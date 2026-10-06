@@ -1,0 +1,289 @@
+//! The embedded build (the stub, or a real dist when `SPA_DIST` names one), and the embedding,
+//! negotiation and shell over `tests/fixture`, a dist shaped like Vite's.
+
+#[path = "../build/embed.rs"]
+mod embed;
+
+use std::io::Read as _;
+use std::path::Path;
+
+use crate::serve::{find, negotiate};
+use crate::shell::render;
+use crate::*;
+
+fn boot() -> Boot {
+    Boot {
+        user: BootUser { id: 7, name: "David".into(), avatar_url: "/users/abc/avatar?v=1".into() },
+        account: BootAccount { name: Some("Smart Data".into()) },
+        theme: theme(Some("dark")),
+        text_size: text_size(None),
+        cable_url: "/cable".into(),
+        version: "1.2.3".into(),
+        revision: Some("0123abc".into()),
+    }
+}
+
+/// The boot JSON a page carries, decoded.
+fn boot_json(html: &str) -> serde_json::Value {
+    let start = html.find("id=\"boot\"").expect("the page has the boot script");
+    let json = &html[html[start..].find('>').unwrap() + start + 1..];
+    serde_json::from_str(&json[..json.find("</script>").unwrap()]).unwrap()
+}
+
+/// `build.rs`'s embedding of `tests/fixture`, made here with the same code (`build/embed.rs`).
+fn fixture() -> &'static [File] {
+    let dist = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture");
+    let (_, entries) = embed::read_dist(&dist);
+    let leak = |bytes: Vec<u8>| -> &'static [u8] { Box::leak(bytes.into_boxed_slice()) };
+    let files: Vec<File> = entries
+        .into_iter()
+        .map(|entry| {
+            let bytes = std::fs::read(&entry.source).unwrap();
+            let encoded = |vite: &Option<std::path::PathBuf>, encode: fn(&[u8]) -> Vec<u8>| match vite {
+                Some(path) => Some(leak(std::fs::read(path).unwrap())),
+                None if entry.compressible() => embed::smaller(encode(&bytes), &bytes).map(leak),
+                None => None,
+            };
+            File {
+                path: Box::leak(entry.path.clone().into_boxed_str()),
+                content_type: entry.content_type,
+                immutable: entry.immutable,
+                br: encoded(&entry.br, embed::brotli),
+                gz: encoded(&entry.gz, embed::gzip),
+                identity: leak(bytes),
+            }
+        })
+        .collect();
+    Box::leak(files.into_boxed_slice())
+}
+
+fn unbrotli(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    brotli::BrotliDecompress(&mut &bytes[..], &mut out).unwrap();
+    out
+}
+
+fn gunzip(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    flate2::read::GzDecoder::new(bytes).read_to_end(&mut out).unwrap();
+    out
+}
+
+// --- The embedded build ----------------------------------------------------------------------------
+
+#[test]
+fn the_stub_stands_in_without_a_dist() {
+    if built() {
+        return; // built_dist_is_embedded_whole covers a real dist.
+    }
+    assert!(files().is_empty());
+    assert_eq!(file("assets/index.js", Some("br, gzip")), None);
+    let page = render_shell(&boot(), "token", Some("nonce"));
+    assert!(page.contains("isn't built into this server"), "{page}");
+    assert!(page.contains("<meta name=\"csrf-token\" content=\"token\" />"));
+    assert_eq!(boot_json(&page)["user"]["id"], 7);
+}
+
+/// With `SPA_DIST` set (the Frontend CI job, after `pnpm build`), the real dist is embedded, and
+/// every file in it can be served the way the fixture's are.
+#[test]
+fn built_dist_is_embedded_whole() {
+    if option_env!("SPA_DIST").is_some_and(|dist| !dist.is_empty()) {
+        assert!(built(), "SPA_DIST is set, so the stub must not be embedded");
+    }
+    if !built() {
+        return;
+    }
+    assert!(!files().is_empty());
+    assert!(files().windows(2).all(|pair| pair[0].path < pair[1].path), "sorted for lookup");
+    let page = render_shell(&boot(), "token", Some("nonce"));
+    assert!(page.contains("<script nonce=\"nonce\" type=\"module\""), "Vite's entry script carries the nonce: {page}");
+    assert_eq!(boot_json(&page)["account"]["name"], "Smart Data");
+    for file in files() {
+        assert!(!file.path.starts_with('.') && !file.path.contains("/."), "{} is build metadata", file.path);
+        assert_ne!(file.path, "index.html");
+        assert_ne!(file.content_type, "application/octet-stream", "{} has no known type", file.path);
+        if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
+            assert!(file.immutable, "Vite hashes every asset's name: {}", file.path);
+        }
+        if let Some(br) = file.br {
+            assert_eq!(unbrotli(br), file.identity, "{}", file.path);
+        }
+        if let Some(gz) = file.gz {
+            assert_eq!(gunzip(gz), file.identity, "{}", file.path);
+        }
+        if embed::compressible(file.content_type) && file.identity.len() > 1024 {
+            assert!(file.br.is_some() && file.gz.is_some(), "{} is served compressed", file.path);
+        }
+    }
+    let entry = page.split("src=\"/app/").nth(1).and_then(|rest| rest.split('"').next()).expect("an entry script");
+    assert!(file(entry, None).is_some(), "the shell's entry script {entry} is embedded");
+}
+
+// --- Embedding -----------------------------------------------------------------------------------
+
+#[test]
+fn embedding_keeps_servable_files_with_their_types_and_cache_policy() {
+    let files = fixture();
+    let summary: Vec<(&str, &str, bool)> = files.iter().map(|f| (f.path, f.content_type, f.immutable)).collect();
+    assert_eq!(
+        summary,
+        [
+            ("assets/index-B2x8Kq1f.js", "text/javascript; charset=utf-8", true),
+            ("assets/index-Dk_9-xYz.css", "text/css; charset=utf-8", true),
+            ("assets/logo-AbCdEf12.png", "image/png", true),
+            ("assets/unhashed.js", "text/javascript; charset=utf-8", false),
+            ("assets/vendor-Q1w2E3r4.js", "text/javascript; charset=utf-8", true),
+            ("favicon.svg", "image/svg+xml", false),
+        ],
+        "index.html is the template, .vite/ and dotfiles are build metadata, and Vite's .br/.gz \
+         are encodings of the file beside them"
+    );
+}
+
+#[test]
+fn embedding_compresses_text_and_keeps_vites_own_encodings() {
+    let files = fixture();
+    let js = find(files, "assets/index-B2x8Kq1f.js").unwrap();
+    assert_eq!(unbrotli(js.br.unwrap()), js.identity);
+    assert_eq!(gunzip(js.gz.unwrap()), js.identity);
+    assert!(js.br.unwrap().len() < js.gz.unwrap().len() && js.gz.unwrap().len() < js.identity.len());
+
+    let vendor = find(files, "assets/vendor-Q1w2E3r4.js").unwrap();
+    assert_eq!(vendor.br, Some(&b"vite's own brotli bytes"[..]), "Vite's .br is used as it is");
+    assert_eq!(gunzip(vendor.gz.unwrap()), vendor.identity);
+
+    let png = find(files, "assets/logo-AbCdEf12.png").unwrap();
+    assert_eq!((png.br, png.gz), (None, None), "a PNG is compressed already");
+    let tiny = find(files, "assets/unhashed.js").unwrap();
+    assert_eq!((tiny.br, tiny.gz), (None, None), "an encoding no smaller than the file isn't kept");
+}
+
+#[test]
+fn only_vites_hashed_asset_names_are_immutable() {
+    for (path, immutable) in [
+        ("assets/index-B2x8Kq1f.js", true),
+        ("assets/index-Dk_9-xYz.css", true),
+        ("assets/app.config-AbCd1234.js", true),
+        ("assets/worker-AbCd1234.js.map", true),
+        ("assets/index-AbCd1234x.js", false), // the hash must end the name
+        ("assets/index-AbCd1234.", false),
+        ("assets/nested/font-ZZZZ____.woff2", true),
+        ("assets/index-short.js", false),
+        ("assets/index.js", false),
+        ("assets/-AbCd1234.js", false),
+        ("favicon-AbCd1234.svg", false), // public files keep their names
+        ("index.html", false),
+    ] {
+        assert_eq!(embed::immutable(path), immutable, "{path}");
+    }
+}
+
+// --- Negotiation ---------------------------------------------------------------------------------
+
+#[test]
+fn negotiation_prefers_brotli_then_gzip_then_the_file() {
+    let js = find(fixture(), "assets/index-B2x8Kq1f.js").unwrap();
+    let encoding = |accept: Option<&str>| negotiate(js, accept).content_encoding;
+    assert_eq!(encoding(Some("gzip, deflate, br, zstd")), Some("br"));
+    assert_eq!(encoding(Some("gzip, deflate")), Some("gzip"));
+    assert_eq!(encoding(Some("x-gzip")), Some("gzip"));
+    assert_eq!(encoding(Some("BR;q=0.5, GZIP;q=0.9")), Some("gzip"), "the client's q-values win");
+    assert_eq!(encoding(Some("br;q=0, gzip")), Some("gzip"));
+    assert_eq!(encoding(Some("*")), Some("br"));
+    assert_eq!(encoding(Some("*;q=0")), None);
+    assert_eq!(encoding(Some("br;q=0, *;q=0.1")), Some("gzip"));
+    assert_eq!(encoding(Some("identity")), None);
+    assert_eq!(encoding(Some("")), None);
+    assert_eq!(encoding(None), None);
+
+    let served = negotiate(js, Some("br"));
+    assert_eq!(served.body, js.br.unwrap());
+    assert!(served.varies());
+    assert_eq!(negotiate(js, None).body, js.identity);
+
+    let png = find(fixture(), "assets/logo-AbCdEf12.png").unwrap();
+    let served = negotiate(png, Some("br, gzip"));
+    assert_eq!((served.content_encoding, served.body, served.varies()), (None, png.identity, false));
+}
+
+#[test]
+fn lookups_are_exact() {
+    let files = fixture();
+    assert!(find(files, "assets/index-B2x8Kq1f.js").is_some());
+    for path in ["index.html", "assets/../index.html", "/assets/index-B2x8Kq1f.js", "assets/index-B2x8Kq1f.js.br", ".vite/manifest.json", "assets"] {
+        assert_eq!(find(files, path), None, "{path}");
+    }
+}
+
+// --- The shell -----------------------------------------------------------------------------------
+
+#[test]
+fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
+    let template = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture/index.html")).unwrap();
+    let page = render(&template, &boot(), "masked+token/=", Some("n0nce+/="));
+    assert!(!page.contains("<!--boot-->"));
+    assert!(page.contains(
+        "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n\
+         <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
+         <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
+         <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
+    ), "{page}");
+    assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
+    assert!(page.contains("<link nonce=\"n0nce+/=\" rel=\"modulepreload\" crossorigin href=\"/app/assets/vendor-Q1w2E3r4.js\">"), "{page}");
+    assert!(page.contains("<link rel=\"stylesheet\" crossorigin href=\"/app/assets/index-Dk_9-xYz.css\">"), "styles need no nonce");
+    assert_eq!(page.matches("nonce=").count(), 3);
+    assert_eq!(
+        boot_json(&page),
+        serde_json::json!({
+            "user": {"id": 7, "name": "David", "avatarUrl": "/users/abc/avatar?v=1"},
+            "account": {"name": "Smart Data"},
+            "theme": "dark",
+            "textSize": "default",
+            "cableUrl": "/cable",
+            "version": "1.2.3",
+            "revision": "0123abc",
+        })
+    );
+
+    let without_nonce = render(&template, &boot(), "token", None);
+    assert!(!without_nonce.contains("nonce"));
+    assert!(without_nonce.contains("<script type=\"application/json\" id=\"boot\">"));
+
+    let no_placeholder = render("<html><head><title>x</title></head></html>", &boot(), "token", None);
+    assert!(no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"), "{no_placeholder}");
+}
+
+#[test]
+fn boot_json_cannot_end_its_script_element() {
+    let mut boot = boot();
+    boot.user.name = "</script><script>alert(1)</script><!-- & \u{2028}\u{2029}".into();
+    let json = script_json(&boot);
+    for raw in ["<", ">", "&", "\u{2028}", "\u{2029}"] {
+        assert!(!json.contains(raw), "{raw:?} in {json}");
+    }
+    assert!(json.contains("\"name\":\"\\u003c/script\\u003e\\u003cscript\\u003ealert(1)\\u003c/script\\u003e\\u003c!-- \\u0026 \\u2028\\u2029\""), "{json}");
+
+    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    assert_eq!(page.matches("</script>").count(), 1);
+    assert_eq!(boot_json(&page)["user"]["name"], boot.user.name, "the escapes decode to the name");
+}
+
+#[test]
+fn boot_response_adds_the_csrf_token_to_the_boot_json() {
+    let boot = boot();
+    let json = serde_json::to_value(BootResponse { boot: &boot, csrf_token: "token" }).unwrap();
+    let mut expected = serde_json::to_value(&boot).unwrap();
+    expected["csrfToken"] = "token".into();
+    assert_eq!(json, expected);
+}
+
+#[test]
+fn theme_and_text_size_fall_back_like_the_layout() {
+    assert_eq!([theme(Some("light")), theme(Some("dark")), theme(Some("system")), theme(Some("neon")), theme(None)], ["light", "dark", "system", "system", "system"]);
+    assert_eq!(
+        ["smaller", "small", "default", "large", "larger", "huge"].map(|size| text_size(Some(size))),
+        ["smaller", "small", "default", "large", "larger", "default"]
+    );
+    assert_eq!(text_size(None), "default");
+}

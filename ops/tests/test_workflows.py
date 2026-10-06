@@ -151,7 +151,13 @@ class WorkflowTest(unittest.TestCase):
         self.assertNotIn("if", job)
         self.assertEqual(frontend["permissions"], {})
         self.assertGreater(audit_actions(frontend), 0)
-        print("WORKFLOW FRONTEND: one always-run 'Frontend' job, no path filter, pinned actions")
+        # The only CI build of crates/spa against a real dist: the job builds one and embeds it.
+        steps = [step.get("run", "") for step in job["steps"]]
+        build = next(i for i, run in enumerate(steps) if run.strip() == "pnpm build")
+        embed = next(i for i, step in enumerate(job["steps"]) if "-p campfire_spa" in step.get("run", ""))
+        self.assertGreater(embed, build)
+        self.assertEqual(job["steps"][embed]["env"]["SPA_DIST"], "frontend/dist")
+        print("WORKFLOW FRONTEND: one always-run 'Frontend' job, no path filter, pinned actions, real-dist crates/spa tests")
 
     def test_rust_gates_skip_frontend_only_changes(self):
         rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())

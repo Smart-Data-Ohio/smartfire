@@ -133,6 +133,20 @@ RUN rustup component add clippy && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 
+# The React SPA (frontend/), built once on the build platform: its output is the same files for
+# every architecture, and crates/spa/build.rs embeds them into the binary, so the runtime image
+# has no Node. The manifest and lockfile come in first, so a source-only change reuses the
+# installed dependencies. pnpm is the version package.json's packageManager names.
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS spa
+WORKDIR /src/frontend
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=campfire-pnpm-store,target=/pnpm-store \
+    npm install --global --no-fund --no-audit "$(node -p 'require("./package.json").packageManager')" && \
+    pnpm install --frozen-lockfile --store-dir /pnpm-store
+COPY frontend ./
+RUN pnpm build
+
+
 # Build the binary against the libvips above, with the image's stable toolchain and LLVM: neither
 # rust-toolchain.toml (the nightly) nor .cargo/config.toml (Cranelift for dev/test builds) is
 # copied in, and .dockerignore leaves the latter out of the context.
@@ -158,6 +172,9 @@ COPY web/vendor/javascript web/vendor/javascript
 COPY web/public web/public
 COPY web/config/importmap.rb web/config/importmap.rb
 COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
+# crates/spa/build.rs embeds the SPA built above (and fails the build if SPA_DIST has none).
+COPY --from=spa /src/frontend/dist frontend/dist
+ENV SPA_DIST=/src/frontend/dist
 
 RUN --mount=type=cache,id=${CARGO_CACHE_SCOPE}-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=${CARGO_CACHE_SCOPE}-target,target=/src/target \
@@ -165,6 +182,8 @@ RUN --mount=type=cache,id=${CARGO_CACHE_SCOPE}-cargo-registry,target=/usr/local/
     # The cache mount's target/ outlives this tree, so mtimes can't prove the migration catalog
     # current: crates/db/build.rs reruns whenever this digest of the files' names and contents changes.
     export CAMPFIRE_MIGRATIONS_DIGEST="$(cd crates/db/migrations && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)" && \
+    # The same for crates/spa/build.rs and the SPA's files.
+    export SPA_DIST_DIGEST="$(cd "$SPA_DIST" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)" && \
     cargo build --profile "$CARGO_PROFILE" --locked -j "$CARGO_BUILD_JOBS" -p campfire && \
     profile_dir="$CARGO_PROFILE" && if [ "$profile_dir" = dev ]; then profile_dir=debug; fi && \
     install -D -m 755 "target/$profile_dir/campfire" /out/campfire

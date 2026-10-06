@@ -1,12 +1,14 @@
 name: Frontend
 
 # The React SPA in frontend/: Biome, the vendored anti-slop Oxlint rules, tsc, Vitest and a
-# production build, with the entry chunks' gzip sizes in the job summary.
+# production build, with the entry chunks' gzip sizes in the job summary; then crates/spa's tests
+# with that build embedded, the one place CI compiles the Rust side against a real dist (rust.yml
+# has no dist, so it embeds the stub page, and the image builds on main).
 #
 # "Frontend" reports on every pull request so it can be a required check: a PR that touches
 # none of frontend/, crates/api_types (whose generated types the schemas in frontend/src/api are
-# pinned to) and this workflow passes after the scope step, without installing anything. The
-# check that frontend/src/gen matches crates/api_types runs in rust.yml's clippy job.
+# pinned to), crates/spa and this workflow passes after the scope step, without installing
+# anything. The check that frontend/src/gen matches crates/api_types runs in rust.yml's clippy job.
 # Pushes to main always run everything, and so does a PR whose diff can't be read.
 #
 # This workflow only checks: read-only contents permission, no secrets, nothing published.
@@ -31,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 10
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
@@ -43,9 +45,12 @@ jobs:
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
           filter: blob:none
           persist-credentials: false
+          # Cone mode also brings the root's files (Cargo.toml, Cargo.lock, rust-toolchain.toml).
           sparse-checkout: |
             frontend
             .github/workflows/frontend.yml
+            crates
+            .cargo
 
       - name: Decide whether the frontend checks are needed
         id: scope
@@ -59,7 +64,7 @@ jobs:
           run=true
           if [ "$EVENT" = pull_request ]; then
             if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
-              if [ -n "$paths" ] && ! grep -qE '^(frontend/|crates/api_types/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
+              if [ -n "$paths" ] && ! grep -qE '^(frontend/|crates/api_types/|crates/spa/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
                 run=false
               fi
             else
@@ -132,3 +137,19 @@ jobs:
             done < <(jq -r '[.[] | select(.isEntry) | .file, (.css // [])[]] | unique[]' dist/.vite/manifest.json)
             printf '| **Total** | | **%s B** |\n' "$total"
           } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # The nightly and components rust-toolchain.toml pins, as everywhere else in CI.
+      - name: Set up Rust
+        if: steps.scope.outputs.run == 'true'
+        working-directory: .
+        run: rustup toolchain install && rustc -vV
+
+      # crates/spa's build script embeds the dist just built (an SPA_DIST without an index.html
+      # fails the build); its tests check the embedded table, encodings and the shell against it.
+      - name: Embed the build (cargo test -p campfire_spa)
+        if: steps.scope.outputs.run == 'true'
+        working-directory: .
+        env:
+          SPA_DIST: frontend/dist
+          CARGO_TERM_COLOR: always
+        run: cargo test -p campfire_spa --locked -j 4

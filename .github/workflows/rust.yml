@@ -95,10 +95,11 @@ jobs:
           import subprocess
 
           # The workspace is the repository root, and the app reads only its own tree: docs,
-          # deploy scripts, the SPA's sources (frontend/, which no crate reads yet), other
-          # workflows and the root's prose files can't affect it. Any other path, including a new
-          # top-level one, runs the gates. frontend/src/gen is the TypeScript crates/api_types
-          # generates; the clippy job fails if it differs from a fresh export.
+          # deploy scripts, the SPA's sources (frontend/: crates/spa embeds only a built dist,
+          # which CI never has, and frontend.yml tests it against one), other workflows and the
+          # root's prose files can't affect it. Any other path, including a new top-level one,
+          # runs the gates. frontend/src/gen is the TypeScript crates/api_types generates; the
+          # clippy job fails if it differs from a fresh export.
           OUTSIDE = (b"docs/", b"deploy/", b"frontend/", b".github/")
           PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
                    b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")

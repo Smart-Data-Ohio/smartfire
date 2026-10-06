@@ -151,8 +151,9 @@ for a normal release; see [`ops/README.md`](../ops/README.md#writing-a-migration
   behind `Rust correctness`.
 - **Frontend** ([`frontend.yml`](../.github/workflows/frontend.yml)): the `Frontend` check runs
   Biome, the anti-slop Oxlint rules, `tsc`, Vitest and `vite build` for the SPA in `frontend/`,
-  and puts the entry chunks' gzip sizes in the job summary. It reports on every pull request; one
-  that touches neither `frontend/` nor the workflow passes without installing anything. See
+  and puts the entry chunks' gzip sizes in the job summary, then runs `cargo test -p campfire_spa`
+  with that build embedded (`SPA_DIST`). It reports on every pull request; one that touches
+  neither `frontend/`, `crates/spa/` nor the workflow passes without installing anything. See
   [`frontend/README.md`](../frontend/README.md).
 - **Repository checks** ([`repo.yml`](../.github/workflows/repo.yml)): `GitHub Actions audit`
   (actionlint, zizmor and the Google deployment configuration tests),
