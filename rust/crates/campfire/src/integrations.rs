@@ -10,8 +10,8 @@
 //! - [`web_push_pool`]: the Web Push pool the app boots with.
 //!
 //! The three HTTP clients share only plumbing ([`net`]); each keeps its own policy (see
-//! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
-//! (Ruby scripts run in the reference) live in testdata/oracle.
+//! plans/rust-conversion.md, "HTTP clients: three distinct policies"). The tests' expected
+//! outputs in testdata/ were recorded by Ruby scripts run in the Rails app, and are frozen.
 
 pub mod google;
 pub mod fizzy;

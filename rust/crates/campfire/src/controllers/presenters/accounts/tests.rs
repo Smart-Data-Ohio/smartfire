@@ -1,8 +1,7 @@
 //! Request-level tests for the session, account and user controllers (controllers A), through the
 //! whole stack (`crate::server::boot`, the Rails route table, kit) over a private copy of the reference-built
 //! `default` parity seed. Missing seeds fail in CI and skip locally with a note
-//! (`parity/bin/seed build default`). Parity against the running reference lives in
-//! `reference-tools/campfire/controllers_a/replay.py`.
+//! (`python3 parity/bin/frozen-seeds restore`).
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

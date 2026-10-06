@@ -1,5 +1,5 @@
 //! Boot-level tests: the whole stack over a copy of the reference-built `default` parity seed
-//! (`parity/bin/seed build default`), with the parity `SECRET_KEY_BASE`. Missing seeds fail in CI
+//! (`python3 parity/bin/frozen-seeds restore`), with the parity `SECRET_KEY_BASE`. Missing seeds fail in CI
 //! and skip locally with a note.
 //!
 //! `vectors/campfire_sessions.json` holds session cookies *issued by Rails* for the seed's
