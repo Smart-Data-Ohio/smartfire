@@ -384,6 +384,8 @@ dependencies = [
  "base64 0.22.1",
  "bnum",
  "bytes",
+ "campfire_api",
+ "campfire_api_types",
  "campfire_app",
  "campfire_assets",
  "campfire_cable",
@@ -439,6 +441,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "campfire_api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "campfire_api_types",
+ "campfire_app",
+ "campfire_cable",
+ "campfire_db",
+ "campfire_kit",
+ "campfire_messages",
+ "campfire_web",
+ "rails_compat",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "campfire_api_types"
 version = "0.1.0"
 dependencies = [
@@ -456,6 +479,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bytes",
+ "campfire_api_types",
  "campfire_assets",
  "campfire_cable",
  "campfire_db",

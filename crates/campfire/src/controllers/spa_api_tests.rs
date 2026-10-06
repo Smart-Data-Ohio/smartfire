@@ -1,0 +1,671 @@
+//! `/api/v1` and the `/api/v1/sync` socket (`campfire_api`) over the seeded app with
+//! `SPA_ENABLED`: the contract's shapes, the envelope for every failure, idempotent posting, and
+//! the JSON twins arriving alongside (never instead of) the classic broadcasts.
+
+use std::net::SocketAddr;
+use std::time::Duration;
+
+use axum::http::{Method, StatusCode};
+use campfire_api_types as api;
+use futures_util::{SinkExt as _, StreamExt as _};
+use serde_json::{Value, json};
+use tokio_tungstenite::tungstenite::Message as WsMessage;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest as _;
+
+use crate::controllers::presenters::test_support::{
+    ALL_TALK, Browser, DAVID, HQ, KEVIN, Reply, Req, TestApp, seed_clock,
+};
+
+/// Rooms in the seed: HQ holds David and Kevin (and no messages); All Talk holds David and 131
+/// messages; All Pets holds David but not Kevin.
+const ALL_PETS: i64 = 104393281;
+
+async fn app(enabled: bool) -> Option<TestApp> {
+    let env: &[(&str, &str)] = if enabled {
+        &[("SPA_ENABLED", "1")]
+    } else {
+        &[]
+    };
+    TestApp::boot_seed_with_env("default", seed_clock(), env).await
+}
+
+fn get(path: &str) -> Req {
+    Req::new(Method::GET, path).header("accept", "application/json")
+}
+
+fn json_body(method: Method, path: &str, body: &Value) -> Req {
+    Req::new(method, path)
+        .header("accept", "application/json")
+        .header("content-type", "application/json")
+        .body(body.to_string())
+}
+
+fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
+    serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
+}
+
+fn tag(reply: &Reply) -> String {
+    let envelope: api::ApiErrorResponse = parse(reply);
+    let value = serde_json::to_value(&envelope.error).unwrap();
+    value["_tag"].as_str().unwrap().to_string()
+}
+
+async fn post(b: &mut Browser<'_>, room_id: i64, client_message_id: &str, source: &str) -> Reply {
+    let body = json!({"clientMessageId": client_message_id, "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null});
+    b.write(json_body(
+        Method::POST,
+        &format!("/api/v1/rooms/{room_id}/messages"),
+        &body,
+    ))
+    .await
+}
+
+#[tokio::test]
+async fn the_api_exists_only_with_the_spa() {
+    let Some(a) = app(false).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let unknown = b.send(get("/no-such-page")).await.status;
+    for path in [
+        "/api/v1/me",
+        "/api/v1/sidebar",
+        &format!("/api/v1/rooms/{HQ}"),
+        "/api/v1/sync",
+    ] {
+        assert_eq!(b.send(get(path)).await.status, unknown, "{path}");
+    }
+    assert!(!a.booted.app.cable.sync_enabled());
+}
+
+#[tokio::test]
+async fn reads_answer_in_the_contracts_shapes() {
+    let Some(a) = app(true).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+
+    let reply = b.send(get("/api/v1/me")).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.header("cache-control"), Some("no-store"));
+    let me: api::Me = parse(&reply);
+    assert_eq!(me.user.id, DAVID);
+    assert!(me.last_room_id.is_some());
+
+    let sidebar: api::Sidebar = parse(&b.send(get("/api/v1/sidebar")).await);
+    let hq = sidebar
+        .rows
+        .iter()
+        .find(|row| row.room.id == HQ)
+        .expect("HQ in David's sidebar");
+    assert_eq!(hq.display_name, "HQ");
+    assert!(sidebar.can_create_rooms);
+    for row in sidebar
+        .rows
+        .iter()
+        .filter(|row| row.room.kind == api::RoomKind::Direct)
+    {
+        assert!(row.room.name.is_none());
+        assert!(!row.direct_member_ids.is_empty());
+        for id in &row.direct_member_ids {
+            assert!(
+                sidebar.users.iter().any(|user| user.id == *id),
+                "user {id} of {}",
+                row.display_name
+            );
+        }
+    }
+
+    let detail: api::RoomDetail = parse(&b.send(get(&format!("/api/v1/rooms/{HQ}"))).await);
+    assert_eq!(
+        (
+            detail.room.id,
+            detail.membership.user_id,
+            detail.display_name.as_str()
+        ),
+        (HQ, DAVID, "HQ")
+    );
+    assert!(detail.member_preview_ids.len() <= 5 && detail.member_preview_ids.contains(&DAVID));
+
+    let newest: api::MessagePage = parse(
+        &b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages")))
+            .await,
+    );
+    assert_eq!(newest.messages.len(), 40);
+    assert!(
+        newest
+            .messages
+            .windows(2)
+            .all(|pair| pair[0].id != pair[1].id)
+    );
+    assert_eq!(newest.after, None, "the newest page reaches the present");
+    for message in &newest.messages {
+        assert_eq!((message.room_id, message.thread_id), (ALL_TALK, None));
+        assert!(
+            newest
+                .users
+                .iter()
+                .any(|user| user.id == message.creator_id)
+        );
+    }
+    let before = newest.before.expect("All Talk has more than a page");
+    assert_eq!(before, newest.messages[0].id);
+    let older: api::MessagePage = parse(
+        &b.send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?before={before}"
+        )))
+        .await,
+    );
+    assert_eq!(older.messages.len(), 40);
+    assert!(older.messages.iter().all(|message| message.id != before));
+    assert_eq!(
+        older.after,
+        older.messages.last().map(|message| message.id),
+        "an older page has newer ones after it"
+    );
+    let newer: api::MessagePage = parse(
+        &b.send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?after={}",
+            older.messages[39].id
+        )))
+        .await,
+    );
+    assert_eq!(
+        newer.messages.first().map(|message| message.id),
+        Some(before)
+    );
+    let anchor = older.messages[20].id;
+    let around: api::MessagePage = parse(
+        &b.send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?around={anchor}"
+        )))
+        .await,
+    );
+    let at = around
+        .messages
+        .iter()
+        .position(|message| message.id == anchor)
+        .expect("the anchor");
+    assert_eq!(
+        (at, around.messages.len() - at - 1),
+        (40, 40),
+        "40 on each side of the anchor"
+    );
+    let both = b
+        .send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?before={before}&after={before}"
+        )))
+        .await;
+    assert_eq!(
+        (both.status, tag(&both)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into())
+    );
+    let unknown = b
+        .send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?around=1")))
+        .await;
+    assert_eq!(
+        (unknown.status, tag(&unknown)),
+        (StatusCode::NOT_FOUND, "NotFound".into())
+    );
+
+    let users: api::UserList = parse(
+        &b.send(get(&format!(
+            "/api/v1/users?ids={KEVIN},{DAVID},999,nope,{DAVID}"
+        )))
+        .await,
+    );
+    assert_eq!(
+        users.users.iter().map(|user| user.id).collect::<Vec<_>>(),
+        [DAVID, KEVIN]
+    );
+    let presence: api::PresenceList = parse(
+        &b.send(get(&format!("/api/v1/presence?ids={KEVIN},{DAVID}")))
+            .await,
+    );
+    assert_eq!(
+        presence
+            .presences
+            .iter()
+            .map(|row| row.user_id)
+            .collect::<Vec<_>>(),
+        [DAVID, KEVIN]
+    );
+
+    let mut kevin = a.sign_in(KEVIN).await;
+    let outside = kevin.send(get(&format!("/api/v1/rooms/{ALL_PETS}"))).await;
+    assert_eq!(
+        (outside.status, tag(&outside)),
+        (StatusCode::NOT_FOUND, "NotFound".into())
+    );
+    let outside = kevin
+        .send(get(&format!("/api/v1/rooms/{ALL_PETS}/messages")))
+        .await;
+    assert_eq!(outside.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn signed_out_and_forged_requests_get_the_envelope() {
+    let Some(a) = app(true).await else { return };
+    let mut anonymous = a.anonymous();
+    // No Accept header: the API is JSON whatever the client asks for.
+    for path in [
+        "/api/v1/me",
+        "/api/v1/sidebar",
+        &format!("/api/v1/rooms/{HQ}/messages"),
+    ] {
+        let reply = anonymous
+            .send(Req::new(Method::GET, path).header("accept", "*/*"))
+            .await;
+        assert_eq!(
+            (reply.status, tag(&reply)),
+            (StatusCode::UNAUTHORIZED, "Unauthorized".into()),
+            "{path}"
+        );
+        assert_eq!(
+            reply.content_type(),
+            Some("application/json; charset=utf-8")
+        );
+    }
+
+    let mut b = a.sign_in(DAVID).await;
+    let body = json!({"clientMessageId": "forged", "markdownSource": "hi", "replyToMessageId": null, "replyNotifyAuthor": null});
+    let forged = b
+        .send(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{HQ}/messages"),
+            &body,
+        ))
+        .await;
+    assert_eq!(
+        (forged.status, tag(&forged)),
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "InvalidAuthenticityToken".into()
+        )
+    );
+    let forged = b
+        .send(
+            Req::new(Method::POST, &format!("/api/v1/rooms/{HQ}/read"))
+                .header("x-csrf-token", "nope"),
+        )
+        .await;
+    assert_eq!(tag(&forged), "InvalidAuthenticityToken");
+    let created = a
+        .db()
+        .read(|conn| campfire_db::Message::find_duplicate(conn, HQ, DAVID, "forged"))
+        .await
+        .unwrap();
+    assert!(created.is_none());
+}
+
+#[tokio::test]
+async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
+    let Some(a) = app(true).await else { return };
+    // A classic page following All Talk, so its stream's publications are recorded.
+    let (_client, cable) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
+    let mut b = a.sign_in(DAVID).await;
+    b.authenticity_token().await;
+    let capture = a.publications();
+    capture.take();
+
+    let first = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
+    assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
+    let created: api::MessageDTO = parse(&first);
+    assert_eq!(
+        (
+            created.room_id,
+            created.creator_id,
+            created.client_message_id.as_str()
+        ),
+        (ALL_TALK, DAVID, "0199b3c4-api-1")
+    );
+    assert!(
+        created.body_html.contains("<strong>there</strong>"),
+        "{}",
+        created.body_html
+    );
+    assert_eq!(created.markdown_source.as_deref(), Some("Hello **there**"));
+
+    // The classic pages still get the Turbo append of the rendered message.
+    let frames = capture.take();
+    assert!(
+        frames.iter().any(|(stream, frame)| {
+            let html = serde_json::from_str::<String>(frame).unwrap_or_default();
+            stream.ends_with(":messages")
+                && html.starts_with(r#"<turbo-stream action="append""#)
+                && html.contains(&format!(r#"data-message-id="{}""#, created.id))
+        }),
+        "{frames:?}"
+    );
+
+    let again = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
+    assert_eq!(again.status, StatusCode::OK);
+    assert_eq!(parse::<api::MessageDTO>(&again), created);
+    let count = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM messages WHERE client_message_id = '0199b3c4-api-1'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+
+    let blank = post(&mut b, ALL_TALK, "  ", "hi").await;
+    assert_eq!(
+        (blank.status, tag(&blank)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into())
+    );
+    let envelope: api::ApiErrorResponse = parse(&blank);
+    let api::ApiError::Validation { fields, .. } = envelope.error else {
+        panic!()
+    };
+    assert!(fields.contains_key("clientMessageId"));
+    let malformed = b
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+            &json!({"markdownSource": "hi"}),
+        ))
+        .await;
+    assert_eq!(tag(&malformed), "Validation");
+    let elsewhere = b.write(json_body(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/messages"), &json!({
+        "clientMessageId": "0199b3c4-api-2", "markdownSource": "hi", "replyToMessageId": 1, "replyNotifyAuthor": null,
+    }))).await;
+    assert_eq!(tag(&elsewhere), "Validation");
+    cable.abort();
+}
+
+#[tokio::test]
+async fn reads_and_unreads_answer_the_read_state() {
+    let Some(a) = app(true).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let page: api::MessagePage = parse(
+        &b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages")))
+            .await,
+    );
+    let message_id = page.messages.last().unwrap().id;
+
+    let unread = b
+        .write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/rooms/{ALL_TALK}/read"),
+            &json!({"messageId": message_id}),
+        ))
+        .await;
+    assert_eq!(unread.status, StatusCode::OK, "{}", unread.text());
+    assert_eq!(
+        parse::<api::ReadState>(&unread),
+        api::ReadState {
+            room_id: ALL_TALK,
+            unread: true,
+            first_unread_message_id: Some(message_id)
+        }
+    );
+    let detail: api::RoomDetail = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
+    assert_eq!(
+        detail.unread,
+        Some(api::UnreadDivider {
+            first_unread_message_id: message_id,
+            count: 1
+        })
+    );
+
+    let read = b
+        .write(
+            Req::new(Method::POST, &format!("/api/v1/rooms/{ALL_TALK}/read"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(
+        parse::<api::ReadState>(&read),
+        api::ReadState {
+            room_id: ALL_TALK,
+            unread: false,
+            first_unread_message_id: None
+        }
+    );
+    let detail: api::RoomDetail = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
+    assert_eq!(detail.unread, None);
+}
+
+// --- The sync socket ---------------------------------------------------------------------------
+
+struct Sync {
+    socket: tokio_tungstenite::WebSocketStream<
+        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    >,
+    /// Events of a batch not yet looked at.
+    pending: std::collections::VecDeque<api::SyncEvent>,
+}
+
+impl Sync {
+    async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
+        let mut request = format!("ws://{addr}/api/v1/sync")
+            .into_client_request()
+            .unwrap();
+        request
+            .headers_mut()
+            .insert("cookie", cookie.parse().unwrap());
+        request
+            .headers_mut()
+            .insert("host", "campfire.test".parse().unwrap());
+        request
+            .headers_mut()
+            .insert("origin", "http://campfire.test".parse().unwrap());
+        let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+        let mut sync = Self {
+            socket,
+            pending: Default::default(),
+        };
+        sync.send(json!({"t": "hello", "v": 1, "resume": null, "topics": topics}))
+            .await;
+        sync
+    }
+
+    async fn send(&mut self, frame: Value) {
+        self.socket
+            .send(WsMessage::Text(frame.to_string().into()))
+            .await
+            .unwrap();
+    }
+
+    /// The next server frame, `None` once the socket closes.
+    async fn next(&mut self) -> Option<api::ServerFrame> {
+        loop {
+            let message = tokio::time::timeout(Duration::from_secs(10), self.socket.next())
+                .await
+                .expect("a sync frame in time");
+            match message {
+                Some(Ok(WsMessage::Text(text))) => {
+                    return Some(
+                        serde_json::from_str(&text)
+                            .unwrap_or_else(|error| panic!("{error}: {text}")),
+                    );
+                }
+                Some(Ok(WsMessage::Close(_))) | Some(Err(_)) | None => return None,
+                Some(Ok(_)) => continue,
+            }
+        }
+    }
+
+    async fn welcome(&mut self) {
+        assert!(matches!(
+            self.next().await,
+            Some(api::ServerFrame::Welcome { resumed: false, .. })
+        ));
+    }
+
+    /// Events until one matches, failing on anything `forbidden` matches first.
+    async fn until(
+        &mut self,
+        wanted: impl Fn(&api::SyncEvent) -> bool,
+        forbidden: impl Fn(&api::SyncEvent) -> bool,
+    ) -> api::SyncEvent {
+        loop {
+            while let Some(event) = self.pending.pop_front() {
+                assert!(!forbidden(&event), "unexpected {event:?}");
+                if wanted(&event) {
+                    return event;
+                }
+            }
+            match self.next().await {
+                Some(api::ServerFrame::Batch { events }) => self.pending.extend(events),
+                Some(api::ServerFrame::Ping) => {}
+                other => panic!("expected a batch, got {other:?}"),
+            }
+        }
+    }
+}
+
+async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    (
+        addr,
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() }),
+    )
+}
+
+fn created_in(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+    move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.room_id == room_id)
+}
+
+#[tokio::test]
+async fn a_classic_post_reaches_the_sync_socket_and_an_api_post_too() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{HQ}")]).await;
+    sync.welcome().await;
+
+    let mut david = a.sign_in(DAVID).await;
+    let classic = david
+        .write(
+            Req::new(Method::POST, &format!("/rooms/{HQ}/messages"))
+                .header("accept", "text/vnd.turbo-stream.html")
+                .header("content-type", "application/json")
+                .body(json!({"message": {"markdown_source": "From the classic page", "client_message_id": "classic-1"}}).to_string()),
+        )
+        .await;
+    assert_eq!(classic.status, StatusCode::OK, "{}", classic.text());
+    let event = sync.until(created_in(HQ), |_| false).await;
+    assert_eq!(event.topic, format!("room:{HQ}"));
+    let api::SyncPayload::MessageCreated(message) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(
+        (message.creator_id, message.client_message_id.as_str()),
+        (DAVID, "classic-1")
+    );
+    assert!(message.body_html.contains("From the classic page"));
+    // Kevin's sidebar row went unread too.
+    sync.until(
+        |event| {
+            matches!(
+                event.payload,
+                api::SyncPayload::RoomUnread(api::RoomUnread { room_id: HQ, .. })
+            )
+        },
+        |_| false,
+    )
+    .await;
+
+    let posted = post(&mut david, HQ, "api-1", "From the API").await;
+    let posted: api::MessageDTO = parse(&posted);
+    let event = sync.until(created_in(HQ), |_| false).await;
+    assert_eq!(event.payload, api::SyncPayload::MessageCreated(posted));
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_non_member_cannot_follow_a_room() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(
+        addr,
+        &kevin.cookie_header(),
+        &[format!("room:{ALL_PETS}"), format!("room:{HQ}")],
+    )
+    .await;
+    sync.welcome().await;
+    sync.send(json!({"t": "sub", "topics": [format!("room:{ALL_PETS}")]}))
+        .await;
+
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(
+        post(&mut david, ALL_PETS, "pets-1", "Kevin can't see this")
+            .await
+            .status,
+        StatusCode::CREATED
+    );
+    assert_eq!(
+        post(&mut david, HQ, "hq-1", "Kevin sees this").await.status,
+        StatusCode::CREATED
+    );
+    // HQ's message arrives, and nothing of All Pets' before it (events are in sequence order).
+    let event = sync
+        .until(created_in(HQ), |event| {
+            event.topic == format!("room:{ALL_PETS}") || created_in(ALL_PETS)(event)
+        })
+        .await;
+    assert_eq!(event.topic, format!("room:{HQ}"));
+    server.abort();
+}
+
+#[tokio::test]
+async fn revoking_the_session_closes_the_sync_socket() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut owner = a.sign_in(KEVIN).await;
+    let victim = a.sign_in(KEVIN).await;
+    let session_id = a
+        .db()
+        .read(|conn| {
+            Ok(campfire_db::Session::for_user(conn, KEVIN)?
+                .into_iter()
+                .map(|s| s.id)
+                .max()
+                .unwrap())
+        })
+        .await
+        .unwrap();
+    let cookie = victim.cookie_header();
+    let mut sync = Sync::connect(addr, &cookie, &[]).await;
+    sync.welcome().await;
+
+    let revoked = owner
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/users/me/sessions/{session_id}"),
+        ))
+        .await;
+    assert_eq!(
+        revoked.location(),
+        Some("http://campfire.test/users/me/sessions")
+    );
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Bye { reason, .. }) => {
+                assert_eq!(reason, "remote");
+                break;
+            }
+            Some(api::ServerFrame::Batch { .. } | api::ServerFrame::Ping) => {}
+            other => panic!("expected bye, got {other:?}"),
+        }
+    }
+    assert!(sync.next().await.is_none(), "the socket closes after bye");
+
+    // The revoked cookie can't come back.
+    let mut again = Sync::connect(addr, &cookie, &[]).await;
+    assert!(matches!(
+        again.next().await,
+        Some(api::ServerFrame::Bye {
+            reconnect: false,
+            ..
+        })
+    ));
+    server.abort();
+}

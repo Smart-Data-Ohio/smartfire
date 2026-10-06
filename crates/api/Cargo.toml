@@ -1,0 +1,26 @@
+[package]
+name = "campfire_api"
+version = "0.1.0"
+edition.workspace = true
+
+# The single-page app's JSON API (`/api/v1`) and its sync socket's session (`/api/v1/sync`),
+# built on campfire_web's before-actions, campfire_messages' create path and campfire_app's
+# broadcasts. The wire types are campfire_api_types'; the socket protocol is campfire_cable's
+# `sync` module.
+
+[dependencies]
+campfire_api_types.workspace = true
+campfire_app.workspace = true
+campfire_cable.workspace = true
+campfire_db.workspace = true
+campfire_kit.workspace = true
+campfire_messages.workspace = true
+campfire_web.workspace = true
+rails_compat.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true

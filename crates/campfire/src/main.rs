@@ -395,5 +395,7 @@ mod tests {
 #[cfg(test)]
 mod layering_tests;
 #[cfg(test)]
+mod sync_twin_tests;
+#[cfg(test)]
 mod slash_commands_tests;
 

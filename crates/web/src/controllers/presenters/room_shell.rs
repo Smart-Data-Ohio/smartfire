@@ -32,8 +32,31 @@ pub fn unread_divider(
     membership: &Membership,
     messages: &[Message],
 ) -> Result<UnreadDivider> {
-    if !membership.unread() {
+    let Some((id, count)) = first_unread(conn, membership)? else {
         return Ok(UnreadDivider::default());
+    };
+    Ok(if messages.iter().any(|m| m.id == id) {
+        UnreadDivider {
+            message_id: Some(id),
+            count,
+            scroll: (count > 5).then_some(true),
+            jump_url: None,
+        }
+    } else {
+        UnreadDivider {
+            message_id: None,
+            count,
+            scroll: None,
+            jump_url: Some(format!("/rooms/{}?message_id={}", membership.room_id, id)),
+        }
+    })
+}
+
+/// `Membership#first_unread_message` and the count of root messages from it to the newest,
+/// inclusive; `None` when the room is read (or nothing follows the read position).
+pub fn first_unread(conn: &Connection, membership: &Membership) -> Result<Option<(i64, i64)>> {
+    if !membership.unread() {
+        return Ok(None);
     }
     let mut query = String::from(
         "SELECT id,created_at FROM messages WHERE room_id=? AND thread_id IS NULL AND ",
@@ -73,24 +96,10 @@ pub fn unread_divider(
         None
     };
     let Some((id, created_at)) = boundary else {
-        return Ok(UnreadDivider::default());
+        return Ok(None);
     };
     let count=conn.query_row_cached("SELECT COUNT(*) FROM messages WHERE room_id=? AND thread_id IS NULL AND (created_at,id) >= (?,?)",rusqlite::params![membership.room_id,created_at,id],|r|r.get::<_,i64>(0))?;
-    Ok(if messages.iter().any(|m| m.id == id) {
-        UnreadDivider {
-            message_id: Some(id),
-            count,
-            scroll: (count > 5).then_some(true),
-            jump_url: None,
-        }
-    } else {
-        UnreadDivider {
-            message_id: None,
-            count,
-            scroll: None,
-            jump_url: Some(format!("/rooms/{}?message_id={}", membership.room_id, id)),
-        }
-    })
+    Ok(Some((id, count)))
 }
 
 pub type NoticeFields = (
