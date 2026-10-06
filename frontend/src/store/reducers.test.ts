@@ -33,7 +33,14 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     embedsSuppressed: false,
     replyToMessageId: null,
     forwardedFromMessageId: null,
+    forwardedAt: null,
+    forwardNote: null,
     editedAt: null,
+    attachment: null,
+    reactions: [],
+    boosts: [],
+    pinned: false,
+    thread: null,
     createdAt,
     updatedAt: createdAt,
     ...extra,
@@ -41,7 +48,7 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
 }
 
 function page(messages: readonly MessageDTO[], before: number | null = null): MessagePage {
-  return { messages: [...messages], users: [], before, after: null };
+  return { messages: [...messages], users: [], before, after: null, saved: [] };
 }
 
 function event(seq: number, payload: DistributiveOmit<SyncEvent, "seq">): SyncEvent {

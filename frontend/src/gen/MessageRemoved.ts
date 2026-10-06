@@ -2,5 +2,11 @@
 
 /**
  * The `message.removed` event: enough to drop the message from any cached page.
+ *
+ * Published after `DELETE /api/v1/messages/:id` (`messages#destroy`, or
+ * `channel_thread_messages#destroy` for a reply), which answers 204. Allowed for the creator or
+ * an administrator, never for a system note. It's a hard delete: replies to it lose their
+ * `replyToMessageId`, its pins, saves, reactions and attachment go, and a thread it started
+ * stays (with no parent).
  */
 export type MessageRemoved = { id: number, roomId: number, threadId: number | null, };

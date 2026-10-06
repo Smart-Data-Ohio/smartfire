@@ -15,27 +15,60 @@
 //! - an absent value is `null`, never an omitted key;
 //! - enums are lowercase string literals.
 
+mod actions;
+mod attachment;
+mod composer;
+mod direct;
 mod error;
 mod me;
 mod message;
+mod panes;
 mod presence;
+mod reaction;
 mod read;
 mod room;
 mod sidebar;
+mod switcher;
 mod sync;
+mod thread;
 mod user;
 
+pub use actions::{
+    CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
+    ForwardThread, Pin, PinList, PinState, SaveMessage, SavedChanged, SavedItem, SavedMark,
+    SavedStatus,
+};
+pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use composer::{
+    CreateScheduledMessage, Icon, IconKind, IconList, MessagePreview, PreviewMessage,
+    RunSlashCommand, ScheduledMessage, ScheduledMessageList, SlashCommand, SlashCommandList,
+    SlashCommandResult, UpdateScheduledMessage, UserSuggestion, UserSuggestionList,
+};
+pub use direct::{
+    AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
+};
 pub use error::{ApiError, ApiErrorResponse};
 pub use me::{
     DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
     VoiceMode,
 };
-pub use message::{CreateMessage, MessageDTO, MessagePage, MessageRemoved};
+pub use message::{
+    CreateMessage, MessageDTO, MessagePage, MessageRemoved, MessageSource, UpdateMessage,
+};
+pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use presence::{Presence, PresenceList, UserPresence};
+pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
 pub use room::{Involvement, Membership, Room, RoomDetail, RoomKind, StageRole, UnreadDivider};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
+pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
+pub use thread::{
+    CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
+    ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,
+    ThreadPermissions, ThreadRead, ThreadRemoved, ThreadStatus, ThreadSummary, ThreadUnread,
+    UpdateThread,
+};
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
 
 /// A UTC instant as Rails' JSON encodes it: RFC 3339 with millisecond precision and a `Z`
@@ -44,3 +77,5 @@ pub type Timestamp = String;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_s2;

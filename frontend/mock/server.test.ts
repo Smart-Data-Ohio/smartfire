@@ -103,6 +103,7 @@ describe("seed", () => {
       users: [],
       before: null,
       after: null,
+      saved: [],
     });
 
     const detail = await get<RoomDetail>(server, `/api/v1/rooms/${rooms.general}`);

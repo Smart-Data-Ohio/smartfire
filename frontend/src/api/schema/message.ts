@@ -3,12 +3,22 @@ import type { CreateMessage as GeneratedCreateMessage } from "../../gen/CreateMe
 import type { MessageDTO as GeneratedMessageDTO } from "../../gen/MessageDTO.ts";
 import type { MessagePage as GeneratedMessagePage } from "../../gen/MessagePage.ts";
 import type { MessageRemoved as GeneratedMessageRemoved } from "../../gen/MessageRemoved.ts";
-import { MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
+import type { MessageSource as GeneratedMessageSource } from "../../gen/MessageSource.ts";
+import type { SavedMark as GeneratedSavedMark } from "../../gen/SavedMark.ts";
+import type { UpdateMessage as GeneratedUpdateMessage } from "../../gen/UpdateMessage.ts";
+import { Attachment } from "./attachment.ts";
+import { MessageId, RoomId, SavedItemId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
+import { Boost, Reaction } from "./reaction.ts";
+import { ThreadIndicator } from "./thread-parts.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
 
-/** A message on a room's timeline or in a thread. `bodyHtml` is already sanitized. */
+/**
+ * A message on a room's timeline or in a thread. `bodyHtml` is already sanitized. Viewer
+ * independent: "you reacted" is the viewer's id in `reactorIds`, edit and delete rights follow
+ * from `creatorId`, `systemNote` and the viewer's role.
+ */
 export const MessageDTO = Schema.Struct({
   id: MessageId,
   roomId: RoomId,
@@ -23,7 +33,14 @@ export const MessageDTO = Schema.Struct({
   embedsSuppressed: Schema.Boolean,
   replyToMessageId: Schema.NullOr(MessageId),
   forwardedFromMessageId: Schema.NullOr(MessageId),
+  forwardedAt: Schema.NullOr(Timestamp),
+  forwardNote: Schema.NullOr(Schema.String),
   editedAt: Schema.NullOr(Timestamp),
+  attachment: Schema.NullOr(Attachment),
+  reactions: Schema.Array(Reaction),
+  boosts: Schema.Array(Boost),
+  pinned: Schema.Boolean,
+  thread: Schema.NullOr(ThreadIndicator),
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });
@@ -43,15 +60,24 @@ export type MessageRemoved = typeof MessageRemoved.Type;
 
 export type MessageRemovedPin = Assert<Pinned<typeof MessageRemoved, GeneratedMessageRemoved>>;
 
+/** One of a page's messages the viewer saved, and the saved item (to unsave it). */
+export const SavedMark = Schema.Struct({ messageId: MessageId, savedItemId: SavedItemId });
+
+export type SavedMark = typeof SavedMark.Type;
+
+export type SavedMarkPin = Assert<Pinned<typeof SavedMark, GeneratedSavedMark>>;
+
 /**
- * `GET /api/v1/rooms/:id/messages`: up to 40 root messages, oldest first, with their authors.
- * `before`/`after` are the ids to page from next, `null` at the start of the room / the present.
+ * `GET /api/v1/rooms/:id/messages` (or `/threads/:id/messages`): up to 40 messages, oldest
+ * first, with their authors and the viewer's saves among them. `before`/`after` are the ids to
+ * page from next, `null` at the start / the present.
  */
 export const MessagePage = Schema.Struct({
   messages: Schema.Array(MessageDTO),
   users: Schema.Array(User),
   before: Schema.NullOr(MessageId),
   after: Schema.NullOr(MessageId),
+  saved: Schema.Array(SavedMark),
 });
 
 export type MessagePage = typeof MessagePage.Type;
@@ -64,8 +90,23 @@ export const CreateMessage = Schema.Struct({
   markdownSource: Schema.String,
   replyToMessageId: Schema.NullOr(MessageId),
   replyNotifyAuthor: Schema.NullOr(Schema.Boolean),
+  attachmentSignedId: Schema.NullOr(Schema.String),
 });
 
 export type CreateMessage = typeof CreateMessage.Type;
 
 export type CreateMessagePin = Assert<Pinned<typeof CreateMessage, GeneratedCreateMessage>>;
+
+/** The body of `PATCH /api/v1/messages/:id`. Always carries the Markdown. */
+export const UpdateMessage = Schema.Struct({ markdownSource: Schema.String });
+
+export type UpdateMessage = typeof UpdateMessage.Type;
+
+export type UpdateMessagePin = Assert<Pinned<typeof UpdateMessage, GeneratedUpdateMessage>>;
+
+/** `GET /api/v1/messages/:id/source`: the edit box's starting Markdown. */
+export const MessageSource = Schema.Struct({ messageId: MessageId, markdownSource: Schema.String });
+
+export type MessageSource = typeof MessageSource.Type;
+
+export type MessageSourcePin = Assert<Pinned<typeof MessageSource, GeneratedMessageSource>>;

@@ -48,7 +48,14 @@ export function messageFixture(
     embedsSuppressed: false,
     replyToMessageId: null,
     forwardedFromMessageId: null,
+    forwardedAt: null,
+    forwardNote: null,
     editedAt: null,
+    attachment: null,
+    reactions: [],
+    boosts: [],
+    pinned: false,
+    thread: null,
     createdAt: at,
     updatedAt: at,
     ...change,
@@ -60,7 +67,7 @@ export function pageFixture(
   before: number | null = null,
   after: number | null = null,
 ): MessagePage {
-  return { messages: [...messages], users: [userFixture(7)], before, after };
+  return { messages: [...messages], users: [userFixture(7)], before, after, saved: [] };
 }
 
 export const meFixture: Me = {

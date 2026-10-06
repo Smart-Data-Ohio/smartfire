@@ -24,3 +24,15 @@ export type ThreadId = typeof ThreadId.Type;
 export const RoomCategoryId = Schema.Int.pipe(Schema.brand("RoomCategoryId"));
 
 export type RoomCategoryId = typeof RoomCategoryId.Type;
+
+export const BoostId = Schema.Int.pipe(Schema.brand("BoostId"));
+
+export type BoostId = typeof BoostId.Type;
+
+export const SavedItemId = Schema.Int.pipe(Schema.brand("SavedItemId"));
+
+export type SavedItemId = typeof SavedItemId.Type;
+
+export const ScheduledMessageId = Schema.Int.pipe(Schema.brand("ScheduledMessageId"));
+
+export type ScheduledMessageId = typeof ScheduledMessageId.Type;
