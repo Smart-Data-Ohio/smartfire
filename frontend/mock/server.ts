@@ -58,6 +58,7 @@ import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
 import { createServerInboxAmbient } from "./s3/ambient.ts";
 import { createSaved } from "./s3/saved.ts";
+import { createSearch } from "./s3/search.ts";
 import {
   buildWorld,
   DUE_REMINDER_DELAY_MS,
@@ -763,6 +764,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     inboxAmbient.start();
   }
 
+  /** Global search (S3), after the other modules' routes. */
+  const searchRoutes = createSearch(ctx).routes;
+
   // --- routing ---
 
   const api = (request: MockRequest, path: string): MockResponse | Promise<MockResponse> => {
@@ -805,7 +809,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       case "DELETE /rooms/:id/read":
         return { status: 200, json: markUnread(roomId, request.body) };
       default: {
-        const handler = dispatch(routes, method, path, query, request.body);
+        const handler = dispatch([...routes, ...searchRoutes], method, path, query, request.body);
 
         if (handler === null) throw notFound(`No route for ${method} /api/v1${path}`);
 
