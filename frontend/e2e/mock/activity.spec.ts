@@ -212,19 +212,37 @@ test("undoing a done message's removal brings it back done", async ({ page }) =>
   await openApp(page, "saved?status=done");
   await ready(page, "Saved");
 
+  const messageId =
+    (await rows(page).first().locator(".saved-row").getAttribute("data-message-id")) ?? "";
+
   const text = (await rows(page).first().locator(".saved-body").textContent()) ?? "";
 
-  await rows(page).first().locator(".list-row-open").focus();
+  expect(messageId).toMatch(/^\d+$/);
+
+  // Seeded messages can share a body; Undo creates a new saved item for the same message.
+  const message = rows(page).filter({
+    has: page.locator(`.saved-row[data-message-id="${messageId}"]`),
+  });
+
+  await message.locator(".list-row-open").focus();
   await page.keyboard.press("Delete");
-  await expect(rows(page).first().locator(".saved-body")).not.toHaveText(text);
+  await expect(message).toHaveCount(0);
   await page.getByRole("button", { name: "Undo" }).click();
   // Saved again it's the newest item, and still done.
-  await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
-  await expect(rows(page).first()).toContainText("Done");
+  await expect(rows(page).first().locator(".saved-row")).toHaveAttribute(
+    "data-message-id",
+    messageId,
+  );
+  await expect(message.locator(".saved-body")).toHaveText(text);
+  await expect(message).toHaveAttribute("data-state", "done");
 
   await page.getByRole("tab", { name: "In progress" }).click();
+  await expect(page.getByRole("tab", { name: "In progress" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
   await expect(rows(page).first()).toBeVisible();
-  await expect(page.locator(".page .saved-body", { hasText: text })).toHaveCount(0);
+  await expect(message).toHaveCount(0);
 });
 
 test("the sidebar leads to Saved and Scheduled", async ({ page }) => {
