@@ -167,6 +167,11 @@ async fn threads_list_show_and_page() {
             can_lock: true,
             can_unlock: false,
             can_delete: true,
+            can_convert_work: false,
+            can_manage_work: false,
+            can_update_work_status: false,
+            can_assign_work: false,
+            can_remove_work: false,
         }
     );
     // Kevin isn't a moderator or the creator, nor a member of the thread.
@@ -182,6 +187,11 @@ async fn threads_list_show_and_page() {
             can_lock: false,
             can_unlock: false,
             can_delete: false,
+            can_convert_work: false,
+            can_manage_work: false,
+            can_update_work_status: false,
+            can_assign_work: false,
+            can_remove_work: false,
         }
     );
     // A room Kevin isn't in, and a thread that doesn't exist.

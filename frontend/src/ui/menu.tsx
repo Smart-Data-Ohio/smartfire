@@ -448,6 +448,57 @@ export function MenuCheckboxItem({ checked, onCheckedChange, children }: MenuChe
   );
 }
 
+interface MenuRadioItemProps {
+  readonly checked: boolean;
+  readonly icon?: IconName;
+  /** A faint second line under the label. */
+  readonly description?: string;
+  readonly onSelect: () => void;
+  readonly children: ReactNode;
+}
+
+/**
+ * One choice of a set inside a menu (wrap the set in a MenuGroup). Choosing it closes the menu,
+ * like an item; the chosen one carries a check at the end.
+ */
+export function MenuRadioItem({
+  checked,
+  icon,
+  description,
+  onSelect,
+  children,
+}: MenuRadioItemProps) {
+  const { closeAll } = use(MenuContext);
+
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the menu's keydown handler turns Enter and Space into this click
+    <div
+      role="menuitemradio"
+      aria-checked={checked}
+      tabIndex={-1}
+      className="menu-item"
+      onPointerMove={focusOnPointer}
+      onClick={() => {
+        onSelect();
+        closeAll(true);
+      }}
+    >
+      <span className="menu-item-icon menu-item-lead">
+        {icon === undefined ? null : <Icon name={icon} />}
+      </span>
+      <span className="menu-item-label">
+        {children}
+        {description === undefined ? null : (
+          <span className="menu-item-description">{description}</span>
+        )}
+      </span>
+      <span className="menu-item-check" aria-hidden="true">
+        {checked ? <Icon name="check" /> : null}
+      </span>
+    </div>
+  );
+}
+
 export function MenuSeparator() {
   return <hr className="menu-separator" />;
 }
