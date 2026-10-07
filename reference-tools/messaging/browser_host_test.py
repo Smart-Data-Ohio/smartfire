@@ -98,6 +98,15 @@ class HostSourceTests(unittest.TestCase):
                 "test-support/agents_ui/normalized_cast_inputs.json.gz": b"normalized",
                 "test-support/agents_ui/render_replay_inputs.json.gz": b"replay",
                 "test-support/agents_ui/casting_followups_inputs.json": b"followups",
+                "frontend/src/auth/auth.css": b"auth styles",
+                "frontend/src/styles/index.css": b"shared styles",
+                "frontend/src/styles/fonts/example.woff2": b"font",
+                "frontend/src/motion/index.css": b"motion styles",
+                "frontend/src/ui/button.css": b"button styles",
+                "frontend/src/ui/text-field.css": b"field styles",
+                "frontend/src/ui/checkbox.css": b"checkbox styles",
+                "frontend/src/rooms/index.tsx": b"not an input",
+                "frontend/dist/index.html": b"not an input",
                 "target/debug/stale": b"not an input",
             }
             for relative, content in inputs.items():
@@ -116,6 +125,11 @@ class HostSourceTests(unittest.TestCase):
                     self.assertEqual((generated / relative).read_bytes(), inputs[relative])
                 self.assertEqual((generated / "parity/reference.sha").read_bytes(), b"pinned")
                 self.assertFalse((generated / "target").exists())
+                for relative in inputs:
+                    if relative.startswith("frontend/src/") and "/rooms/" not in relative:
+                        self.assertEqual((generated / relative).read_bytes(), inputs[relative])
+                self.assertFalse((generated / "frontend/src/rooms").exists())
+                self.assertFalse((generated / "frontend/dist").exists())
                 (generated / "stale.rs").write_bytes(b"old generated source")
                 (root / "public/500.html").write_bytes(b"updated error page")
                 (root / "reference-tools/messaging/older_provider_callbacks.rb").write_bytes(b"updated callback")
