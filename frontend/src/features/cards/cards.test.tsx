@@ -172,6 +172,7 @@ describe("polls", () => {
     const poll = screen.getByRole("region", { name: "Poll" });
     const group = within(poll).getByRole("group", { name: "Cast your vote" });
     const vote = within(poll).getByRole("button", { name: "Vote" });
+    const said = () => within(poll).getByRole("status").textContent;
 
     expect(total(poll)).toBe("4 votes");
     expect(vote.hasAttribute("disabled")).toBe(true);
@@ -181,11 +182,18 @@ describe("polls", () => {
     expect(within(poll).getByText("(your vote)")).toBeTruthy();
     expect(poll.querySelector(".poll-result[data-mine]")?.textContent).toContain("60%");
 
+    // Focus moves on to Change vote, which replaces the options; the result is said aloud.
+    expect(document.activeElement).toBe(within(poll).getByRole("button", { name: "Change vote" }));
+    await waitFor(() => expect(said()).toMatch(/^Voted for Tacos\. Results: Tacos 60%, Pizza/));
+
     await user.click(within(poll).getByRole("button", { name: "Change vote" }));
-    expect(within(poll).getByRole<HTMLInputElement>("radio", { name: "Tacos" }).checked).toBe(true);
+
+    const tacos = within(poll).getByRole<HTMLInputElement>("radio", { name: "Tacos" });
+
+    expect(tacos.checked).toBe(true);
+    expect(document.activeElement).toBe(tacos);
 
     // The arrow keys move the choice within the group, as radios do.
-    within(poll).getByRole("radio", { name: "Tacos" }).focus();
     await user.keyboard("{ArrowDown}");
     expect(within(poll).getByRole<HTMLInputElement>("radio", { name: "Pizza" }).checked).toBe(true);
     await user.click(within(poll).getByRole("button", { name: "Vote" }));
@@ -198,6 +206,32 @@ describe("polls", () => {
     await user.click(within(poll).getByRole("button", { name: "Retract" }));
     await waitFor(() => expect(within(poll).getByRole("radio", { name: "Tacos" })).toBeTruthy());
     expect(total(poll)).toBe("4 votes");
+    expect(document.activeElement).toBe(within(poll).getByRole("radio", { name: "Tacos" }));
+    await waitFor(() => expect(said()).toBe("Vote retracted."));
+  });
+
+  it("keeps a refused vote's options, says why, and keeps focus on them", async () => {
+    const user = userEvent.setup();
+
+    const allow = refuse(
+      (method, path) => method === "POST" && path.endsWith(`/polls/${polls.open}/vote`),
+      "This poll is closed",
+    );
+
+    await renderCards(messages.pollOpen);
+
+    const poll = screen.getByRole("region", { name: "Poll" });
+
+    await user.click(within(poll).getByRole("radio", { name: "Sushi" }));
+    await user.click(within(poll).getByRole("button", { name: "Vote" }));
+
+    const message = "Couldn't record your vote. This poll is closed";
+
+    await waitFor(() => expect(within(poll).getByRole("status").textContent).toBe(message));
+    expect(poll.querySelector(".card-error")?.textContent).toBe(message);
+    expect(total(poll)).toBe("4 votes");
+    expect(document.activeElement).toBe(within(poll).getByRole("radio", { name: "Tacos" }));
+    allow();
   });
 
   it("collects ticks before voting in a multiple-choice poll", async () => {

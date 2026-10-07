@@ -224,6 +224,45 @@ matrix("voting in a poll, changing it and taking it back", async ({ page, theme 
   await expect(poll.getByRole("radio", { name: "Tacos" })).toBeVisible();
 });
 
+test("voting from the keyboard keeps focus in the poll and says what happened", async ({
+  page,
+}) => {
+  await openAt(page, messages.pollOpen, "light");
+
+  const poll = row(page, messages.pollOpen);
+  const tacos = poll.getByRole("radio", { name: "Tacos" });
+  const pizza = poll.getByRole("radio", { name: "Pizza" });
+  const change = poll.getByRole("button", { name: "Change vote" });
+
+  await tacos.focus();
+  await page.keyboard.press("Space");
+  await expect(tacos).toBeChecked();
+  await page.keyboard.press("ArrowDown");
+  await expect(pizza).toBeChecked();
+  await expect(pizza).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(poll.getByRole("button", { name: "Vote" })).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  // The options give way to the results; focus lands on Change vote, not the page.
+  await expect(change).toBeFocused();
+  await expect(poll.getByRole("status")).toHaveText(/^Voted for Pizza\. Results: /);
+
+  await page.keyboard.press("Enter");
+  await expect(pizza).toBeFocused();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await expect(poll.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(change).toBeFocused();
+
+  await page.keyboard.press("Tab");
+  await expect(poll.getByRole("button", { name: "Retract" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(tacos).toBeFocused();
+  await expect(poll.getByRole("status")).toHaveText("Vote retracted.");
+});
+
 matrix("creating a poll from the + menu", async ({ page, theme }) => {
   await openAt(page, messages.pollOpen, theme);
   await page.getByRole("textbox", { name: /^Message #/ }).click();

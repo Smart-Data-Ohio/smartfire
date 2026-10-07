@@ -1,15 +1,15 @@
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { AnimatedNumber } from "../../motion/animated-number.tsx";
 import { pollView } from "../../store/cards.ts";
 import type { MessageDTO } from "../../store/model.ts";
-import { useStore } from "../../store/store.ts";
+import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
-import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { useAnnouncer } from "../destinations/live-region.tsx";
 import { useViewerId } from "../messages/use-message.ts";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { AvatarGroup } from "../threads/avatar-group.tsx";
@@ -23,8 +23,34 @@ type PollOption = Poll["options"][number];
 /** The most voters an option shows as faces. */
 const FACES = 3;
 
-function voteError(error: Error): void {
-  toast({ title: "Couldn't record your vote", description: error.message, tone: "danger" });
+/** Where focus goes once the control that had it is replaced: the options, or Change vote. */
+type FocusTarget = "choices" | "change";
+
+/** Each target's candidates, best first; the first one on screen takes focus. */
+const FOCUS_ORDER: Readonly<Record<FocusTarget, readonly string[]>> = {
+  choices: [".poll-choices input:checked", ".poll-choices input", "[data-poll-change]"],
+  change: ["[data-poll-change]", ".poll-choices input:checked", ".poll-choices input"],
+};
+
+function focusable(card: HTMLElement, target: FocusTarget): HTMLElement | null {
+  for (const selector of FOCUS_ORDER[target]) {
+    const found = card.querySelector<HTMLElement>(selector);
+
+    if (found !== null) {
+      return found;
+    }
+  }
+
+  return null;
+}
+
+/** "Tacos 60%, Pizza 40%": a poll's results read aloud. */
+function resultsText(poll: Poll): string {
+  const total = poll.options.reduce((sum, option) => sum + option.votes, 0);
+
+  return poll.options
+    .map((option) => `${option.label} ${percent(option.votes, total)}%`)
+    .join(", ");
 }
 
 /** "Single choice · Anonymous · Closes in 2 hours": what kind of poll it is. */
@@ -240,10 +266,14 @@ function LoadError({ retrying, onRetry }: LoadErrorProps) {
 }
 
 /**
- * A poll under its question: pick an option (or tick several) and vote, then the results as bars that grow into
- * place; change or take back a vote while it's open; final results once closed (the client
- * closes it itself when `closesAt` passes). Anonymous polls show counts only, and fetch the
- * viewer's own vote, which their `voterIds` can't tell.
+ * A poll under its question: pick an option (or tick several) and vote, then the results as bars
+ * that grow into place; change or take back a vote while it's open; final results once closed
+ * (the client closes it itself when `closesAt` passes). Anonymous polls show counts only, and
+ * fetch the viewer's own vote, which their `voterIds` can't tell.
+ *
+ * Voting, changing and retracting swap the controls, so focus moves on to the control that
+ * replaces the one that had it (the chosen option, or Change vote), and one live region per card
+ * says what happened.
  */
 export function PollCard({ message, poll }: { readonly message: MessageDTO; readonly poll: Poll }) {
   const viewerId = useViewerId() ?? 0;
@@ -253,6 +283,10 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
   const load = useStore((state) => state.cards.pollLoads[poll.id] ?? "idle");
   const [changing, setChanging] = useState(false);
   const [retried, setRetried] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [focusNext, setFocusNext] = useState<FocusTarget | null>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const { announce, region } = useAnnouncer();
   const view = pollView(poll, ballot, pending, viewerId, now);
   const unknown = view.myOptionIds === null;
 
@@ -271,14 +305,78 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
     }
   }, [unknown, load, message.roomId, poll.id]);
 
+  const skeleton = unknown && !view.closed;
+
+  // Runs after every render while a move is due, until the target is on screen (the results may
+  // still be loading). Focus moves only if it was in the card or fell to the page when the
+  // control that had it went: it never pulls the viewer back from somewhere else.
+  useEffect(() => {
+    const card = cardRef.current;
+
+    if (focusNext === null || card === null) {
+      return;
+    }
+
+    const target = focusable(card, focusNext);
+
+    if (target === null && skeleton) {
+      return;
+    }
+
+    const active = document.activeElement;
+
+    if (target !== null && (active === null || active === document.body || card.contains(active))) {
+      target.focus();
+    }
+
+    setFocusNext(null);
+  });
+
   const retry = () => {
     setRetried(true);
+    setFocusNext("choices");
     actions.cards.loadPoll(message.roomId, poll.id).catch(() => undefined);
   };
 
   const vote = (optionIds: readonly number[]) => {
+    const retracting = optionIds.length === 0;
+
+    const labels = poll.options.flatMap((option) =>
+      optionIds.includes(option.id) ? [option.label] : [],
+    );
+
     setChanging(false);
-    actions.cards.vote(message.roomId, poll.id, optionIds).catch(voteError);
+    setFailure(null);
+    setFocusNext(retracting ? "choices" : "change");
+
+    actions.cards.vote(message.roomId, poll.id, optionIds).then(
+      () => {
+        const landed = store.getState().messages[message.id]?.poll ?? poll;
+
+        announce(
+          retracting
+            ? "Vote retracted."
+            : `Voted for ${labels.join(", ")}. Results: ${resultsText(landed)}.`,
+        );
+      },
+      (error: Error) => {
+        const text = `Couldn't record your vote. ${error.message}`;
+
+        setFailure(text);
+        setFocusNext("choices");
+        announce(text);
+      },
+    );
+  };
+
+  const change = () => {
+    setChanging(true);
+    setFocusNext("choices");
+  };
+
+  const cancel = () => {
+    setChanging(false);
+    setFocusNext("change");
   };
 
   const mine = view.myOptionIds ?? [];
@@ -291,13 +389,18 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
   const failed = unknown && !view.closed && (load === "error" || (retried && load === "loading"));
 
   return (
-    <section className="card poll-card" data-closed={view.closed || undefined} aria-label="Poll">
+    <section
+      ref={cardRef}
+      className="card poll-card"
+      data-closed={view.closed || undefined}
+      aria-label="Poll"
+    >
       <PollMeta poll={view.poll} closed={view.closed} now={now} />
       {failed ? (
         <LoadError retrying={load === "loading"} onRetry={retry} />
       ) : (
         <SkeletonReveal
-          loading={unknown && !view.closed}
+          loading={skeleton}
           skeleton={
             <div className="poll-skeleton">
               {view.poll.options.map((option) => (
@@ -311,7 +414,7 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
               poll={view.poll}
               initial={mine}
               onVote={vote}
-              onCancel={changing ? () => setChanging(false) : null}
+              onCancel={changing ? cancel : null}
             />
           ) : (
             <ul className="poll-results">
@@ -329,6 +432,12 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
           )}
         </SkeletonReveal>
       )}
+      {failure === null ? null : (
+        <div className="card-error">
+          <Icon name="circle-alert" size={14} />
+          <span>{failure}</span>
+        </div>
+      )}
       <footer className="poll-footer">
         <span className="poll-total tabular">
           <AnimatedNumber value={view.poll.totalVotes} />{" "}
@@ -337,7 +446,7 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
         </span>
         {!view.closed && voted && !choosing ? (
           <span className="poll-footer-actions">
-            <Button variant="ghost" size="sm" onClick={() => setChanging(true)}>
+            <Button variant="ghost" size="sm" data-poll-change="" onClick={change}>
               Change vote
             </Button>
             <Button variant="ghost" size="sm" onClick={() => vote([])}>
@@ -346,6 +455,7 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
           </span>
         ) : null}
       </footer>
+      {region}
     </section>
   );
 }
