@@ -54,6 +54,8 @@ export interface StepsSummary {
   /** The step running now (the first, by position), if any. */
   readonly running: AgentStep | null;
   readonly failed: number;
+  /** Every step is done or failed (none pending or running). */
+  readonly settled: boolean;
   /** The total of the known durations, once nothing is pending or running; `null` otherwise. */
   readonly totalMs: number | null;
 }
@@ -69,6 +71,7 @@ export function summarizeSteps(steps: readonly AgentStep[]): StepsSummary {
     count: `${steps.length} ${steps.length === 1 ? "step" : "steps"}`,
     running,
     failed,
+    settled,
     totalMs:
       settled && durations.length > 0 ? durations.reduce((sum, each) => sum + each, 0) : null,
   };
@@ -130,7 +133,11 @@ export function MessageSteps({ steps }: { readonly steps: readonly AgentStep[] }
   }
 
   const summary = summarizeSteps(steps);
-  const lead = summary.running?.status ?? (summary.failed > 0 ? "failed" : "done");
+
+  // Done (or failed) only once every step has settled; pending while any still waits.
+  const lead =
+    summary.running?.status ??
+    (summary.settled ? (summary.failed > 0 ? "failed" : "done") : "pending");
 
   return (
     <div className="steps t-acc" data-open={open}>

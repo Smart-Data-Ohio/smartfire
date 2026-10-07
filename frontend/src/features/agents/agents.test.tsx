@@ -174,6 +174,27 @@ describe("steps on an agent message", () => {
     expect(settled).toMatchObject({ running: null, failed: 1, totalMs: 2200 });
   });
 
+  it("leads with pending until every step has settled", () => {
+    const { container, rerender } = render(
+      <MessageSteps steps={[step(1, "pending"), step(2, "pending")]} />,
+    );
+
+    const lead = () =>
+      container.querySelector(".steps-summary .step-icon")?.getAttribute("data-status");
+
+    expect(summarizeSteps([step(1, "pending")]).settled).toBe(false);
+    expect(lead()).toBe("pending");
+
+    rerender(<MessageSteps steps={[step(1, "done"), step(2, "pending")]} />);
+    expect(lead()).toBe("pending");
+
+    rerender(<MessageSteps steps={[step(1, "done"), step(2, "done")]} />);
+    expect(lead()).toBe("done");
+
+    rerender(<MessageSteps steps={[step(1, "done"), step(2, "failed")]} />);
+    expect(lead()).toBe("failed");
+  });
+
   it("formats durations in ms below a second, else seconds", () => {
     expect(formatDuration(420)).toBe("420 ms");
     expect(formatDuration(4200)).toBe("4.2 s");
