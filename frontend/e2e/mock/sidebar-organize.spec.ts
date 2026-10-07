@@ -269,6 +269,18 @@ test("favourites: star from the menu, reorder by drag, drop a channel back", asy
   await page.mouse.up();
   expect(await names(page, "favorites")).toEqual(["random", "Maya Okafor"]);
 
+  // Without a drag (touch has none): Move up from the row's menu.
+  await row(section(page, "favorites"), "Maya Okafor").click({ button: "right" });
+
+  const menu = page.getByRole("menu", { name: "Maya Okafor options" });
+
+  await expect(menu.getByRole("menuitem", { name: "Move down" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await menu.getByRole("menuitem", { name: "Move up" }).click();
+  await expect.poll(() => names(page, "favorites")).toEqual(["Maya Okafor", "random"]);
+
   // A drag's click doesn't navigate.
   await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
 });

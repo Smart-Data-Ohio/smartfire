@@ -2,7 +2,14 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Placement } from "../../lib/anchor.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import type { RoomCategory, SidebarRow } from "../../store/model.ts";
-import { canCategorize, defaultInvolvement } from "../../store/organize.ts";
+import {
+  canCategorize,
+  defaultInvolvement,
+  favoriteRows,
+  organizedSidebar,
+} from "../../store/organize.ts";
+import type { State } from "../../store/state.ts";
+import { useStore } from "../../store/store.ts";
 import {
   Menu,
   MenuGroup,
@@ -57,6 +64,23 @@ export function NotificationItems({ row, level }: NotificationItemsProps) {
   );
 }
 
+/** The favourites the sidebar shows, in order (one being hidden has left). */
+function shownFavorites(state: State): readonly SidebarRow[] {
+  return favoriteRows(organizedSidebar(state.sidebar)).filter(
+    (row) => row.membership.involvement !== "invisible",
+  );
+}
+
+/** Where a room sits among the shown favourites (-1 when it isn't one), and how many there are. */
+function useFavoritePlace(roomId: number): { readonly index: number; readonly count: number } {
+  const index = useStore((state) =>
+    shownFavorites(state).findIndex((row) => row.room.id === roomId),
+  );
+  const count = useStore((state) => shownFavorites(state).length);
+
+  return { index, count };
+}
+
 interface RoomMenuItemsProps {
   readonly row: SidebarRow;
   readonly categories: readonly RoomCategory[];
@@ -65,19 +89,38 @@ interface RoomMenuItemsProps {
 }
 
 /**
- * A conversation's menu: favourite, move to a category (channels only), notification level,
- * mute, and mark as read when there is something unread.
+ * A conversation's menu: favourite (and, for a favourite, move up or down among them), move to a
+ * category (channels only), notification level, mute, and mark as read when there is something
+ * unread.
  */
 export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsProps) {
   const { favoritePosition, roomCategoryId, involvement, unreadAt } = row.membership;
   const starred = favoritePosition !== null;
   const muted = involvement === "muted";
+  const favorite = useFavoritePlace(row.room.id);
 
   return (
     <>
       <MenuItem icon={starred ? "star-off" : "star"} onSelect={() => toggleFavorite(row)}>
         {starred ? "Remove from Favourites" : "Add to Favourites"}
       </MenuItem>
+      {starred && favorite.index !== -1 && favorite.count > 1 ? (
+        // Reordering without a drag (touch has none): the same move a drop makes.
+        <>
+          <MenuItem
+            disabled={favorite.index === 0}
+            onSelect={() => moveRoom(row, { kind: "favorite", index: favorite.index - 1 })}
+          >
+            Move up
+          </MenuItem>
+          <MenuItem
+            disabled={favorite.index === favorite.count - 1}
+            onSelect={() => moveRoom(row, { kind: "favorite", index: favorite.index + 1 })}
+          >
+            Move down
+          </MenuItem>
+        </>
+      ) : null}
       {canCategorize(row) ? (
         <SubMenu label="Move to" icon="folder-input">
           <MenuRadioItem

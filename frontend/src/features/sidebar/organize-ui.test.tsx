@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { SEED_IDS } from "../../../mock/server.ts";
 import type { Sidebar } from "../../gen/Sidebar.ts";
 import type { RoomCategory, RoomKind, SidebarRow } from "../../store/model.ts";
-import { organizedSidebar } from "../../store/organize.ts";
+import { favoriteRows, organizedSidebar } from "../../store/organize.ts";
 import { mutations, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { Button } from "../../ui/button.tsx";
@@ -29,6 +29,9 @@ beforeAll(() => {
 afterAll(() => network.restore());
 
 beforeEach(async () => {
+  // Each test starts from the seeded workspace, whatever the one before changed.
+  network.server.reset();
+
   const sidebar: Sidebar = await (await fetch("/api/v1/sidebar")).json();
 
   mutations.reset();
@@ -240,6 +243,32 @@ describe("a room's menu", () => {
 
     await user.click(screen.getByRole("menuitem", { name: "Add to Favourites" }));
     expect(seeded(QUIET).membership.favoritePosition).not.toBeNull();
+  });
+
+  it("moves a favourite up or down without a drag, the ends disabled", async () => {
+    const ENGINEERING = SEED_IDS.rooms.engineering;
+    const MAYA = SEED_IDS.rooms.dmMaya;
+    const favorites = () =>
+      favoriteRows(organizedSidebar(store.getState().sidebar)).map((entry) => entry.room.id);
+
+    expect(favorites()).toEqual([ENGINEERING, MAYA]);
+
+    const user = await open(seeded(ENGINEERING));
+
+    expect(screen.getByRole("menuitem", { name: "Move up" }).getAttribute("aria-disabled")).toBe(
+      "true",
+    );
+
+    await user.click(screen.getByRole("menuitem", { name: "Move down" }));
+    expect(favorites()).toEqual([MAYA, ENGINEERING]);
+    await waitFor(() => expect(favoriteRows(store.getState().sidebar).at(0)?.room.id).toBe(MAYA));
+  });
+
+  it("offers no Move up or down for a room that isn't a favourite", async () => {
+    await open(seeded(QUIET));
+
+    expect(screen.queryByRole("menuitem", { name: "Move up" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Move down" })).toBeNull();
   });
 
   it("mutes a room", async () => {
