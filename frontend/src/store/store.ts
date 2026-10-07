@@ -213,6 +213,8 @@ export const mutations = {
   markSavedStale: () => apply((state) => savedList.markSavedStale(state)),
   /** Every scheduled list reloads when next shown (a send that dropped it instead). */
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
+  /** Every activity list reloads when next shown (a room came into the sidebar). */
+  markActivityStale: () => apply((state) => activity.markActivityStale(state)),
   /** Missed events the server can't replay: every S3 list reloads when next shown. */
   markInboxStale: () =>
     apply((state) =>
