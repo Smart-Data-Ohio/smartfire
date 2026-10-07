@@ -166,6 +166,9 @@ pub fn facts(
                 run_url: thread.run_url.clone().filter(|url| https(url)),
                 result_updated_at: thread.result_updated_at.map(dto::time),
                 links,
+                // Owner/link rows can disappear without touching the thread; taking their
+                // live timestamps would make this revision go backwards after a deletion.
+                updated_at: dto::time(thread.updated_at),
             },
         );
     }
