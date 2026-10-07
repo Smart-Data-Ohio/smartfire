@@ -309,6 +309,11 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
     let stream = broadcast.stream_name();
     let attributes = [("maintain_scroll", frame.maintain_scroll.then_some("true"))];
     cable.broadcast_action_to(&[&stream], action, Target::Target(&frame.target), Some(&html), &attributes);
+    if let Some(campfire_db::broadcasts::Partial::ThreadIndicator { message_id, .. }) = &frame.partial
+        && cable.sync_wanted()
+    {
+        app.db.read_blocking(|conn| { app.broadcasts.sync_thread_indicator(conn, *message_id); Ok(()) })?;
+    }
     Ok(())
 }
 

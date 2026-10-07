@@ -14,11 +14,12 @@
 use std::sync::{Arc, OnceLock};
 
 use campfire_api_types::{
-    MessageDTO, MessageRemoved, Presence, RoomRead, RoomUnread, SidebarRow, SidebarRowRemoved,
-    SyncPayload, Typing, UserPresence,
+    MessageDTO, MessageReactions, MessageRemoved, PinState, Presence, RoomRead, RoomUnread,
+    SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator,
+    ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
-use campfire_db::{Connection, Database, Membership, Message, Room};
+use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room};
 
 use super::Cable;
 
@@ -26,6 +27,8 @@ use super::Cable;
 pub trait SyncRenderer: Send + Sync + 'static {
     /// The message as `GET /api/v1/rooms/:id/messages` serves it.
     fn message(&self, conn: &Connection, message: &Message) -> Option<MessageDTO>;
+    /// The message's reactions and boosts, as `POST /api/v1/messages/:id/boosts` answers them.
+    fn reactions(&self, conn: &Connection, message: &Message) -> Option<MessageReactions>;
     /// The membership's sidebar row, or `None` when the room isn't in that sidebar (an
     /// invisible membership, a deleted room).
     fn sidebar_row(
@@ -34,6 +37,14 @@ pub trait SyncRenderer: Send + Sync + 'static {
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<SidebarRow>>;
+    /// The thread as `GET /api/v1/threads/:id` serves it.
+    fn thread(&self, conn: &Connection, thread: &ChannelThread) -> Option<Thread>;
+    /// The reply indicator of `parent`'s thread: `Ok(None)` when it has none (any more).
+    fn thread_indicator(
+        &self,
+        conn: &Connection,
+        parent: &Message,
+    ) -> campfire_db::Result<Option<ThreadIndicator>>;
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
@@ -69,6 +80,13 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::message_remove", &["message.removed"]),
     ("Broadcasts::message_replace", &["message.updated"]),
     ("Broadcasts::message_part_replace", &["message.updated"]),
+    ("Broadcasts::message_thread_part_replace", &["message.updated"]),
+    ("Broadcasts::message_reactions_replace", &["message.reactions"]),
+    ("Broadcasts::thread_refresh", &["thread.unread"]),
+    ("Broadcasts::thread_created", &["thread.created"]),
+    ("Broadcasts::thread_updated", &["thread.updated"]),
+    ("Broadcasts::thread_removed", &["thread.removed"]),
+    ("Broadcasts::thread_read", &["thread.read"]),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
     ("Broadcasts::open_room_update", &["sidebar.row.upserted"]),
@@ -81,9 +99,11 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     ("broadcasts::read_room", &["room.read"]),
     ("TypingNotificationsChannel", &["typing"]),
-    // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`, and
-    // `user_<id>_unreads`/`user_<id>_reads`. Its other frames (message features, room
-    // composition, polls, pins, threads and directory partials) have no twin yet.
+    // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
+    // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
+    // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
+    // carries the thread's new count and activity). Its other frames (message features, room
+    // composition, polls, board rows and directory partials) have no twin yet.
     (
         "broadcasts::Broadcast",
         &[
@@ -91,8 +111,14 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "message.updated",
             "room.unread",
             "room.read",
+            "message.pinned",
+            "thread.unread",
+            "thread.indicator",
+            "thread.updated",
         ],
     ),
+    // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
+    ("campfire_api::saved_items", &["saved.changed"]),
     ("RoomRemovalBroadcast", &["sidebar.row.removed"]),
     (
         "user_status_settings::updates::StatusBadgeBroadcast",
@@ -103,7 +129,6 @@ pub const TWINS: &[(&str, &[&str])] = &[
 
 /// Broadcast points with no sync event yet: the SPA slices after S1 port them.
 pub const NOT_YET_TWINNED: &[&str] = &[
-    "Broadcasts::message_reactions_replace",
     "Broadcasts::boost_create",
     "Broadcasts::boost_remove",
     "board_automations::DigestNotes",
@@ -125,19 +150,10 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "agent_step::StepParentChange",
 ];
 
-/// Sync events the contract defines that no broadcast point publishes yet (the S2 and S3 events:
-/// their endpoints and twins come with the S2 and S3 server work). The coverage test fails when
-/// an event is in neither this list nor [`TWINS`], or in both.
+/// Sync events the contract defines that no broadcast point publishes yet (the S3 events: their
+/// endpoints and twins come with the S3 server work). The coverage test fails when an event is
+/// in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
-    "message.reactions",
-    "message.pinned",
-    "thread.indicator",
-    "thread.created",
-    "thread.updated",
-    "thread.removed",
-    "thread.unread",
-    "thread.read",
-    "saved.changed",
     "activity.item",
     "activity.removed",
     "scheduled.changed",
@@ -159,6 +175,10 @@ pub fn message_topic(message: &Message) -> String {
 
 pub fn room_topic(room_id: i64) -> String {
     format!("room:{room_id}")
+}
+
+pub fn thread_topic(thread_id: i64) -> String {
+    format!("thread:{thread_id}")
 }
 
 /// Publishes `payload` to `audience`. Serializes nothing while no sync socket is open.
@@ -220,6 +240,81 @@ pub fn message_updated_later(server: &Cable, slot: &RendererSlot, message_id: i6
         };
         message(&server, &slot, conn, &found, false);
     }));
+}
+
+/// `message.reactions` on the message's conversation, read afresh later (the boost
+/// broadcasts have no connection at hand).
+pub fn message_reactions_later(server: &Cable, slot: &RendererSlot, message_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let (Some(server), Ok(Some(found))) =
+            (server.upgrade(), Message::find_by_id(conn, message_id))
+        else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        if let Some(reactions) = renderer.reactions(conn, &found) {
+            send(
+                &server,
+                Audience::Topic(message_topic(&found)),
+                &SyncPayload::MessageReactions(reactions),
+                |publication| publication,
+            );
+        }
+    }));
+}
+
+/// `message.pinned` on the message's room: the pin badge's twin, sent as the badge is
+/// replaced. Nothing for a message that's gone (its `message.removed` says so).
+pub fn message_pinned(server: &Cable, conn: &Connection, message_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let state = (|| -> campfire_db::Result<Option<PinState>> {
+        let Some(message) = Message::find_by_id(conn, message_id)? else {
+            return Ok(None);
+        };
+        Ok(Some(PinState {
+            message_id,
+            room_id: message.room_id,
+            pinned: campfire_db::MessagePin::pinned(conn, message_id)?,
+            pin_count: campfire_db::MessagePin::count_for_room(conn, message.room_id)?,
+        }))
+    })();
+    match state {
+        Ok(Some(state)) => send(
+            server,
+            Audience::Topic(room_topic(state.room_id)),
+            &SyncPayload::MessagePinned(state),
+            |publication| publication,
+        ),
+        Ok(None) => {}
+        Err(error) => tracing::warn!(%error, message_id, "sync: pin state not read"),
+    }
+}
+
+/// `saved.changed` on the person's `user` topic: they saved (`Some` item, as it is now) or
+/// unsaved a message.
+pub fn saved_changed(
+    server: &Cable,
+    user_id: i64,
+    message_id: i64,
+    item: Option<campfire_api_types::SavedItem>,
+) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::User(user_id),
+        &SyncPayload::SavedChanged(SavedChanged { message_id, item }),
+        |publication| publication,
+    );
 }
 
 /// `message.removed` on the message's conversation.
@@ -320,12 +415,156 @@ pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
             .parse::<i64>()
             .ok()
     };
-    let room_id = |key: &str| payload.get(key).and_then(serde_json::Value::as_i64);
-    if let (Some(user_id), Some(room_id)) = (user_id("_unreads"), room_id("roomId")) {
+    let id = |key: &str| payload.get(key).and_then(serde_json::Value::as_i64);
+    if let (Some(user_id), Some(room_id)) = (user_id("_unreads"), id("roomId")) {
         room_unread(server, user_id, room_id, None, false);
-    } else if let (Some(user_id), Some(room_id)) = (user_id("_reads"), room_id("room_id")) {
+    } else if let (Some(user_id), Some(room_id)) = (user_id("_reads"), id("room_id")) {
         room_read(server, user_id, room_id);
+    } else if let (Some(user_id), Some(thread_id), Some(room_id)) =
+        (user_id("_unread_threads"), id("threadId"), id("roomId"))
+    {
+        let refresh_only = payload
+            .get("refreshOnly")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false);
+        thread_unread(server, user_id, thread_id, room_id, refresh_only);
     }
+}
+
+/// `thread.unread` on the member's `user` topic: the twin of `user_<id>_unread_threads`.
+pub fn thread_unread(server: &Cable, user_id: i64, thread_id: i64, room_id: i64, refresh_only: bool) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let payload = SyncPayload::ThreadUnread(ThreadUnread {
+        thread_id,
+        room_id,
+        refresh_only,
+    });
+    send(server, Audience::User(user_id), &payload, |publication| {
+        publication
+    });
+}
+
+/// `thread.read` on the person's `user` topic: they read the thread (new: no Turbo frame).
+pub fn thread_read(server: &Cable, user_id: i64, thread_id: i64, room_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let payload = SyncPayload::ThreadRead(ThreadRead { thread_id, room_id });
+    send(server, Audience::User(user_id), &payload, |publication| {
+        publication
+    });
+}
+
+/// `thread.indicator` on the parent's room, for the indicator replace of `parent_message_id`;
+/// then, while the thread is there, `thread.updated` with its new count and activity. Nothing
+/// for a parent that's gone (its `message.removed` says so).
+pub fn thread_indicator(server: &Cable, slot: &RendererSlot, conn: &Connection, parent_message_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let parent = match Message::find_by_id(conn, parent_message_id) {
+        Ok(Some(parent)) => parent,
+        Ok(None) => return,
+        Err(error) => {
+            return tracing::warn!(%error, parent_message_id, "sync: thread indicator not read");
+        }
+    };
+    let indicator = match renderer.thread_indicator(conn, &parent) {
+        Ok(indicator) => indicator,
+        Err(error) => {
+            return tracing::warn!(%error, parent_message_id, "sync: thread indicator not rendered");
+        }
+    };
+    let thread_id = indicator.as_ref().map(|indicator| indicator.thread_id);
+    send(
+        server,
+        Audience::Topic(room_topic(parent.room_id)),
+        &SyncPayload::ThreadIndicator(ThreadIndicatorChanged {
+            room_id: parent.room_id,
+            parent_message_id,
+            thread: indicator,
+        }),
+        |publication| publication,
+    );
+    if let Some(thread_id) = thread_id {
+        thread_changed(server, slot, conn, thread_id, false);
+    }
+}
+
+/// `thread.created` on the thread's room, or `thread.updated` on its room and its own topic.
+pub fn thread_changed(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    thread_id: i64,
+    created: bool,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let thread = match ChannelThread::find_by_id(conn, thread_id) {
+        Ok(Some(thread)) => thread,
+        Ok(None) => return,
+        Err(error) => return tracing::warn!(%error, thread_id, "sync: thread not read"),
+    };
+    let Some(dto) = renderer.thread(conn, &thread) else {
+        return;
+    };
+    if created {
+        let payload = SyncPayload::ThreadCreated(dto);
+        send(
+            server,
+            Audience::Topic(room_topic(thread.room_id)),
+            &payload,
+            |publication| publication,
+        );
+        return;
+    }
+    let payload = SyncPayload::ThreadUpdated(dto);
+    for topic in [room_topic(thread.room_id), thread_topic(thread.id)] {
+        send(server, Audience::Topic(topic), &payload, |publication| {
+            publication
+        });
+    }
+}
+
+/// [`thread_changed`], read afresh later: for broadcast points without a connection.
+pub fn thread_changed_later(server: &Cable, slot: &RendererSlot, thread_id: i64, created: bool) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        if let Some(server) = server.upgrade() {
+            thread_changed(&server, &slot, conn, thread_id, created);
+        }
+    }));
+}
+
+/// `thread.removed` on the thread's room and its own topic, whose followers then stop following
+/// it.
+pub fn thread_removed(server: &Cable, thread_id: i64, room_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let payload = SyncPayload::ThreadRemoved(ThreadRemoved { thread_id, room_id });
+    send(
+        server,
+        Audience::Topic(room_topic(room_id)),
+        &payload,
+        |publication| publication,
+    );
+    send(
+        server,
+        Audience::Topic(thread_topic(thread_id)),
+        &payload,
+        |publication| SyncPublication {
+            unsubscribe: Some(thread_topic(thread_id)),
+            ..publication
+        },
+    );
 }
 
 /// `sidebar.row.upserted` (or `sidebar.row.removed` when the room left their sidebar) for the

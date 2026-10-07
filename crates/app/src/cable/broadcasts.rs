@@ -192,6 +192,12 @@ impl Broadcasts {
         sync::message(&self.server, &self.sync, conn, message, created);
     }
 
+    /// `thread.indicator` (and `thread.updated`) for the indicator replace of a thread's parent
+    /// message, which a broadcast point outside this type rendered.
+    pub fn sync_thread_indicator(&self, conn: &Connection, parent_message_id: i64) {
+        sync::thread_indicator(&self.server, &self.sync, conn, parent_message_id);
+    }
+
     // The primitives
 
     /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`
@@ -259,6 +265,40 @@ impl Broadcasts {
         let reached = self.channel(&unread_rooms_stream_name(user_id), &UnreadRoom { room_id });
         sync::room_unread(&self.server, user_id, room_id, None, false);
         reached
+    }
+
+    // Channel threads. Only the refresh has a classic frame; the others are the sync socket's
+    // alone (the classic pages reload the thread list and pane).
+
+    /// `UnreadThreadsChannel.broadcast_to(user, thread_id:, room_id:, refresh_only: true)`: a
+    /// reply or the parent was deleted, so the member's row needs refreshing.
+    pub fn thread_refresh(&self, user_id: i64, room_id: i64, thread_id: i64) -> usize {
+        let reached = self.channel(
+            &format!("user_{user_id}_unread_threads"),
+            &serde_json::json!({"threadId": thread_id, "roomId": room_id, "refreshOnly": true}),
+        );
+        sync::thread_unread(&self.server, user_id, thread_id, room_id, true);
+        reached
+    }
+
+    /// A thread was started.
+    pub fn thread_created(&self, thread_id: i64) {
+        sync::thread_changed_later(&self.server, &self.sync, thread_id, true);
+    }
+
+    /// A thread was renamed, closed, reopened, locked or unlocked.
+    pub fn thread_updated(&self, thread_id: i64) {
+        sync::thread_changed_later(&self.server, &self.sync, thread_id, false);
+    }
+
+    /// A thread was deleted.
+    pub fn thread_removed(&self, thread_id: i64, room_id: i64) {
+        sync::thread_removed(&self.server, thread_id, room_id);
+    }
+
+    /// The person read a thread.
+    pub fn thread_read(&self, user_id: i64, thread_id: i64, room_id: i64) {
+        sync::thread_read(&self.server, user_id, thread_id, room_id);
     }
 
     // Message::Broadcasts (reference/app/models/message/broadcasts.rb)
@@ -372,6 +412,22 @@ impl Broadcasts {
             Some(html),
             true,
         );
+        sync::message_reactions_later(&self.server, &self.sync, message.id);
+    }
+
+    /// `broadcast_replace_to` a thread reply's conversation over `dom_id(message, part)`,
+    /// keeping the scroll position (ChannelThreadMessagesController#update's edit frames).
+    pub fn message_thread_part_replace(&self, room: &Room, message: &Message, part: &str, html: &str) {
+        self.turbo(
+            &Stream::conversation(room, message),
+            Action::Replace,
+            &message_dom_id(message, Some(part)),
+            Some(html),
+            true,
+        );
+        if part == "presentation" {
+            sync::message_updated_later(&self.server, &self.sync, message.id);
+        }
     }
 
     // Messages::BoostsController's `broadcast_create`/`broadcast_remove`

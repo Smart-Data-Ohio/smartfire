@@ -101,8 +101,8 @@ pub struct MessageRemoved {
 #[ts(export)]
 pub struct MessagePage {
     pub messages: Vec<MessageDTO>,
-    /// Every creator of a message on the page, once each, so the page renders without another
-    /// request.
+    /// Every creator of a message on the page and every replier its thread indicators name,
+    /// once each, so the page renders without another request.
     pub users: Vec<crate::User>,
     /// The id to pass as `before` for the next older page: the oldest message here when an older
     /// one exists (`exists_before`), else `null` (the start of the room).

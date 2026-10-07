@@ -40,6 +40,13 @@ impl SyncRenderer for Renderer {
             .ok()
     }
 
+    fn reactions(&self, conn: &Connection, message: &Message) -> Option<api::MessageReactions> {
+        let app = self.app.upgrade()?;
+        dto::message_reactions(conn, &app, message)
+            .inspect_err(|error| tracing::warn!(%error, message_id = message.id, "sync: reactions not rendered"))
+            .ok()
+    }
+
     fn sidebar_row(
         &self,
         conn: &Connection,
@@ -47,6 +54,22 @@ impl SyncRenderer for Renderer {
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {
         dto::sidebar_row(conn, room, membership)
+    }
+
+    fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
+        let app = self.app.upgrade()?;
+        Room::find(conn, thread.room_id)
+            .map(|room| dto::thread(thread, &room, app.db.env().now()))
+            .inspect_err(|error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"))
+            .ok()
+    }
+
+    fn thread_indicator(
+        &self,
+        conn: &Connection,
+        parent: &Message,
+    ) -> campfire_db::Result<Option<api::ThreadIndicator>> {
+        dto::thread_indicator(conn, parent)
     }
 
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>) {

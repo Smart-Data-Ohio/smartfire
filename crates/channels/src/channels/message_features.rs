@@ -167,5 +167,24 @@ pub(crate) fn deliver(
         &attributes,
     );
     cable.broadcast_stream_to(&[&broadcast.stream_name()], &html);
+    // The JSON twins: a quiet note or scheduled/slash post consumed here is `message.created`
+    // (or `message.updated`) as in `messaging`, and a pin badge is `message.pinned`.
+    if cable.sync_wanted() {
+        let twinned = app.db.read_blocking(|conn| {
+            match partial {
+                Partial::Message { message_id } if matches!(frame.action, TurboAction::Append | TurboAction::Replace) => {
+                    if let Some(message) = campfire_db::Message::find_by_id(conn, *message_id)? {
+                        app.broadcasts.sync_message(conn, &message, frame.action == TurboAction::Append);
+                    }
+                }
+                Partial::PinBadge { message_id } => crate::cable::sync::message_pinned(cable, conn, *message_id),
+                _ => {}
+            }
+            Ok(())
+        });
+        if let Err(error) = twinned {
+            tracing::warn!(%error, "sync: message feature twin not read");
+        }
+    }
     Ok(true)
 }

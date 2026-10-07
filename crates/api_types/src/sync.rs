@@ -147,15 +147,17 @@ pub enum SyncPayload {
     /// On `room:<id>`: a root message's reply indicator changed.
     #[serde(rename = "thread.indicator")]
     ThreadIndicator(ThreadIndicatorChanged),
-    /// On `room:<id>`: a thread was started there. New: the classic app shows new threads only
-    /// through the parent's indicator.
+    /// On `room:<id>` only: a thread was started there (a new thread has no followers yet but
+    /// its creator, whose tab has the `POST` response). New: the classic app shows new threads
+    /// only through the parent's indicator. Board posts don't publish it.
     #[serde(rename = "thread.created")]
     ThreadCreated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was renamed, closed, reopened, locked or
     /// unlocked, or its reply count or last activity moved. New, as `thread.created`.
     #[serde(rename = "thread.updated")]
     ThreadUpdated(Thread),
-    /// On `room:<id>` and `thread:<id>`: a thread was deleted.
+    /// On `room:<id>` and `thread:<id>`: a thread was deleted. Connections following
+    /// `thread:<id>` stop following it.
     #[serde(rename = "thread.removed")]
     ThreadRemoved(ThreadRemoved),
     /// On a member's `user` topic: a thread went unread for them, or needs refreshing.

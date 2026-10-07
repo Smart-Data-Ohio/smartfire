@@ -172,7 +172,7 @@ pub fn messages(
                 thread_id: message.thread_id,
                 creator_id: message.creator_id,
                 client_message_id: message.client_message_id.clone(),
-                body_html: presenter.rendered_body_html(message)?,
+                body_html: inline_mentions(&presenter.rendered_body_html(message)?),
                 markdown_source: message.markdown_source.clone(),
                 system_note: message.system_note,
                 action: message.action,
@@ -276,7 +276,7 @@ fn reactions_and_boosts(
             }
             None => reactions.push(api::Reaction {
                 content: boost.content,
-                title: reaction.title,
+                title: sentence_case(&reaction.title),
                 image_url: match reaction.icon {
                     Some(AvatarIcon::Image { url, .. }) => Some(url),
                     _ => None,
@@ -286,6 +286,166 @@ fn reactions_and_boosts(
         }
     }
     Ok((reactions, boosts))
+}
+
+/// A reaction's tooltip name read alike for every kind: a quick reaction's label ("Thumbs up"),
+/// an emoji's stored name ("thumbs_up") or an icon's title all start with a capital, with
+/// spaces for underscores.
+fn sentence_case(title: &str) -> String {
+    let spaced = title.replace('_', " ");
+    let mut chars = spaced.chars();
+    match chars.next() {
+        Some(first) => first.to_uppercase().chain(chars).collect(),
+        None => spaced,
+    }
+}
+
+/// The body with each mention's `<div class="mention …">` wrapper as a `<span>`: inside a `<p>`,
+/// an HTML parser closes the paragraph at a `<div>`, splitting the sentence. Only the JSON copy
+/// changes; the classic pages render the body as before.
+fn inline_mentions(html: &str) -> String {
+    const OPEN: &str = r#"<div class="mention"#;
+    if !html.contains(OPEN) {
+        return html.to_owned();
+    }
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find(OPEN) {
+        out.push_str(&rest[..start]);
+        let wrapper = &rest[start..];
+        match matching_close(wrapper) {
+            Some(close) => {
+                // `<div` → `<span`, and its own `</div>` → `</span>`; anything nested stays.
+                out.push_str("<span");
+                out.push_str(&wrapper["<div".len()..close]);
+                out.push_str("</span>");
+                rest = &wrapper[close + "</div>".len()..];
+            }
+            None => {
+                // Unbalanced: leave the rest as it is.
+                out.push_str(wrapper);
+                rest = "";
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The offset of the `</div>` that closes the `<div` at the start of `html`, counting the
+/// `<div>`s nested inside it.
+fn matching_close(html: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut at = 0;
+    while at < html.len() {
+        let tail = &html[at..];
+        if tail.starts_with("</div>") {
+            depth = depth.checked_sub(1)?;
+            if depth == 0 {
+                return Some(at);
+            }
+            at += "</div>".len();
+        } else if tail.starts_with("<div") && tail[4..].starts_with(|c: char| c == '>' || c.is_whitespace()) {
+            depth += 1;
+            at += "<div".len();
+        } else {
+            at += tail.chars().next().map_or(1, char::len_utf8);
+        }
+    }
+    None
+}
+
+/// The message's reactions and boosts after a change (`MessageReactions`).
+pub fn message_reactions(
+    conn: &Connection,
+    app: &AppState,
+    message: &Message,
+) -> Result<api::MessageReactions> {
+    let presenter = Presenter::new(conn, app, None);
+    let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
+    Ok(api::MessageReactions {
+        message_id: message.id,
+        room_id: message.room_id,
+        thread_id: message.thread_id,
+        reactions,
+        boosts,
+        updated_at: time(message.updated_at),
+    })
+}
+
+/// The pin state after a pin or unpin (`PinState`).
+pub fn pin_state(conn: &Connection, message: &Message) -> Result<api::PinState> {
+    Ok(api::PinState {
+        message_id: message.id,
+        room_id: message.room_id,
+        pinned: MessagePin::pinned(conn, message.id)?,
+        pin_count: MessagePin::count_for_room(conn, message.room_id)?,
+    })
+}
+
+/// `GET /api/v1/rooms/:id/pins`: newest first, at most `MessagePin::MAX_PER_ROOM`, with the
+/// messages and the people.
+pub fn pin_list(
+    conn: &Connection,
+    app: &AppState,
+    room_id: i64,
+    now: Timestamp,
+) -> Result<api::PinList> {
+    let mut statement = conn.prepare_cached(
+        r#"SELECT "message_pins"."message_id", "message_pins"."pinner_id", "message_pins"."created_at" FROM "message_pins" WHERE "message_pins"."room_id" = ? ORDER BY "message_pins"."created_at" DESC, "message_pins"."id" DESC LIMIT ?"#,
+    )?;
+    let pins: Vec<(i64, i64, Timestamp)> = statement
+        .query_map(
+            rusqlite::params![room_id, campfire_db::message_pin::MAX_PER_ROOM],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )?
+        .collect::<rusqlite::Result<_>>()?;
+    let mut pinned = Vec::with_capacity(pins.len());
+    for (message_id, _, _) in &pins {
+        if let Some(message) = Message::find_by_id(conn, *message_id)? {
+            pinned.push(message);
+        }
+    }
+    let messages = messages(conn, app, &pinned)?;
+    // A pin whose message is gone (or doesn't render) is left out, so every pin has its message.
+    let listed: BTreeSet<i64> = messages.iter().map(|message| message.id).collect();
+    let pins: Vec<_> = pins
+        .into_iter()
+        .filter(|(message_id, _, _)| listed.contains(message_id))
+        .collect();
+    let people: Vec<i64> = pins
+        .iter()
+        .map(|(_, pinner, _)| *pinner)
+        .chain(pinned.iter().map(|message| message.creator_id))
+        .collect();
+    Ok(api::PinList {
+        pins: pins
+            .into_iter()
+            .map(|(message_id, pinner_id, pinned_at)| api::Pin {
+                message_id,
+                pinner_id,
+                pinned_at: time(pinned_at),
+            })
+            .collect(),
+        messages,
+        users: users(conn, &app.secrets, people, now)?,
+    })
+}
+
+/// One of the viewer's `saved_items`.
+pub fn saved_item(item: &campfire_db::SavedItem) -> api::SavedItem {
+    api::SavedItem {
+        id: item.id,
+        message_id: item.message_id,
+        status: if item.status == "done" {
+            api::SavedStatus::Done
+        } else {
+            api::SavedStatus::InProgress
+        },
+        remind_at: item.remind_at.map(time),
+        reminded_at: item.reminded_at.map(time),
+        created_at: time(item.created_at),
+    }
 }
 
 /// The reply indicators of the root messages that started a thread: `channel_threads`'
@@ -679,4 +839,239 @@ pub fn presences(conn: &Connection, ids: &[i64], now: Timestamp) -> Result<Vec<a
             status_text: settings.status_text_display(now),
         })
         .collect())
+}
+
+/// A thread's status as the wire names it.
+pub fn thread_status(status: campfire_db::models::channel_thread::ThreadStatus) -> api::ThreadStatus {
+    use campfire_db::models::channel_thread::ThreadStatus as Db;
+    match status {
+        Db::Active => api::ThreadStatus::Active,
+        Db::Closed => api::ThreadStatus::Closed,
+        Db::Locked => api::ThreadStatus::Locked,
+    }
+}
+
+/// `message_forwards#destinations`: the viewer's rooms except boards, sorted by lowercased name,
+/// with each non-direct room's unlocked threads. A direct room is named by its other members.
+pub fn forward_destinations(
+    conn: &Connection,
+    viewer: &User,
+    now: Timestamp,
+) -> Result<api::ForwardDestinationList> {
+    let mut rooms = Room::for_user(conn, viewer.id)?;
+    rooms.sort_by_cached_key(|room| room.name.as_ref().map(|name| name.to_ascii_lowercase()));
+    let ids: Vec<i64> = rooms.iter().map(|room| room.id).collect();
+    let threads = campfire_db::ChannelThread::for_rooms(conn, &ids)?;
+    let mut direct_names = HashMap::<i64, Vec<String>>::new();
+    let mut statement = conn.prepare_cached(
+        "SELECT memberships.room_id, users.id, users.name FROM memberships \
+         INNER JOIN users ON users.id = memberships.user_id \
+         INNER JOIN rooms ON rooms.id = memberships.room_id \
+         WHERE rooms.type = 'Rooms::Direct' \
+         AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id = ?) \
+         ORDER BY memberships.id",
+    )?;
+    let rows = statement.query_map([viewer.id], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?, row.get::<_, String>(2)?))
+    })?;
+    for row in rows {
+        let (room, user, name) = row?;
+        if user != viewer.id {
+            direct_names.entry(room).or_default().push(name);
+        }
+    }
+    let destinations = rooms
+        .iter()
+        .filter(|room| !room.board())
+        .map(|room| {
+            let name = if room.direct() {
+                let names = direct_names.get(&room.id).map_or(&[][..], Vec::as_slice);
+                let name = campfire_views::helpers::to_sentence(names, " and ");
+                if name.is_empty() { viewer.name.clone() } else { name }
+            } else {
+                room.name.clone().unwrap_or_default()
+            };
+            let threads = if room.direct() {
+                Vec::new()
+            } else {
+                threads
+                    .iter()
+                    .filter(|thread| thread.room_id == room.id && thread.locked_at.is_none())
+                    .map(|thread| api::ForwardThread {
+                        id: thread.id,
+                        name: thread.name.clone(),
+                        status: thread_status(thread.status_in_room(room, now)),
+                    })
+                    .collect()
+            };
+            api::ForwardDestination { room_id: room.id, name, direct: room.direct(), threads }
+        })
+        .collect();
+    Ok(api::ForwardDestinationList { destinations })
+}
+
+/// A thread as every member of its room sees it.
+pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) -> api::Thread {
+    api::Thread {
+        id: thread.id,
+        room_id: thread.room_id,
+        parent_message_id: thread.parent_message_id,
+        creator_id: thread.creator_id,
+        name: thread.name.clone(),
+        status: thread_status(thread.status_in_room(room, now)),
+        reply_count: thread.messages_count,
+        last_activity_at: time(thread.last_activity_at),
+        auto_archive_after_minutes: thread.auto_archive_after_minutes,
+        created_at: time(thread.created_at),
+    }
+}
+
+/// A person's `thread_memberships` row.
+pub fn thread_membership(membership: &campfire_db::ThreadMembership) -> api::ThreadMembership {
+    use campfire_db::ThreadInvolvement as Db;
+    api::ThreadMembership {
+        thread_id: membership.thread_id,
+        involvement: match membership.involvement {
+            Db::Nothing => api::ThreadInvolvement::Nothing,
+            Db::Mentions => api::ThreadInvolvement::Mentions,
+            Db::Everything => api::ThreadInvolvement::Everything,
+        },
+        unread_at: membership.unread_at.map(time),
+        joined_at: time(membership.joined_at),
+    }
+}
+
+/// The reply indicator of the thread started from `parent`, if one was.
+pub fn thread_indicator(conn: &Connection, parent: &Message) -> Result<Option<api::ThreadIndicator>> {
+    Ok(thread_indicators(conn, std::slice::from_ref(parent))?.remove(&parent.id))
+}
+
+/// What `viewer` may do to `thread`, as `channel_threads#update` and `#destroy` decide it.
+pub fn thread_permissions(
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    viewer: &User,
+    member: bool,
+    now: Timestamp,
+) -> api::ThreadPermissions {
+    use campfire_db::models::channel_thread::ThreadStatus as Db;
+    let settings = thread.settings_manageable_in_room(room, viewer);
+    let moderator = thread.manageable_in_room(room, viewer);
+    let status = thread.status_in_room(room, now);
+    let locked = thread.locked_at.is_some();
+    // The viewer reads the thread from a room they belong to; a board post's name is work
+    // metadata, which its owner may change too (`channel_threads#update`).
+    let rename = if room.board() {
+        thread.work_manageable_in_room(room, viewer, true)
+    } else {
+        settings
+    };
+    api::ThreadPermissions {
+        can_rename: rename,
+        can_close: status == Db::Active && if room.board() { moderator } else { settings },
+        can_reopen: status == Db::Closed && member,
+        can_lock: moderator && !locked,
+        can_unlock: moderator && locked,
+        can_delete: moderator,
+    }
+}
+
+/// `GET /api/v1/threads/:id`.
+pub fn thread_detail(
+    conn: &Connection,
+    app: &AppState,
+    viewer: &User,
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    now: Timestamp,
+) -> Result<api::ThreadDetail> {
+    let membership = thread.membership_for(conn, viewer.id)?;
+    let parent = match thread.parent_message_id {
+        Some(id) => Message::find_by_id(conn, id)?,
+        None => None,
+    };
+    let parent_message = parent
+        .as_ref()
+        .map(|parent| message(conn, app, parent))
+        .transpose()?;
+    let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
+    Ok(api::ThreadDetail {
+        thread: self::thread(thread, room, now),
+        permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
+        membership: membership.as_ref().map(thread_membership),
+        parent_message,
+        users: users(conn, &app.secrets, people, now)?,
+    })
+}
+
+/// `GET /api/v1/rooms/:id/threads`: `channel_threads#index`'s filters, most recently active
+/// first, with the viewer's memberships and the creators.
+pub fn thread_list(
+    conn: &Connection,
+    secrets: &Secrets,
+    viewer_id: i64,
+    room: &Room,
+    filter: api::ThreadFilter,
+    now: Timestamp,
+) -> Result<api::ThreadList> {
+    use campfire_db::ChannelThread;
+    let threads: Vec<ChannelThread> = match filter {
+        api::ThreadFilter::Closed => ChannelThread::effectively_closed_for_room(conn, room.id, now)?,
+        api::ThreadFilter::All => ChannelThread::for_room(conn, room.id)?,
+        api::ThreadFilter::Locked => ChannelThread::for_room(conn, room.id)?
+            .into_iter()
+            .filter(|thread| thread.locked_at.is_some())
+            .collect(),
+        api::ThreadFilter::Active => ChannelThread::for_room(conn, room.id)?
+            .into_iter()
+            .filter(|thread| {
+                thread.closed_at.is_none()
+                    && thread.locked_at.is_none()
+                    && (room.board() || thread.auto_archive_at() > now)
+            })
+            .collect(),
+    };
+    let mut summaries = Vec::with_capacity(threads.len());
+    for thread in &threads {
+        let membership = thread.membership_for(conn, viewer_id)?;
+        summaries.push(api::ThreadSummary {
+            thread: self::thread(thread, room, now),
+            membership: membership.as_ref().map(thread_membership),
+        });
+    }
+    Ok(api::ThreadList {
+        users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
+        threads: summaries,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inline_mentions;
+
+    #[test]
+    fn a_mention_wrapper_becomes_a_span_with_its_own_close() {
+        let html = concat!(
+            r#"<p>Hi <div class="mention mention--user-1" data-user-id="1">"#,
+            r#"<a href="/users/1">D</a><div class="inner"><b>x</b></div>"#,
+            r#"<button>David</button></div>, and <div class="mention">"#,
+            r#"<span>Kevin</span></div>!</p><div class="after"></div>"#,
+        );
+        assert_eq!(
+            inline_mentions(html),
+            concat!(
+                r#"<p>Hi <span class="mention mention--user-1" data-user-id="1">"#,
+                r#"<a href="/users/1">D</a><div class="inner"><b>x</b></div>"#,
+                r#"<button>David</button></span>, and <span class="mention">"#,
+                r#"<span>Kevin</span></span>!</p><div class="after"></div>"#,
+            )
+        );
+    }
+
+    #[test]
+    fn an_unbalanced_mention_is_left_alone() {
+        let html = r#"<p><div class="mention"><div>open</p>"#;
+        assert_eq!(inline_mentions(html), html);
+        assert_eq!(inline_mentions("<p>plain</p>"), "<p>plain</p>");
+    }
 }

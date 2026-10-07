@@ -301,7 +301,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             }
         });
         let storage = c.app().storage.clone();
-        c.app()
+        let thread = c.app()
             .db
             .write(move |tx| {
                 let room = Room::find(tx.conn(), room_id)?;
@@ -353,7 +353,9 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
                 Ok(thread)
             })
             .await
-            .map_err(db_error)?
+            .map_err(db_error)?;
+        c.app().broadcasts.thread_created(thread.id);
+        thread
     };
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
         return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{}", thread.id)));
@@ -587,6 +589,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         Err(error) => return write_error(c, Error::internal(error)),
     };
+    c.app().broadcasts.thread_updated(thread_id);
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
         return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{thread_id}")));
     }
@@ -639,7 +642,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     match removed {
         Ok(false) => return Ok(concerns::head(StatusCode::FORBIDDEN)),
         Err(error) => return Err(db_error(error)),
-        _ => {}
+        _ => c.app().broadcasts.thread_removed(id, room.id),
     }
     if c.format()? == Some(&format::HTML) {
         c.redirect_to(&c.url_for(&format!("/rooms/{}", room.id)))

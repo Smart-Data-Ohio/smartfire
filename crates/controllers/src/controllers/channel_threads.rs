@@ -228,6 +228,7 @@ pub async fn read(c: &mut Ctx) -> Result {
         Ok(Some(member))
     }).await.map_err(db_error)?;
     let Some(member) = member else { return render_error(c, StatusCode::NOT_FOUND, "Join the thread before marking it read") };
+    c.app().broadcasts.thread_read(user_id, thread_id, thread.room_id);
     render_membership(c, thread, member).await
 }
 

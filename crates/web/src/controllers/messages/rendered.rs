@@ -37,8 +37,7 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
         }).map_err(|error| campfire_db::Error::Other(error.to_string()))?;
         for (part, html) in parts {
             if thread_scoped {
-                app.broadcasts.turbo(&Stream::conversation(&room, &message), campfire_cable::turbo::Action::Replace,
-                    &message_dom_id(&message, Some(part)), Some(&html), true);
+                app.broadcasts.message_thread_part_replace(&room, &message, part, &html);
             } else { app.broadcasts.message_part_replace(&room, &message, part, &html); }
         }
         Ok(presenter.take_render_refreshes())
@@ -70,8 +69,7 @@ pub async fn broadcast_thread_refresh(app: &App, room_id: i64, thread_id: i64) -
     let runtime = app.clone();
     app.db.read(move |conn| {
         for membership in campfire_db::Membership::for_room(conn, room_id)? {
-            runtime.broadcasts.channel(&format!("user_{}_unread_threads", membership.user_id),
-                &serde_json::json!({"threadId": thread_id, "roomId": room_id, "refreshOnly": true}));
+            runtime.broadcasts.thread_refresh(membership.user_id, room_id, thread_id);
         }
         Ok(())
     }).await.map_err(db_error)

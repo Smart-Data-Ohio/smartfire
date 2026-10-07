@@ -14,24 +14,13 @@ use campfire_web::controllers::presenters::page::db_error;
 use serde::de::DeserializeOwned;
 
 use crate::dto;
-use crate::error::{fail, not_found, prepare, respond, validation};
+use crate::error::{fail, not_found, validation};
 
 /// The most ids `GET /users` and `GET /presence` look up.
 const MAX_IDS: usize = 100;
 /// The largest request body read: a message at `SOURCE_LIMIT` characters, four bytes each,
 /// escaped, with room to spare.
-const BODY_LIMIT: usize = 1 << 20;
-
-macro_rules! endpoint {
-    ($(#[$doc:meta])* $name:ident => $body:ident) => {
-        $(#[$doc])*
-        pub async fn $name(c: &mut Ctx) -> Result {
-            prepare(c);
-            let result = $body(c).await;
-            respond(c, result)
-        }
-    };
-}
+pub(crate) const BODY_LIMIT: usize = 1 << 20;
 
 endpoint!(
     /// `GET /api/v1/me`
@@ -70,7 +59,7 @@ endpoint!(
     presence => index_presence
 );
 
-async fn before_actions(c: &mut Ctx) -> Result<()> {
+pub(crate) async fn before_actions(c: &mut Ctx) -> Result<()> {
     concerns::before_actions(
         c,
         Before {
@@ -82,7 +71,7 @@ async fn before_actions(c: &mut Ctx) -> Result<()> {
 }
 
 /// `set_room`, of an alive room (`RoomScoped` with `Room.alive`).
-async fn set_room(c: &mut Ctx) -> Result<(campfire_db::Membership, campfire_db::Room)> {
+pub(crate) async fn set_room(c: &mut Ctx) -> Result<(campfire_db::Membership, campfire_db::Room)> {
     let (membership, room) = concerns::set_room(c).await?;
     if room.deleted_at.is_some() {
         return Err(Error::NotFound);
@@ -91,7 +80,7 @@ async fn set_room(c: &mut Ctx) -> Result<(campfire_db::Membership, campfire_db::
 }
 
 /// The JSON body as `T`; anything else is a 422.
-async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
+pub(crate) async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
     let bytes = c.read_body(BODY_LIMIT).await;
     serde_json::from_slice(&bytes).map_err(|error| {
         fail(
@@ -104,7 +93,7 @@ async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
     })
 }
 
-fn now(c: &Ctx) -> campfire_db::Timestamp {
+pub(crate) fn now(c: &Ctx) -> campfire_db::Timestamp {
     c.app().db.env().now()
 }
 
@@ -173,6 +162,11 @@ enum Cursor {
 async fn index_messages(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (_, room) = set_room(c).await?;
+    message_page(c, Timeline::Room(room.id)).await
+}
+
+/// A [`api::MessagePage`] of `timeline`, by the `before`, `after` or `around` cursor.
+pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
     let mut given = Vec::new();
     for key in ["before", "after", "around"] {
         if let Some(value) = c.param_str(key) {
@@ -198,18 +192,17 @@ async fn index_messages(c: &mut Ctx) -> Result {
             ));
         }
     };
-    let (app, now, room_id) = (c.app().clone(), now(c), room.id);
+    let (app, now) = (c.app().clone(), now(c));
     let viewer_id = concerns::require_current_user(c)?.id;
     let page = c
         .app()
         .db
         .read(move |conn| {
-            let timeline = Timeline::Room(room_id);
             let anchor = |id| Message::find_in(conn, timeline, id);
             // A `before`/`after` cursor whose message was deleted since pages from its id, so
             // paging doesn't stall on it. Messages are deleted outright, so a cursor that isn't
-            // on this timeline but still exists is another room's or a thread's: that's a 404,
-            // as is an `around` anchor that's gone.
+            // on this timeline but still exists is another room's or thread's, or the room's
+            // root timeline's: that's a 404, as is an `around` anchor that's gone.
             let gone = |error: &campfire_db::Error, id: i64| -> campfire_db::Result<bool> {
                 if !matches!(error, campfire_db::Error::RecordNotFound(_)) {
                     return Ok(false);
@@ -243,14 +236,16 @@ async fn index_messages(c: &mut Ctx) -> Result {
                 Some(newest) if Message::exists_after(conn, timeline, newest)? => Some(newest.id),
                 _ => None,
             };
+            let dtos = dto::messages(conn, &app, &messages)?;
+            // The authors, and the repliers the thread indicators name, so their avatars need
+            // no `GET /users`.
+            let people = dtos.iter().flat_map(|message| {
+                let repliers = message.thread.iter().flat_map(|thread| thread.replier_ids.iter());
+                std::iter::once(message.creator_id).chain(repliers.copied())
+            });
             Ok(api::MessagePage {
-                users: dto::users(
-                    conn,
-                    &app.secrets,
-                    messages.iter().map(|message| message.creator_id),
-                    now,
-                )?,
-                messages: dto::messages(conn, &app, &messages)?,
+                users: dto::users(conn, &app.secrets, people.collect::<Vec<_>>(), now)?,
+                messages: dtos,
                 saved: dto::saved(conn, viewer_id, &messages)?,
                 before,
                 after,
@@ -363,7 +358,7 @@ async fn post_message(c: &mut Ctx) -> Result {
 }
 
 /// The blob a direct upload's signed id names exists (`ActiveStorage::Blob.find_signed`).
-async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
+pub(crate) async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
     let app = c.app();
     let now = app.clock.now();
     let Some(id) =

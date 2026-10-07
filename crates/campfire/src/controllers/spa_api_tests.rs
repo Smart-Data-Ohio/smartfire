@@ -18,9 +18,9 @@ use crate::controllers::presenters::test_support::{
 
 /// Rooms in the seed: HQ holds David and Kevin (and no messages); All Talk holds David and 131
 /// messages; All Pets holds David but not Kevin.
-const ALL_PETS: i64 = 104393281;
+pub(super) const ALL_PETS: i64 = 104393281;
 
-async fn app(enabled: bool) -> Option<TestApp> {
+pub(super) async fn app(enabled: bool) -> Option<TestApp> {
     let env: &[(&str, &str)] = if enabled {
         &[("SPA_ENABLED", "1")]
     } else {
@@ -29,22 +29,22 @@ async fn app(enabled: bool) -> Option<TestApp> {
     TestApp::boot_seed_with_env("default", seed_clock(), env).await
 }
 
-fn get(path: &str) -> Req {
+pub(super) fn get(path: &str) -> Req {
     Req::new(Method::GET, path).header("accept", "application/json")
 }
 
-fn json_body(method: Method, path: &str, body: &Value) -> Req {
+pub(super) fn json_body(method: Method, path: &str, body: &Value) -> Req {
     Req::new(method, path)
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(body.to_string())
 }
 
-fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
+pub(super) fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
     serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
 }
 
-fn tag(reply: &Reply) -> String {
+pub(super) fn tag(reply: &Reply) -> String {
     let envelope: api::ApiErrorResponse = parse(reply);
     let value = serde_json::to_value(&envelope.error).unwrap();
     value["_tag"].as_str().unwrap().to_string()
@@ -386,7 +386,7 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
 }
 
 /// A message in All Talk with reactions: Jason's 💯.
-const BOOSTED: i64 = 136976342;
+pub(super) const BOOSTED: i64 = 136976342;
 
 #[tokio::test]
 async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
@@ -623,7 +623,7 @@ async fn reads_and_unreads_answer_the_read_state() {
 
 // --- The sync socket ---------------------------------------------------------------------------
 
-struct Sync {
+pub(super) struct Sync {
     socket: tokio_tungstenite::WebSocketStream<
         tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
     >,
@@ -632,7 +632,7 @@ struct Sync {
 }
 
 impl Sync {
-    async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
+    pub(super) async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
         Self::open(addr, cookie, topics, Value::Null).await
     }
 
@@ -686,7 +686,7 @@ impl Sync {
         }
     }
 
-    async fn welcome(&mut self) {
+    pub(super) async fn welcome(&mut self) {
         assert!(matches!(
             self.next().await,
             Some(api::ServerFrame::Welcome { resumed: false, .. })
@@ -694,7 +694,7 @@ impl Sync {
     }
 
     /// Events until one matches, failing on anything `forbidden` matches first.
-    async fn until(
+    pub(super) async fn until(
         &mut self,
         wanted: impl Fn(&api::SyncEvent) -> bool,
         forbidden: impl Fn(&api::SyncEvent) -> bool,
@@ -715,7 +715,7 @@ impl Sync {
     }
 }
 
-async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
+pub(super) async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let router = a.booted.router.clone();
@@ -725,7 +725,7 @@ async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
     )
 }
 
-fn created_in(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+pub(super) fn created_in(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| matches!(&event.payload, api::SyncPayload::MessageCreated(message) if message.room_id == room_id)
 }
 

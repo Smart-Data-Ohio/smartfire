@@ -356,6 +356,20 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
         drive_file_ids: params.get("drive_file_ids").map(|_| attributes.drive_file_ids),
         ..Default::default()
     };
+    apply_human_edit(c, thread_id, message, changes, attachment, attachment_given).await
+}
+
+/// The SPA's edit (`PATCH /api/v1/messages/:id`): the classic update given only
+/// `message[markdown_source]`.
+pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String) -> Result<Message> {
+    let changes = campfire_db::MessageChanges { markdown_source: Some(markdown_source), ..Default::default() };
+    let attachment = Assignment::Unchanged.stage(c.app()).await?;
+    apply_human_edit(c, thread_id, message, changes, attachment, false).await
+}
+
+/// The write half of [`update_human_message`]: a locked thread refuses, a rich-text message
+/// edited into Markdown keeps its attachments, then `assign_attributes` + `save!`.
+async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, changes: campfire_db::MessageChanges, attachment: Assignment<Staged>, attachment_given: bool) -> Result<Message> {
     let preserve = !message.markdown() && changes.markdown_source.as_ref().is_some_and(|source| !source.chars().all(char::is_whitespace));
     let id = message.id;
     let app = c.app().clone();
@@ -486,6 +500,84 @@ pub async fn create_message_into(c: &Ctx, room: &Room, thread: Option<campfire_d
 /// in the create's write transaction, so retries racing each other can't both create.
 pub async fn create_or_find_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
     create_message_outcome(c, room, None, attributes, false, true).await
+}
+
+/// [`create_or_find_message`] for a reply in `thread`.
+pub async fn create_or_find_reply(c: &Ctx, room: &Room, thread: campfire_db::ChannelThread, attributes: MessageParams) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+    create_message_outcome(c, room, Some(thread), attributes, false, true).await
+}
+
+/// What [`create_or_find_thread`] did.
+pub enum ThreadOutcome {
+    /// The thread, with its first reply.
+    Created(campfire_db::ChannelThread, Message),
+    /// A retry: the thread the reply's `client_message_id` already started.
+    Replay(campfire_db::ChannelThread, Message),
+    /// The reply's `client_message_id` already names a message outside any thread.
+    ClientMessageIdTaken,
+}
+
+/// `channel_threads#create` in a channel (not a board): the thread on `parent_message_id`, the
+/// creator's thread membership and the first reply, in one write. A retry of the reply's
+/// `client_message_id` finds the thread its first attempt started. Posts nothing itself; the
+/// thread's frames come from its write, as the classic action's do.
+pub async fn create_or_find_thread(c: &Ctx, room: &Room, parent_message_id: i64, name: Option<String>, attributes: MessageParams) -> Result<ThreadOutcome> {
+    use campfire_db::{ChannelThread, Membership, NewChannelThread, ThreadMembership};
+    let creator_id = require_current_user(c)?.id;
+    let room_id = room.id;
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
+    let storage = c.app().storage.clone();
+    let outcome = c
+        .app()
+        .db
+        .write(move |tx| {
+            if let Some(client_message_id) = attributes.client_message_id.as_deref()
+                && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
+            {
+                return Ok(match duplicate.thread_id {
+                    Some(thread_id) => ThreadOutcome::Replay(ChannelThread::find(tx.conn(), thread_id)?, duplicate),
+                    None => ThreadOutcome::ClientMessageIdTaken,
+                });
+            }
+            let room = Room::find(tx.conn(), room_id)?;
+            if room.deleted_at.is_some() || Membership::find_by_room_and_user(tx.conn(), room_id, creator_id)?.is_none() {
+                return Err(campfire_db::Error::RecordNotFound("Membership"));
+            }
+            let mut thread = ChannelThread::create(tx, NewChannelThread {
+                room_id,
+                creator_id,
+                parent_message_id: Some(parent_message_id),
+                name,
+                ..Default::default()
+            })?;
+            ThreadMembership::join(tx, thread.id, creator_id)?;
+            let blob = attachment_blob(tx, attachment)?;
+            let message = thread.post_message(tx, creator_id, NewMessage {
+                markdown_source: attributes.markdown_source,
+                client_message_id: attributes.client_message_id,
+                attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                reply_to_message_id: attributes.reply_to_message_id,
+                reply_notify_author: attributes.reply_notify_author,
+                ..Default::default()
+            })?;
+            if let Some(blob) = &blob { attachments::enqueue_analysis(tx, blob); }
+            crate::messaging::process_message_attachment(tx, storage, &message)?;
+            Ok(ThreadOutcome::Created(thread, message))
+        })
+        .await
+        .map_err(db_error)?;
+    match outcome {
+        ThreadOutcome::Created(thread, message) => {
+            let (thread_id, message_id) = (thread.id, message.id);
+            c.app().db.read(move |conn| Ok(ThreadOutcome::Created(campfire_db::ChannelThread::find(conn, thread_id)?, Message::find(conn, message_id)?)))
+                .await
+                .map_err(db_error)
+        }
+        replay => Ok(replay),
+    }
 }
 
 fn created_message(outcome: campfire_db::models::agent_posting::PostingOutcome) -> Result<Message> {

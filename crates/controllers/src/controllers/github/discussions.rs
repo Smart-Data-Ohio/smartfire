@@ -22,17 +22,25 @@ pub async fn create(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            crate::integrations::github::threads::discuss(tx, room_id, user_id, id, parent)
+            use crate::integrations::github::threads::{PullRequestThread, discuss};
+            // Whether this write starts the thread, for the SPA's `thread.created`.
+            let existed = PullRequestThread::for_room_pr(tx.conn(), room_id, id)?.is_some();
+            discuss(tx, room_id, user_id, id, parent).map(|mapping| (mapping, !existed))
         })
         .await
     {
-        Ok(mapping) => c.redirect_to_with(
-            &campfire_routes::room_thread(room_id, mapping.channel_thread_id),
-            Redirect {
-                status: Some(StatusCode::SEE_OTHER),
-                ..Default::default()
-            },
-        ),
+        Ok((mapping, created)) => {
+            if created {
+                c.app().broadcasts.thread_created(mapping.channel_thread_id);
+            }
+            c.redirect_to_with(
+                &campfire_routes::room_thread(room_id, mapping.channel_thread_id),
+                Redirect {
+                    status: Some(StatusCode::SEE_OTHER),
+                    ..Default::default()
+                },
+            )
+        }
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             if c.format()? == Some(&format::JSON) {
                 c.json(
