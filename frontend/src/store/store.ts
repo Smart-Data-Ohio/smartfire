@@ -270,15 +270,22 @@ export const mutations = {
     apply((state) => work.landWorkList(state, filter, list, generation)),
   // --- S4: agents ---
   setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
-  landAgentDirectory: (page: AgentDirectory, generation: number) =>
-    apply((state) => agents.landDirectory(state, page, generation)),
+  landAgentDirectory: (
+    page: AgentDirectory,
+    generation: number,
+    sentLive: agents.AgentsSlice["live"],
+  ) => apply((state) => agents.landDirectory(state, page, generation, sentLive)),
   setAgentDirectoryFailed: (error: string, generation: number) =>
     apply((state) => agents.setDirectoryFailed(state, error, generation)),
   setAgentProfileLoading: (agentId: number) =>
     apply((state) => agents.setProfileLoading(state, agentId)),
-  landAgentProfile: (profile: AgentProfile) => apply((state) => agents.landProfile(state, profile)),
-  setAgentProfileFailed: (agentId: number, error: string, missing: boolean) =>
-    apply((state) => agents.setProfileFailed(state, agentId, error, missing)),
+  landAgentProfile: (
+    profile: AgentProfile,
+    generation: number,
+    sentLive: agents.AgentsSlice["live"],
+  ) => apply((state) => agents.landProfile(state, profile, generation, sentLive)),
+  setAgentProfileFailed: (agentId: number, error: string, missing: boolean, generation: number) =>
+    apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
   setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
     apply((state) => approvals.setApprovalListLoading(state, key, more)),
   setApprovalListFailed: (key: approvals.ApprovalListKey, error: string, generation?: number) =>

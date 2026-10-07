@@ -136,7 +136,7 @@ describe("the agent directory and profiles", () => {
   });
 
   it("marks a 404 profile missing, and keeps a shown one on another failure", () => {
-    const missing = setProfileFailed(initialState, 40, "Agent not found", true);
+    const missing = setProfileFailed(initialState, 40, "Agent not found", true, 0);
 
     expect(profileOf(missing, 40)).toMatchObject({ status: "error", missing: true });
 
@@ -152,7 +152,7 @@ describe("the agent directory and profiles", () => {
       users: [bot(40, "Bea")],
     };
 
-    const shown = setProfileFailed(landProfile(initialState, profile), 40, "Offline", false);
+    const shown = setProfileFailed(landProfile(initialState, profile, 0), 40, "Offline", false, 0);
 
     expect(profileOf(shown, 40)).toMatchObject({ status: "ready", error: "Offline" });
     expect(shown.users[40]?.name).toBe("Bea");
@@ -160,6 +160,92 @@ describe("the agent directory and profiles", () => {
 });
 
 describe("agent.status", () => {
+  it("keeps a GET's newer status when an event older than that GET follows", () => {
+    const live = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const loading = setDirectoryLoading(live);
+
+    const loaded = landDirectory(
+      loading,
+      { agents: [row(40, { statusChangedAt: at(20) })], users: [bot(40, "Bea")] },
+      directoryGeneration(loading),
+      loading.agents.live,
+    );
+
+    const next = applyEvents(
+      loaded,
+      [
+        {
+          seq: 2,
+          topic: "user:1",
+          type: "agent.status",
+          data: status({ statusChangedAt: at(15) }),
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(loaded);
+    expect(next.agents.rows[40]).toMatchObject({ status: "idle", statusChangedAt: at(20) });
+  });
+
+  it("keeps a newer status when an event with an older statusChangedAt follows", () => {
+    const newer = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const next = applyEvents(
+      newer,
+      [
+        {
+          seq: 2,
+          topic: "user:1",
+          type: "agent.status",
+          data: status({
+            status: "idle",
+            statusChangedAt: at(5),
+            workingPresence: null,
+            workingPresenceExpiresAt: null,
+          }),
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(newer);
+    expect(next.agents.rows[40]?.status).toBe("working");
+    expect(workingPresenceAt(next, 40, NOW)).toBe("Reading the logs");
+  });
+
+  it("keeps an event's newer timestamp even on a GET sent after that event", () => {
+    const newer = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const loading = setDirectoryLoading(newer);
+
+    const next = landDirectory(
+      loading,
+      { agents: [row(40, { statusChangedAt: at(5) })], users: [bot(40, "Bea")] },
+      directoryGeneration(loading),
+      loading.agents.live,
+    );
+
+    expect(next.agents.rows[40]?.status).toBe("working");
+    expect(next.users[40]?.agent?.status).toBe("working");
+  });
+
   it("updates the badge, the row and the working presence, and re-sorts on suspension", () => {
     const next = event({
       seq: 1,
