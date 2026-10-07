@@ -27,7 +27,7 @@ describe("links to classic pages", () => {
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/searches"),
+      link("/work"),
       link("/users/7/profile"),
       link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),

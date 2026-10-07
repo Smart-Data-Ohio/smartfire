@@ -60,7 +60,10 @@ import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
 import { createServerInboxAmbient } from "./s3/ambient.ts";
+import { CARD_IDS, createCards } from "./s3/cards.ts";
+import { createOrganize } from "./s3/organize.ts";
 import { createSaved } from "./s3/saved.ts";
+import { createSearch } from "./s3/search.ts";
 import {
   buildWorld,
   DUE_REMINDER_DELAY_MS,
@@ -119,6 +122,7 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
+  cards: CARD_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -688,7 +692,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const cards = createCards(ctx);
+
   const routes = [
+    ...cards.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -700,6 +707,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createSettings(ctx, uploads).routes,
     ...admin.routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
+    ...createOrganize(ctx).routes,
   ];
 
   composer.arm();
@@ -770,6 +778,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     inboxAmbient.start();
   }
 
+  /** Global search (S3), after the other modules' routes. */
+  const searchRoutes = createSearch(ctx).routes;
+
   // --- routing ---
 
   const api = (request: MockRequest, path: string): MockResponse | Promise<MockResponse> => {
@@ -812,7 +823,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       case "DELETE /rooms/:id/read":
         return { status: 200, json: markUnread(roomId, request.body) };
       default: {
-        const handler = dispatch(routes, method, path, query, request.body);
+        const handler = dispatch([...routes, ...searchRoutes], method, path, query, request.body);
 
         if (handler === null) throw notFound(`No route for ${method} /api/v1${path}`);
 
@@ -943,6 +954,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "cards":
+        return { status: 200, json: cards.control(body) };
       case "reset":
         server.reset();
 

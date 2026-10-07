@@ -73,7 +73,7 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
-    screen("searches#index", "/searches", "/app/search", false),
+    screen("searches#index", "/searches", "/app/search", true),
     screen("work_threads#index", "/work", "/app/work", false),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(

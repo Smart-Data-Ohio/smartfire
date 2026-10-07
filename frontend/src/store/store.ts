@@ -21,11 +21,14 @@ import type {
   Boot,
   ConnectionStatus,
   Me,
+  Membership,
   MessageDTO,
   MessagePage,
   PendingMessage,
+  RoomCategory,
   RoomDetail,
   Sidebar,
+  SidebarRow,
   SyncEvent,
   Thread,
   ThreadFilter,
@@ -33,6 +36,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import * as organize from "./organize.ts";
 import * as reduce from "./reducers.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
@@ -209,11 +213,33 @@ export const mutations = {
   markSavedStale: () => apply((state) => savedList.markSavedStale(state)),
   /** Every scheduled list reloads when next shown (a send that dropped it instead). */
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
+  /** Every activity list reloads when next shown (a room came into the sidebar). */
+  markActivityStale: () => apply((state) => activity.markActivityStale(state)),
   /** Missed events the server can't replay: every S3 list reloads when next shown. */
   markInboxStale: () =>
     apply((state) =>
       scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
     ),
+  /** Sidebar organisation (S3): pending changes, category replies, membership replies. */
+  addSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.addOverlay(state, entry)),
+  dropSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.dropOverlay(state, entry)),
+  upsertCategory: (category: RoomCategory) =>
+    apply((state) => organize.upsertCategory(state, category)),
+  mergeOrganization: (rows: readonly SidebarRow[]) =>
+    apply((state) => organize.mergeOrganization(state, rows)),
+  landCreatedCategory: (
+    category: RoomCategory,
+    draft: organize.SidebarOverlay,
+    settled: organize.SidebarOverlay,
+  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled)),
+  setCategories: (categories: readonly RoomCategory[]) =>
+    apply((state) => organize.setCategories(state, categories)),
+  removeCategory: (categoryId: number) =>
+    apply((state) => organize.removeCategory(state, categoryId)),
+  setMembership: (membership: Membership) =>
+    apply((state) => organize.setMembership(state, membership)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };
