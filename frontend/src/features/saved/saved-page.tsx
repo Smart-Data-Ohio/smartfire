@@ -9,6 +9,7 @@ import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCustomTimeDialog } from "../composer/schedule/lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "../composer/schedule/presets.ts";
+import { useCelebrations } from "../destinations/celebrations.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
@@ -72,7 +73,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
   const ids = useId();
   const filterTabs = `${ids}-filter`;
   const panelId = `${ids}-panel`;
-  const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
+  const celebrations = useCelebrations();
   const [custom, setCustom] = useState<SavedItem | null>(null);
   const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
 
@@ -117,13 +118,14 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
       const next = item.status === "done" ? "in_progress" : "done";
 
       if (next === "done") {
-        setCelebrated((ids) => new Set([...ids, item.id]));
+        celebrations.start(item.id);
       }
 
       announce(next === "done" ? "Marked done" : "Moved back to in progress");
-      actions.saved
-        .setStatus(item.id, next)
-        .catch(failed(next === "done" ? "Couldn't mark it as done" : "Couldn't reopen it"));
+      actions.saved.setStatus(item.id, next).catch((error: Error) => {
+        celebrations.stop(item.id);
+        failed(next === "done" ? "Couldn't mark it as done" : "Couldn't reopen it")(error);
+      });
     },
     onRemind: (item, at) => {
       remind(item, at).then(
@@ -198,7 +200,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
               conversation={row.value.conversation}
               now={now}
               motion={row.motion}
-              celebrate={celebrated.has(row.key)}
+              celebrate={celebrations.has(row.key)}
               handlers={handlers}
             />
           ))}

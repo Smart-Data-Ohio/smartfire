@@ -10,6 +10,7 @@ import { actions } from "../../sync/runtime.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useCelebrations } from "../destinations/celebrations.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
@@ -136,7 +137,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   const statusTabs = `${ids}-status`;
   const typeTabs = `${ids}-type`;
   const panelId = `${ids}-panel`;
-  const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
+  const celebrations = useCelebrations();
   const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
 
   // The context menu reads the item live, so its labels follow a change made while it's open.
@@ -171,11 +172,12 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
 
   const change = (item: ActivityItem, action: ActivityAction) => {
     if (action === "handled") {
-      setCelebrated((ids) => new Set([...ids, item.id]));
+      celebrations.start(item.id);
     }
 
     announce(ANNOUNCED[action]);
     actions.activity.setState(item.id, action).catch((error: Error) => {
+      celebrations.stop(item.id);
       toast({ title: ACTION_FAILED[action], description: error.message, tone: "danger" });
     });
   };
@@ -256,7 +258,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
               item={row.value}
               now={now}
               motion={row.motion}
-              celebrate={celebrated.has(row.key)}
+              celebrate={celebrations.has(row.key)}
               onOpen={open}
               onAction={change}
               onMenu={openMenu}
