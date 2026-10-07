@@ -41,6 +41,58 @@
     U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
+/*
+ * The font presets people can pick for their device (Settings → Appearance), self-hosted and
+ * subset like Inter by tools/fonts/subset.sh. A face downloads only once a page uses it.
+ */
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/source-serif-4-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/source-serif-4-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
 /* Arial tuned to Inter's metrics, so the swap from the fallback doesn't shift layout. */
 @font-face {
   font-family: "Inter Fallback";
@@ -53,7 +105,17 @@
 
 @layer tokens {
   :root {
-    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    /*
+     * Font presets (`<html data-font>`): each stack ends in the system's fonts, and only Inter
+     * takes Inter's character variants. Line heights are rem, so layout holds in every face.
+     */
+    --font-preset-inter: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-system: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    --font-preset-atkinson: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-serif: "Source Serif 4", "Iowan Old Style", Georgia, ui-serif, serif;
+    --font-preset-mono:
+      "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-sans: var(--font-preset-inter);
     --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     --font-features: "cv11", "ss01", "calt";
 
@@ -86,6 +148,26 @@
    * token above is in rem, so the root size scales all text together while spacing (px) holds.
    * Percentages stack on the browser's own default, so an OS or browser text size still applies.
    */
+  :root[data-font="system"] {
+    --font-sans: var(--font-preset-system);
+    --font-features: normal;
+  }
+
+  :root[data-font="atkinson"] {
+    --font-sans: var(--font-preset-atkinson);
+    --font-features: normal;
+  }
+
+  :root[data-font="serif"] {
+    --font-sans: var(--font-preset-serif);
+    --font-features: normal;
+  }
+
+  :root[data-font="mono"] {
+    --font-sans: var(--font-preset-mono);
+    --font-features: normal;
+  }
+
   :root[data-text-size="smaller"] {
     font-size: 87.5%;
   }
@@ -100,6 +182,16 @@
 
   :root[data-text-size="larger"] {
     font-size: 112.5%;
+  }
+
+  /*
+   * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
+   * use the composer size never drop below it at the smaller text sizes.
+   */
+  @media (pointer: coarse) {
+    :root {
+      --text-composer: max(1rem, 16px);
+    }
   }
 }
 

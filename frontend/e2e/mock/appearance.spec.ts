@@ -1,17 +1,6 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, test } from "./support.ts";
-
-/** Saves the account's appearance through the API, as another device would. */
-async function saveAccount(page: Page, change: Record<string, string>): Promise<void> {
-  const state = await (await page.request.get("/__mock/state")).json();
-
-  const response = await page.request.patch("/api/v1/settings/appearance", {
-    headers: { "X-CSRF-Token": state.csrfToken },
-    data: { theme: null, textSize: null, timeZone: null, ...change },
-  });
-
-  expect(response.ok()).toBe(true);
-}
+import { ROOM_IDS } from "../../mock/seed.ts";
+import { expect, matrix, openApp, saveAccountAppearance, shot, test } from "./support.ts";
 
 /** The computed font size of `selector`, in px. */
 function fontSize(page: Page, selector: string): Promise<number> {
@@ -34,7 +23,7 @@ test("the account's theme applies on start, over what this device last showed", 
     }
   });
   await openApp(page, "");
-  await saveAccount(page, { theme: "dark" });
+  await saveAccountAppearance(page, { theme: "dark" });
 
   await page.reload();
   await page.getByRole("complementary", { name: "Conversations" }).waitFor();
@@ -46,11 +35,15 @@ test("a theme pinned on this device wins, until it's set back to the account's",
 }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await openApp(page, "settings/appearance");
-  await saveAccount(page, { theme: "dark" });
+  await saveAccountAppearance(page, { theme: "dark" });
   await page.reload();
   await expect(html(page)).toHaveAttribute("data-theme", "dark");
 
   const device = page.getByLabel("Theme on this device");
+
+  await expect(device).toHaveAccessibleDescription(
+    "Pin a theme here without changing it on your other devices.",
+  );
 
   await device.selectOption({ label: "Light" });
   await expect(html(page)).toHaveAttribute("data-theme", "light");
@@ -163,9 +156,28 @@ matrix("palettes and fonts", async ({ page, theme }) => {
   await shot(page, "appearance-ember-serif", theme);
 });
 
+test.describe("on a touch phone", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test("the composer stays at 16px at the smallest text size, so iOS never zooms in", async ({
+    page,
+  }) => {
+    await openApp(page, "");
+    await saveAccountAppearance(page, { textSize: "smaller" });
+    await openApp(page, `r/${ROOM_IDS.general}`);
+
+    const composer = page.getByRole("textbox", { name: "Message #general" });
+
+    await expect(html(page)).toHaveAttribute("data-text-size", "smaller");
+    expect(
+      await composer.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)),
+    ).toBeGreaterThanOrEqual(16);
+  });
+});
+
 matrix("appearance from the account", async ({ page, theme }) => {
   await openApp(page, "settings/appearance");
-  await saveAccount(page, { theme, textSize: "large" });
+  await saveAccountAppearance(page, { theme, textSize: "large" });
   await page.reload();
   await expect(html(page)).toHaveAttribute("data-theme", theme);
   await page.mouse.move(0, 0);

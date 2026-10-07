@@ -152,6 +152,7 @@ export function SettingsSelect<T extends string>({
         className="input settings-select"
         value={value}
         disabled={disabled}
+        aria-describedby={hint === undefined ? undefined : `${id}-hint`}
         onChange={(event) => {
           const picked = choices.find((choice) => choice.value === event.target.value);
 
@@ -166,7 +167,11 @@ export function SettingsSelect<T extends string>({
           </option>
         ))}
       </select>
-      {hint === undefined ? null : <p className="settings-hint text-faint">{hint}</p>}
+      {hint === undefined ? null : (
+        <p id={`${id}-hint`} className="settings-hint text-faint">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

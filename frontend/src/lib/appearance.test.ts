@@ -25,7 +25,12 @@ function inlineBoot(theme: string, textSize: string): void {
   document.head.append(script);
 }
 
-function stored(): Partial<Appearance> {
+/** What's stored: this device's choices, plus the chosen palette's derived tokens. */
+type Stored = Partial<Appearance> & {
+  readonly paletteTokens?: Readonly<Partial<Record<`--${string}`, string>>>;
+};
+
+function stored(): Stored {
   return JSON.parse(localStorage.getItem(KEY) ?? "{}");
 }
 
@@ -80,14 +85,18 @@ describe("restoreAppearance", () => {
     expect(html().dataset.textSize).toBe("small");
   });
 
-  it("uses the account's last known choices until boot arrives", async () => {
-    localStorage.setItem(KEY, JSON.stringify({ accountTheme: "dark", textSize: "large" }));
+  it("takes no account's theme from an earlier visit: without boot, the OS decides", async () => {
+    // What an earlier person's account left behind, in either earlier format.
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ theme: "dark", accountTheme: "dark", textSize: "large" }),
+    );
     const { restoreAppearance } = await load();
 
     restoreAppearance();
 
-    expect(html().dataset.theme).toBe("dark");
-    expect(html().dataset.textSize).toBe("large");
+    expect(html().dataset.theme).toBeUndefined();
+    expect(html().dataset.textSize).toBe("default");
   });
 
   it("falls back to the system theme and default size with nothing known", async () => {
@@ -118,8 +127,15 @@ describe("applyAccountAppearance", () => {
 
     expect(html().dataset.theme).toBe("dark");
     expect(html().dataset.textSize).toBe("smaller");
-    // `theme` is what's on screen: the classic pages' script reads it.
-    expect(stored()).toMatchObject({ theme: "dark", accountTheme: "dark", textSize: "smaller" });
+    // Only this device's own choices are stored: the classic pages read the pin, and the next
+    // person to sign in on this browser must not inherit this account's theme.
+    expect(stored()).toEqual({
+      themeOverride: null,
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
+    });
   });
 
   it("leaves a device's pinned theme on screen", async () => {
@@ -129,10 +145,12 @@ describe("applyAccountAppearance", () => {
     applyAccountAppearance({ theme: "dark", textSize: "default" });
 
     expect(html().dataset.theme).toBe("light");
-    expect(stored()).toMatchObject({
-      theme: "light",
+    expect(stored()).toEqual({
       themeOverride: "light",
-      accountTheme: "dark",
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
     });
   });
 });
@@ -147,7 +165,8 @@ describe("setThemeOverride", () => {
 
     setThemeOverride(null);
     expect(html().dataset.theme).toBe("dark");
-    expect(stored()).toMatchObject({ theme: "dark", themeOverride: null });
+    expect(stored()).toMatchObject({ themeOverride: null });
+    expect(stored()).not.toHaveProperty("theme");
   });
 });
 
@@ -177,6 +196,8 @@ describe("palette and font", () => {
     expect(html().style.getPropertyValue("--bg-pane")).toMatch(/^light-dark\(oklch/);
     expect(html().style.getPropertyValue("--accent")).toMatch(/^light-dark\(oklch/);
     expect(stored()).toMatchObject({ palette: "ember" });
+    // Its tokens too, for index.html's blocking script to paint before the SPA loads.
+    expect(stored().paletteTokens?.["--accent"]).toBe(html().style.getPropertyValue("--accent"));
   });
 
   it("goes back to the stylesheet's colours with Smartfire's palette", async () => {

@@ -149,6 +149,11 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /**
+   * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
+   * without its CSRF token, which the meta tag carries), escaped for a script element.
+   */
+  inlineBoot(): string;
   /** Stops the ambient simulation (the bot still answers). */
   pause(): void;
   resume(): void;
@@ -1021,6 +1026,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    inlineBoot: () => {
+      const { csrfToken: _meta, ...inline } = boot();
+
+      return JSON.stringify(inline).replaceAll("<", "\\u003c");
+    },
     pause: () => simulation.pause(),
     resume: () => simulation.resume(),
     typing,

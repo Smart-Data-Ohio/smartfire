@@ -15,6 +15,7 @@ import {
   useAppearance,
 } from "../../lib/appearance.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
+import { AppearancePreview, FontPicker, PalettePicker } from "./appearance-presets.tsx";
 import { type Choice, TEXT_SIZE_CHOICES, THEME_CHOICES } from "./settings-format.ts";
 import {
   SettingsGroup,
@@ -49,8 +50,8 @@ const DEVICE_THEME_CHOICES: readonly Choice<DeviceTheme>[] = [
 
 /**
  * Appearance: the account's theme, text size and time zone (saved for every device, as the
- * classic page saves them), then this device's own theme pin, density and motion. Choosing a
- * theme or size shows it at once here too.
+ * classic page saves them), then this device's own theme pin, colour palette, font, density and
+ * motion. Choosing a theme or size shows it at once here too.
  */
 export function AppearanceSection() {
   const { settings, replace } = useSettings();
@@ -145,6 +146,9 @@ export function AppearanceSection() {
           hint="Pin a theme here without changing it on your other devices."
           onChange={(choice: DeviceTheme) => setThemeOverride(choice === "account" ? null : choice)}
         />
+        <PalettePicker />
+        <FontPicker />
+        <AppearancePreview />
         <SettingsRadios
           label="Density"
           value={device.density}
