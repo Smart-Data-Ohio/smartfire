@@ -31,6 +31,8 @@ pub(crate) fn user() -> User {
             text: Some("On a beach".into()),
             expires_at: None,
         }),
+        avatar_icon: None,
+        agent: None,
         created_at: "2026-09-26T12:26:46.848Z".into(),
     }
 }
@@ -61,6 +63,7 @@ pub(crate) fn message() -> MessageDTO {
         poll: None,
         cards: vec![],
         cards_as_of: "2026-10-06T09:15:00.200Z".into(),
+        steps: vec![],
         created_at: "2026-10-06T09:15:00.123Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
     }
@@ -79,6 +82,8 @@ fn user_is_camel_case_with_explicit_nulls() {
             "avatarUrl": "/users/7/avatar?v=1700000000",
             "hasAvatar": true,
             "customStatus": {"emoji": "🌴", "text": "On a beach", "expiresAt": null},
+            "avatarIcon": null,
+            "agent": null,
             "createdAt": "2026-09-26T12:26:46.848Z",
         }),
     );
@@ -245,6 +250,7 @@ fn message_round_trips() {
             "poll": null,
             "cards": [],
             "cardsAsOf": "2026-10-06T09:15:00.200Z",
+            "steps": [],
             "createdAt": "2026-10-06T09:15:00.123Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
         }),

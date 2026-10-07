@@ -13,6 +13,8 @@ function user(id: number, name: string, role: User["role"] = "member"): User {
     avatarUrl: `/avatars/${id}`,
     hasAvatar: false,
     customStatus: null,
+    avatarIcon: null,
+    agent: null,
     createdAt: "2026-01-01T00:00:00.000Z",
   };
 }

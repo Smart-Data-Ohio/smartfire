@@ -23,6 +23,8 @@ export function userFixture(id: number, name = `User ${id}`): User {
     avatarUrl: `/users/${id}/avatar`,
     hasAvatar: false,
     customStatus: null,
+    avatarIcon: null,
+    agent: null,
     createdAt: "2026-01-01T00:00:00.000Z",
   };
 }
@@ -60,6 +62,7 @@ export function messageFixture(
     poll: null,
     cards: [],
     cardsAsOf: at,
+    steps: [],
     createdAt: at,
     updatedAt: at,
     ...change,

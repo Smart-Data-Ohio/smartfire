@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::Timestamp;
+use crate::{AgentBadge, Icon, Timestamp};
 
 /// A person or bot as every viewer sees them: the directory entry and profile card.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -21,6 +21,14 @@ pub struct User {
     pub has_avatar: bool,
     /// `null` when unset or expired.
     pub custom_status: Option<CustomStatus>,
+    /// A bot without an uploaded avatar shows this icon instead of `avatarUrl`'s default
+    /// (`users.icon_name`, resolved as the classic presenters do: a brand logo, else a workspace
+    /// icon, else the built-in icon or emoji of that name). `null` for people, for a bot with an
+    /// uploaded avatar, and for a name that resolves to nothing.
+    pub avatar_icon: Option<Icon>,
+    /// Set for an agent (a bot with an `agents` row); `null` for people and for bots without
+    /// one, which the classic pages label "Bot". Kept current by `agent.status`.
+    pub agent: Option<AgentBadge>,
     pub created_at: Timestamp,
 }
 

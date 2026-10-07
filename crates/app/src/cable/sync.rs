@@ -98,8 +98,14 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::message_remove", &["message.removed"]),
     ("Broadcasts::message_replace", &["message.updated"]),
     ("Broadcasts::message_part_replace", &["message.updated"]),
-    ("Broadcasts::message_thread_part_replace", &["message.updated"]),
-    ("Broadcasts::message_reactions_replace", &["message.reactions"]),
+    (
+        "Broadcasts::message_thread_part_replace",
+        &["message.updated"],
+    ),
+    (
+        "Broadcasts::message_reactions_replace",
+        &["message.reactions"],
+    ),
     ("Broadcasts::thread_refresh", &["thread.unread"]),
     ("Broadcasts::thread_created", &["thread.created"]),
     ("Broadcasts::thread_updated", &["thread.updated"]),
@@ -185,15 +191,19 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "agent_step::StepParentChange",
 ];
 
-/// Sync events the contract defines that no broadcast point publishes yet (the S3 events: their
-/// endpoints and twins come with the S3 server work). The coverage test fails when an event is
-/// in neither this list nor [`TWINS`], or in both.
+/// Sync events the contract defines that no broadcast point publishes yet (the S3 and S4 events:
+/// their endpoints and twins come with the S3 and S4 server work). The coverage test fails when an
+/// event is in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
     "sidebar.category.upserted",
     "sidebar.category.removed",
     "poll.updated",
     "poll.ballot",
     "message.cards",
+    // S4: agents and approvals.
+    "agent.status",
+    "agent.steps",
+    "approval.updated",
 ];
 
 /// The conversation topic a message's events go to: its thread's, or its room's.
@@ -618,7 +628,13 @@ pub fn scheduled_later(
 }
 
 /// `thread.unread` on the member's `user` topic: the twin of `user_<id>_unread_threads`.
-pub fn thread_unread(server: &Cable, user_id: i64, thread_id: i64, room_id: i64, refresh_only: bool) {
+pub fn thread_unread(
+    server: &Cable,
+    user_id: i64,
+    thread_id: i64,
+    room_id: i64,
+    refresh_only: bool,
+) {
     if !server.sync_wanted() {
         return;
     }
@@ -646,7 +662,12 @@ pub fn thread_read(server: &Cable, user_id: i64, thread_id: i64, room_id: i64) {
 /// `thread.indicator` on the parent's room, for the indicator replace of `parent_message_id`;
 /// then, while the thread is there, `thread.updated` with its new count and activity. Nothing
 /// for a parent that's gone (its `message.removed` says so).
-pub fn thread_indicator(server: &Cable, slot: &RendererSlot, conn: &Connection, parent_message_id: i64) {
+pub fn thread_indicator(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    parent_message_id: i64,
+) {
     let Some(renderer) = slot.get(server) else {
         return;
     };

@@ -1,0 +1,11 @@
+[
+  { "endpoint": "welcome#show", "classic": "/", "spa": "/app/", "ported": true },
+  { "endpoint": "rooms#show", "classic": "/rooms/:id", "spa": "/app/r/:id", "ported": true },
+  { "endpoint": "rooms#show", "classic": "/rooms/:room_id/@:message_id", "spa": "/app/r/:room_id/m/:message_id", "ported": true },
+  { "endpoint": "channel_threads#show", "classic": "/rooms/:room_id/threads/:id", "spa": "/app/r/:room_id/t/:id", "ported": true },
+  { "endpoint": "activity_items#index", "classic": "/activity", "spa": "/app/activity", "ported": true },
+  { "endpoint": "saved_items#index", "classic": "/saved", "spa": "/app/saved", "ported": true },
+  { "endpoint": "scheduled_messages#index", "classic": "/scheduled_messages", "spa": "/app/scheduled", "ported": true },
+  { "endpoint": "searches#index", "classic": "/searches", "spa": "/app/search", "ported": false },
+  { "endpoint": "work_threads#index", "classic": "/work", "spa": "/app/work", "ported": false }
+]

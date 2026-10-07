@@ -3,8 +3,10 @@
 /**
  * `PUT /api/v1/room_categories/order`: the viewer's categories in their new order, every one of
  * them exactly once. A list that doesn't match the viewer's current categories (one added or
- * removed in another tab, or a repeat) is a 409 Conflict and changes nothing: refetch and retry. Sets `position` to 1, 2, … in this order and answers
- * [`RoomCategoryList`], publishing `sidebar.category.upserted` for each one that moved.
+ * removed in another tab, or a repeat) is a 409 (`ApiError::Conflict`, no other body) and
+ * changes nothing: the client refetches the sidebar and lets the person try again. Sets
+ * `position` to 1, 2, … in this order and answers [`RoomCategoryList`], publishing
+ * `sidebar.category.upserted` for each one that moved.
  *
  * New: the classic app keeps creation order (`position` is set once and isn't a permitted
  * parameter), though it already sorts by `(position, id)`.
