@@ -90,7 +90,8 @@ fn board_topics() -> [String; 2] {
     [format!("room:{BOARD}"), format!("thread:{DONE_POST}")]
 }
 
-/// A marker fences writes; draining the renderer also catches frames that arrive after it.
+/// Settle prior deferred publications before the marker's synchronous `message.created`.
+/// They share the ordered sync ring, so draining to the marker catches every earlier frame.
 async fn no_more_thread_updates(
     a: &TestApp,
     browser: &mut Browser<'_>,
@@ -99,6 +100,12 @@ async fn no_more_thread_updates(
     thread_id: i64,
     marker: &str,
 ) {
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("all deferred sync publications settled");
     let path = if room_id == BOARD {
         assert_ne!(thread_id, DONE_POST, "the marker uses a different post");
         format!("/rooms/{room_id}/threads/{DONE_POST}/messages")
@@ -125,14 +132,6 @@ async fn no_more_thread_updates(
         thread_updated(thread_id),
     )
     .await;
-    tokio::time::timeout(
-        Duration::from_secs(5),
-        a.booted.app.broadcasts.settle_sync(),
-    )
-    .await
-    .expect("all deferred sync publications settled");
-    sync.assert_no_event(thread_updated(thread_id), Duration::from_millis(100))
-        .await;
 }
 
 /// The existing writer-queue interleaving pattern, without a production pause hook.

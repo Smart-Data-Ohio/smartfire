@@ -715,26 +715,6 @@ impl Sync {
             }
         }
     }
-
-    /// Checks queued batches and later socket frames under one bounded receive deadline.
-    pub(super) async fn assert_no_event(
-        &mut self,
-        forbidden: impl Fn(&api::SyncEvent) -> bool,
-        receive_for: Duration,
-    ) {
-        let deadline = tokio::time::Instant::now() + receive_for;
-        loop {
-            while let Some(event) = self.pending.pop_front() {
-                assert!(!forbidden(&event), "unexpected late {event:?}");
-            }
-            match tokio::time::timeout_at(deadline, self.next()).await {
-                Err(_) => return,
-                Ok(Some(api::ServerFrame::Batch { events })) => self.pending.extend(events),
-                Ok(Some(api::ServerFrame::Ping)) => {}
-                Ok(other) => panic!("expected a batch, got {other:?}"),
-            }
-        }
-    }
 }
 
 pub(super) async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {

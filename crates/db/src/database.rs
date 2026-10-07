@@ -540,20 +540,56 @@ impl<'c> Tx<'c> {
 /// after finalizing committed resources and waking any remaining committed jobs,
 /// discarding later model callbacks
 /// (Rails raises it from the save that committed; durable enqueueing stays atomic).
-/// Opted-in settled broadcasts of committed writes still emit after callbacks stop.
+/// Opted-in settled broadcasts of committed writes still emit after callbacks stop,
+/// including when they panic. An interrupted follow-up write rolls back before emission.
 pub fn run_write<T>(
     conn: &Connection,
     env: &Env,
     f: impl FnOnce(&mut Tx<'_>) -> Result<T>,
 ) -> Result<T> {
     let settled_broadcasts = RefCell::new(Vec::new());
-    let result = run_write_with_settled_broadcasts(conn, env, &settled_broadcasts, f);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_write_with_settled_broadcasts(conn, env, &settled_broadcasts, f)
+    }));
+    match result {
+        Ok(result) => {
+            flush_settled_broadcasts(conn, env, &settled_broadcasts);
+            result
+        }
+        Err(panic) => {
+            // A callback may have panicked inside a separate follow-up transaction.
+            // Its pending broadcasts never joined the committed collection.
+            if !conn.is_autocommit() {
+                let rollback = conn.execute_batch("ROLLBACK TRANSACTION");
+                if !conn.is_autocommit() {
+                    tracing::error!(
+                        error = ?rollback.err(),
+                        "interrupted write remains in a transaction"
+                    );
+                    std::panic::resume_unwind(panic);
+                }
+            }
+            // The callback's unwind has finished: no Drop emits while panicking.
+            // Preserve that original panic even if the sink also panics during flush.
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                flush_settled_broadcasts(conn, env, &settled_broadcasts);
+            }));
+            std::panic::resume_unwind(panic);
+        }
+    }
+}
+
+fn flush_settled_broadcasts(
+    conn: &Connection,
+    env: &Env,
+    settled_broadcasts: &RefCell<Vec<Event>>,
+) {
     let mut after = Tx {
         conn,
         env,
         in_transaction: false,
         after_commit: Vec::new(),
-        settled_broadcasts: &settled_broadcasts,
+        settled_broadcasts,
         commit_finalizers: Vec::new(),
         commit_preparations: Vec::new(),
         persist_error: None,
@@ -569,7 +605,6 @@ pub fn run_write<T>(
             env.sink.emit_committed(&mut after, event);
         }
     }
-    result
 }
 
 fn run_write_with_settled_broadcasts<T>(
@@ -1224,6 +1259,10 @@ mod tests {
         }
 
         fn emit_committed(&self, after: &mut Tx<'_>, event: Event) {
+            assert!(
+                after.conn().is_autocommit(),
+                "broadcasts observe committed state"
+            );
             let value = match &event {
                 Event::Broadcast(request) => request
                     .decode::<crate::models::channel_thread::ThreadWorkChange>()
@@ -1367,6 +1406,113 @@ mod tests {
                 Event::broadcast(&ThreadWorkChange { thread_id: 2 }),
             ]
         );
+    }
+
+    #[test]
+    fn settled_broadcasts_survive_panicking_followup_and_writer_recovers() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        let dir = tempfile::tempdir().unwrap();
+        let sink = Arc::new(SettledSnapshotSink::default());
+        let db = Database::open(
+            Config::new(dir.path().join("panicking-followup.sqlite3")),
+            Env {
+                sink: sink.clone(),
+                ..Env::default()
+            },
+        )
+        .unwrap();
+        db.write_blocking(|tx| {
+            Ok(tx.conn().execute_batch(
+                "CREATE TABLE state(id INTEGER PRIMARY KEY,value INTEGER); INSERT INTO state VALUES(1,0),(2,0),(3,0)",
+            )?)
+        })
+        .unwrap();
+        let result = db.write_blocking(|tx| {
+            tx.conn().execute("UPDATE state SET value=1 WHERE id=1", [])?;
+            ThreadWorkChange::emit(tx, 1);
+            tx.after_commit(|after| {
+                after.write_after_commit(|tx| {
+                    tx.conn().execute("UPDATE state SET value=2 WHERE id=2", [])?;
+                    ThreadWorkChange::emit(tx, 2);
+                    tx.after_commit(|after| {
+                        after.write_after_commit(|tx| -> Result<()> {
+                            tx.conn().execute("UPDATE state SET value=3 WHERE id=1", [])?;
+                            tx.conn().execute("UPDATE state SET value=3 WHERE id=3", [])?;
+                            ThreadWorkChange::emit(tx, 3);
+                            panic!("injected follow-up transaction panic");
+                        })
+                    });
+                    Ok(())
+                })
+            });
+            Ok(())
+        });
+        assert!(matches!(result, Err(Error::WriterGone)));
+        assert_eq!(
+            *sink.events.lock().unwrap(),
+            [
+                (Event::broadcast(&ThreadWorkChange { thread_id: 1 }), Some(1)),
+                (Event::broadcast(&ThreadWorkChange { thread_id: 2 }), Some(2)),
+            ]
+        );
+        assert_eq!(
+            db.read_blocking(|conn| {
+                Ok(conn
+                    .prepare("SELECT value FROM state ORDER BY id")?
+                    .query_map([], |r| r.get::<_, i64>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?)
+            })
+            .unwrap(),
+            [1, 2, 0],
+            "the interrupted follow-up must roll back before broadcasts render"
+        );
+        db.write_blocking(|tx| {
+            tx.conn().execute("UPDATE state SET value=4 WHERE id=3", [])?;
+            ThreadWorkChange::emit(tx, 3);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            sink.events.lock().unwrap().last(),
+            Some(&(Event::broadcast(&ThreadWorkChange { thread_id: 3 }), Some(4)))
+        );
+    }
+
+    #[test]
+    fn settled_broadcast_flush_preserves_callback_panic_when_sink_panics() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        struct PanickingSink {
+            emitted: std::sync::atomic::AtomicBool,
+        }
+        impl EventSink for PanickingSink {
+            fn emit(&self, _event: Event) {
+                assert!(!std::thread::panicking());
+                self.emitted.store(true, Ordering::SeqCst);
+                panic!("injected sink panic");
+            }
+        }
+        let conn = Connection::open_in_memory().unwrap();
+        let sink = Arc::new(PanickingSink {
+            emitted: std::sync::atomic::AtomicBool::new(false),
+        });
+        let env = Env {
+            sink: sink.clone(),
+            ..Env::default()
+        };
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            run_write(&conn, &env, |tx| {
+                ThreadWorkChange::emit(tx, 1);
+                tx.after_commit(|_| panic!("injected callback panic"));
+                Ok(())
+            })
+        }))
+        .expect_err("the original callback panic must propagate");
+        assert_eq!(panic.downcast_ref::<&str>(), Some(&"injected callback panic"));
+        assert!(sink.emitted.load(Ordering::SeqCst));
+        assert!(conn.is_autocommit());
+        run_write(&conn, &env, |_| Ok(())).unwrap();
     }
 
     struct CompletionWake {
