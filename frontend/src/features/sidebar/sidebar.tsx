@@ -12,6 +12,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
 import { openOverlay } from "../switcher/overlay-store.ts";
 import { type SidebarSection, sidebarSections } from "./sections.ts";
@@ -211,7 +212,7 @@ const THEME_NEXT = { system: "light", light: "dark", dark: "system" } as const;
 
 const THEME_ICON = { system: "monitor", light: "sun", dark: "moon" } as const;
 
-/** Discord's user panel: who you are, your presence, and the appearance switch. */
+/** Discord's user panel: who you are (it opens your menu), your presence, and the appearance switch. */
 function YouPanel() {
   const me = useStore((state) => state.me);
   const bootUser = useStore((state) => state.boot?.user ?? null);
@@ -225,11 +226,15 @@ function YouPanel() {
 
   return (
     <footer className="sidebar-you">
-      <UserAvatar userId={userId} size={32} presence decorative />
-      <span className="sidebar-you-text">
-        <span className="sidebar-you-name">{me?.user.name ?? bootUser?.name ?? UNKNOWN_NAME}</span>
-        <span className="sidebar-you-status">{status?.statusText ?? "Active"}</span>
-      </span>
+      <UserMenu>
+        <UserAvatar userId={userId} size={32} presence decorative />
+        <span className="sidebar-you-text">
+          <span className="sidebar-you-name">
+            {me?.user.name ?? bootUser?.name ?? UNKNOWN_NAME}
+          </span>
+          <span className="sidebar-you-status">{status?.statusText ?? "Active"}</span>
+        </span>
+      </UserMenu>
       <IconButton
         icon={THEME_ICON[theme]}
         label={`Theme: ${theme}`}

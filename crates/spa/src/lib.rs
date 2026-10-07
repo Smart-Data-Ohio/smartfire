@@ -8,11 +8,13 @@
 //! - [`file`]: an embedded file by its path under `/app/`, in the encoding the client prefers.
 //! - [`render_shell`]: `index.html` with the CSRF meta tags, the CSP nonce and the [`Boot`] JSON
 //!   the app starts from.
+//! - [`screens`]: which classic pages the SPA has ported, and their URLs on both sides.
 //!
 //! The HTTP side (routes, authentication, headers) is the app's (`crates/campfire`,
 //! `controllers/spa.rs`); this crate knows nothing of requests or sessions.
 
 mod boot;
+pub mod screens;
 mod serve;
 mod shell;
 

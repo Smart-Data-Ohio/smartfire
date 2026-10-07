@@ -28,4 +28,5 @@
 {% endif %}
     {{ h::profile_form_submit_button(ctx) }}
   </fieldset>
-{% endfilter %}
+{% endfilter %}{% if let Some(next_ui) = data.next_ui %}
+{{ self.next_ui_panel(next_ui) }}{% endif %}
