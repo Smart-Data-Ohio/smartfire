@@ -138,6 +138,7 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
         Req::new(Method::GET, &format!("{room_path}/events/1")),
+        Req::new(Method::GET, &format!("{room_path}/events")),
         Req::new(Method::GET, &format!("{room_path}/messages")),
     ];
     for request in requests {
