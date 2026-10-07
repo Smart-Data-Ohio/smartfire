@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="GLOBAL" />
+    <meta name="csp-nonce" content="NONCE" />
+    
+    <title>Set up Smartfire</title>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==" type="image/png">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==">
+    <link rel="stylesheet" href="./auth.css">
+    <script src="./auth.js"></script>
+    
+    
+  </head>
+  <body class="auth">
+    
+<main class="auth-card">
+  <header class="auth-header">
+    <h1 class="auth-title">Set up Smartfire</h1>
+    <p class="auth-lede">Create the first account. It administers the workspace.</p>
+  </header>
+
+  <form class="auth-form" enctype="multipart/form-data" action="/first_run" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:/first_run" />
+<label class="auth-avatar" title="Add your avatar">
+      <span data-avatar-empty><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+      <img class="auth-avatar-preview" data-avatar-preview alt="" hidden>
+      <span class="auth-avatar-badge"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>
+      <input class="visually-hidden" accept="image/*" data-avatar-input="true" type="file" name="user[avatar]" id="user_avatar" />
+      <span class="visually-hidden">Add your avatar</span>
+    </label>
+
+    <div class="field">
+      <div class="auth-label-row">
+        <label class="field-label" for="user_name">Name</label>
+        <details class="auth-translate">
+  <summary class="button" data-variant="icon" data-size="sm" aria-label="Translate" title="Translate"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></summary>
+  <div class="auth-translate-menu"><dl class="language-list"><dt>🇺🇸</dt><dd class="margin-none">Enter your name</dd><dt>🇪🇸</dt><dd class="margin-none">Introduce tu nombre</dd><dt>🇫🇷</dt><dd class="margin-none">Entrez votre nom</dd><dt>🇮🇳</dt><dd class="margin-none">अपना नाम दर्ज करें</dd><dt>🇩🇪</dt><dd class="margin-none">Geben Sie Ihren Namen ein</dd><dt>🇧🇷</dt><dd class="margin-none">Insira seu nome</dd><dt>🇯🇵</dt><dd class="margin-none">お名前を入力してください</dd></dl></div>
+</details>
+      </div>
+      <input class="input" autocomplete="name" autofocus="autofocus" required="required" data-1p-ignore="true" type="text" name="user[name]" id="user_name" />
+    </div>
+
+    <div class="field">
+      <div class="auth-label-row">
+        <label class="field-label" for="user_email_address">Email address</label>
+        <details class="auth-translate">
+  <summary class="button" data-variant="icon" data-size="sm" aria-label="Translate" title="Translate"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></summary>
+  <div class="auth-translate-menu"><dl class="language-list"><dt>🇺🇸</dt><dd class="margin-none">Enter your email address</dd><dt>🇪🇸</dt><dd class="margin-none">Introduce tu correo electrónico</dd><dt>🇫🇷</dt><dd class="margin-none">Entrez votre adresse courriel</dd><dt>🇮🇳</dt><dd class="margin-none">अपना ईमेल पता दर्ज करें</dd><dt>🇩🇪</dt><dd class="margin-none">Geben Sie Ihre E-Mail-Adresse ein</dd><dt>🇧🇷</dt><dd class="margin-none">Insira seu endereço de email</dd><dt>🇯🇵</dt><dd class="margin-none">メールアドレスを入力してください</dd></dl></div>
+</details>
+      </div>
+      <input class="input" autocomplete="username" placeholder="you@example.com" required="required" type="email" name="user[email_address]" id="user_email_address" />
+    </div>
+
+    <div class="field">
+      <div class="auth-label-row">
+        <label class="field-label" for="user_password">Password</label>
+        <details class="auth-translate">
+  <summary class="button" data-variant="icon" data-size="sm" aria-label="Translate" title="Translate"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg></summary>
+  <div class="auth-translate-menu"><dl class="language-list"><dt>🇺🇸</dt><dd class="margin-none">Enter your password</dd><dt>🇪🇸</dt><dd class="margin-none">Introduce tu contraseña</dd><dt>🇫🇷</dt><dd class="margin-none">Saisissez votre mot de passe</dd><dt>🇮🇳</dt><dd class="margin-none">अपना पासवर्ड दर्ज करें</dd><dt>🇩🇪</dt><dd class="margin-none">Geben Sie Ihr Passwort ein</dd><dt>🇧🇷</dt><dd class="margin-none">Insira sua senha</dd><dt>🇯🇵</dt><dd class="margin-none">パスワードを入力してください</dd></dl></div>
+</details>
+      </div>
+      <input class="input" autocomplete="new-password" required="required" maxlength="72" size="72" type="password" name="user[password]" id="user_password" />
+    </div>
+
+    <button name="button" type="submit" class="button auth-wide" data-variant="primary" data-size="lg">Create account</button>
+</form>
+</main>
+
+  </body>
+</html>

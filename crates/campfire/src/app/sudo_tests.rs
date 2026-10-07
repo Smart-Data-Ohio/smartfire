@@ -849,7 +849,7 @@ async fn sudo_continuation_consumes_gets_and_rejects_external_paths() {
 }
 
 #[tokio::test]
-async fn sudo_views_match_six_rails_seed_bodies_byte_for_byte() {
+async fn sudo_views_preserve_six_rails_form_contracts() {
     use askama::Template;
     use campfire_views::{helpers as h, sudos};
     struct Tokens;
@@ -894,17 +894,8 @@ async fn sudo_views_match_six_rails_seed_bodies_byte_for_byte() {
                 )
             },
         );
-        if actual != expected.as_str().unwrap()
-            && let Ok(dir) = std::env::var("WS9_SUDO_DIFF_DIR")
-        {
-            std::fs::create_dir_all(&dir).unwrap();
-            std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
-            std::fs::write(format!("{dir}/{name}.expected"), expected.as_str().unwrap()).unwrap();
-        }
-        assert!(super::asset_goldens::compare(
-            name,
-            &actual,
-            expected.as_str().unwrap()
-        ));
+        crate::form_contracts::assert_forms(name, &actual, expected.as_str().unwrap());
+        if name != "continue" { crate::form_contracts::assert_text(&actual, "Confirm it's you"); }
+
     }
 }

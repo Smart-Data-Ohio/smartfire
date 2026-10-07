@@ -56,6 +56,17 @@ fn transactions(statements: Vec<String>) -> Vec<Value> {
 fn response(reply: &Reply) -> Value {
     json!({"status":reply.status.as_u16(),"location":reply.location(),"content_type":reply.content_type(),"body":reply.text()})
 }
+/// A response and its Rails vector, with a restyled page's bodies reduced to their form contracts.
+fn comparable(mut actual: Value, mut rails: Value) -> (Value, Value) {
+    let body = actual["body"].as_str().unwrap_or_default().to_owned();
+    if crate::form_contracts::reskinned(&body) {
+        actual["body"] = json!(crate::form_contracts::contract(&body));
+        rails["body"] = json!(crate::form_contracts::contract(
+            rails["body"].as_str().unwrap_or_default()
+        ));
+    }
+    (actual, rails)
+}
 async fn boundary(name: &'static str) {
     let oracle: Value = serde_json::from_str(BOUNDARIES).unwrap();
     let expected = oracle["cases"]
@@ -227,11 +238,8 @@ async fn boundary(name: &'static str) {
         state["sessions"].as_array().unwrap().len(),
         groups.len()
     );
-    assert_eq!(
-        response(&reply),
-        expected["response"],
-        "{name}: complete response"
-    );
+    let (actual, rails) = comparable(response(&reply), expected["response"].clone());
+    assert_eq!(actual, rails, "{name}: complete response");
     assert_eq!(state, expected["state"], "{name}: retained rows");
     assert_eq!(
         json!(groups),
@@ -247,11 +255,11 @@ async fn boundary(name: &'static str) {
         })
         .await
         .unwrap();
-    assert_eq!(
+    let (actual, rails) = comparable(
         response(&with_fixed_render_secrets(browser.get("/two_factor_setup")).await),
-        expected["after"],
-        "{name}: next setup response"
+        expected["after"].clone(),
     );
+    assert_eq!(actual, rails, "{name}: next setup response");
 }
 macro_rules! cases {
     ($($function:ident => $name:literal),* $(,)?) => { $(#[tokio::test] async fn $function() { boundary($name).await; })* };

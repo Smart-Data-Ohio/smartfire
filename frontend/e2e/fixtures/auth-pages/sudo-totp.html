@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="GLOBAL" />
+    <meta name="csp-nonce" content="NONCE" />
+    <meta name="current-user-id" content="127326141" /><meta name="current-user-name" content="David" />
+    <title>Confirm it&#39;s you</title>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==" type="image/png">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==">
+    <link rel="stylesheet" href="./auth.css">
+    <script src="./auth.js"></script>
+    
+    
+  </head>
+  <body class="auth">
+    
+<main class="auth-card">
+  <header class="auth-header">
+    <img alt="" class="auth-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==" width="48" height="48" />
+    <h1 class="auth-title">Confirm it's you</h1>
+    <p class="auth-lede">This action needs a fresh confirmation. Confirm once and it continues.</p>
+  </header>
+
+
+  <form class="auth-form" data-turbo="false" action="http://campfire.test/sudo" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:http://campfire.test/sudo" />
+    <input type="hidden" name="verifier" id="verifier" value="totp" />
+    <div class="field">
+      <label class="field-label" for="totp_code">Authenticator code</label>
+      <input required="required" class="input auth-code" autofocus="autofocus" autocomplete="one-time-code" inputmode="numeric" maxlength="10" placeholder="Enter your authenticator code" aria-label="Authenticator code" size="10" type="text" name="totp_code" id="totp_code" />
+    </div>
+
+    <button name="confirm" type="submit" class="button auth-wide" data-variant="primary" data-size="lg">Confirm</button>
+</form>
+
+</main>
+
+  </body>
+</html>

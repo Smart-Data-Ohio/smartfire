@@ -1,4 +1,4 @@
-//! Complete template/layout byte comparisons; request chrome population has separate owners.
+//! Auth form/behavior contracts against Rails vectors; unrelated classic pages keep byte goldens.
 use crate::controllers::presenters::test_support::TestApp;
 use askama::Template;
 use campfire_views::{helpers as h, layouts, sessions, sudos, two_factor, users};
@@ -13,7 +13,7 @@ impl h::request_forgery::AuthenticityTokens for Tokens {
     }
 }
 #[tokio::test]
-async fn complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks() {
+async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
     let a = TestApp::boot()
         .await
         .expect("build the pinned WS19 default seed");
@@ -206,23 +206,46 @@ async fn complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks(
             },
         );
         let expected = expected.as_str().unwrap();
-        if !super::asset_goldens::compare(name, &actual, expected) {
-            let at = actual
-                .bytes()
-                .zip(expected.bytes())
-                .position(|(a, b)| a != b)
-                .unwrap_or(actual.len().min(expected.len()));
-            eprintln!(
-                "{name}: byte {at}; Rust {} bytes, Rails {} bytes",
-                actual.len(),
-                expected.len()
-            );
-            if let Ok(dir) = std::env::var("WS9_PAGE_DIFF_DIR") {
-                std::fs::create_dir_all(&dir).unwrap();
-                std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
-                std::fs::write(format!("{dir}/{name}.expected"), expected).unwrap();
+        if ["incompatible_browser", "sessions_one", "sessions_two"].contains(&name.as_str()) {
+            if !super::asset_goldens::compare(name, &actual, expected) {
+                let at = actual
+                    .bytes()
+                    .zip(expected.bytes())
+                    .position(|(a, b)| a != b)
+                    .unwrap_or(actual.len().min(expected.len()));
+                eprintln!(
+                    "{name}: byte {at}; Rust {} bytes, Rails {} bytes",
+                    actual.len(),
+                    expected.len()
+                );
+                if let Ok(dir) = std::env::var("WS9_PAGE_DIFF_DIR") {
+                    std::fs::create_dir_all(&dir).unwrap();
+                    std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
+                    std::fs::write(format!("{dir}/{name}.expected"), expected).unwrap();
+                }
+                mismatches.push(name);
             }
-            mismatches.push(name);
+        } else {
+            let content = crate::form_contracts::page_content(&actual);
+            crate::form_contracts::assert_forms(
+                name, content, crate::form_contracts::page_content(expected),
+            );
+            if name == "sign_in" {
+                crate::form_contracts::assert_text(content, &account.as_ref().unwrap().name);
+            }
+            if name == "setup" {
+                crate::form_contracts::assert_text(content, vectors["key"].as_str().unwrap());
+                assert!(content.contains(&qr));
+            }
+            if name.starts_with("backups") {
+                for code in vectors["codes"].as_array().unwrap() {
+                    crate::form_contracts::assert_text(content, code.as_str().unwrap());
+                }
+                crate::form_contracts::assert_text(content, "They will not be shown again.");
+                if name == "backups_signed_out" {
+                    crate::form_contracts::assert_text(content, "Signed out your other devices");
+                }
+            }
         }
     }
     assert!(

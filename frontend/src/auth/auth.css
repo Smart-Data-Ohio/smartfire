@@ -1,0 +1,11 @@
+/*
+ * The server-rendered pages outside the SPA (sign-in, joining, two-step sign-in, password
+ * confirmation, the sign-in link, first run and the public pages), in the SPA's look. The Rust
+ * asset pipeline (crates/assets) inlines these imports and serves the result as one
+ * fingerprinted stylesheet, so it needs neither Node nor the SPA build.
+ */
+@import "../styles/index.css";
+@import "../ui/button.css";
+@import "../ui/text-field.css";
+@import "../ui/checkbox.css";
+@import "./pages.css";

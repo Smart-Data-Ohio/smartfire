@@ -24,7 +24,7 @@ impl New<'_> {
     fn totp_options(&self) -> h::Attrs {
         h::attrs()
             .required(true)
-            .class("input")
+            .class("input auth-code")
             .attr("autofocus", !self.password)
             .autocomplete("one-time-code")
             .attr("inputmode", "numeric")

@@ -55,6 +55,11 @@ export interface Boot {
   readonly cableUrl: string;
   readonly version: string;
   readonly revision: string | null;
+  /**
+   * The sign-in or integration callback's notice or alert that sent you here, shown once as a
+   * toast; the shell consumes it from the session when it renders the page.
+   */
+  readonly flash?: { readonly kind: "notice" | "alert"; readonly message: string } | null;
 }
 
 /** The sync socket's state, for the connection banner. */

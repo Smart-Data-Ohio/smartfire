@@ -58,6 +58,7 @@ impl Fresh {
             "SECRET_KEY_BASE" => secret["secret_key_base"].as_str().map(str::to_owned),
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
+            "SPA_ENABLED" => case["spa_enabled"].as_bool().filter(|enabled| *enabled).map(|_| "1".into()),
             "GITHUB_WEBHOOK_SECRET" => case["webhook_secret"].as_str().map(str::to_owned),
             _ => None,
         })

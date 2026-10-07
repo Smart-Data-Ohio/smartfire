@@ -1,13 +1,17 @@
-{% extends "layouts/application.html" %}
-{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
-{% block content %}
-<section class="txt-align-center">
-  <div class="panel">
-    <h1 class="txt-large">Confirmed — continuing</h1>
+{% extends "layouts/auth.html" %}
 
-    {% let form = h::form_with(path).method(method).class("flex flex-column gap").data("controller", "auto-submit") %}{% filter form_with(form) %}
-      {{ crate::sudos::replay_fields(params, None) }}
-      {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value("Continue").class("btn btn--reversed center txt-large").data("disable-with", "Continue")) }}
-{% endfilter %}  </div>
-</section>
+{% block head %}{% endblock %}
+
+{% block content %}
+<main class="auth-card">
+  <header class="auth-header">
+    <h1 class="auth-title">Confirmed — continuing</h1>
+  </header>
+  <p class="auth-wait" role="status"><span class="auth-spinner" aria-hidden="true"></span>Carrying on with what you were doing…</p>
+
+  {#- Submits itself (auth.js); Continue is there if it can't. -#}
+  {% let form = h::form_with(path).method(method).class("auth-form").data("controller", "auto-submit") %}{% filter form_with(form) %}
+    {{ crate::sudos::replay_fields(params, None) }}
+    {{ h::legacy_tag("input", h::attrs().type_("submit").name("commit").value("Continue").class("button auth-wide").data("variant", "secondary").data("size", "lg").data("disable-with", "Continue")) }}
+{% endfilter %}</main>
 {% endblock %}

@@ -1,0 +1,3584 @@
+/*
+ * The server-rendered pages outside the SPA (sign-in, joining, two-step sign-in, password
+ * confirmation, the sign-in link, first run and the public pages), in the SPA's look. The Rust
+ * asset pipeline (crates/assets) inlines these imports and serves the result as one
+ * fingerprinted stylesheet, so it needs neither Node nor the SPA build.
+ */
+/* The global stylesheet, in cascade-layer order (tokens.css declares the layers). Component
+   styles live beside their components and load with them. */
+/*
+ * Design tokens. Components use only the semantic tokens (the second block); the primitives
+ * exist so the semantic layer reads as decisions ("the sidebar is neutral-150") rather than
+ * colour maths.
+ *
+ * Theme: `:root[data-theme="light" | "dark"]` pins a theme; no attribute (or "system") follows the
+ * OS through `color-scheme: light dark`, and every colour token is a `light-dark()` pair, so a
+ * theme switch is one property flip with no duplicated blocks. Contrast: every text token is held
+ * to 4.5:1 against the surfaces it sits on, in both themes, by src/styles/tokens.test.ts.
+ *
+ * Admin custom CSS (accounts/custom_styles) is injected unlayered after these layers, so it wins
+ * by cascade order; it should target tokens such as --accent, not class names.
+ */
+@layer tokens, base, motion, recipes, ui, app;
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    /* ── Primitives ─────────────────────────────────────────────────────────────── */
+
+    /* Cool neutrals for light surfaces and ink. */
+    --neutral-0: oklch(100% 0 0);
+    --neutral-50: oklch(98.5% 0.002 250);
+    --neutral-100: oklch(96.5% 0.004 250);
+    --neutral-150: oklch(95% 0.004 250);
+    --neutral-200: oklch(92.5% 0.005 250);
+    --neutral-250: oklch(91% 0.004 250);
+    --neutral-300: oklch(86% 0.006 255);
+    --neutral-500: oklch(51% 0.008 260);
+    --neutral-600: oklch(46% 0.01 260);
+    --neutral-900: oklch(22% 0.01 260);
+
+    /* Charcoal for dark surfaces: true charcoal, not black, separated by lightness steps. */
+    --charcoal-950: oklch(17% 0.006 260);
+    --charcoal-900: oklch(20% 0.007 260);
+    --charcoal-850: oklch(23% 0.007 260);
+    --charcoal-800: oklch(27% 0.008 260);
+    --charcoal-750: oklch(30% 0.008 260);
+    --charcoal-700: oklch(34% 0.009 260);
+    --charcoal-400: oklch(69% 0.01 260);
+    --charcoal-300: oklch(74% 0.01 260);
+    --charcoal-100: oklch(94% 0.005 260);
+
+    /* Indigo accent. */
+    --indigo-soft-light: oklch(95% 0.03 268);
+    --indigo-selected-light: oklch(92% 0.02 265);
+    --indigo-500: oklch(52% 0.19 268);
+    --indigo-450: oklch(56% 0.19 268);
+    --indigo-300: oklch(72% 0.14 268);
+    --indigo-selected-dark: oklch(32% 0.03 265);
+    --indigo-soft-dark: oklch(30% 0.06 268);
+
+    /* Amber: mentions of you (Slack's) and warnings. */
+    --amber-bar-light: oklch(80% 0.13 85);
+    --amber-bg-light: oklch(97% 0.04 90);
+    --amber-text-light: oklch(48% 0.1 75);
+    --amber-bar-dark: oklch(82% 0.12 85);
+    --amber-wash-dark: oklch(82% 0.12 85 / 8%);
+    --amber-chip-light: oklch(80% 0.13 85 / 35%);
+    --amber-chip-dark: oklch(82% 0.12 85 / 20%);
+    --amber-text-dark: oklch(84% 0.12 85);
+    --amber-500: oklch(75% 0.15 75);
+    --amber-warning-text-light: oklch(52% 0.12 70);
+    --amber-warning-text-dark: oklch(82% 0.13 80);
+
+    /* Red: danger and do-not-disturb. */
+    --red-500: oklch(53% 0.2 27);
+    --red-450: oklch(56% 0.2 27);
+    --red-300: oklch(72% 0.16 25);
+    --red-soft-light: oklch(96% 0.025 27);
+    --red-soft-dark: oklch(29% 0.06 27);
+
+    /* Green: success and presence. */
+    --green-500: oklch(60% 0.15 150);
+    --green-text-light: oklch(50% 0.13 150);
+    --green-300: oklch(76% 0.15 150);
+
+    /* Violet is reserved for agents, nowhere else. */
+    --violet-500: oklch(62% 0.17 300);
+    --violet-text-light: oklch(52% 0.19 300);
+    --violet-300: oklch(74% 0.14 300);
+    --violet-soft-light: oklch(96% 0.025 300);
+    --violet-soft-dark: oklch(29% 0.06 300);
+
+    /* ── Semantic colour ────────────────────────────────────────────────────────── */
+
+    --bg-app: light-dark(var(--neutral-50), var(--charcoal-950));
+    --bg-sidebar: light-dark(var(--neutral-100), var(--charcoal-900));
+    --bg-pane: light-dark(var(--neutral-0), var(--charcoal-850));
+    --bg-raised: light-dark(var(--neutral-0), var(--charcoal-800));
+    --bg-hover: light-dark(var(--neutral-150), var(--charcoal-800));
+    --bg-active: light-dark(var(--neutral-200), var(--charcoal-750));
+    --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
+    --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
+    --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+
+    --text: light-dark(var(--neutral-900), var(--charcoal-100));
+    --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
+    --text-faint: light-dark(var(--neutral-500), var(--charcoal-400));
+
+    --border: light-dark(var(--neutral-250), var(--charcoal-750));
+    --border-strong: light-dark(var(--neutral-300), var(--charcoal-700));
+
+    --accent: light-dark(var(--indigo-500), var(--indigo-300));
+    --accent-solid: light-dark(var(--indigo-500), var(--indigo-450));
+    --accent-soft: light-dark(var(--indigo-soft-light), var(--indigo-soft-dark));
+    --on-accent: var(--neutral-0);
+    --focus-ring: var(--accent);
+
+    --mention: light-dark(var(--amber-bar-light), var(--amber-bar-dark));
+    /* Dark keeps the row a whisper of amber over the pane; the bar carries the signal (Slack's). */
+    --mention-bg: light-dark(var(--amber-bg-light), var(--amber-wash-dark));
+    --mention-chip-bg: light-dark(var(--amber-chip-light), var(--amber-chip-dark));
+    --mention-text: light-dark(var(--amber-text-light), var(--amber-text-dark));
+
+    --success: var(--green-500);
+    --success-text: light-dark(var(--green-text-light), var(--green-300));
+    --warning: var(--amber-500);
+    --warning-text: light-dark(var(--amber-warning-text-light), var(--amber-warning-text-dark));
+    --danger: light-dark(var(--red-500), var(--red-300));
+    --danger-solid: light-dark(var(--red-500), var(--red-450));
+    --danger-soft: light-dark(var(--red-soft-light), var(--red-soft-dark));
+    --danger-text: light-dark(var(--red-500), var(--red-300));
+    --on-danger: var(--neutral-0);
+
+    --presence-online: var(--green-500);
+    --presence-away: var(--amber-500);
+    --presence-dnd: var(--red-450);
+    --presence-offline: light-dark(var(--neutral-500), var(--charcoal-400));
+
+    --agent: light-dark(var(--violet-500), var(--violet-300));
+    --agent-text: light-dark(var(--violet-text-light), var(--violet-300));
+    --agent-soft: light-dark(var(--violet-soft-light), var(--violet-soft-dark));
+
+    --scrim: light-dark(oklch(22% 0.01 260 / 32%), oklch(8% 0.005 260 / 60%));
+    --tooltip-bg: light-dark(var(--neutral-900), var(--charcoal-100));
+    --tooltip-text: light-dark(var(--neutral-0), var(--neutral-900));
+
+    /* Shadows: a hairline ring plus two soft layers. Dark leans on the ring, light on the blur. */
+    --shadow-ring: light-dark(oklch(22% 0.01 260 / 8%), oklch(100% 0 0 / 7%));
+    --shadow-soft: light-dark(oklch(22% 0.01 260 / 8%), oklch(0% 0 0 / 32%));
+    --shadow-deep: light-dark(oklch(22% 0.01 260 / 12%), oklch(0% 0 0 / 44%));
+    --shadow-raised:
+      0 0 0 1px var(--shadow-ring), 0 2px 6px var(--shadow-soft),
+      0 12px 32px -8px var(--shadow-deep);
+    --shadow-overlay:
+      0 0 0 1px var(--shadow-ring), 0 8px 24px var(--shadow-soft),
+      0 24px 64px -12px var(--shadow-deep);
+    --shadow-control: 0 1px 1px light-dark(oklch(22% 0.01 260 / 6%), oklch(0% 0 0 / 24%));
+
+    /* ── Space, size, radius ────────────────────────────────────────────────────── */
+
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-1-5: 6px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    --control-sm: 28px;
+    --control-md: 32px;
+    --control-lg: 40px;
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 999px;
+
+    --rail-width: 64px;
+    --sidebar-width: 248px;
+    --pane-header-height: 48px;
+    --right-pane-width: 380px;
+
+    /* ── Density: comfortable (default) ─────────────────────────────────────────── */
+
+    --message-avatar-size: 36px;
+    --message-gutter: 52px;
+    --message-pad-y: 2px;
+    --message-group-gap: var(--space-2);
+    --sidebar-row-height: 28px;
+    --sidebar-row-gap: 1px;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
+  :root[data-density="compact"] {
+    --message-avatar-size: 0px;
+    --message-gutter: 0px;
+    --message-pad-y: 1px;
+    --message-group-gap: 2px;
+    --sidebar-row-height: 24px;
+    --sidebar-row-gap: 0px;
+  }
+}
+
+/*
+ * Type. Inter (variable, self-hosted) for everything, JetBrains Mono (variable) only in code.
+ * Both are subsets: Latin and Latin Extended plus the UI symbols (arrows, ⌘ ⌥ ⇧ ⎋ ⏎), with the
+ * weight axis cut to the 400-600 the scale uses and Inter's optical-size axis pinned to text.
+ * tools/fonts/subset.sh regenerates them from the upstream releases; the OFL licences sit beside
+ * the files. Text outside the subset falls back to the system font through unicode-range.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/inter-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/jetbrains-mono-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* Arial tuned to Inter's metrics, so the swap from the fallback doesn't shift layout. */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+
+@layer tokens {
+  :root {
+    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-features: "cv11", "ss01", "calt";
+
+    /* Scale (rem at 16 px). Weights: 400 body, 500 names and unread rows, 600 headings. No 700. */
+    --text-meta: 0.75rem; /* 12: timestamps, captions, badges */
+    --leading-meta: 1rem;
+    --text-sidebar: 0.8125rem; /* 13: sidebar rows, small controls */
+    --leading-sidebar: 1.125rem;
+    --text-ui: 0.875rem; /* 14: buttons, menus, inputs */
+    --leading-ui: 1.25rem;
+    --text-body: 0.9375rem; /* 15/22: message body, as Slack */
+    --leading-body: 1.375rem;
+    --text-composer: 1rem; /* 16: composer, so iOS never zooms */
+    --leading-composer: 1.5rem;
+    --text-title: 1.125rem; /* 18: pane header title */
+    --leading-title: 1.5rem;
+    --text-page: 1.375rem; /* 22/28: page titles */
+    --leading-page: 1.75rem;
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+
+    --tracking-tight: -0.011em;
+    --tracking-title: -0.017em;
+  }
+}
+
+@layer base {
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    font-feature-settings: normal;
+    font-size: 0.9em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  .text-meta {
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .text-ui {
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .text-body {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .text-title {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .text-page {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .text-faint {
+    color: var(--text-faint);
+  }
+
+  /* Counters and timestamps line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Reset and document defaults. Components style themselves in the `ui` layer. */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    /* Lets `height: auto` transition (sidebar sections, accordions) where supported. */
+    interpolate-size: allow-keywords;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--bg-app);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-feature-settings: var(--font-features);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    letter-spacing: var(--tracking-tight);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  img,
+  picture,
+  svg,
+  canvas,
+  video {
+    display: block;
+    max-width: 100%;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+
+  button:disabled {
+    cursor: default;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.15em;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--accent) 28%, transparent);
+  }
+
+  /* One focus ring everywhere, keyboard focus only. */
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Popovers and dialogs start bare; each component styles its own surface. */
+  [popover],
+  dialog {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    overflow: visible;
+  }
+
+  [hidden] {
+    /* biome-ignore lint/complexity/noImportantStyles: `hidden` must win over any component's display. */
+    display: none !important;
+  }
+
+  /* Thin, quiet scrollbars that match the surface. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/*
+ * Motion tokens: the only durations and easings in the app. Recipes and components read these
+ * (directly, or through a recipe's own tunable variable that points here), so changing a step
+ * here retimes everything that uses it.
+ *
+ * Durations by size (exits run about 25 % faster than entries):
+ *   micro   hover, press, colour                         120 / 80 ms
+ *   small   tooltip, menu, popover, chip, text swap      160 / 120 ms
+ *   medium  pane, dialog, sheet, tabs, accordion         240 / 180 ms
+ *   large   route-level cross-fade                       250 / 180 ms
+ *   spring  pops that settle on a CSS linear() spring    400 ms
+ *
+ * Reduced motion (the OS setting, unless the user picked "full" in Smartfire, or the user's own
+ * "reduce" override): distances, blur and scale collapse to nothing and every duration becomes a
+ * short fade, so whatever animated becomes a <= 80 ms opacity change. WebGL and canvas effects
+ * read the same setting through useReducedMotion() and render a still frame or a CSS fallback.
+ */
+
+@layer tokens {
+  :root {
+    --duration-micro: 120ms;
+    --duration-micro-exit: 80ms;
+    --duration-small: 160ms;
+    --duration-small-exit: 120ms;
+    --duration-medium: 240ms;
+    --duration-medium-exit: 180ms;
+    --duration-large: 250ms;
+    --duration-large-exit: 180ms;
+    --duration-spring: 400ms;
+    --duration-stagger: 40ms;
+    /* One turn of a loading spinner. It keeps turning under reduced motion: it is the message. */
+    --duration-spin: 750ms;
+    /* Hover intent: the delay before hover-only chrome (action bar, tooltips) commits. */
+    --duration-intent: 80ms;
+    /* A cold tooltip waits this long (on top of the intent delay); a warm one shows at once. */
+    --duration-tooltip-cold: 300ms;
+    /* How long a toast stays before it leaves on its own (paused while hovered or focused). */
+    --duration-toast-dwell: 5000ms;
+
+    /* Enter: fast-out, "emphasized decelerate". Exit: accelerate away. Move: position and size. */
+    --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --ease-move: cubic-bezier(0.3, 0, 0, 1);
+    /* Springs, as linear() curves so no runtime motion library is needed.
+       pop: about 12 % overshoot (badges, reaction chips). soft: about 3 % (toggles, drag release). */
+    --ease-spring: linear(
+      0,
+      0.135,
+      0.417,
+      0.708,
+      0.933,
+      1.067,
+      1.122,
+      1.121,
+      1.091,
+      1.053,
+      1.02,
+      0.998,
+      0.987,
+      0.984,
+      0.987,
+      0.991,
+      0.996,
+      0.999,
+      1.001,
+      1.002,
+      1.002,
+      1.001,
+      1.001,
+      1,
+      1
+    );
+    --ease-spring-soft: linear(
+      0,
+      0.132,
+      0.386,
+      0.631,
+      0.815,
+      0.933,
+      0.996,
+      1.023,
+      1.028,
+      1.024,
+      1.017,
+      1.01,
+      1.005,
+      1.002,
+      1,
+      0.999,
+      0.999,
+      0.999,
+      1,
+      1,
+      1
+    );
+
+    --distance-micro: 4px;
+    --distance-rise: 8px;
+    --distance-pane: 12px;
+    --distance-toast: 16px;
+    --blur-small: 2px;
+    --scale-press: 0.97;
+    --scale-surface: 0.96;
+    --scale-menu: 0.97;
+    --scale-menu-exit: 0.99;
+    --scale-tooltip: 0.98;
+    --scale-chip: 0.8;
+    /* Icon swap: the recipe's 0.25, softened by its blur, so the new glyph blooms in place. */
+    --scale-icon-swap: 0.25;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) {
+      --duration-micro: 80ms;
+      --duration-small: 80ms;
+      --duration-small-exit: 80ms;
+      --duration-medium: 80ms;
+      --duration-medium-exit: 80ms;
+      --duration-large: 80ms;
+      --duration-large-exit: 80ms;
+      --duration-spring: 80ms;
+      --duration-stagger: 0ms;
+      --ease-spring: var(--ease-enter);
+      --ease-spring-soft: var(--ease-enter);
+      --distance-micro: 0px;
+      --distance-rise: 0px;
+      --distance-pane: 0px;
+      --distance-toast: 0px;
+      --blur-small: 0px;
+      --scale-press: 1;
+      --scale-surface: 1;
+      --scale-menu: 1;
+      --scale-menu-exit: 1;
+      --scale-tooltip: 1;
+      --scale-chip: 1;
+      --scale-icon-swap: 1;
+    }
+  }
+
+  :root[data-motion="reduce"] {
+    --duration-micro: 80ms;
+    --duration-small: 80ms;
+    --duration-small-exit: 80ms;
+    --duration-medium: 80ms;
+    --duration-medium-exit: 80ms;
+    --duration-large: 80ms;
+    --duration-large-exit: 80ms;
+    --duration-spring: 80ms;
+    --duration-stagger: 0ms;
+    --ease-spring: var(--ease-enter);
+    --ease-spring-soft: var(--ease-enter);
+    --distance-micro: 0px;
+    --distance-rise: 0px;
+    --distance-pane: 0px;
+    --distance-toast: 0px;
+    --blur-small: 0px;
+    --scale-press: 1;
+    --scale-surface: 1;
+    --scale-menu: 1;
+    --scale-menu-exit: 1;
+    --scale-tooltip: 1;
+    --scale-chip: 1;
+    --scale-icon-swap: 1;
+  }
+}
+
+/*
+ * Enter patterns with @starting-style: an element animates in when it is inserted (or shown) with
+ * no JavaScript and no mount bookkeeping. Add the class to something that appears; leaving is the
+ * component's business (most chrome leaves instantly, overlays use their recipe's exit).
+ *
+ *   .enter-fade   opacity only
+ *   .enter-rise   8 px rise plus fade: a message that arrives live while you're at the bottom
+ *   .enter-pop    0.96 -> 1 plus fade: cards, chips
+ *   .enter-chip   0.8 -> 1 on the pop spring: a reaction that was just added
+ *   .enter-pane   12 px slide from the end edge plus fade: the right pane opening
+ *
+ * Under reduced motion the distance and scale tokens are zero, so each becomes a short fade.
+ */
+
+@layer motion {
+  .enter-fade {
+    transition: opacity var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  .enter-rise {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      translate var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--distance-rise);
+    }
+  }
+
+  .enter-pop {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      scale: var(--scale-surface);
+    }
+  }
+
+  .enter-chip {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-spring) var(--ease-spring);
+
+    @starting-style {
+      opacity: 0;
+      scale: var(--scale-chip);
+    }
+  }
+
+  .enter-pane {
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: var(--distance-pane) 0;
+    }
+  }
+
+  /* View Transitions (theme switch, conversation swaps): a short cross-fade, nothing more. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--duration-small);
+    animation-timing-function: var(--ease-enter);
+  }
+}
+
+/* The adapted transitions.dev recipes (see each file's header and THIRD_PARTY_NOTICES.md). */
+/*
+ * Menu dropdown: adapted from the free "Menu dropdown" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add menu-dropdown`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at Smartfire's motion tokens
+ * (small/small-exit, enter/exit easing). Open and closing are `data-state=open | closing`
+ * set by usePresence(); the enter plays from @starting-style when the element mounts or enters the
+ * top layer, and a light dismiss by the Popover API exits the same way through `display` and
+ * `overlay` discrete transitions. Menus and popovers both use it.
+ */
+
+@layer recipes {
+  :root {
+    --dropdown-open-dur: var(--duration-small);
+    --dropdown-close-dur: var(--duration-small-exit);
+    --dropdown-pre-scale: var(--scale-menu);
+    --dropdown-closing-scale: var(--scale-menu-exit);
+    --dropdown-ease: var(--ease-enter);
+    --dropdown-close-ease: var(--ease-exit);
+  }
+
+  .t-dropdown {
+    transform-origin: top left;
+    transform: scale(1);
+    opacity: 1;
+    transition:
+      transform var(--dropdown-open-dur) var(--dropdown-ease),
+      opacity var(--dropdown-open-dur) var(--dropdown-ease),
+      display var(--dropdown-open-dur),
+      overlay var(--dropdown-open-dur);
+    transition-behavior: allow-discrete;
+    will-change: transform, opacity;
+  }
+
+  .t-dropdown[data-origin="top-right"] {
+    transform-origin: top right;
+  }
+
+  .t-dropdown[data-origin="top-center"] {
+    transform-origin: top center;
+  }
+
+  .t-dropdown[data-origin="bottom-left"] {
+    transform-origin: bottom left;
+  }
+
+  .t-dropdown[data-origin="bottom-center"] {
+    transform-origin: bottom center;
+  }
+
+  .t-dropdown[data-origin="bottom-right"] {
+    transform-origin: bottom right;
+  }
+
+  .t-dropdown[data-origin="left"] {
+    transform-origin: left center;
+  }
+
+  @starting-style {
+    .t-dropdown[data-state="open"] {
+      transform: scale(var(--dropdown-pre-scale));
+      opacity: 0;
+    }
+  }
+
+  .t-dropdown[data-state="closing"] {
+    transform: scale(var(--dropdown-closing-scale));
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--dropdown-close-dur);
+    transition-timing-function: var(--dropdown-close-ease);
+  }
+
+  /* A light dismiss (outside click, Esc) hides the popover before React hears about it. */
+  .t-dropdown[popover]:not(:popover-open) {
+    transform: scale(var(--dropdown-closing-scale));
+    opacity: 0;
+    transition-duration: var(--dropdown-close-dur);
+    transition-timing-function: var(--dropdown-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-dropdown {
+      transition-property: opacity, display, overlay;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-dropdown {
+    transition-property: opacity, display, overlay;
+  }
+}
+
+/*
+ * Tooltip: adapted from the free "Tooltip open/close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add tooltip`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens and the
+ * tooltip colours at --tooltip-bg/--tooltip-text. Instead of a CSS :hover wrap, Tooltip (src/ui)
+ * sets `data-state` and shows the element in the top layer, anchored with CSS anchor positioning;
+ * the intent delay stays on the open transition only, so leaving still snaps it away. It closes on
+ * the ease-out curve, as the recipe does, so the fade starts at once.
+ */
+
+@layer recipes {
+  :root {
+    --tt-in-dur: var(--duration-small);
+    --tt-out-dur: var(--duration-micro-exit);
+    --tt-scale: var(--scale-tooltip);
+    --tt-delay: var(--duration-intent);
+    --tt-in-ease: var(--ease-enter);
+    --tt-out-ease: var(--ease-enter);
+    --tt-bg: var(--tooltip-bg);
+    --tt-fg: var(--tooltip-text);
+  }
+
+  .t-tt {
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--tt-bg);
+    color: var(--tt-fg);
+    white-space: nowrap;
+    box-shadow: var(--shadow-raised);
+    transform-origin: 50% 100%;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: none;
+    transition:
+      opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+      transform var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+      display var(--tt-in-dur) var(--tt-delay),
+      overlay var(--tt-in-dur) var(--tt-delay);
+    transition-behavior: allow-discrete;
+  }
+
+  .t-tt[data-placement^="bottom"] {
+    transform-origin: 50% 0%;
+  }
+
+  .t-tt[data-placement^="right"] {
+    transform-origin: 0% 50%;
+  }
+
+  .t-tt[data-placement^="left"] {
+    transform-origin: 100% 50%;
+  }
+
+  @starting-style {
+    .t-tt[data-state="open"] {
+      opacity: 0;
+      transform: scale(var(--tt-scale));
+    }
+  }
+
+  /* Leaving has no delay: the tooltip gets out of the way immediately. */
+  .t-tt[data-state="closing"] {
+    opacity: 0;
+    transform: scale(var(--tt-scale));
+    transition-duration: var(--tt-out-dur);
+    transition-timing-function: var(--tt-out-ease);
+    transition-delay: 0s;
+  }
+
+  .t-tt[data-warm] {
+    transition-delay: 0s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-tt {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-tt {
+    transition: none !important;
+  }
+}
+
+/*
+ * Modal: adapted from the free "Modal open / close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add modal`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium,
+ * medium-exit, --scale-surface). Dialog (src/ui) is a native <dialog>: the enter plays from
+ * @starting-style when showModal() puts it in the top layer, `data-state="closing"` plays the exit
+ * before close(), and the ::backdrop fades on the same clock.
+ */
+
+@layer recipes {
+  :root {
+    --modal-open-dur: var(--duration-medium);
+    --modal-close-dur: var(--duration-medium-exit);
+    --modal-scale: var(--scale-surface);
+    --modal-scale-close: var(--scale-surface);
+    --modal-ease: var(--ease-enter);
+    --modal-close-ease: var(--ease-exit);
+  }
+
+  .t-modal {
+    transform-origin: center;
+    transform: scale(1);
+    opacity: 1;
+    transition:
+      transform var(--modal-open-dur) var(--modal-ease),
+      opacity var(--modal-open-dur) var(--modal-ease),
+      display var(--modal-open-dur),
+      overlay var(--modal-open-dur);
+    transition-behavior: allow-discrete;
+    will-change: transform, opacity;
+  }
+
+  @starting-style {
+    .t-modal[open] {
+      transform: scale(var(--modal-scale));
+      opacity: 0;
+    }
+  }
+
+  .t-modal[data-state="closing"] {
+    transform: scale(var(--modal-scale-close));
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--modal-close-dur);
+    transition-timing-function: var(--modal-close-ease);
+  }
+
+  .t-modal::backdrop {
+    background: var(--scrim);
+    opacity: 1;
+    transition:
+      opacity var(--modal-open-dur) var(--modal-ease),
+      display var(--modal-open-dur),
+      overlay var(--modal-open-dur);
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    .t-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .t-modal[data-state="closing"]::backdrop {
+    opacity: 0;
+    transition-duration: var(--modal-close-dur);
+    transition-timing-function: var(--modal-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-modal {
+      transition-property: opacity, display, overlay;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-modal {
+    transition-property: opacity, display, overlay;
+  }
+}
+
+/*
+ * Toast: adapted from the free "Toast open/close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add toast`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium for
+ * the open, small for the close, --distance-toast, --blur-small). Toast (src/ui) mounts each toast
+ * with `data-state="open"`, so the rise plays from @starting-style, and plays the close on
+ * `data-state="closing"` before unmounting. The stack offset lives in `translate` so it composes
+ * with the recipe's `transform`.
+ */
+
+@layer recipes {
+  :root {
+    --toast-open: var(--duration-medium);
+    --toast-close: var(--duration-small);
+    --toast-distance: var(--distance-toast);
+    --toast-blur: var(--blur-small);
+    --toast-scale: var(--scale-menu);
+    --toast-ease: var(--ease-enter);
+    --toast-close-ease: var(--ease-exit);
+  }
+
+  .t-toast {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    will-change: transform, opacity, filter;
+    transition:
+      opacity var(--toast-open) var(--toast-ease),
+      transform var(--toast-open) var(--toast-ease),
+      filter var(--toast-open) var(--toast-ease);
+  }
+
+  @starting-style {
+    .t-toast[data-state="open"] {
+      opacity: 0;
+      transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+      filter: blur(var(--toast-blur));
+    }
+  }
+
+  .t-toast[data-state="closing"] {
+    opacity: 0;
+    transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+    filter: blur(var(--toast-blur));
+    transition:
+      opacity var(--toast-close) var(--toast-close-ease),
+      transform var(--toast-close) var(--toast-close-ease),
+      filter var(--toast-close) var(--toast-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-toast {
+      transition: opacity var(--duration-micro-exit) linear !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-toast {
+    transition: opacity var(--duration-micro-exit) linear !important;
+  }
+}
+
+/*
+ * Notification badge: adapted from the free "Notification badge" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add notification-badge`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens: the pop
+ * rides the pop spring (--ease-spring over --duration-spring) instead of a cubic overshoot, the
+ * fade lasts the spring step like the recipe's, the slide uses the medium step, the close uses the
+ * small exit. Badge (src/ui) positions
+ * itself; `.t-badge` is only absolute when it decorates a trigger (`data-floating`).
+ */
+
+@layer recipes {
+  :root {
+    --badge-slide-dur: var(--duration-medium);
+    --badge-pop-dur: var(--duration-spring);
+    --badge-pop-close-dur: var(--duration-small-exit);
+    --badge-fade-dur: var(--duration-spring);
+    --badge-fade-close-dur: var(--duration-small-exit);
+    --badge-blur: var(--blur-small);
+    --badge-offset-x: calc(var(--distance-rise) * -1);
+    --badge-offset-y: calc(var(--distance-pane));
+    --badge-slide-ease: var(--ease-enter);
+    --badge-pop-ease: var(--ease-spring);
+    --badge-close-ease: var(--ease-exit);
+  }
+
+  @keyframes t-badge-slide-in {
+    from {
+      transform: translate(var(--badge-offset-x), var(--badge-offset-y));
+    }
+
+    to {
+      transform: translate(0, 0);
+    }
+  }
+
+  .t-badge {
+    display: inline-flex;
+    pointer-events: none;
+  }
+
+  .t-badge[data-floating] {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+  }
+
+  .t-badge[data-floating][data-open="true"] {
+    animation: t-badge-slide-in var(--badge-slide-dur) var(--badge-slide-ease);
+  }
+
+  .t-badge-dot {
+    display: inline-flex;
+    transform-origin: center;
+    transform: scale(1);
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      transform var(--badge-pop-dur) var(--badge-pop-ease),
+      opacity var(--badge-fade-dur) var(--badge-slide-ease),
+      filter var(--badge-pop-dur) var(--badge-slide-ease);
+    will-change: transform, opacity, filter;
+  }
+
+  @starting-style {
+    .t-badge[data-open="true"] .t-badge-dot {
+      transform: scale(0);
+      opacity: 0;
+      filter: blur(var(--badge-blur));
+    }
+  }
+
+  .t-badge[data-open="false"] .t-badge-dot {
+    transform: scale(0);
+    opacity: 0;
+    filter: blur(var(--badge-blur));
+    transition:
+      transform var(--badge-pop-close-dur) var(--badge-close-ease),
+      opacity var(--badge-fade-close-dur) var(--badge-close-ease),
+      filter var(--badge-pop-close-dur) var(--badge-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-badge,
+    :root:not([data-motion="full"]) .t-badge-dot {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-badge,
+  :root[data-motion="reduce"] .t-badge-dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/*
+ * Number pop-in: adapted from the free "Number pop-in" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add number-pop-in`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the pop
+ * spring, --distance-rise, --duration-stagger). AnimatedNumber (src/motion) re-keys the digit spans
+ * on every change, so React remounts them and the keyframes replay without the recipe's
+ * remove-reflow-add dance; only digits that changed animate.
+ */
+
+@layer recipes {
+  :root {
+    --digit-dur: var(--duration-spring);
+    --digit-distance: var(--distance-rise);
+    --digit-stagger: var(--duration-stagger);
+    --digit-blur: var(--blur-small);
+    --digit-ease: var(--ease-spring);
+    --digit-dir-x: 0;
+    --digit-dir-y: 1;
+  }
+
+  @keyframes t-digit-pop-in {
+    0% {
+      transform: translate(
+        calc(var(--digit-distance) * var(--digit-dir-x)),
+        calc(var(--digit-distance) * var(--digit-dir-y))
+      );
+      opacity: 0;
+      filter: blur(var(--digit-blur));
+    }
+
+    100% {
+      transform: translate(0, 0);
+      opacity: 1;
+      filter: blur(0);
+    }
+  }
+
+  .t-digit-group {
+    display: inline-flex;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .t-digit {
+    display: inline-block;
+  }
+
+  .t-digit-group.is-animating .t-digit[data-changed] {
+    animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+  }
+
+  .t-digit-group.is-animating .t-digit[data-stagger="1"] {
+    animation-delay: var(--digit-stagger);
+  }
+
+  .t-digit-group.is-animating .t-digit[data-stagger="2"] {
+    animation-delay: calc(var(--digit-stagger) * 2);
+  }
+
+  /* Counting down drops the new digits in from above. */
+  .t-digit-group[data-direction="down"] {
+    --digit-dir-y: -1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-digit-group .t-digit {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}
+
+/*
+ * Text states swap: adapted from the free "Text states swap" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add text-states-swap`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (small,
+ * --distance-micro, --blur-small, --ease-move). TextSwap (src/motion) runs the recipe's three
+ * phases from React state, timing the hand-off from the element's computed transition, and keeps
+ * the widest label's width so the control never jumps.
+ */
+
+@layer recipes {
+  :root {
+    --text-swap-dur: var(--duration-small);
+    --text-swap-translate-y: var(--distance-micro);
+    --text-swap-blur: var(--blur-small);
+    --text-swap-ease: var(--ease-move);
+  }
+
+  .t-text-swap {
+    display: inline-block;
+    transform: translateY(0);
+    filter: blur(0);
+    opacity: 1;
+    transition:
+      transform var(--text-swap-dur) var(--text-swap-ease),
+      filter var(--text-swap-dur) var(--text-swap-ease),
+      opacity var(--text-swap-dur) var(--text-swap-ease);
+    will-change: transform, filter, opacity;
+  }
+
+  .t-text-swap.is-exit {
+    transform: translateY(calc(var(--text-swap-translate-y) * -1));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+  }
+
+  .t-text-swap.is-enter-start {
+    transform: translateY(var(--text-swap-translate-y));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-text-swap {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-text-swap {
+    transition: none !important;
+  }
+}
+
+/*
+ * Success check: adapted from the free "Success check" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add success-check`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the pop
+ * spring for the bob, --duration-spring for the rest, a shorter rotate, travel and blur so it reads
+ * at 16-20 px). The check path's dash length is fixed to the Lucide check it draws.
+ */
+
+@layer recipes {
+  :root {
+    --check-opacity-dur: var(--duration-spring);
+    --check-rotate-dur: var(--duration-spring);
+    --check-rotate-from: 45deg;
+    --check-bob-dur: var(--duration-spring);
+    --check-y-amount: var(--distance-rise);
+    --check-blur-dur: var(--duration-spring);
+    --check-blur-from: 4px;
+    --check-path-dur: var(--duration-spring);
+    --check-path-delay: var(--duration-intent);
+    --check-ease-out: var(--ease-enter);
+    --check-ease-opacity: var(--ease-enter);
+    --check-ease-rotate: var(--ease-enter);
+    --check-ease-bob: var(--ease-spring);
+    --check-ease-path: var(--ease-enter);
+  }
+
+  .t-success-check {
+    display: inline-block;
+    transform-origin: center;
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+
+  .t-success-check svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .t-success-check svg path {
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+  }
+
+  .t-success-check[data-state="in"] {
+    animation:
+      t-check-fade var(--check-opacity-dur) var(--check-ease-opacity) forwards,
+      t-check-rotate var(--check-rotate-dur) var(--check-ease-rotate) forwards,
+      t-check-blur var(--check-blur-dur) var(--check-ease-out) forwards,
+      t-check-bob var(--check-bob-dur) var(--check-ease-bob) forwards;
+  }
+
+  .t-success-check[data-state="in"] svg path {
+    animation: t-check-draw var(--check-path-dur) var(--check-ease-path) var(--check-path-delay)
+      forwards;
+  }
+
+  @keyframes t-check-fade {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes t-check-rotate {
+    from {
+      transform: rotate(var(--check-rotate-from));
+    }
+
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes t-check-blur {
+    from {
+      filter: blur(var(--check-blur-from));
+    }
+
+    to {
+      filter: blur(0);
+    }
+  }
+
+  @keyframes t-check-bob {
+    from {
+      translate: 0 var(--check-y-amount);
+    }
+
+    to {
+      translate: 0 0;
+    }
+  }
+
+  @keyframes t-check-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-success-check {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    :root:not([data-motion="full"]) .t-success-check svg path {
+      animation: none !important;
+      stroke-dashoffset: 0 !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-success-check {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  :root[data-motion="reduce"] .t-success-check svg path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/*
+ * Error state shake: adapted from the free "Error state shake" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add error-state-shake`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the
+ * micro exit step for the swings, --distance-micro for the overshoot, the medium step for the
+ * revert), and the border tween uses the small step instead of a literal. TextField (src/ui) runs
+ * the recipe's orchestration from React state.
+ */
+
+@layer recipes {
+  :root {
+    --shake-distance: 6px;
+    --shake-overshoot: var(--distance-micro);
+    --shake-dur-a: var(--duration-micro-exit);
+    --shake-dur-b: calc(var(--duration-micro-exit) * 0.75);
+    --shake-ease: var(--ease-enter);
+    --revert-hold: 3000ms;
+    --revert-dur: var(--duration-medium);
+  }
+
+  .t-input {
+    transition:
+      border-color var(--duration-small) var(--ease-enter),
+      box-shadow var(--duration-small) var(--ease-enter);
+    will-change: transform;
+  }
+
+  .t-input.is-error {
+    transition:
+      border-color var(--revert-dur) var(--ease-enter),
+      box-shadow var(--revert-dur) var(--ease-enter);
+  }
+
+  .t-error-msg {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--revert-dur) var(--ease-enter),
+      visibility 0s linear var(--revert-dur);
+  }
+
+  .t-input-wrap.is-error .t-error-msg {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity var(--revert-dur) var(--ease-enter),
+      visibility 0s linear 0s;
+  }
+
+  /* Legs of 80, 80, 60, 60 ms (A, A, B, B): the stops are cumulative fractions of 280 ms. */
+  .t-input.is-shaking {
+    animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
+  }
+
+  @keyframes t-input-shake {
+    0% {
+      transform: translateX(0);
+      animation-timing-function: var(--shake-ease);
+    }
+
+    28.57% {
+      transform: translateX(var(--shake-distance));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    57.14% {
+      transform: translateX(calc(var(--shake-distance) * -1));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    78.57% {
+      transform: translateX(var(--shake-overshoot));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-input {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-input {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * Skeleton loader and reveal: adapted from the free "Skeleton loader and reveal" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add skeleton-reveal`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the
+ * large step for the reveal, --blur-small, --ease-move), the pulse keeps going while loading
+ * (`--pulse-count: infinite`) on a quiet linear 1.6 s breath, and the skeleton layer leaves the
+ * accessibility tree once revealed. Skeleton and SkeletonReveal (src/ui) drive the states.
+ */
+
+@layer recipes {
+  :root {
+    --pulse-dur: calc(var(--duration-spring) * 4);
+    --pulse-count: infinite;
+    --pulse-min: 0.55;
+    --reveal-dur: var(--duration-large);
+    --reveal-blur: var(--blur-small);
+    --reveal-ease: var(--ease-move);
+  }
+
+  .t-skel {
+    display: grid;
+  }
+
+  /* Both layers share one grid cell, so the swap never changes layout. */
+  .t-skel-skeleton,
+  .t-skel-content {
+    grid-area: 1 / 1;
+  }
+
+  .t-skel-skeleton {
+    z-index: 1;
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease),
+      visibility 0s linear 0s;
+  }
+
+  .t-skel-content {
+    z-index: 2;
+    opacity: 0;
+    filter: blur(var(--reveal-blur));
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease);
+  }
+
+  .t-skel.is-revealed .t-skel-skeleton {
+    opacity: 0;
+    filter: blur(var(--reveal-blur));
+    visibility: hidden;
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease),
+      visibility 0s linear var(--reveal-dur);
+  }
+
+  .t-skel.is-revealed .t-skel-content {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  .t-skel.is-resetting .t-skel-skeleton,
+  .t-skel.is-resetting .t-skel-content {
+    transition: none !important;
+  }
+
+  .t-skel-skeleton.is-pulsing > *,
+  .t-skel-bone.is-pulsing {
+    animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
+  }
+
+  @keyframes t-skel-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: var(--pulse-min);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-skel-skeleton,
+    :root:not([data-motion="full"]) .t-skel-content {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-skel-skeleton,
+  :root[data-motion="reduce"] .t-skel-content {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-skel-skeleton.is-pulsing > *,
+    :root:not([data-motion="full"]) .t-skel-bone.is-pulsing {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-skel-skeleton.is-pulsing > *,
+  :root[data-motion="reduce"] .t-skel-bone.is-pulsing {
+    animation: none !important;
+  }
+}
+
+/*
+ * Tabs sliding: adapted from the free "Tabs sliding" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add tabs-sliding`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium, --ease-move) and
+ * the colour tokens; the bar is a quiet segmented control (radius-md, not a 48 px capsule) and the
+ * pill is the raised surface with the control shadow. Tabs (src/ui) measures the selected tab and
+ * writes the pill's width and transform; the first measurement lands without a transition.
+ */
+
+@layer recipes {
+  :root {
+    --tabs-dur: var(--duration-medium);
+    --tabs-ease: var(--ease-move);
+    --tabs-text-muted: var(--text-muted);
+    --tabs-text-active: var(--text);
+    --tabs-bar-bg: var(--bg-sunken);
+    --tabs-pill-bg: light-dark(var(--neutral-0), var(--charcoal-700));
+  }
+
+  .t-tabs {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-0-5);
+    padding: var(--space-0-5);
+    border-radius: var(--radius-md);
+    background: var(--tabs-bar-bg);
+  }
+
+  .t-tab {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--tabs-text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .t-tab:not([aria-selected="true"]):hover,
+  .t-tab[aria-selected="true"] {
+    color: var(--tabs-text-active);
+  }
+
+  /* Width and transform are written inline from measurements, so the transition tweens between
+     the previous and the next tab. */
+  .t-tabs-pill {
+    position: absolute;
+    top: var(--space-0-5);
+    bottom: var(--space-0-5);
+    left: 0;
+    z-index: 0;
+    width: 0;
+    border-radius: var(--radius-sm);
+    background: var(--tabs-pill-bg);
+    box-shadow:
+      var(--shadow-control),
+      0 0 0 1px var(--shadow-ring);
+    transform: translateX(0);
+    transition:
+      transform var(--tabs-dur) var(--tabs-ease),
+      width var(--tabs-dur) var(--tabs-ease);
+    will-change: transform, width;
+    pointer-events: none;
+  }
+
+  .t-tabs-pill[data-measured="false"] {
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-tabs-pill,
+    :root:not([data-motion="full"]) .t-tab {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-tabs-pill,
+  :root[data-motion="reduce"] .t-tab {
+    transition: none !important;
+  }
+}
+
+/*
+ * Toggle: adapted from the free "Toggle" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add toggle`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the thumb's travel is derived from the control-size tokens, the
+ * keyframed overshoot runs on the spring step with --ease-enter between stops (the keyframes are the
+ * spring), and the track colour crossfades on the micro step instead of snapping (the recipe's
+ * 0ms; the scanner reports that as off-scale, and it is deliberate). The recipe's `is-init` class
+ * is a `data-init` attribute here, set after the first user flip so a toggle that renders "on"
+ * doesn't animate on mount.
+ */
+
+@layer recipes {
+  :root {
+    --toggle-width: 34px;
+    --toggle-height: 20px;
+    --toggle-inset: 2px;
+    --toggle-thumb: calc(var(--toggle-height) - var(--toggle-inset) * 2);
+    --toggle-travel: calc(var(--toggle-width) - var(--toggle-thumb) - var(--toggle-inset) * 2);
+    --toggle-dur: var(--duration-spring);
+    --toggle-ov1: 1.5px;
+    --toggle-ov2: 0px;
+    --toggle-track: var(--duration-micro);
+    --toggle-ease: var(--ease-enter);
+  }
+
+  .t-toggle {
+    transition: background-color var(--toggle-track) var(--toggle-ease);
+  }
+
+  .t-toggle-thumb {
+    translate: 0 0;
+    will-change: translate;
+  }
+
+  .t-toggle[data-on="true"] .t-toggle-thumb {
+    translate: var(--toggle-travel) 0;
+  }
+
+  .t-toggle[data-init][data-on="true"] .t-toggle-thumb {
+    animation: t-toggle-on var(--toggle-dur) var(--toggle-ease) both;
+  }
+
+  .t-toggle[data-init][data-on="false"] .t-toggle-thumb {
+    animation: t-toggle-off var(--toggle-dur) var(--toggle-ease) both;
+  }
+
+  @keyframes t-toggle-on {
+    0% {
+      translate: 0 0;
+    }
+
+    55% {
+      translate: calc(var(--toggle-travel) + var(--toggle-ov1)) 0;
+    }
+
+    80% {
+      translate: calc(var(--toggle-travel) - var(--toggle-ov2)) 0;
+    }
+
+    100% {
+      translate: var(--toggle-travel) 0;
+    }
+  }
+
+  @keyframes t-toggle-off {
+    0% {
+      translate: var(--toggle-travel) 0;
+    }
+
+    55% {
+      translate: calc(0px - var(--toggle-ov1)) 0;
+    }
+
+    80% {
+      translate: var(--toggle-ov2) 0;
+    }
+
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-toggle .t-toggle-thumb {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-toggle .t-toggle-thumb {
+    animation: none !important;
+  }
+}
+
+/*
+ * Checkbox check: adapted from the free "Checkbox check" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add checkbox-check`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (micro for the box fill,
+ * medium for the stroke draw, micro-exit for the un-draw), the box uses the accent and border
+ * tokens, the draw starts a stagger step after the fill so the mark lands on a filled box, and
+ * the checked state is also read from `data-checked` (Checkbox wraps a native input).
+ */
+
+@layer recipes {
+  :root {
+    --check-box: var(--duration-micro);
+    --check-draw: var(--duration-medium);
+    --check-delay: var(--duration-stagger);
+    --check-uncheck: var(--duration-micro-exit);
+    --check-ease: var(--ease-enter);
+  }
+
+  .t-check {
+    transition:
+      background-color var(--check-box) var(--check-ease),
+      box-shadow var(--check-box) var(--check-ease);
+  }
+
+  .t-check svg path {
+    stroke-dasharray: var(--check-len, 15);
+    stroke-dashoffset: var(--check-len, 15);
+    transition: stroke-dashoffset var(--check-uncheck) var(--check-ease);
+  }
+
+  .t-check[aria-checked="true"] svg path,
+  .t-check[aria-checked="mixed"] svg path,
+  .t-check[data-checked="true"] svg path,
+  .t-check[data-checked="mixed"] svg path {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset var(--check-draw) var(--check-ease) var(--check-delay);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-check,
+    :root:not([data-motion="full"]) .t-check svg path {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-check,
+  :root[data-motion="reduce"] .t-check svg path {
+    transition: none !important;
+  }
+}
+
+/*
+ * Icon swap: adapted from the free "Icon swap" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add icon-swap`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the medium step,
+ * --blur-small, --ease-move), and the recipe's 0.25 start scale is the --scale-icon-swap token
+ * (1 under reduced motion). The blur hides the small frames, so at 16 px it reads as the glyph
+ * blooming in place. Used for copy -> check, mute and the theme switch.
+ */
+
+@layer recipes {
+  :root {
+    --icon-swap-dur: var(--duration-medium);
+    --icon-swap-blur: var(--blur-small);
+    --icon-swap-start-scale: var(--scale-icon-swap);
+    --icon-swap-ease: var(--ease-move);
+  }
+
+  .t-icon-swap {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .t-icon-swap .t-icon {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--icon-swap-dur) var(--icon-swap-ease),
+      filter var(--icon-swap-dur) var(--icon-swap-ease),
+      transform var(--icon-swap-dur) var(--icon-swap-ease);
+    will-change: opacity, filter, transform;
+  }
+
+  .t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+  .t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+
+  .t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+  .t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+    opacity: 0;
+    filter: blur(var(--icon-swap-blur));
+    transform: scale(var(--icon-swap-start-scale));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-icon-swap .t-icon {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-icon-swap .t-icon {
+    transition: none !important;
+  }
+}
+
+/*
+ * Accordion: adapted from the free "Accordion expand" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add accordion`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium to expand,
+ * medium-exit to collapse, --ease-move, --blur-small), the chevron is the Lucide chevron-down
+ * rotated rather than flipped (it reads as one object turning), and closed panels are `inert`
+ * from the component so collapsed content can't take focus.
+ */
+
+@layer recipes {
+  :root {
+    --acc-expand: var(--duration-medium);
+    --acc-collapse: var(--duration-medium-exit);
+    --acc-chevron: var(--duration-medium);
+    --acc-ease: var(--ease-move);
+  }
+
+  /* grid-template-rows 0fr -> 1fr animates height with no measurement; the inner element clips. */
+  .t-acc-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-panel {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+  }
+
+  .t-acc-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    filter: blur(var(--blur-small));
+    transition:
+      opacity var(--acc-collapse) var(--acc-ease),
+      filter var(--acc-collapse) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-panel-inner {
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity var(--acc-expand) var(--acc-ease),
+      filter var(--acc-expand) var(--acc-ease);
+  }
+
+  .t-acc-chevron {
+    display: inline-flex;
+    rotate: -90deg;
+    transition: rotate var(--acc-chevron) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-chevron {
+    rotate: 0deg;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-acc-panel,
+    :root:not([data-motion="full"]) .t-acc-panel-inner,
+    :root:not([data-motion="full"]) .t-acc-chevron {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-acc-panel,
+  :root[data-motion="reduce"] .t-acc-panel-inner,
+  :root[data-motion="reduce"] .t-acc-chevron {
+    transition: none !important;
+  }
+}
+
+/*
+ * Panel reveal: adapted from the free "Panel reveal" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add panel-reveal`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the panel enters from the end edge (the thread / right pane) by
+ * --distance-pane instead of rising 100 px, on the medium step with --ease-enter in and --ease-exit
+ * out, and the blur uses --blur-small. A closed panel is `inert` from the component.
+ */
+
+@layer recipes {
+  :root {
+    --panel-open-dur: var(--duration-medium);
+    --panel-close-dur: var(--duration-medium);
+    --panel-translate-x: var(--distance-pane);
+    --panel-blur: var(--blur-small);
+    --panel-ease: var(--ease-enter);
+    --panel-ease-exit: var(--ease-exit);
+  }
+
+  .t-panel-slide {
+    transform: translateX(var(--panel-translate-x));
+    opacity: 0;
+    filter: blur(var(--panel-blur));
+    pointer-events: none;
+    transition:
+      transform var(--panel-close-dur) var(--panel-ease-exit),
+      opacity var(--panel-close-dur) var(--panel-ease-exit),
+      filter var(--panel-close-dur) var(--panel-ease-exit);
+    will-change: transform, opacity, filter;
+  }
+
+  .t-panel-slide[data-open="true"] {
+    transform: translateX(0);
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
+    transition:
+      transform var(--panel-open-dur) var(--panel-ease),
+      opacity var(--panel-open-dur) var(--panel-ease),
+      filter var(--panel-open-dur) var(--panel-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-panel-slide {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-panel-slide {
+    transition: none !important;
+  }
+}
+
+/*
+ * Avatar group hover: adapted from the free "Avatar group hover" recipe on transitions.dev by
+ * Jakub Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add avatar-group-hover`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the duration is the spring step, the lift is a quieter 3 px with a
+ * 1.08 scale (the faces are 20-22 px, not 40), and the return overshoot is softened from 3.85 to
+ * 2.4 so small faces don't wobble. AvatarGroup (src/features/threads) writes --shift and
+ * --scale-active, setting the in or out curve first as the recipe's orchestration does.
+ */
+
+@layer recipes {
+  :root {
+    --avatar-lift: -3px;
+    --avatar-dur: var(--duration-spring);
+    --avatar-scale: 1.08;
+    --avatar-falloff: 0.45;
+    --avatar-ease-in: cubic-bezier(0.22, 1, 0.36, 1);
+    --avatar-ease-out: cubic-bezier(0.34, 2.4, 0.64, 1);
+  }
+
+  .t-avatar {
+    transform-origin: center;
+    /* translateY before scale, so the scale doesn't amplify the lift. */
+    transform: translateY(var(--shift, 0px)) scale(var(--scale-active, 1));
+    transition: transform var(--avatar-dur) var(--avatar-ease-in);
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-avatar {
+      transition: none !important;
+      transform: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-avatar {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * Page side-by-side: adapted from the free "Page side-by-side" recipe on transitions.dev by Jakub
+ * Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add page-side-by-side`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium step, --ease-enter,
+ * --distance-pane, --blur-small); the page that comes in also starts from its exit position on
+ * insertion (`@starting-style`), so a pane mounted straight onto page 2 slides in instead of
+ * appearing; and under reduced motion the distance and blur tokens are zero, so the pages
+ * cross-fade (opacity only) rather than cutting. A settled page has `transform: none` and
+ * `filter: none` and no will-change, so it isn't a containing block for the fixed-position
+ * popovers inside it and doesn't stay one big composited layer. On phones the conversation is page 1 and the
+ * right pane (thread, members, pins, files) is page 2 (src/features/room, src/features/panes).
+ */
+
+@layer recipes {
+  :root {
+    --page-slide-dur: var(--duration-medium);
+    --page-fade-dur: var(--duration-medium);
+    --page-slide-distance: var(--distance-pane);
+    --page-blur: var(--blur-small);
+    --page-stagger: 0ms;
+    --page-exit-enabled: 1;
+    --page-slide-ease: var(--ease-enter);
+    --page-fade-ease: var(--ease-enter);
+  }
+
+  .t-page-slide {
+    position: relative;
+  }
+
+  .t-page-slide .t-page[data-page-id="1"] {
+    --t-page-from-x: calc(var(--page-slide-distance) * -1);
+  }
+
+  .t-page-slide .t-page[data-page-id="2"] {
+    --t-page-from-x: var(--page-slide-distance);
+  }
+
+  .t-page-slide .t-page {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled)));
+    filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+    transition:
+      opacity var(--page-fade-dur) var(--page-fade-ease),
+      transform var(--page-slide-dur) var(--page-slide-ease),
+      filter var(--page-slide-dur) var(--page-slide-ease);
+  }
+
+  .t-page-slide[data-page="1"] .t-page[data-page-id="1"],
+  .t-page-slide[data-page="2"] .t-page[data-page-id="2"] {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    filter: none;
+    transition-delay: var(--page-stagger);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateX(calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled)));
+      filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-page-slide .t-page {
+      transition-property: opacity !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-page-slide .t-page {
+    transition-property: opacity !important;
+  }
+}
+
+/*
+ * Like button: adapted from the free "Like button" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add like-button`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: it drives reaction pills, so the "heart" is the emoji (or icon) in
+ * `.t-like-icon` and there is no stroke-to-fill step; the colour is the accent; the pop, fill
+ * and particle timings point at the motion tokens (spring pop, micro fill). The pill sets
+ * `data-liked` when the viewer has reacted and adds `.is-bursting` for one particle burst when
+ * they add it (never for other people's reactions arriving live).
+ */
+
+@layer recipes {
+  :root {
+    --like-color: var(--accent);
+    --like-fill: var(--duration-micro);
+    --like-pop: var(--duration-spring);
+    --like-pop-ease: var(--ease-spring);
+    --like-particle-dur: 520ms;
+    --like-particle-dist: 14px;
+    --like-particle-size: 3px;
+    --like-ease: var(--ease-enter);
+  }
+
+  /* The pop lives on an HTML wrapper, never on an <svg> or <img> directly (crisp on hi-DPI). */
+  .t-like-icon {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  /* Reduced motion: no pop, no burst (the !important beats the state rules below). */
+  @media (prefers-reduced-motion: reduce) {
+    :where(:root:not([data-motion="full"])) .t-like-icon,
+    :where(:root:not([data-motion="full"])) .t-like-particles i {
+      animation: none !important;
+    }
+  }
+
+  :where(:root[data-motion="reduce"]) .t-like-icon,
+  :where(:root[data-motion="reduce"]) .t-like-particles i {
+    animation: none !important;
+  }
+
+  .t-like[data-liked="true"].is-popping .t-like-icon {
+    animation: t-like-pop var(--like-pop) var(--like-pop-ease);
+  }
+
+  @keyframes t-like-pop {
+    0% {
+      transform: scale(1);
+    }
+
+    30% {
+      transform: scale(0.78);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Particle burst: eight dots flung along per-particle vectors (--px, --py). */
+  .t-like-particles {
+    position: absolute;
+    top: 50%;
+    left: var(--like-origin-x, 14px);
+    width: 0;
+    height: 0;
+    color: var(--like-color);
+    pointer-events: none;
+  }
+
+  .t-like-particles i {
+    position: absolute;
+    top: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    left: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    width: calc(var(--like-particle-size) * var(--psize, 1));
+    height: calc(var(--like-particle-size) * var(--psize, 1));
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0;
+  }
+
+  @keyframes t-like-burst {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.4);
+    }
+
+    20% {
+      opacity: 1;
+      transform: translate(calc(var(--px) * 0.25), calc(var(--py) * 0.25)) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate(var(--px), var(--py)) scale(var(--p-end-scale, 0.6));
+    }
+  }
+
+  .t-like.is-bursting .t-like-particles i {
+    animation: t-like-burst var(--pdur, var(--like-particle-dur)) ease-out var(--pdelay, 0ms)
+      forwards;
+  }
+}
+
+/*
+ * Input clear with dissolve: adapted from the free "Input clear with dissolve" recipe on
+ * transitions.dev by Jakub Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add input-clear-dissolve`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the spring duration for the
+ * text out and the placeholder in, two and a half of it for the whole clear, --distance-pane for
+ * the fly, --blur-small, --ease-move), so reduced motion collapses the fly, blur and glow to a
+ * short crossfade. The mirror only shows while a clear plays (the input keeps its own glyphs at
+ * rest), and dark mode screens white streaks instead of multiplying black ones. The per-frame
+ * orchestration is playClearDissolve (src/motion/clear-dissolve.ts); the search field drives it.
+ */
+
+@layer recipes {
+  :root {
+    --clear-dur: calc(var(--duration-spring) * 2.5);
+    --clear-out-dur: var(--duration-spring);
+    --clear-in-dur: var(--duration-spring);
+    --clear-out-fly: var(--distance-pane);
+    --clear-in-fly: var(--distance-pane);
+    --clear-out-ease: var(--ease-move);
+    --clear-in-ease: var(--ease-move);
+    --clear-blur: var(--blur-small);
+    --glow-delay: 50ms;
+    --glow-peak-at: 0.15;
+    --glow-opacity: 0.42;
+    --glow-spread: 1.5;
+  }
+
+  :root[data-theme="dark"] {
+    --glow-opacity: 0.85;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --glow-opacity: 0.85;
+    }
+  }
+
+  /* The wrap clips the glow to its rounded box; size, padding and surface are the field's. */
+  .t-clear {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .t-clear-mirror,
+  .t-clear-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .t-clear-mirror {
+    opacity: 0;
+  }
+
+  .t-clear.is-clearing .t-clear-mirror {
+    opacity: 1;
+  }
+
+  .t-clear.has-value .t-clear-placeholder {
+    opacity: 0;
+  }
+
+  /* JS writes a stack of radial gradients here during a clear and animates its opacity. */
+  .t-clear-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    opacity: 0;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  :root[data-theme="dark"] .t-clear-glow {
+    mix-blend-mode: screen;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .t-clear-glow {
+      mix-blend-mode: screen;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-clear-glow {
+      opacity: 0 !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-clear-glow {
+    opacity: 0 !important;
+  }
+}
+
+/*
+ * Card resize: adapted from the free "Card resize" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add card-resize`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the medium step on
+ * --ease-move), and the reduced-motion guard also honours Smartfire's own motion setting. A
+ * poll's result bars (src/features/cards) use it to grow to their new share when votes change;
+ * a width set on first render doesn't transition, so history never animates.
+ */
+
+@layer recipes {
+  :root {
+    --resize-dur: var(--duration-medium);
+    --resize-ease: var(--ease-move);
+  }
+
+  .t-resize {
+    transition:
+      width var(--resize-dur) var(--resize-ease),
+      height var(--resize-dur) var(--resize-ease);
+    will-change: width, height;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-resize {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-resize {
+    transition: none !important;
+  }
+}
+
+
+
+/*
+ * Buttons. Replace every Campfire button: quieter fills, 6 px corners, one height scale (28/32/40),
+ * a press that dips to 0.97 and a keyboard-only focus ring. Hover and press change colour on the
+ * micro step; nothing bounces.
+ */
+
+@layer ui {
+  .button {
+    --button-bg: transparent;
+    --button-bg-hover: var(--bg-hover);
+    --button-bg-active: var(--bg-active);
+    --button-fg: var(--text);
+    --button-ring: transparent;
+    --button-height: var(--control-md);
+    --button-pad: var(--space-3);
+
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    height: var(--button-height);
+    padding-inline: var(--button-pad);
+    border-radius: var(--radius-sm);
+    background: var(--button-bg);
+    box-shadow: inset 0 0 0 1px var(--button-ring);
+    color: var(--button-fg);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-ui);
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter),
+      box-shadow var(--duration-micro) var(--ease-enter),
+      opacity var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter),
+      filter var(--duration-micro) var(--ease-enter);
+  }
+
+  /* A link styled as a button (a router <Link>) reads as one: no underline. */
+  a.button {
+    text-decoration: none;
+  }
+
+  .button:hover {
+    background: var(--button-bg-hover);
+  }
+
+  .button:active:not(:disabled, [aria-disabled="true"]) {
+    background: var(--button-bg-active);
+    scale: var(--scale-press);
+  }
+
+  .button:disabled,
+  .button[aria-disabled="true"]:not([aria-busy="true"]) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .button:disabled:hover,
+  .button[aria-disabled="true"]:hover {
+    background: var(--button-bg);
+  }
+
+  .button[aria-busy="true"] {
+    cursor: progress;
+  }
+
+  .button .icon {
+    flex-shrink: 0;
+  }
+
+  /* ── Sizes ── */
+
+  .button[data-size="sm"] {
+    --button-height: var(--control-sm);
+    --button-pad: var(--space-2);
+
+    gap: var(--space-1);
+    font-size: var(--text-sidebar);
+  }
+
+  .button[data-size="lg"] {
+    --button-height: var(--control-lg);
+    --button-pad: var(--space-4);
+
+    gap: var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: var(--text-body);
+  }
+
+  /* ── Variants ── */
+
+  .button[data-variant="primary"] {
+    --button-bg: var(--accent-solid);
+    --button-bg-hover: color-mix(in oklch, var(--accent-solid), black 9%);
+    --button-bg-active: color-mix(in oklch, var(--accent-solid), black 16%);
+    --button-fg: var(--on-accent);
+
+    box-shadow:
+      var(--shadow-control),
+      inset 0 1px 0 oklch(100% 0 0 / 12%);
+  }
+
+  .button[data-variant="secondary"] {
+    --button-bg: var(--bg-raised);
+    --button-ring: var(--border-strong);
+    --button-fg: var(--text);
+
+    box-shadow:
+      var(--shadow-control),
+      inset 0 0 0 1px var(--button-ring);
+  }
+
+  .button[data-variant="ghost"] {
+    --button-fg: var(--text-muted);
+  }
+
+  .button[data-variant="ghost"]:hover {
+    color: var(--text);
+  }
+
+  .button[data-variant="danger"] {
+    --button-bg: var(--danger-solid);
+    --button-bg-hover: color-mix(in oklch, var(--danger-solid), black 9%);
+    --button-bg-active: color-mix(in oklch, var(--danger-solid), black 16%);
+    --button-fg: var(--on-danger);
+
+    box-shadow: var(--shadow-control);
+  }
+
+  .button[data-variant="icon"] {
+    --button-fg: var(--text-muted);
+    --button-pad: 0;
+
+    width: var(--button-height);
+  }
+
+  .button[data-variant="icon"]:hover,
+  .button[data-variant="icon"][aria-expanded="true"],
+  .button[data-variant="icon"][aria-pressed="true"] {
+    color: var(--text);
+  }
+
+  .button[data-variant="icon"][aria-expanded="true"] {
+    background: var(--button-bg-active);
+  }
+
+  .button[data-variant="pill"] {
+    --button-bg: var(--bg-hover);
+    --button-bg-hover: var(--bg-active);
+    --button-bg-active: var(--bg-active);
+
+    border-radius: var(--radius-pill);
+  }
+
+  .button[data-variant="pill"][aria-pressed="true"] {
+    --button-bg: var(--accent-soft);
+    --button-bg-hover: var(--accent-soft);
+    --button-ring: color-mix(in oklch, var(--accent), transparent 45%);
+    --button-fg: var(--accent);
+  }
+
+  .button[data-variant="link"] {
+    --button-bg-hover: transparent;
+    --button-bg-active: transparent;
+    --button-fg: var(--accent);
+    --button-pad: 0;
+
+    height: auto;
+    font-weight: var(--weight-regular);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.18em;
+    transition:
+      color var(--duration-micro) var(--ease-enter),
+      text-decoration-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .button[data-variant="link"]:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .button[data-variant="link"]:active:not(:disabled, [aria-disabled="true"]) {
+    scale: 1;
+  }
+
+  /*
+   * Metal. Live, metal-fx paints a liquid-metal ring around a deep, quiet fill. Static (reduced
+   * motion, no WebGL2), it is brushed metal: banded stops for the curvature, fine horizontal
+   * grain, a soft diagonal sheen, a lit top edge and a hairline rim, and no motion. Silver in
+   * light, graphite in dark, so it sits beside the live ring rather than glaring from the page.
+   */
+  .button[data-variant="metal"] {
+    --metal-ink: light-dark(oklch(27% 0.01 260), oklch(96% 0.004 260));
+    --metal-engrave: light-dark(oklch(100% 0 0 / 55%), oklch(0% 0 0 / 45%));
+    --metal-top: light-dark(oklch(98.5% 0.002 260), oklch(50% 0.008 260));
+    --metal-upper: light-dark(oklch(92% 0.004 260), oklch(40% 0.008 260));
+    --metal-mid: light-dark(oklch(85% 0.006 260), oklch(32% 0.008 260));
+    --metal-crease: light-dark(oklch(80% 0.008 260), oklch(27% 0.008 260));
+    --metal-lower: light-dark(oklch(87% 0.005 260), oklch(33% 0.008 260));
+    --metal-bottom: light-dark(oklch(94% 0.003 260), oklch(42% 0.008 260));
+    --metal-grain: light-dark(oklch(100% 0 0 / 12%), oklch(100% 0 0 / 3.5%));
+    --metal-sheen: light-dark(oklch(100% 0 0 / 45%), oklch(100% 0 0 / 12%));
+    --metal-rim: light-dark(oklch(58% 0.01 260 / 55%), oklch(78% 0.008 260 / 30%));
+    --metal-highlight: light-dark(oklch(100% 0 0 / 85%), oklch(100% 0 0 / 24%));
+    --metal-shade: light-dark(oklch(30% 0.01 260 / 12%), oklch(0% 0 0 / 35%));
+
+    --button-fg: var(--metal-ink);
+    --button-bg:
+      linear-gradient(104deg, transparent 28%, var(--metal-sheen) 44%, transparent 58%),
+      repeating-linear-gradient(180deg, var(--metal-grain) 0 0.5px, transparent 0.5px 2px),
+      linear-gradient(
+        180deg,
+        var(--metal-top) 0%,
+        var(--metal-upper) 24%,
+        var(--metal-mid) 47%,
+        var(--metal-crease) 53%,
+        var(--metal-lower) 76%,
+        var(--metal-bottom) 100%
+      );
+    --button-bg-hover: var(--button-bg);
+    --button-bg-active: var(--button-bg);
+
+    border-radius: var(--radius-pill);
+    box-shadow:
+      var(--shadow-control),
+      0 0 0 1px var(--metal-rim),
+      inset 0 1px 0 var(--metal-highlight),
+      inset 0 -1px 0 var(--metal-shade);
+    font-weight: var(--weight-semibold);
+    text-shadow: 0 1px 0 var(--metal-engrave);
+  }
+
+  .button[data-variant="metal"]:hover {
+    filter: brightness(1.04);
+  }
+
+  .button[data-variant="metal"][data-metal="live"] {
+    --button-fg: oklch(96% 0.003 260);
+    --button-bg: oklch(22% 0.006 260);
+
+    box-shadow: var(--shadow-control);
+    text-shadow: none;
+  }
+
+  .metal-host {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  /* ── Loading: label and busy state share one grid cell, so the width never moves ── */
+
+  .button-stack {
+    display: inline-grid;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .button-stack > * {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  .button-busy {
+    pointer-events: none;
+  }
+
+  .button[aria-busy="true"] .button-busy,
+  .button:not([aria-busy="true"]) .button-label {
+    transition-delay: calc(var(--duration-small) * 0.5);
+  }
+
+  /* ── Spinner ── */
+
+  .spinner {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-turn var(--duration-spin) linear infinite;
+  }
+
+  @keyframes spinner-turn {
+    to {
+      rotate: 1turn;
+    }
+  }
+}
+
+@layer ui {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .field > .field-label {
+    font-weight: var(--weight-medium);
+  }
+
+  .input {
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+    height: var(--control-lg);
+    padding-inline: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text);
+    font-size: var(--text-ui);
+  }
+
+  .input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .input:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .input:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .input.is-error,
+  .input.is-error:hover {
+    box-shadow: inset 0 0 0 1px var(--danger);
+  }
+
+  .input.is-error:focus-visible {
+    box-shadow:
+      inset 0 0 0 1px var(--danger),
+      0 0 0 3px color-mix(in oklch, var(--danger), transparent 75%);
+  }
+
+  .field > .field-hint,
+  .field-error {
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .field-error {
+    min-height: var(--leading-sidebar);
+    color: var(--danger-text);
+  }
+
+  .field:has(.field-hint) .field-error:empty {
+    display: none;
+  }
+}
+
+@layer ui {
+  .checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    cursor: pointer;
+  }
+
+  .checkbox-row[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .checkbox {
+    position: relative;
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-xs);
+    background: var(--bg-raised);
+    box-shadow: inset 0 0 0 1.5px var(--border-strong);
+    color: var(--on-accent);
+  }
+
+  /* The real input covers the box, invisible, so clicks, focus and Space are native. */
+  .checkbox-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+  }
+
+  .checkbox svg {
+    pointer-events: none;
+  }
+
+  .checkbox:has(.checkbox-input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .checkbox-row:hover .checkbox:not([data-checked="true"], [data-checked="mixed"]) {
+    box-shadow: inset 0 0 0 1.5px var(--text-faint);
+  }
+
+  .checkbox[data-checked="true"],
+  .checkbox[data-checked="mixed"] {
+    background: var(--accent-solid);
+    box-shadow: inset 0 0 0 1.5px var(--accent-solid);
+  }
+}
+
+/*
+ * The server-rendered pages: one centred card on the app background (sign-in, joining, two-step
+ * sign-in, password confirmation, the sign-in link, first run), and a reading column for the
+ * public pages. Built from the SPA's tokens and its button, field and checkbox styles; nothing
+ * here needs a script but the avatar preview, the copy button and the translation lists' dismissal
+ * (crates/assets/auth/auth.js).
+ */
+
+@layer app {
+  /* ── The page ── */
+
+  body.auth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+    padding: var(--space-10) var(--space-4);
+  }
+
+  .auth-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    width: min(100%, 400px);
+    padding: var(--space-8);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: var(--shadow-raised);
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--distance-rise);
+    }
+  }
+
+  .auth-card[data-width="wide"] {
+    width: min(100%, 460px);
+  }
+
+  /* A rejected attempt shakes the card once, as the SPA's fields do. */
+  .auth-card[data-shake] {
+    animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .auth-card[data-shake] {
+      animation: none;
+    }
+  }
+
+  :root[data-motion="reduce"] .auth-card[data-shake] {
+    animation: none;
+  }
+
+  @media (width < 520px) {
+    body.auth {
+      justify-content: flex-start;
+      padding: var(--space-4) var(--space-3) var(--space-8);
+    }
+
+    .auth-card {
+      padding: var(--space-6) var(--space-5);
+    }
+  }
+
+  /* ── Header: the workspace, a title, one line under it ── */
+
+  .auth-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  .auth-logo {
+    width: 48px;
+    height: 48px;
+    margin-block-end: var(--space-2);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 0 0 1px var(--shadow-ring);
+    object-fit: cover;
+  }
+
+  .auth-title {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+  }
+
+  .auth-lede {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  /* ── Forms ── */
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .auth-form .input {
+    width: 100%;
+  }
+
+  .auth-wide {
+    width: 100%;
+  }
+
+  .auth-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: var(--control-sm);
+  }
+
+  /* A one-time code reads as a code: centred, monospaced, spaced. */
+  .input.auth-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-composer);
+    letter-spacing: 0.16em;
+    text-align: center;
+  }
+
+  /* A worded placeholder ("Enter your authenticator code") reads as prose, not as a code. */
+  .input.auth-code::placeholder {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    letter-spacing: normal;
+  }
+
+  .auth-check {
+    align-self: flex-start;
+  }
+
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .auth-note {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    text-align: center;
+  }
+
+  .auth-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .auth-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .auth-row > * {
+    flex: 1;
+  }
+
+  .auth-centre {
+    align-self: center;
+  }
+
+  /* A form that is only a button (sign out, Google) fills its slot like the button would. */
+  form.auth-button-form {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .auth-google svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ── Translations of a field's label, from a globe beside it ── */
+
+  .auth-translate {
+    position: relative;
+  }
+
+  .auth-translate > summary {
+    list-style: none;
+  }
+
+  .auth-translate > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .auth-translate[open] > summary {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .auth-translate-menu {
+    position: absolute;
+    z-index: 10;
+    inset-block-start: calc(100% + var(--space-1));
+    inset-inline-end: 0;
+    width: max-content;
+    max-width: min(320px, calc(100vw - var(--space-8)));
+    max-height: 288px;
+    overflow-y: auto;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    transform-origin: top right;
+  }
+
+  /* Only an open list animates in: a closed <details> skips rendering its content, so a transition
+     there would never finish. */
+  .auth-translate[open] > .auth-translate-menu {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      scale: var(--scale-menu);
+    }
+  }
+
+  .auth-translate-menu dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .auth-translate-menu dt {
+    color: var(--text-faint);
+  }
+
+  /* ── An avatar picker: the picture, with a camera badge, over a hidden file input ── */
+
+  .auth-avatar {
+    position: relative;
+    display: grid;
+    align-self: center;
+    place-items: center;
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .auth-avatar:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .auth-avatar:has(input:focus-visible) {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .auth-avatar-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .auth-avatar-badge {
+    position: absolute;
+    inset-block-end: -2px;
+    inset-inline-end: -2px;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    color: var(--text);
+  }
+
+  /* ── Two-step sign-in: numbered steps, the QR code on white, the key and the backup codes ── */
+
+  .auth-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: 0;
+    counter-reset: step;
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    list-style: none;
+  }
+
+  .auth-steps > li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-inline-start: var(--space-8);
+    counter-increment: step;
+  }
+
+  .auth-steps > li::before {
+    content: counter(step);
+    position: absolute;
+    inset-block-start: -1px;
+    inset-inline-start: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Scanners want dark modules on light, so the code keeps a white plate in both themes. */
+  .auth-qr {
+    align-self: flex-start;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--neutral-0);
+    box-shadow: 0 0 0 1px var(--shadow-ring);
+  }
+
+  .auth-qr svg {
+    width: 168px;
+    height: 168px;
+  }
+
+  .auth-key {
+    align-self: flex-start;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: var(--text-ui);
+    letter-spacing: 0.06em;
+    overflow-wrap: anywhere;
+  }
+
+  .auth-codes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2) var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    list-style: none;
+    text-align: center;
+  }
+
+  .auth-codes code {
+    font-size: var(--text-body);
+    letter-spacing: 0.06em;
+  }
+
+  .auth-copy[data-copied] {
+    --button-fg: var(--success-text);
+  }
+
+  /* ── Waiting (the sign-in link, a confirmed action carrying on) ── */
+
+  .auth-wait {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .auth-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-strong);
+    border-block-start-color: var(--accent);
+    border-radius: 50%;
+    animation: auth-spin var(--duration-spin) linear infinite;
+  }
+
+  @keyframes auth-spin {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .auth-spinner {
+      animation-duration: calc(var(--duration-spin) * 3);
+    }
+  }
+
+  /* ── The flash: a toast above the card ── */
+
+  .auth-flash {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    width: min(100%, 400px);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 calc(var(--distance-toast) * -1);
+    }
+  }
+
+  .auth-flash:has(+ [data-width="wide"]) {
+    width: min(100%, 460px);
+  }
+
+  .auth-flash-icon {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+
+  .auth-flash-icon .icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  .auth-flash[data-tone="danger"] .auth-flash-icon {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .auth-flash[data-tone="success"] .auth-flash-icon {
+    background: color-mix(in oklch, var(--success), transparent 82%);
+    color: var(--success-text);
+  }
+
+  /* The SPA's checkbox, checked by the native input rather than React state. */
+  .checkbox .icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    scale: 0.6;
+    transition:
+      opacity var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .checkbox:has(.checkbox-input:checked) {
+    background: var(--accent-solid);
+    box-shadow: inset 0 0 0 1.5px var(--accent-solid);
+  }
+
+  .checkbox:has(.checkbox-input:checked) .icon {
+    opacity: 1;
+    scale: 1;
+  }
+
+  /* ── Under the card: the policy links, the help contact and the version ── */
+
+  .auth-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .auth-links a,
+  .auth-help a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .auth-links a:hover,
+  .auth-help a:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .auth-help {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .auth-help a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  /* ── The public pages: a header, a reading column, a footer ── */
+
+  body.public-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .public-skip {
+    position: absolute;
+    inset-block-start: var(--space-2);
+    inset-inline-start: var(--space-2);
+    z-index: 30;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    translate: 0 -200%;
+  }
+
+  .public-skip:focus-visible {
+    translate: 0;
+  }
+
+  .public-wrap {
+    width: min(100%, 720px);
+    margin-inline: auto;
+    padding-inline: var(--space-5);
+  }
+
+  .public-header {
+    border-block-end: 1px solid var(--border);
+    background: var(--bg-pane);
+  }
+
+  .public-header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    min-height: var(--pane-header-height);
+    padding-block: var(--space-2);
+  }
+
+  .public-brand {
+    color: var(--text);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+    text-decoration: none;
+  }
+
+  .public-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .public-nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .public-nav a:hover {
+    color: var(--text);
+  }
+
+  .public-nav a.public-signin {
+    --button-height: var(--control-sm);
+  }
+
+  .public-nav a.public-signin,
+  .public-nav a.public-signin:hover {
+    color: var(--on-accent);
+  }
+
+  .public-main {
+    flex: 1;
+    padding-block: var(--space-10);
+  }
+
+  .public-prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .public-prose h1 {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+  }
+
+  .public-prose h2 {
+    margin-block-start: var(--space-4);
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+  }
+
+  .public-prose h3 {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .public-prose ul,
+  .public-prose ol {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-inline-start: var(--space-6);
+  }
+
+  .public-prose li::marker {
+    color: var(--text-faint);
+  }
+
+  .public-prose .public-lede {
+    color: var(--text-muted);
+    font-size: var(--text-composer);
+    line-height: var(--leading-composer);
+  }
+
+  .public-prose .public-updated {
+    color: var(--text-faint);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .public-prose .public-callout {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--mention-bg);
+    box-shadow: inset 3px 0 0 var(--mention);
+  }
+
+  .public-footer {
+    padding-block: var(--space-6) var(--space-8);
+    border-block-start: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .public-footer .public-nav {
+    margin-block-end: var(--space-3);
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 520px) {
+    .public-main {
+      padding-block: var(--space-6);
+    }
+
+    .public-prose h1 {
+      font-size: var(--text-page);
+      line-height: var(--leading-page);
+    }
+  }
+}
+

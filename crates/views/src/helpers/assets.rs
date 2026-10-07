@@ -35,3 +35,13 @@ pub fn image_tag(ctx: &ViewContext, source: impl std::fmt::Display, options: Att
     }
     legacy_tag("img", &options)
 }
+
+/// The standalone auth stylesheet, deliberately outside the classic stylesheet set.
+pub fn auth_stylesheet_tag() -> Html {
+    super::raw(format!("<link rel=\"stylesheet\" href=\"{}\">", campfire_assets::stylesheet_path("auth")))
+}
+
+/// A blocking same-origin script restores appearance before the page paints.
+pub fn auth_script_tag() -> Html {
+    super::raw(format!("<script src=\"{}\"></script>", campfire_assets::javascript_path("auth")))
+}

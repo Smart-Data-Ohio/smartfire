@@ -1,27 +1,29 @@
-{% extends "layouts/application.html" %}
-{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
+{% block head %}{% endblock %}
+
 {% block content %}
-<section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %}">
-    {{ h::account_logo_tag(ctx, Some("center margin-block-end txt-xx-large")) }}
+<main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
+  <header class="auth-header">
+    {{ h::image_tag(ctx, &ctx.account.logo_url, h::attrs().alt("").class("auth-logo").size(48)) }}
+    <h1 class="auth-title">Confirm it's you</h1>
+    <p class="auth-lede">This action needs a fresh confirmation. Confirm once and it continues.</p>
+  </header>
 
-    <h1 class="txt-large">Confirm it's you</h1>
-    <p class="txt-subtle">This action needs a fresh confirmation. Confirm once and it continues.</p>
+{% if password %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("auth-form").data("turbo", false) %}  {% filter form_with(form) %}
+    {{ h::hidden_field_tag("verifier", Some("password"), h::attrs()) }}
+    <div class="field">
+      {{ form.label("password", "Password", h::attrs().class("field-label")) }}
+      {{ form.password_field("password", h::attrs().required(true).class("input").autofocus().autocomplete("current-password").maxlength(72)) }}
+    </div>
 
-{% if password %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("flex flex-column gap").data("turbo", false) %}      {% filter form_with(form) %}
-        {{ h::hidden_field_tag("verifier", Some("password"), h::attrs()) }}
-        <div class="flex align-center gap">
-          <label class="flex align-center gap input input--actor txt-large">
-            {{ form.password_field("password", h::attrs().required(true).class("input").autofocus().autocomplete("current-password").placeholder("Enter your password").maxlength(72)) }}
-            {{ h::image_tag(ctx, "password.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
-          </label>
-        </div>
-
-        {{ h::button_tag(h::attrs().class("btn btn--reversed center txt-large").type_("submit").name("confirm"), "Confirm") }}
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit").name("confirm"), "Confirm") }}
 {% endfilter %}{% endif %}
-{% if totp %}      {% include "sudos/_totp_form.html" %}
+{% if totp %}{% if password %}  <p class="auth-divider">or</p>
+{% endif %}  {% include "sudos/_totp_form.html" %}
 {% endif %}
-{% if google %}      {{ h::button_to_form(h::routes::sudo_google().as_str(), h::attrs().method("post").class("btn center margin-block-start"), h::attrs().data("turbo", false), "Confirm with Google") }}
-{% endif %}  </div>
-</section>
+{% if google %}{% if password || totp %}  <p class="auth-divider">or</p>
+{% endif %}  {% filter button_to_form(h::routes::sudo_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form").data("turbo", false)) %}{% call auth::google() %}Confirm with Google{% endfilter %}
+{% endif %}</main>
 {% endblock %}
