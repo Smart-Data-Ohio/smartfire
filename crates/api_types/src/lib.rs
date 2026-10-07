@@ -126,10 +126,12 @@ pub use search::{
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use settings::{
-    AppearanceSettings, CallSettings, Connection, DndAllowedPerson, GoogleIntegration, InboxSwitch,
+    AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, DndAllowedPerson,
+    GoogleIntegration, InboxSwitch,
     IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
-    ProfileSettings, PushSubscriptionInfo, PushSubscriptionList, SessionInfo, SessionList, Settings,
-    StatusExpiry, StatusSettings, TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls,
+    ProfileSettings, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
+    RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
+    TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,
     UpdateNotifications, UpdateProfile, UpdateStatus,
 };
 pub use slack::{

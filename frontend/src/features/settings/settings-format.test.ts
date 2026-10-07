@@ -10,9 +10,13 @@ import {
   fieldError,
   keywordLines,
   oooSummary,
+  reauthLabel,
+  rememberedMeta,
   SECTIONS,
   sessionMeta,
   statusExpiry,
+  svgDataUrl,
+  twoFactorSince,
   withConnection,
   withDependents,
 } from "./settings-format.ts";
@@ -157,5 +161,35 @@ describe("settings words", () => {
     expect(merged.profile.githubLogin).toBeNull();
     expect(merged.status.oooUntil).toBeNull();
     expect(merged.integrations).toBe(next.integrations);
+  });
+
+  it("words the two-step panel as the classic profile does", () => {
+    const now = Date.parse("2026-10-06T12:00:00Z");
+
+    expect(twoFactorSince("2026-07-08T12:00:00Z")).toMatch(/^On since July 8, 2026\.$/);
+    const device = { id: 1, description: "Firefox", ipAddress: null, lastUsedAt: null };
+
+    expect(rememberedMeta(device, now)).toBeNull();
+    expect(rememberedMeta({ ...device, lastUsedAt: "2026-10-06T09:00:00Z" }, now)).toBe(
+      "last used 3 hours ago",
+    );
+    expect(
+      rememberedMeta(
+        { ...device, ipAddress: "203.0.113.9", lastUsedAt: "2026-10-06T09:00:00Z" },
+        now,
+      ),
+    ).toBe("203.0.113.9 · last used 3 hours ago");
+    expect(rememberedMeta({ ...device, ipAddress: "203.0.113.9" }, now)).toBe("203.0.113.9");
+    expect(reauthLabel(true)).toBe("Authenticator code or password");
+    expect(reauthLabel(false)).toBe("Authenticator code");
+  });
+
+  it("draws the QR code from a data URL, so the link never reaches a request", () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>';
+    const src = svgDataUrl(svg);
+
+    expect(src.startsWith("data:image/svg+xml;charset=utf-8,")).toBe(true);
+    expect(src).not.toContain("<");
+    expect(decodeURIComponent(src.slice(src.indexOf(",") + 1))).toBe(svg);
   });
 });

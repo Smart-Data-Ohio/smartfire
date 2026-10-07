@@ -221,7 +221,12 @@ export function involvementChoice(level: Involvement): InvolvementChoice {
  * limited to mentions (every message in it is for you).
  */
 export function involvementChoices(row: Pick<SidebarRow, "room">): readonly InvolvementChoice[] {
-  return row.room.kind === "direct"
+  return levelChoices(row.room.kind === "direct");
+}
+
+/** The levels a direct message (`direct`) or another room offers, in the classic bell's order. */
+export function levelChoices(direct: boolean): readonly InvolvementChoice[] {
+  return direct
     ? [CHOICES.everything, CHOICES.nothing, CHOICES.muted]
     : [CHOICES.everything, CHOICES.mentions, CHOICES.nothing, CHOICES.muted, CHOICES.invisible];
 }

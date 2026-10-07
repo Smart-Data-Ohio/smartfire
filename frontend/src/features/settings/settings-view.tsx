@@ -31,8 +31,8 @@ function SettingsSkeleton() {
 }
 
 /**
- * `/app/settings`: the classic profile page as sections (profile, status, notifications,
- * appearance, calls, sessions, push devices, integrations), a nav on the left and the chosen
+ * `/app/settings`: the classic profile page as sections (profile, status, notifications, rooms,
+ * appearance, calls, security, sessions, push devices, integrations), a nav on the left and the chosen
  * section on the right. On phones the nav becomes a scrolling strip above the section. The page
  * loads once; each section writes its own part and takes the server's answer back.
  */

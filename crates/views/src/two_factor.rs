@@ -80,12 +80,7 @@ impl Profile<'_> {
             .format(self.data.confirmed_at.unwrap(), "%B %d, %Y")
     }
     fn agent(&self, device: &Device) -> String {
-        device
-            .user_agent
-            .as_deref()
-            .filter(|s| !s.chars().all(char::is_whitespace))
-            .unwrap_or("Unknown browser")
-            .into()
+        device_description(device)
     }
     fn last_used(&self, device: &Device) -> String {
         let mut parts = Vec::new();
@@ -100,6 +95,15 @@ impl Profile<'_> {
         }
         parts.join(" · ")
     }
+}
+/// The remembered device row's bold line, shared with the account JSON twin.
+pub fn device_description(device: &Device) -> String {
+    device
+        .user_agent
+        .as_deref()
+        .filter(|s| !s.chars().all(char::is_whitespace))
+        .unwrap_or("Unknown browser")
+        .into()
 }
 pub fn submit(label: &str, class: &str) -> h::Html {
     h::legacy_tag(

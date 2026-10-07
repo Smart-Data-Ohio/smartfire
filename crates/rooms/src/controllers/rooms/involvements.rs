@@ -1,7 +1,7 @@
 //! `Rooms::InvolvementsController` (reference/app/controllers/rooms/involvements_controller.rb).
 
 use askama::Template;
-use campfire_db::{Account, Involvement};
+use campfire_db::{Account, Involvement, Membership, Room};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_views::rooms::{InvolvementShow, InvolvementView};
 
@@ -33,15 +33,35 @@ pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (membership, room) = concerns::set_room(c).await?;
     let involvement = involvement_param(c)?;
-    let previous = membership.involvement;
-    let membership = c
+    change(c, &room, membership.id, involvement).await?;
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => Ok(c.head(StatusCode::OK)),
+        _ => c.redirect_to(&c.url_for(&campfire_routes::room_involvement(room.id))),
+    }
+}
+
+/// The body of `update`, shared with `PUT /api/v1/rooms/:id/involvement`: sets the viewer's
+/// involvement (marking the room read when it's now muted) and makes
+/// `broadcast_visibility_changes`. The membership is read inside the write, so a message or a
+/// read landing after the controller looked it up is seen. Answers the membership as it is now,
+/// and whether this change cleared its unread state.
+pub async fn change(
+    c: &Ctx,
+    room: &Room,
+    membership_id: i64,
+    involvement: Option<Involvement>,
+) -> Result<(Membership, bool)> {
+    let (membership, previous, cleared_unread) = c
         .app()
         .db
         .write(move |tx| {
-            let mut membership = membership;
+            let mut membership = Membership::find(tx.conn(), membership_id)?;
+            let previous = membership.involvement;
+            let was_unread = membership.unread();
             membership.update_involvement(tx, involvement)?;
             if membership.involved_in(Involvement::Muted) { membership.read(tx)?; }
-            Ok(membership)
+            let cleared_unread = was_unread && !membership.unread();
+            Ok((membership, previous, cleared_unread))
         })
         .await
         .map_err(db_error)?;
@@ -67,14 +87,10 @@ pub async fn update(c: &mut Ctx) -> Result {
             .await
             .map_err(db_error)?
     } else {
-        render_membership_sidebar(c, &room, &membership, if previous == Some(Involvement::Invisible) { None } else { Some(membership.unread()) }).await?
+        render_membership_sidebar(c, room, &membership, if previous == Some(Involvement::Invisible) { None } else { Some(membership.unread()) }).await?
     };
-    c.app().broadcasts.involvement_change(&room, &membership, previous, &partials);
-
-    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
-        f if *f == campfire_kit::format::JSON => Ok(c.head(StatusCode::OK)),
-        _ => c.redirect_to(&c.url_for(&campfire_routes::room_involvement(room.id))),
-    }
+    c.app().broadcasts.involvement_change(room, &membership, previous, &partials);
+    Ok((membership, cleared_unread))
 }
 
 /// Our fork uses `params.require(:involvement)` before the enum cast.

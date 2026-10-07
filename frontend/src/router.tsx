@@ -28,6 +28,8 @@ import { DevicesSection } from "./features/settings/devices-section.tsx";
 import { IntegrationsSection } from "./features/settings/integrations-section.tsx";
 import { NotificationsSection } from "./features/settings/notifications-section.tsx";
 import { ProfileSection } from "./features/settings/profile-section.tsx";
+import { RoomsSection } from "./features/settings/rooms-section.tsx";
+import { SecuritySection } from "./features/settings/security-section.tsx";
 import { SessionsSection } from "./features/settings/sessions-section.tsx";
 import { SettingsView } from "./features/settings/settings-view.tsx";
 import { StatusSection } from "./features/settings/status-section.tsx";
@@ -165,12 +167,18 @@ const settingsSections = [
     path: "notifications",
     component: NotificationsSection,
   }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "rooms", component: RoomsSection }),
   createRoute({
     getParentRoute: () => settingsRoute,
     path: "appearance",
     component: AppearanceSection,
   }),
   createRoute({ getParentRoute: () => settingsRoute, path: "calls", component: CallsSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "security",
+    component: SecuritySection,
+  }),
   createRoute({
     getParentRoute: () => settingsRoute,
     path: "sessions",

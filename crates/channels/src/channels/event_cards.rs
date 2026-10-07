@@ -40,6 +40,7 @@ pub fn publish(app: &App, event_id: i64) -> anyhow::Result<()> {
                     true,
                 );
             }
+            app.broadcasts.sync_message_cards(conn, &messages);
             if messages.len() < message_batches::SIZE {
                 break;
             }

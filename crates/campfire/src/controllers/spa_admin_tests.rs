@@ -95,6 +95,9 @@ const VOLATILE: &[&str] = &[
     "access_token",
     "refresh_token",
     "client_secret",
+    // Backup codes are freshly random in each transport. The account suite separately checks
+    // every digest's shape, replacement, and correspondence with the once-shown plaintext.
+    "code_digest",
 ];
 
 /// `text` with the random part of a deactivated address (`kevin-deactivated-<uuid>@...`) and a
@@ -199,6 +202,16 @@ pub(super) async fn dump(a: &TestApp) -> Value {
                                         if arguments[1].is_string() {
                                             arguments[1] = json!("<encrypted snapshot>");
                                         }
+                                        json!(arguments.to_string())
+                                    }
+                                    rusqlite::types::Value::Text(text)
+                                        if table == "background_jobs" && name == "arguments"
+                                            && row.get::<_, String>("job_class")? == "Push::Subscription::TestNotificationJob" =>
+                                    {
+                                        let mut arguments: Value = serde_json::from_str(&text).unwrap();
+                                        // Only the test notification body is a fresh UUID; keep
+                                        // the subscription, viewer and absolute destination.
+                                        arguments["body"] = json!("<uuid>");
                                         json!(arguments.to_string())
                                     }
                                     rusqlite::types::Value::Text(text) => json!(unrandom(&text)),

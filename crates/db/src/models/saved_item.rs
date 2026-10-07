@@ -257,13 +257,26 @@ impl SavedItem {
 
     /// `destroy!`: its activity items first (`dependent: :destroy`).
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        ActivityItem::destroy_for_source(tx, SOURCE_TYPE, self.id)?;
+        self.destroy_inner(tx, false)
+    }
+
+    fn destroy_inner(&self, tx: &mut Tx<'_>, importing: bool) -> Result<()> {
+        if importing {
+            ActivityItem::delete_for_source(tx, SOURCE_TYPE, self.id)?;
+        } else {
+            ActivityItem::destroy_for_source(tx, SOURCE_TYPE, self.id)?;
+        }
         tx.conn().execute_cached(r#"DELETE FROM "saved_items" WHERE "saved_items"."id" = ?"#, [self.id])?;
         Ok(())
     }
 
-    /// `has_many :saved_items, dependent: :destroy` on the message.
-    pub(crate) fn destroy_for_message(tx: &mut Tx<'_>, message_id: i64) -> Result<()> {
+    /// `has_many :saved_items, dependent: :destroy` on the message. A Slack import's undo
+    /// (`importing`) tells no other tab.
+    pub(crate) fn destroy_for_message(
+        tx: &mut Tx<'_>,
+        message_id: i64,
+        importing: bool,
+    ) -> Result<()> {
         let items = query_all(
             tx.conn(),
             r#"SELECT "saved_items".* FROM "saved_items" WHERE "saved_items"."message_id" = ?"#,
@@ -271,7 +284,7 @@ impl SavedItem {
             Self::from_row,
         )?;
         for item in items {
-            item.destroy(tx)?;
+            item.destroy_inner(tx, importing)?;
         }
         Ok(())
     }

@@ -1,13 +1,17 @@
 import { describe, expect, it } from "@effect/vitest";
 import { DateTime, Schema } from "effect";
 import {
+  AccountSettings,
+  BackupCodes,
   Connection,
   IntegrationChange,
   IntegrationToken,
   PushSubscriptionList,
+  Reauthentication,
   SessionList,
   Settings,
   StatusExpiry,
+  TwoFactorChange,
   UpdateAppearance,
   UpdateAvatar,
   UpdateCalls,
@@ -176,6 +180,42 @@ describe("S7 settings schemas", () => {
           platform: "Android",
         },
       ],
+    });
+  });
+
+  it("round-trip the account panels and the two-step writes", () => {
+    const panel = {
+      confirmedAt: "2026-10-07T10:00:00.000Z",
+      google: true,
+      hasPassword: false,
+      devices: [
+        {
+          id: 7,
+          description: "Firefox",
+          ipAddress: "203.0.113.9",
+          lastUsedAt: "2026-10-07T11:00:00.000Z",
+        },
+      ],
+    };
+
+    roundTrips(AccountSettings, {
+      sharedRooms: [
+        { roomId: 12, name: "Everyone", involvement: "everything", direct: false },
+        { roomId: 14, name: "Old room", involvement: null, direct: false },
+      ],
+      directRooms: [{ roomId: 13, name: "Grace", involvement: "mentions", direct: true }],
+      twoFactor: panel,
+      transferUrl: "https://chat.example/session/transfers/signed",
+      transferQrSvg: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+    });
+    roundTrips(Reauthentication, { reauth: "" });
+    roundTrips(BackupCodes, { codes: ["1234-5678"] });
+    roundTrips(TwoFactorChange, {
+      notice: "Device forgotten. It will ask for a code at next sign-in.",
+      twoFactor: {
+        ...panel,
+        devices: [{ id: 6, description: "Unknown browser", ipAddress: null, lastUsedAt: null }],
+      },
     });
   });
 });

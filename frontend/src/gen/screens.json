@@ -16,6 +16,8 @@
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/appearance", "ported": true },
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/calls", "ported": true },
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/integrations", "ported": true },
+  { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/rooms", "ported": true },
+  { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/security", "ported": true },
   { "endpoint": "users/statuses#edit", "classic": "/users/me/status/edit", "spa": "/app/settings/status", "ported": true },
   { "endpoint": "users/sessions#index", "classic": "/users/me/sessions", "spa": "/app/settings/sessions", "ported": true },
   { "endpoint": "users/push_subscriptions#index", "classic": "/users/me/push_subscriptions", "spa": "/app/settings/devices", "ported": true },

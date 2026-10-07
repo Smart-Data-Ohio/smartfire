@@ -174,7 +174,7 @@ impl Undo<'_> {
                                     "room",
                                     room.id,
                                     || format!("Could not remove imported room {}", room.id),
-                                    |tx| room.destroy(tx),
+                                    |tx| room.destroy_imported(tx),
                                 )?;
                             }
                         }

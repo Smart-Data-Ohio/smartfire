@@ -17,6 +17,7 @@ use campfire_db::{
     DndAllowedUser, Errors, PushSubscription, Session, User, UserChanges, UserStatusSettings,
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
+use campfire_people::controllers::{qr_code, two_factor, users::push_subscriptions::test_notifications};
 use campfire_web::authentication;
 use campfire_web::concerns::{self, Authentication, Before, current_session};
 use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
@@ -90,6 +91,27 @@ pub fn routes() -> Router<Kit> {
         .route(
             "/api/v1/settings/google_connection",
             axum::routing::delete(action(disconnect_google)),
+        )
+        .route("/api/v1/settings/account", get(action(account)))
+        .route(
+            "/api/v1/settings/two_factor/backup_codes",
+            post(unparsed_action(backup_codes)),
+        )
+        .route(
+            "/api/v1/settings/two_factor",
+            axum::routing::delete(unparsed_action(disable_two_factor)),
+        )
+        .route(
+            "/api/v1/settings/two_factor/devices/{id}",
+            axum::routing::delete(unparsed_action(forget_device)),
+        )
+        .route(
+            "/api/v1/settings/two_factor/devices",
+            axum::routing::delete(unparsed_action(forget_all_devices)),
+        )
+        .route(
+            "/api/v1/settings/push_subscriptions/{id}/test",
+            post(action(test_push)),
         )
 }
 
@@ -184,6 +206,30 @@ endpoint!(
 endpoint!(
     /// `DELETE /api/v1/settings/google_connection`
     disconnect_google => unlink_google
+);
+endpoint!(
+    /// `GET /api/v1/settings/account`
+    account => show_account
+);
+endpoint!(
+    /// `POST /api/v1/settings/two_factor/backup_codes`
+    backup_codes => regenerate_backup_codes
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/two_factor`
+    disable_two_factor => destroy_two_factor
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/two_factor/devices/:id`
+    forget_device => destroy_device
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/two_factor/devices`
+    forget_all_devices => destroy_all_devices
+);
+endpoint!(
+    /// `POST /api/v1/settings/push_subscriptions/:id/test`
+    test_push => create_test_push
 );
 
 async fn before_actions(c: &mut Ctx) -> Result<()> {
@@ -1075,4 +1121,170 @@ async fn unlink_google(c: &mut Ctx) -> Result {
     let id = user.id;
     let notice = google_connections::disconnect_user(c, user).await?;
     integration_reply(c, id, Ok(notice)).await
+}
+
+/// Adapt the already-worded classic panel; both transports use the same reader.
+async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettings> {
+    let id = user.id;
+    let now = c.now();
+    let google = c.app().two_factor.google().is_some();
+    let data = c
+        .app()
+        .db
+        .read(move |conn| presenters::accounts::profile_two_factor(conn, id, now, google))
+        .await
+        .map_err(Error::internal)?;
+    Ok(api::TwoFactorSettings {
+        confirmed_at: data.confirmed_at
+            .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
+        google: data.google,
+        has_password: presenters::accounts::profile_has_password(user),
+        devices: data.devices.iter().map(|device| api::RememberedDevice {
+            id: device.id,
+            description: campfire_views::two_factor::device_description(device),
+            ip_address: device.ip_address.clone(),
+            last_used_at: device.last_used_at
+                .map(|at| time(campfire_db::Timestamp::from_jiff(at))),
+        }).collect(),
+    })
+}
+
+fn account_membership(row: campfire_views::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
+    // The presenter supplies the classic involvement name. A missing one (NULL, which the classic
+    // row shows as "") stays `None`: no mention reaches it, so it isn't `mentions`.
+    let involvement = if row.involvement.is_empty() {
+        None
+    } else {
+        Some(
+            serde_json::from_value(serde_json::Value::String(row.involvement))
+                .map_err(Error::internal)?,
+        )
+    };
+    Ok(api::RoomMembershipRow {
+        room_id: row.room_id,
+        name: row.room_display_name,
+        involvement,
+        direct: row.direct,
+    })
+}
+
+/// The signed-in person for the account panels and their writes: people only. A bot's session
+/// gets no sign-in link, backup codes or test push (`deny_bots` turns away bot keys alone).
+async fn human_viewer(c: &mut Ctx) -> Result<User> {
+    let user = viewer(c).await?;
+    if user.is_bot() {
+        return Err(fail(
+            c,
+            api::ApiError::Forbidden {
+                message: "Not allowed".into(),
+            },
+        ));
+    }
+    Ok(user)
+}
+
+async fn show_account(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
+    two_factor::no_store(c);
+    let owner = user.clone();
+    let (direct, shared) = c
+        .app()
+        .db
+        .read(move |conn| presenters::accounts::profile_memberships(conn, &owner))
+        .await
+        .map_err(Error::internal)?;
+    let two_factor = account_two_factor(c, &user).await?;
+    let transfer = presenters::accounts::transfer_id(&c.app().secrets, user.id, c.now());
+    let transfer_url = c.url_for(&campfire_routes::session_transfer(&transfer));
+    let transfer_qr_svg = qr_code::transfer_svg(&transfer_url).ok_or_else(|| {
+        Error::internal(std::io::Error::other("the sign-in link doesn't fit a QR code"))
+    })?;
+    let settings = api::AccountSettings {
+        shared_rooms: shared.into_iter().map(account_membership).collect::<Result<_>>()?,
+        direct_rooms: direct.into_iter().map(account_membership).collect::<Result<_>>()?,
+        two_factor,
+        transfer_url,
+        transfer_qr_svg,
+    };
+    c.json(StatusCode::OK, &settings)
+}
+
+/// Blank JSON confirmation has exactly the classic form's Google-session semantics.
+fn reauth(value: &api::Reauthentication) -> Option<&str> {
+    campfire_kit::Param::Str(value.reauth.clone())
+        .is_present()
+        .then_some(value.reauth.as_str())
+}
+
+async fn two_factor_reply(c: &mut Ctx, user: &User, outcome: two_factor::ManagementOutcome) -> Result {
+    use two_factor::ManagementOutcome;
+    match outcome {
+        ManagementOutcome::Codes(codes) => c.json(StatusCode::OK, &api::BackupCodes { codes }),
+        ManagementOutcome::Notice(notice) => {
+            let two_factor = account_two_factor(c, user).await?;
+            c.json(StatusCode::OK, &api::TwoFactorChange {
+                notice: notice.into(),
+                two_factor,
+            })
+        }
+        ManagementOutcome::Alert(alert) => Err(crate::admin::refusal(c, alert)),
+        ManagementOutcome::RateLimited => Err(fail(
+            c,
+            api::ApiError::RateLimited {
+                message: two_factor::RATE_ALERT.into(),
+                retry_after: 0,
+            },
+        )),
+        ManagementOutcome::NotEnabled => Err(fail(
+            c,
+            api::ApiError::Conflict {
+                message: "Set up two-step sign-in first.".into(),
+            },
+        )),
+        ManagementOutcome::NotHuman => Err(fail(
+            c,
+            api::ApiError::Forbidden {
+                message: "Not allowed".into(),
+            },
+        )),
+    }
+}
+
+async fn regenerate_backup_codes(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
+    let input: api::Reauthentication = body(c).await?;
+    let outcome = two_factor::regenerate_backup_codes(c, user.clone(), reauth(&input)).await?;
+    two_factor_reply(c, &user, outcome).await
+}
+
+async fn destroy_two_factor(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
+    let input: api::Reauthentication = body(c).await?;
+    let outcome = two_factor::disable_two_factor(c, user.clone(), reauth(&input)).await?;
+    two_factor_reply(c, &user, outcome).await
+}
+
+async fn destroy_device(c: &mut Ctx) -> Result {
+    destroy_devices(c, false).await
+}
+
+async fn destroy_all_devices(c: &mut Ctx) -> Result {
+    destroy_devices(c, true).await
+}
+
+async fn destroy_devices(c: &mut Ctx, all: bool) -> Result {
+    let user = human_viewer(c).await?;
+    let input: api::Reauthentication = body(c).await?;
+    let id = c.param_str("id").and_then(concerns::cast_integer);
+    let outcome = two_factor::forget_devices(c, user.clone(), reauth(&input), id, all).await?;
+    two_factor_reply(c, &user, outcome).await
+}
+
+async fn create_test_push(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
+    let id = c.param_str("id")
+        .and_then(concerns::cast_integer)
+        .ok_or(Error::NotFound)?;
+    test_notifications::enqueue(c, user.id, id).await?;
+    Ok(c.head(StatusCode::NO_CONTENT))
 }
