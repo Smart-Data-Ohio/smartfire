@@ -26,7 +26,9 @@ import {
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedFailed,
   pagedLanded,
+  pagedLoading,
   pagedPlaced,
   pagedStale,
 } from "./paged-list.ts";
@@ -313,6 +315,17 @@ describe("a keyset-paged list", () => {
     expect(more).toMatchObject({ ids: [2, 4, 6], nextCursor: null, stale: true });
     expect(pagedLanded(stale, [2], null, "replace").stale).toBe(false);
     expect(pagedStale(emptyPagedList)).toBe(emptyPagedList);
+  });
+
+  it("lands a page or failure only in the generation its load started in", () => {
+    const list = ready([2, 4], "c");
+    const started = list.generation;
+    const reloading = pagedLoading(list);
+
+    expect(reloading.generation).toBe(started + 1);
+    expect(pagedLanded(reloading, [6], null, "more", started)).toBe(reloading);
+    expect(pagedFailed(reloading, "Down", started)).toBe(reloading);
+    expect(pagedLanded(reloading, [6], null, "replace", reloading.generation).ids).toEqual([6]);
   });
 });
 

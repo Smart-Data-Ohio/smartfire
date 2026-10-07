@@ -17,6 +17,7 @@ import {
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedCurrent,
   pagedFailed,
   pagedLanded,
   pagedLoading,
@@ -91,8 +92,13 @@ export function setSavedListLoading(state: State, filter: SavedFilter, more: boo
   return updateList(state, filter, more ? pagedLoadingMore : pagedLoading);
 }
 
-export function setSavedListFailed(state: State, filter: SavedFilter, error: string): State {
-  return updateList(state, filter, (list) => pagedFailed(list, error));
+export function setSavedListFailed(
+  state: State,
+  filter: SavedFilter,
+  error: string,
+  generation?: number,
+): State {
+  return updateList(state, filter, (list) => pagedFailed(list, error, generation));
 }
 
 /** Messages join the store unless deleted here or older than the copy held. */
@@ -119,14 +125,20 @@ function mergeMessages(state: State, messages: readonly MessageDTO[]): State {
 
 /**
  * A page of one filter landed: the items, their messages, the messages' authors and the
- * conversation names join the store, and each message's saved mark follows its item.
+ * conversation names join the store, and each message's saved mark follows its item. A page
+ * from a load the list has since restarted (`generation`) changes nothing.
  */
 export function landSavedPage(
   state: State,
   filter: SavedFilter,
   page: SavedItemList,
   mode: "replace" | "more",
+  generation?: number,
 ): State {
+  if (!pagedCurrent(savedListOf(state, filter), generation)) {
+    return state;
+  }
+
   const items = { ...state.savedList.items };
   const saved = { ...state.saved };
 

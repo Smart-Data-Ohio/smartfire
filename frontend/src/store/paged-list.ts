@@ -4,6 +4,10 @@
  * without a refetch: an id that now belongs joins at its sorted place when that place is inside
  * the loaded window (past the last loaded row it belongs to a later page, which brings it then);
  * an id that no longer belongs leaves.
+ *
+ * Every first-page load (or reload) starts a new `generation`. A load remembers the generation it
+ * started in, and its page (or failure) lands only if no reload started since: a late next page
+ * can't append to, or set the cursor of, a list that was reloaded meanwhile.
  */
 import type { LoadStatus } from "./model.ts";
 
@@ -23,6 +27,8 @@ export interface PagedList {
   readonly error: string | null;
   /** Something happened the list can't place without the server: reload it when next shown. */
   readonly stale: boolean;
+  /** Bumped by every first-page load; a load lands only in the generation it started in. */
+  readonly generation: number;
 }
 
 export const emptyPagedList: PagedList = {
@@ -32,14 +38,28 @@ export const emptyPagedList: PagedList = {
   loadingMore: false,
   error: null,
   stale: false,
+  generation: 0,
 };
 
 /** Sorts two ids in the list's order: negative when `left` comes first. */
 export type IdOrder = (left: number, right: number) => number;
 
-/** The first page (or a reload) is on its way; what's shown stays until it lands. */
+/**
+ * The first page (or a reload) is on its way, in a new generation: a next page still on its way
+ * won't land. What's shown stays until the reload lands.
+ */
 export function pagedLoading(list: PagedList): PagedList {
-  return { ...list, status: list.status === "ready" ? "ready" : "loading", error: null };
+  return {
+    ...list,
+    status: list.status === "ready" ? "ready" : "loading",
+    error: null,
+    generation: list.generation + 1,
+  };
+}
+
+/** Whether a load that started in `generation` may still land (`undefined`: no check). */
+export function pagedCurrent(list: PagedList, generation: number | undefined): boolean {
+  return generation === undefined || generation === list.generation;
 }
 
 /** The next page is on its way. */
@@ -47,8 +67,15 @@ export function pagedLoadingMore(list: PagedList): PagedList {
   return { ...list, loadingMore: true, error: null };
 }
 
-/** A load failed: a list never shown says so; a shown one keeps its rows and the message. */
-export function pagedFailed(list: PagedList, error: string): PagedList {
+/**
+ * A load failed: a list never shown says so; a shown one keeps its rows and the message. A load
+ * from an older `generation` changes nothing.
+ */
+export function pagedFailed(list: PagedList, error: string, generation?: number): PagedList {
+  if (!pagedCurrent(list, generation)) {
+    return list;
+  }
+
   return {
     ...list,
     status: list.status === "ready" ? "ready" : "error",
@@ -59,14 +86,20 @@ export function pagedFailed(list: PagedList, error: string): PagedList {
 
 /**
  * A page landed: `replace` makes it the list (a first load or a reload); `more` adds it at the
- * end, skipping ids already held (one may have moved in live meanwhile).
+ * end, skipping ids already held (one may have moved in live meanwhile). A page from an older
+ * `generation` changes nothing.
  */
 export function pagedLanded(
   list: PagedList,
   ids: readonly number[],
   nextCursor: Cursor | null,
   mode: "replace" | "more",
+  generation?: number,
 ): PagedList {
+  if (!pagedCurrent(list, generation)) {
+    return list;
+  }
+
   const merged = mode === "replace" ? [...new Set(ids)] : [...new Set([...list.ids, ...ids])];
 
   return {
@@ -76,6 +109,7 @@ export function pagedLanded(
     loadingMore: false,
     error: null,
     stale: mode === "replace" ? false : list.stale,
+    generation: list.generation,
   };
 }
 

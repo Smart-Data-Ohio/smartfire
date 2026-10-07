@@ -14,6 +14,7 @@ import {
   emptyPagedList,
   type IdOrder,
   type PagedList,
+  pagedCurrent,
   pagedFailed,
   pagedLanded,
   pagedLoading,
@@ -117,17 +118,30 @@ export function setScheduledListLoading(state: State, key: ScheduledListKey, mor
   return updateList(state, key, more ? pagedLoadingMore : pagedLoading);
 }
 
-export function setScheduledListFailed(state: State, key: ScheduledListKey, error: string): State {
-  return updateList(state, key, (list) => pagedFailed(list, error));
+export function setScheduledListFailed(
+  state: State,
+  key: ScheduledListKey,
+  error: string,
+  generation?: number,
+): State {
+  return updateList(state, key, (list) => pagedFailed(list, error, generation));
 }
 
-/** A page of one list landed: its messages and conversation names join the store. */
+/**
+ * A page of one list landed: its messages and conversation names join the store. A page from a
+ * load the list has since restarted (`generation`) changes nothing.
+ */
 export function landScheduledPage(
   state: State,
   key: ScheduledListKey,
   page: ScheduledMessageList,
   mode: "replace" | "more",
+  generation?: number,
 ): State {
+  if (!pagedCurrent(scheduledListOf(state, key), generation)) {
+    return state;
+  }
+
   const items = { ...state.scheduled.items };
 
   for (const message of page.scheduledMessages) {

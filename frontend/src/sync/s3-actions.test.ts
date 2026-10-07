@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Deferred, Effect, Fiber } from "effect";
 import { TestClock } from "effect/testing";
-import { Conflict, Forbidden, ServerError, Validation } from "../api/errors.ts";
+import { Conflict, Forbidden, NotFound, ServerError, Validation } from "../api/errors.ts";
 import { FakeApi, messageFixture, userFixture } from "../api/testing.ts";
 import type { ActivityEventType } from "../gen/ActivityEventType.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
@@ -263,6 +263,126 @@ describe("activity actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("roll two failing changes back to the server's count, not to a snapshot", () =>
+    Effect.gen(function* () {
+      seedInbox();
+
+      const fake = yield* FakeApi;
+      const gate = yield* Deferred.make<void>();
+      let during: number | null = null;
+
+      for (const id of [3, 2]) {
+        yield* fake.route(`PATCH /activity/${id}`, () => {
+          during = store.getState().activity.unreadCount;
+
+          return Deferred.await(gate).pipe(Effect.andThen(refuse));
+        });
+      }
+
+      const both = yield* Effect.forkChild(
+        Effect.all([activity.setState(3, "read"), activity.setState(2, "read")], {
+          concurrency: "unbounded",
+          mode: "result",
+        }),
+      );
+
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
+
+      expect(during).toBe(3);
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.await(both);
+
+      expect(store.getState().activity.unreadCount).toBe(5);
+      expect(inboxIds("unread")).toEqual([3, 2]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a newer event when a refused change ends", () =>
+    Effect.gen(function* () {
+      seedInbox();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /activity/2", () => {
+        // Someone handled it elsewhere meanwhile.
+        mutations.applyActivityItem(item(2, 50, "handled"), 3);
+
+        return refuse();
+      });
+
+      yield* Effect.flip(activity.setState(2, "read"));
+
+      expect(store.getState().activity.items[2]?.state).toBe("handled");
+      expect(inboxIds("handled")).toEqual([2, 1]);
+      expect(store.getState().activity.unreadCount).toBe(3);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("ignore an older page's copy, and its count once a newer count landed", () =>
+    Effect.gen(function* () {
+      seedInbox();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("GET /activity", () => {
+        mutations.applyActivityItem(item(3, 50, "read"), 4);
+
+        return Effect.succeed({
+          items: [item(3, 30), item(2, 20)],
+          users: [],
+          unreadCount: 5,
+          nextCursor: null,
+        });
+      });
+
+      yield* activity.load("all", "unread");
+
+      expect(store.getState().activity.items[3]?.state).toBe("read");
+      expect(inboxIds("unread")).toEqual([2]);
+      expect(store.getState().activity.unreadCount).toBe(4);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("drop a next page that lands after the list reloaded", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.reply("GET /activity", {
+        items: [item(3, 30)],
+        users: [],
+        unreadCount: 2,
+        nextCursor: "page-2",
+      });
+      yield* activity.load("all", "unread");
+
+      yield* fake.route("GET /activity", () => {
+        // A reload starts while this next page is on its way.
+        mutations.setActivityListLoading("all", "unread", false);
+        mutations.landActivityPage(
+          "all",
+          "unread",
+          { items: [item(4, 40)], users: [], unreadCount: 2, nextCursor: null },
+          "replace",
+        );
+
+        return Effect.succeed({
+          items: [item(1, 10)],
+          users: [],
+          unreadCount: 2,
+          nextCursor: "page-3",
+        });
+      });
+      yield* activity.loadMore("all", "unread");
+
+      expect(inboxIds("unread")).toEqual([4]);
+      expect(activityListOf(store.getState(), "all", "unread").nextCursor).toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("refresh the badge", () =>
     Effect.gen(function* () {
       seedInbox();
@@ -324,6 +444,30 @@ describe("saved actions", () => {
       expect(markDuring).toBeUndefined();
       expect(store.getState().saved[102]).toBe(2);
       expect(savedListOf(store.getState(), "all").ids).toEqual([2, 1]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep an event's copy when a refused change ends, and reload on 404", () =>
+    Effect.gen(function* () {
+      seedSaved();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /saved/2", () => {
+        mutations.applySavedChange(102, { ...savedItem(2, 102, 20), remindAt: at(59) });
+
+        return refuse();
+      });
+      yield* Effect.flip(saved.setStatus(2, "done"));
+
+      expect(store.getState().savedList.items[2]?.remindAt).toBe(at(59));
+      expect(savedListOf(store.getState(), "in_progress").ids).toEqual([2, 1]);
+
+      yield* fake.route("DELETE /saved/1", () => Effect.fail(new NotFound({ message: "Gone" })));
+      yield* Effect.flip(saved.remove(1));
+
+      expect(store.getState().saved[101]).toBeUndefined();
+      expect(savedListOf(store.getState(), "all")).toMatchObject({ ids: [2], stale: true });
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -503,6 +647,41 @@ describe("scheduled actions", () => {
       expect(during).toEqual([2]);
       expect(scheduledListOf(store.getState(), "pending").ids).toEqual([1, 2]);
       expect(scheduledListOf(store.getState(), roomScheduledKey(ROOM)).ids).toEqual([1, 2]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("cancel: a 404 leaves it gone and reloads; a sent copy meanwhile stays sent", () =>
+    Effect.gen(function* () {
+      seedScheduled();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("DELETE /scheduled_messages/1", () =>
+        Effect.fail(new NotFound({ message: "Not found" })),
+      );
+      yield* Effect.flip(scheduled.cancel(1));
+
+      expect(scheduledListOf(store.getState(), "pending")).toMatchObject({
+        ids: [2],
+        stale: true,
+      });
+
+      const sent = scheduledMessage(2, 20, {
+        state: "sent",
+        sendable: false,
+        sentAt: at(21),
+        sentMessageId: 902,
+      });
+
+      yield* fake.route("DELETE /scheduled_messages/2", () => {
+        mutations.applyScheduled(sent);
+
+        return Effect.fail(new Conflict({ message: "That message is sending right now" }));
+      });
+      yield* Effect.flip(scheduled.cancel(2));
+
+      expect(store.getState().scheduled.items[2]?.state).toBe("sent");
+      expect(scheduledListOf(store.getState(), "pending").ids).toEqual([]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

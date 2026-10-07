@@ -2,9 +2,10 @@
  * Scheduled messages' actions as Effect programs, for the Scheduled page and the composer. Loads
  * land in the store (failures as the list's error); writes land the server's reply in every list
  * (the `scheduled.*` event that follows is then a no-op). Cancelling shows at once and comes back
- * if the server refuses (409 while it's sending).
+ * if the server refuses (409 while it's sending); if the server no longer has it (404: it was
+ * sent, dropped or cancelled meanwhile), the lists reload instead.
  */
-import { Effect, Schema } from "effect";
+import { Effect, Predicate, Schema } from "effect";
 import * as api from "../api/composer-endpoints.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
@@ -17,10 +18,14 @@ export const load = Effect.fn("scheduled.load")(function* (key: ScheduledListKey
 
   mutations.setScheduledListLoading(key, false);
 
+  const { generation } = scheduledListOf(store.getState(), key);
+
   yield* api.scheduledMessagePage(status, roomId, null).pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.landScheduledPage(key, page, "replace"))),
+    Effect.tap((page) =>
+      Effect.sync(() => mutations.landScheduledPage(key, page, "replace", generation)),
+    ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setScheduledListFailed(key, error.message)),
+      Effect.sync(() => mutations.setScheduledListFailed(key, error.message, generation)),
     ),
   );
 });
@@ -37,9 +42,11 @@ export const loadMore = Effect.fn("scheduled.loadMore")(function* (key: Schedule
   mutations.setScheduledListLoading(key, true);
 
   yield* api.scheduledMessagePage(status, roomId, list.nextCursor).pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.landScheduledPage(key, page, "more"))),
+    Effect.tap((page) =>
+      Effect.sync(() => mutations.landScheduledPage(key, page, "more", list.generation)),
+    ),
     Effect.catch((error) =>
-      Effect.sync(() => mutations.setScheduledListFailed(key, error.message)),
+      Effect.sync(() => mutations.setScheduledListFailed(key, error.message, list.generation)),
     ),
   );
 });
@@ -97,18 +104,39 @@ export const sendNow = Effect.fn("scheduled.sendNow")(function* (scheduledMessag
   return message.state === "sent" ? ("sent" as const) : ("held" as const);
 });
 
-/** Cancels it, at once; it comes back if the server refuses. */
+/**
+ * Cancels it, at once. If the server refuses, it comes back, unless an event brought a newer
+ * copy meanwhile. If the server no longer has it (404), it stays gone and the lists reload.
+ */
 export const cancel = Effect.fn("scheduled.cancel")(function* (scheduledMessageId: number) {
   const before = store.getState().scheduled.items[scheduledMessageId];
 
   mutations.removeScheduled(scheduledMessageId);
 
+  const rollBack = () => {
+    if (
+      before !== undefined &&
+      store.getState().scheduled.items[scheduledMessageId] === undefined
+    ) {
+      mutations.applyScheduled(before);
+    }
+  };
+
   yield* api.cancelScheduledMessage(scheduledMessageId).pipe(
-    Effect.tapError(() =>
+    Effect.tapError((error) =>
       Effect.sync(() => {
-        if (before !== undefined) {
-          mutations.applyScheduled(before);
+        if (Predicate.isTagged(error, "NotFound")) {
+          mutations.markScheduledStale();
+        } else {
+          rollBack();
         }
+      }),
+    ),
+    // Interrupted, so the outcome is unknown: put it back, and reload to be sure.
+    Effect.onInterrupt(() =>
+      Effect.sync(() => {
+        rollBack();
+        mutations.markScheduledStale();
       }),
     ),
   );

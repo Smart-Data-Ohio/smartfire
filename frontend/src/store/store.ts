@@ -155,40 +155,58 @@ export const mutations = {
   // --- S3: the activity inbox, saved items and scheduled messages ---
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),
-  setActivityListFailed: (tab: ActivityTab, status: ActivityState, error: string) =>
-    apply((state) => activity.setActivityListFailed(state, tab, status, error)),
+  setActivityListFailed: (
+    tab: ActivityTab,
+    status: ActivityState,
+    error: string,
+    generation?: number,
+  ) => apply((state) => activity.setActivityListFailed(state, tab, status, error, generation)),
   landActivityPage: (
     tab: ActivityTab,
     status: ActivityState,
     page: ActivityList,
     mode: "replace" | "more",
-  ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode)),
-  /** An item as it is now; `unreadCount` `null` keeps the badge. */
+    start?: activity.ActivityLoadStart,
+  ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode, start)),
+  /** An item as the server has it now; `unreadCount` `null` keeps the badge. */
   applyActivityItem: (item: ActivityItem, unreadCount: number | null) =>
     apply((state) => activity.applyActivityItem(state, item, unreadCount)),
+  /** A change on its way, shown at once (see `activity.showActivityChange`). */
+  showActivityChange: (item: ActivityItem, token: number, unreadDelta: number) =>
+    apply((state) => activity.showActivityChange(state, item, token, unreadDelta)),
+  /** A change on its way ended (see `activity.endActivityChange`). */
+  endActivityChange: (end: activity.ActivityChangeEnd) =>
+    apply((state) => activity.endActivityChange(state, end)),
   setActivityUnreadCount: (unreadCount: number) =>
     apply((state) => activity.setActivityUnreadCount(state, unreadCount)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
-  setSavedListFailed: (filter: SavedFilter, error: string) =>
-    apply((state) => savedList.setSavedListFailed(state, filter, error)),
-  landSavedPage: (filter: SavedFilter, page: SavedItemList, mode: "replace" | "more") =>
-    apply((state) => savedList.landSavedPage(state, filter, page, mode)),
+  setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>
+    apply((state) => savedList.setSavedListFailed(state, filter, error, generation)),
+  landSavedPage: (
+    filter: SavedFilter,
+    page: SavedItemList,
+    mode: "replace" | "more",
+    generation?: number,
+  ) => apply((state) => savedList.landSavedPage(state, filter, page, mode, generation)),
   /** A message saved, changed (`item`) or unsaved (`null`): its mark, item and lists follow. */
   applySavedChange: (messageId: number, item: SavedItem | null) =>
     apply((state) => savedList.applySavedChange(state, messageId, item)),
   setScheduledListLoading: (key: scheduled.ScheduledListKey, more: boolean) =>
     apply((state) => scheduled.setScheduledListLoading(state, key, more)),
-  setScheduledListFailed: (key: scheduled.ScheduledListKey, error: string) =>
-    apply((state) => scheduled.setScheduledListFailed(state, key, error)),
+  setScheduledListFailed: (key: scheduled.ScheduledListKey, error: string, generation?: number) =>
+    apply((state) => scheduled.setScheduledListFailed(state, key, error, generation)),
   landScheduledPage: (
     key: scheduled.ScheduledListKey,
     page: ScheduledMessageList,
     mode: "replace" | "more",
-  ) => apply((state) => scheduled.landScheduledPage(state, key, page, mode)),
+    generation?: number,
+  ) => apply((state) => scheduled.landScheduledPage(state, key, page, mode, generation)),
   applyScheduled: (message: ScheduledMessage) =>
     apply((state) => scheduled.applyScheduled(state, message)),
   removeScheduled: (id: number) => apply((state) => scheduled.removeScheduled(state, id)),
+  /** Every saved list reloads when next shown (a change the server says is already gone). */
+  markSavedStale: () => apply((state) => savedList.markSavedStale(state)),
   /** Every scheduled list reloads when next shown (a send that dropped it instead). */
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
   /** Missed events the server can't replay: every S3 list reloads when next shown. */
