@@ -52,17 +52,6 @@ export function groupPeople(people: readonly Person[]) {
   };
 }
 
-/** The row to move to when `id` leaves `ids`: the next one, else the previous, else none. */
-export function neighbour<T>(ids: readonly T[], id: T): T | null {
-  const index = ids.indexOf(id);
-
-  if (index === -1) {
-    return null;
-  }
-
-  return ids[index + 1] ?? ids[index - 1] ?? null;
-}
-
 /** The classic page's confirmation before a two-step sign-in reset. */
 export function twoFactorResetConfirmation(person: Person): string {
   return `Reset two-step sign-in for ${person.name}? They will sign out everywhere and set it up again at next sign-in.`;
