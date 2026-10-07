@@ -51,31 +51,24 @@ export function formatElapsed(ms: number): string {
     : `${minutes}:${seconds}`;
 }
 
-let callStartedAt: { readonly roomId: number; readonly at: number } | null = null;
-
-/** How long the viewer has been in this room's call, ticking each second while connected. */
-function useElapsed(roomId: number | null, live: boolean): string | null {
+/** How long the viewer has been in this call, ticking each second while connected. */
+function useElapsed(live: boolean): string | null {
+  const startedAt = useCall((state) => state.startedAt);
   const [now, setNow] = useState(() => Date.now());
-
-  if (roomId !== null && live && callStartedAt?.roomId !== roomId) {
-    callStartedAt = { roomId, at: Date.now() };
-  }
-
-  if (roomId === null && callStartedAt !== null) {
-    callStartedAt = null;
-  }
 
   useEffect(() => {
     if (!live) {
       return;
     }
 
+    setNow(Date.now());
+
     const timer = setInterval(() => setNow(Date.now()), 1000);
 
     return () => clearInterval(timer);
   }, [live]);
 
-  return live && callStartedAt !== null ? formatElapsed(now - callStartedAt.at) : null;
+  return live && startedAt !== null ? formatElapsed(now - startedAt) : null;
 }
 
 /** A border beam for the first three seconds of a call. */
@@ -223,7 +216,7 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
   const viewedRoomId = useParams({ strict: false }).roomId ?? null;
   const streaming = useCall((state) => state.streaming !== null);
   const live = livePhase(phase);
-  const elapsed = useElapsed(roomId, phase === "connected" || phase === "reconnecting");
+  const elapsed = useElapsed(phase === "connected" || phase === "reconnecting");
   const beaming = useJoinBeam(phase, roomId);
 
   if (phase === "idle" || phase === "prejoin" || roomId === null) {

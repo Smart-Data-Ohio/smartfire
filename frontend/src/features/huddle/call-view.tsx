@@ -13,8 +13,8 @@ import { SpeakingRing } from "../../ui/speaking-ring.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { callController } from "./call-controller.ts";
-import { streamVideoIdOf, useCall } from "./call-store.ts";
-import { loadParticipantMuted, loadStreamQuality } from "./engine/preferences.ts";
+import { streamVideoIdOf, useCall, userIdForIdentity } from "./call-store.ts";
+import { loadStreamQuality } from "./engine/preferences.ts";
 import type { CallParticipant, ViewerQuality } from "./engine/transport.ts";
 import { ParticipantMenu } from "./participant-menu.tsx";
 
@@ -97,11 +97,16 @@ function VideoTrack({
 
 /** The person behind a LiveKit identity (the viewer's own tile is theirs). */
 function useParticipantUser(participant: CallParticipant): number | null {
-  const viewerId = useStore((state) => state.me?.user.id ?? null);
+  const roomId = useCall((state) => state.roomId);
 
-  useStore((state) => state.huddles);
+  // Read from the stores in the selector: a controller call during render would be memoized.
+  return useStore((state) => {
+    if (participant.local) {
+      return state.me?.user.id ?? null;
+    }
 
-  return participant.local ? viewerId : callController.userIdFor(participant.identity);
+    return roomId === null ? null : userIdForIdentity(state.huddles[roomId], participant.identity);
+  });
 }
 
 function ParticipantTile({
@@ -118,8 +123,10 @@ function ParticipantTile({
   );
 
   const display = name === "" ? UNKNOWN_NAME : name;
-  // Re-read on every snapshot: the controller republishes the snapshot after a local mute.
-  const mutedForMe = userId !== null && !participant.local && loadParticipantMuted(userId);
+
+  const mutedForMe = useCall(
+    (state) => userId !== null && !participant.local && state.localMutes.includes(userId),
+  );
 
   const tile = (
     <div

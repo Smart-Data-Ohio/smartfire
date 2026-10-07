@@ -23,6 +23,7 @@ import {
   livePhase,
   type PrejoinState,
   streamVideoIdOf,
+  userIdForIdentity,
 } from "./call-store.ts";
 import {
   canShareScreen,
@@ -242,7 +243,9 @@ function snapshotKey(state: CallState["snapshot"]): string {
 export class CallController {
   readonly #env: CallEnvironment;
   #operation = 0;
+  /** The device check's microphone preview; the camera's has its own, so neither drops the other. */
   #previewOperation = 0;
+  #previewVideoOperation = 0;
   #transport: CallTransport | null = null;
   #unsubscribeTransport: (() => void) | null = null;
   #canPublishHint: boolean | null = null;
@@ -344,6 +347,7 @@ export class CallController {
       devicesOpen: live ? this.#state.devicesOpen : false,
       statsOpen: live ? this.#state.statsOpen : false,
       prejoin: phase === "prejoin" ? this.#state.prejoin : null,
+      startedAt: live && this.#state.startedAt === null ? Date.now() : this.#state.startedAt,
     });
 
     if (phase !== "reconnecting") {
@@ -422,8 +426,14 @@ export class CallController {
     this.#operation += 1;
 
     const operation = this.#operation;
+    // Switching calls leaves the old one, reported as `leave()` reports it.
+    const previous = state.roomId !== null && state.phase !== "idle" ? state.roomId : null;
 
     await this.#disconnectCurrent();
+
+    if (previous !== null) {
+      void this.#env.leave(previous);
+    }
 
     if (operation !== this.#operation) {
       return;
@@ -445,6 +455,9 @@ export class CallController {
       deafened: false,
       expandedVideoId: null,
       viewOpen: true,
+      // A retry in the same room keeps its timer, as a rejoin does.
+      startedAt: state.roomId === roomId ? state.startedAt : null,
+      localMutes: [],
       noise: { available, enabled: available && loadNoiseSuppression(), busy: false },
     });
     this.#holdRoom(roomId);
@@ -675,6 +688,8 @@ export class CallController {
 
   async #startPreview(): Promise<void> {
     this.#previewOperation += 1;
+    // The camera preview restarts after the microphone's: one still opening is stale.
+    this.#previewVideoOperation += 1;
 
     const preview = this.#previewOperation;
 
@@ -750,9 +765,9 @@ export class CallController {
   }
 
   async #startPreviewVideo(): Promise<void> {
-    this.#previewOperation += 1;
+    this.#previewVideoOperation += 1;
 
-    const preview = this.#previewOperation;
+    const preview = this.#previewVideoOperation;
 
     this.#stopPreviewVideo();
 
@@ -768,7 +783,7 @@ export class CallController {
         audio: false,
       });
 
-      if (preview !== this.#previewOperation || this.#state.phase !== "prejoin") {
+      if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         stopStream(stream);
 
         return;
@@ -776,7 +791,7 @@ export class CallController {
 
       this.#setPrejoin({ preview: stream });
     } catch {
-      if (preview !== this.#previewOperation || this.#state.phase !== "prejoin") {
+      if (preview !== this.#previewVideoOperation || this.#state.phase !== "prejoin") {
         return;
       }
 
@@ -790,6 +805,7 @@ export class CallController {
 
   #stopPreview(): void {
     this.#previewOperation += 1;
+    this.#previewVideoOperation += 1;
     this.#stopPreviewStreams();
     this.#set({ meter: 0 });
   }
@@ -981,7 +997,8 @@ export class CallController {
   /** The page is going away, or another account signed in: end without waiting. */
   endForPageChange(): void {
     const roomId = this.#state.roomId;
-    const live = this.#transport !== null;
+    // Mid-connect the grant may already exist: report the leave then too.
+    const live = this.#transport !== null || this.#state.phase === "connecting";
 
     this.#operation += 1;
     this.#endStreamOnDisconnect(true);
@@ -1053,7 +1070,15 @@ export class CallController {
 
     this.#lastSnapshotKey = "";
     this.#autoExpanded = null;
-    this.#set({ snapshot: EMPTY_SNAPSHOT, expandedVideoId: null, meter: 0, stats: null });
+    // A toggle still running on the old transport skips its own cleanup (it checks the
+    // transport), so its busy flag ends here, or the control would stay dead on the new one.
+    this.#set({
+      snapshot: EMPTY_SNAPSHOT,
+      expandedVideoId: null,
+      meter: 0,
+      stats: null,
+      busy: initialCallState.busy,
+    });
   }
 
   #stopTimers(): void {
@@ -1249,15 +1274,8 @@ export class CallController {
   /** The user id behind a LiveKit identity, from the room's presence. */
   userIdFor(identity: string): number | null {
     const roomId = this.#state.roomId;
-    const presence = roomId === null ? undefined : store.getState().huddles[roomId];
 
-    for (const participant of presence?.participants ?? []) {
-      if (participant.identities.includes(identity)) {
-        return participant.userId;
-      }
-    }
-
-    return null;
+    return roomId === null ? null : userIdForIdentity(store.getState().huddles[roomId], identity);
   }
 
   #identitiesOf(userId: number): string[] {
@@ -1278,7 +1296,15 @@ export class CallController {
       return;
     }
 
-    for (const participant of store.getState().huddles[roomId]?.participants ?? []) {
+    const participants = store.getState().huddles[roomId]?.participants ?? [];
+
+    this.#setLocalMutes(
+      participants
+        .filter((participant) => loadParticipantMuted(participant.userId))
+        .map((participant) => participant.userId),
+    );
+
+    for (const participant of participants) {
       const volume = loadParticipantVolume(participant.userId);
       const muted = loadParticipantMuted(participant.userId);
 
@@ -1326,7 +1352,19 @@ export class CallController {
       transport?.setParticipantMuted(identity, muted);
     }
 
-    this.#set({ snapshot: { ...this.#state.snapshot } });
+    const others = this.#state.localMutes.filter((id) => id !== userId);
+
+    this.#setLocalMutes(muted ? [...others, userId] : others);
+  }
+
+  /** The "muted for me" marks, kept in the store so tiles and menus follow them. */
+  #setLocalMutes(userIds: readonly number[]): void {
+    const next = userIds.toSorted((a, b) => a - b);
+    const current = this.#state.localMutes;
+
+    if (next.length !== current.length || next.some((id, index) => id !== current[index])) {
+      this.#set({ localMutes: next });
+    }
   }
 
   // ── Microphone, push-to-talk and deafen ───────────────────────────────────────────────────

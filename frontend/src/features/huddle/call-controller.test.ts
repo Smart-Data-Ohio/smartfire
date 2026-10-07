@@ -498,3 +498,150 @@ describe("the microphone", () => {
     await controller.leave();
   });
 });
+
+describe("call state", () => {
+  it("a toggle cut off by a reconnect doesn't leave its control busy", async () => {
+    const { controller, transports } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [first] = transports;
+
+    if (first === undefined) {
+      throw new Error("no transport");
+    }
+
+    let release: () => void = () => undefined;
+
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    first.setCamera = async () => {
+      await gate;
+    };
+
+    const toggling = controller.toggleCamera();
+
+    expect(callStore.getState().busy.camera).toBe(true);
+
+    await controller.reconnectNow();
+
+    expect(callStore.getState().phase).toBe("connected");
+    expect(callStore.getState().busy.camera).toBe(false);
+
+    release();
+    await toggling;
+
+    expect(callStore.getState().busy.camera).toBe(false);
+    await controller.leave();
+  });
+
+  it("switching calls reports leaving the old one", async () => {
+    const { controller, calls } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+    await controller.join(OTHER_ROOM, "Other", null);
+
+    expect(calls.indexOf(`leave ${ROOM}`)).toBeGreaterThan(-1);
+    expect(calls.indexOf(`leave ${ROOM}`)).toBeLessThan(calls.indexOf(`join ${OTHER_ROOM}`));
+    await controller.leave();
+  });
+
+  it("a page closed mid-connect still reports the leave", async () => {
+    let release: () => void = () => undefined;
+
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const { controller, calls } = harness({
+      join: async (roomId) => {
+        await gate;
+
+        return credentials(roomId);
+      },
+    });
+
+    const joining = controller.join(ROOM, "Lounge", null);
+
+    await vi.waitFor(() => expect(callStore.getState().phase).toBe("connecting"));
+    controller.endForPageChange();
+    release();
+    await joining;
+
+    expect(calls).toContain(`leave-on-unload ${ROOM}`);
+    expect(callStore.getState().phase).toBe("idle");
+  });
+
+  it("keeps the people muted for me in the store", async () => {
+    mutations.setHuddlePresence({
+      roomId: ROOM,
+      participants: [{ userId: 3, membershipId: 30, identities: ["maya-1"], serverMuted: false }],
+      live: false,
+    });
+
+    const { controller } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+    controller.toggleParticipantMute(3);
+    expect(callStore.getState().localMutes).toEqual([3]);
+
+    await controller.leave();
+    await controller.join(ROOM, "Lounge", null);
+    controller.presenceChanged();
+    // Remembered for the next call.
+    expect(callStore.getState().localMutes).toEqual([3]);
+
+    controller.toggleParticipantMute(3);
+    expect(callStore.getState().localMutes).toEqual([]);
+    await controller.leave();
+  });
+
+  it("starts the call timer on connect and keeps it through a rejoin", async () => {
+    const { controller } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const startedAt = callStore.getState().startedAt;
+
+    expect(startedAt).not.toBeNull();
+
+    await controller.roleChanged(ROOM, "speaker", false);
+    expect(callStore.getState().startedAt).toBe(startedAt);
+
+    await controller.leave();
+    expect(callStore.getState().startedAt).toBeNull();
+  });
+
+  it("a camera picked while the microphone prompt is open keeps the microphone's outcome", async () => {
+    let refuse: () => void = () => undefined;
+
+    const { controller } = harness({
+      shouldCheckDevices: async () => true,
+      getUserMedia: async (constraints) => {
+        if (constraints.audio !== false) {
+          await new Promise<void>((resolve) => {
+            refuse = resolve;
+          });
+        }
+
+        throw new Error("no device");
+      },
+    });
+
+    void controller.join(ROOM, "Lounge", null);
+    await vi.waitFor(() => expect(callStore.getState().phase).toBe("prejoin"));
+    await settle();
+    await controller.selectDevice("videoinput", "camera-1");
+    refuse();
+
+    await vi.waitFor(() =>
+      expect(callStore.getState().prejoin?.error).toBe(
+        "The microphone could not be started. Check your device and try again.",
+      ),
+    );
+    expect(callStore.getState().prejoin?.retry).toBe(true);
+    await controller.leave();
+  });
+});

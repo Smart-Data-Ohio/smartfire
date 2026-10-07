@@ -674,11 +674,19 @@
     box-shadow: 0 0 0 3px var(--danger-soft);
   }
 
+  /* Reduced motion: the OS setting applies unless the user chose "full" in Smartfire;
+     choosing "reduce" there reduces motion whatever the OS says. */
   @media (prefers-reduced-motion: reduce) {
-    .huddle-meter-fill,
-    .voice-participant-avatar::after,
-    .call-tile {
+    :root:not([data-motion="full"]) .huddle-meter-fill,
+    :root:not([data-motion="full"]) .voice-participant-avatar::after,
+    :root:not([data-motion="full"]) .call-tile {
       transition: none;
     }
+  }
+
+  :root[data-motion="reduce"] .huddle-meter-fill,
+  :root[data-motion="reduce"] .voice-participant-avatar::after,
+  :root[data-motion="reduce"] .call-tile {
+    transition: none;
   }
 }

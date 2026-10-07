@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { streamVideoIdOf } from "./call-store.ts";
+import { streamVideoIdOf, userIdForIdentity } from "./call-store.ts";
 import type { CallParticipant } from "./engine/transport.ts";
 
 function participant(identity: string, local: boolean, screenId: string | null): CallParticipant {
@@ -35,5 +35,23 @@ describe("streamVideoIdOf", () => {
     expect(streamVideoIdOf([ME, MAYA], false, null)).toBeNull();
     expect(streamVideoIdOf([ME, JONAH], false, "jonah")).toBeNull();
     expect(streamVideoIdOf([ME], false, "maya")).toBeNull();
+  });
+});
+
+describe("userIdForIdentity", () => {
+  it("finds the person behind any of their tabs' identities", () => {
+    const presence = {
+      roomId: 8,
+      participants: [
+        { userId: 3, membershipId: 30, identities: ["a", "b"], serverMuted: false },
+        { userId: 4, membershipId: 40, identities: ["c"], serverMuted: false },
+      ],
+      live: false,
+    };
+
+    expect(userIdForIdentity(presence, "b")).toBe(3);
+    expect(userIdForIdentity(presence, "c")).toBe(4);
+    expect(userIdForIdentity(presence, "d")).toBeNull();
+    expect(userIdForIdentity(undefined, "a")).toBeNull();
   });
 });

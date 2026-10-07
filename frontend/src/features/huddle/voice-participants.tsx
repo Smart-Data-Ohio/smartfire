@@ -8,32 +8,42 @@ import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
-import { callController } from "./call-controller.ts";
-import { useCall } from "./call-store.ts";
+import { useCall, userIdForIdentity } from "./call-store.ts";
 import { useCallLive, useCallParticipants, useHuddlesAvailable } from "./presence.ts";
+
+/** Stands for the viewer's own tile among the speaking identities. */
+const SELF = "@self";
 
 /** The user ids speaking in the viewer's call, if it's this room's. */
 function useSpeakingUsers(roomId: number): ReadonlySet<number> {
-  const key = useCall((state) =>
+  // The speaking identities from the call, then their people from the presence: both are store
+  // reads, so a presence change re-runs the mapping too.
+  const identities = useCall((state) =>
     state.roomId !== roomId
       ? ""
       : state.snapshot.participants
           .filter((participant) => participant.speaking)
-          .map((participant) =>
-            participant.local
-              ? "self"
-              : String(callController.userIdFor(participant.identity) ?? ""),
-          )
-          .join(","),
+          .map((participant) => (participant.local ? SELF : participant.identity))
+          .join("\n"),
   );
 
-  const viewerId = useStore((state) => state.me?.user.id ?? null);
+  const key = useStore((state) =>
+    identities
+      .split("\n")
+      .filter((identity) => identity !== "")
+      .map((identity) =>
+        identity === SELF
+          ? String(state.me?.user.id ?? "")
+          : String(userIdForIdentity(state.huddles[roomId], identity) ?? ""),
+      )
+      .join(","),
+  );
 
   return new Set(
     key
       .split(",")
       .filter((part) => part !== "")
-      .map((part) => (part === "self" ? (viewerId ?? 0) : Number(part))),
+      .map(Number),
   );
 }
 

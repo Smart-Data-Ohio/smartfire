@@ -210,3 +210,28 @@ test("a remote screen share opens in theater mode", async ({ page }) => {
   await page.getByRole("button", { name: "Exit theater mode" }).click();
   await expect(page.locator(".call-view[data-theater]")).toHaveCount(0);
 });
+
+test("Smartfire's motion setting overrides the system one in a call", async ({ page }) => {
+  await open(page, LOUNGE);
+  await join(page);
+
+  const tile = page.locator(".call-tile").first();
+
+  const transition = () => tile.evaluate((element) => getComputedStyle(element).transitionProperty);
+
+  // The OS asks for reduced motion (open() emulates it), so the tiles do not animate...
+  await expect.poll(transition).toBe("none");
+
+  // ...unless the user chose full motion in Smartfire.
+  await page.evaluate(() => {
+    document.documentElement.dataset.motion = "full";
+  });
+  await expect.poll(transition).toBe("box-shadow");
+
+  // Choosing reduced motion in Smartfire wins over an OS that allows motion.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.motion = "reduce";
+  });
+  await expect.poll(transition).toBe("none");
+});

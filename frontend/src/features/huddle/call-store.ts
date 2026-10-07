@@ -6,6 +6,7 @@
 
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
+import type { HuddlePresence } from "../../gen/HuddlePresence.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { type DeviceLists, EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
 import type { DevicePreferences } from "./engine/preferences.ts";
@@ -104,6 +105,10 @@ export interface CallState {
   readonly expandedVideoId: string | null;
   /** The call view is open over the room (rather than collapsed to the dock). */
   readonly viewOpen: boolean;
+  /** When this room's call first connected (epoch ms), for the dock's timer; rejoins keep it. */
+  readonly startedAt: number | null;
+  /** The people in the call the viewer muted for themselves (remembered per person). */
+  readonly localMutes: readonly number[];
 }
 
 export const NO_DEVICES: DevicePreferences = { audioinput: "", audiooutput: "", videoinput: "" };
@@ -133,9 +138,25 @@ export const initialCallState: CallState = {
   stats: null,
   expandedVideoId: null,
   viewOpen: false,
+  startedAt: null,
+  localMutes: [],
 };
 
 export const callStore = createStore<CallState>()(() => initialCallState);
+
+/** The person behind a LiveKit identity in a room's presence (one per tab, so maybe several). */
+export function userIdForIdentity(
+  presence: HuddlePresence | undefined,
+  identity: string,
+): number | null {
+  for (const participant of presence?.participants ?? []) {
+    if (participant.identities.includes(identity)) {
+      return participant.userId;
+    }
+  }
+
+  return null;
+}
 
 /**
  * The stage stream's screen share among the call's participants: this tab's own share while it

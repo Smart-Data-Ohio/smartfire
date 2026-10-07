@@ -1,7 +1,8 @@
 /**
  * What you can do about someone in the call: their volume for you (0–200 %, remembered per
  * person), muting them for you only, and, for administrators and stage hosts in a voice or
- * stage room, muting them for everyone or removing them from the call.
+ * stage room, muting them for everyone or removing them from the call (administrators only
+ * for other administrators).
  */
 import { type ReactElement, useState } from "react";
 import { useStore } from "../../store/store.ts";
@@ -13,7 +14,7 @@ import { Toggle } from "../../ui/toggle.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { callController } from "./call-controller.ts";
 import { useCall } from "./call-store.ts";
-import { loadParticipantMuted, loadParticipantVolume } from "./engine/preferences.ts";
+import { loadParticipantVolume } from "./engine/preferences.ts";
 
 /** Whether the viewer may moderate this room's call: an administrator, or a stage's host. */
 export function useCanModerate(roomId: number | null): boolean {
@@ -49,7 +50,7 @@ interface ParticipantMenuProps {
 function VolumeControls({ userId }: { readonly userId: number }) {
   const capped = useCall((state) => state.snapshot.boostCapped);
   const [volume, setVolume] = useState(() => loadParticipantVolume(userId));
-  const [muted, setMuted] = useState(() => loadParticipantMuted(userId));
+  const muted = useCall((state) => state.localMutes.includes(userId));
   const max = capped ? 100 : 200;
 
   return (
@@ -79,10 +80,7 @@ function VolumeControls({ userId }: { readonly userId: number }) {
       ) : null}
       <Toggle
         checked={muted}
-        onCheckedChange={() => {
-          setMuted(!muted);
-          callController.toggleParticipantMute(userId);
-        }}
+        onCheckedChange={() => callController.toggleParticipantMute(userId)}
         label="Mute for me"
         description="Only you stop hearing them"
       />
@@ -138,6 +136,13 @@ export function ParticipantMenu({ userId, trigger }: ParticipantMenuProps) {
   const viewerId = useStore((state) => state.me?.user.id ?? null);
   const roomId = useCall((state) => state.roomId);
   const canModerate = useCanModerate(roomId);
+
+  // Only administrators moderate administrators (the server refuses a host otherwise).
+  const outranked = useStore(
+    (state) =>
+      state.users[userId]?.role === "administrator" && state.me?.user.role !== "administrator",
+  );
+
   const self = userId === viewerId;
 
   return (
@@ -150,7 +155,9 @@ export function ParticipantMenu({ userId, trigger }: ParticipantMenuProps) {
           ) : (
             <VolumeControls userId={userId} />
           )}
-          {canModerate && !self ? <ModerationControls userId={userId} close={close} /> : null}
+          {canModerate && !self && !outranked ? (
+            <ModerationControls userId={userId} close={close} />
+          ) : null}
         </div>
       )}
     </Popover>
