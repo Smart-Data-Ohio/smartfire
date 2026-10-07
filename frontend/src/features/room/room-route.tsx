@@ -5,6 +5,7 @@ import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Composer } from "../composer/composer.tsx";
+import { FizzyCardOverlay } from "../fizzy/fizzy-card-overlay.tsx";
 import { JoinBanner } from "../huddle/call-alerts.tsx";
 import { CallView } from "../huddle/call-view.tsx";
 import { RightPane } from "../panes/right-pane.tsx";
@@ -15,7 +16,7 @@ import { Timeline } from "./timeline.tsx";
 import "./room.css";
 
 /**
- * `/app/r/$roomId` (and its permalink child): opens the room on the sync engine while it's on
+ * `/app/r/$roomId` (and its permalink, thread and "Create Fizzy card" children): opens the room on the sync engine while it's on
  * screen, then lays out header, timeline and composer. Switching rooms keys the pane, so each
  * conversation starts fresh and the header cross-fades in.
  */
@@ -32,7 +33,12 @@ export function RoomRoute() {
 
   useEffect(() => () => actions.closeRoom(roomId), [roomId]);
 
-  return <RoomPane key={roomId} roomId={roomId} focusMessageId={focusMessageId} />;
+  return (
+    <>
+      <RoomPane key={roomId} roomId={roomId} focusMessageId={focusMessageId} />
+      <FizzyCardOverlay key={roomId} roomId={roomId} />
+    </>
+  );
 }
 
 interface RoomPaneProps {
