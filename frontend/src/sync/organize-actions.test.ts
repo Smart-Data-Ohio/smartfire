@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Exit, Fiber } from "effect";
-import { Conflict, Validation } from "../api/errors.ts";
+import { TestClock } from "effect/testing";
+import { Conflict, NetworkError, Validation } from "../api/errors.ts";
 import {
   FakeApi,
   meFixture,
@@ -430,6 +431,42 @@ describe("organize actions", () => {
       expect(unreadDuring).toBeNull();
       expect(store.getState().sidebar.rows[1]?.membership.involvement).toBe("muted");
       expect(store.getState().rooms[1]?.detail?.membership.involvement).toBe("muted");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("give up a change the server never answers, so the next one runs", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PUT /rooms/1/category", () => Effect.never);
+      yield* fake.reply("PATCH /room_categories/2", { ...team, name: "People" });
+
+      const stuck = yield* Effect.forkChild(
+        organize.moveRoom(1, { kind: "category", categoryId: team.id }),
+      );
+
+      const renamed = yield* Effect.forkChild(organize.renameCategory(2, "People"));
+
+      yield* Effect.yieldNow;
+
+      expect(view().rows[1]?.membership.roomCategoryId).toBe(team.id);
+      expect((yield* fake.requests).map((request) => request.path)).toEqual(["/rooms/1/category"]);
+
+      yield* TestClock.adjust("15 seconds");
+
+      const error = yield* Effect.flip(Fiber.join(stuck));
+
+      // Undone, with a reason to show, and the rename that waited behind it went through.
+      expect(error).toBeInstanceOf(NetworkError);
+      expect(error.message).toContain("didn't answer");
+      expect(view().rows[1]?.membership.roomCategoryId).toBeNull();
+
+      yield* Fiber.join(renamed);
+
+      expect(view().categories.find((category) => category.id === 2)?.name).toBe("People");
+      expect(overlayIsEmpty()).toBe(true);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

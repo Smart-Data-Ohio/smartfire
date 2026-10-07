@@ -8,6 +8,7 @@
  */
 import { Clock, Effect, Semaphore } from "effect";
 import { sidebar as fetchSidebar } from "../api/endpoints.ts";
+import { NetworkError } from "../api/errors.ts";
 import * as api from "../api/organize-endpoints.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { RoomCategory, SidebarRow } from "../store/model.ts";
@@ -49,12 +50,26 @@ const categories = (entries: SidebarOverlay["categories"]): SidebarOverlay => ({
 });
 
 /**
+ * How long one change may hold the lock. A call the server never answers would otherwise freeze
+ * every organising change after it.
+ */
+const SERVER_TIMEOUT = "15 seconds";
+
+/**
  * Shows `entry` from now until `change` settles; the change waits its turn for the server. The
- * entry goes either way: the reply has landed by then, or the refusal leaves the old state.
+ * entry goes either way: the reply has landed by then, or the refusal leaves the old state. A
+ * change still unanswered after `SERVER_TIMEOUT` is given up (the call is interrupted and the
+ * entry goes) so the next one can run; the server may have made it after all, so the sidebar is
+ * fetched again in the background.
  */
 const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>) =>
   Effect.sync(() => mutations.addSidebarOverlay(entry)).pipe(
-    Effect.andThen(Semaphore.withPermit(lock, change)),
+    Effect.andThen(
+      Semaphore.withPermit(
+        lock,
+        change.pipe(Effect.timeoutOrElse({ duration: SERVER_TIMEOUT, orElse: () => stalled })),
+      ),
+    ),
     Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(entry))),
   );
 
@@ -82,6 +97,17 @@ const serverRow = (roomId: number) => store.getState().sidebar.rows[roomId];
 const refetchSidebar = fetchSidebar().pipe(
   Effect.tap((sidebar) => Effect.sync(() => mutations.loadSidebar(sidebar))),
   Effect.catch((error) => Effect.logWarning("organize: sidebar refetch failed", error.message)),
+);
+
+/** A change the server didn't answer in time: refetch in the background, and fail with why. */
+const stalled = Effect.forkDetach(refetchSidebar).pipe(
+  Effect.andThen(
+    Effect.fail(
+      new NetworkError({
+        message: "The server didn't answer in time, so the change was undone. Try it again.",
+      }),
+    ),
+  ),
 );
 
 /** The category a room ends up in once it leaves the favourites for `slot`. */
