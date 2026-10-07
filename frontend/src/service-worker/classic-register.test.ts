@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const source = readFileSync(
   resolve("../crates/assets/overrides/smartfire/initializers/service_worker.js"),
@@ -38,6 +38,8 @@ function startup(controller?: { scriptURL: string }) {
     navigator: { serviceWorker },
     URL,
     Promise,
+    setTimeout,
+    clearTimeout,
   });
 
   return { doc, page, meta, register, serviceWorker };
@@ -377,6 +379,130 @@ function notificationFrame(
 }
 
 const switchingFromSpa = { scriptURL: "https://smartfire.test/app/service-worker.js" };
+
+describe("classic worker startup deadline", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("registers within five seconds when an eligible image decode never settles", async () => {
+    vi.useFakeTimers();
+    const f = startup(switchingFromSpa);
+    const decode = vi.fn(() => new Promise<void>(() => undefined));
+
+    image(f.doc, "/assets/notification-bell-alert-01234567.svg", decode).hidden = true;
+    f.page.dispatchEvent(new Event("load"));
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(decode).toHaveBeenCalledOnce();
+    expect(f.register).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.register).toHaveBeenCalledExactlyOnceWith("/service-worker.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each(["controller connection", "push lookup", "frame render"])(
+    "registers within five seconds when notification %s never completes",
+    async (stage) => {
+      vi.useFakeTimers();
+      const f = startup(switchingFromSpa);
+      const tasks = eventLoop();
+      const frame = notificationFrame(f, tasks, () => new Promise<void>(() => undefined));
+
+      const notice = notifications(
+        f,
+        tasks,
+        (detail) => frame.controller.load({ params: { url: "/rooms/1/involvement" }, detail }),
+        stage === "push lookup"
+          ? () => new Promise<ExistingPushSubscription | null>(() => undefined)
+          : async () => ({ endpoint: "existing-push" }),
+      );
+
+      f.page.dispatchEvent(new Event("load"));
+
+      if (stage !== "controller connection") notice.controller.connect();
+      await vi.advanceTimersByTimeAsync(0);
+
+      if (stage === "frame render") {
+        tasks.advance();
+        await vi.advanceTimersByTimeAsync(0);
+        tasks.advance();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(frame.requests).toEqual(["/rooms/1/involvement"]);
+      }
+
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(f.register).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(f.register).toHaveBeenCalledExactlyOnceWith("/service-worker.js", {
+        scope: "/",
+        updateViaCache: "none",
+      });
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it("shares one five-second budget between notification startup and image decoding", async () => {
+    vi.useFakeTimers();
+    const f = startup(switchingFromSpa);
+    const tasks = eventLoop();
+    const subscription = Promise.withResolvers<ExistingPushSubscription | null>();
+
+    const notice = notifications(
+      f,
+      tasks,
+      () => undefined,
+      () => subscription.promise,
+    );
+
+    const decode = vi.fn(() => new Promise<void>(() => undefined));
+
+    image(f.doc, "/assets/notification-bell-alert-01234567.svg", decode);
+    f.page.dispatchEvent(new Event("load"));
+    notice.controller.connect();
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(decode).not.toHaveBeenCalled();
+    subscription.resolve({ endpoint: "existing-push" });
+    await vi.advanceTimersByTimeAsync(0);
+    tasks.advance();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(decode).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(999);
+    expect(f.register).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(f.register).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("drops the expired old body and gives the newer Turbo visit its own deadline", async () => {
+    vi.useFakeTimers();
+    const f = startup();
+
+    image(
+      f.doc,
+      "/assets/notification-bell-alert-01234567.svg",
+      () => new Promise<void>(() => undefined),
+    );
+    f.page.dispatchEvent(new Event("load"));
+    await vi.advanceTimersByTimeAsync(1_000);
+    f.doc.body.replaceWith(f.doc.createElement("body"));
+    f.meta.content = "/app/service-worker.js";
+    image(
+      f.doc,
+      "/assets/notification-bell-alert-01234567.svg",
+      () => new Promise<void>(() => undefined),
+    );
+    f.doc.dispatchEvent(new Event("turbo:load"));
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(f.register).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(f.register).toHaveBeenCalledExactlyOnceWith("/app/service-worker.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
 
 describe("classic worker handoff after notification startup", () => {
   it("waits for a lazily connected notification controller, queued frame render, and its new images", async () => {

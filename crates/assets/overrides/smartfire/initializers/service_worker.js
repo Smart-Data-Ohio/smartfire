@@ -47,6 +47,22 @@ function waitForNotificationStartup(body) {
   }))
 }
 
+async function waitForStartup(body, workerChanged) {
+  const startup = async () => {
+    if (workerChanged) await waitForNotificationStartup(body)
+    await waitForStaticImages(body)
+  }
+  let timer
+  // Give the startup frame and small public images five seconds together, even if either stalls.
+  const deadline = new Promise(resolve => timer = setTimeout(resolve, 5_000))
+
+  try {
+    await Promise.race([ startup(), deadline ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 let reconciliation = 0
 
 async function reconcileServiceWorker() {
@@ -56,10 +72,8 @@ async function reconcileServiceWorker() {
   if (!body || !serviceWorkerEnabled()) return
 
   const controller = navigator.serviceWorker.controller
-  if (controller && controller.scriptURL !== new URL(workerUrl, document.baseURI).href) {
-    await waitForNotificationStartup(body)
-  }
-  await waitForStaticImages(body)
+  const workerChanged = controller && controller.scriptURL !== new URL(workerUrl, document.baseURI).href
+  await waitForStartup(body, workerChanged)
 
   if (generation !== reconciliation || document.body !== body || workerUrl !== selectedServiceWorkerUrl() || !serviceWorkerEnabled()) return
 
