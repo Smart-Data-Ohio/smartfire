@@ -26,7 +26,7 @@ import type { SlackSetupChange as GeneratedSlackSetupChange } from "../../gen/Sl
 import type { StartPersonalSlackImport as GeneratedStartPersonalSlackImport } from "../../gen/StartPersonalSlackImport.ts";
 import type { StartSlackDryRun as GeneratedStartSlackDryRun } from "../../gen/StartSlackDryRun.ts";
 import type { StartSlackImport as GeneratedStartSlackImport } from "../../gen/StartSlackImport.ts";
-import { RoomId } from "./ids.ts";
+import { RoomId, SlackRunId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
@@ -71,7 +71,7 @@ export type SlackPresetPin = Assert<Pinned<typeof SlackPreset, GeneratedSlackPre
 
 /** The active run, as the setup page names it. */
 export const SlackRunSummary = Schema.Struct({
-  id: Schema.Int,
+  id: SlackRunId,
   kind: SlackRunKind,
   mode: SlackRunMode,
   status: SlackRunStatus,
@@ -120,7 +120,7 @@ export type SlackDisconnectedPin = Assert<
 
 /** One run on a list. */
 export const SlackRunRow = Schema.Struct({
-  id: Schema.Int,
+  id: SlackRunId,
   kind: SlackRunKind,
   mode: SlackRunMode,
   status: SlackRunStatus,
@@ -188,7 +188,7 @@ export type SlackConversationPin = Assert<
 
 /** `GET .../runs/:id/status`: one run's progress, polled while it is active. */
 export const SlackRun = Schema.Struct({
-  id: Schema.Int,
+  id: SlackRunId,
   kind: SlackRunKind,
   mode: SlackRunMode,
   status: SlackRunStatus,
@@ -265,7 +265,7 @@ export type SlackSamplePin = Assert<Pinned<typeof SlackSample, GeneratedSlackSam
 
 /** `GET /admin/slack/runs/:id/plan`: a completed dry run's plan. */
 export const SlackPlan = Schema.Struct({
-  runId: Schema.Int,
+  runId: SlackRunId,
   conversations: Schema.Array(SlackPlanConversation),
   rooms: Schema.Array(SlackRoomTarget),
   samples: Schema.Array(SlackSample),
