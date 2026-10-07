@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, pageFixture, userFixture } from "../api/testing.ts";
+import {
+  factsFixture,
+  threadDetailFixture,
+  workDetailFixture,
+} from "../features/work/test-fixtures.ts";
 import type { AgentDirectoryRow } from "../gen/AgentDirectoryRow.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
@@ -21,6 +26,7 @@ import {
 import type { SyncEvent } from "./model.ts";
 import { applyEvents, applyPage, receiveMessage, updateMessage } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
+import { landWorkDetail } from "./work.ts";
 
 const NOW = Date.UTC(2026, 9, 6, 16, 30, 0);
 
@@ -130,7 +136,7 @@ describe("the agent directory and profiles", () => {
   });
 
   it("marks a 404 profile missing, and keeps a shown one on another failure", () => {
-    const missing = setProfileFailed(initialState, 40, "Agent not found", true);
+    const missing = setProfileFailed(initialState, 40, "Agent not found", true, 0);
 
     expect(profileOf(missing, 40)).toMatchObject({ status: "error", missing: true });
 
@@ -146,7 +152,7 @@ describe("the agent directory and profiles", () => {
       users: [bot(40, "Bea")],
     };
 
-    const shown = setProfileFailed(landProfile(initialState, profile), 40, "Offline", false);
+    const shown = setProfileFailed(landProfile(initialState, profile, 0), 40, "Offline", false, 0);
 
     expect(profileOf(shown, 40)).toMatchObject({ status: "ready", error: "Offline" });
     expect(shown.users[40]?.name).toBe("Bea");
@@ -154,6 +160,92 @@ describe("the agent directory and profiles", () => {
 });
 
 describe("agent.status", () => {
+  it("keeps a GET's newer status when an event older than that GET follows", () => {
+    const live = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const loading = setDirectoryLoading(live);
+
+    const loaded = landDirectory(
+      loading,
+      { agents: [row(40, { statusChangedAt: at(20) })], users: [bot(40, "Bea")] },
+      directoryGeneration(loading),
+      loading.agents.live,
+    );
+
+    const next = applyEvents(
+      loaded,
+      [
+        {
+          seq: 2,
+          topic: "user:1",
+          type: "agent.status",
+          data: status({ statusChangedAt: at(15) }),
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(loaded);
+    expect(next.agents.rows[40]).toMatchObject({ status: "idle", statusChangedAt: at(20) });
+  });
+
+  it("keeps a newer status when an event with an older statusChangedAt follows", () => {
+    const newer = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const next = applyEvents(
+      newer,
+      [
+        {
+          seq: 2,
+          topic: "user:1",
+          type: "agent.status",
+          data: status({
+            status: "idle",
+            statusChangedAt: at(5),
+            workingPresence: null,
+            workingPresenceExpiresAt: null,
+          }),
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(newer);
+    expect(next.agents.rows[40]?.status).toBe("working");
+    expect(workingPresenceAt(next, 40, NOW)).toBe("Reading the logs");
+  });
+
+  it("keeps an event's newer timestamp even on a GET sent after that event", () => {
+    const newer = event({
+      seq: 1,
+      topic: "user:1",
+      type: "agent.status",
+      data: status({ statusChangedAt: at(10) }),
+    });
+
+    const loading = setDirectoryLoading(newer);
+
+    const next = landDirectory(
+      loading,
+      { agents: [row(40, { statusChangedAt: at(5) })], users: [bot(40, "Bea")] },
+      directoryGeneration(loading),
+      loading.agents.live,
+    );
+
+    expect(next.agents.rows[40]?.status).toBe("working");
+    expect(next.users[40]?.agent?.status).toBe("working");
+  });
+
   it("updates the badge, the row and the working presence, and re-sorts on suspension", () => {
     const next = event({
       seq: 1,
@@ -229,12 +321,23 @@ describe("agent steps", () => {
     expect(merged.steps[0]?.status).toBe("done");
   });
 
-  it("applies agent.steps to a held message, and leaves a work thread's to the work view", () => {
-    const state = applyPage(
+  it("applies agent.steps to held messages and work threads", () => {
+    const messages = applyPage(
       initialState,
       ROOM,
       pageFixture([messageFixture(100, ROOM)]),
       "replace",
+    );
+
+    const state = landWorkDetail(
+      messages,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({
+          steps: [step(2, 0, { messageId: null, threadId: 7, status: "running" })],
+        }),
+      ),
     );
 
     const stepped = applyEvents(
@@ -264,13 +367,88 @@ describe("agent steps", () => {
           seq: 2,
           topic: `room:${ROOM}`,
           type: "agent.steps",
+          data: {
+            roomId: ROOM,
+            messageId: null,
+            threadId: 7,
+            steps: [step(2, 1, { messageId: null, threadId: 7 })],
+          },
+        },
+      ],
+      NOW,
+    );
+
+    expect(thread.work.details[7]?.steps.map((each) => each.status)).toEqual(["done"]);
+    expect(thread.messages).toBe(stepped.messages);
+  });
+
+  it("keeps newer thread steps when an older event follows", () => {
+    const newer = step(2, 9, { messageId: null, threadId: 7, status: "done" });
+
+    const state = landWorkDetail(
+      initialState,
+      threadDetailFixture(7, factsFixture(), workDetailFixture({ steps: [newer] })),
+    );
+
+    const next = applyEvents(
+      state,
+      [
+        {
+          seq: 1,
+          topic: "thread:7",
+          type: "agent.steps",
+          data: {
+            roomId: ROOM,
+            messageId: null,
+            threadId: 7,
+            steps: [step(2, 2, { messageId: null, threadId: 7, status: "running" })],
+          },
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(state);
+    expect(next.work.details[7]?.steps).toEqual([newer]);
+  });
+
+  it("ignores thread steps when no work detail is held", () => {
+    const next = applyEvents(
+      initialState,
+      [
+        {
+          seq: 1,
+          topic: "thread:7",
+          type: "agent.steps",
           data: { roomId: ROOM, messageId: null, threadId: 7, steps: [step(2, 1)] },
         },
       ],
       NOW,
     );
 
-    expect(thread).toBe(stepped);
+    expect(next).toBe(initialState);
+  });
+
+  it("keeps live thread steps when a detail with older steps lands", () => {
+    const newer = step(2, 9, { messageId: null, threadId: 7, status: "done" });
+
+    const state = landWorkDetail(
+      initialState,
+      threadDetailFixture(7, factsFixture(), workDetailFixture({ steps: [newer] })),
+    );
+
+    const landed = landWorkDetail(
+      state,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({
+          steps: [step(2, 2, { messageId: null, threadId: 7, status: "running" })],
+        }),
+      ),
+    );
+
+    expect(landed.work.details[7]?.steps).toEqual([newer]);
   });
 
   it("keeps steps an update or a re-received copy doesn't know yet", () => {

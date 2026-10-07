@@ -44,6 +44,7 @@ export interface AgentProfileEntry {
   readonly error: string | null;
   /** The server has no such agent (404): nothing to retry. */
   readonly missing: boolean;
+  readonly generation: number;
 }
 
 export interface AgentsSlice {
@@ -53,6 +54,10 @@ export interface AgentsSlice {
   readonly profiles: Readonly<Record<number, AgentProfileEntry>>;
   /** Working presence by agent id; absent when unset. Check `expiresAt` when reading. */
   readonly working: Readonly<Record<number, WorkingPresence>>;
+  /** Retained even before the first GET, since status timestamps do not cover presence changes. */
+  readonly live: Readonly<
+    Record<number, { readonly version: number; readonly change: AgentStatusChanged }>
+  >;
 }
 
 export const emptyAgents: AgentsSlice = {
@@ -60,6 +65,7 @@ export const emptyAgents: AgentsSlice = {
   rows: {},
   profiles: {},
   working: {},
+  live: {},
 };
 
 const emptyProfile: AgentProfileEntry = {
@@ -67,6 +73,7 @@ const emptyProfile: AgentProfileEntry = {
   profile: null,
   error: null,
   missing: false,
+  generation: 0,
 };
 
 function withAgents(state: State, agents: AgentsSlice): State {
@@ -123,7 +130,12 @@ export function directoryGeneration(state: State): number {
 }
 
 /** The directory landed, unless a newer load started since. */
-export function landDirectory(state: State, page: AgentDirectory, generation: number): State {
+export function landDirectory(
+  state: State,
+  page: AgentDirectory,
+  generation: number,
+  sentLive: AgentsSlice["live"] = state.agents.live,
+): State {
   if (generation !== state.agents.directory.generation) {
     return state;
   }
@@ -131,17 +143,23 @@ export function landDirectory(state: State, page: AgentDirectory, generation: nu
   const rows = { ...state.agents.rows };
 
   for (const row of page.agents) {
-    rows[row.agentId] = row;
+    rows[row.agentId] = keepLiveStatus(state, row, sentLive);
   }
+
+  const users = mergeUserList(state.users, withAgentBadges(page.users, rows));
 
   return {
     ...state,
-    users: mergeUserList(state.users, page.users),
+    users,
     agents: {
       ...state.agents,
       rows,
       directory: {
-        ids: page.agents.map((row) => row.agentId),
+        ids: directoryOrder(
+          page.agents.map((row) => row.agentId),
+          rows,
+          users,
+        ),
         status: "ready",
         error: null,
         generation,
@@ -185,22 +203,42 @@ export function setProfileLoading(state: State, agentId: number): State {
     ...entry,
     status: entry.status === "ready" ? "ready" : "loading",
     error: null,
+    generation: entry.generation + 1,
   });
 }
 
 /** The profile landed: its row and users join the store too. */
-export function landProfile(state: State, profile: AgentProfile): State {
+export function landProfile(
+  state: State,
+  profile: AgentProfile,
+  generation: number,
+  sentLive: AgentsSlice["live"] = state.agents.live,
+): State {
   const agentId = profile.agent.agentId;
+
+  if (generation !== profileOf(state, agentId).generation) {
+    return state;
+  }
+
+  const agent = keepLiveStatus(state, profile.agent, sentLive);
+  const rows = { ...state.agents.rows, [agentId]: agent };
+  const users = withAgentBadges(profile.users, rows);
 
   return {
     ...state,
-    users: mergeUserList(state.users, profile.users),
+    users: mergeUserList(state.users, users),
     agents: {
       ...state.agents,
-      rows: { ...state.agents.rows, [agentId]: profile.agent },
+      rows,
       profiles: {
         ...state.agents.profiles,
-        [agentId]: { status: "ready", profile, error: null, missing: false },
+        [agentId]: {
+          status: "ready",
+          profile: { ...profile, agent, users },
+          error: null,
+          missing: false,
+          generation,
+        },
       },
     },
   };
@@ -212,8 +250,13 @@ export function setProfileFailed(
   agentId: number,
   error: string,
   missing: boolean,
+  generation: number,
 ): State {
   const entry = profileOf(state, agentId);
+
+  if (generation !== entry.generation) {
+    return state;
+  }
 
   return withProfile(state, agentId, {
     ...entry,
@@ -236,12 +279,47 @@ function withStatus(row: AgentDirectoryRow, change: AgentStatusChanged): AgentDi
   };
 }
 
+function keepLiveStatus(
+  state: State,
+  row: AgentDirectoryRow,
+  sentLive: AgentsSlice["live"],
+): AgentDirectoryRow {
+  const live = state.agents.live[row.agentId];
+
+  return live !== undefined &&
+    (live.version !== sentLive[row.agentId]?.version ||
+      (live.change.statusChangedAt ?? "") > (row.statusChangedAt ?? ""))
+    ? withStatus(row, live.change)
+    : row;
+}
+
+function withAgentBadges(users: readonly User[], rows: AgentsSlice["rows"]): User[] {
+  return users.map((user) => {
+    const row = user.agent === null ? undefined : rows[user.agent.agentId];
+
+    return row === undefined || user.agent === null
+      ? user
+      : { ...user, agent: { ...user.agent, status: row.status, suspended: row.suspended } };
+  });
+}
+
 /**
  * `agent.status`: the badge on the agent's user, its directory row (which may move, when a
  * suspension changes its rank), its profile and its working presence.
  */
 export function applyAgentStatus(state: State, change: AgentStatusChanged): State {
   const { agentId, userId } = change;
+  const previous = state.agents.live[agentId];
+
+  const incomingAt = change.statusChangedAt ?? "";
+
+  if (
+    (previous?.change.statusChangedAt ?? "") > incomingAt ||
+    (state.agents.rows[agentId]?.statusChangedAt ?? "") > incomingAt
+  ) {
+    return state;
+  }
+
   const user = state.users[userId];
 
   const users =
@@ -296,6 +374,7 @@ export function applyAgentStatus(state: State, change: AgentStatusChanged): Stat
       rows,
       profiles,
       working,
+      live: { ...state.agents.live, [agentId]: { version: (previous?.version ?? 0) + 1, change } },
       directory: ids === directory.ids ? directory : { ...directory, ids },
     },
   };
@@ -446,13 +525,29 @@ function newerOnly(
 }
 
 /**
- * `agent.steps` on a message: its steps merged in. Steps on a work thread are the work view's
- * (they arrive on `thread:<id>` with no message); a message not held picks its steps up when it
- * loads.
+ * `agent.steps` merged into a held message or work detail. Unheld parents pick up their steps
+ * when they load.
  */
 export function applyAgentSteps(state: State, change: AgentStepsChanged): State {
   if (change.messageId === null) {
-    return state;
+    const threadId = change.threadId;
+    const detail = threadId === null ? undefined : state.work.details[threadId];
+
+    if (threadId === null || detail === undefined) {
+      return state;
+    }
+
+    const steps = mergeSteps(detail.steps, change.steps);
+
+    return steps === detail.steps
+      ? state
+      : {
+          ...state,
+          work: {
+            ...state.work,
+            details: { ...state.work.details, [threadId]: { ...detail, steps: [...steps] } },
+          },
+        };
   }
 
   const message = state.messages[change.messageId];

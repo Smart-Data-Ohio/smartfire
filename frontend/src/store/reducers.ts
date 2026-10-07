@@ -27,7 +27,8 @@ import { removeCategory, setDetailMembership, upsertCategory } from "./organize.
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
-import { removeThread, setThreadIndicator, setThreadUnread, upsertThread } from "./threads.ts";
+import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
+import { receiveWorkThread } from "./work.ts";
 
 export { compareMessages };
 
@@ -783,7 +784,7 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "thread.created":
       case "thread.updated":
-        next = upsertThread(next, event.data);
+        next = receiveWorkThread(next, event.data);
         break;
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId);

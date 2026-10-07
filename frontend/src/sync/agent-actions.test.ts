@@ -5,7 +5,7 @@ import { FakeApi, userFixture } from "../api/testing.ts";
 import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentDirectoryRow } from "../gen/AgentDirectoryRow.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
-import { profileOf } from "../store/agents.ts";
+import { profileOf, workingPresenceAt } from "../store/agents.ts";
 import { mutations, store } from "../store/store.ts";
 import * as agents from "./agent-actions.ts";
 
@@ -27,7 +27,19 @@ function row(agentId: number): AgentDirectoryRow {
 function directory(ids: readonly number[]): AgentDirectory {
   return {
     agents: ids.map(row),
-    users: [...ids.map((id) => ({ ...userFixture(id), role: "bot" as const })), userFixture(2)],
+    users: [
+      ...ids.map((id) => ({
+        ...userFixture(id),
+        role: "bot" as const,
+        agent: {
+          agentId: id,
+          kind: "personal" as const,
+          status: "idle" as const,
+          suspended: false,
+        },
+      })),
+      userFixture(2),
+    ],
   };
 }
 
@@ -40,11 +52,140 @@ const profile: AgentProfile = {
   hiddenRoomCount: 0,
   grants: null,
   management: null,
-  users: [userFixture(40), userFixture(2)],
+  users: directory([40]).users,
 };
 
 describe("agent actions", () => {
   afterEach(() => mutations.reset());
+
+  for (const older of ["success", "error"] as const) {
+    it.effect(`drop a stale profile ${older} after reopening loads a newer success`, () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const gate = yield* Deferred.make<void>();
+
+        yield* fake.route("GET /agents/40", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(gate)),
+            Effect.andThen(
+              older === "success"
+                ? Effect.succeed({ ...profile, description: "Old" })
+                : Effect.fail(new NotFound({ message: "Old error" })),
+            ),
+          ),
+        );
+
+        const first = yield* Effect.forkChild(agents.loadProfile(40));
+
+        yield* Deferred.await(started);
+        yield* fake.reply("GET /agents/40", { ...profile, description: "New" });
+        yield* agents.loadProfile(40);
+        yield* Deferred.succeed(gate, undefined);
+        yield* Fiber.join(first);
+
+        expect(profileOf(store.getState(), 40)).toMatchObject({
+          status: "ready",
+          profile: { description: "New" },
+          error: null,
+          missing: false,
+        });
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
+  it.effect("drop a stale profile success after reopening fails", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      yield* fake.route("GET /agents/40", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as(profile),
+        ),
+      );
+
+      const first = yield* Effect.forkChild(agents.loadProfile(40));
+
+      yield* Deferred.await(started);
+      yield* fake.route("GET /agents/40", () =>
+        Effect.fail(new NotFound({ message: "New error" })),
+      );
+      yield* agents.loadProfile(40);
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(first);
+
+      expect(profileOf(store.getState(), 40)).toMatchObject({
+        status: "error",
+        profile: null,
+        error: "New error",
+        missing: true,
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  for (const screen of ["directory", "profile"] as const) {
+    it.effect(`keep live status and presence after a delayed ${screen} GET`, () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const gate = yield* Deferred.make<void>();
+        const path = screen === "directory" ? "GET /agents" : "GET /agents/40";
+
+        yield* fake.route(path, () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(gate)),
+            Effect.as(screen === "directory" ? directory([40]) : profile),
+          ),
+        );
+
+        const loading = yield* Effect.forkChild(
+          screen === "directory" ? agents.loadDirectory() : agents.loadProfile(40),
+        );
+
+        yield* Deferred.await(started);
+        mutations.applyEvents(
+          [
+            {
+              seq: 1,
+              topic: "user:2",
+              type: "agent.status",
+              data: {
+                agentId: 40,
+                userId: 40,
+                status: "working",
+                statusNote: "Live",
+                statusChangedAt: null,
+                suspended: true,
+                workingPresence: "Reading logs",
+                workingPresenceExpiresAt: "2026-10-08T16:30:00.000Z",
+              },
+            },
+          ],
+          0,
+        );
+        yield* Deferred.succeed(gate, undefined);
+        yield* Fiber.join(loading);
+
+        expect(store.getState().agents.rows[40]).toMatchObject({
+          status: "working",
+          statusNote: "Live",
+          suspended: true,
+        });
+        expect(store.getState().users[40]?.agent).toMatchObject({
+          status: "working",
+          suspended: true,
+        });
+        expect(workingPresenceAt(store.getState(), 40, 0)).toBe("Reading logs");
+
+        if (screen === "profile") {
+          expect(profileOf(store.getState(), 40).profile?.agent.status).toBe("working");
+        }
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
 
   it.effect("land the directory with its users", () =>
     Effect.gen(function* () {

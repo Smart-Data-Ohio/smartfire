@@ -2,11 +2,12 @@
  * Agents' approval requests as Effect programs (S4). Loads land in the store (failures as the
  * list's error) and never fail. A decision shows at once and lands the server's reply; if the
  * server refuses (403 for an admin-only action, 422 once it isn't pending), it comes back as it
- * was, unless an `approval.updated` brought a newer copy meanwhile. A 404 (the viewer may no longer
- * decide it) also reloads the lists.
+ * was, unless an `approval.updated` brought a newer copy meanwhile. A refusal saying it is no
+ * longer pending reloads All and any held Pending list to pick up missed decisions.
  */
 import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
+import type { ApiFailure } from "../api/errors.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import {
   type ApprovalFilter,
@@ -25,6 +26,19 @@ function statusOf(filter: ApprovalFilter) {
 function failLoad(key: ApprovalListKey, generation: number) {
   return (error: { readonly message: string }) =>
     Effect.sync(() => mutations.setApprovalListFailed(key, error.message, generation));
+}
+
+function noLongerPending(error: ApiFailure): boolean {
+  if (Predicate.isTagged(error, "NotFound") || Predicate.isTagged(error, "Conflict")) {
+    return true;
+  }
+
+  return (
+    Predicate.isTagged(error, "Validation") &&
+    [error.message, ...Object.values(error.fields).flat()].some((message) =>
+      /already decided|expired/i.test(message),
+    )
+  );
 }
 
 /** Loads (or reloads) an agent's first page in `filter`. */
@@ -87,17 +101,13 @@ export const decide = Effect.fn("approvals.decide")(function* (
       : decidedLocally(before, decision, deciderId, note, Date.now());
 
   if (shown !== undefined) {
-    mutations.applyApproval(shown);
+    mutations.showApproval(shown);
   }
 
   /** Back as it was, unless something newer replaced what this decision showed. */
   const rollBack = () => {
-    if (
-      before !== undefined &&
-      shown !== undefined &&
-      store.getState().approvals.items[approvalId] === shown
-    ) {
-      mutations.applyApproval(before);
+    if (shown !== undefined) {
+      mutations.rollbackApproval(shown);
     }
   };
 
@@ -105,11 +115,19 @@ export const decide = Effect.fn("approvals.decide")(function* (
     .decideApproval(approvalId, note === null ? { decision } : { decision, note })
     .pipe(
       Effect.tapError((error) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
           rollBack();
 
-          if (Predicate.isTagged(error, "NotFound")) {
+          if (noLongerPending(error)) {
             mutations.markApprovalsStale();
+
+            if (before !== undefined) {
+              yield* load(before.agentId, "all");
+
+              if (state.approvals.lists[approvalListKey(before.agentId, "pending")] !== undefined) {
+                yield* load(before.agentId, "pending");
+              }
+            }
           }
         }),
       ),

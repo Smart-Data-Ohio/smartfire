@@ -157,8 +157,12 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail) =>
-    apply((state) => work.landWorkDetail(threads.loadThreadDetail(state, detail), detail)),
+  loadThreadDetail: (detail: ThreadDetail, liveVersion?: number) =>
+    apply((state) =>
+      liveVersion !== undefined && liveVersion !== work.workVersion(state, detail.thread.id)
+        ? state
+        : work.landWorkDetail(threads.loadThreadDetail(state, detail), detail),
+    ),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
   threadCreated: (created: ThreadCreated) =>
     apply((state) =>
@@ -167,7 +171,7 @@ export const mutations = {
         created.message,
       ),
     ),
-  upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
+  upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>
@@ -266,15 +270,22 @@ export const mutations = {
     apply((state) => work.landWorkList(state, filter, list, generation)),
   // --- S4: agents ---
   setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
-  landAgentDirectory: (page: AgentDirectory, generation: number) =>
-    apply((state) => agents.landDirectory(state, page, generation)),
+  landAgentDirectory: (
+    page: AgentDirectory,
+    generation: number,
+    sentLive: agents.AgentsSlice["live"],
+  ) => apply((state) => agents.landDirectory(state, page, generation, sentLive)),
   setAgentDirectoryFailed: (error: string, generation: number) =>
     apply((state) => agents.setDirectoryFailed(state, error, generation)),
   setAgentProfileLoading: (agentId: number) =>
     apply((state) => agents.setProfileLoading(state, agentId)),
-  landAgentProfile: (profile: AgentProfile) => apply((state) => agents.landProfile(state, profile)),
-  setAgentProfileFailed: (agentId: number, error: string, missing: boolean) =>
-    apply((state) => agents.setProfileFailed(state, agentId, error, missing)),
+  landAgentProfile: (
+    profile: AgentProfile,
+    generation: number,
+    sentLive: agents.AgentsSlice["live"],
+  ) => apply((state) => agents.landProfile(state, profile, generation, sentLive)),
+  setAgentProfileFailed: (agentId: number, error: string, missing: boolean, generation: number) =>
+    apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
   setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
     apply((state) => approvals.setApprovalListLoading(state, key, more)),
   setApprovalListFailed: (key: approvals.ApprovalListKey, error: string, generation?: number) =>
@@ -287,6 +298,10 @@ export const mutations = {
   ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation)),
   applyApproval: (approval: AgentApproval) =>
     apply((state) => approvals.applyApproval(state, approval)),
+  showApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.showApproval(state, approval)),
+  rollbackApproval: (shown: AgentApproval) =>
+    apply((state) => approvals.rollbackApproval(state, shown)),
   /** Every approvals list reloads when next shown. */
   markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
   setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>
