@@ -24,6 +24,7 @@ fn auth_shell_uses_standalone_assets_and_preserves_flash_precedence() {
     assert!(html.contains("rel=\"apple-touch-icon\""));
     assert!(html.contains(".auth { --example: 1; }"));
     assert!(html.contains("role=\"status\""));
+    assert!(html.contains("class=\"flash auth-flash\""));
     form_contracts::assert_text(&html, "Connected <&> successfully.");
     assert!(html.contains("Connected &lt;&amp;&gt; successfully."));
     assert!(!html.contains("An alert that loses"));
@@ -53,6 +54,7 @@ fn auth_shell_uses_standalone_assets_and_preserves_flash_precedence() {
     .render()
     .unwrap();
     assert!(html.contains("role=\"alert\""));
+    assert!(html.contains("class=\"flash auth-flash\""));
     form_contracts::assert_text(&html, "Failed <&>. Try again.");
     assert!(html.contains("Failed &lt;&amp;&gt;. Try again."));
 }
