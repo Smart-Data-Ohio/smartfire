@@ -12,6 +12,13 @@ type Anchor =
       readonly inset: number;
     };
 
+type PlacementTarget = {
+  readonly placement: string;
+  readonly key: string;
+  readonly align: "start" | "center" | "end";
+  readonly offset: number;
+};
+
 function wrapperOf(row: HTMLElement): HTMLElement | null {
   return row.closest(".thread-parent")?.parentElement ?? row.parentElement;
 }
@@ -23,7 +30,6 @@ export function useViewportAnchor({
   items,
   placement,
   placed,
-  placementAtEnd,
   cardsLoaded,
   parentId = null,
 }: {
@@ -32,7 +38,6 @@ export function useViewportAnchor({
   readonly items: readonly TimelineItem[];
   readonly placement: string;
   readonly placed: boolean;
-  readonly placementAtEnd: boolean;
   readonly cardsLoaded: boolean;
   readonly parentId?: number | null;
 }) {
@@ -40,19 +45,24 @@ export function useViewportAnchor({
   const stopRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
   const settledPlacementRef = useRef<string | null>(null);
+  const targetRef = useRef<PlacementTarget | null>(null);
 
-  const indices = useMemo(() => {
-    const map = new Map<number, number>();
+  const { indices, itemIndices } = useMemo(() => {
+    const indices = new Map<number, number>();
+    const itemIndices = new Map<string, number>();
 
     items.forEach((item, index) => {
-      if (item.kind === "message") map.set(item.message.id, index);
-      else if (item.kind === "intro" && parentId !== null) map.set(parentId, index);
+      itemIndices.set(item.key, index);
+
+      if (item.kind === "message") indices.set(item.message.id, index);
+      else if (item.kind === "intro" && parentId !== null) indices.set(parentId, index);
     });
 
-    return map;
+    return { indices, itemIndices };
   }, [items, parentId]);
 
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+  const isPlacing = () => targetRef.current?.placement === placement;
 
   const capture = (atBottom: boolean) => {
     if (!placed || settledPlacementRef.current !== placement) return;
@@ -127,13 +137,7 @@ export function useViewportAnchor({
   };
 
   const seed = useEffectEvent(() => {
-    if (settledPlacementRef.current !== placement) {
-      // An end target is safe before placement settles, including a short list that never
-      // scrolls. Other targets must let Virtua finish before capturing their measured position.
-      if (placementAtEnd) anchorRef.current = { kind: "end", placement };
-
-      return;
-    }
+    if (settledPlacementRef.current !== placement) return;
 
     const list = listRef.current;
 
@@ -143,16 +147,147 @@ export function useViewportAnchor({
   });
 
   const settle = () => {
-    if (!placed) return;
+    if (!placed || targetRef.current?.placement === placement) return;
 
     settledPlacementRef.current = placement;
     correctedOffsetRef.current = null;
-    const list = listRef.current;
+    const element = viewport();
 
-    if (list !== null && list.viewportSize > 0) {
-      capture(list.scrollSize - list.scrollOffset - list.viewportSize < 40);
+    if (element) {
+      element.dataset.placementSettled = "true";
+      capture(element.scrollHeight - element.scrollTop - element.clientHeight < 40);
     }
   };
+
+  const place = (
+    index: number,
+    { align, offset = 0 }: { readonly align: PlacementTarget["align"]; readonly offset?: number },
+  ) => {
+    const item = items[index];
+
+    if (item === undefined) return;
+
+    targetRef.current = { placement, key: item.key, align, offset };
+    settledPlacementRef.current = null;
+    anchorRef.current = null;
+
+    const element = viewport();
+
+    if (element) element.dataset.placementSettled = "false";
+  };
+
+  const measurePlacement = useEffectEvent(() => {
+    const target = targetRef.current;
+    const list = listRef.current;
+    const element = viewport();
+
+    if (target === null || target.placement !== placement || list === null || !element) return null;
+
+    const index = target.align === "end" ? items.length - 1 : itemIndices.get(target.key);
+
+    if (index === undefined || list.viewportSize === 0) return null;
+
+    const size = list.getItemSize(index);
+
+    const offset =
+      target.align === "end"
+        ? element.scrollHeight - element.clientHeight
+        : list.getItemOffset(index) +
+          (target.align === "center" ? (size - list.viewportSize) / 2 : 0) +
+          target.offset;
+
+    element.scrollTop = offset;
+
+    const item = items[index];
+    let selector: string | null = null;
+
+    if (item?.kind === "message")
+      selector = `[data-message-row][data-message-id="${item.message.id}"]`;
+    else if (item?.kind === "unread") selector = ".unread-divider";
+
+    const row = selector === null ? null : element.querySelector<HTMLElement>(selector);
+    const wrapper = row && wrapperOf(row);
+
+    const targetMeasured =
+      selector === null ||
+      (wrapper !== null && Math.abs(wrapper.getBoundingClientRect().height - size) <= 1);
+
+    // Virtua hides unmeasured wrappers. Wait for their measurements and the native scroll
+    // event, then for the target geometry to agree across frames, including a no-scroll list.
+    const measured = Array.from(element.firstElementChild?.children ?? []).every(
+      (wrapper) => wrapper instanceof HTMLElement && wrapper.style.visibility !== "hidden",
+    );
+
+    return targetMeasured && measured && Math.abs(list.scrollOffset - element.scrollTop) <= 1
+      ? { offset: element.scrollTop, size, total: list.scrollSize, viewport: list.viewportSize }
+      : null;
+  });
+
+  const finishPlacement = useEffectEvent(() => {
+    targetRef.current = null;
+    settle();
+  });
+
+  useLayoutEffect(() => {
+    if (!placed) return;
+
+    const element = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+    if (!element) return;
+
+    let frame = 0;
+    let previous: ReturnType<typeof measurePlacement> = null;
+
+    const tick = () => {
+      if (targetRef.current?.placement !== placement) return;
+
+      const current = measurePlacement();
+
+      if (
+        current !== null &&
+        previous !== null &&
+        current.offset === previous.offset &&
+        current.size === previous.size &&
+        current.total === previous.total &&
+        current.viewport === previous.viewport
+      ) {
+        finishPlacement();
+
+        return;
+      }
+
+      previous = current;
+      frame = requestAnimationFrame(tick);
+    };
+
+    const takeControl = (event: Event) => {
+      if (
+        event instanceof KeyboardEvent &&
+        !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)
+      )
+        return;
+
+      // Cancel our placement before the input scrolls. No Virtua imperative target remains
+      // to reassert the initial position when another row measurement arrives.
+      cancelAnimationFrame(frame);
+      finishPlacement();
+    };
+
+    const inputs = ["wheel", "touchstart", "keydown", "pointerdown"];
+
+    for (const input of inputs)
+      element.addEventListener(input, takeControl, { capture: true, passive: true });
+
+    frame = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(frame);
+
+      for (const input of inputs) element.removeEventListener(input, takeControl, true);
+
+      if (targetRef.current?.placement === placement) targetRef.current = null;
+    };
+  }, [placed, placement, containerRef]);
 
   const chunkLoaded = useEffectEvent(() => cardsLoaded);
 
@@ -292,5 +427,5 @@ export function useViewportAnchor({
       stopRef.current?.();
   });
 
-  return { capture, settle };
+  return { capture, settle, place, isPlacing };
 }

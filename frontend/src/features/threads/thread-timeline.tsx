@@ -155,13 +155,17 @@ export function ThreadTimeline({
       ? -1
       : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
 
-  const { capture: captureAnchor, settle: settleAnchor } = useViewportAnchor({
+  const {
+    capture: captureAnchor,
+    settle: settleAnchor,
+    place: placeAnchor,
+    isPlacing,
+  } = useViewportAnchor({
     containerRef,
     listRef,
     items,
     placement,
     placed: loaded && placed === placement,
-    placementAtEnd: focusIndex < 0,
     cardsLoaded,
     parentId: parent?.id ?? null,
   });
@@ -180,9 +184,9 @@ export function ThreadTimeline({
     if (viewport) viewport.dataset.scrollSettled = "false";
 
     if (focusIndex >= 0) {
-      list.scrollToIndex(focusIndex, { align: "center" });
+      placeAnchor(focusIndex, { align: "center" });
     } else {
-      list.scrollToIndex(items.length - 1, { align: "end" });
+      placeAnchor(items.length - 1, { align: "end" });
     }
   });
 
@@ -197,7 +201,12 @@ export function ThreadTimeline({
       last: lastKey,
     };
 
-    if (appended && (atBottomRef.current || items.at(-1)?.kind === "pending")) {
+    if (
+      appended &&
+      placed === placement &&
+      !isPlacing() &&
+      (atBottomRef.current || items.at(-1)?.kind === "pending")
+    ) {
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
   });
@@ -306,6 +315,7 @@ export function ThreadTimeline({
             }}
             data={items}
             data-scroll-settled="false"
+            data-placement-settled="false"
             aria-label="Replies"
             role="log"
             // Focusable from script only: Home/End hold focus here while the edge row is drawn.

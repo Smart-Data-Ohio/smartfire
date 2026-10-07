@@ -373,14 +373,35 @@ test("a card arriving live while the chunk loads keeps the list and its place", 
   await expect(posted).toBeInViewport();
 });
 
-test("an older page with cards while the chunk loads keeps the list and its place", async ({
-  page,
-}) => {
+async function olderCardsScenario(page: Page, earlyScrolling: boolean) {
   // Keep the welcome's refetch out of this pagination scenario.
   await holdSync(page);
 
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
+
+  if (earlyScrolling) {
+    // Keep the touch active through the reveal, so Virtua cannot debounce a scroll end.
+    await page.addInitScript(() => {
+      document.addEventListener(
+        "scroll",
+        (event) => {
+          const list = event.target;
+
+          if (
+            list instanceof HTMLElement &&
+            list.matches("[data-message-list]") &&
+            list.dataset.touching !== "true" &&
+            list.scrollHeight - list.clientHeight - list.scrollTop <= 3
+          ) {
+            list.dataset.touching = "true";
+            list.dispatchEvent(new Event("touchstart", { bubbles: true }));
+          }
+        },
+        true,
+      );
+    });
+  }
 
   let markInjected: (id: number) => void = () => undefined;
 
@@ -427,7 +448,7 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   const anchorRow = row(page, Number(anchor));
 
   const anchorTop = () =>
-    anchorRow.evaluate(async (element) => {
+    anchorRow.evaluate(async (element, earlyScrolling) => {
       const list = element.closest("[data-message-list]");
 
       if (list === null) throw new Error("The anchor is outside the message list");
@@ -442,19 +463,28 @@ test("an older page with cards while the chunk loads keeps the list and its plac
       return {
         before,
         after: measure(),
-        settled: list.getAttribute("data-scroll-settled") === "true",
+        settled: earlyScrolling
+          ? list.getAttribute("data-touching") === "true"
+          : list.getAttribute("data-scroll-settled") === "true",
       };
-    });
+    }, earlyScrolling);
 
   // Virtua's scroll end follows the placement measurements and their scroll event.
-  await expect(list).toHaveAttribute("data-scroll-settled", "true");
-  await list.evaluate(
-    (element) =>
-      new Promise<void>((resolve) => {
-        element.addEventListener("scroll", () => resolve(), { once: true });
-        element.scrollTop = 0;
-      }),
-  );
+  if (earlyScrolling) {
+    await expect(list).toHaveAttribute("data-touching", "true");
+    await expect(list).toHaveAttribute("data-scroll-settled", "false");
+    await list.hover();
+    await page.mouse.wheel(0, -10_000);
+  } else {
+    await expect(list).toHaveAttribute("data-scroll-settled", "true");
+    await list.evaluate(
+      (element) =>
+        new Promise<void>((resolve) => {
+          element.addEventListener("scroll", () => resolve(), { once: true });
+          element.scrollTop = 0;
+        }),
+    );
+  }
 
   await expect(anchorRow).toBeInViewport();
 
@@ -493,6 +523,23 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
   await expect(anchorRow).toBeInViewport();
   await expect.poll(anchorDelta).toBeLessThanOrEqual(3);
+
+  if (earlyScrolling) {
+    await expect(list).toHaveAttribute("data-scroll-settled", "false");
+    await list.dispatchEvent("touchend");
+  }
+}
+
+test("an older page with cards while the chunk loads keeps the list and its place", async ({
+  page,
+}) => {
+  await olderCardsScenario(page, false);
+});
+
+test("scrolling up before the first scroll end keeps its place when cards arrive", async ({
+  page,
+}) => {
+  await olderCardsScenario(page, true);
 });
 
 test("reading a tall thread parent while the cards chunk loads keeps its place", async ({
@@ -576,7 +623,7 @@ test("reading a tall thread parent while the cards chunk loads keeps its place",
     .toBeLessThanOrEqual(3);
 });
 
-test("a short thread stays at the end when the cards chunk makes it overflow", async ({ page }) => {
+async function shortThreadScenario(page: Page, permalink: boolean) {
   await holdSync(page);
 
   const poll = await seededPoll(page.request);
@@ -589,7 +636,7 @@ test("a short thread stays at the end when the cards chunk makes it overflow", a
     bodyHtml: Array.from({ length: 6 }, () => "<p>A short parent paragraph</p>").join(""),
     poll,
   });
-  await page.route(`**/api/v1/threads/${threadId}/messages`, async (route) => {
+  await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
     const response = await route.fetch();
     const body: MessagePage = await response.json();
     const reply = body.messages[0];
@@ -600,7 +647,10 @@ test("a short thread stays at the end when the cards chunk makes it overflow", a
     body.after = null;
     await route.fulfill({ response, json: body });
   });
-  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
+  await openApp(
+    page,
+    `r/${ROOM_IDS.general}/t/${threadId}${permalink ? `?m=${MESSAGE_IDS.generalThreadFunnel}` : ""}`,
+  );
   await chunk.requested;
 
   const list = page.getByRole("log", { name: "Replies" });
@@ -611,17 +661,34 @@ test("a short thread stays at the end when the cards chunk makes it overflow", a
     .poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight))
     .toBe(true);
   await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+
+  if (permalink) await expect(list).toHaveAttribute("data-placement-settled", "true");
+
   chunk.release();
   await expect(list.locator(".thread-parent").getByRole("region", { name: "Poll" })).toBeAttached();
   await expect
     .poll(() => list.evaluate((element) => element.scrollHeight > element.clientHeight))
     .toBe(true);
-  await expect
-    .poll(() =>
-      list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
-    )
-    .toBeLessThanOrEqual(3);
+
+  if (!permalink) {
+    await expect
+      .poll(() =>
+        list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+      )
+      .toBeLessThanOrEqual(3);
+  }
+
   await expect(reply).toBeInViewport();
+}
+
+test("a short thread stays at the end when the cards chunk makes it overflow", async ({ page }) => {
+  await shortThreadScenario(page, false);
+});
+
+test("a short thread permalink stays in view when the cards chunk makes it overflow", async ({
+  page,
+}) => {
+  await shortThreadScenario(page, true);
 });
 
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {

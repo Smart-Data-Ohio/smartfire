@@ -148,13 +148,17 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   const unreadIndex = items.findIndex((item) => item.kind === "unread");
 
-  const { capture: captureAnchor, settle: settleAnchor } = useViewportAnchor({
+  const {
+    capture: captureAnchor,
+    settle: settleAnchor,
+    place: placeAnchor,
+    isPlacing,
+  } = useViewportAnchor({
     containerRef,
     listRef,
     items,
     placement,
     placed: ready && placed === placement,
-    placementAtEnd: focusIndex < 0 && unreadIndex < 0,
     cardsLoaded,
   });
 
@@ -173,11 +177,11 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     if (viewport) viewport.dataset.scrollSettled = "false";
 
     if (focusIndex >= 0) {
-      list.scrollToIndex(focusIndex, { align: "center" });
+      placeAnchor(focusIndex, { align: "center" });
     } else if (unreadIndex >= 0) {
-      list.scrollToIndex(unreadIndex, { align: "start", offset: -8 });
+      placeAnchor(unreadIndex, { align: "start", offset: -8 });
     } else {
-      list.scrollToIndex(items.length - 1, { align: "end" });
+      placeAnchor(items.length - 1, { align: "end" });
     }
   });
 
@@ -193,7 +197,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       count: items.length,
     };
 
-    if (!appended || !ready) {
+    if (!appended || !ready || placed !== placement || isPlacing()) {
       return;
     }
 
@@ -390,6 +394,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             tabIndex={-1}
             data-message-list
             data-scroll-settled="false"
+            data-placement-settled="false"
           >
             {renderItem}
           </VList>
