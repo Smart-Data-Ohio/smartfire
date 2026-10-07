@@ -81,11 +81,13 @@ that pin and activation metadata with pruning across worker instances; the lock
 does not span network fetching. Failed installation pins stay retained. Browsers
 without Web Locks keep serving and installing but skip cache pruning.
 
-If a lazy module still fails to load, the SPA records that an update is required.
-The `useAppUpdateRequired()` hook and `reloadForUpdate()` function are the interface
-for a future shell prompt. Module-import guards and `vite:preloadError` detection
-keep a failed import from crashing the view. They do not catch unrelated component
-render errors or API failures. No automatic reload or visible prompt is added here.
+If a lazy module still fails to load, the SPA records that an update is required
+(`useAppUpdateRequired()`), and a strip slides open over the panes: "Smartfire has
+been updated. Reload to get the latest version." with a Reload button
+(`reloadForUpdate()`). The page never reloads by itself, so drafts and open panes
+survive until the person chooses. Module-import guards and `vite:preloadError`
+detection keep a failed import from crashing the view. They do not catch unrelated
+component render errors or API failures.
 
 The SPA worker cleans only its own cache namespace. It leaves the classic
 `smartfire-static-v1` cache in place so classic assets remain available and
@@ -105,11 +107,13 @@ classic destinations can still redirect on the server according to the effective
 UI. The click handler navigates and focuses an existing workspace window, or
 opens one when none exists.
 
-The SPA exposes `enablePushNotifications()` for an explicit click. It requests
-permission only through that call, registers the selected script at root scope,
+Settings → Push devices has a "This browser" row: notifications off (with an
+"Enable notifications" button), on, blocked by the browser, or unsupported. The
+button calls `enablePushNotifications()`, the only place that requests permission.
+It registers the selected script at root scope,
 subscribes with the same VAPID public key as the classic page, and saves through
 the classic subscription creation path. `usePushEnrollment()` exposes permission,
-subscription and busy state for the future Devices control. The flow refreshes the
+subscription and busy state for that row. The flow refreshes the
 existing Devices list. Removing the last saved subscription with the current
 browser's endpoint also unsubscribes it locally; another saved key triple for
 that endpoint keeps the browser subscribed. No enrollment control is rendered yet.

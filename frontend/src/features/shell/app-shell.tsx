@@ -13,6 +13,7 @@ import { GlobalOverlays } from "../switcher/global-overlays.tsx";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
+import { UpdateBanner } from "./update-banner.tsx";
 import "./app-shell.css";
 
 /** A full-column page that isn't a conversation: its tab title, or `null` for a room. */
@@ -92,7 +93,6 @@ export function AppShell() {
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const updateRequired = useAppUpdateRequired();
 
-  // LEAD-UI: use updateRequired and reloadForUpdate for the update prompt; no automatic reload.
   return (
     <div
       className="app-shell"
@@ -106,6 +106,7 @@ export function AppShell() {
         <style>{`.message-body .mention--user-${viewerId} .profile-card-name{background:var(--mention-chip-bg);color:var(--mention-text)}`}</style>
       )}
       <main className="app-main">
+        <UpdateBanner />
         <ConnectionBanner />
         <div className="app-main-dock">
           <HuddleDock compact />

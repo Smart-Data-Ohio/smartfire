@@ -428,6 +428,13 @@ test("a forced real lazy-chunk failure preserves the page and signals explicit u
     await expect(page.getByRole("dialog", { name: "Create a poll" })).toHaveCount(0);
     expect(errors).toEqual([]);
     expect(navigations).toBe(0);
+
+    const banner = page.locator(".update-banner");
+
+    await expect(banner).toHaveAttribute("data-open", "true");
+    await expect(banner).toContainText("Smartfire has been updated");
+    await banner.getByRole("button", { name: "Reload" }).click();
+    await expect.poll(() => navigations).toBe(1);
   } finally {
     dispose();
   }

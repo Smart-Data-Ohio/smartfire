@@ -104,7 +104,7 @@ async function openDevices(page: Page) {
   await page.goto("/app/settings/devices");
   await expect(page.getByRole("heading", { level: 1, name: "Push devices" })).toBeVisible();
   await page.waitForFunction(() => window.__smartfirePushEnrollment !== undefined);
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
 }
 
 test("the explicit enrollment hook adds this browser, deduplicates, and removes its local subscription", async ({
@@ -130,7 +130,7 @@ test("the explicit enrollment hook adds this browser, deduplicates, and removes 
   });
   keyRequest.resolve();
   expect(await enrolling).toMatchObject({ kind: "enabled" });
-  await expect(page.locator(".settings-list-row")).toHaveCount(3);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(3);
   expect(await page.evaluate(() => ({ ...window.__smartfirePushEnrollment }))).toMatchObject({
     permission: "granted",
     subscribed: true,
@@ -148,13 +148,15 @@ test("the explicit enrollment hook adds this browser, deduplicates, and removes 
   expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toMatchObject({
     kind: "enabled",
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(3);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(3);
   expect(await page.evaluate(() => window.__smartfirePushBrowser?.subscribes)).toBe(1);
 
-  const local = page.locator(".settings-list-row").filter({ hasText: "mock-enrollment" });
+  const local = page
+    .locator(".settings-list .settings-list-row")
+    .filter({ hasText: "mock-enrollment" });
 
   await local.getByRole("button", { name: /^Remove / }).click();
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
   await expect.poll(() => page.evaluate(() => window.__smartfirePushBrowser?.unsubscribes)).toBe(1);
   await expect
     .poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.subscribed))
@@ -188,20 +190,22 @@ test("rotated-key rows keep the local transport until the final endpoint row is 
   expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toMatchObject({
     kind: "enabled",
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(4);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(4);
 
-  const matching = page.locator(".settings-list-row").filter({ hasText: "mock-enrollment" });
+  const matching = page
+    .locator(".settings-list .settings-list-row")
+    .filter({ hasText: "mock-enrollment" });
 
   await matching
     .first()
     .getByRole("button", { name: /^Remove / })
     .click();
-  await expect(page.locator(".settings-list-row")).toHaveCount(3);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(3);
   expect(await page.evaluate(() => window.__smartfirePushBrowser?.unsubscribes)).toBe(0);
   expect(await page.evaluate(() => window.__smartfirePushEnrollment?.subscribed)).toBe(true);
 
   await matching.getByRole("button", { name: /^Remove / }).click();
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
   await expect.poll(() => page.evaluate(() => window.__smartfirePushBrowser?.unsubscribes)).toBe(1);
   await expect
     .poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.subscribed))
@@ -216,7 +220,7 @@ test("denied permission does not register or add a device", async ({ page }) => 
     kind: "denied",
     permission: "denied",
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
   await expect
     .poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.permission))
     .toBe("denied");
@@ -244,7 +248,7 @@ test("server refusal returns a failed outcome and keeps the device list", async 
     kind: "failed",
     message: "Push endpoint rejected",
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
   await expect.poll(() => page.evaluate(() => window.__smartfirePushEnrollment?.busy)).toBe(false);
 });
 
@@ -262,7 +266,7 @@ test("unsupported browsers load devices without a permission prompt", async ({ p
     subscribed: false,
     busy: false,
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(2);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
 });
 
 test("a delayed initial device read cannot overwrite successful enrollment", async ({ page }) => {
@@ -304,7 +308,7 @@ test("a delayed initial device read cannot overwrite successful enrollment", asy
   expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toMatchObject({
     kind: "enabled",
   });
-  await expect(page.locator(".settings-list-row")).toHaveCount(1);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(1);
 
   const stale = page.waitForResponse(
     (response) =>
@@ -320,8 +324,39 @@ test("a delayed initial device read cannot overwrite successful enrollment", asy
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       ),
   );
-  await expect(page.locator(".settings-list-row")).toHaveCount(1);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(1);
   await expect(
     page.getByText("https://fcm.googleapis.com/fcm/send/mock-enrollment", { exact: true }),
   ).toBeVisible();
+});
+
+test("Enable notifications asks only on its click and shows this browser as on", async ({
+  page,
+}) => {
+  await browserPush(page, "granted");
+  await openDevices(page);
+
+  const thisBrowser = page.getByRole("region", { name: "This browser" });
+
+  await expect(thisBrowser).toContainText("Notifications are off");
+  expect(await page.evaluate(() => window.__smartfirePushBrowser?.permissionRequests)).toBe(0);
+
+  await thisBrowser.getByRole("button", { name: "Enable notifications" }).click();
+  await expect(thisBrowser).toContainText("Notifications are on");
+  await expect(thisBrowser.getByRole("button", { name: "Enable notifications" })).toHaveCount(0);
+  await expect(page.getByText("Notifications are on for this browser")).toBeVisible();
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(3);
+  expect(await page.evaluate(() => window.__smartfirePushBrowser?.permissionRequests)).toBe(1);
+});
+
+test("a declined prompt leaves this browser blocked with a way forward", async ({ page }) => {
+  await browserPush(page, "denied");
+  await openDevices(page);
+
+  const thisBrowser = page.getByRole("region", { name: "This browser" });
+
+  await thisBrowser.getByRole("button", { name: "Enable notifications" }).click();
+  await expect(thisBrowser).toContainText("Notifications are blocked");
+  await expect(thisBrowser.getByRole("button", { name: "Enable notifications" })).toHaveCount(0);
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
 });

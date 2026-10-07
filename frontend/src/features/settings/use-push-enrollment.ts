@@ -17,12 +17,12 @@ export interface PushEnrollment {
 
 declare global {
   interface Window {
-    /** Mock-mode enrollment driver: exercises the click path before its visible control ships. */
+    /** Mock-mode enrollment driver: lets e2e exercise the flow without a real push service. */
     __smartfirePushEnrollment?: PushEnrollment;
   }
 }
 
-/** A future notification control reads this state and calls `enable` directly from its click. */
+/** The Devices "This browser" row reads this state and calls `enable` directly from its click. */
 export function usePushEnrollment(onEnabled: (list: PushSubscriptionList) => void): PushEnrollment {
   const [permission, setPermission] = useState<PushPermission>("unsupported");
   const [subscribed, setSubscribed] = useState(false);

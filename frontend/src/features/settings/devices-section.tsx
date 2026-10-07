@@ -3,11 +3,12 @@ import type { PushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
 import { settings as settingsActions, unsubscribePushEndpoint } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
+import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { deviceName } from "./settings-format.ts";
 import { SettingsGroup, SettingsPage, toastFailure } from "./settings-parts.tsx";
-import { usePushEnrollment } from "./use-push-enrollment.ts";
+import { type PushEnrollment, usePushEnrollment } from "./use-push-enrollment.ts";
 
 type Load =
   | { readonly status: "loading" }
@@ -49,8 +50,6 @@ export function DevicesSection() {
   }, []);
 
   const enrollment = usePushEnrollment(replaceList);
-  // LEAD-UI: the future Enable control here calls enrollment.enable directly from its click;
-  // permission, subscribed and busy are available without any automatic permission prompt.
 
   const reload = () => {
     setLoad({ status: "loading" });
@@ -111,6 +110,9 @@ export function DevicesSection() {
       title="Push devices"
       description="Browsers and phones that get push notifications for your account."
     >
+      <SettingsGroup title="This browser">
+        <ThisBrowser enrollment={enrollment} />
+      </SettingsGroup>
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
       {load.status === "ready" && load.list.pushSubscriptions.length === 0 ? (
@@ -151,5 +153,96 @@ export function DevicesSection() {
         </SettingsGroup>
       ) : null}
     </SettingsPage>
+  );
+}
+
+interface BrowserPushState {
+  readonly key: "unsupported" | "blocked" | "on" | "off";
+  readonly icon: IconName;
+  readonly title: string;
+  readonly text: string;
+  readonly canEnable: boolean;
+}
+
+/** What this browser can do about push, and the one control that asks for permission. */
+function browserState(enrollment: PushEnrollment): BrowserPushState {
+  if (enrollment.permission === "unsupported") {
+    return {
+      key: "unsupported",
+      icon: "bell-off",
+      title: "Push isn't available here",
+      text: "This browser can't show push notifications. On an iPhone or iPad, add Smartfire to your Home Screen first.",
+      canEnable: false,
+    };
+  }
+
+  if (enrollment.permission === "denied") {
+    return {
+      key: "blocked",
+      icon: "bell-off",
+      title: "Notifications are blocked",
+      text: "Allow notifications for this site in your browser's settings, then come back here.",
+      canEnable: false,
+    };
+  }
+
+  if (enrollment.permission === "granted" && enrollment.subscribed) {
+    return {
+      key: "on",
+      icon: "bell-ring",
+      title: "Notifications are on",
+      text: "This browser gets push notifications, even when Smartfire isn't open.",
+      canEnable: false,
+    };
+  }
+
+  return {
+    key: "off",
+    icon: "bell",
+    title: "Notifications are off",
+    text: "Get push notifications in this browser, even when Smartfire isn't open.",
+    canEnable: true,
+  };
+}
+
+function ThisBrowser({ enrollment }: { readonly enrollment: PushEnrollment }) {
+  const state = browserState(enrollment);
+
+  // The permission prompt starts inside this click and nowhere else.
+  const enable = () => {
+    void enrollment.enable().then((outcome) => {
+      if (outcome.kind === "enabled") {
+        toast({ title: "Notifications are on for this browser", tone: "success" });
+      } else if (outcome.kind === "denied") {
+        toast({
+          title: "Notifications stay off",
+          description:
+            outcome.permission === "denied"
+              ? "This browser blocked them. You can allow them in its site settings."
+              : "You can turn them on here whenever you like.",
+        });
+      } else if (outcome.kind === "unsupported") {
+        toast({ title: "This browser can't show push notifications" });
+      } else {
+        toastFailure("Couldn't turn on notifications", new Error(outcome.message));
+      }
+    });
+  };
+
+  return (
+    <div className="settings-list-row settings-push-row" data-state={state.key}>
+      <span className="settings-push-icon" aria-hidden="true">
+        <Icon name={state.icon} size={16} />
+      </span>
+      <span className="settings-list-main">
+        <strong>{state.title}</strong>
+        <span className="text-muted">{state.text}</span>
+      </span>
+      {state.canEnable ? (
+        <Button variant="primary" size="sm" loading={enrollment.busy} onClick={enable}>
+          Enable notifications
+        </Button>
+      ) : null}
+    </div>
   );
 }
