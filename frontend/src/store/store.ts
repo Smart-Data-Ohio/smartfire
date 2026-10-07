@@ -30,6 +30,7 @@ import type { WorkList } from "../gen/WorkList.ts";
 import * as activity from "./activity.ts";
 import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
+import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
@@ -94,6 +95,20 @@ const apply = (change: (state: State) => State) => store.setState(change, true);
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
+  startRead: (list: string | null = null) => {
+    const read = freshness.startRead(store.getState().freshness, list);
+
+    apply((state) => ({ ...state, freshness: read.freshness }));
+
+    return read.ticket;
+  },
+  finishRead: (ticket: number) => {
+    const read = freshness.finishRead(store.getState().freshness, ticket);
+
+    apply((state) => ({ ...state, freshness: read.freshness }));
+
+    return read.rejected;
+  },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
@@ -157,12 +172,8 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail, liveVersion?: number) =>
-    apply((state) =>
-      liveVersion !== undefined && liveVersion !== work.workVersion(state, detail.thread.id)
-        ? state
-        : work.landWorkDetail(threads.loadThreadDetail(state, detail), detail),
-    ),
+  loadThreadDetail: (detail: ThreadDetail, ticket?: number) =>
+    apply((state) => work.loadWorkThreadDetail(state, detail, ticket)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
   threadCreated: (created: ThreadCreated) =>
     apply((state) =>
@@ -178,8 +189,18 @@ export const mutations = {
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
   setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
-  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
-    apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, ticket?: number) =>
+    apply((state) => {
+      let next = state;
+
+      const summaries = list.threads.map((summary) => {
+        next = work.receiveWorkThread(next, summary.thread, ticket);
+
+        return { ...summary, thread: next.threads[summary.thread.id] ?? summary.thread };
+      });
+
+      return threads.loadThreadList(next, roomId, filter, { ...list, threads: summaries });
+    }),
   setHuddlePresence: (presence: HuddlePresence) =>
     apply((state) => huddles.setHuddlePresence(state, presence)),
   loadHuddlePresence: (list: HuddlePresenceList) =>
@@ -266,8 +287,8 @@ export const mutations = {
     apply((state) => work.setWorkListLoading(state, filter)),
   setWorkListFailed: (filter: WorkFilter, error: string, generation: number) =>
     apply((state) => work.setWorkListFailed(state, filter, error, generation)),
-  landWorkList: (filter: WorkFilter, list: WorkList, generation: number) =>
-    apply((state) => work.landWorkList(state, filter, list, generation)),
+  landWorkList: (filter: WorkFilter, list: WorkList, generation: number, ticket?: number) =>
+    apply((state) => work.landWorkList(state, filter, list, generation, ticket)),
   // --- S4: agents ---
   setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
   landAgentDirectory: (

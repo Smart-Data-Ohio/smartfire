@@ -17,6 +17,7 @@ import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { AgentStepsChanged } from "../gen/AgentStepsChanged.ts";
+import { land, receive } from "./freshness.ts";
 import type { LoadStatus, MessageDTO, User } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
@@ -473,6 +474,48 @@ export function mergeSteps(
   return changed ? [...byId.values()].sort(compareSteps) : held;
 }
 
+/** Work step reads use tickets for equal timestamps; events share the same per-step keys. */
+export function mergeFreshSteps(
+  state: State,
+  held: readonly AgentStep[],
+  incoming: readonly AgentStep[],
+  ticket?: number,
+) {
+  let freshness = state.freshness;
+  const byId = new Map(held.map((step) => [step.id, step]));
+
+  for (const step of incoming) {
+    const copies = {
+      held: byId.get(step.id),
+      incoming: step,
+      same: sameStep,
+      timestamp: (value: AgentStep) => value.updatedAt,
+    };
+
+    const result =
+      ticket === undefined
+        ? receive(freshness, `agent-step:${step.id}`, copies)
+        : land(freshness, `agent-step:${step.id}`, ticket, copies);
+
+    freshness = result.freshness;
+
+    if (result.value !== undefined) {
+      byId.set(step.id, result.value);
+    }
+  }
+
+  const steps = [...byId.values()].sort(compareSteps);
+
+  return {
+    freshness,
+    steps:
+      steps.length === held.length &&
+      steps.every((step, index) => sameStep(step, held[index] ?? step))
+        ? held
+        : steps,
+  };
+}
+
 function sameStep(left: AgentStep, right: AgentStep): boolean {
   return (
     left.updatedAt === right.updatedAt &&
@@ -537,12 +580,13 @@ export function applyAgentSteps(state: State, change: AgentStepsChanged): State 
       return state;
     }
 
-    const steps = mergeSteps(detail.steps, change.steps);
+    const { steps, freshness } = mergeFreshSteps(state, detail.steps, change.steps);
 
     return steps === detail.steps
       ? state
       : {
           ...state,
+          freshness,
           work: {
             ...state.work,
             details: { ...state.work.details, [threadId]: { ...detail, steps: [...steps] } },

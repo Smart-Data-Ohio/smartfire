@@ -11,6 +11,8 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
+import { workKey } from "../store/work.ts";
+import { readFresh, withRead } from "./freshness.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -27,7 +29,15 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
 
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(api.thread(threadId)),
+      Effect.result(
+        withRead((ticket) =>
+          api
+            .thread(threadId)
+            .pipe(
+              Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
+            ),
+        ),
+      ),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -42,7 +52,14 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  mutations.loadThreadDetail(detail.success);
+  if (detail.success.rejected) {
+    yield* readFresh(workKey(threadId), (ticket) =>
+      api.thread(threadId).pipe(
+        Effect.tap((reply) => Effect.sync(() => mutations.loadThreadDetail(reply, ticket))),
+        Effect.ignore,
+      ),
+    );
+  }
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
@@ -147,7 +164,21 @@ export const create = Effect.fn("threads.create")(function* (
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  mutations.loadThreadDetail(yield* api.updateThread(threadId, body));
+  const result = yield* withRead((ticket) =>
+    api
+      .updateThread(threadId, body)
+      .pipe(Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket)))),
+  );
+
+  if (result.rejected) {
+    yield* readFresh(workKey(threadId), (ticket) =>
+      api
+        .thread(threadId)
+        .pipe(
+          Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
+        ),
+    );
+  }
 });
 
 /** Follows (`everything`), mentions-only, or leaves (`null`). */
@@ -180,10 +211,16 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
-  mutations.setThreadListLoading(roomId, filter);
+  yield* readFresh(`thread-list:${roomId}:${filter}`, (ticket) =>
+    Effect.gen(function* () {
+      mutations.setThreadListLoading(roomId, filter);
 
-  yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) => Effect.sync(() => mutations.loadThreadList(roomId, filter, threads))),
-    Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
+      yield* api.threads(roomId, filter).pipe(
+        Effect.tap((threads) =>
+          Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, ticket)),
+        ),
+        Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
+      );
+    }),
   );
 });
