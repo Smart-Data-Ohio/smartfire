@@ -66,6 +66,7 @@ pub fn user(
         avatar_icon: None,
         agent: None,
         created_at: time(user.created_at),
+        updated_at: time(user.updated_at),
     }
 }
 

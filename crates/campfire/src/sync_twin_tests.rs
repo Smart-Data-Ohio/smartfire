@@ -159,3 +159,64 @@ fn the_events_read_are_the_contracts() {
     let parsed: SyncPayload = serde_json::from_value(serde_json::json!({"type": "room.read", "data": {"roomId": 1}})).unwrap();
     assert_eq!(parsed, SyncPayload::RoomRead(RoomRead { room_id: 1 }));
 }
+
+#[tokio::test]
+async fn approval_sync_users_carry_their_row_timestamps() {
+    use campfire_api_types as api;
+    use crate::controllers::presenters::test_support::{BENDER, DAVID, Req, TestApp, seed_clock};
+
+    let Some(a) = TestApp::boot_seed_with_env("default", seed_clock(), &[("SPA_ENABLED", "1")]).await
+    else { return };
+    a.db().write(|tx| {
+        tx.conn().execute(
+            "UPDATE users SET updated_at=? WHERE id IN (?,?)",
+            rusqlite::params![tx.now(), BENDER, DAVID],
+        )?;
+        Ok(())
+    }).await.unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    let reply = b.send(
+        Req::new(axum::http::Method::GET, &format!("/api/v1/users?ids={BENDER},{DAVID}"))
+            .header("accept", "application/json"),
+    ).await;
+    assert_eq!(reply.status, axum::http::StatusCode::OK, "{}", reply.text());
+    let users: api::UserList = serde_json::from_slice(&reply.body).unwrap();
+    let now = a.db().env().now();
+    let timestamps = a.db().read(move |conn| {
+        [BENDER, DAVID].into_iter().map(|id| {
+            campfire_db::User::find(conn, id).map(|user| (id, user.updated_at.to_wire()))
+        }).collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap();
+    let payload = api::SyncPayload::ApprovalUpdated(api::ApprovalUpdated {
+        approval: api::AgentApproval {
+            id: 1,
+            agent_id: 1,
+            agent_user_id: BENDER,
+            room_id: None,
+            room_name: None,
+            action: "github.merge_pull_request".into(),
+            summary: "Merge the reviewed change".into(),
+            status: api::AgentApprovalStatus::Approved,
+            expires_at: now.to_wire(),
+            created_at: now.to_wire(),
+            decided_by_id: Some(DAVID),
+            decided_at: Some(now.to_wire()),
+            decision_note: None,
+            github_login: None,
+            fizzy_user_name: None,
+            admin_only: true,
+            approvable: true,
+            deniable: true,
+        },
+        users: users.users,
+    });
+    let wire = serde_json::to_value(&payload).unwrap();
+    assert_eq!(wire["type"], "approval.updated");
+    let users = wire["data"]["users"].as_array().unwrap();
+    assert_eq!(users.len(), timestamps.len());
+    for (id, updated_at) in timestamps {
+        let user = users.iter().find(|user| user["id"] == id).unwrap();
+        assert_eq!(user["updatedAt"], updated_at);
+    }
+    assert_eq!(serde_json::from_value::<api::SyncPayload>(wire).unwrap(), payload);
+}

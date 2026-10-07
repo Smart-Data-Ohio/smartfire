@@ -30,6 +30,9 @@ pub struct User {
     /// one, which the classic pages label "Bot". Kept current by `agent.status`.
     pub agent: Option<AgentBadge>,
     pub created_at: Timestamp,
+    /// `users.updated_at`: moves on every change to the users row, including status changes
+    /// from bans and unbans. Clients keep whichever copy of a user has the later value.
+    pub updated_at: Timestamp,
 }
 
 /// `users.role`.

@@ -34,4 +34,9 @@ avatarIcon: Icon | null,
  * Set for an agent (a bot with an `agents` row); `null` for people and for bots without
  * one, which the classic pages label "Bot". Kept current by `agent.status`.
  */
-agent: AgentBadge | null, createdAt: string, };
+agent: AgentBadge | null, createdAt: string, 
+/**
+ * `users.updated_at`: moves on every change to the users row, including status changes
+ * from bans and unbans. Clients keep whichever copy of a user has the later value.
+ */
+updatedAt: string, };

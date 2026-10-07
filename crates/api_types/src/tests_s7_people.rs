@@ -10,7 +10,8 @@ fn user_json() -> Value {
         "id": 7, "name": "Ada Lovelace", "role": "administrator", "status": "active",
         "bio": null, "avatarUrl": "/users/7/avatar?v=1700000000", "hasAvatar": true,
         "customStatus": {"emoji": "🌴", "text": "On a beach", "expiresAt": null},
-        "avatarIcon": null, "agent": null, "createdAt": "2026-09-26T12:26:46.848Z"
+        "avatarIcon": null, "agent": null, "createdAt": "2026-09-26T12:26:46.848Z",
+        "updatedAt": "2026-10-06T09:15:00.123Z"
     })
 }
 

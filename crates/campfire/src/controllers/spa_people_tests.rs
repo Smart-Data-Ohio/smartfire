@@ -52,10 +52,16 @@ async fn ban_and_remove_ban_match_classic() {
             public_sessions,
             async |b, _| classic(b, method.clone(), &path, &[]).await,
             async |b, _| {
+                let before = b.app().db()
+                    .read(move |conn| User::find(conn, id)).await.unwrap();
                 let profile: api::PersonProfile =
                     spa(b, method.clone(), &api_path, Value::Null).await;
                 assert_eq!(profile.user.id, id);
                 assert_eq!(profile.user.status, status);
+                assert!(profile.user.updated_at > before.updated_at.to_wire());
+                let after = b.app().db()
+                    .read(move |conn| User::find(conn, id)).await.unwrap();
+                assert_eq!(profile.user.updated_at, after.updated_at.to_wire());
                 assert!(profile.status.is_some());
                 assert!(profile.email_address.is_some());
                 assert!(profile.can_ban);
@@ -324,6 +330,9 @@ async fn directory_matches_classic_presenters_in_order() {
         let source = expected.iter().find(|p| p.user.id == user.id).unwrap();
         assert_eq!(user.name, source.user.name);
         assert_eq!(user.avatar_url, source.user.avatar_path);
+        let id = user.id;
+        let row = a.db().read(move |conn| User::find(conn, id)).await.unwrap();
+        assert_eq!(user.updated_at, row.updated_at.to_wire());
     }
     let ids = ids.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
     let users: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={ids}"))).await);
@@ -405,6 +414,7 @@ async fn check_profile(
     assert_eq!(profile.user.id, user.id);
     assert_eq!(profile.user.name, user.name);
     assert_eq!(profile.user.bio, user.bio);
+    assert_eq!(profile.user.updated_at, user.updated_at.to_wire());
     let users: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={id}"))).await);
     assert_eq!(profile.user, users.users[0]);
     // Conditions in `users/show.html:21,45-49,51,58-65`.
