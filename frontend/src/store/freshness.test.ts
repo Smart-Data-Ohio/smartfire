@@ -1,21 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { emptyFreshness, finishRead, membership, placeId, replay, startRead } from "./freshness.ts";
+import {
+  emptyFreshness,
+  finishRead,
+  membership,
+  observeMembership,
+  placeId,
+  replay,
+  retireReads,
+  startRead,
+} from "./freshness.ts";
 
 const order = (left: number, right: number) => right - left;
 
 describe("list membership history", () => {
-  it("replays additions and removals and prunes only deltas no outstanding read needs", () => {
+  it("replays additions and removals until their list's current read finishes", () => {
     const first = startRead(emptyFreshness, "approved");
     const added = membership(first.freshness, "approved", [2], [3, 2]);
-    const second = startRead(added, "approved");
-    const removed = membership(second.freshness, "approved", [3, 2], [3]);
-    const page = replay(removed, "approved", first.ticket, [2], order);
-    const finished = finishRead(removed, first.ticket);
+    const removed = membership(added, "approved", [3, 2], [3]);
 
-    expect(page).toEqual([3]);
-    expect(finished.freshness.deltas).toHaveLength(1);
-    expect(replay(finished.freshness, "approved", second.ticket, [3, 2], order)).toEqual([3]);
-    expect(finishRead(finished.freshness, second.ticket).freshness.deltas).toEqual([]);
+    expect(replay(removed, "approved", first.ticket, [2], order)).toEqual([3]);
+    expect(finishRead(removed, first.ticket).freshness.deltas).toEqual([]);
+  });
+
+  it("retires superseded reloads while preserving another list's outstanding read", () => {
+    const other = startRead(emptyFreshness, "other");
+    const first = startRead(other.freshness, "approved");
+    const added = membership(first.freshness, "approved", [], [3]);
+    const second = startRead(added, "approved");
+    const removed = membership(second.freshness, "approved", [3], []);
+    const finished = finishRead(removed, first.ticket).freshness;
+
+    expect(Object.keys(finished.reads)).toEqual([String(other.ticket), String(second.ticket)]);
+    expect(finished.deltas).toHaveLength(1);
+    expect(replay(finished, "approved", second.ticket, [3], order)).toEqual([]);
+    expect(retireReads(finished, "approved").freshness).toMatchObject({
+      reads: { [other.ticket]: { list: "other" } },
+      deltas: [],
+    });
   });
 
   it("records membership changes independently of equal record echoes", () => {
@@ -31,6 +52,26 @@ describe("list membership history", () => {
     const changed = membership(read.freshness, "approved", [], [3]);
 
     expect(finishRead(changed, read.ticket).freshness.deltas).toEqual([]);
+  });
+
+  it("keeps only the newest outstanding read and observations for each list and id", () => {
+    let state = emptyFreshness;
+
+    for (let index = 0; index < 100; index += 1) {
+      state = startRead(state, "approved").freshness;
+
+      for (let echo = 0; echo < 100; echo += 1) {
+        state = observeMembership(state, "approved", 3, echo % 2 === 0);
+      }
+
+      expect(Object.values(state.reads)).toHaveLength(1);
+      expect(state.deltas).toHaveLength(1);
+    }
+
+    const ticket = Number(Object.keys(state.reads)[0]);
+
+    expect(replay(state, "approved", ticket, [3], order)).toEqual([]);
+    expect(finishRead(state, ticket).freshness.deltas).toEqual([]);
   });
 
   it("keeps an existing member's place", () => {

@@ -20,7 +20,7 @@ import { mutations, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { AgentApprovals } from "./agent-approvals-tab.tsx";
-import { useAgentLedger } from "./agent-hooks.ts";
+import { useAgentApprovals, useAgentLedger } from "./agent-hooks.ts";
 import { ApprovalCard } from "./approval-card.tsx";
 import {
   actsAsText,
@@ -137,6 +137,77 @@ afterEach(() => {
 });
 
 describe("S4 client contracts", () => {
+  it("restarts the approval read after StrictMode lifecycle cleanup", () => {
+    const load = vi.spyOn(actions.approvals, "load").mockImplementation(async (agentId, filter) => {
+      const key = approvalListKey(agentId, filter);
+
+      mutations.startRead(`approvals:${key}`);
+      mutations.setApprovalListLoading(key, false);
+    });
+
+    const view = renderHook(() => useAgentApprovals(9, "all"), {
+      reactStrictMode: true,
+    });
+
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(Object.values(store.getState().freshness.reads)).toEqual([{ list: "approvals:9:all" }]);
+
+    view.unmount();
+
+    expect(store.getState().freshness.reads).toEqual({});
+  });
+
+  it("bounds approval membership history across reloads, filter changes and unmount", () => {
+    vi.spyOn(actions.approvals, "load").mockImplementation(async (agentId, filter) => {
+      const key = approvalListKey(agentId, filter);
+
+      mutations.startRead(`approvals:${key}`);
+      mutations.setApprovalListLoading(key, false);
+    });
+
+    const view = renderHook(
+      ({ filter }: { filter: "all" | "pending" }) => useAgentApprovals(9, filter),
+      {
+        initialProps: { filter: "all" },
+      },
+    );
+
+    for (let index = 0; index < 100; index += 1) {
+      act(() => {
+        view.result.current.reload();
+
+        for (let echo = 0; echo < 10; echo += 1) {
+          mutations.applyEvents(
+            [
+              {
+                seq: index * 10 + echo + 1,
+                topic: "user:7",
+                type: "approval.updated",
+                data: { approval: approval(), users: [] },
+              },
+            ],
+            NOW,
+          );
+        }
+      });
+
+      expect(Object.values(store.getState().freshness.reads)).toHaveLength(1);
+      expect(store.getState().freshness.deltas).toHaveLength(1);
+    }
+
+    view.rerender({ filter: "pending" });
+
+    expect(Object.values(store.getState().freshness.reads)).toEqual([
+      { list: "approvals:9:pending" },
+    ]);
+    expect(store.getState().freshness.deltas).toEqual([]);
+
+    view.unmount();
+
+    expect(store.getState().freshness.reads).toEqual({});
+    expect(store.getState().freshness.deltas).toEqual([]);
+  });
+
   it("shows a base decision-note refusal through the existing toast", async () => {
     const message = "Decision note is too long (maximum is 200 characters)";
 

@@ -17,7 +17,7 @@ import {
 } from "../../store/ledger.ts";
 import type { LoadStatus } from "../../store/model.ts";
 import type { PagedList } from "../../store/paged-list.ts";
-import { useStore } from "../../store/store.ts";
+import { mutations, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import type { PagedState } from "../destinations/paged-list.tsx";
 
@@ -100,6 +100,14 @@ export function useAgentApprovals(
 
   const stale = list.stale && list.status === "ready";
   const shownKey = useRef<string | null>(null);
+
+  useEffect(
+    () => () => {
+      shownKey.current = null;
+      mutations.retireReads(`approvals:${key}`);
+    },
+    [key],
+  );
 
   // Once each time this list is shown, then again whenever it goes stale while shown.
   useEffect(() => {

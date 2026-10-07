@@ -117,7 +117,9 @@ export function landApprovalPage(
   generation?: number,
   ticket?: number,
 ): State {
-  const current = pagedCurrent(approvalListOf(state, key), generation);
+  const current =
+    pagedCurrent(approvalListOf(state, key), generation) &&
+    (ticket === undefined || state.freshness.reads[ticket]?.list === `approvals:${key}`);
 
   let next = state;
 

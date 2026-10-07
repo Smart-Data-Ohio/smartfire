@@ -108,6 +108,12 @@ export const mutations = {
 
     apply((state) => ({ ...state, freshness: read.freshness }));
   },
+  retireReads: (list: string) => {
+    apply((state) => ({
+      ...state,
+      freshness: freshness.retireReads(state.freshness, list).freshness,
+    }));
+  },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>

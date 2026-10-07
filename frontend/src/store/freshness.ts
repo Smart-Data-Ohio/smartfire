@@ -14,34 +14,60 @@ interface MembershipDelta {
 
 export const emptyFreshness: Freshness = { clock: 0, reads: {}, deltas: [] };
 
+function pruneHistory(state: Freshness, reads: Freshness["reads"]): Freshness {
+  return {
+    ...state,
+    reads,
+    deltas: state.deltas.filter((delta) =>
+      Object.entries(reads).some(
+        ([ticket, read]) => read.list === delta.list && Number(ticket) < delta.at,
+      ),
+    ),
+  };
+}
+
+/** A reload supersedes any earlier read of the same list. */
 export function startRead(state: Freshness, list: string) {
   const ticket = state.clock + 1;
+  const current = retireReads(state, list).freshness;
 
   return {
     freshness: {
-      ...state,
+      ...current,
       clock: ticket,
-      reads: { ...state.reads, [ticket]: { list } },
+      reads: { ...current.reads, [ticket]: { list } },
     },
     ticket,
   };
+}
+
+/** A view leaving retires its reads, even if their requests are still running. */
+export function retireReads(state: Freshness, list: string) {
+  const reads = Object.fromEntries(
+    Object.entries(state.reads).filter(([, read]) => read.list !== list),
+  );
+
+  return { freshness: pruneHistory(state, reads) };
 }
 
 /** Finishing failures and interrupted reads prunes their history too. */
 export function finishRead(state: Freshness, ticket: number) {
   const { [ticket]: _settled, ...reads } = state.reads;
 
-  return {
-    freshness: {
-      ...state,
-      reads,
-      deltas: state.deltas.filter((delta) =>
-        Object.entries(reads).some(
-          ([ticket, read]) => read.list === delta.list && Number(ticket) < delta.at,
-        ),
-      ),
-    },
-  };
+  return { freshness: pruneHistory(state, reads) };
+}
+
+function compactDeltas(
+  held: readonly MembershipDelta[],
+  incoming: readonly MembershipDelta[],
+): readonly MembershipDelta[] {
+  const latest = new Map(held.map((delta) => [`${delta.list}:${delta.id}`, delta]));
+
+  for (const delta of incoming) {
+    latest.set(`${delta.list}:${delta.id}`, delta);
+  }
+
+  return [...latest.values()].sort((left, right) => left.at - right.at);
 }
 
 /** Existing members keep their position, including the last row of a paged window. */
@@ -86,7 +112,7 @@ export function membership(
     ...state,
     clock: at,
     deltas: Object.values(state.reads).some((read) => read.list === list)
-      ? [...state.deltas, ...deltas]
+      ? compactDeltas(state.deltas, deltas)
       : state.deltas,
   };
 }
@@ -107,7 +133,7 @@ export function observeMembership(
   return {
     ...state,
     clock: at,
-    deltas: [...state.deltas, { list, id, added, at }],
+    deltas: compactDeltas(state.deltas, [{ list, id, added, at }]),
   };
 }
 
