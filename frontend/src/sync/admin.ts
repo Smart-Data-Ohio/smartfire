@@ -95,9 +95,11 @@ import type { StartSlackDryRun } from "../gen/StartSlackDryRun.ts";
 import type { StartSlackImport } from "../gen/StartSlackImport.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
+import type { User } from "../gen/User.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
 import { mutations } from "../store/store.ts";
+import { landingOrder } from "./landing-order.ts";
 import { runAction } from "./runtime.ts";
 
 export const admin = {
@@ -237,29 +239,53 @@ export const slack = {
   disconnect: (): Promise<SlackDisconnected> => runAction(disconnectSlack()),
 };
 
-/** A person page's reply, with their profile landed in the store so the page's avatar resolves. */
-function landProfile(profile: PersonProfile): PersonProfile {
-  mutations.mergeUsers([profile.user]);
+/** The people replies' order, so a slow load never lands over a newer reply. */
+const peopleOrder = landingOrder();
 
-  return profile;
+/** Lands the users a people reply carries, unless a reply that started later already did. */
+function landPeople(started: number, users: readonly User[]): void {
+  const fresh = peopleOrder.claim(started, users, (user) => user.id);
+
+  if (fresh.length > 0) {
+    mutations.mergeUsers(fresh);
+  }
+}
+
+/** A person page's reply, with their profile landed in the store so the page's avatar resolves. */
+function landProfile(started: number) {
+  return (profile: PersonProfile): PersonProfile => {
+    landPeople(started, [profile.user]);
+
+    return profile;
+  };
 }
 
 /**
  * The people directory and a person's page: plain promises over the S7 people endpoints, each
- * reply's profiles landed in the store first. Banning fails as `admin`'s writes do.
+ * reply's profiles landed in the store first unless a later reply already landed them. Banning
+ * fails as `admin`'s writes do.
  */
 export const peoplePages = {
-  directory: (): Promise<readonly DirectoryPerson[]> =>
-    runAction(peopleDirectory()).then((list) => {
-      mutations.mergeUsers(list.users);
+  directory: (): Promise<readonly DirectoryPerson[]> => {
+    const started = peopleOrder.start();
+
+    return runAction(peopleDirectory()).then((list) => {
+      landPeople(started, list.users);
 
       return list.people;
-    }),
+    });
+  },
 
-  profile: (userId: number): Promise<PersonProfile> =>
-    runAction(personProfile(userId)).then(landProfile),
+  profile: (userId: number): Promise<PersonProfile> => {
+    const started = peopleOrder.start();
+
+    return runAction(personProfile(userId)).then(landProfile(started));
+  },
 
   /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
-  setBanned: (userId: number, banned: boolean): Promise<PersonProfile> =>
-    runAction(setBanned(userId, banned)).then(landProfile),
+  setBanned: (userId: number, banned: boolean): Promise<PersonProfile> => {
+    const started = peopleOrder.start();
+
+    return runAction(setBanned(userId, banned)).then(landProfile(started));
+  },
 };

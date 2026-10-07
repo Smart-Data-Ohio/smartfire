@@ -156,22 +156,25 @@ function Profile({
 }: {
   readonly profile: PersonProfile;
   readonly viewerId: number | undefined;
-  readonly onChange: (next: PersonProfile) => void;
+  readonly onChange: (update: (current: PersonProfile) => PersonProfile) => void;
 }) {
   const navigate = useNavigate();
   const [ask, setAsk] = useState<Ask | null>(null);
-  const [saving, setSaving] = useState<"dnd" | "ban" | "message" | null>(null);
+  const [savingDnd, setSavingDnd] = useState(false);
+  const [messaging, setMessaging] = useState(false);
+  const [banning, setBanning] = useState(false);
   const { user } = profile;
   const own = user.id === viewerId;
   const active = user.status === "active";
   const deactivated = user.status === "deactivated";
 
   const setAllowance = (allowed: boolean) => {
-    setSaving("dnd");
+    setSavingDnd(true);
     settingsActions
       .setDndAllowance(user.id, allowed)
       .then(
-        () => onChange({ ...profile, dndAllowed: allowed }),
+        // Only the field this changed, so a ban that landed meanwhile stays.
+        () => onChange((current) => ({ ...current, dndAllowed: allowed })),
         (error: Error) =>
           toast({
             title: allowed ? "Couldn't allow them during DND" : "Couldn't mute them during DND",
@@ -179,15 +182,15 @@ function Profile({
             tone: "danger",
           }),
       )
-      .finally(() => setSaving(null));
+      .finally(() => setSavingDnd(false));
   };
 
   const message = () => {
-    setSaving("message");
+    setMessaging(true);
     directs.create([user.id]).then(
       (row) => void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } }),
       (error: Error) => {
-        setSaving(null);
+        setMessaging(false);
         toast({
           title: `Couldn't message ${user.name}`,
           description: error.message,
@@ -198,12 +201,12 @@ function Profile({
   };
 
   const changeBan = (banned: boolean) => {
-    setSaving("ban");
+    setBanning(true);
     peoplePages
       .setBanned(user.id, banned)
       .then(
         (next) => {
-          onChange(next);
+          onChange(() => next);
           toast({
             title: banned ? `${user.name} is banned` : `${user.name}'s ban was removed`,
             tone: "success",
@@ -212,7 +215,7 @@ function Profile({
         (error: Error) =>
           adminFailure(banned ? `Couldn't ban ${user.name}` : "Couldn't remove the ban", error),
       )
-      .finally(() => setSaving(null));
+      .finally(() => setBanning(false));
   };
 
   const askBan = () =>
@@ -261,8 +264,7 @@ function Profile({
               variant="secondary"
               icon={profile.dndAllowed ? "bell-off" : "bell-ring"}
               aria-pressed={profile.dndAllowed}
-              loading={saving === "dnd"}
-              disabled={saving !== null}
+              loading={savingDnd}
               onClick={() => setAllowance(!profile.dndAllowed)}
             >
               {profile.dndAllowed ? "Mute during DND" : "Allow during DND"}
@@ -272,8 +274,7 @@ function Profile({
             variant="primary"
             icon="message-circle"
             aria-label={`Message ${user.name}`}
-            loading={saving === "message"}
-            disabled={saving !== null}
+            loading={messaging}
             onClick={message}
           >
             Message
@@ -292,8 +293,8 @@ function Profile({
         <Button
           variant={active ? "secondary" : "danger"}
           icon="ban"
-          loading={saving === "ban"}
-          disabled={saving !== null}
+          loading={banning}
+          aria-busy={banning}
           onClick={askBan}
         >
           {active ? `Ban ${user.name}` : "Remove ban"}
@@ -320,20 +321,43 @@ export function PersonPage({
   const hasAgentPage = useHasAgentPage();
   const navigate = useNavigate();
   const left = useRef(false);
+  const generation = useRef(0);
 
   const fetchProfile = useCallback(() => {
+    const mine = ++generation.current;
+
     peoplePages.profile(userId).then(
-      (profile) => setLoad({ status: "ready", profile }),
-      (error: Error) =>
+      (profile) => {
+        if (mine === generation.current) setLoad({ status: "ready", profile });
+      },
+      (error: Error) => {
+        if (mine !== generation.current) return;
+
         setLoad(
           error instanceof ActionError && error.tag === "NotFound"
             ? { status: "missing" }
             : { status: "error", message: error.message },
-        ),
+        );
+      },
     );
   }, [userId]);
 
-  useEffect(fetchProfile, [fetchProfile]);
+  useEffect(() => {
+    fetchProfile();
+
+    // Leaving (or Strict Mode's rehearsal) drops the reply of the load in flight.
+    return () => {
+      generation.current++;
+    };
+  }, [fetchProfile]);
+
+  /** A change from the page outranks any load still in flight. */
+  const change = (update: (current: PersonProfile) => PersonProfile) => {
+    generation.current++;
+    setLoad((current) =>
+      current.status === "ready" ? { status: "ready", profile: update(current.profile) } : current,
+    );
+  };
 
   const bot =
     load.status === "ready" && load.profile.user.role === "bot" ? load.profile.user : null;
@@ -387,11 +411,7 @@ export function PersonPage({
           />
         ) : null}
         {load.status === "ready" && bot === null ? (
-          <Profile
-            profile={load.profile}
-            viewerId={viewerId}
-            onChange={(profile) => setLoad({ status: "ready", profile })}
-          />
+          <Profile profile={load.profile} viewerId={viewerId} onChange={change} />
         ) : null}
       </div>
     </PageFrame>

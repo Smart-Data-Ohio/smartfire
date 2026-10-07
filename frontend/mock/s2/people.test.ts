@@ -91,6 +91,23 @@ describe("the mock's people pages", () => {
     expect(restored.user.status).toBe("active");
   });
 
+  it("keeps stars and DND exceptions apart, as their separate tables do", async () => {
+    const { server } = harness();
+    const profileOf = (id: number) => get<PersonProfile>(server, `/api/v1/people/${id}`);
+
+    await send(server, "PUT", `/api/v1/users/${USER_IDS.sam}/star`);
+    expect((await profileOf(USER_IDS.sam)).dndAllowed).toBe(false);
+
+    await send(server, "POST", `/api/v1/settings/dnd_allowances/${USER_IDS.jonah}`);
+    expect((await profileOf(USER_IDS.jonah)).dndAllowed).toBe(true);
+
+    const directory = await get<PeopleDirectory>(server, "/api/v1/people");
+
+    expect(directory.people.find((person) => person.userId === USER_IDS.jonah)?.starred).toBe(
+      false,
+    );
+  });
+
   it("answers 404 for someone who doesn't exist", async () => {
     const { server } = harness();
 

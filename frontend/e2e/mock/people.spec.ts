@@ -89,9 +89,11 @@ test("the bar counts the selection and says agents won't be rung", async ({ page
   await expect(bar.getByRole("button", { name: "Start huddle (0)" })).toBeDisabled();
   await expect(bar).toContainText("Agents can't join huddles.");
 
-  await bar.getByRole("button", { name: "Clear" }).click();
+  await bar.getByRole("button", { name: "Clear" }).focus();
+  await page.keyboard.press("Enter");
   await expect(bar).toBeHidden();
   await expect(page.getByRole("checkbox", { checked: true })).toHaveCount(0);
+  await expect(row(page, "Maya Okafor").getByRole("checkbox")).toBeFocused();
 });
 
 test("Shift-click selects the people in between", async ({ page }) => {
@@ -202,6 +204,42 @@ test("banning asks first, then the page offers to remove the ban", async ({ page
   await page.getByRole("button", { name: "Remove ban" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Remove ban" }).click();
   await expect(page.locator(".person")).toHaveAttribute("data-status", "active");
+});
+
+test("a slow ban keeps its button focusable, and a slow DND change blocks nothing else", async ({
+  page,
+}) => {
+  await openPerson(page, USER_IDS.sam);
+
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/api/v1/people/*/ban", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.route("**/api/v1/settings/dnd_allowances/*", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: /during DND/ }).click();
+  await expect(page.getByRole("button", { name: "Message Sam Whitfield" })).toBeEnabled();
+
+  const opener = page.getByRole("button", { name: "Ban Sam Whitfield" });
+
+  await opener.click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Ban Sam Whitfield" }).click();
+  await expect(page.getByRole("alertdialog")).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(opener).toHaveAttribute("aria-busy", "true");
+
+  release();
+  await expect(page.locator(".person")).toHaveAttribute("data-status", "banned");
+  await expect(page.getByRole("button", { name: "Remove ban" })).toBeFocused();
 });
 
 test("a lapsed password confirmation sends a ban to the classic password page", async ({

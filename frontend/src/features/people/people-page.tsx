@@ -87,6 +87,7 @@ function DirectoryRow({
       <input
         type="checkbox"
         className="people-check"
+        data-user-id={person.userId}
         checked={checked}
         onChange={change}
         aria-label={`Select ${name}`}
@@ -178,16 +179,30 @@ export function PeoplePage() {
   const [selected, setSelected] = useState<readonly number[]>([]);
   const [busy, setBusy] = useState(false);
   const anchor = useRef<number | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const generation = useRef(0);
   const users = useStore((state) => state.users);
 
   const fetchPeople = useCallback(() => {
+    const mine = ++generation.current;
+
     peoplePages.directory().then(
-      (list) => setLoad({ status: "ready", people: list }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (list) => {
+        if (mine === generation.current) setLoad({ status: "ready", people: list });
+      },
+      (error: Error) => {
+        if (mine === generation.current) setLoad({ status: "error", message: error.message });
+      },
     );
   }, []);
 
-  useEffect(fetchPeople, [fetchPeople]);
+  useEffect(() => {
+    fetchPeople();
+
+    return () => {
+      generation.current++;
+    };
+  }, [fetchPeople]);
 
   const list = load.status === "ready" ? load.people : [];
   const order = list.map((person) => person.userId);
@@ -202,6 +217,21 @@ export function PeoplePage() {
   const clear = () => {
     setSelected([]);
     anchor.current = null;
+  };
+
+  /** Clear from the bar: the bar hides, so focus goes back to the last box ticked, or the first. */
+  const clearFromBar = () => {
+    const boxes = listRef.current;
+    const last = anchor.current;
+
+    const target =
+      (last === null
+        ? null
+        : boxes?.querySelector<HTMLInputElement>(`input[data-user-id="${last}"]`)) ??
+      boxes?.querySelector<HTMLInputElement>("input[type=checkbox]");
+
+    clear();
+    target?.focus();
   };
 
   const isBot = (userId: number) => users[userId]?.role === "bot";
@@ -251,7 +281,7 @@ export function PeoplePage() {
           <p className="people-empty text-muted">Nobody else is here yet.</p>
         ) : null}
         {list.length > 0 ? (
-          <ul className="people-list" aria-label="People">
+          <ul ref={listRef} className="people-list" aria-label="People">
             {list.map((person) => (
               <DirectoryRow
                 key={person.userId}
@@ -272,7 +302,7 @@ export function PeoplePage() {
         busy={busy}
         onMessage={() => open(false)}
         onHuddle={() => open(true)}
-        onClear={clear}
+        onClear={clearFromBar}
       />
     </PageFrame>
   );

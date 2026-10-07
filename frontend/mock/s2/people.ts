@@ -1,7 +1,7 @@
 /**
  * The people directory and a person's page (S7), `users#index` and `users#show` as JSON. The
- * directory and the page read the world's users, presence and stars (the stars double as the
- * viewer's DND exceptions, as in the settings mock); banning flips a user's status. The viewer is
+ * directory and the page read the world's users, presence, stars and the viewer's DND exceptions
+ * (the settings mock's set); banning flips a user's status. The viewer is
  * an administrator unless the admin mock made them a member.
  */
 import type { DirectoryPerson } from "../../src/gen/DirectoryPerson.ts";
@@ -84,7 +84,7 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
             statusText: presence?.statusText ?? null,
           }
         : null,
-      dndAllowed: active && other ? world.stars.has(userId) : null,
+      dndAllowed: active && other ? world.dndAllowed.has(userId) : null,
       emailAddress: admin && person ? emailOf(user) : null,
       transferUrl,
       transferQrSvg: transferUrl === null ? null : MOCK_TRANSFER_QR_SVG,
