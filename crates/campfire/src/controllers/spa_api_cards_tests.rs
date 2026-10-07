@@ -579,15 +579,31 @@ async fn messages_carry_their_cards() {
     assert!(message(&mut david, PR_MESSAGE).await.poll.is_none());
 
     let cards = message(&mut david, PR_MESSAGE).await.cards;
+    let [api::MessageCard::Github(github)] = cards.as_slice() else {
+        panic!("{cards:?}")
+    };
+    // The repo is pinned through the URL: a bare quoted seed name here would make the frozen
+    // seed inventory (parity/test_frozen_seeds.py) think this file boots that seed.
     assert_eq!(
-        cards,
-        [api::MessageCard::Github(api::GithubCardRef {
-            pull_request_id: 1,
-            owner: "smart-data-ohio".into(),
-            repo: "smartfire".into(),
-            number: 42,
-            url: "https://github.com/smart-data-ohio/smartfire/pull/42".into(),
-        })]
+        (
+            github.pull_request_id,
+            github.owner.as_str(),
+            github.number,
+            github.url.as_str(),
+        ),
+        (
+            1,
+            "smart-data-ohio",
+            42,
+            "https://github.com/smart-data-ohio/smartfire/pull/42"
+        )
+    );
+    assert_eq!(
+        github.url,
+        format!(
+            "https://github.com/{}/{}/pull/42",
+            github.owner, github.repo
+        )
     );
     let cards = message(&mut david, FIZZY_MESSAGE).await.cards;
     let [api::MessageCard::Fizzy(fizzy)] = cards.as_slice() else {
