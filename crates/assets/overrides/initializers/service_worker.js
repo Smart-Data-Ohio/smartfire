@@ -7,11 +7,15 @@
 // fresh test browser does not install and claim a worker mid-page; the
 // service worker tests opt back in. Turbo refreshes provisional head elements
 // before turbo:load, including the worker selected for the newly signed-in user.
+// Without the SPA the layout names no worker, and the classic one is registered as in Rails.
+function selectedServiceWorkerUrl() {
+  return document.querySelector('meta[name="service-worker-url"]')?.content || "/service-worker.js"
+}
+
 function reconcileServiceWorker() {
   if (document.documentElement.dataset.serviceWorker === "false" || document.documentElement.hasAttribute("data-turbo-preview")) return
 
-  const url = document.querySelector('meta[name="service-worker-url"]')?.content
-  if (url) navigator.serviceWorker.register(url, { scope: "/", updateViaCache: "none" }).catch(() => {})
+  navigator.serviceWorker.register(selectedServiceWorkerUrl(), { scope: "/", updateViaCache: "none" }).catch(() => {})
 }
 
 if ("serviceWorker" in navigator) {

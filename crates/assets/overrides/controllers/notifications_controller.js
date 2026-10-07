@@ -64,7 +64,8 @@ export default class extends Controller {
   }
 
   #registerServiceWorker() {
-    return navigator.serviceWorker.register(document.querySelector('meta[name="service-worker-url"]').content, { scope: "/", updateViaCache: "none" })
+    const url = document.querySelector('meta[name="service-worker-url"]')?.content || "/service-worker.js"
+    return navigator.serviceWorker.register(url, { scope: "/", updateViaCache: "none" })
   }
 
   #revealNotAllowedNotice() {
