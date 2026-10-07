@@ -40,9 +40,11 @@ on:
 permissions: {}
 
 # A new push to a pull request supersedes the run for its previous commit.
-# Pushes to main are never cancelled, so every main commit keeps a full run.
+# Pushes to main share one group and are never cancelled once running, but a newer push
+# replaces one still waiting: when merges land close together only the newest main commit
+# gets its full run (releases go from that commit), which keeps runner demand down.
 concurrency:
-  group: rust-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || inputs.ref || github.sha }}
+  group: rust-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || inputs.ref || (github.event_name == 'push' && 'main-push') || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
