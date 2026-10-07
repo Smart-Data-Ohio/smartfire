@@ -7,9 +7,9 @@ import {
   RouterProvider,
   useParams,
 } from "@tanstack/react-router";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { roomDetailFixture } from "../../api/testing.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
@@ -58,17 +58,48 @@ async function mount() {
   return router;
 }
 
-afterEach(() => store.setState(initialState, true));
+/** Every request the menu makes that isn't a read: choosing a level is the only write. */
+let writes: string[] = [];
+
+beforeEach(() => {
+  writes = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const method = (
+      init?.method ?? (input instanceof Request ? input.method : "GET")
+    ).toUpperCase();
+
+    if (method !== "GET") {
+      writes.push(`${method} ${String(input instanceof Request ? input.url : input)}`);
+    }
+
+    return Promise.resolve(new Response("{}", { status: 200 }));
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  store.setState(initialState, true);
+});
+
+const trigger = () => screen.getByRole("button", { name: /^Notifications:/ });
 
 describe("the notification menu URL", () => {
   it("opens the existing menu and clears its route on Escape", async () => {
     const router = await mount();
     const user = userEvent.setup();
 
-    expect(screen.getByRole("menu", { name: /^Notifications$/ })).toBeTruthy();
+    const menu = screen.getByRole("menu", { name: /^Notifications$/ });
+
+    // Like a keyboard open of the trigger: focus starts on the first level.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(within(menu).getAllByRole("menuitemradio")[0]),
+    );
+    expect(writes).toEqual([]);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger()));
+    expect(writes).toEqual([]);
   });
 
   it("closes on outside dismissal and clears the menu URL", async () => {
@@ -78,16 +109,18 @@ describe("the notification menu URL", () => {
     await user.click(screen.getByRole("button", { name: "Outside control" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(writes).toEqual([]);
   });
 
   it("does not latch the routed menu open when its trigger receives an arrow key", async () => {
     const router = await mount();
     const user = userEvent.setup();
 
-    act(() => screen.getByRole("button", { name: /^Notifications:/ }).focus());
+    act(() => trigger().focus());
     await user.keyboard("{ArrowDown}");
     await act(async () => router.history.back());
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(writes).toEqual([]);
   });
 });

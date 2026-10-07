@@ -68,6 +68,7 @@ export function useRoomPaneLifecycle(roomId: number): void {
   const params = useParams({ strict: false });
   const matchRoute = useMatchRoute();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+  const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   // Browser Back and room changes must not leave a URL pane as a local pane on the base room.
   useEffect(() => {
@@ -77,6 +78,15 @@ export function useRoomPaneLifecycle(roomId: number): void {
       clearRoutePane();
     }
   }, [params.threadId, drafting, routePane, roomId]);
+
+  // The notification URL is the room with its header menu open. A side pane left open locally
+  // (say, opened after Escape and before Back) would cover the conversation on phones and leave
+  // that menu inert, so arriving at the URL closes it.
+  useEffect(() => {
+    if (notifying) {
+      openPane(null);
+    }
+  }, [notifying]);
 
   useEffect(() => () => clearRoutePane(roomId), [roomId]);
 }

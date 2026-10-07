@@ -156,6 +156,43 @@ test("browser Back closes a routed notification menu after keyboard use of its t
   await expect(menu).toHaveCount(0);
 });
 
+test.describe("phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("Back to the notification URL closes a Threads pane opened after Escape", async ({
+    page,
+  }) => {
+    await open(page, `r/${ROOM}/notifications`);
+
+    const menu = page.getByRole("menu", { name: "Notifications", exact: true });
+    const conversation = page.getByRole("region", { name: "Conversation" });
+
+    await expect(menu).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
+    await expect(menu).toHaveCount(0);
+
+    // The header button opens Threads as a local pane, a full page over the conversation.
+    await page.locator(".room-header").getByRole("button", { name: "Threads" }).click();
+    await expect(pane(page)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
+    await expect(conversation).toHaveAttribute("inert", "");
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}/notifications$`));
+    await expect(menu).toBeVisible();
+    await expect(pane(page)).toHaveCount(0);
+    await expect(conversation).not.toHaveAttribute("inert");
+
+    // The menu works: a level can be chosen, and choosing it leaves the URL.
+    await menu.getByRole("menuitemradio", { name: "No notifications" }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
+    await expect(
+      page.locator(".room-header").getByRole("button", { name: "Notifications: No notifications" }),
+    ).toBeVisible();
+  });
+});
+
 test("an unknown bare message stays on the existing not-found state", async ({ page }) => {
   await open(page, "m/999999999");
 

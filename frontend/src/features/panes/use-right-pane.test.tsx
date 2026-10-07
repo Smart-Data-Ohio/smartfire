@@ -81,8 +81,10 @@ async function mount(path: string) {
 
   const draft = createRoute({ getParentRoute: () => room, path: "t/new" });
 
+  const notifications = createRoute({ getParentRoute: () => room, path: "notifications" });
+
   const router = createRouter({
-    routeTree: root.addChildren([room.addChildren([...controls, thread, draft])]),
+    routeTree: root.addChildren([room.addChildren([...controls, thread, draft, notifications])]),
     history: createMemoryHistory({ initialEntries: [path] }),
   });
 
@@ -175,5 +177,17 @@ describe("URL pane navigation", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     expect(screen.getByRole("status").textContent).toBe("null");
+  });
+
+  it("closes a local pane opened after leaving the notification URL when Back returns there", async () => {
+    const router = await mount("/r/4/notifications");
+    const user = userEvent.setup();
+
+    await act(() => router.navigate({ href: "/r/4" }));
+    await user.click(screen.getByRole("button", { name: "Members" }));
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"members"}');
+    await act(async () => router.history.back());
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4/notifications"));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("null"));
   });
 });
