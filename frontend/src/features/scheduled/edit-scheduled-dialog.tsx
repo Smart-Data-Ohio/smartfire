@@ -11,6 +11,7 @@ import {
   sendAtLabel,
   toLocalInput,
 } from "../composer/schedule/presets.ts";
+import { useNow } from "../threads/use-now.ts";
 
 /** What the dialog saves: only the fields that changed (a missing one keeps its value). */
 export type ScheduledEdit = UpdateScheduledMessage;
@@ -67,8 +68,12 @@ function EditForm({ item, onClose, onSave }: EditFormProps) {
   const [timeError, setTimeError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
+  // The earliest time and the presets follow the clock while the form is open: from when it
+  // opened, then the shared 30 s tick (a bare `new Date()` here would be memoized at mount).
+  const [openedAt] = useState(() => Date.now());
+  const tick = useNow();
+  const now = new Date(Math.max(openedAt, tick));
   const at = fromLocalInput(when);
-  const now = new Date();
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
 
