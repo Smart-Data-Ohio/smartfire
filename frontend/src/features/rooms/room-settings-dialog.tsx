@@ -103,6 +103,27 @@ export default function RoomSettingsDialog({
   const [iconError, setIconError] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // Which opening of the dialog this is, and whether it's still open: a save or delete that
+  // completes after the viewer closed it (or after it reopened) mustn't close or navigate again.
+  const opening = useRef({ id: 0, open: false });
+
+  useEffect(() => {
+    opening.current = open
+      ? { id: opening.current.id + 1, open: true }
+      : { ...opening.current, open: false };
+  }, [open]);
+
+  const close = () => {
+    opening.current = { ...opening.current, open: false };
+    onOpenChange(false);
+  };
+
+  /** A check, for a write's completion, that the opening it started in is still the one showing. */
+  const stillShowing = () => {
+    const id = opening.current.id;
+
+    return () => opening.current.open && opening.current.id === id;
+  };
 
   // Each opening reads the room afresh: someone else may have changed it since.
   useEffect(() => {
@@ -229,6 +250,9 @@ export default function RoomSettingsDialog({
     }
 
     setBusy(true);
+
+    const showing = stillShowing();
+
     actions.rooms.update(roomId, updateBody(form, kind, draft)).then((result) => {
       setBusy(false);
 
@@ -236,9 +260,11 @@ export default function RoomSettingsDialog({
         // They took themselves out: the room is gone from their sidebar. Leaving the settings URL
         // closes the dialog; replacing it keeps Back from stepping into the room they left.
         toast({ title: `You left ${roomLabel(result.room.kind, result.room.name ?? "the room")}` });
-        void navigate({ to: "/", replace: true });
+
+        if (showing()) void navigate({ to: "/", replace: true });
       } else {
-        onOpenChange(false);
+        if (showing()) close();
+
         toast({ title: "Changes saved", tone: "success" });
       }
     }, fail("Couldn't save the changes"));
@@ -248,13 +274,17 @@ export default function RoomSettingsDialog({
     if (form === null) return;
 
     setDeleting(true);
+
+    const showing = stillShowing();
+
     actions.rooms.remove(roomId).then(
       () => {
         setDeleting(false);
         setConfirming(false);
         toast({ title: `Deleted ${roomLabel(kind, form.name ?? form.displayName)}` });
+
         // Leaving the settings URL closes the dialog (stepping back would land on the deleted room).
-        void navigate({ to: "/", replace: true });
+        if (showing()) void navigate({ to: "/", replace: true });
       },
       fail(`Couldn't delete the ${noun}`),
     );
@@ -268,7 +298,7 @@ export default function RoomSettingsDialog({
     );
 
   const footer = readOnly ? (
-    <Button variant="secondary" onClick={() => onOpenChange(false)}>
+    <Button variant="secondary" onClick={close}>
       Close
     </Button>
   ) : (
@@ -278,7 +308,7 @@ export default function RoomSettingsDialog({
           Unsaved changes
         </span>
       ) : null}
-      <Button variant="secondary" onClick={() => onOpenChange(false)}>
+      <Button variant="secondary" onClick={close}>
         Cancel
       </Button>
       <Button
@@ -425,7 +455,7 @@ export default function RoomSettingsDialog({
     <>
       <Dialog
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={(next) => (next ? onOpenChange(true) : close())}
         title={title}
         description={description}
         footer={footer}

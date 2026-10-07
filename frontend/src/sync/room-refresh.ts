@@ -10,6 +10,9 @@ let epoch = 0;
 /** The epoch of each room's latest management change. */
 const changedAt = new Map<number, number>();
 
+/** The epoch of the latest whole-sidebar snapshot, which rewrote every room the viewer can see. */
+let snapshotAt = 0;
+
 const listeners = new Map<number, Set<Listener>>();
 
 /** The management revision a pending header/member-list read must still match. */
@@ -32,6 +35,28 @@ export function invalidateRoom(roomId: number): number {
   return revision;
 }
 
+/**
+ * Rooms a snapshot (a reconnect's sidebar, a room's resync) just rewrote: a write that started
+ * before it mustn't land over it. Unlike `invalidateRoom` it doesn't ask readers to read again;
+ * the snapshot is already the newest.
+ */
+export function markRoomsChanged(roomIds: Iterable<number>): void {
+  epoch += 1;
+
+  for (const roomId of roomIds) {
+    changedAt.set(roomId, epoch);
+  }
+}
+
+/**
+ * A reconnect's sidebar snapshot replaced every row, so every write that started before it is
+ * older than the store, including a create whose new room the snapshot didn't list.
+ */
+export function markSidebarSnapshot(): void {
+  epoch += 1;
+  snapshotAt = epoch;
+}
+
 /** The workspace-wide management epoch now: take it before a write, to ask about it afterwards. */
 export function managementEpoch(): number {
   return epoch;
@@ -43,7 +68,7 @@ export function managementEpoch(): number {
  * It works for a room the write itself created, whose id wasn't known when it started.
  */
 export function changedSince(roomId: number, since: number): boolean {
-  return (changedAt.get(roomId) ?? 0) > since;
+  return snapshotAt > since || (changedAt.get(roomId) ?? 0) > since;
 }
 
 /** A mounted reader subscribes until its room changes or it unmounts. */

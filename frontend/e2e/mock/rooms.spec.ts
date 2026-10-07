@@ -167,6 +167,46 @@ test.describe("creating rooms", () => {
     await expect(page.locator(".sidebar").getByText("only-once", { exact: true })).toHaveCount(1);
   });
 
+  test("a retry that asks for something else is a new attempt with its own key", async ({
+    page,
+  }) => {
+    const keys: string[] = [];
+    let lost = 1;
+
+    await page.route("**/api/v1/rooms", async (route) => {
+      if (route.request().method() !== "POST") {
+        return route.continue();
+      }
+
+      keys.push(route.request().postDataJSON().clientRoomId);
+
+      if (lost > 0) {
+        lost -= 1;
+
+        return route.abort("connectionreset");
+      }
+
+      return route.continue();
+    });
+    await openApp(page, "rooms/new/open");
+
+    const dialog = page.getByRole("dialog", { name: "Create a channel" });
+    const name = dialog.getByLabel("Name", { exact: true });
+    const create = dialog.getByRole("button", { name: "Create channel" });
+
+    await expect(create).toBeEnabled();
+    await name.fill("first-try");
+    await create.click();
+    await expect(create).toBeEnabled();
+
+    await name.fill("second-try");
+    await create.click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("heading", { level: 1, name: "second-try" })).toBeVisible();
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
   test("the classic new page and the app shortcut open the dialog on their kind", async ({
     page,
   }) => {
@@ -303,6 +343,41 @@ test.describe("room settings", () => {
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("a save that lands after settings were closed doesn't close them again", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await rowFor(page, "general").click();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await page.getByRole("link", { name: /room settings$/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    let release: () => void = () => undefined;
+
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await page.route("**/api/v1/rooms/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        return route.continue();
+      }
+
+      await held;
+
+      return route.continue();
+    });
+    await dialog.getByLabel("Name", { exact: true }).fill("general-renamed");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+
+    release();
+    await expect(page.getByText("Changes saved")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
   });
 
   test("settings opened as the first page close onto the room in place", async ({ page }) => {

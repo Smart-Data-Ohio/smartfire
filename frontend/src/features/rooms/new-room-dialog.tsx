@@ -135,8 +135,9 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const [step, setStep] = useState<Step>("details");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [busy, setBusy] = useState(false);
-  // One key per opening: retrying a create whose reply was lost gets the room it made, not another.
-  const [clientRoomId, setClientRoomId] = useState(() => crypto.randomUUID());
+  // The last create sent in this opening: trying the same room again after a lost reply reuses
+  // its key (and gets the room it made); any change to what's asked for is a new attempt.
+  const lastSent = useRef<{ readonly key: string; readonly request: string } | null>(null);
 
   const [problem, setProblem] = useState<{ field: "iconName" | "other"; message: string } | null>(
     null,
@@ -158,7 +159,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
       setDirection("forward");
       setBusy(false);
       setProblem(null);
-      setClientRoomId(crypto.randomUUID());
+      lastSent.current = null;
     }
   }
 
@@ -217,7 +218,15 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
     setProblem(null);
 
     const draft = { name, iconName, userIds: [viewerId, ...members] };
-    const body = createBody(kind, draft, form.name, clientRoomId);
+    const request = JSON.stringify(createBody(kind, draft, form.name, ""));
+    const previous = lastSent.current;
+
+    const key =
+      previous !== null && previous.request === request ? previous.key : crypto.randomUUID();
+
+    lastSent.current = { key, request };
+
+    const body = createBody(kind, draft, form.name, key);
 
     actions.rooms.create(body).then((result) => {
       setBusy(false);

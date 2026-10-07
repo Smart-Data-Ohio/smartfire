@@ -71,6 +71,14 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                 .query_map([], |row| {
                     let mut value = json!({});
                     for (i, column) in columns.iter().enumerate() {
+                        // The API's per-attempt creation key is port-only; Slack imports leave it null.
+                        if table == "rooms" && column == "client_room_id" {
+                            assert!(
+                                matches!(row.get::<_, SqlValue>(i)?, SqlValue::Null),
+                                "Slack imports never set API creation keys"
+                            );
+                            continue;
+                        }
                         let v = match row.get::<_, SqlValue>(i)? {
                             SqlValue::Null => Value::Null,
                             SqlValue::Integer(v) => json!(v),

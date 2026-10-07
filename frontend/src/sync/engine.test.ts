@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
-import { Clock, Deferred, Effect, Layer, Random, Ref, Schema } from "effect";
+import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
@@ -24,6 +24,7 @@ import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
+import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
@@ -1206,6 +1207,84 @@ describe("room management refresh", () => {
           expect(reloads).toBe(1);
         }),
       ),
+  );
+
+  it.effect("doesn't let a save that was on its way during a resync bring back a lost room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+
+        // The save is sent, then its reply is held until after the reconnect.
+        yield* api.route("PATCH /rooms/12", () => Deferred.await(release).pipe(Effect.as(stale)));
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+
+        // Meanwhile the viewer is removed; the server can't resume, so the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/12", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        const before = (yield* api.requests).length;
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect((yield* api.requests).slice(before)).toContainEqual({
+          method: "GET",
+          path: "/rooms/12",
+        });
+      }),
+    ),
+  );
+
+  it.effect("doesn't land a create that was on its way during a resync over the snapshot", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(40, "launch");
+        const made = { room: row.room, detail: roomDetailFixture(40), row };
+
+        yield* api.route("POST /rooms", () => Deferred.await(release).pipe(Effect.as(made)));
+
+        const creating = yield* Effect.forkChild(
+          roomActions.create({ type: "open", name: "launch", iconName: null, clientRoomId: "k1" }),
+        );
+
+        yield* settle;
+
+        // The snapshot doesn't list the new room: by then the viewer has lost it again.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/40", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(creating);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[40]).toBeUndefined();
+        expect(store.getState().rooms[40]?.detail).toBeNull();
+      }),
+    ),
   );
 
   it.effect("refreshes a hidden row without revoking its still-readable room", () =>

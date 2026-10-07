@@ -27,7 +27,13 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { invalidateRoom, roomRefreshIds, roomRevision } from "./room-refresh.ts";
+import {
+  invalidateRoom,
+  markRoomsChanged,
+  markSidebarSnapshot,
+  roomRefreshIds,
+  roomRevision,
+} from "./room-refresh.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
@@ -205,12 +211,14 @@ export class Engine extends Context.Service<
         );
 
         if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
+          markRoomsChanged([roomId]);
           landRefreshedRoom(detail.success, revision);
         } else if (
           Result.isFailure(detail) &&
           roomRevision(roomId) === revision &&
           Predicate.isTagged(detail.failure, "NotFound")
         ) {
+          markRoomsChanged([roomId]);
           mutations.setRoomUnavailable(roomId);
           mutations.setPageFailed(roomId);
 
@@ -283,7 +291,13 @@ export class Engine extends Context.Service<
 
           if (topic === "user") {
             yield* sidebar().pipe(
-              Effect.tap((data) => Effect.sync(() => mutations.loadSidebar(data))),
+              Effect.tap((data) =>
+                Effect.sync(() => {
+                  mutations.loadSidebar(data);
+                  // The snapshot is newer than any room write still on its way.
+                  markSidebarSnapshot();
+                }),
+              ),
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
               ),
