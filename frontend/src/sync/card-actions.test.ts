@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Effect, Fiber } from "effect";
+import { Deferred, Effect, Fiber } from "effect";
 import { TestClock } from "effect/testing";
 import { Forbidden, Validation } from "../api/errors.ts";
 import { FakeApi, meFixture, messageFixture, pageFixture } from "../api/testing.ts";
@@ -201,6 +201,49 @@ describe("card actions", () => {
         response: "going",
         applyToFuture: true,
       });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("put two refused event responses back to the server's answer, not to a guess", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const gate = yield* Deferred.make<void>();
+
+      const attendance: EventAttendance = {
+        eventId: 3,
+        response: null,
+        goingCount: 1,
+        maybeCount: 0,
+        declinedCount: 0,
+        respondable: true,
+        canApplyToFuture: true,
+      };
+
+      yield* fake.reply("GET /rooms/12/events/3/attendance", attendance);
+      yield* cards.loadAttendance(ROOM, 3);
+      yield* fake.route("PUT /rooms/12/events/3/attendance", () =>
+        Deferred.await(gate).pipe(
+          Effect.andThen(Effect.fail(new Forbidden({ message: "Not allowed" }))),
+        ),
+      );
+
+      const both = yield* Effect.forkChild(
+        Effect.all(
+          [cards.respond(ROOM, 3, "going", false), cards.respond(ROOM, 3, "maybe", false)],
+          { concurrency: "unbounded", mode: "result" },
+        ),
+      );
+
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.await(both);
+
+      expect(store.getState().cards.previews.attendance[attendanceKey(3)]?.value).toEqual(
+        attendance,
+      );
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

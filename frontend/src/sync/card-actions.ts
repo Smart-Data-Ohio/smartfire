@@ -21,11 +21,18 @@ import {
   withResponse,
 } from "../store/cards.ts";
 import { mutations, store } from "../store/store.ts";
+import { keyedSerial } from "./serial.ts";
 
 /** How often a preview the server is still fetching is asked for again, and how long between. */
 const STILL_LOADING_RETRIES = 4;
 
 const FIRST_RETRY = Duration.seconds(2);
+
+/** Ballots go out one at a time per poll, so the server sees them in the order they were cast. */
+const votes = keyedSerial<number>();
+
+/** Answers go out one at a time per event, so each rolls back to a copy no other is holding. */
+const answers = keyedSerial<number>();
 
 /** Fetches the viewer's results for a poll (its choice in an anonymous poll comes only here). */
 export const loadPoll = Effect.fn("cards.loadPoll")(function* (roomId: number, pollId: number) {
@@ -44,7 +51,8 @@ export const loadPoll = Effect.fn("cards.loadPoll")(function* (roomId: number, p
 
 /**
  * Sends the viewer's whole ballot (`[]` takes the vote back). The counts move at once; a refusal
- * (closed, or not a member any more) puts them back and rejects.
+ * (closed, or not a member any more) puts them back, unless a later ballot has replaced this one,
+ * and rejects.
  */
 export const vote = Effect.fn("cards.vote")(function* (
   roomId: number,
@@ -55,9 +63,12 @@ export const vote = Effect.fn("cards.vote")(function* (
 
   cardMutations.setPendingVote(pollId, sent);
 
-  const results = yield* api
-    .votePoll(roomId, pollId, sent)
-    .pipe(Effect.tapError(() => Effect.sync(() => cardMutations.settleVote(pollId, sent, null))));
+  const results = yield* votes.run(
+    pollId,
+    api
+      .votePoll(roomId, pollId, sent)
+      .pipe(Effect.onError(() => Effect.sync(() => cardMutations.settleVote(pollId, sent, null)))),
+  );
 
   cardMutations.settleVote(pollId, sent, results);
 });
@@ -179,7 +190,7 @@ export const loadAttendance = Effect.fn("cards.loadAttendance")(function* (
 
 /**
  * Answers an event (with `applyToFuture`, every later occurrence too). Shown at once; a refusal
- * puts the previous answer back and rejects.
+ * puts the previous answer back, if nothing newer has replaced the guess since, and rejects.
  */
 export const respond = Effect.fn("cards.respond")(function* (
   roomId: number,
@@ -187,22 +198,32 @@ export const respond = Effect.fn("cards.respond")(function* (
   response: AttendanceResponse,
   applyToFuture: boolean,
 ) {
-  const before = store.getState().cards.previews.attendance[attendanceKey(eventId)];
-  const shown = before?.value ?? null;
+  const key = attendanceKey(eventId);
 
-  if (shown !== null) {
-    cardMutations.setAttendance(withResponse(shown, response), yield* Clock.currentTimeMillis);
-  }
+  yield* answers.run(
+    eventId,
+    Effect.gen(function* () {
+      const before = store.getState().cards.previews.attendance[key];
+      const shown = before?.value ?? null;
+      const guess = shown === null ? null : withResponse(shown, response);
 
-  const reply = yield* api.respondToEvent(roomId, eventId, response, applyToFuture).pipe(
-    Effect.tapError(() =>
-      Effect.sync(() => {
-        if (shown !== null) {
-          cardMutations.setAttendance(shown, before?.fetchedAt ?? 0);
-        }
-      }),
-    ),
+      if (guess !== null) {
+        cardMutations.setAttendance(guess, yield* Clock.currentTimeMillis);
+      }
+
+      const reply = yield* api.respondToEvent(roomId, eventId, response, applyToFuture).pipe(
+        Effect.onError(() =>
+          Effect.sync(() => {
+            const held = store.getState().cards.previews.attendance[key]?.value ?? null;
+
+            if (shown !== null && guess !== null && held === guess) {
+              cardMutations.setAttendance(shown, before?.fetchedAt ?? 0);
+            }
+          }),
+        ),
+      );
+
+      cardMutations.setAttendance(reply, yield* Clock.currentTimeMillis);
+    }),
   );
-
-  cardMutations.setAttendance(reply, yield* Clock.currentTimeMillis);
 });
