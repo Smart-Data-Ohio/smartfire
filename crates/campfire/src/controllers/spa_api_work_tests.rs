@@ -90,8 +90,9 @@ fn board_topics() -> [String; 2] {
     [format!("room:{BOARD}"), format!("thread:{DONE_POST}")]
 }
 
-/// A later committed message fences publications without depending on a quiet-time timeout.
+/// A marker fences writes; draining the renderer also catches frames that arrive after it.
 async fn no_more_thread_updates(
+    a: &TestApp,
     browser: &mut Browser<'_>,
     sync: &mut Sync,
     room_id: i64,
@@ -124,6 +125,14 @@ async fn no_more_thread_updates(
         thread_updated(thread_id),
     )
     .await;
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("all deferred sync publications settled");
+    sync.assert_no_event(thread_updated(thread_id), Duration::from_millis(100))
+        .await;
 }
 
 /// The existing writer-queue interleaving pattern, without a production pause hook.
@@ -152,6 +161,40 @@ async fn wait_for_queued_writes(a: &TestApp, count: usize) {
     })
     .await
     .expect("the competing HTTP writes queued behind the held writer");
+}
+
+#[tokio::test]
+async fn deferred_sync_publications_settle_after_reader_jobs_and_per_app() {
+    use campfire_app::cable::sync::SyncRenderer;
+
+    let a = app(true).await.expect("the frozen default seed");
+    let b = app(true).await.expect("the frozen default seed");
+    let renderer =
+        campfire_api::sync::Renderer::new(&a.booted.app, tokio::runtime::Handle::current());
+    let other = campfire_api::sync::Renderer::new(&b.booted.app, tokio::runtime::Handle::current());
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (release, held) = std::sync::mpsc::channel();
+    renderer.defer(Box::new(move |_| {
+        entered.send(()).unwrap();
+        held.recv_timeout(Duration::from_secs(10)).unwrap();
+    }));
+    tokio::time::timeout(Duration::from_secs(5), ready)
+        .await
+        .expect("the deferred reader started")
+        .unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_millis(100), renderer.settle())
+            .await
+            .is_err(),
+        "settle must include a reader that is still publishing"
+    );
+    tokio::time::timeout(Duration::from_secs(1), other.settle())
+        .await
+        .expect("another app has no outstanding deferred reads");
+    release.send(()).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), renderer.settle())
+        .await
+        .expect("settle completes once the deferred reader finishes");
 }
 
 #[tokio::test]
@@ -379,6 +422,7 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         Some(api::WorkStatus::Planned)
     );
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -426,6 +470,7 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         .await;
     assert_eq!(event.topic, format!("room:{DESIGNERS}"));
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -507,6 +552,7 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         )
         .await;
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -560,6 +606,7 @@ async fn a_link_change_publishes_thread_updated() {
     assert!(links[0].event_starts_at.is_some());
     let mut david = a.sign_in(DAVID).await;
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -579,6 +626,7 @@ async fn a_link_change_publishes_thread_updated() {
         )
         .await;
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -624,6 +672,7 @@ async fn a_link_change_publishes_thread_updated() {
     );
     assert!(link.url.starts_with("https://"), "{}", link.url);
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut kevins_tab,
         DESIGNERS,
@@ -779,6 +828,7 @@ async fn a_handoff_takes_the_classic_checks_and_moves_the_owner() {
         Some(BENDER)
     );
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut jasons_tab,
         BOARD,
@@ -832,6 +882,7 @@ async fn a_classic_thread_update_publishes_thread_updated_once() {
         kevins_tab.until(thread_updated(THREAD), |_| false).await;
         marker += 1;
         no_more_thread_updates(
+            &a,
             &mut david,
             &mut kevins_tab,
             DESIGNERS,
@@ -843,8 +894,7 @@ async fn a_classic_thread_update_publishes_thread_updated_once() {
     server.abort();
 }
 
-#[tokio::test]
-async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_once() {
+async fn a_classic_tag_update_auto_assigns_once(status: Option<&'static str>) {
     use campfire_db::{BoardTagAssignment, ChannelThread, NewBoardTagAssignment, NewChannelThread};
 
     let a = app(true).await.expect("the frozen default seed");
@@ -878,6 +928,10 @@ async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_onc
     let mut david = a.sign_in(DAVID).await;
     let mut tab = Sync::connect(addr, &david.cookie_header(), &board_topics()).await;
     tab.welcome().await;
+    let mut form = vec![("thread[tags]", "release")];
+    if let Some(status) = status {
+        form.push(("thread[work_status]", status));
+    }
     let reply = david
         .write(
             Req::new(
@@ -885,7 +939,7 @@ async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_onc
                 &format!("/rooms/{BOARD}/threads/{}", post.id),
             )
             .header("accept", "text/html")
-            .form(&[("thread[tags]", "release")]),
+            .form(&form),
         )
         .await;
     assert!(reply.status.is_redirection(), "{}", reply.text());
@@ -893,18 +947,53 @@ async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_onc
     let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
         unreachable!()
     };
+    let work = thread.work.unwrap();
     assert_eq!(
-        thread.work.unwrap().owner.unwrap().id,
+        work.status,
+        if status.is_some() {
+            api::WorkStatus::InProgress
+        } else {
+            api::WorkStatus::Planned
+        },
+        "the single publication includes the requested status"
+    );
+    assert_eq!(
+        work.owner.unwrap().id,
         JASON,
         "the tag callback committed the assignment"
     );
-    let stored = a
+    let (stored, history) = a
         .db()
-        .read(move |conn| ChannelThread::find(conn, post.id))
+        .read(move |conn| {
+            Ok((
+                ChannelThread::find(conn, post.id)?,
+                campfire_db::WorkThreadEvent::for_thread(conn, post.id)?,
+            ))
+        })
         .await
         .unwrap();
     assert_eq!(stored.work_owner_id, Some(JASON));
+    assert!(
+        history.iter().any(|entry| {
+            entry.event_type == "work_assignment"
+                && entry.from_owner_id.is_none()
+                && entry.to_owner_id == Some(JASON)
+                && entry.metadata["note"] == "Auto-assigned by board tag rule"
+        }),
+        "the auto-assignment keeps its history: {history:?}"
+    );
+    if status.is_some() {
+        assert!(
+            history.iter().any(|entry| {
+                entry.event_type == "work_update"
+                    && entry.from_status.as_deref() == Some("planned")
+                    && entry.to_status.as_deref() == Some("in_progress")
+            }),
+            "the status change keeps its history: {history:?}"
+        );
+    }
     no_more_thread_updates(
+        &a,
         &mut david,
         &mut tab,
         BOARD,
@@ -913,6 +1002,16 @@ async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_onc
     )
     .await;
     server.abort();
+}
+
+#[tokio::test]
+async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_once() {
+    a_classic_tag_update_auto_assigns_once(None).await;
+}
+
+#[tokio::test]
+async fn a_combined_tag_and_work_classic_update_auto_assigns_and_publishes_thread_updated_once() {
+    a_classic_tag_update_auto_assigns_once(Some("in_progress")).await;
 }
 
 #[tokio::test]
@@ -1027,6 +1126,7 @@ async fn agent_token_work_writes_publish_thread_updated_once() {
             _ => unreachable!(),
         }
         no_more_thread_updates(
+            &a,
             &mut david,
             &mut tab,
             BOARD,
@@ -1092,6 +1192,7 @@ async fn overlapping_handoffs_commit_once_and_publish_thread_updated_once() {
     };
     assert_eq!(thread.work.unwrap().owner.unwrap().id, BENDER);
     no_more_thread_updates(
+        &a,
         &mut first,
         &mut tab,
         BOARD,
@@ -1177,6 +1278,7 @@ async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
             api::WorkStatus::InProgress
         );
         no_more_thread_updates(
+            &a,
             &mut classic,
             &mut tab,
             DESIGNERS,
@@ -1272,6 +1374,7 @@ async fn classic_board_frames(spa: bool) -> Option<Vec<(String, String)>> {
         assert_eq!(work.status, api::WorkStatus::Blocked);
         assert_eq!(work.links.len(), 1);
         no_more_thread_updates(
+            &a,
             &mut david,
             &mut sync,
             BOARD,

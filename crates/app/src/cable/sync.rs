@@ -86,6 +86,11 @@ pub trait SyncRenderer: Send + Sync + 'static {
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
+    /// Waits for this renderer's deferred reads, so publication counts include late frames.
+    #[cfg(feature = "test-support")]
+    fn settle(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
+        Box::pin(async {})
+    }
 }
 
 /// Where [`Broadcasts`](super::Broadcasts) finds the installed [`SyncRenderer`].
@@ -96,6 +101,13 @@ impl RendererSlot {
     /// Only the first call takes effect.
     pub fn install(&self, renderer: Arc<dyn SyncRenderer>) {
         let _ = self.0.set(renderer);
+    }
+
+    #[cfg(feature = "test-support")]
+    pub async fn settle(&self) {
+        if let Some(renderer) = self.0.get() {
+            renderer.settle().await;
+        }
     }
 
     fn get(&self, server: &Cable) -> Option<&Arc<dyn SyncRenderer>> {

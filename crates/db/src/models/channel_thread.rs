@@ -50,8 +50,8 @@ impl crate::events::Broadcast for ThreadWorkChange {
 }
 impl ThreadWorkChange {
     pub fn emit(tx: &mut Tx<'_>, thread_id: i64) {
-        // Once per transaction: a request that edits the result and the status publishes once.
-        tx.broadcast_after_commit_once(&ThreadWorkChange { thread_id });
+        // Include tag auto-assignment's after-commit write before publishing the final facts.
+        tx.broadcast_after_commit_settled_once(&ThreadWorkChange { thread_id });
     }
 }
 

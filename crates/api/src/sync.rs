@@ -5,6 +5,8 @@
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Weak};
+#[cfg(feature = "test-support")]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use campfire_api_types as api;
 use campfire_app::app::AppState;
@@ -21,6 +23,48 @@ use crate::dto;
 pub struct Renderer {
     app: Weak<AppState>,
     runtime: tokio::runtime::Handle,
+    #[cfg(feature = "test-support")]
+    deferred: Arc<DeferredJobs>,
+}
+
+#[cfg(feature = "test-support")]
+#[derive(Default)]
+struct DeferredJobs {
+    outstanding: AtomicUsize,
+    finished: tokio::sync::Notify,
+}
+
+#[cfg(feature = "test-support")]
+impl DeferredJobs {
+    fn start(self: &Arc<Self>) -> DeferredJob {
+        self.outstanding.fetch_add(1, Ordering::AcqRel);
+        DeferredJob(self.clone())
+    }
+
+    async fn settle(&self) {
+        loop {
+            let notified = self.finished.notified();
+            tokio::pin!(notified);
+            // Register before checking: the last job can finish between the check and await.
+            notified.as_mut().enable();
+            if self.outstanding.load(Ordering::Acquire) == 0 {
+                return;
+            }
+            notified.await;
+        }
+    }
+}
+
+#[cfg(feature = "test-support")]
+struct DeferredJob(Arc<DeferredJobs>);
+
+#[cfg(feature = "test-support")]
+impl Drop for DeferredJob {
+    fn drop(&mut self) {
+        if self.0.outstanding.fetch_sub(1, Ordering::AcqRel) == 1 {
+            self.0.finished.notify_waiters();
+        }
+    }
 }
 
 impl Renderer {
@@ -28,6 +72,8 @@ impl Renderer {
         Self {
             app: Arc::downgrade(app),
             runtime,
+            #[cfg(feature = "test-support")]
+            deferred: Arc::default(),
         }
     }
 }
@@ -188,10 +234,16 @@ impl SyncRenderer for Renderer {
         let Some(app) = self.app.upgrade() else {
             return;
         };
+        #[cfg(feature = "test-support")]
+        let deferred = self.deferred.start();
         self.runtime.spawn(async move {
             let result = app
                 .db
                 .read(move |conn| {
+                    // A cancelled async read may leave its blocking reader running. Keep the
+                    // guard with that reader until its job has really finished publishing.
+                    #[cfg(feature = "test-support")]
+                    let _deferred = deferred;
                     job(conn);
                     Ok(())
                 })
@@ -200,6 +252,11 @@ impl SyncRenderer for Renderer {
                 tracing::warn!(%error, "sync: deferred twin not read");
             }
         });
+    }
+
+    #[cfg(feature = "test-support")]
+    fn settle(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
+        Box::pin(self.deferred.settle())
     }
 }
 

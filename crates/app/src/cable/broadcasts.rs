@@ -186,6 +186,12 @@ impl Broadcasts {
         self.sync.install(renderer);
     }
 
+    /// Drains this app's deferred twins before test assertions count socket publications.
+    #[cfg(feature = "test-support")]
+    pub async fn settle_sync(&self) {
+        self.sync.settle().await;
+    }
+
     /// `message.created` (or `message.updated`) for a message a broadcast point outside this
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {
