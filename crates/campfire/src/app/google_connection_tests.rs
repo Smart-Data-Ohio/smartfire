@@ -21,8 +21,12 @@ async fn app() -> (TestApp, Arc<Recorded>) {
         .await
         .unwrap();
     super::google_test_support::observe_jobs(&a).await;
-    // The normal durable runner executes the callback's SyncEntry jobs. Give those
-    // consumers their own Rails-recorded replies so they cannot take a /token reply.
+    answer_calendar_jobs(&a, &r).await;
+    (a, r)
+}
+/// The normal durable runner executes the callback's SyncEntry jobs. Give those
+/// consumers their own Rails-recorded replies so they cannot take a /token reply.
+async fn answer_calendar_jobs(a: &TestApp, r: &Recorded) {
     let inserted = support::vectors()["scenarios"]
         .as_array()
         .unwrap()
@@ -58,7 +62,6 @@ async fn app() -> (TestApp, Arc<Recorded>) {
             );
         }
     }
-    (a, r)
 }
 pub async fn sudo(a: &TestApp, b: &mut Browser<'_>) {
     let crypto = RailsCrypto::new(a.booted.app.secrets.clone());
@@ -722,6 +725,26 @@ async fn spa_boot(b: &mut Browser<'_>) -> Value {
     serde_json::from_str(json).unwrap()
 }
 
+/// The classic layout's flash: its kind (an alert carries the negative background) and message.
+fn classic_flash(html: &str) -> Value {
+    let flash = html
+        .split("<div class=\"flash\"")
+        .nth(1)
+        .and_then(|rest| rest.split("<main").next())
+        .expect("the classic layout shows the flash");
+    let kind = if flash.contains("--flash-background: var(--color-negative)") {
+        "alert"
+    } else {
+        "notice"
+    };
+    let message = flash
+        .split("aria-atomic=\"true\">")
+        .nth(1)
+        .and_then(|rest| rest.split("</span>").next())
+        .expect("the flash announces its message");
+    json!({"kind": kind, "message": message})
+}
+
 #[tokio::test]
 async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_flash() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
@@ -735,6 +758,7 @@ async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_fl
         .expect("default seed required");
         let r = Recorded::new(vec![]);
         support::install(&a, r.clone()).await;
+        answer_calendar_jobs(&a, &r).await;
         a.db()
             .write(move |tx| ui_preference::store(tx, DAVID, preference))
             .await
@@ -744,15 +768,28 @@ async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_fl
             _ => "http://campfire.test/users/me/profile",
         };
         let mut b = a.sign_in(DAVID).await;
+        // The successful connection goes last: the jobs it enqueues call Google too, and must not
+        // take a reply recorded for a later callback.
         let outcomes = [
-            ("forged", "Google connection expired. Try again."),
-            ("denied", "Google Calendar connection was not approved."),
+            ("forged", "alert", "Google connection expired. Try again."),
+            (
+                "denied",
+                "alert",
+                "Google Calendar connection was not approved.",
+            ),
+            (
+                "provider failure",
+                "alert",
+                "Could not connect Google Calendar. Try again.",
+            ),
             (
                 "drive-only",
+                "alert",
                 "Calendar permission was not granted. Reconnect to publish events.",
             ),
+            ("connected", "notice", "Google Calendar connected."),
         ];
-        for (outcome, message) in outcomes {
+        for (outcome, kind, message) in outcomes {
             let state = start(&a, &mut b).await;
             let reply = match outcome {
                 "forged" => callback(&mut b, "forged").await,
@@ -763,24 +800,49 @@ async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_fl
                     ))
                     .await
                 }
-                _ => {
+                "provider failure" => {
+                    r.answer(400, json!({"error": "invalid_grant"}));
+                    callback(&mut b, &state).await
+                }
+                "drive-only" => {
                     r.answer(
                         200,
                         tokens(&a, Some(campfire_db::models::google_account::DRIVE_SCOPE)),
                     );
                     callback(&mut b, &state).await
                 }
+                _ => {
+                    let scopes = format!(
+                        "{} {}",
+                        campfire_db::models::google_account::CALENDAR_SCOPE,
+                        campfire_db::models::google_account::DRIVE_SCOPE
+                    );
+                    r.answer(200, tokens(&a, Some(&scopes)));
+                    callback(&mut b, &state).await
+                }
             };
+            assert_eq!(
+                reply.status,
+                StatusCode::FOUND,
+                "{outcome}: {}",
+                reply.text()
+            );
             assert_eq!(reply.location(), Some(destination), "{outcome}");
+            let flash = json!({"kind": kind, "message": message});
             if preference == UiPreference::Next {
-                assert_eq!(
-                    spa_boot(&mut b).await["flash"],
-                    json!({"kind": "alert", "message": message}),
-                    "{outcome}"
-                );
+                assert_eq!(spa_boot(&mut b).await["flash"], flash, "{outcome}");
             } else {
-                assert!(b.get("/users/me/profile").await.text().contains(message), "{outcome}");
+                let profile = b.get("/users/me/profile").await.text();
+                assert_eq!(classic_flash(&profile), flash, "{outcome}");
             }
         }
+        let connected = a
+            .db()
+            .read(|c| GoogleAccount::for_user(c, DAVID))
+            .await
+            .unwrap()
+            .expect("the last outcome connected Google");
+        assert_eq!(connected.email, "david@gmail.test");
+        assert!(connected.calendar() && connected.drive());
     }
 }

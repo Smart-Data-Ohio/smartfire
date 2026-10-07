@@ -51,7 +51,10 @@ pub fn forms(html: &str) -> Vec<Form> {
                 .to_ascii_lowercase();
             Form {
                 action: dom.attr(form, "action").unwrap_or("").into(),
-                html_method: dom.attr(form, "method").unwrap_or("get").to_ascii_lowercase(),
+                html_method: dom
+                    .attr(form, "method")
+                    .unwrap_or("get")
+                    .to_ascii_lowercase(),
                 method,
                 enctype: dom
                     .attr(form, "enctype")
@@ -192,6 +195,15 @@ pub fn assert_head(name: &str, actual: &str, rails: &str) {
     assert_eq!(head(actual), head(rails), "{name}: Rails head metadata");
 }
 
+/// Which part of the Rails contract `actual` breaks, if any: the same checks as `assert_forms`,
+/// without panicking.
+pub fn contract_break(actual: &str, rails: &str) -> Option<&'static str> {
+    if rails.contains("<head") && head(actual) != head(rails) {
+        return Some("Rails head metadata");
+    }
+    (forms(actual) != forms(rails)).then_some("Rails form contract")
+}
+
 /// The forms, and for complete documents the head metadata too.
 pub fn assert_forms(name: &str, actual: &str, rails: &str) {
     if rails.contains("<head") {
@@ -316,6 +328,107 @@ mod tests {
         assert_eq!(forms(rails)[0].action, "/user?a=1&b=2");
         assert_eq!(forms(rails)[0].method, "patch");
         assert_eq!(forms(rails)[0].controls[6].values, ["b"]);
+    }
+
+    #[test]
+    fn form_contracts_detect_html_method_csrf_and_disabled_changes() {
+        let rails = r#"<form action="/session" method="post"><input type="hidden" name="_method" value="delete"><input type="hidden" name="authenticity_token" value="real"><input name="code"><button name="go" disabled>Go</button></form>"#;
+        assert_forms(
+            "another token",
+            &rails.replace("value=\"real\"", "value=\"other\""),
+            rails,
+        );
+        for (change, mutation) in [
+            (
+                "HTML method beneath an unchanged _method",
+                rails.replace("method=\"post\"", "method=\"get\""),
+            ),
+            (
+                "HTML method dropped beneath an unchanged _method",
+                rails.replace(" method=\"post\"", ""),
+            ),
+            (
+                "empty CSRF value",
+                rails.replace("value=\"real\"", "value=\"\""),
+            ),
+            ("missing CSRF value", rails.replace(" value=\"real\"", "")),
+            ("disabled control removed", rails.replace(" disabled", "")),
+            (
+                "disabled control added",
+                rails.replace("<input name=\"code\">", "<input name=\"code\" disabled>"),
+            ),
+        ] {
+            assert_ne!(mutation, rails, "{change}: the mutation applies");
+            assert_ne!(forms(&mutation), forms(rails), "{change}");
+            assert_eq!(
+                contract_break(&mutation, rails),
+                Some("Rails form contract"),
+                "{change}"
+            );
+        }
+        let form = &forms(rails)[0];
+        assert_eq!(
+            (form.html_method.as_str(), form.method.as_str()),
+            ("post", "delete")
+        );
+        assert_eq!(
+            forms(&rails.replace(" value=\"real\"", ""))[0].controls[1].values,
+            ["<missing authenticity_token>"]
+        );
+    }
+
+    #[test]
+    fn form_contracts_detect_head_metadata_changes_in_complete_documents() {
+        let rails = r#"<!DOCTYPE html><html><head><meta name="csrf-param" content="authenticity_token"><meta name="csrf-token" content="real"><meta name="current-user-id" content="7"><meta name="turbo-visit-control" content="reload"><meta name="turbo-cache-control" content="no-cache"></head><body><form action="/x" method="post"><input type="hidden" name="authenticity_token" value="real"></form></body></html>"#;
+        let other_token = rails.replace("content=\"real\"", "content=\"other\"");
+        assert_forms("another token", &other_token, rails);
+        assert_eq!(contract_break(&other_token, rails), None);
+        assert_eq!(contract(&other_token), contract(rails));
+        for (change, mutation) in [
+            (
+                "csrf-param removed",
+                rails.replace(
+                    r#"<meta name="csrf-param" content="authenticity_token">"#,
+                    "",
+                ),
+            ),
+            (
+                "csrf-token removed",
+                rails.replace(r#"<meta name="csrf-token" content="real">"#, ""),
+            ),
+            (
+                "csrf-token emptied",
+                rails.replace(
+                    r#"name="csrf-token" content="real""#,
+                    r#"name="csrf-token" content="""#,
+                ),
+            ),
+            (
+                "current-user-id changed",
+                rails.replace("content=\"7\"", "content=\"8\""),
+            ),
+            (
+                "current-user-id removed",
+                rails.replace(r#"<meta name="current-user-id" content="7">"#, ""),
+            ),
+            (
+                "turbo-visit-control removed",
+                rails.replace(r#"<meta name="turbo-visit-control" content="reload">"#, ""),
+            ),
+            (
+                "turbo-cache-control changed",
+                rails.replace("content=\"no-cache\"", "content=\"no-preview\""),
+            ),
+        ] {
+            assert_ne!(mutation, rails, "{change}: the mutation applies");
+            assert_ne!(head(&mutation), head(rails), "{change}");
+            assert_ne!(contract(&mutation), contract(rails), "{change}: contract");
+            assert_eq!(
+                contract_break(&mutation, rails),
+                Some("Rails head metadata"),
+                "{change}"
+            );
+        }
     }
 
     #[test]
