@@ -259,7 +259,10 @@ describe("GET /search", () => {
 
     for (const message of files.messages) {
       expect(message.creatorId).toBe(USER_IDS.maya);
-      expect(message.attachment).not.toBeNull();
+      // A file is an attachment or a Drive card.
+      expect(
+        message.attachment !== null || message.cards.some((card) => card.kind === "drive"),
+      ).toBe(true);
     }
 
     const inRoom = await get<SearchResults>(server, searchPath("in:#engineering"));

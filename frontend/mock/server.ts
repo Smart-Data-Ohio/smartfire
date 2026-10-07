@@ -57,6 +57,7 @@ import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
 import { createServerInboxAmbient } from "./s3/ambient.ts";
+import { CARD_IDS, createCards } from "./s3/cards.ts";
 import { createOrganize } from "./s3/organize.ts";
 import { createSaved } from "./s3/saved.ts";
 import { createSearch } from "./s3/search.ts";
@@ -118,6 +119,7 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
+  cards: CARD_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -686,7 +688,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const cards = createCards(ctx);
+
   const routes = [
+    ...cards.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -938,6 +943,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "cards":
+        return { status: 200, json: cards.control(body) };
       case "reset":
         server.reset();
 
