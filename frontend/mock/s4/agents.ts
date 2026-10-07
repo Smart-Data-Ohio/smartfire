@@ -20,11 +20,13 @@ import type { AgentStepStatus } from "../../src/gen/AgentStepStatus.ts";
 import type { Icon } from "../../src/gen/Icon.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { User } from "../../src/gen/User.ts";
-import { notFound, ok, validation } from "../http.ts";
+import { notFound, ok } from "../http.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso } from "../s2/model.ts";
 import { BOT_ID, ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
+import { validation } from "./http.ts";
+import { workStateOf } from "./work-state.ts";
 
 const MINUTE = 60_000;
 
@@ -307,7 +309,7 @@ export function statusControl(
   const known = STATUSES.find((candidate) => candidate === status);
 
   if (status !== null && known === undefined) {
-    throw validation("status", "status must be idle, working, waiting or failed");
+    throw validation("status", "must be idle, working, waiting or failed");
   }
 
   return {
@@ -377,7 +379,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
   const recordOr404 = (agentId: number): AgentRecord => {
     const record = records.get(agentId);
 
-    if (record === undefined) throw notFound("Agent not found");
+    if (record === undefined) throw notFound();
 
     return record;
   };
@@ -494,6 +496,12 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
   };
 
   const seed = () => {
+    // Ember cannot manage threads in announcements. Existing work rooms keep their capabilities.
+    workStateOf(ctx.world()).agentCapabilities.set(
+      `${ROOM_IDS.announcements}:${AGENT_IDS.ember}`,
+      new Set(["post_messages", "read_messages"]),
+    );
+
     const now = ctx.now();
     const world = ctx.world();
 
@@ -673,16 +681,16 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
   const setSteps = (messageId: number, stage: number): readonly AgentStep[] => {
     const found = locateMessage(messageId);
 
-    if (found === null) throw notFound("Message not found");
+    if (found === null) throw notFound();
 
     if (!Number.isInteger(stage) || stage < 0 || stage > PLAN.length) {
-      throw validation("stage", `stage must be 0 to ${PLAN.length}`);
+      throw validation("stage", `must be 0 to ${PLAN.length}`);
     }
 
     const { room, index } = found;
     const message = room.messages[index];
 
-    if (message === undefined) throw notFound("Message not found");
+    if (message === undefined) throw notFound();
 
     const now = ctx.now();
     const held = new Map(message.steps.map((step) => [step.name, step]));

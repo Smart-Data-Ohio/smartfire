@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { ThreadCreated } from "../../src/gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { WorkList } from "../../src/gen/WorkList.ts";
 import type { Json } from "../json.ts";
-import { collect, errorOf, expectStatus, get, harness, send } from "../s2/testing.ts";
+import { collect, errorOf, expectStatus, get, harness, messageBody, send } from "../s2/testing.ts";
 import { SEED_IDS } from "../server.ts";
+import { AGENT_IDS } from "./agents.ts";
 import { normalizeList, truncate, workPermissions } from "./work-model.ts";
 
 const { users } = SEED_IDS;
@@ -248,7 +250,13 @@ describe("PATCH /threads/:id/work", () => {
     const path = patch(ids.viewerOwned);
     const refused = await expectStatus<Json>(server, "PATCH", path, { status: null }, 422);
 
-    expect(errorOf(refused).message).toBe("Validation failed: Work owner requires work tracking");
+    expect(refused).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Work owner requires work tracking",
+        fields: { ownerId: ["requires work tracking"] },
+      },
+    });
 
     const stopped = await expectStatus<ThreadDetail>(
       server,
@@ -281,14 +289,20 @@ describe("PATCH /threads/:id/work", () => {
     const status = await expectStatus<Json>(server, "PATCH", path, { status: "someday" }, 422);
     const untracked = patch(ids.untracked);
 
-    const stop = await expectStatus<Json>(server, "PATCH", untracked, { status: null }, 403);
+    const stop = await expectStatus<ThreadDetail>(
+      server,
+      "PATCH",
+      untracked,
+      { status: null },
+      200,
+    );
 
-    const result = await expectStatus<Json>(
+    const result = await expectStatus<ThreadDetail>(
       server,
       "PATCH",
       untracked,
       { resultMarkdown: "x" },
-      403,
+      200,
     );
 
     const missing = await send(server, "PATCH", "/api/v1/threads/9999/work", { status: "done" });
@@ -297,10 +311,49 @@ describe("PATCH /threads/:id/work", () => {
     expect(errorOf(inactive).message).toContain("active human member of the parent room");
     expect(errorOf(long).message).toContain("maximum is 20000 characters");
     expect(errorOf(status).tag).toBe("Validation");
-    expect(errorOf(stop).tag).toBe("Forbidden");
-    expect(errorOf(result).tag).toBe("Forbidden");
+    expect(stop.thread.work).toBeNull();
+    expect(result.thread.work).toBeNull();
     expect(missing.status).toBe(404);
     expect((await detailOf(server, ids.untracked)).thread.work).toBeNull();
+
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+    const forbidden = await expectStatus<Json>(
+      server,
+      "PATCH",
+      patch(ids.agentOwned),
+      { status: "done" },
+      403,
+    );
+
+    expect(errorOf(forbidden).message).toBe("You can't make that change to this thread");
+    expect(missing.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
+  });
+
+  it("returns decode errors without field errors for malformed work bodies", async () => {
+    const { server } = harness();
+
+    for (const body of [
+      { status: 42 },
+      { status: "someday" },
+      { ownerId: "1" },
+      { ownerId: true },
+      { resultMarkdown: 42 },
+      null,
+    ]) {
+      const response = await send(server, "PATCH", patch(ids.viewerOwned), body);
+
+      expect(response.status).toBe(422);
+      expect(response.json).toEqual({
+        error: {
+          _tag: expect.stringMatching(/^Validation$/),
+          message: expect.stringMatching(/^The request body isn't valid/),
+          fields: {},
+        },
+      });
+    }
   });
 });
 
@@ -364,9 +417,124 @@ describe("POST /threads/:id/work/handoff", () => {
     expect(errorOf(owner).message).toContain("Receiver is already the owner of this work");
     expect(errorOf(absent).message).toContain("Receiver must be an active agent member");
     expect(errorOf(blank).message).toBe(
-      "Validation failed: Summary can't be blank, Links must be http(s) URLs, Open questions must be at most 500 characters each",
+      "Summary can't be blank, Links must be http(s) URLs, Open questions must be at most 500 characters each",
     );
+    expect(blank).toMatchObject({
+      error: {
+        fields: {
+          summary: ["can't be blank"],
+          links: ["must be http(s) URLs"],
+          openQuestions: ["must be at most 500 characters each"],
+        },
+      },
+    });
     expect(errorOf(many).message).toContain("Links are limited to 10 per handoff");
+  });
+
+  it("checks handoff scope before decoding the body", async () => {
+    const { server } = harness();
+
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+    const missing = await send(server, "POST", "/api/v1/threads/9999/work/handoff", {});
+
+    const untracked = await send(
+      server,
+      "POST",
+      `/api/v1/threads/${ids.untracked}/work/handoff`,
+      {},
+    );
+
+    const forbidden = await send(
+      server,
+      "POST",
+      `/api/v1/threads/${ids.agentOwned}/work/handoff`,
+      {},
+    );
+
+    expect(missing.status).toBe(404);
+    expect(missing.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
+    expect(untracked.status).toBe(422);
+    expect(untracked.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "This thread isn't tracked as work",
+        fields: { base: ["This thread isn't tracked as work"] },
+      },
+    });
+    expect(forbidden.status).toBe(403);
+    expect(forbidden.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Forbidden$/),
+        message: "You cannot manage work in this thread",
+      },
+    });
+
+    const malformed = await send(
+      server,
+      "POST",
+      `/api/v1/threads/${ids.viewerOwned}/work/handoff`,
+      { summary: "Ready", links: [], openQuestions: [] },
+    );
+
+    expect(malformed.status).toBe(422);
+    expect(malformed.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: expect.stringMatching(/^The request body isn't valid/),
+        fields: {},
+      },
+    });
+  });
+
+  it("checks the seeded receiver's capability before already the owner or the package", async () => {
+    const { server } = harness();
+    const parent = server.post(SEED_IDS.rooms.announcements, SEED_IDS.viewer, "Track release work");
+
+    const created = await expectStatus<ThreadCreated>(
+      server,
+      "POST",
+      `/api/v1/rooms/${SEED_IDS.rooms.announcements}/threads`,
+      {
+        parentMessageId: parent.id,
+        name: null,
+        message: messageBody("ember-announcements", "Release notes"),
+      },
+      201,
+    );
+
+    const threadId = created.detail.thread.id;
+
+    await expectStatus<ThreadDetail>(
+      server,
+      "PATCH",
+      patch(threadId),
+      { status: "planned", ownerId: AGENT_IDS.ember },
+      200,
+    );
+
+    const detail = await detailOf(server, threadId);
+
+    const response = await send(
+      server,
+      "POST",
+      `/api/v1/threads/${threadId}/work/handoff`,
+      body({ receiverAgentId: AGENT_IDS.ember, summary: "" }),
+    );
+
+    expect(detail.work?.handoffReceivers).toEqual([]);
+    expect(response.status).toBe(422);
+    expect(response.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Receiver must hold the manage_threads capability in this room",
+        fields: {
+          receiverAgentId: ["Receiver must hold the manage_threads capability in this room"],
+        },
+      },
+    });
   });
 
   it("normalizes lists and truncates like the server", () => {

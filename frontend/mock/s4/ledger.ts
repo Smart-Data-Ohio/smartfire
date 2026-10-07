@@ -4,7 +4,7 @@
  * else, a 404 for an unknown agent). The ledger has no live updates.
  *
  * The seed gives Ember a page and more of every kind of entry (plus one type this build doesn't
- * know, which the client must tolerate), some about real seeded messages, a few in a room the
+ * know, which the backend skips), some about real seeded messages, a few in a room the
  * viewer isn't in, and two pairs sharing a timestamp (one across the page boundary). Scout and
  * Atlas get a few each; the others none.
  *
@@ -17,12 +17,13 @@ import type { AgentExternalResult } from "../../src/gen/AgentExternalResult.ts";
 import type { AgentLedgerEvent } from "../../src/gen/AgentLedgerEvent.ts";
 import type { AgentLedgerEventType } from "../../src/gen/AgentLedgerEventType.ts";
 import type { AgentWebhookStatus } from "../../src/gen/AgentWebhookStatus.ts";
-import { forbidden, notFound, ok } from "../http.ts";
+import { forbidden, HttpError, notFound, ok } from "../http.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso } from "../s2/model.ts";
 import { beforeOf, keysetPage, plainText } from "../s3/model.ts";
-import { ROOM_IDS, USER_IDS } from "../seed.ts";
+import { ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
 import { AGENT_IDS, type Agents, HIDDEN_ROOM, viewerManages, viewerRoomName } from "./agents.ts";
+import { validation } from "./http.ts";
 
 const MINUTE = 60_000;
 
@@ -34,7 +35,7 @@ export const LEDGER_PAGE_SIZE = 50;
 /** How many entries Ember's seeded ledger holds (more than a page). */
 export const EMBER_LEDGER_SIZE = 84;
 
-/** A type this build doesn't know, as a newer server might send. */
+/** A stored type this backend's contract doesn't know, omitted after paging. */
 export const UNKNOWN_LEDGER_TYPE = "budget_threshold_crossed";
 
 /** The cut `content` and `handoffSummary` get: 140 characters, the last three `...`. */
@@ -65,9 +66,6 @@ interface LedgerRecord {
   /** Whether the agent could read the message (a member with `read_messages` there). */
   readonly readable: boolean;
 }
-
-/** An entry as the wire carries it; `eventType` may be one this build doesn't know. */
-type LedgerWire = Omit<AgentLedgerEvent, "eventType"> & { readonly eventType: string };
 
 /** One shape of entry; `index` spreads them over rooms, people and messages. */
 type Template = (index: number) => Omit<LedgerRecord, "id" | "agentId" | "createdAt">;
@@ -316,7 +314,9 @@ export function createLedger(ctx: S2Context, agents: Agents): Ledger {
     few(AGENT_IDS.atlas, 7000, [2, 12]);
   };
 
-  const present = (record: LedgerRecord): LedgerWire => {
+  const present = (record: LedgerRecord): AgentLedgerEvent | null => {
+    if (record.eventType === UNKNOWN_LEDGER_TYPE) return null;
+
     const roomName = viewerRoomName(ctx, record.roomId);
     const open = record.roomId === null || roomName !== null;
     const message = record.messageId === null ? null : findMessage(record.roomId, record.messageId);
@@ -356,10 +356,9 @@ export function createLedger(ctx: S2Context, agents: Agents): Ledger {
   const list = (agentId: number, query: URLSearchParams) => {
     const row = agents.record(agentId);
 
-    if (row === null) throw notFound("Agent not found");
+    if (row === null || ctx.world().users.get(VIEWER_ID)?.role === "bot") throw notFound();
 
-    if (!viewerManages(ctx, row))
-      throw forbidden("Only an administrator or the agent's owner can see its activity");
+    if (!viewerManages(ctx, row)) throw forbidden("Forbidden");
 
     const outcome = query.get("outcome");
 
@@ -371,12 +370,7 @@ export function createLedger(ctx: S2Context, agents: Agents): Ledger {
       (record) => record.agentId === agentId && (known === undefined || record.outcome === known),
     );
 
-    const page = keysetPage(
-      matching,
-      (record) => ({ at: iso(record.createdAt), id: record.id }),
-      beforeOf(query),
-      LEDGER_PAGE_SIZE,
-    );
+    const page = pageOf(matching, beforeOf(query));
 
     const userIds = [
       row.userId,
@@ -384,10 +378,31 @@ export function createLedger(ctx: S2Context, agents: Agents): Ledger {
     ];
 
     return {
-      events: page.rows.map(present),
+      events: page.rows.flatMap((record) => {
+        const event = present(record);
+
+        return event === null ? [] : [event];
+      }),
       users: ctx.usersFor(userIds),
       nextCursor: page.nextCursor,
     };
+  };
+
+  const pageOf = (matching: readonly LedgerRecord[], before: string | null) => {
+    try {
+      return keysetPage(
+        matching,
+        (record) => ({ at: iso(record.createdAt), id: record.id }),
+        before,
+        LEDGER_PAGE_SIZE,
+      );
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 422) {
+        throw validation("before", "is invalid");
+      }
+
+      throw error;
+    }
   };
 
   return {

@@ -1,9 +1,8 @@
 /**
  * Agents' approval requests as Effect programs (S4). Loads land in the store (failures as the
  * list's error) and never fail. A decision shows at once and lands the server's reply; if the
- * server refuses (403 for an admin-only action, 422 once it isn't pending), it comes back as it
- * was, unless an `approval.updated` brought a newer copy meanwhile. A refusal saying it is no
- * longer pending reloads All and any held Pending list to pick up missed decisions.
+ * server refuses, it comes back as it was, unless an `approval.updated` brought a newer copy
+ * meanwhile. A 422, 404 or 409 reloads All and any held Pending list to pick up missed decisions.
  */
 import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
@@ -28,16 +27,11 @@ function failLoad(key: ApprovalListKey, generation: number) {
     Effect.sync(() => mutations.setApprovalListFailed(key, error.message, generation));
 }
 
-function noLongerPending(error: ApiFailure): boolean {
-  if (Predicate.isTagged(error, "NotFound") || Predicate.isTagged(error, "Conflict")) {
-    return true;
-  }
-
+function needsRefetch(error: ApiFailure): boolean {
   return (
-    Predicate.isTagged(error, "Validation") &&
-    [error.message, ...Object.values(error.fields).flat()].some((message) =>
-      /already decided|expired/i.test(message),
-    )
+    Predicate.isTagged(error, "Validation") ||
+    Predicate.isTagged(error, "NotFound") ||
+    Predicate.isTagged(error, "Conflict")
   );
 }
 
@@ -118,7 +112,7 @@ export const decide = Effect.fn("approvals.decide")(function* (
         Effect.gen(function* () {
           rollBack();
 
-          if (noLongerPending(error)) {
+          if (needsRefetch(error)) {
             mutations.markApprovalsStale();
 
             if (before !== undefined) {

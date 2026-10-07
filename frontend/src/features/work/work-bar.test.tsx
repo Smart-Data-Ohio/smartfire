@@ -6,7 +6,12 @@ import type { Me } from "../../gen/Me.ts";
 import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
 import { mutations, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
-import { workPermissionsFixture } from "./test-fixtures.ts";
+import {
+  factsFixture,
+  threadDetailFixture,
+  workDetailFixture,
+  workPermissionsFixture,
+} from "./test-fixtures.ts";
 import { WorkBar, WorkLive } from "./work-bar.tsx";
 
 // The real actions run against the in-memory mock backend through stubbed fetch.
@@ -75,6 +80,23 @@ beforeEach(async () => {
 });
 
 describe("the thread pane's work section", () => {
+  it("hides stop tracking for a board post while keeping its status menu", async () => {
+    const detail = threadDetailFixture(
+      901,
+      factsFixture(),
+      workDetailFixture(),
+      workPermissionsFixture({ canRemoveWork: false }),
+    );
+
+    act(() => mutations.loadThreadDetail({ ...detail, thread: { ...detail.thread, roomId: 41 } }));
+    render(<WorkBar threadId={901} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /Change status/ }));
+
+    expect(screen.getByRole("menuitemradio", { name: "Done" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Stop tracking…" })).toBeNull();
+  });
+
   it("shows the status, owner, links and run, and changes the status from its menu", async () => {
     await load(WORK.agentOwned);
     renderBar(WORK.agentOwned);

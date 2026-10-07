@@ -3,6 +3,8 @@
  * history), and the pure helpers that turn it into the contract's `WorkFacts`, `WorkDetail`
  * and permission flags (`ChannelThread#work_*` in the Rust tree).
  */
+
+import type { AgentCapability } from "../../src/gen/AgentCapability.ts";
 import type { AgentStep } from "../../src/gen/AgentStep.ts";
 import type { ThreadPermissions } from "../../src/gen/ThreadPermissions.ts";
 import type { User } from "../../src/gen/User.ts";
@@ -16,6 +18,7 @@ import type { WorkOwnerSnapshot } from "../../src/gen/WorkOwnerSnapshot.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import type { ThreadRecord } from "../s2/model.ts";
 import type { World } from "../seed.ts";
+import { S4_BOARD, workStateOf } from "./work-state.ts";
 
 /** `ChannelThread::RESULT_LIMIT`. */
 export const RESULT_LIMIT = 20_000;
@@ -105,6 +108,11 @@ export function isTracked(thread: ThreadRecord): boolean {
   return thread.work !== undefined && thread.work.status !== null;
 }
 
+/** The work list's agents filter joins the agent record, regardless of a bot's role. */
+export function isAgentOwner(world: World, ownerId: number | null): boolean {
+  return ownerId !== null && world.users.get(ownerId)?.agent != null;
+}
+
 /** The agent behind a bot user, if it's an active agent (not suspended). */
 function activeAgent(user: User | undefined): User["agent"] {
   if (user === undefined || user.status !== "active" || user.role !== "bot") return null;
@@ -122,14 +130,21 @@ export function isActiveHumanMember(world: World, roomId: number, userId: number
   return user !== undefined && user.role !== "bot" && user.status === "active" && member;
 }
 
-/**
- * Whether `userId` is an agent in the room that may post there. Every mock agent holds every
- * capability in the rooms it's in, so the post, manage-threads and read-messages checks agree.
- */
+function holdsCapability(
+  world: World,
+  roomId: number,
+  agentId: number,
+  capability: AgentCapability,
+): boolean {
+  return workStateOf(world).agentCapabilities.get(`${roomId}:${agentId}`)?.has(capability) ?? true;
+}
+
+/** Whether `userId` is an active agent in the room that may post there. */
 export function isPostingAgentMember(world: World, roomId: number, userId: number): boolean {
   const member = world.rooms.get(roomId)?.memberIds.includes(userId) === true;
+  const agent = activeAgent(world.users.get(userId));
 
-  return activeAgent(world.users.get(userId)) !== null && member;
+  return agent !== null && member && holdsCapability(world, roomId, agent.agentId, "post_messages");
 }
 
 /** `work_owner_active`: the owner can act on the work. */
@@ -166,7 +181,7 @@ export function workPermissions(
     canManageWork: manageWork,
     canUpdateWorkStatus: manageWork,
     canAssignWork: tracked && manages,
-    canRemoveWork: tracked && manages,
+    canRemoveWork: tracked && manages && thread.roomId !== S4_BOARD.roomId,
   };
 }
 
@@ -203,6 +218,30 @@ export function ownerCandidates(world: World, roomId: number): WorkOwnerCandidat
   ];
 }
 
+/** Receiver permission checks match the real backend / classic, in the same order. */
+export function receiverError(
+  world: World,
+  roomId: number,
+  ownerId: number | null,
+  receiverAgentId: number,
+): string | null {
+  const user = [...world.users.values()].find((user) => user.agent?.agentId === receiverAgentId);
+
+  if (user === undefined || !isPostingAgentMember(world, roomId, user.id)) {
+    return "Receiver must be an active agent member of this room with permission to post";
+  }
+
+  if (!holdsCapability(world, roomId, receiverAgentId, "manage_threads")) {
+    return "Receiver must hold the manage_threads capability in this room";
+  }
+
+  if (!holdsCapability(world, roomId, receiverAgentId, "read_messages")) {
+    return "Receiver must hold the read_messages capability in this room";
+  }
+
+  return user.id === ownerId ? "Receiver is already the owner of this work" : null;
+}
+
 /** The agents in the room the work can go to, except its owner, by lower-cased name. */
 export function handoffReceivers(
   world: World,
@@ -212,7 +251,11 @@ export function handoffReceivers(
   const members = world.rooms.get(roomId)?.memberIds ?? [];
 
   return members
-    .filter((id) => id !== ownerId && isPostingAgentMember(world, roomId, id))
+    .filter((id) => {
+      const agent = activeAgent(world.users.get(id));
+
+      return agent !== null && receiverError(world, roomId, ownerId, agent.agentId) === null;
+    })
     .sort(byName(world))
     .flatMap((userId) => {
       const agent = activeAgent(world.users.get(userId));
@@ -256,10 +299,6 @@ export function workUserIds(thread: ThreadRecord, detail: WorkDetail | null): nu
 
   for (const entry of detail.history) {
     if (entry.actorId !== null) ids.push(entry.actorId);
-
-    if (entry.fromOwner?.userId != null) ids.push(entry.fromOwner.userId);
-
-    if (entry.toOwner?.userId != null) ids.push(entry.toOwner.userId);
   }
 
   for (const candidate of detail.ownerCandidates) ids.push(candidate.userId);
