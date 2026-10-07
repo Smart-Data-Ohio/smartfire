@@ -124,17 +124,13 @@ describe("directs", () => {
       userIds: [users.maya, users.lucia, users.theo, users.ember, 2],
     });
 
-    expect([oneToOne.status, nobody.status]).toEqual([422, 422]);
+    expect(oneToOne.status).toBe(422);
+    // Nobody new is the model's no-op: the room as it is.
+    expect(nobody.status).toBe(200);
     expect(full.status).toBe(200);
-
-    const over = await send(server, "POST", `/api/v1/directs/${rooms.groupDm}/members`, {
-      userIds: [users.dana],
-    });
-
-    expect(over.status).toBe(422);
   });
 
-  it("refuses adding only inactive people", async () => {
+  it("treats adding only inactive people as a no-op", async () => {
     // The seed has 9 active people, so a group can't be pushed past 10 here.
     const { server } = harness();
 
@@ -146,11 +142,18 @@ describe("directs", () => {
       201,
     );
 
-    const crowded = await send(server, "POST", `/api/v1/directs/${group.room.id}/members`, {
-      userIds: [users.dana],
-    });
+    const events = collect(server);
 
-    expect(crowded.status).toBe(422);
+    const unchanged = await expectStatus<RoomDetail>(
+      server,
+      "POST",
+      `/api/v1/directs/${group.room.id}/members`,
+      { userIds: [users.dana] },
+      200,
+    );
+
+    expect(unchanged.memberCount).toBe(9);
+    expect(events).toEqual([]);
   });
 
   it("renames a group and clears the name", async () => {

@@ -219,14 +219,13 @@ async fn growing_and_renaming_a_group_publishes_each_members_row() {
     assert_eq!(event.topic, "user");
     assert!(row_of(&event).direct_member_ids.contains(&LONELY_LOU));
 
-    // Nobody new, a one-to-one room, and a room Kevin isn't in.
+    // Nobody new is a no-op: the room as it is, and no event.
     let reply = david
         .write(json_body(Method::POST, &members, &json!({"userIds": [JZ]})))
         .await;
-    assert_eq!(
-        status_and_tag(&reply),
-        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into())
-    );
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(parse::<api::RoomDetail>(&reply).member_count, 5);
+    // A one-to-one room, and a room Kevin isn't in.
     let reply = david
         .write(json_body(
             Method::POST,

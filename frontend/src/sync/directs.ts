@@ -21,8 +21,8 @@ export const directs = {
 };
 
 /**
- * The server's reason when it turned the request down as invalid (a 422: nobody new chosen, a
- * group already full), so the dialog can say it in place; `null` for anything else.
+ * The server's reason when it turned the request down as invalid (a 422: a room that can't be a
+ * group, or a group already full), so the dialog can say it in place; `null` for anything else.
  */
 export function validationMessage(error: Error): string | null {
   return error instanceof ActionError && error.tag === "Validation" ? error.message : null;

@@ -225,11 +225,12 @@ async fn post_direct_members(c: &mut Ctx) -> Result {
         })
         .await;
     match result {
-        // Backend note 6: nobody new is refused, as the classic form's alert refuses it.
-        Ok(names) if names.is_empty() => Err(fail(
-            c,
-            validation("userIds", "must name at least one new member"),
-        )),
+        // Backend note 6: nobody new is the model's no-op, answered with the room as it is (no
+        // audit, no event).
+        Ok(names) if names.is_empty() => {
+            let detail = room_detail(c, room.id).await?;
+            c.json(StatusCode::OK, &detail)
+        }
         Ok(names) => {
             audit_room(
                 c,
