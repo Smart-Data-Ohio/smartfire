@@ -6,10 +6,16 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { CancelEvent } from "../gen/CancelEvent.ts";
+import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { EventAttendance } from "../gen/EventAttendance.ts";
+import type { EventDetail } from "../gen/EventDetail.ts";
+import type { EventForm } from "../gen/EventForm.ts";
+import type { EventList } from "../gen/EventList.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
@@ -24,6 +30,7 @@ import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { ActivityAction } from "../store/activity.ts";
@@ -32,6 +39,7 @@ import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
+import * as eventActions from "./event-actions.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
@@ -287,6 +295,31 @@ const cards = {
     runAction(cardActions.loadQuote(roomId, referenceId)),
 };
 
+/** Calendar reads and writes return current facts; failures reject with field-aware ActionError. */
+const events = {
+  list: (roomId: number): Promise<EventList> => runAction(eventActions.list(roomId)),
+  newForm: (roomId: number): Promise<EventForm> => runAction(eventActions.newForm(roomId)),
+  read: (roomId: number, eventId: number): Promise<EventDetail> =>
+    runAction(eventActions.read(roomId, eventId)),
+  editForm: (roomId: number, eventId: number): Promise<EventForm> =>
+    runAction(eventActions.editForm(roomId, eventId)),
+  create: (roomId: number, body: CreateEvent): Promise<EventDetail> =>
+    runAction(eventActions.create(roomId, body)),
+  update: (roomId: number, eventId: number, body: UpdateEvent): Promise<EventDetail> =>
+    runAction(eventActions.update(roomId, eventId, body)),
+  cancel: (roomId: number, eventId: number, body: CancelEvent): Promise<EventDetail> =>
+    runAction(eventActions.cancel(roomId, eventId, body)),
+  attendance: (roomId: number, eventId: number): Promise<EventAttendance> =>
+    runAction(eventActions.attendance(roomId, eventId)),
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture = false,
+  ): Promise<EventDetail> =>
+    runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -297,6 +330,7 @@ export const actions = {
   search,
   organize,
   cards,
+  events,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

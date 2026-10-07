@@ -76,6 +76,7 @@ import {
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -127,6 +128,7 @@ export const SEED_IDS = {
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
   cards: CARD_IDS,
+  events: EVENT_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -702,9 +704,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   );
 
   const huddles = createHuddles(ctx, simulate);
-  const cards = createCards(ctx);
+  const events = createEvents(ctx);
+  const cards = createCards(ctx, events);
 
   const routes = [
+    ...events.routes,
     ...huddles.routes,
     ...cards.routes,
     ...uploads.routes,

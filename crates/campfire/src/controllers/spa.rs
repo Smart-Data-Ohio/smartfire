@@ -74,3 +74,7 @@ mod account_tests;
 #[cfg(test)]
 #[path = "spa_people_tests.rs"]
 mod people_tests;
+
+#[cfg(test)]
+#[path = "spa_api_events_tests.rs"]
+mod spa_api_events_tests;
