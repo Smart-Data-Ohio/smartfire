@@ -1,7 +1,9 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import { THREAD_IDS } from "../../mock/s2/seed.ts";
 import { CARD_IDS } from "../../mock/s3/cards.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { Poll } from "../../src/gen/Poll.ts";
+import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import {
   expect,
   holdSync,
@@ -300,6 +302,157 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
   await expect(anchorRow).toBeInViewport();
   await expect.poll(async () => Math.abs((await anchorTop()) - top)).toBeLessThanOrEqual(3);
+});
+
+test("reading a tall thread parent while the cards chunk loads keeps its place", async ({
+  page,
+}) => {
+  await holdSync(page);
+
+  const poll = await seededPoll(page.request);
+  const chunk = await holdCardsChunk(page);
+  const threadId = THREAD_IDS.generalActive;
+
+  expect(poll).toBeTruthy();
+  await page.route(`**/api/v1/threads/${threadId}`, async (route) => {
+    const response = await route.fetch();
+    const body: ThreadDetail = await response.json();
+
+    expect(body.parentMessage).not.toBeNull();
+
+    if (body.parentMessage !== null && poll !== undefined) {
+      body.parentMessage = {
+        ...body.parentMessage,
+        bodyHtml: Array.from(
+          { length: 40 },
+          (_, index) => `<p>Parent paragraph ${index + 1}</p>`,
+        ).join(""),
+        poll,
+      };
+    }
+
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
+  await chunk.requested;
+
+  const list = page.getByRole("log", { name: "Replies" });
+  const parent = list.locator(".thread-parent [data-message-row]");
+
+  await expect(list.locator("[data-message-row]").last()).toBeInViewport();
+  // Establish an end anchor, then move entirely inside the tall parent.
+  await list.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop -= 100;
+      }),
+  );
+  await list.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop = element.scrollHeight;
+      }),
+  );
+  await list.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop = 250;
+      }),
+  );
+  await expect(parent).toBeInViewport();
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(250);
+
+  const parentTop = () =>
+    parent.evaluate((element) => {
+      const list = element.closest('[role="log"]');
+
+      if (list === null) throw new Error("The parent is outside the replies list");
+
+      return element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    });
+
+  const top = await parentTop();
+
+  chunk.release();
+  await expect(parent.getByRole("region", { name: "Poll" })).toBeAttached();
+  await expect.poll(async () => Math.abs((await parentTop()) - top)).toBeLessThanOrEqual(3);
+
+  // Continue reading while another measurement arrives, rather than retaining the old target.
+  await list.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop = 500;
+      }),
+  );
+  const continuedTop = await parentTop();
+
+  await page.setViewportSize({ width: 1280, height: 740 });
+  await expect
+    .poll(async () => Math.abs((await parentTop()) - continuedTop))
+    .toBeLessThanOrEqual(3);
+});
+
+test("a short thread stays at the end when the cards chunk makes it overflow", async ({ page }) => {
+  await holdSync(page);
+
+  const poll = await seededPoll(page.request);
+  const chunk = await holdCardsChunk(page);
+  const threadId = THREAD_IDS.generalActive;
+
+  expect(poll).toBeTruthy();
+  await page.route(`**/api/v1/threads/${threadId}`, async (route) => {
+    const response = await route.fetch();
+    const body: ThreadDetail = await response.json();
+
+    expect(body.parentMessage).not.toBeNull();
+
+    if (body.parentMessage !== null && poll !== undefined) {
+      body.parentMessage = {
+        ...body.parentMessage,
+        bodyHtml: Array.from({ length: 6 }, () => "<p>A short parent paragraph</p>").join(""),
+        poll,
+      };
+    }
+
+    await route.fulfill({ response, json: body });
+  });
+  await page.route(`**/api/v1/threads/${threadId}/messages`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+    const reply = body.messages[0];
+
+    expect(reply).toBeTruthy();
+    body.messages = reply === undefined ? [] : [{ ...reply, bodyHtml: "<p>A short reply</p>" }];
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
+  await chunk.requested;
+
+  const list = page.getByRole("log", { name: "Replies" });
+  const reply = list.locator("[data-message-row]").filter({ hasText: "A short reply" });
+
+  await expect(reply).toBeInViewport();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight))
+    .toBe(true);
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+  chunk.release();
+  await expect(list.locator(".thread-parent").getByRole("region", { name: "Poll" })).toBeAttached();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
+  await expect
+    .poll(() =>
+      list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+    )
+    .toBeLessThanOrEqual(3);
+  await expect(reply).toBeInViewport();
 });
 
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {

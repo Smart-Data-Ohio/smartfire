@@ -8,7 +8,7 @@ import { actions } from "../../sync/runtime.ts";
 import { Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
-import { useCardsChunkSettled } from "../cards/card-slot.tsx";
+import { useCardsChunkLoaded } from "../cards/card-slot.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider } from "../room/dividers.tsx";
@@ -125,7 +125,7 @@ export function ThreadTimeline({
   const listRef = useRef<VListHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
-  const placedRef = useRef<string | null>(null);
+  const [placed, setPlaced] = useState<string | null>(null);
 
   const committedRef = useRef<CommittedEdges & { readonly last: string | null }>({
     first: null,
@@ -148,27 +148,27 @@ export function ThreadTimeline({
   const lastKey = items.at(-1)?.key ?? null;
   const shift = prepended(items, committedRef.current);
   const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
-  const cardsSettled = useCardsChunkSettled();
+  const cardsLoaded = useCardsChunkLoaded();
 
   const captureAnchor = useViewportAnchor({
     containerRef,
     listRef,
     items,
     placement,
-    placed: placedRef.current === placement,
-    shift,
-    cardsSettled,
+    placed: loaded && placed === placement,
+    cardsLoaded,
+    parentId: parent?.id ?? null,
   });
 
   // Place the view once per loaded window: on the permalinked reply, else at the newest.
   useLayoutEffect(() => {
     const list = listRef.current;
 
-    if (!loaded || list === null || items.length === 0 || placedRef.current === placement) {
+    if (!loaded || list === null || items.length === 0 || placed === placement) {
       return;
     }
 
-    placedRef.current = placement;
+    setPlaced(placement);
 
     const focusIndex =
       focusMessageId === null

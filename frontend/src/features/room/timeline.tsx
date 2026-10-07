@@ -8,7 +8,7 @@ import { store, useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
-import { hasCards, useCardsChunkSettled } from "../cards/card-slot.tsx";
+import { hasCards, useCardsChunkLoaded, useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
@@ -123,6 +123,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const ready = timeline.status === "ready";
   const placement = `${roomId}:${timeline.generation}:${focusMessageId ?? ""}`;
   const cardsSettled = useCardsChunkSettled();
+  const cardsLoaded = useCardsChunkLoaded();
 
   // A loaded window that holds cards stays under the skeleton, unplaced, until their chunk
   // settles: placed earlier, the cards growing in above a permalinked row would push it out of
@@ -145,9 +146,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     listRef,
     items,
     placement,
-    placed: placed === placement,
-    shift,
-    cardsSettled,
+    placed: ready && placed === placement,
+    cardsLoaded,
   });
 
   // Place the view once per loaded window: on the permalinked message, on the unread divider
