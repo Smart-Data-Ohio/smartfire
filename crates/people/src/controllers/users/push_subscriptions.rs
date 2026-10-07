@@ -89,9 +89,22 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
                 .app()
                 .db
                 .write(move |tx| {
+                    // Two requests for one subscription (two tabs, or the SPA's retry) can both
+                    // find no row and then await DNS. The write lock serializes them here, so the
+                    // later one finds the row the earlier one saved and touches it instead of
+                    // inserting a duplicate; the table has no unique index to catch it.
+                    if let Some(saved) = find_by(tx.conn(), user_id, &params)? {
+                        return presenters::accounts::touch(
+                            tx.conn(),
+                            "push_subscriptions",
+                            saved.id,
+                            tx.now(),
+                        );
+                    }
                     PushSubscription::create(tx, &subscription, &|host| {
                         resolved.get(host).cloned().flatten()
                     })
+                    .map(|_| ())
                 })
                 .await;
             match result {

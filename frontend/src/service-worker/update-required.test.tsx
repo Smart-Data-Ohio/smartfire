@@ -262,7 +262,7 @@ describe("telling a deploy apart from a failed load", () => {
     expect(network).not.toHaveBeenCalled();
   });
 
-  it("says Smartfire was updated only after the check confirms it, and re-checks after a failure", async () => {
+  it("shows the plain wording at once, says updated only once confirmed, and re-checks after a failure", async () => {
     const update = await import("./update-required.ts");
     const { UpdateBanner } = await import("../features/shell/update-banner.tsx");
     let answer!: (newer: boolean) => void;
@@ -277,13 +277,14 @@ describe("telling a deploy apart from a failed load", () => {
 
     expect(banner.dataset.open).toBe("false");
 
+    // The plain wording shows at once, before the probe answers.
     act(() => update.requireAppUpdate(pending));
     expect(update.appUpdateRequired()).toBe(true);
-    expect(banner.dataset.open).toBe("false");
-
-    await act(async () => answer(false));
     expect(banner.dataset.open).toBe("true");
     expect(banner.textContent).toContain("Couldn't load part of Smartfire. Reload to try again.");
+
+    await act(async () => answer(false));
+    expect(update.appUpdateKind()).toBe("failed");
 
     act(() => update.requireAppUpdate(pending));
     await act(async () => answer(true));
@@ -297,5 +298,66 @@ describe("telling a deploy apart from a failed load", () => {
     act(() => update.requireAppUpdate(check));
     expect(check).not.toHaveBeenCalled();
     expect(update.appUpdateKind()).toBe("updated");
+  });
+
+  it("bounds a probe whose response never arrives, or whose body never finishes", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const { newerBuildAvailable } = await import("./update-required.ts");
+      const current = pageWithEntry("/app/assets/index-AAAA1111.js");
+      const signals: AbortSignal[] = [];
+
+      const hangingHeaders = (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.signal) signals.push(init.signal);
+
+        return new Promise<Response>(() => undefined);
+      };
+
+      const headers = newerBuildAvailable(hangingHeaders, current, 5000);
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(headers).resolves.toBe(false);
+      expect(signals[0]?.aborted).toBe(true);
+
+      const hangingBody = (_url: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.signal) signals.push(init.signal);
+
+        const body = new ReadableStream<Uint8Array>({ start: () => undefined });
+
+        return Promise.resolve(new Response(body, { status: 200 }));
+      };
+
+      const bodyProbe = newerBuildAvailable(hangingBody, current, 5000);
+
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(bodyProbe).resolves.toBe(false);
+      expect(signals[1]?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the plain strip and re-checks later when a check never settles", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const update = await import("./update-required.ts");
+      const stalled = vi.fn(() => new Promise<boolean>(() => undefined));
+
+      update.requireAppUpdate(stalled);
+      expect(update.appUpdateKind()).toBe("failed");
+
+      await vi.advanceTimersByTimeAsync(update.UPDATE_PROBE_TIMEOUT_MS + 1000);
+
+      const confirmed = vi.fn(() => Promise.resolve(true));
+
+      update.requireAppUpdate(confirmed);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(confirmed).toHaveBeenCalledTimes(1);
+      expect(update.appUpdateKind()).toBe("updated");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

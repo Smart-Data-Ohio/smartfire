@@ -377,3 +377,81 @@ async fn delete_is_classic_scoped_and_idempotent_without_audit_jobs_or_broadcast
     tokio::task::yield_now().await;
     assert!(capture.take().is_empty());
 }
+
+/// Holds the first two lookups until both have arrived, so two enrollments have both missed
+/// the row before either saves it. Later lookups answer at once.
+struct OverlappingResolver {
+    arrived: std::sync::atomic::AtomicUsize,
+    both: tokio::sync::watch::Sender<bool>,
+}
+
+impl crate::net::Resolver for OverlappingResolver {
+    fn lookup<'a>(
+        &'a self,
+        _host: &'a str,
+    ) -> crate::net::BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
+        Box::pin(async move {
+            let mut both = self.both.subscribe();
+            if self
+                .arrived
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+                + 1
+                >= 2
+            {
+                self.both.send_replace(true);
+            }
+            let _ = both.wait_for(|ready| *ready).await;
+            Ok(vec!["142.250.1.1".parse().unwrap()])
+        })
+    }
+}
+
+#[tokio::test]
+async fn overlapping_classic_and_spa_enrollments_save_one_subscription() {
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let mut network = crate::net::Network::system();
+    network.resolver = Arc::new(OverlappingResolver {
+        arrived: Default::default(),
+        both: tokio::sync::watch::channel(false).0,
+    });
+    let Some(app) =
+        TestApp::boot_with_network_clock_and_env(network, clock, &[("SPA_ENABLED", "1")]).await
+    else {
+        return;
+    };
+    let app = app.without_job_runner().await;
+    let mut classic = app.sign_in(DAVID).await;
+    let mut spa = app.sign_in(DAVID).await;
+    let (classic_reply, spa_reply) =
+        tokio::time::timeout(std::time::Duration::from_secs(20), async {
+            tokio::join!(
+                create(&mut classic, true, ENDPOINT, "p256", "auth"),
+                create(&mut spa, false, ENDPOINT, "p256", "auth"),
+            )
+        })
+        .await
+        .expect("both enrollments reach name resolution and finish");
+    assert_eq!(
+        classic_reply.status,
+        StatusCode::OK,
+        "{}",
+        classic_reply.text()
+    );
+    assert_eq!(spa_reply.status, StatusCode::OK, "{}", spa_reply.text());
+    let saved = app
+        .db()
+        .read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID))
+        .await
+        .unwrap()
+        .into_iter()
+        .filter(|row| {
+            row.endpoint.as_deref() == Some(ENDPOINT)
+                && row.p256dh_key.as_deref() == Some("p256")
+                && row.auth_key.as_deref() == Some("auth")
+        })
+        .count();
+    assert_eq!(
+        saved, 1,
+        "the later enrollment touches the row the earlier one saved"
+    );
+}

@@ -39,13 +39,29 @@ function entryScript(doc: Document, base: string): string | null {
   return src ? new URL(src, base).href : null;
 }
 
+/** How long the newer-build probe may take, body included, before it counts as no answer. */
+export const UPDATE_PROBE_TIMEOUT_MS = 8000;
+
+/** `promise`, or `fallback` once `ms` pass without it settling. */
+function within<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /**
  * Whether the server now hands out a different build than this tab runs. Being offline, a
- * failed request, or a page without an entry module all count as no newer build.
+ * failed or slow request (past `timeoutMs`, body included), or a page without an entry module
+ * all count as no newer build.
  */
 export async function newerBuildAvailable(
   network: typeof fetch = (...args) => fetch(...args),
   doc: Document = document,
+  timeoutMs: number = UPDATE_PROBE_TIMEOUT_MS,
 ): Promise<boolean> {
   const current = entryScript(doc, doc.baseURI);
 
@@ -53,13 +69,16 @@ export async function newerBuildAvailable(
     return false;
   }
 
-  try {
+  const controller = new AbortController();
+
+  const probe = async (): Promise<boolean> => {
     const page = new URL("/app/", doc.baseURI).href;
 
     const response = await network(page, {
       cache: "no-store",
       credentials: "same-origin",
       headers: { Accept: "text/html" },
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -72,19 +91,30 @@ export async function newerBuildAvailable(
     );
 
     return served !== null && served !== current;
-  } catch {
-    return false;
+  };
+
+  try {
+    return await within(
+      probe().catch(() => false),
+      timeoutMs,
+      false,
+    );
+  } finally {
+    // A probe that is still waiting, on headers or on the body, stops here.
+    controller.abort();
   }
 }
 
 /**
  * A failed module load leaves the current page intact until its person chooses to reload. The
- * strip only says Smartfire was updated once the server confirms a different build; a later
- * failure re-checks, since a deploy can land after an offline blip.
+ * strip opens at once with the plain "couldn't load" wording, and switches to saying Smartfire
+ * was updated only once the server confirms a different build. The probe is time-bounded, and a
+ * later failure re-checks, since a deploy can land after an offline blip.
  */
 export function requireAppUpdate(check: () => Promise<boolean> = newerBuildAvailable): void {
-  if (!required) {
+  if (!required || kind === null) {
     required = true;
+    kind ??= "failed";
     notify();
   }
 
@@ -92,17 +122,20 @@ export function requireAppUpdate(check: () => Promise<boolean> = newerBuildAvail
     return;
   }
 
-  checking = check()
-    .catch(() => false)
-    .then((newer) => {
-      checking = null;
-      const next: AppUpdateKind = newer ? "updated" : "failed";
+  // The default probe bounds itself; this also bounds any other check, so one that never
+  // settles can't block later re-checks.
+  checking = within(
+    check().catch(() => false),
+    UPDATE_PROBE_TIMEOUT_MS + 1000,
+    false,
+  ).then((newer) => {
+    checking = null;
 
-      if (next !== kind) {
-        kind = next;
-        notify();
-      }
-    });
+    if (newer && kind !== "updated") {
+      kind = "updated";
+      notify();
+    }
+  });
 }
 
 export function useAppUpdateRequired(): boolean {

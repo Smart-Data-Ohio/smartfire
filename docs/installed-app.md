@@ -13,7 +13,8 @@ service-worker initializer and notifications controller, kept as added assets un
 `crates/assets/overrides/smartfire/`. Only a layout that names a worker maps those two
 module names to them (`javascript_importmap_tags_selecting_worker()`). With
 `SPA_ENABLED` off the layout omits the meta and keeps the Rails import map, so classic
-pages stay byte-identical to Rails and register `/service-worker.js` as Rails does. Registration reconciles on both `load` and `turbo:load`, so signing
+page HTML stays byte-identical to Rails and registers `/service-worker.js` as Rails does (the
+classic worker script itself always carries the SPA-cache patch described below). Registration reconciles on both `load` and `turbo:load`, so signing
 in as someone with a different preference also replaces the selected script. It
 never unregisters the root registration.
 The boot JSON carries that URL, or null. Mock boot data leave it null, and
