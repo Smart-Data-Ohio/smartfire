@@ -26,4 +26,12 @@ statusChangedAt: string | null,
 /**
  * "last seen …"; `null` reads "never".
  */
-lastSeenAt: string | null, };
+lastSeenAt: string | null, 
+/**
+ * The server's revision of the agent's status facts (status, note, suspension and working
+ * presence): when they last changed on the server.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

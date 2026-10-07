@@ -46,6 +46,7 @@ fn directory_row() -> AgentDirectoryRow {
         created_at: "2026-09-01T10:00:00.000Z".into(),
         status_changed_at: Some("2026-10-06T09:00:00.000Z".into()),
         last_seen_at: None,
+        updated_at: "2026-10-06T09:00:00.000Z".into(),
     }
 }
 
@@ -61,6 +62,7 @@ fn directory_row_wire() -> serde_json::Value {
         "createdAt": "2026-09-01T10:00:00.000Z",
         "statusChangedAt": "2026-10-06T09:00:00.000Z",
         "lastSeenAt": null,
+        "updatedAt": "2026-10-06T09:00:00.000Z",
     })
 }
 
@@ -116,6 +118,7 @@ fn approval() -> AgentApproval {
         admin_only: true,
         approvable: false,
         deniable: true,
+        updated_at: "2026-10-06T09:15:00.000Z".into(),
     }
 }
 
@@ -139,6 +142,7 @@ fn approval_wire() -> serde_json::Value {
         "adminOnly": true,
         "approvable": false,
         "deniable": true,
+        "updatedAt": "2026-10-06T09:15:00.000Z",
     })
 }
 
@@ -347,6 +351,7 @@ fn s4_sync_events_round_trip() {
                 suspended: false,
                 working_presence: Some("Reviewing #42".into()),
                 working_presence_expires_at: Some("2026-10-06T09:20:00.000Z".into()),
+                updated_at: "2026-10-06T09:15:00.000Z".into(),
             }),
             json!({"type": "agent.status", "data": {
                 "agentId": 3,
@@ -357,6 +362,7 @@ fn s4_sync_events_round_trip() {
                 "suspended": false,
                 "workingPresence": "Reviewing #42",
                 "workingPresenceExpiresAt": "2026-10-06T09:20:00.000Z",
+                "updatedAt": "2026-10-06T09:15:00.000Z",
             }}),
         ),
         (

@@ -70,4 +70,12 @@ approvable: boolean,
 /**
  * The viewer may deny it (`AgentApproval#decidable_by`); only while `status` is `pending`.
  */
-deniable: boolean, };
+deniable: boolean, 
+/**
+ * The server's revision of the request (its status, decision and note): when it last
+ * changed on the server.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

@@ -170,6 +170,7 @@ fn work_facts() -> WorkFacts {
         run_url: Some("https://ci.example.com/runs/7".into()),
         result_updated_at: None,
         links: vec![pull_request_link()],
+        updated_at: "2026-10-06T09:05:00.000Z".into(),
     }
 }
 
@@ -191,6 +192,7 @@ fn work_facts_wire() -> serde_json::Value {
             "eventTimeZone": null,
             "eventCancelled": false,
         }],
+        "updatedAt": "2026-10-06T09:05:00.000Z",
     })
 }
 
