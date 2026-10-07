@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, type MouseEvent, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useId, useState } from "react";
 import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityState } from "../../gen/ActivityState.ts";
@@ -8,7 +8,7 @@ import { useActivityList, useActivityUnread } from "../../store/inbox-hooks.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
-import { Tabs } from "../../ui/tabs.tsx";
+import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
@@ -132,6 +132,10 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   const unread = useActivityUnread();
   const follow = useFollowTarget();
   const { announce, region } = useAnnouncer();
+  const ids = useId();
+  const statusTabs = `${ids}-status`;
+  const typeTabs = `${ids}-type`;
+  const panelId = `${ids}-panel`;
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
   const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
 
@@ -202,6 +206,8 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
       tools={
         <div className="activity-status">
           <Tabs
+            id={statusTabs}
+            panelId={panelId}
             label="Show"
             items={STATUS_ITEMS}
             value={status}
@@ -215,6 +221,8 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
       }
       toolbar={
         <Tabs
+          id={typeTabs}
+          panelId={panelId}
           label="Activity type"
           items={ACTIVITY_TABS}
           value={tab}
@@ -228,26 +236,34 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
         />
       }
     >
-      <PagedList
-        state={view}
-        label={`${ACTIVITY_TABS.find((item) => item.value === tab)?.label ?? "All"} activity`}
-        errorText="Your activity couldn't be loaded."
-        isEmpty={rows.length === 0}
-        empty={<PaneEmpty icon={EMPTY_ICON[status]} title={copy.title} text={copy.text} />}
+      {/* Both tab strips filter this one list: it is labelled by the two selected tabs. */}
+      <div
+        role="tabpanel"
+        id={panelId}
+        aria-labelledby={`${tabId(typeTabs, tab)} ${tabId(statusTabs, status)}`}
+        className="page-panel"
       >
-        {rows.map((row) => (
-          <ActivityRow
-            key={row.key}
-            item={row.value}
-            now={now}
-            motion={row.motion}
-            celebrate={celebrated.has(row.key)}
-            onOpen={open}
-            onAction={change}
-            onMenu={openMenu}
-          />
-        ))}
-      </PagedList>
+        <PagedList
+          state={view}
+          label={`${ACTIVITY_TABS.find((item) => item.value === tab)?.label ?? "All"} activity`}
+          errorText="Your activity couldn't be loaded."
+          isEmpty={rows.length === 0}
+          empty={<PaneEmpty icon={EMPTY_ICON[status]} title={copy.title} text={copy.text} />}
+        >
+          {rows.map((row) => (
+            <ActivityRow
+              key={row.key}
+              item={row.value}
+              now={now}
+              motion={row.motion}
+              celebrate={celebrated.has(row.key)}
+              onOpen={open}
+              onAction={change}
+              onMenu={openMenu}
+            />
+          ))}
+        </PagedList>
+      </div>
       {menu === null || menuItem === undefined ? null : (
         <PointMenu
           key={menu.request.id}

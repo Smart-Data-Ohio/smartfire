@@ -1,11 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, type MouseEvent, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useId, useState } from "react";
 import type { SavedFilter } from "../../gen/SavedFilter.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
 import { type SavedRow as SavedEntry, useSavedList } from "../../store/inbox-hooks.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
-import { Tabs } from "../../ui/tabs.tsx";
+import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCustomTimeDialog } from "../composer/schedule/lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "../composer/schedule/presets.ts";
@@ -69,6 +69,9 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
   const navigate = useNavigate();
   const view = useSavedList(filter);
   const { announce, region } = useAnnouncer();
+  const ids = useId();
+  const filterTabs = `${ids}-filter`;
+  const panelId = `${ids}-panel`;
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
   const [custom, setCustom] = useState<SavedItem | null>(null);
   const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
@@ -161,6 +164,8 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
       back
       toolbar={
         <Tabs
+          id={filterTabs}
+          panelId={panelId}
           label="Show"
           items={SAVED_TABS}
           value={filter}
@@ -172,26 +177,33 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
         />
       }
     >
-      <PagedList
-        state={view}
-        label="Saved messages"
-        errorText="Your saved messages couldn't be loaded."
-        isEmpty={rows.length === 0}
-        empty={<PaneEmpty icon="bookmark" title={empty.title} text={empty.text} />}
+      <div
+        role="tabpanel"
+        id={panelId}
+        aria-labelledby={tabId(filterTabs, filter)}
+        className="page-panel"
       >
-        {rows.map((row) => (
-          <SavedRow
-            key={row.key}
-            item={row.value.item}
-            message={row.value.message}
-            conversation={row.value.conversation}
-            now={now}
-            motion={row.motion}
-            celebrate={celebrated.has(row.key)}
-            handlers={handlers}
-          />
-        ))}
-      </PagedList>
+        <PagedList
+          state={view}
+          label="Saved messages"
+          errorText="Your saved messages couldn't be loaded."
+          isEmpty={rows.length === 0}
+          empty={<PaneEmpty icon="bookmark" title={empty.title} text={empty.text} />}
+        >
+          {rows.map((row) => (
+            <SavedRow
+              key={row.key}
+              item={row.value.item}
+              message={row.value.message}
+              conversation={row.value.conversation}
+              now={now}
+              motion={row.motion}
+              celebrate={celebrated.has(row.key)}
+              handlers={handlers}
+            />
+          ))}
+        </PagedList>
+      </div>
       {menu === null || menuItem === undefined ? null : (
         <PointMenu
           key={menu.request.id}

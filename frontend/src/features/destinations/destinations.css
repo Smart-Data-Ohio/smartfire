@@ -101,6 +101,14 @@
     min-height: 0;
   }
 
+  /* The panel the filter tabs control: it passes the body's height on to the list. */
+  .page-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
   /* The list column: a readable measure, flush with the header's start like the timeline. */
   .page-list {
     display: flex;

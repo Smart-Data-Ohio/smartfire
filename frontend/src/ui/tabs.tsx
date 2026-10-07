@@ -21,11 +21,23 @@ interface TabsProps {
   readonly onValueChange: (value: string) => void;
   /** The tab list's accessible name. */
   readonly label: string;
+  /** A base for the tabs' ids (see `tabId`), so a panel laid out elsewhere can name its tab. */
+  readonly id?: string;
   /**
-   * The selected tab's panel. Without it the tabs act as a filter for content the caller lays
-   * out itself, and no tab claims to control a panel.
+   * The id of a panel the caller lays out elsewhere (role="tabpanel", labelled by `tabId`), which
+   * the selected tab then controls. Ignored when the panel is passed as children.
+   */
+  readonly panelId?: string;
+  /**
+   * The selected tab's panel. Without it (or `panelId`) the tabs act as a filter for content the
+   * caller lays out itself, and no tab claims to control a panel.
    */
   readonly children?: ReactNode;
+}
+
+/** The id of the tab for `value` in the tabs whose `id` is `tabsId`. */
+export function tabId(tabsId: string, value: string): string {
+  return `${tabsId}-tab-${value}`;
 }
 
 /** How far past a scrolled-to tab its strip scrolls, so the tab clears a fading edge. */
@@ -57,8 +69,18 @@ function revealTab(list: HTMLElement, tab: HTMLElement): void {
  * WAI-ARIA tabs with automatic activation: arrows move and select, Home/End jump, and only the
  * selected tab is in the Tab order.
  */
-export function Tabs({ items, value, onValueChange, label, children }: TabsProps) {
-  const id = useId();
+export function Tabs({
+  items,
+  value,
+  onValueChange,
+  label,
+  id: idBase,
+  panelId,
+  children,
+}: TabsProps) {
+  const generatedId = useId();
+  const id = idBase ?? generatedId;
+  const controls = children === undefined ? panelId : `${id}-panel`;
   const listRef = useRef<HTMLDivElement | null>(null);
   const pillRef = useRef<HTMLSpanElement | null>(null);
   const [measured, setMeasured] = useState(false);
@@ -145,11 +167,11 @@ export function Tabs({ items, value, onValueChange, label, children }: TabsProps
               key={item.value}
               type="button"
               role="tab"
-              id={`${id}-tab-${item.value}`}
+              id={tabId(id, item.value)}
               className="tab t-tab"
               data-value={item.value}
               aria-selected={selected}
-              aria-controls={selected && children !== undefined ? `${id}-panel` : undefined}
+              aria-controls={selected ? controls : undefined}
               tabIndex={selected ? 0 : -1}
               onClick={() => onValueChange(item.value)}
             >
@@ -164,7 +186,7 @@ export function Tabs({ items, value, onValueChange, label, children }: TabsProps
         <div
           role="tabpanel"
           id={`${id}-panel`}
-          aria-labelledby={`${id}-tab-${value}`}
+          aria-labelledby={tabId(id, value)}
           className="tab-panel"
           // biome-ignore lint/a11y/noNoninteractiveTabindex: APG tab panels take focus when they hold no focusable content
           tabIndex={0}
