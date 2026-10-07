@@ -11,7 +11,7 @@
 //! its caches), and no broadcast, since only the person's own navigation reads it.
 
 use rusqlite::{Connection, OptionalExtension};
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use crate::{Result, Tx};
 
@@ -87,7 +87,7 @@ pub fn store(tx: &Tx<'_>, user: i64, preference: UiPreference) -> Result<()> {
     let mut preferences = raw
         .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
         .and_then(|value| value.as_object().cloned())
-        .unwrap_or_else(Map::new);
+        .unwrap_or_default();
     preferences.insert(KEY.into(), Value::Bool(preference == UiPreference::Next));
     let json = serde_json::to_string(&Value::Object(preferences)).expect("JSON preferences");
     tx.conn().execute(
