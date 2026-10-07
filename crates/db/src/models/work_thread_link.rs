@@ -182,11 +182,13 @@ impl WorkThreadLink {
         Self::validate(tx.conn(), &attributes)?.into_result()?;
         let id=tx.conn().query_row("INSERT INTO work_thread_links(channel_thread_id,created_by_id,kind,github_pull_request_id,event_id,url,title,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id",
             params![attributes.channel_thread_id,attributes.created_by_id,attributes.kind,attributes.github_pull_request_id,attributes.event_id,attributes.url,attributes.title,tx.now(),tx.now()],|row|row.get::<_,i64>(0))?;
+        crate::models::channel_thread::ThreadWorkChange::emit(tx, attributes.channel_thread_id);
         Self::find(tx.conn(), id)?.ok_or(crate::Error::RecordNotFound("WorkThreadLink"))
     }
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn()
             .execute("DELETE FROM work_thread_links WHERE id=?", [self.id])?;
+        crate::models::channel_thread::ThreadWorkChange::emit(tx, self.channel_thread_id);
         Ok(())
     }
 }

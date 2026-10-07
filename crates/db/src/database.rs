@@ -23,7 +23,7 @@
 //! lull), and at [`WAL_LIMIT_PAGES`] (~40 MB) the writer checkpoints it itself with RESTART,
 //! stalling writes as Rails' commits do, but once per 10,000 pages instead of per 1,000.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
@@ -157,6 +157,7 @@ enum AfterCommit {
     },
     Hook(AfterCommitHook),
     Event(Event),
+    SettledBroadcast(Event),
 }
 
 impl AfterCommit {
@@ -186,6 +187,7 @@ pub struct Tx<'c> {
     env: &'c Env,
     in_transaction: bool,
     after_commit: Vec<AfterCommit>,
+    settled_broadcasts: &'c RefCell<Vec<Event>>,
     commit_finalizers: Vec<Box<dyn FnOnce() + Send>>,
     commit_preparations: Vec<CommitPreparation>,
     /// The first error persisting an emitted event (see [`EventSink::persist`]), which rolls the
@@ -313,6 +315,40 @@ impl<'c> Tx<'c> {
         }
     }
 
+    /// Coalesce identical descriptions across this commit and its explicit after-commit
+    /// writes. Emit only after those callbacks finish, so rendering sees their final state.
+    /// Classic callbacks retain their registration order; only opted-in broadcasts wait.
+    pub fn broadcast_after_commit_settled_once<B: crate::Broadcast>(&mut self, broadcast: &B) {
+        let event = Event::broadcast(broadcast);
+        if self.after_commit.iter().any(|pending| {
+            matches!(pending, AfterCommit::SettledBroadcast(existing) if existing == &event)
+        }) || !self.persist(&event) {
+            return;
+        }
+        if self.in_transaction {
+            self.after_commit.push(AfterCommit::SettledBroadcast(event));
+        } else {
+            self.collect_settled_broadcast(event);
+        }
+    }
+
+    fn collect_settled_broadcast(&self, event: Event) {
+        let mut broadcasts = self.settled_broadcasts.borrow_mut();
+        if !broadcasts.contains(&event) {
+            broadcasts.push(event);
+        }
+    }
+
+    /// An after-commit callback's new transaction joins its caller's settled broadcasts.
+    /// Its rows, history and jobs still commit or roll back independently of the caller.
+    pub(crate) fn write_after_commit<T>(
+        &mut self,
+        f: impl FnOnce(&mut Tx<'_>) -> Result<T>,
+    ) -> Result<T> {
+        debug_assert!(!self.in_transaction);
+        run_write_with_settled_broadcasts(self.conn, self.env, self.settled_broadcasts, f)
+    }
+
     /// [`EventSink::persist`]. A failure fails the write (the transaction rolls back when `f`
     /// returns); after commit it's logged, and the event dropped.
     fn persist(&mut self, event: &Event) -> bool {
@@ -362,6 +398,7 @@ impl<'c> Tx<'c> {
                 env: self.env,
                 in_transaction: false,
                 after_commit: Vec::new(),
+                settled_broadcasts: self.settled_broadcasts,
                 commit_finalizers: Vec::new(),
                 commit_preparations: Vec::new(),
                 persist_error: None,
@@ -503,9 +540,77 @@ impl<'c> Tx<'c> {
 /// after finalizing committed resources and waking any remaining committed jobs,
 /// discarding later model callbacks
 /// (Rails raises it from the save that committed; durable enqueueing stays atomic).
+/// Opted-in settled broadcasts of committed writes still emit after callbacks stop,
+/// including when they panic. An interrupted follow-up write rolls back before emission.
 pub fn run_write<T>(
     conn: &Connection,
     env: &Env,
+    f: impl FnOnce(&mut Tx<'_>) -> Result<T>,
+) -> Result<T> {
+    let settled_broadcasts = RefCell::new(Vec::new());
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        run_write_with_settled_broadcasts(conn, env, &settled_broadcasts, f)
+    }));
+    match result {
+        Ok(result) => {
+            flush_settled_broadcasts(conn, env, &settled_broadcasts);
+            result
+        }
+        Err(panic) => {
+            // A callback may have panicked inside a separate follow-up transaction.
+            // Its pending broadcasts never joined the committed collection.
+            if !conn.is_autocommit() {
+                let rollback = conn.execute_batch("ROLLBACK TRANSACTION");
+                if !conn.is_autocommit() {
+                    tracing::error!(
+                        error = ?rollback.err(),
+                        "interrupted write remains in a transaction"
+                    );
+                    std::panic::resume_unwind(panic);
+                }
+            }
+            // The callback's unwind has finished: no Drop emits while panicking.
+            // Preserve that original panic even if the sink also panics during flush.
+            let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                flush_settled_broadcasts(conn, env, &settled_broadcasts);
+            }));
+            std::panic::resume_unwind(panic);
+        }
+    }
+}
+
+fn flush_settled_broadcasts(
+    conn: &Connection,
+    env: &Env,
+    settled_broadcasts: &RefCell<Vec<Event>>,
+) {
+    let mut after = Tx {
+        conn,
+        env,
+        in_transaction: false,
+        after_commit: Vec::new(),
+        settled_broadcasts,
+        commit_finalizers: Vec::new(),
+        commit_preparations: Vec::new(),
+        persist_error: None,
+    };
+    // Keep committed facts visible even when a later callback failed. Rolled-back writes
+    // never enter this collection. Release its borrow before a sink runs more callbacks.
+    loop {
+        let broadcasts = settled_broadcasts.take();
+        if broadcasts.is_empty() {
+            break;
+        }
+        for event in broadcasts {
+            env.sink.emit_committed(&mut after, event);
+        }
+    }
+}
+
+fn run_write_with_settled_broadcasts<T>(
+    conn: &Connection,
+    env: &Env,
+    settled_broadcasts: &RefCell<Vec<Event>>,
     f: impl FnOnce(&mut Tx<'_>) -> Result<T>,
 ) -> Result<T> {
     conn.execute_batch("BEGIN IMMEDIATE TRANSACTION")?;
@@ -514,6 +619,7 @@ pub fn run_write<T>(
         env,
         in_transaction: true,
         after_commit: Vec::new(),
+        settled_broadcasts,
         commit_finalizers: Vec::new(),
         commit_preparations: Vec::new(),
         persist_error: None,
@@ -584,6 +690,16 @@ pub fn run_write<T>(
         return Err(error.into());
     }
 
+    // These descriptions are now committed. They wait for the entire callback tree,
+    // including tag assignment's separate commit, without reordering classic events.
+    queue.retain(|item| match item {
+        AfterCommit::SettledBroadcast(event) => {
+            tx.collect_settled_broadcast(event.clone());
+            false
+        }
+        _ => true,
+    });
+
     for finalize in std::mem::take(&mut tx.commit_finalizers) {
         finalize();
     }
@@ -593,6 +709,7 @@ pub fn run_write<T>(
         env,
         in_transaction: false,
         after_commit: Vec::new(),
+        settled_broadcasts,
         commit_finalizers: Vec::new(),
         commit_preparations: Vec::new(),
         persist_error: None,
@@ -629,6 +746,7 @@ pub fn run_write<T>(
                 .try_for_each(|hook| hook(&mut after))
                 .err(),
             AfterCommit::Hook(hook) => hook(&mut after).err(),
+            AfterCommit::SettledBroadcast(_) => unreachable!("collected after COMMIT"),
         };
         if let Some(error) = callback_error {
             for pending in callbacks {
@@ -1129,6 +1247,273 @@ impl Drop for Checkout<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Default)]
+    struct SettledSnapshotSink {
+        events: Mutex<Vec<(Event, Option<i64>)>>,
+    }
+
+    impl EventSink for SettledSnapshotSink {
+        fn emit(&self, event: Event) {
+            self.events.lock().unwrap().push((event, None));
+        }
+
+        fn emit_committed(&self, after: &mut Tx<'_>, event: Event) {
+            assert!(
+                after.conn().is_autocommit(),
+                "broadcasts observe committed state"
+            );
+            let value = match &event {
+                Event::Broadcast(request) => request
+                    .decode::<crate::models::channel_thread::ThreadWorkChange>()
+                    .map(|change| {
+                        let change = change.unwrap();
+                        after
+                            .conn()
+                            .query_row(
+                                "SELECT value FROM state WHERE id=?",
+                                [change.thread_id],
+                                |r| r.get::<_, i64>(0),
+                            )
+                            .unwrap()
+                    }),
+                _ => None,
+            };
+            self.events.lock().unwrap().push((event, value));
+        }
+    }
+
+    #[test]
+    fn settled_broadcasts_coalesce_nested_commits_after_all_hooks() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE state(id INTEGER PRIMARY KEY,value INTEGER); INSERT INTO state VALUES(1,0),(2,0)").unwrap();
+        let sink = Arc::new(SettledSnapshotSink::default());
+        let env = Env {
+            sink: sink.clone(),
+            ..Env::default()
+        };
+        run_write(&conn, &env, |tx| {
+            tx.conn().execute("UPDATE state SET value=1 WHERE id=1", [])?;
+            ThreadWorkChange::emit(tx, 1);
+            tx.emit_after_commit(Event::PurgeBlob { blob_id: 11 });
+            tx.after_commit_record_latest("tag_assignment", 1, |after| {
+                after.write_after_commit(|tx| {
+                    tx.conn().execute("UPDATE state SET value=2", [])?;
+                    ThreadWorkChange::emit(tx, 1);
+                    ThreadWorkChange::emit(tx, 2);
+                    ThreadWorkChange::emit(tx, 2);
+                    tx.emit_after_commit(Event::PurgeBlob { blob_id: 12 });
+                    tx.after_commit(|after| {
+                        after.write_after_commit(|tx| {
+                            tx.conn().execute("UPDATE state SET value=3 WHERE id=1", [])?;
+                            ThreadWorkChange::emit(tx, 1);
+                            Ok(())
+                        })?;
+                        // Opted-in broadcasts emitted directly after commit share the scope.
+                        ThreadWorkChange::emit(after, 2);
+                        Ok(())
+                    });
+                    Ok(())
+                })
+            });
+            tx.emit_after_commit(Event::PurgeBlob { blob_id: 13 });
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            *sink.events.lock().unwrap(),
+            [
+                (Event::PurgeBlob { blob_id: 11 }, None),
+                (Event::PurgeBlob { blob_id: 12 }, None),
+                (Event::PurgeBlob { blob_id: 13 }, None),
+                (Event::broadcast(&ThreadWorkChange { thread_id: 1 }), Some(3)),
+                (Event::broadcast(&ThreadWorkChange { thread_id: 2 }), Some(2)),
+            ]
+        );
+    }
+
+    #[test]
+    fn settled_broadcasts_follow_savepoint_and_transaction_rollbacks() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        let conn = Connection::open_in_memory().unwrap();
+        let sink = crate::events::RecordingSink::new();
+        let env = Env {
+            sink: Arc::new(sink.clone()),
+            ..Env::default()
+        };
+        run_write(&conn, &env, |tx| {
+            ThreadWorkChange::emit(tx, 1);
+            let rolled_back = tx.savepoint(|tx| -> Result<()> {
+                ThreadWorkChange::emit(tx, 2);
+                Err(Error::Other("savepoint rollback".into()))
+            });
+            assert!(rolled_back.is_err());
+            tx.after_commit(|after| {
+                let rolled_back = after.write_after_commit(|tx| -> Result<()> {
+                    ThreadWorkChange::emit(tx, 3);
+                    Err(Error::Other("nested transaction rollback".into()))
+                });
+                assert!(rolled_back.is_err());
+                Ok(())
+            });
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            sink.take(),
+            [Event::broadcast(&ThreadWorkChange { thread_id: 1 })]
+        );
+        let rolled_back = run_write(&conn, &env, |tx| -> Result<()> {
+            ThreadWorkChange::emit(tx, 4);
+            Err(Error::Other("outer transaction rollback".into()))
+        });
+        assert!(rolled_back.is_err());
+        assert!(sink.events().is_empty());
+    }
+
+    #[test]
+    fn settled_broadcasts_survive_later_callback_errors() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        let conn = Connection::open_in_memory().unwrap();
+        let sink = crate::events::RecordingSink::new();
+        let env = Env {
+            sink: Arc::new(sink.clone()),
+            ..Env::default()
+        };
+        let result = run_write(&conn, &env, |tx| {
+            ThreadWorkChange::emit(tx, 1);
+            tx.after_commit(|after| {
+                let result = after.write_after_commit(|tx| {
+                    ThreadWorkChange::emit(tx, 1);
+                    ThreadWorkChange::emit(tx, 2);
+                    tx.after_commit(|_| Err(Error::Other("nested callback failure".into())));
+                    Ok(())
+                });
+                assert!(result.is_err());
+                Err(Error::Other("outer callback failure".into()))
+            });
+            Ok(())
+        });
+        assert!(result.is_err());
+        assert_eq!(
+            sink.events(),
+            [
+                Event::broadcast(&ThreadWorkChange { thread_id: 1 }),
+                Event::broadcast(&ThreadWorkChange { thread_id: 2 }),
+            ]
+        );
+    }
+
+    #[test]
+    fn settled_broadcasts_survive_panicking_followup_and_writer_recovers() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        let dir = tempfile::tempdir().unwrap();
+        let sink = Arc::new(SettledSnapshotSink::default());
+        let db = Database::open(
+            Config::new(dir.path().join("panicking-followup.sqlite3")),
+            Env {
+                sink: sink.clone(),
+                ..Env::default()
+            },
+        )
+        .unwrap();
+        db.write_blocking(|tx| {
+            Ok(tx.conn().execute_batch(
+                "CREATE TABLE state(id INTEGER PRIMARY KEY,value INTEGER); INSERT INTO state VALUES(1,0),(2,0),(3,0)",
+            )?)
+        })
+        .unwrap();
+        let result = db.write_blocking(|tx| {
+            tx.conn().execute("UPDATE state SET value=1 WHERE id=1", [])?;
+            ThreadWorkChange::emit(tx, 1);
+            tx.after_commit(|after| {
+                after.write_after_commit(|tx| {
+                    tx.conn().execute("UPDATE state SET value=2 WHERE id=2", [])?;
+                    ThreadWorkChange::emit(tx, 2);
+                    tx.after_commit(|after| {
+                        after.write_after_commit(|tx| -> Result<()> {
+                            tx.conn().execute("UPDATE state SET value=3 WHERE id=1", [])?;
+                            tx.conn().execute("UPDATE state SET value=3 WHERE id=3", [])?;
+                            ThreadWorkChange::emit(tx, 3);
+                            panic!("injected follow-up transaction panic");
+                        })
+                    });
+                    Ok(())
+                })
+            });
+            Ok(())
+        });
+        assert!(matches!(result, Err(Error::WriterGone)));
+        assert_eq!(
+            *sink.events.lock().unwrap(),
+            [
+                (Event::broadcast(&ThreadWorkChange { thread_id: 1 }), Some(1)),
+                (Event::broadcast(&ThreadWorkChange { thread_id: 2 }), Some(2)),
+            ]
+        );
+        assert_eq!(
+            db.read_blocking(|conn| {
+                Ok(conn
+                    .prepare("SELECT value FROM state ORDER BY id")?
+                    .query_map([], |r| r.get::<_, i64>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?)
+            })
+            .unwrap(),
+            [1, 2, 0],
+            "the interrupted follow-up must roll back before broadcasts render"
+        );
+        db.write_blocking(|tx| {
+            tx.conn().execute("UPDATE state SET value=4 WHERE id=3", [])?;
+            ThreadWorkChange::emit(tx, 3);
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            sink.events.lock().unwrap().last(),
+            Some(&(Event::broadcast(&ThreadWorkChange { thread_id: 3 }), Some(4)))
+        );
+    }
+
+    #[test]
+    fn settled_broadcast_flush_preserves_callback_panic_when_sink_panics() {
+        use crate::models::channel_thread::ThreadWorkChange;
+
+        struct PanickingSink {
+            emitted: std::sync::atomic::AtomicBool,
+        }
+        impl EventSink for PanickingSink {
+            fn emit(&self, _event: Event) {
+                assert!(!std::thread::panicking());
+                self.emitted.store(true, Ordering::SeqCst);
+                panic!("injected sink panic");
+            }
+        }
+        let conn = Connection::open_in_memory().unwrap();
+        let sink = Arc::new(PanickingSink {
+            emitted: std::sync::atomic::AtomicBool::new(false),
+        });
+        let env = Env {
+            sink: sink.clone(),
+            ..Env::default()
+        };
+        let panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            run_write(&conn, &env, |tx| {
+                ThreadWorkChange::emit(tx, 1);
+                tx.after_commit(|_| panic!("injected callback panic"));
+                Ok(())
+            })
+        }))
+        .expect_err("the original callback panic must propagate");
+        assert_eq!(panic.downcast_ref::<&str>(), Some(&"injected callback panic"));
+        assert!(sink.emitted.load(Ordering::SeqCst));
+        assert!(conn.is_autocommit());
+        run_write(&conn, &env, |_| Ok(())).unwrap();
+    }
 
     struct CompletionWake {
         generation: Arc<AtomicU64>,

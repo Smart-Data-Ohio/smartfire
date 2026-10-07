@@ -129,6 +129,25 @@ impl AgentChanges {
     }
 }
 
+/// One capability's active grants ([`Agent::grant_lines`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GrantLine {
+    pub capability: &'static str,
+    /// A grant with no room is active.
+    pub workspace_wide: bool,
+    /// Rooms with an active grant; 0 when `workspace_wide`.
+    pub room_count: i64,
+}
+
+/// The last 24 hours of an agent's deliveries ([`Agent::activity_counts`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ActivityCounts {
+    pub delivered: i64,
+    pub acknowledged: i64,
+    pub posted: i64,
+    pub suppressed: i64,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AgentStatusTarget {
     Badge,
@@ -141,6 +160,17 @@ pub struct AgentStatusChange {
 }
 impl crate::events::Broadcast for AgentStatusChange {
     const KIND: &'static str = "Agent#broadcast_status_change";
+}
+
+/// The agent's status, note, suspension or working presence changed. The classic app's frames
+/// are [`AgentStatusChange`]'s (status and note only); the cable sink publishes the single-page
+/// app's `agent.status` for this one, once per change.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentSyncChange {
+    pub agent_id: i64,
+}
+impl crate::events::Broadcast for AgentSyncChange {
+    const KIND: &'static str = "Agent#sync_status";
 }
 
 impl Agent {
@@ -436,6 +466,14 @@ impl Agent {
                 }));
             }
         }
+        if self.status != before.status
+            || self.status_note != before.status_note
+            || self.suspended_at != before.suspended_at
+            || self.working_presence != before.working_presence
+            || self.working_presence_expires_at != before.working_presence_expires_at
+        {
+            tx.emit_after_commit(Event::broadcast(&AgentSyncChange { agent_id: self.id }));
+        }
         Ok(())
     }
     /// Agent's declared dependent destroys, in Rails declaration order. This is
@@ -563,13 +601,15 @@ impl Agent {
             },
         })
     }
-    pub fn grants_summary(&self, conn: &Connection) -> Result<String> {
+    /// The active grants by capability, in capability name order: `None` for legacy access (no
+    /// grant rows recorded). [`Self::grants_summary`] words them.
+    pub fn grant_lines(&self, conn: &Connection) -> Result<Option<Vec<GrantLine>>> {
         if self.legacy_capabilities(conn)? {
-            return Ok("legacy access (no grants recorded)".into());
+            return Ok(None);
         };
         let mut capabilities = super::agent_access::CAPABILITIES;
         capabilities.sort();
-        let mut summaries = vec![];
+        let mut lines = vec![];
         for capability in capabilities {
             let rooms = query_all(
                 conn,
@@ -578,25 +618,59 @@ impl Agent {
                 |r| r.get::<_, Option<i64>>(0),
             )?;
             if rooms.contains(&None) {
-                summaries.push(format!("{capability} workspace-wide"));
+                lines.push(GrantLine {
+                    capability,
+                    workspace_wide: true,
+                    room_count: 0,
+                });
             } else if !rooms.is_empty() {
-                summaries.push(format!(
-                    "{capability} in {} {}",
-                    rooms.len(),
-                    if rooms.len() == 1 { "room" } else { "rooms" }
-                ));
+                lines.push(GrantLine {
+                    capability,
+                    workspace_wide: false,
+                    room_count: rooms.len() as i64,
+                });
             }
         }
+        Ok(Some(lines))
+    }
+    pub fn grants_summary(&self, conn: &Connection) -> Result<String> {
+        let Some(lines) = self.grant_lines(conn)? else {
+            return Ok("legacy access (no grants recorded)".into());
+        };
+        let summaries = lines
+            .iter()
+            .map(|line| {
+                if line.workspace_wide {
+                    format!("{} workspace-wide", line.capability)
+                } else {
+                    format!(
+                        "{} in {} {}",
+                        line.capability,
+                        line.room_count,
+                        if line.room_count == 1 { "room" } else { "rooms" }
+                    )
+                }
+            })
+            .collect::<Vec<_>>();
         Ok(if summaries.is_empty() {
             "no active grants".into()
         } else {
             summaries.join(", ")
         })
     }
+    /// The last 24 hours of deliveries, as [`Self::activity_summary`] counts them.
+    pub fn activity_counts(&self, conn: &Connection, now: Timestamp) -> Result<ActivityCounts> {
+        Ok(conn.query_row("SELECT COUNT(CASE WHEN outcome='delivered' AND event_type IN ('mention','direct_message','reply','approval_decided','github_action_completed','fizzy_action_completed','work_assigned','work_unassigned','work_handed_off','slash_command') THEN 1 END),COUNT(CASE WHEN outcome='acknowledged' THEN 1 END),COUNT(CASE WHEN event_type='posted' THEN 1 END),COUNT(CASE WHEN outcome='suppressed' THEN 1 END) FROM agent_events WHERE agent_id=? AND created_at>=?",params![self.id,now.ago(jiff::SignedDuration::from_hours(24))],|r|Ok(ActivityCounts { delivered: r.get(0)?, acknowledged: r.get(1)?, posted: r.get(2)?, suppressed: r.get(3)? }))?)
+    }
     pub fn activity_summary(&self, conn: &Connection, now: Timestamp) -> Result<String> {
-        let (delivered,acked,posted,suppressed):(i64,i64,i64,i64)=conn.query_row("SELECT COUNT(CASE WHEN outcome='delivered' AND event_type IN ('mention','direct_message','reply','approval_decided','github_action_completed','fizzy_action_completed','work_assigned','work_unassigned','work_handed_off','slash_command') THEN 1 END),COUNT(CASE WHEN outcome='acknowledged' THEN 1 END),COUNT(CASE WHEN event_type='posted' THEN 1 END),COUNT(CASE WHEN outcome='suppressed' THEN 1 END) FROM agent_events WHERE agent_id=? AND created_at>=?",params![self.id,now.ago(jiff::SignedDuration::from_hours(24))],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)))?;
+        let ActivityCounts {
+            delivered,
+            acknowledged,
+            posted,
+            suppressed,
+        } = self.activity_counts(conn, now)?;
         Ok(format!(
-            "{delivered} delivered, {acked} acknowledged, {posted} posted, {suppressed} suppressed"
+            "{delivered} delivered, {acknowledged} acknowledged, {posted} posted, {suppressed} suppressed"
         ))
     }
     pub fn for_directory(conn: &Connection) -> Result<Vec<Self>> {
