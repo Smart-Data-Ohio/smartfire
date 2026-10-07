@@ -72,8 +72,12 @@ export function smartfireServiceWorker(): Plugin {
       const chunk = outputs[0]?.output.find((output) => output.type === "chunk");
       const offline = bundle["offline.html"];
 
-      if (chunk === undefined || offline?.type !== "asset") {
-        throw new Error("The production build must emit a worker and offline.html");
+      const page = Object.values(bundle).find(
+        (output) => output.type === "chunk" && output.isEntry && output.name === "index",
+      );
+
+      if (chunk === undefined || offline?.type !== "asset" || page === undefined) {
+        throw new Error("The production build must emit an app entry, worker and offline.html");
       }
 
       const runtimeName = `assets/service-worker-${assetHash(chunk.code)}.js`;
@@ -85,7 +89,13 @@ export function smartfireServiceWorker(): Plugin {
       this.emitFile({ type: "asset", fileName: offlineName, source: offline.source });
 
       const precache = precacheFiles([...Object.keys(bundle), runtimeName, offlineName], base);
-      const config = { version: buildVersion(precache), precache, offline: `${base}offline.html` };
+
+      const config = {
+        version: buildVersion(precache),
+        precache,
+        offline: `${base}offline.html`,
+        page: `${base}${page.fileName}`,
+      };
 
       this.emitFile({
         type: "asset",
@@ -98,9 +108,96 @@ export function smartfireServiceWorker(): Plugin {
       // context.route cannot intercept the browser's update-script requests reliably.
       let revision = "";
       let noStoreReads = 0;
+      const retired = new Set<string>();
       const testing = process.env.SMARTFIRE_PWA_E2E === "1";
 
       server.middlewares.use(async (request, response, next) => {
+        const requested = new URL(request.url ?? "/", "http://preview");
+        const moduleRevision = requested.searchParams.get("pwa");
+
+        if (testing && requested.pathname === "/__pwa/retire" && request.method === "POST") {
+          const path = requested.searchParams.get("path");
+
+          if (path === null) {
+            retired.clear();
+          } else {
+            retired.add(path);
+          }
+
+          response.statusCode = 204;
+          response.end();
+
+          return;
+        }
+
+        if (testing && retired.has(requested.pathname)) {
+          response.statusCode = 404;
+          response.setHeader("Cache-Control", "no-store");
+          response.end("This build's asset has retired");
+
+          return;
+        }
+
+        if (
+          testing &&
+          moduleRevision !== null &&
+          requested.pathname.startsWith(`${base}assets/`) &&
+          /^\/[^/]+-[\w-]{8,}\.js$/.test(requested.pathname.slice(`${base}assets`.length))
+        ) {
+          try {
+            const code = await readFile(
+              resolve(dist, requested.pathname.slice(base.length)),
+              "utf8",
+            );
+
+            response.setHeader("Content-Type", "text/javascript; charset=utf-8");
+            response.setHeader("Cache-Control", "no-cache");
+            // Tag the whole module graph. Dynamic chunks can import the entry, so changing
+            // only its script URL would execute the untagged entry and mount the app twice.
+            response.end(
+              code.replace(
+                /(["'`])(\.\/[^"'`]+-[\w-]{8,}\.js)\1/g,
+                `$1$2?pwa=${encodeURIComponent(moduleRevision)}$1`,
+              ),
+            );
+          } catch (error) {
+            next(error);
+          }
+
+          return;
+        }
+
+        // Give each simulated deployment its own real page entry URL. The page reports that
+        // URL from import.meta.url; changing only the controller version cannot identify a page.
+        if (
+          testing &&
+          revision !== "" &&
+          requested.pathname.startsWith(base) &&
+          !requested.pathname.includes(".") &&
+          request.headers.accept?.includes("text/html")
+        ) {
+          try {
+            const html = await readFile(resolve(dist, "index.html"), "utf8");
+
+            for (const [name, value] of Object.entries(server.config.preview.headers ?? {})) {
+              if (value !== undefined) response.setHeader(name, value);
+            }
+
+            response.setHeader("Content-Type", "text/html; charset=utf-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.end(
+              html.replace(
+                /(src="[^"]*\/assets\/index-[\w-]+\.js)(")/,
+                `$1?pwa=${encodeURIComponent(revision)}$2`,
+              ),
+            );
+          } catch (error) {
+            next(error);
+          }
+
+          return;
+        }
+
         if (testing && request.url === "/assets/pwa-no-store-0123456789abcdef.txt") {
           noStoreReads += 1;
           response.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -139,6 +236,11 @@ export function smartfireServiceWorker(): Plugin {
 
           if (testing && revision !== "") {
             script = script.replace(/("version":")[^"]+("\s*,)/, `$1${revision}$2`);
+            // Changed module bytes need distinct cache keys, just like real build hashes.
+            script = script.replace(
+              /("[^"\n]*\/assets\/[^"\n]+-[\w-]{8,}\.js)(")/g,
+              `$1?pwa=${encodeURIComponent(revision)}$2`,
+            );
           }
 
           for (const [name, value] of Object.entries(server.config.preview.headers ?? {})) {

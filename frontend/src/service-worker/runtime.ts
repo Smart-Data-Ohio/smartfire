@@ -2,6 +2,7 @@ import {
   CACHE_PREFIX,
   type CacheActivation,
   cacheName,
+  latestCache,
   nextActivation,
   obsoleteCaches,
   previousCache,
@@ -12,25 +13,46 @@ export interface WorkerBuild {
   readonly version: string;
   readonly precache: readonly string[];
   readonly offline: string;
+  readonly page: string;
+}
+
+/** The small Cache API surface used by the worker, also exercised by lifecycle tests. */
+export interface WorkerCacheStorage {
+  readonly keys: CacheStorage["keys"];
+  readonly delete: CacheStorage["delete"];
+  readonly match: CacheStorage["match"];
+  readonly open: (name: string) => Promise<Pick<Cache, "keys" | "put">>;
+}
+
+export interface CacheCoordinator {
+  run<Result>(work: () => Promise<Result>): Promise<Result>;
 }
 
 /** Browser APIs stay at this boundary; request selection and cache retention are pure modules. */
 export class WorkerCache {
   readonly name: string;
   private readonly origin: string;
-  private readonly storage: CacheStorage;
+  private readonly storage: WorkerCacheStorage;
   private readonly fetch: typeof fetch;
   private readonly build: WorkerBuild;
   private readonly marker: string;
   private readonly currentUrls: ReadonlySet<string>;
   private readonly assetPrefix: string;
   private previousUrls: Promise<ReadonlySet<string>> | null = null;
+  private readonly coordinator: CacheCoordinator | null;
 
-  constructor(build: WorkerBuild, origin: string, storage: CacheStorage, network: typeof fetch) {
+  constructor(
+    build: WorkerBuild,
+    origin: string,
+    storage: WorkerCacheStorage,
+    network: typeof fetch,
+    coordinator: CacheCoordinator | null = null,
+  ) {
     this.build = build;
     this.origin = origin;
     this.storage = storage;
     this.fetch = (...args) => network(...args);
+    this.coordinator = coordinator;
     this.name = cacheName(build.version);
     this.marker = new URL(`${build.offline}.activation`, origin).href;
     this.currentUrls = new Set(build.precache.map((path) => new URL(path, origin).href));
@@ -49,8 +71,26 @@ export class WorkerCache {
   }
 
   async install(): Promise<void> {
+    await this.coordinate(async () => {
+      const existing = (await this.activations()).find((cache) => cache.name === this.name);
+      const cache = await this.storage.open(this.name);
+
+      // A rollback reuses an activated cache. Pin it under the same origin-wide lock used by
+      // pruning, preserving its activation/page so existing tabs can still read its assets.
+      await cache.put(
+        this.marker,
+        new Response(
+          JSON.stringify({
+            activation: existing?.activation ?? null,
+            page: existing?.page ?? new URL(this.build.page, this.origin).href,
+            installing: true,
+          }),
+        ),
+      );
+    });
     const cache = await this.storage.open(this.name);
 
+    // The persistent pin protects the cache while these network requests run without a lock.
     // addAll would cache no-store replies. Reject an incomplete precache instead of activating it.
     for (const url of this.currentUrls) {
       const request = new Request(url, { cache: "reload" });
@@ -64,6 +104,10 @@ export class WorkerCache {
     }
   }
 
+  private async coordinate<Result>(work: () => Promise<Result>): Promise<Result> {
+    return this.coordinator === null ? work() : this.coordinator.run(work);
+  }
+
   private async activations(): Promise<CacheActivation[]> {
     const activations: CacheActivation[] = [];
 
@@ -73,30 +117,91 @@ export class WorkerCache {
       }
 
       const marker = await this.storage.match(this.marker, { cacheName: name });
-      const activation = marker === undefined ? null : Number(await marker.text());
+      const content = marker === undefined ? "" : await marker.text();
+      let activation: number | null = null;
+      let page: string | null = null;
+      let installing = false;
+
+      try {
+        const value: unknown = JSON.parse(content);
+
+        if (Number.isSafeInteger(value)) {
+          // A worker from before live-build reporting left a numeric activation marker.
+          activation = Number(value);
+        } else if (value instanceof Object) {
+          if ("activation" in value && Number.isSafeInteger(value.activation)) {
+            activation = Number(value.activation);
+          }
+
+          if ("page" in value && String(value.page) === value.page) {
+            page = value.page;
+          }
+
+          installing = "installing" in value && value.installing === true;
+        }
+      } catch {
+        // Incomplete or unrecognized internal metadata never proves a cache is activated.
+      }
 
       activations.push({
         name,
         activation: activation !== null && Number.isSafeInteger(activation) ? activation : null,
+        page,
+        installing,
       });
     }
 
     return activations;
   }
 
-  async activate(): Promise<void> {
-    const activations = await this.activations();
-    const previous = previousCache(this.name, activations);
-    const cache = await this.storage.open(this.name);
+  async activate(livePages: readonly (string | null)[]): Promise<void> {
+    await this.coordinate(async () => {
+      const activations = await this.activations();
+      const cache = await this.storage.open(this.name);
 
-    // This internal record is written only on activation, so failed installations never count.
-    await cache.put(this.marker, new Response(String(nextActivation(activations))));
-    await Promise.all(
-      obsoleteCaches(this.name, previous, await this.storage.keys()).map((name) =>
-        this.storage.delete(name),
-      ),
-    );
-    this.previousUrls = null;
+      // This internal record is written only on activation, so failed installations never count.
+      await cache.put(
+        this.marker,
+        new Response(
+          JSON.stringify({
+            activation: nextActivation(activations),
+            page: new URL(this.build.page, this.origin).href,
+            installing: false,
+          }),
+        ),
+      );
+      await this.pruneLocked(livePages);
+      this.previousUrls = null;
+    });
+  }
+
+  async prune(livePages: readonly (string | null)[]): Promise<void> {
+    if (this.coordinator === null) {
+      // Without cross-worker exclusion, reading a pin and deleting the cache is not atomic.
+      // Keep caching/installing usable but retain all builds rather than risk an unsafe prune.
+      return;
+    }
+
+    await this.coordinator.run(() => this.pruneLocked(livePages));
+  }
+
+  private async pruneLocked(livePages: readonly (string | null)[]): Promise<void> {
+    if (this.coordinator === null) {
+      return;
+    }
+
+    const activations = await this.activations();
+    // An older worker can still finish an event after its replacement activates. The durable
+    // activation order, read under the shared lock, identifies the actual current/previous.
+    const current = latestCache(activations) ?? this.name;
+    const previous = previousCache(current, activations);
+    const obsolete = obsoleteCaches(current, previous, activations, livePages);
+
+    await Promise.all(obsolete.map((name) => this.storage.delete(name)));
+
+    if (obsolete.length > 0) {
+      this.previousUrls = null;
+    }
   }
 
   private async retainedUrls(): Promise<ReadonlySet<string>> {
@@ -112,7 +217,7 @@ export class WorkerCache {
       for (const request of await cache.keys()) {
         const url = new URL(request.url);
 
-        // Only the previous build's hashed chunks become precached requests. The activation
+        // Only retained builds' hashed chunks become precached requests. The activation
         // record, offline HTML, and arbitrary cache entries cannot extend the fetch policy.
         if (url.origin === this.origin && isSpaAsset(url.pathname, this.assetPrefix)) {
           urls.add(url.href);

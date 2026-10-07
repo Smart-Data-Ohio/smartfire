@@ -1,7 +1,14 @@
 import { type BrowserContext, expect, type Page, test, type Worker } from "@playwright/test";
+import { parseJson } from "../mock/json.ts";
+import { ROOM_IDS } from "../mock/seed.ts";
+import { createMockServer } from "../mock/server.ts";
 
 declare const self: ServiceWorkerGlobalScope & {
-  readonly smartfireBuild: { readonly version: string };
+  readonly smartfireBuild: {
+    readonly version: string;
+    readonly page: string;
+    readonly precache: readonly string[];
+  };
 };
 
 declare const SmartfireWorker: { openNotification(path: string): Promise<WindowClient | null> };
@@ -38,9 +45,30 @@ async function cacheNames(page: Page): Promise<string[]> {
 }
 
 async function update(page: Page, context: BrowserContext, version: string): Promise<Worker> {
-  await context.request.post(`/__pwa/version?value=${version}`);
+  let existing: Worker | undefined;
 
-  const installed = context.waitForEvent("serviceworker");
+  for (const worker of context.serviceWorkers()) {
+    if (
+      new URL(worker.url()).pathname === workerPath &&
+      (await worker.evaluate(() => self.smartfireBuild.version)) === version
+    ) {
+      existing = worker;
+      break;
+    }
+  }
+
+  // Subscribe before changing the server: the page's own update can win this race.
+  const installed =
+    existing === undefined
+      ? context.waitForEvent(
+          "serviceworker",
+          async (worker) =>
+            new URL(worker.url()).pathname === workerPath &&
+            (await worker.evaluate(() => self.smartfireBuild.version)) === version,
+        )
+      : Promise.resolve(existing);
+
+  await context.request.post(`/__pwa/version?value=${version}`);
 
   await page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration("/");
@@ -49,49 +77,151 @@ async function update(page: Page, context: BrowserContext, version: string): Pro
       throw new Error("Missing root service-worker registration");
     }
 
-    const found = new Promise<ServiceWorker>((resolve, reject) => {
-      registration.addEventListener(
-        "updatefound",
-        () => {
-          const installing = registration.installing;
-
-          if (installing === null) {
-            reject(new Error("Update has no installing worker"));
-          } else {
-            resolve(installing);
-          }
-        },
-        { once: true },
-      );
-    });
-
     await registration.update();
 
-    const installing = await found;
+    const installing = registration.installing ?? registration.waiting ?? registration.active;
+
+    if (installing === null) {
+      throw new Error("Update has no worker");
+    }
 
     if (installing.state !== "activated") {
       await new Promise<void>((resolve, reject) => {
-        installing.addEventListener("statechange", () => {
+        const changed = () => {
           if (installing.state === "activated") {
+            installing.removeEventListener("statechange", changed);
             resolve();
           } else if (installing.state === "redundant") {
+            installing.removeEventListener("statechange", changed);
             reject(new Error("Updated worker did not install"));
           }
-        });
+        };
+
+        installing.addEventListener("statechange", changed);
+        changed();
       });
+    }
+
+    if (registration.active !== installing || navigator.serviceWorker.controller !== installing) {
+      throw new Error("Updated worker is not the active root controller");
     }
   });
 
   const worker = await installed;
 
-  await expect.poll(() => worker.evaluate(() => self.smartfireBuild.version)).toBe(version);
+  expect(await worker.evaluate(() => self.smartfireBuild.version)).toBe(version);
+
+  const modules = await worker.evaluate(() =>
+    self.smartfireBuild.precache.filter((path) =>
+      new URL(path, self.location.href).pathname.endsWith(".js"),
+    ),
+  );
+
+  expect(modules.length).toBeGreaterThan(0);
+
+  for (const path of modules) {
+    expect(new URL(path, page.url()).searchParams.get("pwa")).toBe(version);
+  }
+
+  // The same script URL serves every revision. Check the reporting worker's identity too.
+  const confirmation = await page.evaluateHandle(async (expected) => {
+    const registration = await navigator.serviceWorker.getRegistration("/");
+
+    const confirmed = new Promise<void>((resolve, reject) => {
+      const received = (event: MessageEvent<unknown>) => {
+        if (event.data !== `pwa-test:${expected}`) {
+          return;
+        }
+
+        navigator.serviceWorker.removeEventListener("message", received);
+
+        if (
+          registration?.active?.state === "activated" &&
+          event.source === registration.active &&
+          navigator.serviceWorker.controller === registration.active
+        ) {
+          resolve();
+        } else {
+          reject(new Error("Version-matching worker is not the active root controller"));
+        }
+      };
+
+      navigator.serviceWorker.addEventListener("message", received);
+    });
+
+    return { confirmed };
+  }, version);
+
+  try {
+    await worker.evaluate(async () => {
+      for (const client of await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      })) {
+        client.postMessage(`pwa-test:${self.smartfireBuild.version}`);
+      }
+    });
+    await confirmation.evaluate(({ confirmed }) => confirmed);
+  } finally {
+    await confirmation.dispose();
+  }
 
   return worker;
 }
 
 test.beforeEach(async ({ request }) => {
   await request.post("/__pwa/version?value=");
+  await request.post("/__pwa/retire");
 });
+
+/** Exercise real production chunks with the existing wire-contract mock, without a dev bundle. */
+async function mockApi(page: Page): Promise<() => void> {
+  const mock = createMockServer();
+
+  await page.route("**/api/v1/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const text = request.postData();
+
+    const result = await mock.handle({
+      method: request.method(),
+      path: url.pathname,
+      query: url.searchParams,
+      body: text === null ? undefined : parseJson(text),
+      headers: await request.allHeaders(),
+    });
+
+    await route.fulfill({
+      status: result.status,
+      contentType: "application/json",
+      headers: { "Cache-Control": "no-store" },
+      body: result.status === 204 ? "" : JSON.stringify(result.json),
+    });
+  });
+
+  return () => mock.dispose();
+}
+
+async function openPoll(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Attach and more" }).click();
+  await page.getByRole("menuitem", { name: "Create a poll" }).click();
+}
+
+async function pollChunk(page: Page, cache: string): Promise<string> {
+  return page.evaluate(async (name) => {
+    const stored = await caches.open(name);
+
+    const request = (await stored.keys()).find((entry) =>
+      /\/create-poll-dialog-[\w-]+\.js$/.test(new URL(entry.url).pathname),
+    );
+
+    if (request === undefined) {
+      throw new Error("The actual create-poll lazy chunk was not precached");
+    }
+
+    return new URL(request.url).pathname;
+  }, cache);
+}
 
 test("offline navigation shows the designed offline page and recovers online", async ({
   page,
@@ -155,7 +285,7 @@ test("no-store classic assets are fetched each time and never enter either cache
   expect(results.cached).toBe(false);
 });
 
-test("updates activate B then C, preserve one previous build, and keep serving pages", async ({
+test("updates retain live A through B and C, then prune its closed page", async ({
   page,
   context,
 }) => {
@@ -176,6 +306,8 @@ test("updates activate B then C, preserve one previous build, and keep serving p
     { name: cacheA, path: oldChunk, classicPath: oldClassic },
   );
   await update(page, context, "pwa-e2e-b");
+  // An unchanged worker emits no updatefound event; accept the already active revision.
+  await update(page, context, "pwa-e2e-b");
   await expect.poll(() => cacheNames(page)).toEqual([cacheA, `${cachePrefix}pwa-e2e-b`].sort());
 
   await context.setOffline(true);
@@ -195,9 +327,110 @@ test("updates activate B then C, preserve one previous build, and keep serving p
   await update(page, context, "pwa-e2e-c");
   await expect
     .poll(() => cacheNames(page))
+    .toEqual([cacheA, `${cachePrefix}pwa-e2e-b`, `${cachePrefix}pwa-e2e-c`].sort());
+
+  const current = await context.newPage();
+
+  await current.goto("/app/_kitchen-sink");
+  await expect(current.getByRole("heading", { name: "Smartfire design system" })).toBeVisible();
+  await page.close();
+  // A later real fetch/messages performs pruning; there is no retention timer.
+  await current.evaluate(() => fetch("/app/offline.html"));
+  await expect
+    .poll(() => cacheNames(current))
     .toEqual([`${cachePrefix}pwa-e2e-b`, `${cachePrefix}pwa-e2e-c`]);
-  await page.goto("/app/_kitchen-sink");
-  await expect(page.getByRole("heading", { name: "Smartfire design system" })).toBeVisible();
+});
+
+test("an A page opens its unloaded real poll chunk after B and C activate", async ({
+  page,
+  context,
+}) => {
+  const dispose = await mockApi(page);
+
+  try {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const a = await register(page, context);
+    const cacheA = `${cachePrefix}${await a.evaluate(() => self.smartfireBuild.version)}`;
+
+    await page.goto(`/app/r/${ROOM_IDS.general}`);
+    await expect(page.getByRole("textbox", { name: /^Message #/ })).toBeVisible();
+    const chunk = await pollChunk(page, cacheA);
+
+    await update(page, context, "pwa-live-b");
+    await update(page, context, "pwa-live-c");
+    await context.request.post(`/__pwa/retire?path=${encodeURIComponent(chunk)}`);
+    await page.evaluate(async (path) => {
+      for (const name of await caches.keys()) {
+        if (name === "smartfire-spa-pwa-live-b" || name === "smartfire-spa-pwa-live-c") {
+          const stored = await caches.open(name);
+
+          for (const request of await stored.keys()) {
+            if (new URL(request.url).pathname === path) await stored.delete(request);
+          }
+        }
+      }
+    }, chunk);
+    const session = await context.newCDPSession(page);
+
+    await session.send("Network.enable");
+    await session.send("Network.clearBrowserCache");
+    await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+    await openPoll(page);
+    await expect(page.getByRole("dialog", { name: "Create a poll" })).toBeVisible();
+    await expect(page.locator(".app-shell")).toHaveAttribute("data-update-required", "false");
+    await expect.poll(() => cacheNames(page)).toContain(cacheA);
+  } finally {
+    dispose();
+  }
+});
+
+test("a forced real lazy-chunk failure preserves the page and signals explicit update recovery", async ({
+  page,
+  context,
+}) => {
+  const dispose = await mockApi(page);
+  const errors: string[] = [];
+
+  page.on("pageerror", (error) => errors.push(error.message));
+
+  try {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const a = await register(page, context);
+    const cacheA = `${cachePrefix}${await a.evaluate(() => self.smartfireBuild.version)}`;
+
+    await page.goto(`/app/r/${ROOM_IDS.general}`);
+    const composer = page.getByRole("textbox", { name: /^Message #/ });
+
+    await expect(composer).toBeVisible();
+    await composer.fill("Keep this draft while the feature is unavailable");
+    const chunk = await pollChunk(page, cacheA);
+
+    await page.evaluate(async (path) => {
+      for (const name of await caches.keys()) {
+        await (await caches.open(name)).delete(path);
+      }
+    }, chunk);
+    await context.request.post(`/__pwa/retire?path=${encodeURIComponent(chunk)}`);
+    const session = await context.newCDPSession(page);
+
+    await session.send("Network.enable");
+    await session.send("Network.clearBrowserCache");
+    await session.send("Network.setCacheDisabled", { cacheDisabled: true });
+    let navigations = 0;
+
+    page.on("framenavigated", (frame) => {
+      if (frame === page.mainFrame()) navigations += 1;
+    });
+    await openPoll(page);
+    await expect(page.locator(".app-shell")).toHaveAttribute("data-update-required", "true");
+    await expect(composer).toHaveText("Keep this draft while the feature is unavailable");
+    await expect(page.getByRole("navigation", { name: "Destinations" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Create a poll" })).toHaveCount(0);
+    expect(errors).toEqual([]);
+    expect(navigations).toBe(0);
+  } finally {
+    dispose();
+  }
 });
 
 test("classic and SPA scripts replace one root registration in both directions", async ({

@@ -1,17 +1,86 @@
 /// <reference lib="webworker" />
 import { classicToSpaUrl } from "../lib/screens.ts";
-import { type WorkerBuild, WorkerCache } from "./runtime.ts";
+import { pageBuildMessage, REQUEST_PAGE_BUILD } from "./messages.ts";
+import { type CacheCoordinator, type WorkerBuild, WorkerCache } from "./runtime.ts";
 
 declare const self: ServiceWorkerGlobalScope & { readonly smartfireBuild: WorkerBuild };
 
-const cache = new WorkerCache(self.smartfireBuild, self.location.origin, caches, fetch);
+const coordinator: CacheCoordinator | null =
+  self.navigator.locks === undefined
+    ? null
+    : { run: (work) => self.navigator.locks.request("smartfire-spa-cache", work) };
+
+const cache = new WorkerCache(
+  self.smartfireBuild,
+  self.location.origin,
+  caches,
+  fetch,
+  coordinator,
+);
+
+const pageBuilds = new Map<string, string>();
+
+let maintenance: Promise<void> = Promise.resolve();
+
+/** The snapshot, rather than remembered IDs, decides which pages are still alive. */
+async function livePages(): Promise<readonly (string | null)[]> {
+  const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+  const ids = new Set(windows.map((client) => client.id));
+
+  for (const id of pageBuilds.keys()) {
+    if (!ids.has(id)) {
+      pageBuilds.delete(id);
+    }
+  }
+
+  return windows.map((client) => {
+    const page = pageBuilds.get(client.id) ?? null;
+
+    if (page === null) {
+      client.postMessage({ kind: REQUEST_PAGE_BUILD });
+    }
+
+    return page;
+  });
+}
+
+/** Activation, fetch and message pruning must not delete a cache from a stale client snapshot. */
+function maintain(work: () => Promise<void>): Promise<void> {
+  const pending = maintenance.then(work);
+
+  maintenance = pending.catch(() => undefined);
+
+  return pending;
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(cache.install().then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim().then(() => cache.activate()));
+  event.waitUntil(
+    maintain(async () => {
+      await self.clients.claim();
+      await cache.activate(await livePages());
+    }),
+  );
+});
+
+self.addEventListener("message", (event) => {
+  const page = pageBuildMessage(event, self.location.origin);
+  const source = event.source;
+
+  if (page === null || source === null || !("id" in source) || source.type !== "window") {
+    return;
+  }
+
+  event.waitUntil(
+    maintain(async () => {
+      // A reload reports its own entry and replaces any earlier identity for this client.
+      pageBuilds.set(source.id, page);
+      await cache.prune(await livePages());
+    }),
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -19,8 +88,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const pruning = maintain(async () => cache.prune(await livePages()));
+
+  event.waitUntil(pruning);
   event.respondWith(
-    cache.response(event.request).then((response) => response ?? fetch(event.request)),
+    pruning
+      .then(() => cache.response(event.request))
+      .then((response) => response ?? fetch(event.request)),
   );
 });
 

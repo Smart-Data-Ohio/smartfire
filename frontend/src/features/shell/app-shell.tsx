@@ -1,5 +1,6 @@
 import { Outlet, useMatches, useMatchRoute, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
@@ -89,9 +90,15 @@ export function AppShell() {
   const view = usePhoneView(roomId);
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
+  const updateRequired = useAppUpdateRequired();
 
+  // LEAD-UI: use updateRequired and reloadForUpdate for the update prompt; no automatic reload.
   return (
-    <div className="app-shell" data-view={page === null ? view : "room"}>
+    <div
+      className="app-shell"
+      data-view={page === null ? view : "room"}
+      data-update-required={updateRequired}
+    >
       <Rail />
       <Sidebar />
       {viewerId === null ? null : (

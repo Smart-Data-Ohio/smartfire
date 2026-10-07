@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
-import { lazy, type ReactElement, Suspense, useState } from "react";
+import { type ReactElement, Suspense, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { type ScheduledRow as ScheduledEntry, useScheduledList } from "../../store/inbox-hooks.ts";
 import { actions, isScheduledDropped } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -19,9 +20,11 @@ import { inlineWhen, markdownExcerpt, scheduledSection } from "./scheduled-forma
 import { ScheduledRow, type ScheduledRowHandlers } from "./scheduled-row.tsx";
 import "./scheduled.css";
 
-const LoadedEditDialog = lazy(() =>
-  import("./edit-scheduled-dialog.tsx").then((module) => ({ default: module.EditScheduledDialog })),
-);
+const LoadedEditDialog = lazy(async () => {
+  const module = await import("./edit-scheduled-dialog.tsx");
+
+  return { default: module.EditScheduledDialog };
+});
 
 /** The editor, loaded the first time a message is edited. */
 function LazyEditDialog(props: {
