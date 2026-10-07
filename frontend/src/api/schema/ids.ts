@@ -88,3 +88,35 @@ export type WorkLinkId = typeof WorkLinkId.Type;
 export const WorkEventId = Schema.Int.pipe(Schema.brand("WorkEventId"));
 
 export type WorkEventId = typeof WorkEventId.Type;
+
+export const SessionId = Schema.Int.pipe(Schema.brand("SessionId"));
+
+export type SessionId = typeof SessionId.Type;
+
+export const PushSubscriptionId = Schema.Int.pipe(Schema.brand("PushSubscriptionId"));
+
+export type PushSubscriptionId = typeof PushSubscriptionId.Type;
+
+export const RememberedDeviceId = Schema.Int.pipe(Schema.brand("RememberedDeviceId"));
+
+export type RememberedDeviceId = typeof RememberedDeviceId.Type;
+
+export const WorkspaceIconId = Schema.Int.pipe(Schema.brand("WorkspaceIconId"));
+
+export type WorkspaceIconId = typeof WorkspaceIconId.Type;
+
+export const AuditLogEntryId = Schema.Int.pipe(Schema.brand("AuditLogEntryId"));
+
+export type AuditLogEntryId = typeof AuditLogEntryId.Type;
+
+export const CredentialId = Schema.Int.pipe(Schema.brand("CredentialId"));
+
+export type CredentialId = typeof CredentialId.Type;
+
+export const AgentGrantId = Schema.Int.pipe(Schema.brand("AgentGrantId"));
+
+export type AgentGrantId = typeof AgentGrantId.Type;
+
+export const SlackRunId = Schema.Int.pipe(Schema.brand("SlackRunId"));
+
+export type SlackRunId = typeof SlackRunId.Type;

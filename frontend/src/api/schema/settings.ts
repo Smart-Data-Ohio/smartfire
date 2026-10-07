@@ -32,7 +32,7 @@ import type { UpdateCalls as GeneratedUpdateCalls } from "../../gen/UpdateCalls.
 import type { UpdateNotifications as GeneratedUpdateNotifications } from "../../gen/UpdateNotifications.ts";
 import type { UpdateProfile as GeneratedUpdateProfile } from "../../gen/UpdateProfile.ts";
 import type { UpdateStatus as GeneratedUpdateStatus } from "../../gen/UpdateStatus.ts";
-import { RoomId, UserId } from "./ids.ts";
+import { PushSubscriptionId, RememberedDeviceId, RoomId, SessionId, UserId } from "./ids.ts";
 import { PresenceSetting, TextSize, Theme, VoiceMode } from "./me.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Involvement } from "./room.ts";
@@ -323,7 +323,7 @@ export type UpdateCallsPin = Assert<Pinned<typeof UpdateCalls, GeneratedUpdateCa
 
 /** One signed-in session. */
 export const SessionInfo = Schema.Struct({
-  id: Schema.Int,
+  id: SessionId,
   current: Schema.Boolean,
   description: Schema.String,
   ipAddress: Schema.NullOr(Schema.String),
@@ -347,7 +347,7 @@ export type SessionListPin = Assert<Pinned<typeof SessionList, GeneratedSessionL
 
 /** One browser or device receiving push notifications. */
 export const PushSubscriptionInfo = Schema.Struct({
-  id: Schema.Int,
+  id: PushSubscriptionId,
   endpoint: Schema.String,
   browser: Schema.String,
   version: Schema.String,
@@ -388,7 +388,7 @@ export type RoomMembershipRowPin = Assert<
 
 /** A browser that skips the two-step code for 30 days. */
 export const RememberedDevice = Schema.Struct({
-  id: Schema.Int,
+  id: RememberedDeviceId,
   description: Schema.String,
   ipAddress: Schema.NullOr(Schema.String),
   lastUsedAt: Schema.NullOr(Timestamp),
