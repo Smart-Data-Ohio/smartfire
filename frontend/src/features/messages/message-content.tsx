@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { inlineMentions } from "../../lib/body-html.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { CardSlot } from "../cards/card-slot.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { AttachmentView } from "./attachments.tsx";
+import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
 
 /** How much of a quoted message the reply line shows before it trails off. */
@@ -89,13 +90,7 @@ export function ReplyQuote({ message }: { readonly message: MessageDTO }) {
 }
 
 function Body({ message }: { readonly message: MessageDTO }) {
-  return (
-    <div
-      className="message-body"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
-    />
-  );
+  return <BodyHtml html={message.bodyHtml} className="message-body" />;
 }
 
 /** Where a forward came from, when the source message is in the store. */
@@ -135,13 +130,19 @@ interface MessageContentProps {
   readonly message: MessageDTO;
   /** Shown at the end of the body's last line ("(edited)" on a continuation row). */
   readonly trailing?: ReactNode;
+  /** Rendered in a thread pane (the pane's root message heads its thread, cards and all). */
+  readonly inThread?: boolean;
 }
 
 /**
  * The message's own content under the header: the body (or, for a forward, the forwarder's note
- * and the forwarded card), then its file.
+ * and the forwarded card), then its file, then its poll and cards.
  */
-export function MessageContent({ message, trailing }: MessageContentProps) {
+export function MessageContent({ message, trailing, inThread = false }: MessageContentProps) {
+  // The thread pane's root message heads that thread; its replies head nothing.
+  const heads = inThread && message.threadId === null ? (message.thread?.threadId ?? null) : null;
+  const cards = <CardSlot message={message} threadId={heads} />;
+
   if (message.forwardedAt === null) {
     return (
       <>
@@ -150,6 +151,7 @@ export function MessageContent({ message, trailing }: MessageContentProps) {
           {trailing}
         </div>
         {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        {cards}
       </>
     );
   }
@@ -175,6 +177,7 @@ export function MessageContent({ message, trailing }: MessageContentProps) {
           {message.forwardNote === null ? trailing : null}
         </div>
         {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        {cards}
       </div>
     </>
   );

@@ -46,7 +46,7 @@ const agentUserJson = {
   status: "active",
   bio: null,
   avatarUrl: "/users/40/avatar?v=1700000001",
-  hasAvatar: false,
+  hasAvatar: true,
   customStatus: null,
   avatarIcon: {
     name: "github",

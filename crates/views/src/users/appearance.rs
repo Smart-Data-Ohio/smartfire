@@ -1,6 +1,13 @@
 //! users/profiles/_appearance.html.erb. The choices are the pinned Rails catalogue.
 use super::*;
 
+/// The time zone select's choices (label, IANA identifier), in its order, after "Not set".
+pub fn profile_time_zones() -> &'static [(String, String)] {
+    static CHOICES: std::sync::LazyLock<Vec<(String, String)>> =
+        std::sync::LazyLock::new(|| serde_json::from_str(include_str!("profile_time_zones.json")).unwrap());
+    &CHOICES
+}
+
 #[derive(Clone)]
 pub struct AppearanceData {
     pub theme: String,
@@ -68,13 +75,9 @@ impl Appearance<'_> {
         )
     }
     fn zones(&self) -> h::Html {
-        static CHOICES: std::sync::LazyLock<Vec<(String, String)>> =
-            std::sync::LazyLock::new(|| {
-                serde_json::from_str(include_str!("profile_time_zones.json")).unwrap()
-            });
         let mut options =
             vec![h::content_tag_text("option", h::attrs().value(""), "Not set (use system)").0];
-        for (label, value) in CHOICES.iter() {
+        for (label, value) in profile_time_zones() {
             let mut attrs = h::attrs();
             if self.data.zone_identifier.as_deref() == Some(value) {
                 attrs = attrs.attr("selected", "selected");

@@ -1,0 +1,37 @@
+/*
+ * Card resize: adapted from the free "Card resize" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add card-resize`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the medium step on
+ * --ease-move), and the reduced-motion guard also honours Smartfire's own motion setting. A
+ * poll's result bars (src/features/cards) use it to grow to their new share when votes change;
+ * a width set on first render doesn't transition, so history never animates.
+ */
+
+@layer recipes {
+  :root {
+    --resize-dur: var(--duration-medium);
+    --resize-ease: var(--ease-move);
+  }
+
+  .t-resize {
+    transition:
+      width var(--resize-dur) var(--resize-ease),
+      height var(--resize-dur) var(--resize-ease);
+    will-change: width, height;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-resize {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-resize {
+    transition: none !important;
+  }
+}

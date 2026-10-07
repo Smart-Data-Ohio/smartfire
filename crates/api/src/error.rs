@@ -108,14 +108,20 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
     })
 }
 
-/// What a before-action's halt means to the client. A JSON body is already an envelope.
+/// What a before-action's halt means to the client. A JSON body is already an envelope; a bare
+/// `head` (which takes the request's JSON content type, as Rails' does) is not.
 fn halted(c: &Ctx, response: &Response) -> Option<ApiError> {
     let json = response
         .headers
         .get(axum::http::header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| value.starts_with("application/json"));
-    if json {
+    let bare = match &response.body {
+        campfire_kit::Body::Empty => true,
+        campfire_kit::Body::Bytes(bytes) => bytes.is_empty(),
+        _ => false,
+    };
+    if json && !bare {
         return None;
     }
     let status = response.status;

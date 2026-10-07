@@ -14,7 +14,9 @@ async fn before(c: &mut Ctx, sudo: bool) -> Result<User> {
     }
     Ok(concerns::require_current_user(c)?.clone())
 }
-async fn data(c: &Ctx, uid: i64) -> Result<SetupData> {
+/// The setup page's state for administrator `uid`: the app credentials, their Slack connection,
+/// the active run and the manifest.
+pub async fn data(c: &Ctx, uid: i64) -> Result<SetupData> {
     let crypto = service(c).encryption;
     let mut data=c.app().db.read(move|conn| {
   let w=SlackWorkspace::current(conn)?;let connection=SlackConnection::for_user(conn,uid)?;
@@ -38,6 +40,33 @@ pub async fn update(c: &mut Ctx) -> Result {
         .get("client_secret")
         .filter(|p| p.is_present())
         .map(|_| campfire_richtext::ruby::strip(&param(c, "client_secret")).to_owned());
+    if let Err(errors) = configure(c, &user, client_id.clone(), secret).await? {
+        let mut data = data(c, user.id).await?;
+        data.client_id = Some(client_id);
+        data.configured = false;
+        data.errors = errors;
+        return framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| Setup {
+            ctx,
+            data: &data
+        })
+        .await;
+    }
+    redirect(
+        c,
+        "/account/slack_import",
+        Some("Slack app credentials saved."),
+        None,
+    )
+}
+/// `update` once the administrator is known and their password confirmed: saves the app's
+/// Client ID (stripped) and, when given, a new Client Secret, then the audit. The inner error is
+/// the form's messages.
+pub async fn configure(
+    c: &Ctx,
+    user: &User,
+    client_id: String,
+    secret: Option<String>,
+) -> Result<std::result::Result<(), Vec<String>>> {
     let crypto = service(c).encryption;
     let uid = user.id;
     let id = client_id.clone();
@@ -48,20 +77,10 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await;
     let workspace = match result {
         Ok(w) => w,
-        Err(campfire_db::Error::RecordInvalid(errors)) => {
-            let mut data = data(c, user.id).await?;
-            data.client_id = Some(client_id.clone());
-            data.configured = false;
-            data.errors = errors.full_messages();
-            return framed_page!(c, StatusCode::UNPROCESSABLE_ENTITY, |ctx| Setup {
-                ctx,
-                data: &data
-            })
-            .await;
-        }
+        Err(campfire_db::Error::RecordInvalid(errors)) => return Ok(Err(errors.full_messages())),
         Err(e) => return Err(Error::internal(e)),
     };
-    let context = audit(c, &user)?;
+    let context = audit(c, user)?;
     c.app()
         .db
         .write(move |tx| {
@@ -83,22 +102,11 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    redirect(
-        c,
-        "/account/slack_import",
-        Some("Slack app credentials saved."),
-        None,
-    )
+    Ok(Ok(()))
 }
 pub async fn destroy(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
-    let context = audit(c, &user)?;
-    let removed=c.app().db.write(move|tx| {
-  let active:bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing'))",[],|r|r.get(0))?;
-  if active {return Ok(false)}
-  if let Some(w)=SlackWorkspace::current(tx.conn())? {w.remove_credentials(tx)?;AuditLog::record(tx,NewAuditLog{action:"slack.workspace.remove_credentials".into(),changes:Some(json!({"client_id":w.client_id})),..Default::default()},&context)?;}
-  Ok(true)
- }).await.map_err(Error::internal)?;
+    let removed = remove(c, &user).await?;
     if removed {
         redirect(
             c,
@@ -114,4 +122,16 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             Some("Finish or cancel the running import first."),
         )
     }
+}
+/// `destroy` once the administrator is known and their password confirmed: removes the app
+/// credentials and every member's connection, then the audit; `false` (nothing removed) while a
+/// run is active.
+pub async fn remove(c: &Ctx, user: &User) -> Result<bool> {
+    let context = audit(c, user)?;
+    c.app().db.write(move|tx| {
+  let active:bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing'))",[],|r|r.get(0))?;
+  if active {return Ok(false)}
+  if let Some(w)=SlackWorkspace::current(tx.conn())? {w.remove_credentials(tx)?;AuditLog::record(tx,NewAuditLog{action:"slack.workspace.remove_credentials".into(),changes:Some(json!({"client_id":w.client_id})),..Default::default()},&context)?;}
+  Ok(true)
+ }).await.map_err(Error::internal)
 }

@@ -14,6 +14,9 @@
     "lineWidth": 100
   },
   "linter": {
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
       "preset": "recommended"
     }
@@ -54,9 +57,11 @@
                       "!**/sync/directs.ts",
                       "!**/sync/huddles.ts",
                       "!**/sync/panes.ts",
+                      "!**/sync/settings.ts",
+                      "!**/sync/admin.ts",
                       "!**/sync/run.ts"
                     ],
-                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts, huddles.ts or panes.ts."
+                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts, huddles.ts, panes.ts, settings.ts or admin.ts."
                   },
                   {
                     "group": ["**/sync/runtime.ts"],
