@@ -3,6 +3,7 @@ import { VList, type VListHandle } from "virtua";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
+import { useKeepRowFocus } from "./row-focus.ts";
 import "../panes/panes.css";
 
 /** How close to the end (px) the next page starts loading. */
@@ -37,12 +38,15 @@ interface PagedListProps {
  * A destination's list on virtua: a skeleton while the first page loads (revealed with the
  * skeleton-reveal recipe), an error with Retry, the empty state, or the rows; the next page loads
  * as the end nears (and at once while the rows don't fill the view), with a spinner, or a Retry
- * when it failed.
+ * when it failed. When the row holding focus leaves, focus moves to its neighbour (row-focus.ts).
  */
 export function PagedList({ state, label, errorText, empty, isEmpty, children }: PagedListProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const listRef = useRef<VListHandle | null>(null);
   const { status, loadingMore, hasMore, error, loadMore } = state;
   const canLoad = status === "ready" && hasMore && !loadingMore && error === null;
+
+  useKeepRowFocus(rootRef);
 
   // A short first page leaves nothing to scroll: keep loading until the view fills.
   useEffect(() => {
@@ -82,7 +86,7 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
     ) : null;
 
   return (
-    <div className="page-list">
+    <div ref={rootRef} className="page-list">
       <SkeletonReveal
         loading={status !== "ready"}
         skeleton={
