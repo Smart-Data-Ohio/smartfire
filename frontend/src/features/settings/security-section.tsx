@@ -367,7 +367,11 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
           }
         },
       )
-      .finally(() => setSaving(false));
+      .finally(() => {
+        // The field is read-only while the request is out, but nothing typed survives it.
+        setReauth("");
+        setSaving(false);
+      });
   };
 
   const text = shown === null ? null : askText(shown);
@@ -404,6 +408,7 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
           label={label}
           type="password"
           value={reauth}
+          readOnly={saving}
           autoComplete="off"
           spellCheck={false}
           data-autofocus

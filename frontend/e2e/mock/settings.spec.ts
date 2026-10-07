@@ -557,6 +557,37 @@ test("a refused or cancelled confirmation keeps no code, and closed codes are go
   await expect(page.getByText(first, { exact: true })).toHaveCount(0);
 });
 
+test("nothing typed while a confirmation is out survives its refusal", async ({ page }) => {
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/api/v1/settings/two_factor/backup_codes", async (route) => {
+    await held;
+    await route.fallback();
+  });
+  await openSettings(page, "security");
+  await page.getByRole("button", { name: "New backup codes" }).click();
+
+  const ask = page.getByRole("dialog", { name: "New backup codes?" });
+  const field = ask.getByLabel("Authenticator code or password");
+
+  await field.fill("000000");
+  await page.keyboard.press("Enter");
+  await expect(field).toHaveAttribute("readonly", "");
+  await field.press("7");
+  await expect(field).toHaveValue("");
+
+  release();
+  await expect(
+    ask.getByText("Enter your authenticator code or password to continue."),
+  ).toBeVisible();
+  await expect(field).toHaveValue("");
+  await expect(field).not.toHaveAttribute("readonly");
+});
+
 test("forgetting a browser by keyboard leaves focus on the next one", async ({ page }) => {
   await openSettings(page, "security");
 
@@ -650,6 +681,50 @@ test("a room with no level stored shows none chosen, and Mentions can be chosen"
   await expect(page.getByRole("menuitemradio", { checked: true })).toHaveCount(0);
   await page.getByRole("menuitemradio", { name: /Mentions/ }).click();
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Mentions`);
+});
+
+test("two failed changes from no level go back to none, not to the first choice", async ({
+  page,
+}) => {
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  let calls = 0;
+
+  await page.route("**/api/v1/settings/account", async (route) => {
+    const response = await route.fetch();
+    const account = await response.json();
+
+    account.sharedRooms[0].involvement = null;
+    await route.fulfill({ response, json: account });
+  });
+  await page.route("**/api/v1/rooms/*/involvement", async (route) => {
+    calls += 1;
+    await held;
+    await route.fulfill({ status: 500, contentType: "text/plain", body: "Not now." });
+  });
+  await openSettings(page, "rooms");
+
+  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
+  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
+
+  const room = ((await level.getAttribute("aria-label")) ?? "")
+    .replace(/^Notifications for /, "")
+    .replace(/: .*$/, "");
+
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
+  await level.click();
+  await page.getByRole("menuitemradio", { name: /Muted/ }).click();
+  await level.click();
+  await page.getByRole("menuitemradio", { name: "All messages" }).click();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: All messages`);
+
+  release();
+  await expect.poll(() => calls).toBe(2);
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
 });
 
 test("a push device gets a test notification", async ({ page }) => {
