@@ -96,6 +96,30 @@ for (const theme of ["light", "dark"] as const) {
     await shot(page, "inline-layout", theme);
   });
 
+  test(`the new-messages pill keeps its arrow beside its label (${theme})`, async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    // #general opens at its first unread, far above the present: the pill shows.
+    await page.goto(`/app/r/${ROOM_IDS.general}`);
+
+    const jump = page.locator(".timeline-jump");
+    const pill = jump.locator(".button");
+
+    await expect(jump).toHaveAttribute("data-open", "true");
+    await expect(pill).toBeVisible();
+
+    // The arrow sits inside the label (Button puts the icon there): one line, not stacked.
+    const icon = await box(pill.locator("svg").first());
+    const label = await box(pill.locator(".button-label"));
+
+    expect(Math.abs(icon.y + icon.height / 2 - (label.y + label.height / 2))).toBeLessThanOrEqual(
+      3,
+    );
+    expect(label.width).toBeGreaterThan(icon.width * 3);
+    expect(label.height).toBeLessThanOrEqual(icon.height + 8);
+    expect((await box(pill)).height).toBeLessThanOrEqual(32);
+  });
+
   test(`the reaction row keeps the accessory gap and lines up with the body (${theme})`, async ({
     page,
   }) => {

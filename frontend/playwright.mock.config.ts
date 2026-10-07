@@ -36,7 +36,8 @@ export default defineConfig({
     command: server,
     env: { SMARTFIRE_MOCK_SIMULATE: "0" },
     url: `http://127.0.0.1:${port}/app/`,
-    reuseExistingServer: !process.env.CI,
+    // A production-build run must serve the build it just made, never a dev server left running.
+    reuseExistingServer: !build && !process.env.CI,
     timeout: build ? 180_000 : 60_000,
   },
 });

@@ -5,7 +5,7 @@
  *
  * - `/api/v1/*` and `/__mock/*` go to `MockServer.handle` (held sends hold the HTTP response).
  * - `/rails/active_storage/*` (the direct-upload `PUT`, blob and thumbnail downloads) and
- *   `/icons/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
+ *   `/icons/*` and `/assets/icons/brands/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
  * - `/api/v1/sync` upgrades to a WebSocket bridged to `MockServer.connect`; every other upgrade
  *   (Vite's HMR) is left alone.
  * - `/users/:id/avatar` answers with a picture for a couple of people and 404 for the rest, so
