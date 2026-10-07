@@ -1,10 +1,12 @@
-//! Agents: who they are, what they're doing, and the approvals they wait on (S4, contract A).
+//! Agents: who they are, what they're doing, the approvals they wait on (S4, contract A) and
+//! their event ledger (contract B).
 //!
 //! Ports the agent directory and profile (`agents/directory#index`, the bot branch of
 //! `users#show`; `crates/web/src/controllers/presenters/agents.rs`), the status broadcast
 //! (`Agent#broadcast_status_change` on `agents:all`), agent steps (`AgentStep#payload`,
 //! `Agents::Steps#broadcast_parent`) and human approval decisions (`agent_approvals#update`,
-//! `agents/approvals#for_agent`, `crates/web/src/controllers/presenters/agents/history.rs`).
+//! `agents/approvals#for_agent`, `crates/web/src/controllers/presenters/agents/history.rs`) and
+//! the event ledger (`agents/history#ledger`, `history::present_event`).
 //!
 //! An agent is a bot user with an `agents` row. A bot without one (an integration bot) is
 //! `role: "bot"` with `agent: null`, which the classic pages label "Bot" rather than "Agent".
@@ -428,4 +430,122 @@ pub struct ApprovalUpdated {
     pub approval: AgentApproval,
     /// The agent's bot user and the decider (`decidedById`), once each, as on the page.
     pub users: Vec<User>,
+}
+
+/// What an agent's ledger entry records (`agent_events.event_type`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum AgentLedgerEventType {
+    Mention,
+    DirectMessage,
+    Reply,
+    ApprovalDecided,
+    GithubActionCompleted,
+    FizzyActionCompleted,
+    WorkAssigned,
+    WorkUnassigned,
+    WorkHandedOff,
+    SlashCommand,
+    /// The agent posted a message.
+    Posted,
+    DeliverySuppressedRateLimit,
+    DeliverySuppressedHopLimit,
+    DeliverySuppressedRevoked,
+}
+
+/// Where a delivery stands (`agent_events.outcome`); the ledger's filter.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum AgentDeliveryOutcome {
+    Pending,
+    Delivered,
+    Acknowledged,
+    Suppressed,
+}
+
+/// `agent_events.webhook_status`: whether the entry was pushed to the agent's webhook.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum AgentWebhookStatus {
+    /// Not pushed: the classic row shows no webhook line.
+    None,
+    Pending,
+    Delivered,
+    Failed,
+}
+
+/// A GitHub or Fizzy action's result: "GitHub {action}: {status} — {message}".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AgentExternalResult {
+    /// The metadata's `action`, `status` and `message`; `null` when absent (the classic row
+    /// prints an empty string for the first two).
+    pub action: Option<String>,
+    pub status: Option<String>,
+    pub message: Option<String>,
+}
+
+/// One entry of an agent's event ledger (`history::present_event`, `agents/events/_event.html`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AgentLedgerEvent {
+    pub id: i64,
+    pub event_type: AgentLedgerEventType,
+    /// `null` when none was recorded (the classic row shows nothing after the type).
+    pub outcome: Option<AgentDeliveryOutcome>,
+    pub created_at: Timestamp,
+    pub room_id: Option<i64>,
+    /// The viewer-relative room name; `null` when `roomId` is or the room is gone.
+    pub room_name: Option<String>,
+    /// "from {actor}"; `null` for none. No `users` entry when the account is gone.
+    pub actor_id: Option<i64>,
+    /// "message #{id}"; `null` for none.
+    pub message_id: Option<i64>,
+    /// How many agent-to-agent hops led here; 0 shows nothing.
+    pub hop: i64,
+    /// `null` when blank.
+    pub detail: Option<String>,
+    pub webhook_status: AgentWebhookStatus,
+    /// "{n} attempt(s)" when above 0.
+    pub webhook_attempts: i64,
+    /// `null` when blank.
+    pub webhook_last_error: Option<String>,
+    /// `githubActionCompleted` and `fizzyActionCompleted` entries that recorded a result;
+    /// `null` otherwise.
+    pub external: Option<AgentExternalResult>,
+    /// `workHandedOff` entries: "Handoff: {summary}", cut to 140 characters (ending "..." when
+    /// cut) as the classic row shows it; `null` otherwise.
+    pub handoff_summary: Option<String>,
+    /// The message's plain text, cut as `handoffSummary` is, only when the agent is a member of
+    /// its room with `read_messages` there and the viewer is an administrator or a member of
+    /// that room. `null` otherwise: "Content unavailable" (or no message at all).
+    pub content: Option<String>,
+}
+
+/// `GET /api/v1/agents/:agentId/events?outcome=&before=`: the agent's event ledger, newest
+/// first (`agents/history#ledger`, HTML only in the classic app).
+///
+/// - Only an administrator or the agent's owner; any other human gets a 403, as in the classic
+///   app, and an unknown agent is a 404.
+/// - `outcome`: an [`AgentDeliveryOutcome`] filter; omitted (or unknown) lists every entry.
+/// - `before`: the previous page's `nextCursor`. A cursor that doesn't decode is a 422
+///   (`ApiError::Validation` on `before`).
+///
+/// At most 50 a page. No live updates, as in the classic app: the ledger refetches its first
+/// page when it's shown again.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AgentLedgerPage {
+    pub events: Vec<AgentLedgerEvent>,
+    /// The agent's bot user and every `actorId`, once each.
+    pub users: Vec<User>,
+    /// Pass as `before` for the next page; `null` when this is the last. Opaque, as on
+    /// [`AgentApprovalPage`]. **New**: the classic page uses `?page=` offsets.
+    pub next_cursor: Option<String>,
 }

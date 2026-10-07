@@ -443,6 +443,7 @@ describe("resync", () => {
             lastActivityAt: "2026-10-06T00:00:10.000Z",
             autoArchiveAfterMinutes: 4320,
             createdAt: "2026-10-06T00:00:01.000Z",
+            work: null,
           },
           membership: null,
           parentMessage: null,
@@ -453,7 +454,13 @@ describe("resync", () => {
             canLock: true,
             canUnlock: false,
             canDelete: true,
+            canConvertWork: false,
+            canManageWork: false,
+            canUpdateWorkStatus: false,
+            canAssignWork: false,
+            canRemoveWork: false,
           },
+          work: null,
           users: [],
         });
 

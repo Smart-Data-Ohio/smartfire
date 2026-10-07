@@ -22,10 +22,11 @@ import type { Assert, Pinned } from "./pin.ts";
 import { ThreadIndicator, ThreadStatus } from "./thread-parts.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
+import { WorkDetail, WorkFacts } from "./work-parts.ts";
 
 export { ThreadIndicator, ThreadStatus } from "./thread-parts.ts";
 
-/** A channel thread as every room member sees it. */
+/** A channel thread as every room member sees it; `work` is `null` unless it's tracked. */
 export const Thread = Schema.Struct({
   id: ThreadId,
   roomId: RoomId,
@@ -37,6 +38,7 @@ export const Thread = Schema.Struct({
   lastActivityAt: Timestamp,
   autoArchiveAfterMinutes: Schema.Int,
   createdAt: Timestamp,
+  work: Schema.NullOr(WorkFacts),
 });
 
 export type Thread = typeof Thread.Type;
@@ -91,6 +93,10 @@ export type ThreadList = typeof ThreadList.Type;
 
 export type ThreadListPin = Assert<Pinned<typeof ThreadList, GeneratedThreadList>>;
 
+/**
+ * What the viewer may do to the thread. The work flags: `canConvertWork` for an untracked
+ * thread, the others for a tracked one; `canRemoveWork` is `canAssignWork` except on a board post.
+ */
 export const ThreadPermissions = Schema.Struct({
   canRename: Schema.Boolean,
   canClose: Schema.Boolean,
@@ -98,6 +104,11 @@ export const ThreadPermissions = Schema.Struct({
   canLock: Schema.Boolean,
   canUnlock: Schema.Boolean,
   canDelete: Schema.Boolean,
+  canConvertWork: Schema.Boolean,
+  canManageWork: Schema.Boolean,
+  canUpdateWorkStatus: Schema.Boolean,
+  canAssignWork: Schema.Boolean,
+  canRemoveWork: Schema.Boolean,
 });
 
 export type ThreadPermissions = typeof ThreadPermissions.Type;
@@ -106,12 +117,16 @@ export type ThreadPermissionsPin = Assert<
   Pinned<typeof ThreadPermissions, GeneratedThreadPermissions>
 >;
 
-/** `GET /api/v1/threads/:id`: the pane's header; replies come from `/threads/:id/messages`. */
+/**
+ * `GET /api/v1/threads/:id`: the pane's header, and the work section for a tracked thread;
+ * replies come from `/threads/:id/messages`.
+ */
 export const ThreadDetail = Schema.Struct({
   thread: Thread,
   membership: Schema.NullOr(ThreadMembership),
   parentMessage: Schema.NullOr(MessageDTO),
   permissions: ThreadPermissions,
+  work: Schema.NullOr(WorkDetail),
   users: Schema.Array(User),
 });
 

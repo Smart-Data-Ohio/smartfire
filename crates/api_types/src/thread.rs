@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{CreateMessage, MessageDTO, Timestamp, User};
+use crate::{CreateMessage, MessageDTO, Timestamp, User, WorkDetail, WorkFacts};
 
 /// A thread as every room member sees it (`channel_threads`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -30,6 +30,8 @@ pub struct Thread {
     /// Idle this long, an active thread reads as closed: 60, 1440, 4320 or 10080.
     pub auto_archive_after_minutes: i64,
     pub created_at: Timestamp,
+    /// `null` unless the thread is tracked as work (see [`WorkFacts`]).
+    pub work: Option<WorkFacts>,
 }
 
 /// `ChannelThread#status_in_room`: `locked` when locked; else `closed` when closed or idle past
@@ -125,6 +127,17 @@ pub struct ThreadPermissions {
     /// it; the parent stays, its indicator cleared (`thread.indicator` with `thread: null`), and
     /// `thread.removed` follows. 204; 403 for anyone else.
     pub can_delete: bool,
+    /// An untracked thread: start tracking it as work. A moderator or the thread's creator
+    /// (`settings_manageable`) who is an active member of the room. `false` once tracked.
+    pub can_convert_work: bool,
+    /// A tracked thread: edit its result and hand it off. As `canConvertWork`, or its owner.
+    pub can_manage_work: bool,
+    /// A tracked thread: move its status. As `canManageWork`.
+    pub can_update_work_status: bool,
+    /// A tracked thread: assign its owner, or stop tracking it. As `canConvertWork`.
+    pub can_assign_work: bool,
+    /// Offer "stop tracking": `canAssignWork`, except on a board post, which stays tracked.
+    pub can_remove_work: bool,
 }
 
 /// `GET /api/v1/threads/:id` (`channel_threads#show`): the pane's header. The replies come from
@@ -139,7 +152,10 @@ pub struct ThreadDetail {
     /// `null` once deleted.
     pub parent_message: Option<MessageDTO>,
     pub permissions: ThreadPermissions,
-    /// The thread's creator and the parent's, once each.
+    /// The work section, for a tracked thread; `null` otherwise.
+    pub work: Option<WorkDetail>,
+    /// The thread's creator and the parent's, once each; for a tracked thread also its owner,
+    /// the result's editor, every history actor, owner candidate and handoff receiver.
     pub users: Vec<User>,
 }
 
