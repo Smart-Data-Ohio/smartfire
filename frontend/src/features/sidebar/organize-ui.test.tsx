@@ -248,6 +248,7 @@ describe("a room's menu", () => {
   it("moves a favourite up or down without a drag, the ends disabled", async () => {
     const ENGINEERING = SEED_IDS.rooms.engineering;
     const MAYA = SEED_IDS.rooms.dmMaya;
+
     const favorites = () =>
       favoriteRows(organizedSidebar(store.getState().sidebar)).map((entry) => entry.room.id);
 

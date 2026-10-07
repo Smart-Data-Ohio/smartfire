@@ -71,11 +71,18 @@ function shownFavorites(state: State): readonly SidebarRow[] {
   );
 }
 
-/** Where a room sits among the shown favourites (-1 when it isn't one), and how many there are. */
-function useFavoritePlace(roomId: number): { readonly index: number; readonly count: number } {
+/** Where a room sits among the shown favourites, and how many there are. */
+interface FavoritePlace {
+  /** -1 when the room isn't a favourite. */
+  readonly index: number;
+  readonly count: number;
+}
+
+function useFavoritePlace(roomId: number): FavoritePlace {
   const index = useStore((state) =>
     shownFavorites(state).findIndex((row) => row.room.id === roomId),
   );
+
   const count = useStore((state) => shownFavorites(state).length);
 
   return { index, count };

@@ -201,6 +201,7 @@ describe("organize actions", () => {
       });
 
       const fake = yield* FakeApi;
+
       const replies = [
         // Position 1 put general after engineering: renumbered, the positions are exact now.
         [
