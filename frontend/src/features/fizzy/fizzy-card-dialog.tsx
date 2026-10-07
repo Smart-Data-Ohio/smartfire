@@ -54,6 +54,8 @@ export interface FizzyCardDialogProps {
   readonly onCreated: (created: CreatedFizzyCard) => void;
   /** Where focus goes on close when the menu that opened the dialog is gone. */
   readonly returnFocus?: () => HTMLElement | null;
+  /** Prefer `returnFocus` over the opener (a direct entry has no real opener). */
+  readonly returnFocusFirst?: boolean;
   /** Reads the form; the runtime's action unless a test passes its own. */
   readonly read?: ReadForm;
   /** Creates the card; the runtime's action unless a test passes its own. */
@@ -96,6 +98,7 @@ export default function FizzyCardDialog({
   onClose,
   onCreated,
   returnFocus,
+  returnFocusFirst = false,
   read = readWithRuntime,
   create = createWithRuntime,
 }: FizzyCardDialogProps) {
@@ -286,6 +289,7 @@ export default function FizzyCardDialog({
       size="md"
       footer={footer}
       {...(returnFocus === undefined ? {} : { returnFocus })}
+      returnFocusFirst={returnFocusFirst}
     >
       {form === null || draft === null ? (
         <Pending load={load} onRetry={() => setTries((count) => count + 1)} />

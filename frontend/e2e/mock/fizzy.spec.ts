@@ -90,6 +90,40 @@ async function openForm(page: Page): Promise<Locator> {
   return createFrom(page, row(page, SOURCE));
 }
 
+/** Holds every create until the returned release is called. */
+async function holdCreates(page: Page): Promise<() => void> {
+  let release: () => void = () => undefined;
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/fizzy_cards", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  return release;
+}
+
+/** Posts `count` replies to a thread through the API, so its early replies fall off the newest page. */
+async function postReplies(page: Page, threadId: number, count: number): Promise<void> {
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  for (let index = 0; index < count; index += 1) {
+    await page.request.post(`/api/v1/threads/${threadId}/messages`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        clientMessageId: `fizzy-filler-${index}`,
+        markdownSource: `Filler reply ${index}`,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: null,
+      },
+    });
+  }
+}
+
 async function submitTo(form: Locator, board: string): Promise<void> {
   await form.getByLabel("Board").selectOption({ label: board });
   await form.getByRole("button", { name: "Create card" }).click();
@@ -170,6 +204,44 @@ test.describe("Create Fizzy card", () => {
     release();
     await expect(page.getByText("Fizzy card #580 created.")).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/m/${SOURCE}$`));
+  });
+
+  test("a create that completes after the form reopened leaves the new opening alone", async ({
+    page,
+  }) => {
+    const form = await openForm(page);
+    const release = await holdCreates(page);
+
+    await submitTo(form, "Engineering");
+    await page.goBack();
+    await expect(form).toBeHidden();
+
+    const again = await createFrom(page, row(page, SOURCE));
+
+    release();
+    await expect(page.getByText("Fizzy card #580 created.")).toBeVisible();
+    await expect(again).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/m/${SOURCE}/fizzy/new$`));
+  });
+
+  test("a create that completes after leaving the room doesn't step back", async ({ page }) => {
+    await open(page, `r/${ROOM_IDS.design}`);
+    await page.locator(".sidebar").getByText("general", { exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}$`));
+
+    const last = page.getByRole("log", { name: "Messages" }).locator("[data-message-row]").last();
+    const form = await createFrom(page, last);
+    const release = await holdCreates(page);
+
+    await submitTo(form, "Engineering");
+    // Straight past the room, so the form unmounts while it's still open.
+    await page.evaluate(() => window.history.go(-2));
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
+    await expect(form).toBeHidden();
+
+    release();
+    await expect(page.getByText("Fizzy card #580 created.")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
   });
 
   test("a board and a title are required", async ({ page }) => {
@@ -284,6 +356,26 @@ test.describe("Create Fizzy card", () => {
     await expect(form).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/m/${SOURCE}$`));
     await expect(row(page, SOURCE)).toBeVisible();
+    await expect(row(page, SOURCE)).toBeFocused();
+  });
+
+  test("a direct entry on an older thread reply closes onto that reply", async ({ page }) => {
+    const oldest = seededReplyId(THREAD_IDS.generalActive, 0);
+
+    await open(page, `r/${GENERAL}`);
+    await postReplies(page, THREAD_IDS.generalActive, 45);
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}/m/${oldest}/fizzy/new`);
+
+    const form = dialog(page);
+
+    await expect(form.getByLabel("Board")).toBeFocused();
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(form).toBeHidden();
+    await expect(page).toHaveURL(
+      new RegExp(`/app/r/${GENERAL}/t/${THREAD_IDS.generalActive}\\?m=${oldest}$`),
+    );
+    await expect(row(pane(page), oldest)).toBeVisible();
+    await expect(row(pane(page), oldest)).toBeFocused();
   });
 
   test("a locked thread's reply opens the form, and creating says the thread is locked", async ({

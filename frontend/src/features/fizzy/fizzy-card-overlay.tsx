@@ -1,6 +1,8 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { CreatedFizzyCard } from "../../gen/CreatedFizzyCard.ts";
+import { store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
 import { type FizzyMessageScope, scopeKey } from "./fizzy-card-model.ts";
 import { useCloseOverlay } from "./overlay-history.ts";
@@ -16,6 +18,50 @@ interface Shown {
 /** The source row, for focus after the dialog when the menu that opened it is gone. */
 function sourceRow(scope: FizzyMessageScope): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-message-id="${scope.messageId}"]`);
+}
+
+/** How long focus follows the source row after the dialog closes. */
+const SOURCE_ROW_WAIT_MS = 5000;
+
+/**
+ * Focus after the dialog: the source row. Closing can load the conversation around it (a direct
+ * entry's permalink, or an older thread reply), which mounts the row late or replaces it, so for a
+ * moment focus follows the row: whenever focus falls back to the page or to a container, it
+ * returns to the row. It stops as soon as a control the viewer can reach takes focus.
+ */
+function focusSource(scope: FizzyMessageScope): HTMLElement | null {
+  const follow = () => {
+    const active = document.activeElement;
+    const row = sourceRow(scope);
+
+    // A control the viewer can reach (tabIndex 0 or more) took focus: they've moved on. Panes,
+    // logs and rows (tabIndex -1) only take focus programmatically, as the thread pane does when
+    // it reloads, so focus keeps returning to the row past them.
+    if (active instanceof HTMLElement && active !== document.body && active.tabIndex >= 0) {
+      stop();
+
+      return;
+    }
+
+    if (row !== null && active !== row) {
+      row.focus({ preventScroll: true });
+    }
+  };
+
+  // The row mounting or being replaced, and focus moving to a container, both send focus back.
+  const observer = new MutationObserver(follow);
+  const onFocusIn = () => requestAnimationFrame(follow);
+
+  const stop = () => {
+    observer.disconnect();
+    document.removeEventListener("focusin", onFocusIn);
+  };
+
+  observer.observe(document.body, { childList: true, subtree: true });
+  document.addEventListener("focusin", onFocusIn);
+  window.setTimeout(stop, SOURCE_ROW_WAIT_MS);
+
+  return sourceRow(scope);
 }
 
 /**
@@ -48,8 +94,22 @@ export function FizzyCardOverlay({ roomId }: { readonly roomId: number }) {
     }
   }
 
+  // The opening a create's completion belongs to: closing, another opening and unmounting all end
+  // it, so a create that completes afterwards (say Back left the form) neither closes a newer
+  // opening nor steps back or navigates.
+  const active = useRef<number | null>(null);
+  const opening = open ? (shown?.opening ?? null) : null;
+
+  useEffect(() => {
+    active.current = opening;
+
+    return () => {
+      active.current = null;
+    };
+  }, [opening]);
+
   // Someone opened the dialog's URL: closing lands on the source message in its conversation.
-  const close = useCloseOverlay(() => {
+  const closeOverlay = useCloseOverlay(() => {
     if (shown === null) {
       return;
     }
@@ -69,21 +129,28 @@ export function FizzyCardOverlay({ roomId }: { readonly roomId: number }) {
         search: { m: source.messageId },
         replace: true,
       });
+
+      // The thread beneath opened on its newest replies, and it reads `?m=` only when it opens:
+      // an older source is read in around it here.
+      const loaded = store.getState().threadTimelines[source.threadId]?.ids ?? [];
+
+      if (!loaded.includes(source.messageId)) {
+        void actions.threads.reload(source.threadId, source.messageId).catch(() => undefined);
+      }
     }
   });
 
-  // Whether the dialog's URL is still showing: browser Back works while a create is in flight,
-  // and its completion mustn't then step back (or navigate) a second time.
-  const showing = useRef(open);
+  const close = () => {
+    active.current = null;
+    closeOverlay();
+  };
 
-  useEffect(() => {
-    showing.current = open;
-  }, [open]);
+  const submittedIn = shown?.opening ?? null;
 
   const created = (card: CreatedFizzyCard) => {
     toast({ title: card.notice, tone: "success" });
 
-    if (showing.current) close();
+    if (submittedIn !== null && active.current === submittedIn) close();
   };
 
   if (shown === null) {
@@ -98,7 +165,8 @@ export function FizzyCardOverlay({ roomId }: { readonly roomId: number }) {
         open={open}
         onClose={close}
         onCreated={created}
-        returnFocus={() => sourceRow(shown.scope)}
+        returnFocus={() => focusSource(shown.scope)}
+        returnFocusFirst
       />
     </Suspense>
   );
