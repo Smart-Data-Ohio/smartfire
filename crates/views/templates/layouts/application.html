@@ -4,7 +4,7 @@
     the page itself is the content block. A block holds exactly what the ERB's content_for
     captured (see PORTING.md). `data-test-motion` is only rendered in Rails' test environment. -#}
 <!DOCTYPE html>
-<html data-theme="{{ h::user_theme(ctx) }}" data-text-size="{{ h::user_text_size(ctx) }}" data-service-worker="{{ ctx.chrome.service_worker_auto_register }}"{% if ctx.chrome.test_environment %} data-test-motion="off"{% endif %}>
+<html data-theme="{{ h::user_theme(ctx) }}" data-text-size="{{ h::user_text_size(ctx) }}" data-service-worker="{{ ctx.chrome.service_worker_auto_register }}"{% if let Some(url) = ctx.chrome.service_worker_url %} data-service-worker-url="{{ url }}"{% endif %}{% if ctx.chrome.test_environment %} data-test-motion="off"{% endif %}>
   <head>
     {{ h::page_title_tag(self.page_title().as_deref()) }}
 

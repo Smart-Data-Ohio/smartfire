@@ -21,6 +21,10 @@ pub struct Manifest<'a> {
     pub logo_path: String,
     /// `request.base_url`, for `image_url`.
     pub base_url: String,
+    /// The start URL and scope share one setting; classic keeps `/`.
+    pub root: &'a str,
+    pub new_room_url: String,
+    pub profile_url: String,
     pub asset_path: &'a dyn Fn(&str) -> String,
 }
 

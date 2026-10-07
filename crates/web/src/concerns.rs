@@ -261,6 +261,35 @@ pub async fn before_actions_with_authentication(
 
 // --- The new UI ----------------------------------------------------------------------------------
 
+/// The UI this request uses. A stored choice overrides `SPA_DEFAULT`; signed-out visitors
+/// use the default. Disabling the SPA always selects classic, including for an explicit choice.
+pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_preference::UiPreference> {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    let app = c.app();
+    if !app.config.spa_enabled {
+        return Ok(UiPreference::Classic);
+    }
+    let stored = match current_user(c) {
+        Some(user) => {
+            let user_id = user.id;
+            app.db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?
+        }
+        None => None,
+    };
+    Ok(UiPreference::effective(stored, app.config.spa_default_next))
+}
+
+/// One registration at scope `/`: both UIs choose the same script for the effective UI.
+pub fn service_worker_url(ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
+    use campfire_db::models::user::ui_preference::UiPreference;
+
+    match ui {
+        UiPreference::Classic => "/service-worker.js".into(),
+        UiPreference::Next => format!("{}service-worker.js", campfire_spa::root_path()),
+    }
+}
+
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
 /// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
 /// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page
@@ -270,11 +299,10 @@ pub async fn before_actions_with_authentication(
 /// in, two-step enforcement and the rest come first, and a page's own checks (room access) are the
 /// SPA's to make.
 pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
-    use campfire_db::models::user::ui_preference::{self, UiPreference};
+    use campfire_db::models::user::ui_preference::UiPreference;
     use campfire_kit::format;
 
     let config = &c.app().config;
-    let default_next = config.spa_default_next;
     if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
         return Ok(());
     }
@@ -299,9 +327,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if !c.peek_flash().is_empty() {
         return Ok(());
     }
-    let user_id = require_current_user(c)?.id;
-    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
-    if UiPreference::effective(stored, default_next) != UiPreference::Next {
+    if effective_ui(c).await? != UiPreference::Next {
         return Ok(());
     }
     let location = c.url_for(&location);

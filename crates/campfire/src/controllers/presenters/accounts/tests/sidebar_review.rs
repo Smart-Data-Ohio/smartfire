@@ -74,6 +74,23 @@ fn viewer<'a>(t: &'a TestApp, case: &Value) -> Browser<'a> {
     ));
     b
 }
+/// Keep the frozen Rails body exact except for S8's worker-selection metadata on the root.
+fn without_worker_url(body: &str) -> String {
+    let Some((before, root)) = body.split_once("<html ") else {
+        return body.to_string();
+    };
+    let (attributes, after) = root.split_once('>').unwrap();
+    let worker_url = " data-service-worker-url=\"/service-worker.js\"";
+    assert!(
+        attributes.contains(worker_url),
+        "the classic page selects its classic worker"
+    );
+    format!(
+        "{before}<html {}>{after}",
+        attributes.replacen(worker_url, "", 1)
+    )
+}
+
 async fn compare(kind: Option<&str>) {
     let corpus = corpus();
     let mut failures = Vec::new();
@@ -126,7 +143,11 @@ async fn compare(kind: Option<&str>) {
             );
             if response.status.as_u16() as u64 != step["result"]["status"].as_u64().unwrap()
                 || response.location() != step["result"]["location"].as_str()
-                || response.text() != step["result"]["body"].as_str().unwrap()
+                || !crate::app::asset_goldens::compare(
+                    &name,
+                    &without_worker_url(&response.text()),
+                    step["result"]["body"].as_str().unwrap(),
+                )
             {
                 if let Ok(dir) = std::env::var("WS11UI_DIFF_DIR") {
                     std::fs::create_dir_all(&dir).unwrap();

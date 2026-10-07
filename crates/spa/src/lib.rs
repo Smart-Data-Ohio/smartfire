@@ -32,6 +32,11 @@ pub use shell::render_shell;
 /// The URL prefix the SPA lives under (Vite's `base`, without its trailing slash).
 pub const PREFIX: &str = "/app";
 
+/// The installed SPA's start URL and manifest scope, derived from the same prefix.
+pub fn root_path() -> String {
+    format!("{PREFIX}/")
+}
+
 /// `Cache-Control` for an embedded file whose name isn't content-hashed: the public files'
 /// policy (`campfire_assets`), so a fix reaches clients within a minute.
 pub const REVALIDATE_CACHE_CONTROL: &str = "public, max-age=60, stale-while-revalidate=300";

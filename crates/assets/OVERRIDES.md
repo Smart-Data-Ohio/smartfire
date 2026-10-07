@@ -22,3 +22,8 @@ Rails at the current reference pin (`parity/reference.sha`, including #151) rend
 `external/install-edge.svg`. Neither app ships a root `install-edge.svg` override.
 
 Adding one needs the lead's approval: it is a deliberate divergence from the reference.
+
+S8's installed SPA also overrides `initializers/service_worker.js` and
+`controllers/notifications_controller.js`. Both read the worker URL rendered by the classic
+layout and register it at scope `/`, so visiting a classic page retains the effective UI's
+worker. The copied `web/` assets remain unchanged.

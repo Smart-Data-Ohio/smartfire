@@ -321,6 +321,9 @@ fn pwa_endpoints_match_rails() {
         logo_path_small: logo.replace("?v=", "?size=small&v="),
         logo_path: logo,
         base_url: "https://campfire.test".into(),
+        root: "/",
+        new_room_url: "rooms/opens/new".into(),
+        profile_url: "/users/me/profile".into(),
         asset_path: &asset,
     };
     assert!(compare(

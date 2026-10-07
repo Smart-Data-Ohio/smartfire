@@ -324,6 +324,20 @@ async fn ws17_rejected_profile_layout_metadata_matches_loaded_unsaved_rails_valu
             .await;
         assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);
         let html = response.text();
+        let (prefix, root) = html
+            .split_once("<html ")
+            .expect("the profile has its application layout");
+        let (attributes, after) = root.split_once('>').unwrap();
+        let worker_url = " data-service-worker-url=\"/service-worker.js\"";
+        assert!(
+            attributes.contains(worker_url),
+            "the classic profile selects its classic worker"
+        );
+        // The frozen Rails corpus predates worker selection; compare every other byte unchanged.
+        let html = format!(
+            "{prefix}<html {}>{after}",
+            attributes.replacen(worker_url, "", 1)
+        );
         for (name, fragment) in row["metadata"].as_object().unwrap() {
             let fragment = fragment.as_str().unwrap();
             assert!(

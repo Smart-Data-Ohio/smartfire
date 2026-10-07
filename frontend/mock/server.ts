@@ -334,6 +334,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       theme: "system",
       textSize: "default",
       cableUrl: "/cable",
+      serviceWorkerUrl: null,
       version: "mock",
       revision: null,
       csrfToken: csrf,

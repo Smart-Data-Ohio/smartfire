@@ -475,6 +475,8 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
+        // Every environment uses this private seed copy, not an empty environment-named database.
+        config.storage.database = dir.path().join("db/production.sqlite3");
         config.huddle = huddle;
         let intervals = crate::jobs::periodic::Intervals {
             periodic: None,

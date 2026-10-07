@@ -127,6 +127,7 @@ impl Layout {
             || c.cookies
                 .get("enable_service_worker")
                 .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
+        chrome.service_worker_url = Some(concerns::service_worker_url(concerns::effective_ui(c).await?));
         chrome.huddle_configured = app.config.huddle.configured();
         chrome.global_search_query = if c.request.path().starts_with("/searches") {
             crate::controllers::presenters::params::display_query(c)

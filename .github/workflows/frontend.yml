@@ -164,6 +164,27 @@ jobs:
           CARGO_TERM_COLOR: always
         run: cargo test -p campfire_spa --locked -j 4
 
+      - name: Install the preview browser
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Playwright (production preview and installed app)
+        if: steps.scope.outputs.run == 'true'
+        env:
+          PLAYWRIGHT_HTML_OPEN: never
+        run: pnpm test:e2e
+
+      - name: Keep a failed preview report
+        if: ${{ failure() && steps.scope.outputs.run == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-preview-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results-preview/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # The mock Playwright suite (frontend/e2e/mock, playwright.mock.config.ts): the SPA on Vite's dev
   # server with the in-memory mock backend, in Chromium. The config runs one worker against one
   # mock server, so the suite is split across jobs, each with its own server, by test
