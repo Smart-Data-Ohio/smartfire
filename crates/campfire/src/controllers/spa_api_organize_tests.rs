@@ -930,3 +930,89 @@ async fn a_category_patch_racing_a_reorder_and_a_rename_keeps_both() {
         [(play.id, 1, "Play", false), (work.id, 2, "Jobs", true)]
     );
 }
+
+/// Holds David's mute of All Talk after its lookup, sets All Talk's unread state to `unread`
+/// meanwhile (as a new message or another tab's read would), then lets the mute go on.
+async fn mute_while_unread_changes(a: &TestApp, david: &mut Browser<'_>, unread: bool) -> Reply {
+    let membership_id = a
+        .db()
+        .read(|conn| {
+            Ok(Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
+                .unwrap()
+                .id)
+        })
+        .await
+        .unwrap();
+    let hold = campfire_api::test_hooks::hold_before_involvement_write(membership_id);
+    let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
+    let (reply, ()) = tokio::join!(
+        send(david, Method::PUT, &path, json!({"involvement": "muted"})),
+        async {
+            hold.reached.wait().await;
+            a.db()
+                .write(move |tx| {
+                    let unread_at = unread.then(|| tx.now());
+                    tx.conn().execute(
+                        "UPDATE memberships SET unread_at = ? WHERE id = ?",
+                        rusqlite::params![unread_at, membership_id],
+                    )?;
+                    Ok(())
+                })
+                .await
+                .unwrap();
+            hold.release.wait().await;
+        }
+    );
+    reply
+}
+
+#[tokio::test]
+async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let set_unread = |unread: bool| {
+        a.db().write(move |tx| {
+            let unread_at = unread.then(|| tx.now());
+            tx.conn().execute(
+                "UPDATE memberships SET unread_at = ?, involvement = 'everything' WHERE user_id = ? AND room_id = ?",
+                rusqlite::params![unread_at, DAVID, ALL_TALK],
+            )?;
+            Ok(())
+        })
+    };
+    let muted_row = |e: &api::SyncEvent| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.involvement == api::Involvement::Muted);
+    let room_read = |e: &api::SyncEvent| matches!(&e.payload, api::SyncPayload::RoomRead(r) if r.room_id == ALL_TALK);
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    // Unread when looked up, read by another tab before the write: nothing to clear.
+    set_unread(true).await.unwrap();
+    let muted: api::Membership = ok(&mute_while_unread_changes(&a, &mut david, false).await);
+    assert_eq!(muted.unread_at, None);
+    sync.until(muted_row, room_read).await;
+    // Unmuting publishes the row again; no `room.read` arrives before it either.
+    let path = format!("/api/v1/rooms/{ALL_TALK}/involvement");
+    ok::<api::Membership>(
+        &send(
+            &mut david,
+            Method::PUT,
+            &path,
+            json!({"involvement": "everything"}),
+        )
+        .await,
+    );
+    sync.until(
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.involvement == api::Involvement::Everything),
+        room_read,
+    )
+    .await;
+
+    // Read when looked up, unread again before the write: the mute clears it, and says so.
+    set_unread(false).await.unwrap();
+    let muted: api::Membership = ok(&mute_while_unread_changes(&a, &mut david, true).await);
+    assert_eq!(muted.unread_at, None);
+    sync.until(room_read, |_| false).await;
+    sync.until(muted_row, |_| false).await;
+    server.abort();
+}
