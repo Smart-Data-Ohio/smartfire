@@ -104,12 +104,18 @@ fn deactivating_a_user_deletes_push_subscriptions_searches_memberships_for_non_d
         "david-deactivated-2e7de450-cf04-4fa8-9b02-ff5ab2d733e7@37signals.com".len()
     );
     assert_eq!(reloaded.status, Status::Deactivated);
+    // David's agent is suspended with him: the single-page app's `agent.status`.
     assert_eq!(
         t.events(),
-        vec![Event::DisconnectUser {
-            user_id: david,
-            reconnect: false
-        }]
+        vec![
+            Event::DisconnectUser {
+                user_id: david,
+                reconnect: false
+            },
+            Event::broadcast(&crate::models::agent::AgentSyncChange {
+                agent_id: 773018776
+            }),
+        ]
     );
 }
 

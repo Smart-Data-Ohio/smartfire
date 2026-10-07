@@ -121,6 +121,24 @@ impl AgentEvent {
         )
     }
 
+    /// [`Self::history_page`] by keyset for `GET /api/v1/agents/:id/events`: up to 51 entries
+    /// with `outcome` (all when `None`) strictly before the `(created_at, id)` key `before`, in
+    /// `created_at DESC, id DESC` order.
+    pub fn history_page_before(
+        conn: &Connection,
+        agent_id: i64,
+        outcome: Option<&str>,
+        before: Option<(Timestamp, i64)>,
+    ) -> Result<Vec<Self>> {
+        let (at, id) = before.unzip();
+        query_all(
+            conn,
+            "SELECT * FROM agent_events WHERE agent_id=?1 AND (?2 IS NULL OR outcome=?2) AND (?3 IS NULL OR created_at<?3 OR (created_at=?3 AND id<?4)) ORDER BY created_at DESC, id DESC LIMIT 51",
+            params![agent_id, outcome, at, id],
+            Self::from_row,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Option<Self>> {
         query_one(
             conn,

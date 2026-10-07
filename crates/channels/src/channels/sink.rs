@@ -138,6 +138,15 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::agent_step::StepParentChange::KIND => {
             decode(request).and_then(|broadcast| agent_steps(app, &broadcast))
         }
+        campfire_db::models::agent::AgentSyncChange::KIND => decode::<campfire_db::models::agent::AgentSyncChange>(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.sync_agent_status(change.agent_id); }
+        }),
+        campfire_db::models::channel_thread::ThreadWorkChange::KIND => decode::<campfire_db::models::channel_thread::ThreadWorkChange>(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.thread_updated(change.thread_id); }
+        }),
+        campfire_db::models::agent_approval::ApprovalChange::KIND => decode::<campfire_db::models::agent_approval::ApprovalChange>(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.sync_approval(change.approval_id); }
+        }),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
@@ -176,6 +185,7 @@ fn agent_steps(
             &super::broadcasts::message_dom_id(&message, None),
             &html,
         );
+        app.broadcasts.sync_agent_steps(Some(id), None);
         return Ok(());
     }
     let Some(id) = change.thread_id else {
@@ -200,6 +210,7 @@ fn agent_steps(
         &format!("agent_steps_channel_thread_{id}"),
         &html,
     );
+    app.broadcasts.sync_agent_steps(None, Some(id));
     Ok(())
 }
 

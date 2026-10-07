@@ -27,6 +27,63 @@ pub async fn update(c: &mut Ctx) -> Result {
     let Some(id) = c.param_str("id").and_then(concerns::cast_integer) else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
+    let decision = c
+        .params
+        .get("decision")
+        .and_then(Param::to_s)
+        .unwrap_or_default();
+    let note = ["decision_note", "note"].into_iter().find_map(|key| {
+        c.params
+            .get(key)
+            .and_then(Param::to_s)
+            .filter(|s| !campfire_richtext::ruby::is_blank(s))
+    });
+    match decide(c, actor, id, &decision, note).await? {
+        Decided::NotFound => Ok(c.head(StatusCode::NOT_FOUND)),
+        Decided::Refused {
+            status,
+            message,
+            alert,
+        } => failure(c, status, &message, &alert),
+        Decided::Applied { payload, .. } => match c.respond_to(&[&format::HTML, &format::JSON])? {
+            chosen if chosen == &format::JSON => c.json(StatusCode::OK, &payload),
+            _ => redirect(
+                c,
+                &format!("Request {}.", payload["status"].as_str().unwrap()),
+                false,
+            ),
+        },
+    }
+}
+
+/// What [`decide`] did.
+pub enum Decided {
+    /// The approval doesn't exist, or `actor` may not decide it (`decidable_by`).
+    NotFound,
+    /// Refused with `status`: `message` is the JSON `error`, `alert` the HTML flash.
+    Refused {
+        status: StatusCode,
+        message: String,
+        alert: String,
+    },
+    /// Decided: the approval as it now is, and the JSON reply's payload.
+    Applied {
+        approval: Box<AgentApproval>,
+        payload: serde_json::Value,
+    },
+}
+
+/// `agent_approvals#update` after its before-actions, for a human `actor`: every server-side
+/// check, the decision (with its inbox and ledger callbacks), then the audit entry. The single-page
+/// app's `PATCH /api/v1/agent_approvals/:id` decides through here too.
+pub async fn decide(
+    c: &Ctx,
+    actor: campfire_db::User,
+    id: i64,
+    decision: &str,
+    note: Option<String>,
+) -> Result<Decided> {
+    let decision = decision.to_owned();
     let for_lookup = actor.clone();
     let Some(approval) = c
         .app()
@@ -42,16 +99,17 @@ pub async fn update(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?
     else {
-        return Ok(c.head(StatusCode::NOT_FOUND));
+        return Ok(Decided::NotFound);
     };
-    let decision = c
-        .params
-        .get("decision")
-        .and_then(Param::to_s)
-        .unwrap_or_default();
+    let refused = |status: StatusCode, message: &str, alert: &str| {
+        Ok(Decided::Refused {
+            status,
+            message: message.to_owned(),
+            alert: alert.to_owned(),
+        })
+    };
     if !["approved", "denied"].contains(&decision.as_str()) {
-        return failure(
-            c,
+        return refused(
             StatusCode::UNPROCESSABLE_ENTITY,
             "Decision must be approved or denied",
             "Choose Approve or Deny.",
@@ -67,7 +125,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             "GitHub"
         };
         let message = format!("Only an administrator can approve {service} write actions");
-        return failure(c, StatusCode::FORBIDDEN, &message, &format!("{message}."));
+        return refused(StatusCode::FORBIDDEN, &message, &format!("{message}."));
     }
     if decision == "approved" && (approval.github_action() || approval.fizzy_action()) {
         let agent_id = approval.agent_id;
@@ -114,26 +172,20 @@ pub async fn update(c: &mut Ctx) -> Result {
             } else {
                 "The agent owner's Fizzy account changed since this was requested; deny it and ask the agent to request again"
             };
-            return failure(
-                c,
+            return refused(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 message,
                 &format!("{message}."),
             );
         }
     }
-    let note = ["decision_note", "note"].into_iter().find_map(|key| {
-        c.params
-            .get(key)
-            .and_then(Param::to_s)
-            .filter(|s| !campfire_richtext::ruby::is_blank(s))
-    });
+    let note = note.filter(|s| !campfire_richtext::ruby::is_blank(s));
     let context = Context {
         actor: Some((&actor).into()),
         ip_address: Some(c.request.remote_ip()?.to_string()),
         user_agent: c.request.user_agent().map(str::to_owned),
     };
-    let (decision_result, payload, audit) = c.app().db.write(move |tx| {
+    let (decision_result, approval, payload, audit) = c.app().db.write(move |tx| {
         let mut approval = approval;
         let result = approval.decide_authorized(tx, &decision, &actor, note.as_deref())?;
         let audit = if result == ApprovalDecision::Applied {
@@ -147,7 +199,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         } else { None };
         let mut payload = approval.payload(tx.conn(), tx.now())?;
         payload.as_object_mut().unwrap().retain(|k,_| ["id", "status", "decided_by", "decided_by_id", "decided_at", "decision_note", "note"].contains(&k.as_str()));
-        Ok((result,payload,audit))
+        Ok((result,approval,payload,audit))
     }).await.map_err(Error::internal)?;
     // Rails commits decide! (including inbox/ledger callbacks) before the
     // independent audit insert. An audit failure returns 500 with that decision
@@ -168,16 +220,12 @@ pub async fn update(c: &mut Ctx) -> Result {
             } else {
                 &message
             };
-            failure(c, StatusCode::UNPROCESSABLE_ENTITY, message, message)
+            refused(StatusCode::UNPROCESSABLE_ENTITY, message, message)
         }
-        ApprovalDecision::Applied => match c.respond_to(&[&format::HTML, &format::JSON])? {
-            chosen if chosen == &format::JSON => c.json(StatusCode::OK, &payload),
-            _ => redirect(
-                c,
-                &format!("Request {}.", payload["status"].as_str().unwrap()),
-                false,
-            ),
-        },
+        ApprovalDecision::Applied => Ok(Decided::Applied {
+            approval: Box::new(approval),
+            payload,
+        }),
     }
 }
 fn failure(c: &mut Ctx, status: StatusCode, json_error: &str, alert: &str) -> Result {

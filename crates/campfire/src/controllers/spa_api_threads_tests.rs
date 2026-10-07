@@ -167,7 +167,8 @@ async fn threads_list_show_and_page() {
             can_lock: true,
             can_unlock: false,
             can_delete: true,
-            can_convert_work: false,
+            // Untracked: David, its creator, may start tracking it.
+            can_convert_work: true,
             can_manage_work: false,
             can_update_work_status: false,
             can_assign_work: false,
