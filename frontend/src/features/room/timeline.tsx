@@ -101,7 +101,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     count: 0,
   });
 
-  const positionedRef = useRef<string | null>(null);
+  // The window last placed (`room:generation:focus`).
+  const [placed, setPlaced] = useState<string | null>(null);
   const [farFromPresent, setFarFromPresent] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
   const [floatingDay, setFloatingDay] = useState<string | null>(null);
@@ -118,14 +119,20 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   useListEdges(containerRef, listRef, items);
 
-  // A window with cards waits for their chunk: placed before it lands, the cards growing in
-  // above a permalinked row would push it out of view.
+  const ready = timeline.status === "ready";
+  const placement = `${roomId}:${timeline.generation}:${focusMessageId ?? ""}`;
   const cardsSettled = useCardsChunkSettled();
 
-  const waitsForCards =
-    !cardsSettled && items.some((item) => item.kind === "message" && hasCards(item.message));
+  // A loaded window that holds cards stays under the skeleton, unplaced, until their chunk
+  // settles: placed earlier, the cards growing in above a permalinked row would push it out of
+  // view. Only before its first placement: once placed, the list stays as it is (a card arriving
+  // live or in an older page grows in place, and following and anchoring carry on).
+  const awaitingCards =
+    ready &&
+    placed !== placement &&
+    !cardsSettled &&
+    items.some((item) => item.kind === "message" && hasCards(item.message));
 
-  const ready = timeline.status === "ready" && !waitsForCards;
   const firstKey = items[0]?.key ?? null;
   const lastKey = items.at(-1)?.key ?? null;
 
@@ -136,13 +143,12 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   // (clamped, so a short unread run just lands at the bottom), or at the bottom.
   useLayoutEffect(() => {
     const list = listRef.current;
-    const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
 
-    if (!ready || list === null || positionedRef.current === placement || items.length === 0) {
+    if (!ready || awaitingCards || list === null || placed === placement || items.length === 0) {
       return;
     }
 
-    positionedRef.current = placement;
+    setPlaced(placement);
 
     const focusIndex =
       focusMessageId === null
@@ -339,7 +345,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   return (
     <div className="timeline" ref={containerRef}>
-      <SkeletonReveal loading={!ready} skeleton={<TimelineSkeleton />}>
+      <SkeletonReveal loading={!ready || awaitingCards} skeleton={<TimelineSkeleton />}>
         {ready ? (
           <VList
             ref={listRef}

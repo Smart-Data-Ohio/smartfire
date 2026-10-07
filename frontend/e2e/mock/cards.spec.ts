@@ -1,6 +1,18 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { CARD_IDS } from "../../mock/s3/cards.ts";
-import { expect, matrix, shot, type Theme, test, USER_IDS } from "./support.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
+import type { Poll } from "../../src/gen/Poll.ts";
+import {
+  expect,
+  matrix,
+  openApp,
+  ROOM_IDS,
+  shot,
+  syncWelcomed,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 const ROOM = CARD_IDS.room;
 
@@ -118,19 +130,129 @@ matrix("posts on X, Drive files and events", async ({ page, theme }) => {
   await shot(page, "cards-events", theme);
 });
 
-test("a permalinked row stays in view when the cards chunk arrives late", async ({ page }) => {
-  // Hold the chunk back until the room's first page is in, as a slow dev server sometimes does.
+/**
+ * Holds the cards chunk back until `release()`. `requested` settles once the page has asked for
+ * it, which proves the hold is in effect (a build that names the chunk differently would skip it).
+ */
+async function holdCardsChunk(page: Page) {
+  let release: () => void = () => undefined;
+  let markRequested: () => void = () => undefined;
+
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  const requested = new Promise<void>((resolve) => {
+    markRequested = resolve;
+  });
+
   await page.route("**/src/features/cards/message-cards.tsx*", async (route) => {
-    await page.waitForResponse((response) => response.url().includes("messages?around="));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    markRequested();
+    await released;
     await route.continue();
   });
-  await openAt(page, messages.eventRecurring, "light");
+
+  return { release, requested };
+}
+
+/** The timeline's skeleton cover: `true` while it hides the list. */
+function timelineBusy(page: Page): Locator {
+  return page.locator(".timeline > .t-skel");
+}
+
+/** A message with a poll, from the cards room, to put into another room's page. */
+async function seededPoll(request: APIRequestContext): Promise<Poll | undefined> {
+  const page: MessagePage = await (
+    await request.get(`/api/v1/rooms/${ROOM}/messages?around=${messages.pollOpen}`)
+  ).json();
+
+  return page.messages.find((message) => message.poll !== null)?.poll ?? undefined;
+}
+
+test("a permalinked row stays in view when the cards chunk arrives late", async ({ page }) => {
+  const chunk = await holdCardsChunk(page);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`/app/r/${ROOM}/m/${messages.eventRecurring}`);
+  await chunk.requested;
+
+  // The window is in and its row mounted, but it waits, unplaced, under the skeleton.
+  await expect(row(page, messages.eventRecurring)).toBeAttached();
+  await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "true");
+  chunk.release();
 
   const event = row(page, messages.eventRecurring);
 
   await expect(event.getByRole("region", { name: "Event: Weekly product sync" })).toBeVisible();
   await expect(event).toBeInViewport();
+});
+
+test("a card arriving live while the chunk loads keeps the list and its place", async ({
+  page,
+}) => {
+  const chunk = await holdCardsChunk(page);
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, `r/${ROOM_IDS.engineering}`);
+  await chunk.requested;
+  // No cards in this window: it shows at once, at the bottom.
+  await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
+  await welcomed;
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const created = await page.request.post(`/api/v1/rooms/${ROOM_IDS.engineering}/polls`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { question: "Ship on Friday?", options: ["Yes", "No"], clientMessageId: "e2e-poll-1" },
+  });
+
+  expect(created.ok()).toBe(true);
+
+  const posted = page.locator("[data-message-row]").filter({ hasText: "Ship on Friday?" });
+
+  // It arrives, followed at the bottom, with the list still up (not swapped for a skeleton).
+  await expect(posted).toBeInViewport();
+  await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
+  chunk.release();
+  await expect(posted.getByRole("region", { name: "Poll" })).toBeVisible();
+  await expect(posted).toBeInViewport();
+});
+
+test("an older page with cards while the chunk loads keeps the list and its place", async ({
+  page,
+}) => {
+  const poll = await seededPoll(page.request);
+  const chunk = await holdCardsChunk(page);
+
+  expect(poll).toBeTruthy();
+  // The page before the first window carries a poll on its newest message.
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages?before=*`, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+
+    body.messages[body.messages.length - 1].poll = poll;
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.engineering}`);
+  await chunk.requested;
+  await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
+
+  const list = page.locator("[data-message-list]");
+  const older = page.waitForResponse((response) => response.url().includes("before="));
+
+  await list.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+
+  const anchor = await page.locator("[data-message-row]").first().getAttribute("data-message-id");
+
+  await older;
+  // The older rows go in above; the row that was at the top stays in view, list still up.
+  await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
+  await expect(row(page, Number(anchor))).toBeInViewport();
+  chunk.release();
+  await expect(page.getByRole("region", { name: "Poll" }).first()).toBeAttached();
+  await expect(row(page, Number(anchor))).toBeInViewport();
 });
 
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {
