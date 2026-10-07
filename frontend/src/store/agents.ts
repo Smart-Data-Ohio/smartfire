@@ -276,7 +276,7 @@ function statusFacts(row: AgentDirectoryRow | AgentStatusChanged): AgentStatusFa
   };
 }
 
-/** Directory and profile share the event's canonical status revision. */
+/** Both GET sources merge the same status entity, then update its row and held profile. */
 function mergeAgentRow(state: State, row: AgentDirectoryRow): State {
   const facts = mergeRevision(state.agents.statuses[row.agentId], statusFacts(row));
   const agent = { ...row, ...facts };
@@ -332,7 +332,11 @@ export function reconcileAgentBadges(state: State): State {
   return changed ? { ...state, users: mergeUserList(state.users, users) } : state;
 }
 
-/** Status, suspension and working presence share one server revision. */
+/**
+ * `agent.status`: the badge on the agent's user, its directory row (which may move when a
+ * suspension changes its rank), its profile and its working presence. Status, suspension and
+ * working presence share one server revision.
+ */
 export function applyAgentStatus(state: State, change: AgentStatusChanged): State {
   const { agentId } = change;
   const facts = statusFacts(change);

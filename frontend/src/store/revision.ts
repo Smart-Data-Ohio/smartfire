@@ -15,7 +15,7 @@ export function mergeRevision<T extends Revisioned>(stored: T | null | undefined
   return landsOver(stored, incoming) ? incoming : (stored ?? incoming);
 }
 
-/** Scalar field equality for preserving an unchanged optimistic display copy. */
+/** Scalar field equality preserves unchanged optimistic copies; property order does not matter. */
 export function sameRecord<T extends object>(left: T, right: T): boolean {
   const entries = Object.entries(left);
   const other = new Map(Object.entries(right));

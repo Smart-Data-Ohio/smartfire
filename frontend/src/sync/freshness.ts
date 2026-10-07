@@ -1,7 +1,10 @@
 import { Effect } from "effect";
 import { mutations } from "../store/store.ts";
 
-/** Only list membership needs a client read history; release it on every exit. */
+/**
+ * Only list membership needs a client read history. Every request releases its ticket on
+ * success, failure and interruption.
+ */
 export const withRead = <A, E, R>(
   request: (ticket: number) => Effect.Effect<A, E, R>,
   list: string,
