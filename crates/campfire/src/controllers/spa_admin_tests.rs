@@ -20,11 +20,14 @@ const RITA: i64 = 773523954;
 /// A banned member in the seed.
 const MALLORY: i64 = 773523955;
 
+/// The seeded app with `SPA_ENABLED`, its job runner stopped: a write's enqueued jobs stay as it
+/// left them, so a whole-database comparison never sees a runner claim one on one side only.
 pub(super) async fn app() -> Option<TestApp> {
     let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
     ));
-    TestApp::boot_seed_with_env("default", clock, &[("SPA_ENABLED", "1")]).await
+    let app = TestApp::boot_seed_with_env("default", clock, &[("SPA_ENABLED", "1")]).await?;
+    Some(app.without_job_runner().await)
 }
 
 pub(super) fn get(path: &str) -> Req {
