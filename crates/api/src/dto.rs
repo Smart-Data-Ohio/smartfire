@@ -24,12 +24,125 @@ fn present(value: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
-/// `has_avatar` is [`uploaded_avatars`]' answer for this person.
+/// The per-person facts a [`User`] row doesn't hold, read for a batch at once: who uploaded a
+/// picture, each agent's badge, and each bot's resolved icon.
+#[derive(Default)]
+pub struct UserExtras {
+    avatars: BTreeSet<i64>,
+    agents: HashMap<i64, api::AgentBadge>,
+    icons: HashMap<i64, api::Icon>,
+}
+
+impl UserExtras {
+    /// The extras for `users`.
+    pub fn load<'a>(conn: &Connection, users: impl IntoIterator<Item = &'a User>) -> Result<Self> {
+        let users: Vec<&User> = users.into_iter().collect();
+        let ids: Vec<i64> = users.iter().map(|user| user.id).collect();
+        let avatars = uploaded_avatars(conn, &ids)?;
+        let bots: Vec<i64> = users
+            .iter()
+            .filter(|user| user.is_bot())
+            .map(|user| user.id)
+            .collect();
+        let agents = agent_badges(conn, &bots)?;
+        let mut icons = HashMap::new();
+        for user in users.iter().filter(|user| user.is_bot()) {
+            if avatars.contains(&user.id) {
+                continue;
+            }
+            if let Some(icon) = user
+                .icon_name
+                .as_deref()
+                .and_then(|name| avatar_icon(conn, name))
+            {
+                icons.insert(user.id, icon);
+            }
+        }
+        Ok(Self {
+            avatars,
+            agents,
+            icons,
+        })
+    }
+
+    pub fn has_avatar(&self, user_id: i64) -> bool {
+        self.avatars.contains(&user_id)
+    }
+}
+
+/// The badge of each agent among the bot users `user_ids`, by user id.
+pub fn agent_badges(conn: &Connection, user_ids: &[i64]) -> Result<HashMap<i64, api::AgentBadge>> {
+    Ok(ids_query(
+        conn,
+        r#"SELECT "agents"."user_id", "agents"."id", "agents"."kind", "agents"."status", "agents"."suspended_at" IS NOT NULL FROM "agents" WHERE "agents"."user_id" IN ({})"#,
+        user_ids,
+        |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                api::AgentBadge {
+                    agent_id: row.get(1)?,
+                    kind: agent_kind(&row.get::<_, String>(2)?),
+                    status: agent_status(&row.get::<_, String>(3)?),
+                    suspended: row.get(4)?,
+                },
+            ))
+        },
+    )?
+    .into_iter()
+    .collect())
+}
+
+/// `agents.kind` on the wire (`AgentKind`: anything but `workspace` is personal).
+pub fn agent_kind(kind: &str) -> api::AgentKind {
+    match kind {
+        "workspace" => api::AgentKind::Workspace,
+        _ => api::AgentKind::Personal,
+    }
+}
+
+/// `agents.status` on the wire. The model only stores `Agent::STATUSES`; anything else reads
+/// as idle, as an unset status does.
+pub fn agent_status(status: &str) -> api::AgentStatus {
+    match status {
+        "working" => api::AgentStatus::Working,
+        "waiting" => api::AgentStatus::Waiting,
+        "failed" => api::AgentStatus::Failed,
+        _ => api::AgentStatus::Idle,
+    }
+}
+
+/// `users.icon_name` resolved as the classic avatar does (`resolve_avatar_icon`): a brand logo,
+/// else a workspace icon, else the built-in icon or emoji of that name.
+pub fn avatar_icon(conn: &Connection, name: &str) -> Option<api::Icon> {
+    use campfire_views::helpers::AvatarIcon;
+    Some(match presenters::resolve_avatar_icon(conn, name)? {
+        AvatarIcon::Emoji { title, character } => api::Icon {
+            name: name.to_string(),
+            title,
+            kind: api::IconKind::Emoji,
+            character: Some(character),
+            image_url: None,
+        },
+        AvatarIcon::Image { title, url, brand } => api::Icon {
+            name: name.to_string(),
+            title,
+            kind: if brand {
+                api::IconKind::Brand
+            } else {
+                api::IconKind::Custom
+            },
+            character: None,
+            image_url: Some(url),
+        },
+    })
+}
+
+/// A person as the wire carries them, with their [`UserExtras`].
 pub fn user(
     settings: &UserStatusSettings,
     secrets: &Secrets,
     now: Timestamp,
-    has_avatar: bool,
+    extras: &UserExtras,
 ) -> api::User {
     let user = &settings.user;
     let expired = settings
@@ -60,11 +173,10 @@ pub fn user(
         },
         bio: user.bio.clone(),
         avatar_url: presenters::avatar_path(secrets, user),
-        has_avatar,
+        has_avatar: extras.has_avatar(user.id),
         custom_status,
-        // Agent identity still renders in the HTML only; the S4 backend fills these.
-        avatar_icon: None,
-        agent: None,
+        avatar_icon: extras.icons.get(&user.id).cloned(),
+        agent: extras.agents.get(&user.id).cloned(),
         created_at: time(user.created_at),
         updated_at: time(user.updated_at),
     }
@@ -83,11 +195,11 @@ pub fn users(
         .into_iter()
         .collect();
     let settings = UserStatusSettings::for_ids(conn, &ids)?;
-    let avatars = uploaded_avatars(conn, &ids)?;
-    Ok(ids
-        .iter()
-        .filter_map(|id| settings.get(id))
-        .map(|settings| user(settings, secrets, now, avatars.contains(&settings.user.id)))
+    let found: Vec<&UserStatusSettings> = ids.iter().filter_map(|id| settings.get(id)).collect();
+    let extras = UserExtras::load(conn, found.iter().map(|settings| &settings.user))?;
+    Ok(found
+        .into_iter()
+        .map(|settings| user(settings, secrets, now, &extras))
         .collect())
 }
 
@@ -245,6 +357,7 @@ pub(crate) fn messages_and_fetches(
     .into_iter()
     .collect();
     let threads = thread_indicators(conn, messages)?;
+    let mut steps = message_steps(conn, &ids)?;
     messages
         .iter()
         .map(|message| {
@@ -280,14 +393,68 @@ pub(crate) fn messages_and_fetches(
                 poll: polls.remove(&message.id),
                 cards: cards.remove(&message.id).unwrap_or_default(),
                 cards_as_of: as_of.clone(),
-                // Agent steps still render in the HTML only; the S4 backend fills them.
-                steps: Vec::new(),
+                steps: steps.remove(&message.id).unwrap_or_default(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
             })
         })
         .collect::<Result<Vec<_>>>()
         .map(|dtos| (dtos, fetches))
+}
+
+/// `agent_steps`' columns as [`agent_step`] reads them.
+const STEP_COLUMNS: &str = r#""agent_steps"."id", "agent_steps"."message_id", "agent_steps"."channel_thread_id", "agent_steps"."name", "agent_steps"."status", "agent_steps"."input_summary", "agent_steps"."output_summary", "agent_steps"."duration_ms", "agent_steps"."position", "agent_steps"."created_at", "agent_steps"."updated_at""#;
+
+/// One `agent_steps` row (selected as [`STEP_COLUMNS`]) as the wire carries it (`AgentStep#payload`).
+fn agent_step(row: &rusqlite::Row<'_>) -> rusqlite::Result<api::AgentStep> {
+    Ok(api::AgentStep {
+        id: row.get(0)?,
+        message_id: row.get(1)?,
+        thread_id: row.get(2)?,
+        name: row.get(3)?,
+        status: match row.get::<_, String>(4)?.as_str() {
+            "running" => api::AgentStepStatus::Running,
+            "done" => api::AgentStepStatus::Done,
+            "failed" => api::AgentStepStatus::Failed,
+            _ => api::AgentStepStatus::Pending,
+        },
+        input_summary: row.get(5)?,
+        output_summary: row.get(6)?,
+        duration_ms: row.get(7)?,
+        position: row.get(8)?,
+        created_at: time(row.get(9)?),
+        updated_at: time(row.get(10)?),
+    })
+}
+
+/// Each message's agent steps, in `(position, id)` order (`agent_steps/_steps.html`).
+pub fn message_steps(conn: &Connection, ids: &[i64]) -> Result<HashMap<i64, Vec<api::AgentStep>>> {
+    let mut steps: HashMap<i64, Vec<api::AgentStep>> = HashMap::new();
+    for step in ids_query(
+        conn,
+        &format!(
+            r#"SELECT {STEP_COLUMNS} FROM "agent_steps" WHERE "agent_steps"."message_id" IN ({{}}) ORDER BY "agent_steps"."position", "agent_steps"."id""#
+        ),
+        ids,
+        agent_step,
+    )? {
+        if let Some(message_id) = step.message_id {
+            steps.entry(message_id).or_default().push(step);
+        }
+    }
+    Ok(steps)
+}
+
+/// A work thread's agent steps, in `(position, id)` order (`agent_steps_channel_thread_<id>`).
+pub fn thread_steps(conn: &Connection, thread_id: i64) -> Result<Vec<api::AgentStep>> {
+    ids_query(
+        conn,
+        &format!(
+            r#"SELECT {STEP_COLUMNS} FROM "agent_steps" WHERE "agent_steps"."channel_thread_id" IN ({{}}) ORDER BY "agent_steps"."position", "agent_steps"."id""#
+        ),
+        &[thread_id],
+        agent_step,
+    )
 }
 
 /// Runs `sql`, whose one `IN ({})` takes `ids`; nothing for no ids.
@@ -866,7 +1033,7 @@ pub fn me(
             &settings,
             secrets,
             now,
-            uploaded_avatars(conn, &[viewer.id])?.contains(&viewer.id),
+            &UserExtras::load(conn, [&settings.user])?,
         ),
         email_address: viewer.email_address.clone(),
         preferences: api::Preferences {
@@ -1019,8 +1186,14 @@ pub fn forward_destinations(
     Ok(api::ForwardDestinationList { destinations })
 }
 
-/// A thread as every member of its room sees it.
-pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) -> api::Thread {
+/// A thread as every member of its room sees it, with its work facts ([`crate::work::facts`])
+/// when it's tracked.
+pub fn thread(
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    now: Timestamp,
+    work: Option<api::WorkFacts>,
+) -> api::Thread {
     api::Thread {
         id: thread.id,
         room_id: thread.room_id,
@@ -1032,8 +1205,7 @@ pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) 
         last_activity_at: time(thread.last_activity_at),
         auto_archive_after_minutes: thread.auto_archive_after_minutes,
         created_at: time(thread.created_at),
-        // Work facts still render in the HTML only; the S4 backend fills them.
-        work: None,
+        work,
     }
 }
 
@@ -1077,6 +1249,13 @@ pub fn thread_permissions(
     } else {
         settings
     };
+    let [
+        can_convert_work,
+        can_manage_work,
+        can_update_work_status,
+        can_assign_work,
+        can_remove_work,
+    ] = crate::work::permissions(thread, room, viewer);
     api::ThreadPermissions {
         can_rename: rename,
         can_close: status == Db::Active && if room.board() { moderator } else { settings },
@@ -1084,12 +1263,11 @@ pub fn thread_permissions(
         can_lock: moderator && !locked,
         can_unlock: moderator && locked,
         can_delete: moderator,
-        // With `work` still null, no work action is offered until the S4 backend.
-        can_convert_work: false,
-        can_manage_work: false,
-        can_update_work_status: false,
-        can_assign_work: false,
-        can_remove_work: false,
+        can_convert_work,
+        can_manage_work,
+        can_update_work_status,
+        can_assign_work,
+        can_remove_work,
     }
 }
 
@@ -1110,13 +1288,25 @@ pub(crate) fn thread_detail(
     let (mut parents, mut fetches) = messages_and_fetches(conn, app, parent.as_slice())?;
     let parent_message = parents.pop();
     fetches.thread_header(conn, thread, now)?;
-    let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
+    let facts = crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
+        .remove(&thread.id);
+    let permissions = thread_permissions(thread, room, viewer, membership.is_some(), now);
+    let (work, work_people) = match facts {
+        Some(_) => {
+            let (work, people) = crate::work::detail(conn, app, thread, room, &permissions)?;
+            (Some(work), people)
+        }
+        None => (None, Vec::new()),
+    };
+    let people = std::iter::once(thread.creator_id)
+        .chain(parent.as_ref().map(|parent| parent.creator_id))
+        .chain(work_people);
     let detail = api::ThreadDetail {
-        thread: self::thread(thread, room, now),
-        permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
+        thread: self::thread(thread, room, now, facts),
+        permissions,
         membership: membership.as_ref().map(thread_membership),
         parent_message,
-        work: None,
+        work,
         users: users(conn, &app.secrets, people, now)?,
     };
     Ok((detail, fetches))
@@ -1149,11 +1339,12 @@ pub fn thread_list(
             })
             .collect(),
     };
+    let mut facts = crate::work::facts(conn, secrets, &threads, now)?;
     let mut summaries = Vec::with_capacity(threads.len());
     for thread in &threads {
         let membership = thread.membership_for(conn, viewer_id)?;
         summaries.push(api::ThreadSummary {
-            thread: self::thread(thread, room, now),
+            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
             membership: membership.as_ref().map(thread_membership),
         });
     }

@@ -65,6 +65,7 @@ fn expire(tx: &mut Tx<'_>, approval: &mut Approval) -> Result<()> {
             params![tx.now(), approval.id],
         )?;
         approval.status = "expired".into();
+        campfire_db::models::agent_approval::ApprovalChange::emit(tx, approval.id);
         let items:Vec<(i64,i64)>=tx.conn().prepare("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NULL RETURNING id,user_id")?
             .query_map(params![tx.now(),tx.now(),tx.now(),approval.id],|r|Ok((r.get(0)?,r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
         for (id, user) in items {

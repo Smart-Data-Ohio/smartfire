@@ -11,8 +11,11 @@ import type { User } from "./User";
  * - `outcome`: an [`AgentDeliveryOutcome`] filter; omitted (or unknown) lists every entry.
  * - `before`: the previous page's `nextCursor`. A cursor that doesn't decode is a 422
  *   (`ApiError::Validation` on `before`).
+ * - Room-scoped text follows [`AgentLedgerEvent::room_name`]'s membership gate even after
+ *   room deletion. NULL-room text is only ungated for types never created with a room.
  *
- * At most 50 a page, newest first (`created_at DESC, id DESC`). No live updates, as in the
+ * At most 50 a page, newest first (`created_at DESC, id DESC`). Unknown event types are
+ * skipped, so a short or empty page can still have a `nextCursor`. No live updates, as in the
  * classic app: the ledger refetches its first page when it's shown again.
  */
 export type AgentLedgerPage = { events: Array<AgentLedgerEvent>, 
@@ -22,8 +25,9 @@ export type AgentLedgerPage = { events: Array<AgentLedgerEvent>,
 users: Array<User>, 
 /**
  * Pass as `before` for the next page; `null` when this is the last. Opaque to clients, as on
- * [`AgentApprovalPage`]: it encodes the page's last entry's `(created_at, id)`, and the next
- * page holds the entries strictly before it in that order, so entries added meanwhile never
+ * [`AgentApprovalPage`]: it encodes the last scanned row's `(created_at, id)`, including an
+ * unknown type skipped from `events`. The next page holds the entries strictly before it
+ * in that order, so entries added meanwhile never
  * shift a page. **New**: the classic page uses `?page=` offsets.
  */
 nextCursor: string | null, };
