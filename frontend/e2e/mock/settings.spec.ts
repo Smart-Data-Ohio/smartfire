@@ -162,7 +162,9 @@ test("a theme the server refuses is put back", async ({ page }) => {
 
   const html = page.locator("html");
 
-  await page.getByRole("radio", { name: "Dark" }).check();
+  // A click, not check(): check() insists the radio stays checked, and the refusal can put it
+  // back before Playwright looks.
+  await page.getByRole("radio", { name: "Dark" }).click();
 
   await expect(page.getByText("Couldn't save your appearance")).toBeVisible();
   await expect(html).not.toHaveAttribute("data-theme", "dark");
