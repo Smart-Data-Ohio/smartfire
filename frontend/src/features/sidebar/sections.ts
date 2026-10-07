@@ -111,17 +111,23 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
 }
 
 /**
- * The number on a row's pill: unread mentions, or for a direct message every unread message
- * (each one is addressed to you, as in Slack). A muted room counts its mentions only, while
- * they keep it unread: the server makes it unread for nothing else (`Room#unread_memberships`),
- * and muting marks it read.
+ * The number on a row's red pill, which counts notifications only; plain unread activity shows
+ * as a bold name and the left-edge nub instead (Slack and Discord). A notification is a mention
+ * (an inbox `mention` item), or every unread message where each one notifies you: a direct
+ * message (addressed to you, as in Slack) or a room set to "everything" (`involvement`, which
+ * pushes every message). A muted room counts its mentions only, while they keep it unread: the
+ * server makes it unread for nothing else (`Room#unread_memberships`), and muting marks it read.
  */
 export function rowPillCount(row: SidebarRow): number {
-  if (row.membership.involvement === "muted") {
-    return row.membership.unreadAt === null ? 0 : row.mentionCount;
+  const { involvement, unreadAt } = row.membership;
+
+  if (involvement === "muted") {
+    return unreadAt === null ? 0 : row.mentionCount;
   }
 
-  return row.room.kind === "direct" ? row.unreadCount : row.mentionCount;
+  return row.room.kind === "direct" || involvement === "everything"
+    ? row.unreadCount
+    : row.mentionCount;
 }
 
 /**
@@ -142,6 +148,33 @@ export function rowState(
   }
 
   return row.membership.involvement === "muted" ? "muted" : null;
+}
+
+/** What a row's pill counts, for screen readers: unread messages, or mentions. */
+export function rowPillNoun(row: SidebarRow): "unread" | "mentions" {
+  const { involvement } = row.membership;
+
+  return involvement !== "muted" && (row.room.kind === "direct" || involvement === "everything")
+    ? "unread"
+    : "mentions";
+}
+
+/** A folded section's summary: whether any room in it is unread, and its notifications. */
+export interface SectionUnread {
+  readonly unread: boolean;
+  readonly count: number;
+}
+
+export function sectionUnread(rows: readonly SidebarRow[]): SectionUnread {
+  let unread = false;
+  let count = 0;
+
+  for (const row of rows) {
+    unread ||= row.membership.unreadAt !== null;
+    count += rowPillCount(row);
+  }
+
+  return { unread, count };
 }
 
 /** Unread rooms and unread mentions across the sidebar, for the rail and the tab title. */

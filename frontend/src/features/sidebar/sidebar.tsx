@@ -15,6 +15,7 @@ import { shortcutKeys } from "../../lib/shortcuts.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
+import { Badge } from "../../ui/badge.tsx";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -43,7 +44,7 @@ import {
   slotForSection,
 } from "./organize-model.ts";
 import { RoomContextMenu, type RoomMenuRequest } from "./room-menu.tsx";
-import { type SidebarSection, sidebarSections } from "./sections.ts";
+import { type SidebarSection, sectionUnread, sidebarSections } from "./sections.ts";
 import {
   type DropEdge,
   type RowActions,
@@ -185,7 +186,8 @@ interface SectionProps {
 
 /**
  * A collapsible group (the transitions.dev accordion). Collapsed, it still lists its unread rows
- * and the open conversation, as Slack does, so nothing new hides behind a chevron.
+ * and the open conversation, as Slack does, so nothing new hides behind a chevron; its heading
+ * brightens with the nub when anything inside is unread, and totals the notifications in red.
  */
 function Section({
   section,
@@ -206,12 +208,15 @@ function Section({
         (row) => row.room.id === selectedRoomId || row.membership.unreadAt !== null,
       );
 
+  const folded = open ? { unread: false, count: 0 } : sectionUnread(section.rows);
+
   const edgeFor = (row: Row) => (drop.line?.roomId === row.room.id ? drop.line.edge : undefined);
 
   return (
     <div
       className="sidebar-section t-acc"
       data-open={open}
+      data-unread={folded.unread || undefined}
       data-kind={section.kind}
       data-drop-section={section.key}
       data-flip={`section-${section.key}`}
@@ -240,6 +245,13 @@ function Section({
           </h2>
         )}
         {heading === undefined ? action : null}
+        {heading === undefined ? (
+          <Badge
+            count={folded.count}
+            tone="danger"
+            label={folded.count === 1 ? "1 notification" : `${folded.count} notifications`}
+          />
+        ) : null}
       </div>
       <section
         id={`${id}-panel`}

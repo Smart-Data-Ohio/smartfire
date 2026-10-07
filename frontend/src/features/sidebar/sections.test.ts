@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
+import type { Involvement } from "../../gen/Involvement.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
-import { rowPillCount, rowState, sidebarSections, sidebarTotals } from "./sections.ts";
+import {
+  rowPillCount,
+  rowPillNoun,
+  rowState,
+  sectionUnread,
+  sidebarSections,
+  sidebarTotals,
+} from "./sections.ts";
 
 interface RowOptions {
   readonly kind?: RoomKind;
@@ -11,6 +19,7 @@ interface RowOptions {
   readonly unread?: number;
   readonly mentions?: number;
   readonly muted?: boolean;
+  readonly involvement?: Involvement;
 }
 
 function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
@@ -30,7 +39,7 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
       id: id * 10,
       roomId: id,
       userId: 1,
-      involvement: options.muted === true ? "muted" : "mentions",
+      involvement: options.involvement ?? (options.muted === true ? "muted" : "mentions"),
       unreadAt: unread > 0 ? "2026-10-05T00:00:00.000Z" : null,
       lastReadMessageId: null,
       roomCategoryId: options.category ?? null,
@@ -182,5 +191,76 @@ describe("rows", () => {
     ).toBe(0);
     expect(rowState(mentioned, true)).toBe("selected");
     expect(rowState(row(1, "alpha"), false)).toBeNull();
+  });
+});
+
+describe("the red pill counts notifications only", () => {
+  it("leaves plain unread activity in a channel to the bold name, with no count", () => {
+    const busy = row(1, "general", { unread: 12 });
+
+    expect(rowState(busy, false)).toBe("unread");
+    expect(rowPillCount(busy)).toBe(0);
+    expect(rowPillCount(row(2, "private", { kind: "closed", unread: 3 }))).toBe(0);
+  });
+
+  it("counts a channel's mentions, not its unread messages", () => {
+    expect(rowPillCount(row(1, "general", { unread: 12, mentions: 2 }))).toBe(2);
+  });
+
+  it("counts every unread direct message, each one being addressed to you", () => {
+    expect(rowPillCount(row(2, "Ada", { kind: "direct", unread: 3 }))).toBe(3);
+    expect(
+      rowPillCount(row(3, "Ada, Bo", { kind: "direct", unread: 2, involvement: "everything" })),
+    ).toBe(2);
+  });
+
+  it("counts every unread message in a room set to notify for everything", () => {
+    expect(rowPillCount(row(4, "alerts", { unread: 5, involvement: "everything" }))).toBe(5);
+  });
+
+  it("still counts mentions in a room set to nothing, as the inbox does", () => {
+    expect(rowPillCount(row(5, "quiet", { unread: 5, mentions: 1, involvement: "nothing" }))).toBe(
+      1,
+    );
+    expect(rowPillCount(row(5, "quiet", { unread: 5, involvement: "nothing" }))).toBe(0);
+  });
+
+  it("totals the rail from the same counts: unread rooms apart from notifications", () => {
+    const sidebar = sidebarOf([
+      row(1, "general", { unread: 12 }),
+      row(2, "design", { unread: 4, mentions: 1 }),
+      row(3, "Ada", { kind: "direct", unread: 2 }),
+      row(4, "alerts", { unread: 3, involvement: "everything" }),
+    ]);
+
+    expect(sidebarTotals(sidebar)).toEqual({ unreadRooms: 4, mentions: 6 });
+  });
+});
+
+describe("a folded section's summary", () => {
+  it("marks plain unread without a count, and totals the notifications inside", () => {
+    expect(sectionUnread([row(1, "general", { unread: 12 }), row(2, "design")])).toEqual({
+      unread: true,
+      count: 0,
+    });
+    expect(
+      sectionUnread([
+        row(1, "general", { unread: 12, mentions: 1 }),
+        row(2, "Ada", { kind: "direct", unread: 2 }),
+      ]),
+    ).toEqual({ unread: true, count: 3 });
+    expect(sectionUnread([row(1, "general"), row(2, "design")])).toEqual({
+      unread: false,
+      count: 0,
+    });
+  });
+});
+
+describe("rowPillNoun", () => {
+  it("says what the pill counts", () => {
+    expect(rowPillNoun(row(1, "general"))).toBe("mentions");
+    expect(rowPillNoun(row(2, "Ada", { kind: "direct" }))).toBe("unread");
+    expect(rowPillNoun(row(3, "alerts", { involvement: "everything" }))).toBe("unread");
+    expect(rowPillNoun(row(4, "Bo", { kind: "direct", muted: true }))).toBe("mentions");
   });
 });

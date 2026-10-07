@@ -15,12 +15,17 @@ import { withRecent } from "./recents.ts";
 
 const VIEWER = 7;
 
+/** Unread in a room that notifies for mentions only, so its count is the mentions (the default). */
 function unread(row: SidebarRow, mentions = 0): SidebarRow {
   return {
     ...row,
     unreadCount: 3,
     mentionCount: mentions,
-    membership: { ...row.membership, unreadAt: "2026-10-05T00:00:00.000Z" },
+    membership: {
+      ...row.membership,
+      involvement: "mentions",
+      unreadAt: "2026-10-05T00:00:00.000Z",
+    },
   };
 }
 

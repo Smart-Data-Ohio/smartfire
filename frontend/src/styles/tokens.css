@@ -96,6 +96,8 @@
     --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
+    /* Unread names and markers: the ink at full strength, white on dark (Discord's unread channel). */
+    --text-strong: light-dark(var(--neutral-900), var(--neutral-0));
     --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
     --text-faint: light-dark(var(--neutral-500), var(--charcoal-400));
 
