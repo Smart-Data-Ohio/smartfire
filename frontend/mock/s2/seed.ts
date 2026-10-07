@@ -534,6 +534,8 @@ export function seedS2(world: World, now: number, random: Random): void {
 
   for (const id of STARRED_USER_IDS) world.stars.add(id);
 
+  world.dndAllowed.add(USER_IDS.maya);
+
   world.agentCommands.set(ROOM_IDS.engineering, [
     { name: "deploy-status", description: "Summarize the latest deploy", agentName: "Ember" },
     { name: "triage", description: null, agentName: "Ember" },

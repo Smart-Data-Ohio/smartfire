@@ -86,7 +86,7 @@ describe("the mock's settings", () => {
     expect(saved.profile).toMatchObject({ name: "Riel S.", emailAddress: "new@example.com" });
   });
 
-  it("let starred people through DND, never yourself", async () => {
+  it("let people through DND, never yourself", async () => {
     const { server } = harness();
     const path = `/api/v1/settings/dnd_allowances/${USER_IDS.maya}`;
     const ids = (settings: Settings) => settings.notifications.allowedPeople.map((p) => p.userId);

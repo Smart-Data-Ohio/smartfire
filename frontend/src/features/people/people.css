@@ -1,0 +1,204 @@
+/* The people directory and a person's page: a readable column under the page header. */
+@layer app {
+  .people-page {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-5) var(--space-10);
+  }
+
+  .people-intro,
+  .people-empty {
+    max-width: 640px;
+    margin: 0 0 var(--space-3);
+  }
+
+  .people-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    max-width: 640px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .people-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 48px;
+    padding: var(--space-1-5) var(--space-3);
+    border-radius: var(--radius-md);
+  }
+
+  .people-row:hover {
+    background: var(--bg-hover);
+  }
+
+  .people-row[data-selected] {
+    background: var(--bg-selected);
+  }
+
+  .people-check {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  .people-identity {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .people-name {
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .people-name:hover {
+    text-decoration: underline;
+  }
+
+  .people-presence {
+    font-size: var(--text-meta);
+  }
+
+  .people-badge {
+    flex-shrink: 0;
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  /* The selection bar: pinned to the foot of the page while anyone is chosen. */
+  .people-bar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid var(--border);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .people-bar[hidden] {
+    display: none;
+  }
+
+  .people-bar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .people-bar-note {
+    margin: 0;
+    font-size: var(--text-meta);
+  }
+
+  /* A person's page: centred, as the classic panel is. */
+  .person {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 440px;
+    margin: var(--space-4) auto 0;
+    text-align: center;
+  }
+
+  .person[data-status="banned"] > :first-child {
+    filter: grayscale(1);
+    opacity: 0.6;
+  }
+
+  .person-email {
+    color: var(--accent);
+  }
+
+  .person-bio {
+    margin: 0;
+  }
+
+  .person-status {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    margin: 0;
+  }
+
+  .person-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--presence-offline);
+  }
+
+  .person-status[data-presence="online"] .person-status-dot {
+    background: var(--presence-online);
+  }
+
+  .person-status[data-presence="idle"] .person-status-dot {
+    background: var(--presence-away);
+  }
+
+  .person-status[data-presence="dnd"] .person-status-dot {
+    background: var(--presence-dnd);
+  }
+
+  .person-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+  }
+
+  .person-transfer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    text-align: start;
+  }
+
+  .person-transfer-label {
+    font-weight: var(--weight-medium);
+  }
+
+  .person-transfer-url {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+  }
+
+  .person-transfer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .person-qr {
+    display: block;
+    width: min(240px, 100%);
+    margin: 0 auto;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--neutral-0);
+  }
+}

@@ -1,7 +1,7 @@
 /**
  * The viewer's settings (S7): the classic profile page's sections, sessions and push
- * subscriptions, kept per world so `reset()` starts them over. DND exceptions are the viewer's
- * stars, as on the server.
+ * subscriptions, kept per world so `reset()` starts them over. DND exceptions live in their own
+ * set, apart from the stars, as the server keeps them in their own table.
  */
 import type { IntegrationSettings } from "../../src/gen/IntegrationSettings.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
@@ -19,7 +19,7 @@ import {
   stringArrayField,
   stringField,
 } from "../json.ts";
-import { timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { VIEWER_TIME_ZONE } from "./composer.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import type { Uploads } from "./uploads.ts";
@@ -236,12 +236,12 @@ export function createSettings(
     return state;
   };
 
-  /** The settings page, with the DND exceptions read from the stars. */
+  /** The settings page, with the viewer's DND exceptions. */
   const page = (): Settings => {
     const world = ctx.world();
     const { settings } = current();
 
-    const allowedPeople = [...world.stars]
+    const allowedPeople = [...world.dndAllowed]
       .flatMap((id) => {
         const user = world.users.get(id);
 
@@ -264,7 +264,9 @@ export function createSettings(
     const users = ctx.world().users;
     const viewer = users.get(VIEWER_ID);
 
-    if (viewer !== undefined) users.set(VIEWER_ID, { ...viewer, name });
+    if (viewer !== undefined) {
+      users.set(VIEWER_ID, { ...viewer, name, updatedAt: rowTimestamp(ctx.now()) });
+    }
   };
 
   const profile = (body: Json | undefined) => {
@@ -482,8 +484,8 @@ export function createSettings(
 
     if (userId === VIEWER_ID) throw validation("userId", "can't be you");
 
-    if (allowed) world.stars.add(userId);
-    else world.stars.delete(userId);
+    if (allowed) world.dndAllowed.add(userId);
+    else world.dndAllowed.delete(userId);
 
     return ok(page());
   };

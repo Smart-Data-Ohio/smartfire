@@ -19,8 +19,9 @@ export function switchToClassic(
 
 /**
  * The signed-in person's menu, opened from their panel at the foot of the sidebar (`children` is
- * the trigger's content): their profile and settings, the workspace (its people, and for
- * administrators the rest of the classic account pages), and the way back to the classic UI.
+ * the trigger's content): their profile and settings, the people directory, the workspace (its
+ * people, and for administrators the rest of the classic account pages), and the way back to the
+ * classic UI.
  */
 export function UserMenu({ children }: { readonly children: ReactNode }) {
   const navigate = useNavigate();
@@ -37,6 +38,9 @@ export function UserMenu({ children }: { readonly children: ReactNode }) {
     >
       <MenuItem icon="settings" onSelect={() => void navigate({ to: "/settings" })}>
         Profile and settings
+      </MenuItem>
+      <MenuItem icon="users" onSelect={() => void navigate({ to: "/people" })}>
+        People
       </MenuItem>
       <MenuItem icon="home" onSelect={() => void navigate({ to: "/admin" })}>
         Workspace and people

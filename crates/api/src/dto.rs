@@ -18,6 +18,11 @@ pub fn time(time: Timestamp) -> String {
     time.to_wire()
 }
 
+/// `users.updated_at` with fixed-width microseconds, so string order preserves row order.
+pub fn user_updated_at(time: Timestamp) -> String {
+    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()
+}
+
 fn present(value: Option<&str>) -> Option<String> {
     value
         .filter(|value| !value.trim().is_empty())
@@ -178,6 +183,7 @@ pub fn user(
         avatar_icon: extras.icons.get(&user.id).cloned(),
         agent: extras.agents.get(&user.id).cloned(),
         created_at: time(user.created_at),
+        updated_at: user_updated_at(user.updated_at),
     }
 }
 
