@@ -289,6 +289,35 @@ async fn keys_tokens_and_posts_are_never_redirected() {
 }
 
 #[tokio::test]
+async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
+    let Some(a) = enabled().await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    for (classic, spa) in [
+        ("/account/edit", "/app/admin"),
+        ("/account/icons", "/app/admin/icons"),
+        ("/account/custom_styles/edit", "/app/admin/styles"),
+        ("/account/audit_log", "/app/admin/audit-log"),
+        ("/account/integrations_health", "/app/admin/integrations"),
+    ] {
+        let reply = david.get(classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(spa).as_str()), "{classic}");
+    }
+
+    // The classic form's save runs as before and answers with the classic redirect.
+    let save = david
+        .write(
+            Req::new(Method::PATCH, "/account/custom_styles")
+                .header("accept", "text/html")
+                .form(&[("account[custom_styles]", "body { color: red; }")]),
+        )
+        .await;
+    assert!(save.status.is_redirection(), "{:?}", save.status);
+    assert!(!redirected_to_spa(&save), "{:?}", save.location());
+}
+
+#[tokio::test]
 async fn spa_default_next_moves_everyone_who_has_not_chosen_classic() {
     let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
         return;

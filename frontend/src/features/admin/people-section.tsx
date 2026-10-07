@@ -15,10 +15,11 @@ import {
   googleUnlinkConfirmation,
   googleUnlinkTitle,
   groupPeople,
+  neighbour,
   REMOVE_CONFIRMATION,
   twoFactorResetConfirmation,
 } from "./admin-format.ts";
-import { adminFailure, useAdmin } from "./admin-parts.tsx";
+import { adminFailure, useAdmin, useFocusAfter } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -51,6 +52,13 @@ function confirmation(pending: Pending): string {
   }
 }
 
+/** The people's ids in the order the page shows them: administrators, then members. */
+function shownIds(people: readonly Person[]): readonly number[] {
+  const { administrators, members } = groupPeople(people);
+
+  return [...administrators, ...members].map((person) => person.id);
+}
+
 /** One person: their avatar and name, and for an administrator the classic row's buttons. */
 function PersonRow({
   person,
@@ -68,7 +76,12 @@ function PersonRow({
   const administrator = person.role === "administrator";
 
   return (
-    <li className="settings-list-row admin-person" data-banned={person.banned || undefined}>
+    <li
+      className="settings-list-row admin-person"
+      data-row={person.id}
+      tabIndex={-1}
+      data-banned={person.banned || undefined}
+    >
       <Avatar name={person.name} userId={person.id} src={person.avatarUrl} size={32} />
       <span className="settings-list-main">
         <strong>
@@ -104,6 +117,7 @@ function PersonRow({
               variant="ghost"
               size="sm"
               role="switch"
+              data-row-control="role"
               aria-checked={administrator}
               disabled={busy || person.you}
               title={`Role: ${administrator ? "Administrator" : "Member"}`}
@@ -143,6 +157,7 @@ function PersonRow({
                 variant="danger"
                 size="sm"
                 icon="trash"
+                data-row-control="remove"
                 disabled={busy}
                 onClick={() => onAsk({ person, kind: "remove" })}
               >
@@ -168,6 +183,7 @@ export function PeopleSection() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [more, setMore] = useState(false);
   const { busy, track } = useBusy();
+  const { container, focusAfter } = useFocusAfter();
 
   const fetchPeople = useCallback(() => {
     admin.people().then(
@@ -231,11 +247,14 @@ export function PeopleSection() {
 
     void track(
       `person-${person.id}`,
-      admin
-        .setRole(person.id, role)
-        .then(landed, (error: Error) =>
-          adminFailure(`Couldn't change ${person.name}'s role`, error),
-        ),
+      admin.setRole(person.id, role).then(
+        (change) => {
+          // The row moves to the other list and remounts; its switch keeps the focus.
+          landed(change);
+          focusAfter({ row: `${person.id}`, control: "role" });
+        },
+        (error: Error) => adminFailure(`Couldn't change ${person.name}'s role`, error),
+      ),
     );
   };
 
@@ -276,7 +295,12 @@ export function PeopleSection() {
           key,
           admin.removePerson(person.id).then(
             ({ id }) => {
+              // The removed row was where the dialog handed focus back; the next row takes it.
+              const next =
+                load.status === "ready" ? neighbour(shownIds(load.page.people), id) : null;
+
               edit((people) => people.filter((each) => each.id !== id));
+              focusAfter({ row: next === null ? null : `${next}`, control: "remove" });
               toast({ title: `${person.name} was removed`, tone: "success" });
             },
             (error: Error) => adminFailure(`Couldn't remove ${person.name}`, error),
@@ -303,36 +327,38 @@ export function PeopleSection() {
 
   return (
     <SettingsPage title="People" description="Everyone in this workspace.">
-      {load.status === "loading" ? <PaneListSkeleton rows={4} /> : null}
-      {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-      {groups === null ? null : (
-        <>
-          {groups.administrators.length > 0 ? (
-            <SettingsGroup title="Administrators">
-              <ul className="settings-list">{rows(groups.administrators)}</ul>
-            </SettingsGroup>
-          ) : null}
-          {groups.members.length > 0 ? (
-            <SettingsGroup title="Members">
-              <ul className="settings-list">{rows(groups.members)}</ul>
-            </SettingsGroup>
-          ) : null}
-        </>
-      )}
-      {load.status === "ready" && load.page.nextPage !== null ? (
-        <div className="settings-actions">
-          <Button
-            variant="secondary"
-            loading={more}
-            disabled={more}
-            onClick={() => {
-              if (load.page.nextPage !== null) loadMore(load.page.nextPage);
-            }}
-          >
-            Show more people
-          </Button>
-        </div>
-      ) : null}
+      <div ref={container} tabIndex={-1} className="admin-focus-root">
+        {load.status === "loading" ? <PaneListSkeleton rows={4} /> : null}
+        {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
+        {groups === null ? null : (
+          <>
+            {groups.administrators.length > 0 ? (
+              <SettingsGroup title="Administrators">
+                <ul className="settings-list">{rows(groups.administrators)}</ul>
+              </SettingsGroup>
+            ) : null}
+            {groups.members.length > 0 ? (
+              <SettingsGroup title="Members">
+                <ul className="settings-list">{rows(groups.members)}</ul>
+              </SettingsGroup>
+            ) : null}
+          </>
+        )}
+        {load.status === "ready" && load.page.nextPage !== null ? (
+          <div className="settings-actions">
+            <Button
+              variant="secondary"
+              loading={more}
+              disabled={more}
+              onClick={() => {
+                if (load.page.nextPage !== null) loadMore(load.page.nextPage);
+              }}
+            >
+              Show more people
+            </Button>
+          </div>
+        ) : null}
+      </div>
       <Dialog
         open={pending !== null}
         onOpenChange={(open) => {

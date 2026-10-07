@@ -1,15 +1,47 @@
-import { type FormEvent, type KeyboardEvent, useCallback, useEffect, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { AdministratorsOnly, adminFailure, useAdmin } from "./admin-parts.tsx";
+import { AdministratorsOnly, adminFailure, needsSudo, useAdmin } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready" };
+
+/** Where an unsaved edit waits while the classic page confirms the password. */
+const DRAFT_KEY = "smartfire.draft.admin-styles";
+
+/** The edit kept across the password round trip, taken (and forgotten) once; `null` when none. */
+function takeDraft(): string | null {
+  try {
+    const draft = sessionStorage.getItem(DRAFT_KEY);
+
+    sessionStorage.removeItem(DRAFT_KEY);
+
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps `css` for the page to restore after the password round trip's full page load. */
+function keepDraft(css: string): void {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, css);
+  } catch {
+    // Without storage the edit is lost with the page, as on the classic form.
+  }
+}
 
 /**
  * Custom styles: the workspace's custom CSS, as the classic page edits it. Saving asks for the
@@ -20,11 +52,22 @@ export function StylesSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [css, setCss] = useState("");
   const { busy, track } = useBusy();
+  // The kept edit, taken from storage by the first load to land (`undefined` until then), so
+  // every later load (a retry, a second mount's) shows it too.
+  const kept = useRef<string | null | undefined>(undefined);
 
   const fetchStyles = useCallback(() => {
     admin.customStyles().then(
       (styles) => {
-        setCss(styles.css ?? "");
+        if (kept.current === undefined) {
+          kept.current = takeDraft();
+
+          if (kept.current !== null) {
+            toast({ title: "Your unsaved CSS is back", description: "Save it to keep it." });
+          }
+        }
+
+        setCss(kept.current ?? styles.css ?? "");
         setLoad({ status: "ready" });
       },
       (error: Error) => setLoad({ status: "error", message: error.message }),
@@ -49,10 +92,15 @@ export function StylesSection() {
       "save",
       admin.updateCustomStyles(css).then(
         (styles) => {
+          kept.current = null;
           setCss(styles.css ?? "");
           toast({ title: "Custom styles saved", tone: "success" });
         },
-        (error: Error) => adminFailure("Couldn't save the custom styles", error),
+        (error: Error) => {
+          if (needsSudo(error)) keepDraft(css);
+
+          adminFailure("Couldn't save the custom styles", error);
+        },
       ),
     );
   };

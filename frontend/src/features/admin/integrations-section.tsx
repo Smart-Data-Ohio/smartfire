@@ -43,8 +43,8 @@ function Issues({
     <div className="admin-issues">
       <h3 className="settings-label">{title}</h3>
       <ul className="settings-list">
-        {issues.map((issue, index) => (
-          <li key={`${issue.subject}-${index}`} className="settings-list-row">
+        {issues.map((issue) => (
+          <li key={`${issue.subject}: ${issue.detail}`} className="settings-list-row">
             <span className="settings-list-main">
               <strong>{issue.subject}</strong>
               <span className="text-faint">{issue.detail}</span>

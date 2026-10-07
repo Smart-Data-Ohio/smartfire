@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { IntegrationsHealth } from "../../gen/IntegrationsHealth.ts";
 import type { Person } from "../../gen/Person.ts";
 import {
-  filtering,
+  auditTime,
   filterValue,
   groupPeople,
   healthFacts,
   NO_FILTERS,
+  neighbour,
   visibleSections,
 } from "./admin-format.ts";
 
@@ -75,8 +76,22 @@ describe("the audit log filters", () => {
   it("treat blanks as unset", () => {
     expect(filterValue("  ")).toBeNull();
     expect(filterValue(" ada ")).toBe("ada");
-    expect(filtering(NO_FILTERS)).toBe(false);
-    expect(filtering({ ...NO_FILTERS, actor: "ada" })).toBe(true);
+    expect(NO_FILTERS).toEqual({
+      actor: null,
+      action: null,
+      targetType: null,
+      from: null,
+      to: null,
+    });
+  });
+});
+
+describe("the audit log times", () => {
+  it("read in the zone the filters use", () => {
+    const moment = "2026-10-06T03:30:00Z";
+
+    expect(auditTime(moment, "America/New_York", "en-US")).toBe("Oct 5, 2026, 11:30 PM");
+    expect(auditTime(moment, "Asia/Tokyo", "en-US")).toBe("Oct 6, 2026, 12:30 PM");
   });
 });
 
@@ -93,5 +108,14 @@ describe("integration health", () => {
     expect(facts.expiring).toEqual([{ subject: "user 7", detail: "expires unknown — gone" }]);
     expect(facts.fizzy).toBe("No Fizzy integration is configured in this workspace.");
     expect(facts.email).toBe("1 room with a forward-to address.");
+  });
+});
+
+describe("the row focus moves to", () => {
+  it("the next row, else the previous, else none", () => {
+    expect(neighbour([1, 2, 3], 2)).toBe(3);
+    expect(neighbour([1, 2, 3], 3)).toBe(2);
+    expect(neighbour([1], 1)).toBeNull();
+    expect(neighbour([1, 2], 9)).toBeNull();
   });
 });

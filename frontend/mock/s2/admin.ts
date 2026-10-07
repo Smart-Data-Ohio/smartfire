@@ -432,6 +432,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       exportUrl: `/account/audit_log.csv${exportQuery === "" ? "" : `?${exportQuery}`}`,
       exportTruncated: false,
       exportLimit: 5000,
+      timeZone: "America/New_York",
     };
   };
 

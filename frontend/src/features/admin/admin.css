@@ -110,4 +110,12 @@
   .admin-issues {
     margin-top: var(--space-3);
   }
+
+  /* The list wrapper focus falls back to when a change leaves no row to go to; laid out as the page. */
+  .admin-focus-root {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    outline: none;
+  }
 }

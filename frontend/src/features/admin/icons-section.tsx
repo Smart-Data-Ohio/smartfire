@@ -15,8 +15,8 @@ import {
   SettingsPage,
   useBusy,
 } from "../settings/settings-parts.tsx";
-import { ICON_NAME_HINT } from "./admin-format.ts";
-import { AdministratorsOnly, adminFailure, useAdmin } from "./admin-parts.tsx";
+import { ICON_NAME_HINT, neighbour } from "./admin-format.ts";
+import { AdministratorsOnly, adminFailure, useAdmin, useFocusAfter } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -164,6 +164,7 @@ export function IconsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [doomed, setDoomed] = useState<WorkspaceIcon | null>(null);
   const { busy, track } = useBusy();
+  const { container, focusAfter } = useFocusAfter();
 
   const fetchIcons = useCallback(() => {
     admin.icons().then(
@@ -199,7 +200,14 @@ export function IconsSection() {
     void track(
       `icon-${icon.id}`,
       admin.destroyIcon(icon.id).then(
-        ({ icons }) => shown(icons),
+        ({ icons }) => {
+          // The deleted row was where the dialog handed focus back; the next row takes it.
+          const before = load.status === "ready" ? load.icons.map((each) => each.id) : [];
+          const next = neighbour(before, icon.id);
+
+          shown(icons);
+          focusAfter({ row: next === null ? null : `${next}`, control: "delete" });
+        },
         (error: Error) => adminFailure(`Couldn't delete :${icon.name}:`, error),
       ),
     );
@@ -219,42 +227,45 @@ export function IconsSection() {
         <NewIcon onSaved={shown} />
       </SettingsGroup>
       <SettingsGroup title="Icons">
-        {load.status === "loading" ? <PaneListSkeleton rows={3} /> : null}
-        {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-        {load.status === "ready" && load.icons.length === 0 ? (
-          <p className="text-muted">No workspace icons yet.</p>
-        ) : null}
-        {load.status === "ready" && load.icons.length > 0 ? (
-          <ul className="settings-list">
-            {load.icons.map((icon) => (
-              <li key={icon.id} className="settings-list-row">
-                <img
-                  className="admin-icon-image"
-                  src={icon.imageUrl}
-                  alt=""
-                  width={32}
-                  height={32}
-                  loading="lazy"
-                />
-                <span className="settings-list-main">
-                  <strong>
-                    {icon.title} <code>:{icon.name}:</code>
-                  </strong>
-                  <span className="text-faint">Uploaded by {icon.creatorName}</span>
-                </span>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  icon="trash"
-                  disabled={busy(`icon-${icon.id}`)}
-                  onClick={() => setDoomed(icon)}
-                >
-                  <span className="visually-hidden">Delete :{icon.name}:</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        <div ref={container} tabIndex={-1} className="admin-focus-root">
+          {load.status === "loading" ? <PaneListSkeleton rows={3} /> : null}
+          {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
+          {load.status === "ready" && load.icons.length === 0 ? (
+            <p className="text-muted">No workspace icons yet.</p>
+          ) : null}
+          {load.status === "ready" && load.icons.length > 0 ? (
+            <ul className="settings-list">
+              {load.icons.map((icon) => (
+                <li key={icon.id} className="settings-list-row" data-row={icon.id} tabIndex={-1}>
+                  <img
+                    className="admin-icon-image"
+                    src={icon.imageUrl}
+                    alt=""
+                    width={32}
+                    height={32}
+                    loading="lazy"
+                  />
+                  <span className="settings-list-main">
+                    <strong>
+                      {icon.title} <code>:{icon.name}:</code>
+                    </strong>
+                    <span className="text-faint">Uploaded by {icon.creatorName}</span>
+                  </span>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    icon="trash"
+                    data-row-control="delete"
+                    disabled={busy(`icon-${icon.id}`)}
+                    onClick={() => setDoomed(icon)}
+                  >
+                    <span className="visually-hidden">Delete :{icon.name}:</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </SettingsGroup>
       <Dialog
         open={doomed !== null}

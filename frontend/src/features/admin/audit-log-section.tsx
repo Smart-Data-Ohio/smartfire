@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { AuditLogFilters } from "../../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../../gen/AuditLogPage.ts";
 import { admin } from "../../sync/admin.ts";
@@ -7,7 +7,7 @@ import { TextField } from "../../ui/text-field.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsPage } from "../settings/settings-parts.tsx";
 import { auditTime, filterValue, NO_FILTERS } from "./admin-format.ts";
-import { AdministratorsOnly, adminFailure, useAdmin } from "./admin-parts.tsx";
+import { AdministratorsOnly, useAdmin } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -147,13 +147,21 @@ export function AuditLogSection() {
   const { workspace } = useAdmin();
   const [query, setQuery] = useState<Query>({ filters: NO_FILTERS, page: null });
   const [load, setLoad] = useState<Load>({ status: "loading" });
+  // Each fetch takes the next number; only the newest one's answer lands, so a slow answer for
+  // filters since replaced can't overwrite the log the newer filters asked for.
+  const latest = useRef(0);
 
   const fetchPage = useCallback((next: Query) => {
+    latest.current += 1;
+
+    const request = latest.current;
+
     admin.auditLog(next.filters, next.page).then(
-      (page) => setLoad({ status: "ready", page }),
+      (page) => {
+        if (request === latest.current) setLoad({ status: "ready", page });
+      },
       (error: Error) => {
-        setLoad({ status: "error", message: error.message });
-        adminFailure("Couldn't load the audit log", error);
+        if (request === latest.current) setLoad({ status: "error", message: error.message });
       },
     );
   }, []);
@@ -217,7 +225,9 @@ export function AuditLogSection() {
                   {load.page.entries.map((entry) => (
                     <tr key={entry.id}>
                       <td>
-                        <time dateTime={entry.createdAt}>{auditTime(entry.createdAt)}</time>
+                        <time dateTime={entry.createdAt}>
+                          {auditTime(entry.createdAt, load.page.timeZone)}
+                        </time>
                       </td>
                       <td>{entry.actor ?? "—"}</td>
                       <td>

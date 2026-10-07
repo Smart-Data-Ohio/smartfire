@@ -44,6 +44,17 @@ export function groupPeople(people: readonly Person[]) {
   };
 }
 
+/** The row to move to when `id` leaves `ids`: the next one, else the previous, else none. */
+export function neighbour<T>(ids: readonly T[], id: T): T | null {
+  const index = ids.indexOf(id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  return ids[index + 1] ?? ids[index - 1] ?? null;
+}
+
 /** The classic page's confirmation before a two-step sign-in reset. */
 export function twoFactorResetConfirmation(person: Person): string {
   return `Reset two-step sign-in for ${person.name}? They will sign out everywhere and set it up again at next sign-in.`;
@@ -92,14 +103,13 @@ export function filterValue(value: string): string | null {
   return trimmed === "" ? null : trimmed;
 }
 
-/** Whether any filter is set. */
-export function filtering(filters: AuditLogFilters): boolean {
-  return Object.values(filters).some((value) => value !== null);
-}
-
-/** The audit log's time column: the entry's moment in the viewer's locale. */
-export function auditTime(createdAt: string, locale?: string): string {
+/**
+ * The audit log's time column: the entry's moment in the viewer's locale, read in `timeZone` (the
+ * zone the log's date filters use) or the browser's own zone when it's absent.
+ */
+export function auditTime(createdAt: string, timeZone?: string, locale?: string): string {
   return new Date(createdAt).toLocaleString(locale, {
+    timeZone,
     year: "numeric",
     month: "short",
     day: "numeric",
