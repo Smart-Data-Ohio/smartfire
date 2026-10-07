@@ -20,6 +20,7 @@ fn boot() -> Boot {
         cable_url: "/cable".into(),
         service_worker_url: Some("/app/service-worker.js".into()),
         version: "1.2.3".into(),
+        flash: None,
         revision: Some("0123abc".into()),
     }
 }
@@ -337,5 +338,18 @@ fn pwa_worker_and_offline_page_are_files_while_only_index_is_the_shell() {
         for path in ["offline.html", "service-worker.js"] {
             assert!(file(path, None).is_some(), "the built PWA emits {path}");
         }
+    }
+}
+
+#[test]
+fn optional_boot_flash_uses_camel_case_and_is_safe_in_the_shell() {
+    let mut boot = boot();
+    let value = serde_json::to_value(&boot).unwrap();
+    assert!(value.get("flash").is_none());
+    for (kind, wire) in [(FlashKind::Notice, "notice"), (FlashKind::Alert, "alert")] {
+        boot.flash = Some(BootFlash { kind, message: "Connected <&> </script>.".into() });
+        let html = render_shell(&boot, "TOKEN", Some("NONCE"));
+        assert_eq!(boot_json(&html)["flash"], serde_json::json!({"kind":wire,"message":"Connected <&> </script>."}));
+        assert!(!html.contains("Connected <&> </script>."));
     }
 }

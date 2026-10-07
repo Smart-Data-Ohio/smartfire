@@ -334,6 +334,20 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
             assert_eq!(shell.status, StatusCode::NOT_FOUND, "{label}");
             assert_eq!(boot.status, StatusCode::NOT_FOUND, "{label}");
         }
+        // The auth pages (no Turbo) name the same worker: two-step setup is where a password
+        // sign-in can land, and its load registers the signed-in person's worker.
+        unenroll(&a, DAVID).await;
+        let setup = b.get("/two_factor_setup").await;
+        assert_eq!(setup.status, StatusCode::OK, "{label}");
+        assert_eq!(
+            meta(&setup.text(), "service-worker-url").as_deref(),
+            expected,
+            "auth page: {label}"
+        );
+        assert!(
+            setup.text().contains("data-service-worker=\"false\""),
+            "auth pages keep automatic registration disabled in tests: {label}"
+        );
         // With no signed-in user, SPA_DEFAULT selects the classic layout's worker.
         let expected = match (enabled, default_next) {
             (false, _) => None,
@@ -342,6 +356,10 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         };
         let signed_out = a.anonymous().get("/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
+        assert!(
+            signed_out.text().contains("href=\"/webmanifest.json\""),
+            "{label}"
+        );
         assert_eq!(
             meta(&signed_out.text(), "service-worker-url").as_deref(),
             expected,
@@ -483,12 +501,18 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
     }
 }
 
-/// Application startup owns every registration: real Turbo sign-in and UI preference forms,
-/// the unchanged classic worker, and the built SPA (not a registration fixture or stub).
+/// Application startup owns every registration: real sign-in (a full page load from the auth
+/// pages) and UI preference forms, the unchanged classic worker, and the built SPA (not a
+/// registration fixture or stub).
 #[tokio::test]
 #[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
-async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() {
+async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    // The signed-out page that subscribes has no VAPID meta (the auth pages send no push), so the
+    // browser gets the application's own public key from here.
+    const VAPID_PUBLIC_KEY: &str =
+        "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ=";
 
     assert!(
         campfire_spa::built(),
@@ -499,7 +523,7 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
         ("RAILS_ENV", "test"),
         ("SPA_ENABLED", "1"),
         ("SPA_DEFAULT", "next"),
-        ("VAPID_PUBLIC_KEY", "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ="),
+        ("VAPID_PUBLIC_KEY", VAPID_PUBLIC_KEY),
         ("VAPID_PRIVATE_KEY", "qfXLHghuG1rSHZUVo9SscNRI-0EIHRbIrfeGCqbAwak="),
     ])
     .await
@@ -562,6 +586,8 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
             .arg(format!("PWA_BROWSER_EMAIL={email}"))
             .arg("--env")
             .arg(format!("PWA_ALLOW_PUSH_UNAVAILABLE={allow_flag}"))
+            .arg("--env")
+            .arg(format!("PWA_BROWSER_VAPID_KEY={VAPID_PUBLIC_KEY}"))
             .arg(std::env::var("PWA_PLAYWRIGHT_IMAGE")
                 .expect("ci/correctness.sh pwa supplies the pinned browser image"))
             .arg("node");
@@ -572,7 +598,13 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
         .env("PWA_BROWSER_TARGET", target)
         .env("PWA_BROWSER_EMAIL", email)
         .env("PWA_ALLOW_PUSH_UNAVAILABLE", allow_flag)
-        .kill_on_drop(true).output().await.unwrap();
+        .env("PWA_BROWSER_VAPID_KEY", VAPID_PUBLIC_KEY)
+        .kill_on_drop(true).output();
+    // Every browser wait is bounded; this catches anything that still hangs.
+    let output = tokio::time::timeout(std::time::Duration::from_secs(300), output)
+        .await
+        .expect("the PWA browser run finishes within five minutes")
+        .unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     println!("{stdout}");
     assert!(

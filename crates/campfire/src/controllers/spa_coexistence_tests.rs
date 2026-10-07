@@ -512,3 +512,6 @@ async fn the_shell_loads_in_full_from_a_turbo_visit() {
         "{shell}"
     );
 }
+
+#[path = "spa_coexistence_tests/auth_return.rs"]
+mod auth_return;

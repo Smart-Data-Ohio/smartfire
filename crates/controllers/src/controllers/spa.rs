@@ -23,7 +23,7 @@ use axum::response::Response;
 use campfire_db::models::user::ui_preference::{self, UiPreference};
 use campfire_db::{Account, UserStatusSettings};
 use campfire_kit::{Ctx, Error, Kit, Redirect, Result, StatusCode};
-use campfire_spa::{Boot, BootAccount, BootResponse, BootUser};
+use campfire_spa::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Authentication, Before};
@@ -104,7 +104,11 @@ fn local_path(path: &str) -> bool {
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    let boot = load_boot(c).await?;
+    let mut boot = load_boot(c).await?;
+    let flash = c.flash();
+    boot.flash = flash.notice().map(|message| BootFlash { kind: FlashKind::Notice, message: message.to_owned() })
+        .or_else(|| flash.alert().map(|message| BootFlash { kind: FlashKind::Alert, message: message.to_owned() }));
+    flash.discard(None);
     let csrf_token = c.authenticity_tokens().global();
     let nonce = c.content_security_policy_nonce();
     let html = campfire_spa::render_shell(&boot, &csrf_token, nonce.as_deref());
@@ -151,6 +155,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         service_worker_url,
         version,
         revision,
+        flash: None,
     })
 }
 

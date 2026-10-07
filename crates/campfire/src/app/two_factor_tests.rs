@@ -147,7 +147,7 @@ async fn enrollment_confirms_spends_step_signs_out_others_and_shows_backup_codes
     assert_eq!(result.header("cache-control"), Some("no-store"));
     assert!(result.text().contains("Signed out your other devices"));
     assert!(result.text().contains("smartfire-backup-codes.txt"));
-    let codes = regex::Regex::new(r#"<li><code class="txt-large">([^<]+)</code></li>"#)
+    let codes = regex::Regex::new(r#"<li><code>([^<]+)</code></li>"#)
         .unwrap()
         .captures_iter(&result.text())
         .map(|c| c[1].to_string())
@@ -199,7 +199,7 @@ async fn enrollment_requires_authentication_and_real_csrf() {
 }
 
 #[tokio::test]
-async fn two_factor_views_match_rails_seed_bytes_including_inline_qr() {
+async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
     use askama::Template;
     use campfire_views::{helpers as h, two_factor};
     struct Tokens;
@@ -301,7 +301,30 @@ async fn two_factor_views_match_rails_seed_bytes_including_inline_qr() {
                 )
             },
         );
-        same_bytes(name, &actual, goldens[name].as_str().unwrap());
+        crate::form_contracts::assert_forms(name, &actual, goldens[name].as_str().unwrap());
+        if name.starts_with("profile") {
+            assert_eq!(
+                crate::form_contracts::text(&actual),
+                crate::form_contracts::text(goldens[name].as_str().unwrap()),
+                "{name}: security status and device descriptions",
+            );
+            assert_eq!(crate::form_contracts::links(&actual), crate::form_contracts::links(goldens[name].as_str().unwrap()));
+        } else {
+            if name == "setup" {
+                crate::form_contracts::assert_text(&actual, goldens["key"].as_str().unwrap());
+                assert!(actual.contains(&qr), "private inline QR bytes");
+            }
+            if name.starts_with("backups") {
+                for code in goldens["codes"].as_array().unwrap() {
+                    crate::form_contracts::assert_text(&actual, code.as_str().unwrap());
+                }
+                crate::form_contracts::assert_text(&actual, "They will not be shown again.");
+                if name == "backups_signed_out" {
+                    crate::form_contracts::assert_text(&actual, "Signed out your other devices");
+                }
+                assert_eq!(crate::form_contracts::links(&actual), crate::form_contracts::links(goldens[name].as_str().unwrap()));
+            }
+        }
     }
 }
 fn same_bytes(name: &str, actual: &str, expected: &str) {

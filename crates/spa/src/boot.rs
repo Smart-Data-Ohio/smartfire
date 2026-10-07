@@ -21,6 +21,23 @@ pub struct Boot {
     pub version: String,
     /// `X-Rev` (`GIT_REVISION`), when set.
     pub revision: Option<String>,
+    /// Pending classic feedback, consumed only by a shell navigation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flash: Option<BootFlash>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootFlash {
+    pub kind: FlashKind,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FlashKind {
+    Notice,
+    Alert,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

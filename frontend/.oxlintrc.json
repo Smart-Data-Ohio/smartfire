@@ -3,7 +3,12 @@
   "categories": {
     "correctness": "off"
   },
-  "ignorePatterns": ["dist/**", "src/gen/**", "tools/oxlint-anti-slop/**"],
+  "ignorePatterns": [
+    "dist/**",
+    "e2e/fixtures/auth-pages/**",
+    "src/gen/**",
+    "tools/oxlint-anti-slop/**"
+  ],
   "jsPlugins": [
     { "name": "anti-slop", "specifier": "./tools/oxlint-anti-slop/index.ts" },
     { "name": "anti-slop-effect", "specifier": "./tools/oxlint-anti-slop/effect/index.ts" }

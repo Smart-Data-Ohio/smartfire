@@ -61,7 +61,10 @@ impl Client for Recorded {
     }
 }
 async fn app() -> (TestApp, Arc<Recorded>) {
-    let app = TestApp::boot().await.expect("pinned default seed required");
+    app_with_env(&[]).await
+}
+async fn app_with_env(env: &[(&str, &str)]) -> (TestApp, Arc<Recorded>) {
+    let app = TestApp::boot_seed_with_env("default", crate::controllers::presenters::test_support::seed_clock(), env).await.expect("pinned default seed required");
     let recorded = Arc::new(Recorded {
         response: Mutex::new(Err(())),
         calls: Mutex::new(vec![]),
@@ -962,3 +965,5 @@ mod security_cases;
 
 // WS16 owner comparison uses WS14g's real verifier and signing/JWKS fixtures.
 mod slack_claim;
+
+mod ui_return;

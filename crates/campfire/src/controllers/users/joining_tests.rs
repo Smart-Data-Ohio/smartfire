@@ -7,7 +7,7 @@ fn vectors() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/users_joining.json")).unwrap()
 }
 #[tokio::test]
-async fn join_page_matches_complete_rails_body_and_access_checks() {
+async fn join_page_preserves_rails_form_and_access_checks() {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let v = vectors();
     let (account, help) = app
@@ -37,19 +37,8 @@ async fn join_page_matches_complete_rails_body_and_access_checks() {
             .unwrap()
         },
     );
-    if let Ok(dir) = std::env::var("WS8BR2_DIFF_DIR") {
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(format!("{dir}/joining.actual"), &actual).unwrap();
-        std::fs::write(
-            format!("{dir}/joining.expected"),
-            v["html"].as_str().unwrap(),
-        )
-        .unwrap();
-    }
-    assert!(
-        actual == v["html"].as_str().unwrap(),
-        "complete Rails signup bytes differ"
-    );
+    crate::form_contracts::assert_forms("join", &actual, v["html"].as_str().unwrap());
+    crate::form_contracts::assert_text(&actual, &account.as_ref().unwrap().name);
     let path = format!("/join/{}", v["join"].as_str().unwrap());
     assert_eq!(
         app.anonymous().get(&path).await.status.as_u16(),

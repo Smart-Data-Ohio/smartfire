@@ -14,9 +14,17 @@ service-worker initializer and notifications controller, kept as added assets un
 module names to them (`javascript_importmap_tags_selecting_worker()`). With
 `SPA_ENABLED` off the layout omits the meta and keeps the Rails import map, so classic
 page HTML stays byte-identical to Rails and registers `/service-worker.js` as Rails does (the
-classic worker script itself always carries the SPA-cache patch described below). Registration reconciles on both `load` and `turbo:load`, so signing
-in as someone with a different preference also replaces the selected script. It
+classic worker script itself always carries the SPA-cache patch described below). Registration reconciles on both `load` and `turbo:load`. It
 never unregisters the root registration.
+
+The sign-in, two-step, password confirmation, joining and first-run pages use the
+auth layout, which has no Turbo. That layout carries the same manifest link, meta and
+`data-service-worker` opt-out, and its `auth.js` registers the selected URL (or
+`/service-worker.js` when no meta names one) on `load`. A signed-out visitor
+therefore gets the `SPA_DEFAULT` worker. Signing in is a full page load, so the page
+it lands on, whether a classic page or two-step setup, registers the worker for the
+signed-in person's preference. The public About, Privacy and Terms pages load no
+script and register nothing.
 The boot JSON carries that URL, or null. Mock boot data leave it null, and
 development builds skip registration. Classic automatic registration still respects `data-service-worker="false"`
 in the test environment. The SPA quietly calls `registration.update()` on startup.
@@ -155,7 +163,7 @@ The production-preview Playwright suite exercises offline navigation, worker
 click handling and successive worker updates. It runs in the `Frontend` CI job;
 the separate `Frontend e2e` jobs continue to run the mock suite.
 The `pwa` Rust correctness job serves the embedded production build from a frozen
-seed and drives the real registration code through Turbo sign-in and both UI
+seed and drives the real registration code through sign-in and both UI
 switches. It checks a persistent Chromium profile's root registration identity
 and native push subscription. Locally, Chromium created a subscription and kept
 its endpoint and keys through SPA → classic → SPA → classic. A browser that

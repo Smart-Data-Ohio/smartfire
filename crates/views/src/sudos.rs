@@ -22,15 +22,16 @@ impl Page for New<'_> {
 }
 impl New<'_> {
     fn totp_options(&self) -> h::Attrs {
-        h::attrs()
+        let attrs = h::attrs()
             .required(true)
-            .class("input")
+            .class("input auth-code")
             .attr("autofocus", !self.password)
             .autocomplete("one-time-code")
             .attr("inputmode", "numeric")
             .maxlength(10)
             .placeholder("Enter your authenticator code")
-            .attr("aria-label", "Authenticator code")
+            .attr("aria-label", "Authenticator code");
+        h::rejected_field(self.ctx, attrs)
     }
 }
 

@@ -3,6 +3,9 @@ use askama::Template;
 use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers as h, layouts};
 use serde_json::Value;
 
+#[path = "../../../test-support/form_contracts.rs"]
+mod form_contracts;
+
 mod review;
 mod bots_ui;
 mod bot_access_ui;
@@ -283,7 +286,7 @@ fn application_layout_matches_rails_in_every_state() {
 }
 
 #[test]
-fn public_and_mailer_layouts_match_rails() {
+fn public_layout_preserves_policy_contract_and_mailer_matches_rails() {
     let styles =
         h::raw(campfire_assets::stylesheet_link_tag(&["public"], &[("media", "all")]).html);
     for (name, title, description) in [
@@ -296,11 +299,14 @@ fn public_and_mailer_layouts_match_rails() {
             public_stylesheet: h::raw(styles.0.clone()),
             content: h::raw("<p class=\"golden-body\">Body</p>\n"),
         };
-        assert!(compare(
-            name,
-            &page.render().unwrap(),
-            &fixture(&format!("layouts/{name}.html"))
-        ));
+        let actual = page.render().unwrap();
+        let expected = fixture(&format!("layouts/{name}.html"));
+        form_contracts::assert_public_page(name, &actual, &expected);
+        assert!(actual.contains(&format!("<title>{}</title>", title.unwrap_or("Smartfire"))));
+        if description.is_some() {
+            assert!(actual.contains("About &lt;this&gt; &amp; that"));
+        }
+
     }
     assert!(compare(
         "mailer_html",
@@ -820,3 +826,6 @@ fn google_administrator_link_forms_match_complete_pinned_rails_bytes() {
         assert_eq!(serde_json::json!(actual), row["forms"], "{}: full control forms", row["name"]);
     }
 }
+
+#[path = "core/auth_shell.rs"]
+mod auth_shell;

@@ -17,6 +17,11 @@ export const Boot = Schema.Struct({
   serviceWorkerUrl: Schema.NullOr(Schema.String),
   version: Schema.String,
   revision: Schema.NullOr(Schema.String),
+  flash: Schema.optionalKey(
+    Schema.NullOr(
+      Schema.Struct({ kind: Schema.Literals(["notice", "alert"]), message: Schema.String }),
+    ),
+  ),
 });
 
 export type BootPin = Assert<Pinned<typeof Boot, ModelBoot>>;

@@ -30,12 +30,13 @@ const browser = await chromium.launch({ channel: "chromium", headless: true })
 const profileDirectory = await mkdtemp(join(tmpdir(), "smartfire-pwa-"))
 let persistentContext = null
 try {
-  // Quiet classic startup keeps the existing test-environment opt-out, on both lifecycle events.
+  // Quiet startup keeps the existing test-environment opt-out on the sign-in page, whose auth.js
+  // registers on load. The page still names the signed-out (SPA_DEFAULT=next) worker.
   const disabled = await browser.newContext()
   const disabledPage = await disabled.newPage()
-  await disabledPage.goto(`${origin}/session/new`)
+  await disabledPage.goto(`${origin}/session/new`, { waitUntil: "load" })
   assert.equal(await disabledPage.getAttribute("html", "data-service-worker"), "false")
-  await disabledPage.evaluate(() => document.dispatchEvent(new Event("turbo:load")))
+  assert.equal(await disabledPage.locator('meta[name="service-worker-url"]').getAttribute("content"), "/app/service-worker.js")
   assert.equal(await disabledPage.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), 0)
   await disabled.close()
   await browser.close()
@@ -60,15 +61,40 @@ try {
   })
   await devtools.send("ServiceWorker.enable")
 
+  // Polls from Node: waitForFunction treats an async predicate's promise as already truthy.
+  // A navigation in progress destroys the context, which only means "not yet".
   async function activeWorker(path) {
-    await page.waitForFunction(async ({ origin, path }) => {
-      const registrations = await navigator.serviceWorker.getRegistrations()
-      return registrations.length === 1
-        && registrations[0].scope === `${origin}/`
-        && registrations[0].active?.scriptURL === `${origin}${path}`
-        && registrations[0].active.state === "activated"
-        && navigator.serviceWorker.controller?.scriptURL === `${origin}${path}`
-    }, { origin, path }, { timeout: 30_000 })
+    const deadline = Date.now() + 30_000
+    let state = null
+    for (;;) {
+      try {
+        state = await page.evaluate(async () => {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          return {
+            count: registrations.length,
+            scope: registrations[0]?.scope ?? null,
+            active: registrations[0]?.active?.scriptURL ?? null,
+            state: registrations[0]?.active?.state ?? null,
+            controller: navigator.serviceWorker.controller?.scriptURL ?? null,
+            installing: registrations[0]?.installing?.scriptURL ?? null,
+            waiting: registrations[0]?.waiting?.scriptURL ?? null,
+            page: location.pathname,
+            dataset: document.documentElement.dataset.serviceWorker ?? null,
+            meta: document.querySelector('meta[name="service-worker-url"]')?.content ?? null,
+            ready: document.readyState,
+          }
+        })
+      } catch (error) {
+        state = { error: error.message }
+      }
+      if (state.count === 1
+        && state.scope === `${origin}/`
+        && state.active === `${origin}${path}`
+        && state.state === "activated"
+        && state.controller === `${origin}${path}`) return
+      if (Date.now() > deadline) assert.fail(`the root registration never activated ${path}: ${JSON.stringify(state)}`)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
   }
 
   async function subscription() {
@@ -84,14 +110,15 @@ try {
   await activeWorker("/app/service-worker.js")
   await page.evaluate(() => {
     window.pwaOriginalDocument = document.documentElement
-    window.pwaLoadCount = 0
-    window.addEventListener("load", () => window.pwaLoadCount++)
   })
 
-  // This is an explicit test subscription, using the page's real VAPID key and browser API.
+  // This is an explicit test subscription, using the application's real VAPID key and browser API.
   // Record any native failure exactly; an unsuccessful attempt never proves subscription survival.
-  const enrollment = await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready
+  const enrollment = await page.evaluate(async (encoded) => {
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("no service worker became ready")), 30_000)),
+    ])
     // ready can resolve while the activate event is still running. Subscribe only after the
     // browser reports this active worker as activated, including its startup reconciliation.
     await new Promise((resolve, reject) => {
@@ -108,8 +135,7 @@ try {
       worker.addEventListener("statechange", changed)
       changed()
     })
-    const encoded = document.querySelector('meta[name="vapid-public-key"]').content
-    if (!encoded) throw new Error("the Rust fixture must expose its valid VAPID key")
+    if (!encoded) throw new Error("the Rust fixture must supply its valid VAPID key")
     const raw = atob(encoded.replace(/-/g, "+").replace(/_/g, "/"))
     const key = Uint8Array.from(raw, (character) => character.charCodeAt(0))
     const state = (current) => ({
@@ -131,7 +157,7 @@ try {
       result = { subscribed: false, name: error.name, message: error.message }
     }
     return { ...result, before, after: state(await navigator.serviceWorker.getRegistration("/")) }
-  })
+  }, process.env.PWA_BROWSER_VAPID_KEY)
   assert.equal(enrollment.before.permission, "granted")
   assert.equal(enrollment.before.state, "activated")
   assert.deepEqual(enrollment.after, enrollment.before, "the push request preserves the active root worker")
@@ -163,21 +189,22 @@ try {
     assert.deepEqual(current, initialSubscription, message)
   }
 
-  // Password sign-in is a real Turbo form submission. The stored classic choice must replace
-  // the signed-out next default without a window load or an html-element replacement.
+  // Password sign-in is a plain form submission: the auth pages have no Turbo, so the page it
+  // lands on (a classic page, or two-step setup, itself an auth page) loads afresh. Its head
+  // names the worker for the stored classic choice, replacing the signed-out next default, and
+  // its load registers that script over the same root registration.
   await page.locator('input[name="email_address"]').fill(process.env.PWA_BROWSER_EMAIL)
   await page.locator('input[name="password"]').fill("secret123456")
-  await page.getByRole("button", { name: "Go", exact: true }).click()
+  await page.getByRole("button", { name: "Sign in", exact: true }).click()
+  await page.waitForURL((url) => url.pathname !== "/session/new")
   await page.waitForFunction(() => document.querySelector('meta[name="service-worker-url"]')?.content === "/service-worker.js")
-  assert.deepEqual(await page.evaluate(() => ({
-    sameDocument: document.documentElement === window.pwaOriginalDocument,
-    loads: window.pwaLoadCount,
-  })), { sameDocument: true, loads: 0 })
+  assert.equal(await page.evaluate(() => window.pwaOriginalDocument), undefined, "sign-in loads a new document")
   await activeWorker("/service-worker.js")
-  assert.equal(registrationIds.size, 1, "Turbo sign-in keeps Chromium's root registration identity")
-  assert.equal(deletedIds.size, 0, "Turbo sign-in does not delete the root registration")
+  assert.equal(registrationIds.size, 1, "sign-in keeps Chromium's root registration identity")
+  assert.equal(deletedIds.size, 0, "sign-in does not delete the root registration")
   assert.equal(await page.locator('meta[name="current-user-id"]').getAttribute("content"), "127326141")
-  await assertPreserved("Turbo sign-in preserves the root subscription")
+  console.log(`PWA_SIGN_IN_LANDING ${new URL(page.url()).pathname}`)
+  await assertPreserved("sign-in preserves the root subscription")
 
   await page.goto(`${origin}/users/me/profile?classic=1`)
   // Password authentication grants the session but still enforces authenticator enrollment.
