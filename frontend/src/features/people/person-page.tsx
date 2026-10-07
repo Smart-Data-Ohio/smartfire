@@ -164,6 +164,7 @@ function Profile({
   const [savingDnd, setSavingDnd] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [banning, setBanning] = useState(false);
+  const mounted = useRef<AbortController | null>(null);
   const held = useStore((state) => state.users[profile.user.id]);
   // Their user as the newest copy has it: a resync may have brought a later one than this page's.
   const user = newerUser(profile.user, held);
@@ -174,6 +175,15 @@ function Profile({
   // Their DND exception as the store has it, so a change that finished after you left and came
   // back still shows; the page's own copy only until the store has one.
   const dndAllowed = active && !own ? (stored ?? profile.dndAllowed) : null;
+
+  // Leaving the page stops a ban's follow-up fetches.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    mounted.current = controller;
+
+    return () => controller.abort();
+  }, []);
 
   const setAllowance = (allowed: boolean) => {
     setSavingDnd(true);
@@ -209,7 +219,7 @@ function Profile({
   const changeBan = (banned: boolean) => {
     setBanning(true);
     peoplePages
-      .setBanned(user.id, banned)
+      .setBanned(user.id, banned, mounted.current?.signal)
       .then(
         (next) => {
           // Only what a ban changes: a DND change may have landed after this reply was made.
@@ -329,11 +339,15 @@ export function PersonPage({
   const navigate = useNavigate();
   const left = useRef(false);
   const generation = useRef(0);
+  const loading = useRef<AbortController | null>(null);
 
   const fetchProfile = useCallback(() => {
     const mine = ++generation.current;
+    const controller = new AbortController();
 
-    peoplePages.profile(userId).then(
+    loading.current?.abort();
+    loading.current = controller;
+    peoplePages.profile(userId, controller.signal).then(
       (profile) => {
         if (mine === generation.current) setLoad({ status: "ready", profile });
       },
@@ -352,9 +366,11 @@ export function PersonPage({
   useEffect(() => {
     fetchProfile();
 
-    // Leaving (or Strict Mode's rehearsal) drops the reply of the load in flight.
+    // Leaving (or Strict Mode's rehearsal) drops the reply of the load in flight and stops it
+    // fetching again.
     return () => {
       generation.current++;
+      loading.current?.abort();
     };
   }, [fetchProfile]);
 

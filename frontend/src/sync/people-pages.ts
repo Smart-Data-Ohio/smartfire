@@ -19,6 +19,19 @@ interface DndWrites {
   readonly latest: number;
 }
 
+/** Where someone's DND writes stood when a read started. */
+interface DndMark {
+  readonly latest: number;
+  /** A write was in flight: the read may have seen the allowance from before it. */
+  readonly pending: boolean;
+}
+
+/** How many times a person's page is fetched again when a later copy of them overtook it. */
+export const PROFILE_REFETCHES = 3;
+
+/** Why a person's page gave up: every reply was older than the copy of them already held. */
+export const PROFILE_OUT_OF_DATE = "Couldn't load the latest profile";
+
 /**
  * The people directory and a person's page: plain promises over the S7 people endpoints, each
  * reply's users landed in the store first. The store keeps whichever copy of a user has the later
@@ -32,20 +45,23 @@ export function peoplePagesOver(requests: PeopleRequests) {
   let dndWritesStarted = 0;
 
   /** Where someone's DND writes stand as a read starts. */
-  function dndMark(userId: number): number {
-    return dndWrites.get(userId)?.latest ?? 0;
+  function dndMark(userId: number): DndMark {
+    const writes = dndWrites.get(userId);
+
+    return { latest: writes?.latest ?? 0, pending: (writes?.inFlight ?? 0) > 0 };
   }
 
   /**
-   * Lands the DND allowance a read brought, unless a DND write on them is in flight or started
-   * since the read did: the write's reply is newer, and lands itself.
+   * Lands the DND allowance a read brought, unless a DND write on them was in flight when the
+   * read started, is in flight now, or started since: the write's reply is newer, and lands itself.
    */
-  function landReadAllowance(userId: number, mark: number, allowed: boolean | null): void {
+  function landReadAllowance(userId: number, mark: DndMark, allowed: boolean | null): void {
     const writes = dndWrites.get(userId);
 
     if (
       allowed === null ||
-      (writes !== undefined && (writes.inFlight > 0 || writes.latest !== mark))
+      mark.pending ||
+      (writes !== undefined && (writes.inFlight > 0 || writes.latest !== mark.latest))
     ) {
       return;
     }
@@ -68,8 +84,14 @@ export function peoplePagesOver(requests: PeopleRequests) {
         return list.people;
       }),
 
-    profile: async (userId: number): Promise<PersonProfile> => {
-      for (;;) {
+    /**
+     * Someone's page, fetched again (up to `PROFILE_REFETCHES` times) while the store holds a later
+     * copy of them, then refused with `PROFILE_OUT_OF_DATE` rather than answered mixed: a server
+     * clock that stepped back can keep every reply older. `signal` stops the refetching when the
+     * page goes.
+     */
+    profile: async (userId: number, signal?: AbortSignal): Promise<PersonProfile> => {
+      for (let refetches = 0; ; refetches += 1) {
         const mark = dndMark(userId);
         const profile = await requests.profile(userId);
 
@@ -80,18 +102,26 @@ export function peoplePagesOver(requests: PeopleRequests) {
 
           return profile;
         }
+
+        if (signal?.aborted === true) throw new Error("The page was left");
+
+        if (refetches >= PROFILE_REFETCHES) throw new Error(PROFILE_OUT_OF_DATE);
       }
     },
 
     /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
-    setBanned: async (userId: number, banned: boolean): Promise<PersonProfile> => {
+    setBanned: async (
+      userId: number,
+      banned: boolean,
+      signal?: AbortSignal,
+    ): Promise<PersonProfile> => {
       const mark = dndMark(userId);
       const profile = await requests.setBanned(userId, banned);
 
       mutations.mergeUsers([profile.user]);
 
       if (overtaken(profile.user)) {
-        return pages.profile(userId);
+        return pages.profile(userId, signal);
       }
 
       landReadAllowance(userId, mark, profile.dndAllowed);

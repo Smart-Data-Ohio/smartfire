@@ -4,7 +4,7 @@ import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { User } from "../gen/User.ts";
 import { mutations, store } from "../store/store.ts";
-import { type PeopleRequests, peoplePagesOver } from "./people-pages.ts";
+import { type PeopleRequests, PROFILE_OUT_OF_DATE, peoplePagesOver } from "./people-pages.ts";
 
 const SAM = 5;
 
@@ -148,6 +148,54 @@ describe("the people pages", () => {
     await loading;
 
     expect(store.getState().dndAllowances[SAM]).toBe(true);
+  });
+
+  it("keep a DND change over a read that started while it was in flight and answers after it", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+    const write = held<Settings>();
+    const read = held<PersonProfile>();
+
+    fake.allowances.push(write.promise);
+    fake.profiles.push(read.promise);
+
+    const saving = pages.setDndAllowance(SAM, true);
+    const loading = pages.profile(SAM);
+
+    write.release(SETTINGS);
+    await saving;
+    read.release(page(sam(1), false));
+    await loading;
+
+    expect(store.getState().dndAllowances[SAM]).toBe(true);
+  });
+
+  it("give up after three refetches when every reply is older, keeping the newer user", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+
+    mutations.mergeUsers([sam(9)]);
+
+    for (let reply = 0; reply < 4; reply += 1) {
+      fake.profiles.push(Promise.resolve(page(sam(2, "banned"))));
+    }
+
+    await expect(pages.profile(SAM)).rejects.toThrow(PROFILE_OUT_OF_DATE);
+    expect(fake.profileCalls()).toBe(4);
+    expect(store.getState().users[SAM]?.updatedAt).toBe(sam(9).updatedAt);
+  });
+
+  it("stop fetching again once the page has gone", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+    const controller = new AbortController();
+
+    mutations.mergeUsers([sam(9)]);
+    fake.profiles.push(Promise.resolve(page(sam(2))));
+    controller.abort();
+
+    await expect(pages.profile(SAM, controller.signal)).rejects.toThrow();
+    expect(fake.profileCalls()).toBe(1);
   });
 
   it("let the latest of two DND changes win, whichever answers last", async () => {

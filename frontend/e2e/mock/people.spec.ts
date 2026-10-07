@@ -210,6 +210,33 @@ test("a DND change that finishes after you leave and come back still shows", asy
   );
 });
 
+test("a page whose every reply is older than the copy held says so and offers to try again", async ({
+  page,
+}) => {
+  await openPeople(page);
+
+  let requests = 0;
+
+  await page.route(`**/api/v1/people/${USER_IDS.priya}`, async (route) => {
+    requests += 1;
+
+    const response = await route.fetch();
+    const profile = await response.json();
+
+    profile.user.updatedAt = "2000-01-01T00:00:00.000000Z";
+    await route.fulfill({ response, json: profile });
+  });
+  await row(page, "Priya Raman").getByRole("link", { name: "Priya Raman" }).click();
+
+  await expect(page.getByText("Couldn't load the latest profile")).toBeVisible();
+  // One request and three refetches; Strict Mode's rehearsal load adds one, stopped once it leaves.
+  expect(requests).toBeGreaterThanOrEqual(4);
+  expect(requests).toBeLessThanOrEqual(5);
+  await page.unroute(`**/api/v1/people/${USER_IDS.priya}`);
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect(page.locator(".person")).toBeVisible();
+});
+
 test("Message on a person's page opens your DM with them", async ({ page }) => {
   await openPerson(page, USER_IDS.grace);
 
