@@ -9,9 +9,15 @@ the tests `cargo nextest list` selects for their filter, each passed once, with 
 account for every doctest they ran. Both gates run `check_gate_needs.py`, which fails if
 any job in `rust.yml` is missing from their `needs`. It reports on every pull request:
 `Rust changes` checks the PR's diff, and when it touches no Rust input (anything outside `docs/`,
-`deploy/`, `frontend/`, other workflows and the root prose files) the jobs
+`deploy/`, SPA-only `frontend/` sources, other workflows and the root prose files) the jobs
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
-nightly and manual runs, empty diffs and unavailable history always run everything:
+nightly and manual runs, empty diffs and unavailable history always run everything.
+
+The frontend auth inputs are exceptions: `frontend/src/{auth,styles,motion}/` (including
+fonts) and `frontend/src/ui/{button,text-field,checkbox}.css` feed
+`crates/assets/build/auth.rs`; keep the scope list in `rust.yml` in sync with that script
+and `ci/with-release-inputs.sh`. `frontend/dist/` is a Rust input too (`crates/spa/build.rs`),
+as is `frontend/src/gen/`, checked against the Rust type export by clippy.
 
 | Job | Runs |
 | --- | --- |
@@ -35,13 +41,21 @@ setup action's `parity: seeds`); nothing in the workflow runs Ruby, Rails or a r
 image. Test failures are retained for the summary, then explicit gates fail the job.
 No advisory correctness group remains.
 
-The correctness jobs run on main, nightly, and manual workflows, through the same
-setup action. `Rust correctness` is their aggregator: every job must succeed, each
-must report exit 0 for the tested commit, the shards' JUnit receipts together must
+The correctness jobs run on main, nightly, manual workflows, and PRs that change page
+inputs, through the same setup action. `Rust correctness` is their aggregator: every selected
+job must succeed, each must report exit 0 for the tested commit, the shards' JUnit receipts together must
 contain exactly each suite's registered ignored tests (`correctness_gate.py`), and the
 messaging behaviour shards' case receipts must cover all 139 named cases once
-(`behavior-check.py --verify-receipts`). The slim pull-request gate runs only the
-`Rust port` jobs. Branch protection is managed separately by the release lead.
+(`behavior-check.py --verify-receipts`). The `pages` scope includes every crate except
+`crates/api/` (SPA-only JSON/sync endpoints), `web/`, `reference-tools/`, `parity/` (including
+seeds), `fixtures/`, `test-support/`, `vectors/`, `ci/`, `.cargo/`, `.config/`, the Rust setup
+action, `rust.yml`, Cargo manifests/lockfile, the Rust toolchain, Dockerfile/`.dockerignore`,
+and the frontend auth/dist inputs above. Shared app, session, rendering and harness inputs
+use broad directories to avoid missing indirect dependencies. Page jobs start alongside
+ordinary Rust jobs; only messaging keeps its existing host-build prerequisite. PRs without
+page inputs skip these jobs and receipt collection; the correctness gate requires those
+skips and checks the seed job against the ordinary Rust scope. Branch protection is managed
+separately by the release lead.
 
 `CORRECTNESS_SHARD=K/N` runs one deterministic slice of a suite: browsers split their
 ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behaviour
