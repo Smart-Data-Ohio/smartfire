@@ -8,11 +8,13 @@ use crate::helpers as h;
 /// `pwa/service_worker.js`, served verbatim.
 pub const SERVICE_WORKER_JS: &str = include_str!("../templates/pwa/service_worker.js");
 
-/// The one deliberate difference from Rails' worker, as `(rails, smartfire)` replacements: on
+/// The deliberate differences from Rails' worker, as `(rails, smartfire)` replacements: on
 /// activation it keeps the SPA worker's build caches, and it serves `/app/assets/` from them, so
 /// an SPA tab still open on an older build keeps loading its chunks after another tab switches
-/// to the classic UI. Parity tests apply exactly these to the frozen Rails body.
-pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 4] = [
+/// to the classic UI. Pass-through requests use a static network route when supported, so
+/// they do not wake the worker during a script swap. Parity tests apply exactly these to the
+/// frozen Rails body.
+pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 5] = [
     (
         "const OFFLINE_URL = \"/offline.html\"\n",
         "const OFFLINE_URL = \"/offline.html\"\n\
@@ -32,6 +34,40 @@ pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 4] = [
          \x20   event.respondWith(spaAsset(request))\n\
          \x20   return\n\
          \x20 }\n",
+    ),
+    (
+        "self.addEventListener(\"install\", (event) => {\n\
+         \x20 event.waitUntil(\n\
+         \x20   caches.open(STATIC_CACHE)\n\
+         \x20     .then((cache) => cache.add(OFFLINE_URL))\n\
+         \x20     .then(() => self.skipWaiting())\n\
+         \x20 )\n\
+         })\n",
+        "// Pass-through requests reach the network without waking the worker during a script swap.\n\
+         async function installNetworkRoute(event) {\n\
+         \x20 if (!(\"addRoutes\" in event) || typeof event.addRoutes !== \"function\") return\n\n\
+         \x20 try {\n\
+         \x20   await event.addRoutes({\n\
+         \x20     condition: { not: { or: [\n\
+         \x20       { requestMethod: \"GET\", requestMode: \"navigate\" },\n\
+         \x20       { requestMethod: \"GET\", urlPattern: new URL(\"/assets/*\", self.location.origin).href },\n\
+         \x20       { requestMethod: \"GET\", urlPattern: new URL(`${SPA_ASSETS}*`, self.location.origin).href },\n\
+         \x20       { requestMethod: \"GET\", urlPattern: new URL(OFFLINE_URL, self.location.origin).href }\n\
+         \x20     ] } },\n\
+         \x20     source: \"network\"\n\
+         \x20   })\n\
+         \x20 } catch {\n\
+         \x20   // Older implementations expose addRoutes but reject not/or; keep the fetch handler.\n\
+         \x20 }\n\
+         }\n\n\
+         self.addEventListener(\"install\", (event) => {\n\
+         \x20 event.waitUntil(\n\
+         \x20   Promise.all([\n\
+         \x20     installNetworkRoute(event),\n\
+         \x20     caches.open(STATIC_CACHE).then((cache) => cache.add(OFFLINE_URL))\n\
+         \x20   ]).then(() => self.skipWaiting())\n\
+         \x20 )\n\
+         })\n",
     ),
     (
         "async function networkThenOffline(request) {",

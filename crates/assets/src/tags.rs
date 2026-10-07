@@ -76,10 +76,10 @@ pub fn javascript_importmap_tags() -> &'static str {
     embedded::IMPORTMAP_TAGS
 }
 
-/// The Rails modules whose Smartfire variants register the worker the layout selects, as
+/// The Rails modules whose Smartfire variants coordinate the selected worker startup, as
 /// (Rails logical path, Smartfire logical path). The variants are added assets, so the Rails
 /// import map stays byte-identical while the SPA is off.
-pub const WORKER_SELECTION_MODULES: [(&str, &str); 2] = [
+pub const WORKER_SELECTION_MODULES: [(&str, &str); 3] = [
     (
         "initializers/service_worker.js",
         "smartfire/initializers/service_worker.js",
@@ -87,6 +87,10 @@ pub const WORKER_SELECTION_MODULES: [(&str, &str); 2] = [
     (
         "controllers/notifications_controller.js",
         "smartfire/controllers/notifications_controller.js",
+    ),
+    (
+        "controllers/turbo_frame_controller.js",
+        "smartfire/controllers/turbo_frame_controller.js",
     ),
 ];
 

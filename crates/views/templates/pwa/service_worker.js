@@ -13,11 +13,31 @@ const OFFLINE_URL = "/offline.html"
 const SPA_CACHE_PREFIX = "smartfire-spa-"
 const SPA_ASSETS = "/app/assets/"
 
+// Pass-through requests reach the network without waking the worker during a script swap.
+async function installNetworkRoute(event) {
+  if (!("addRoutes" in event) || typeof event.addRoutes !== "function") return
+
+  try {
+    await event.addRoutes({
+      condition: { not: { or: [
+        { requestMethod: "GET", requestMode: "navigate" },
+        { requestMethod: "GET", urlPattern: new URL("/assets/*", self.location.origin).href },
+        { requestMethod: "GET", urlPattern: new URL(`${SPA_ASSETS}*`, self.location.origin).href },
+        { requestMethod: "GET", urlPattern: new URL(OFFLINE_URL, self.location.origin).href }
+      ] } },
+      source: "network"
+    })
+  } catch {
+    // Older implementations expose addRoutes but reject not/or; keep the fetch handler.
+  }
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => cache.add(OFFLINE_URL))
-      .then(() => self.skipWaiting())
+    Promise.all([
+      installNetworkRoute(event),
+      caches.open(STATIC_CACHE).then((cache) => cache.add(OFFLINE_URL))
+    ]).then(() => self.skipWaiting())
   )
 })
 

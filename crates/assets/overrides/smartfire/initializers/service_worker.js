@@ -12,10 +12,58 @@ function selectedServiceWorkerUrl() {
   return document.querySelector('meta[name="service-worker-url"]')?.content || "/service-worker.js"
 }
 
-function reconcileServiceWorker() {
-  if (document.documentElement.dataset.serviceWorker === "false" || document.documentElement.hasAttribute("data-turbo-preview")) return
+function serviceWorkerEnabled() {
+  return document.documentElement.dataset.serviceWorker !== "false" && !document.documentElement.hasAttribute("data-turbo-preview")
+}
 
-  navigator.serviceWorker.register(selectedServiceWorkerUrl(), { scope: "/", updateViaCache: "none" }).catch(() => {})
+function waitForStaticImages(body) {
+  const decoding = []
+
+  for (const image of body.querySelectorAll("img")) {
+    // Lazy or responsive images can select deferred/private resources instead of this source.
+    if (image.loading === "lazy" || image.srcset || image.closest("picture")) continue
+
+    let url
+    try {
+      url = new URL(image.currentSrc || image.src, document.baseURI)
+    } catch {
+      continue
+    }
+    if (url.origin !== window.location.origin || !/^\/assets\/.+-[a-f0-9]{8,}\.[^/]+$/.test(url.pathname)) continue
+
+    // Wait for hidden bell images before startup can replace the worker.
+    decoding.push(Promise.resolve().then(() => image.decode()))
+  }
+
+  return Promise.allSettled(decoding)
+}
+
+function waitForNotificationStartup(body) {
+  return Promise.allSettled(Array.from(body.querySelectorAll('[data-controller~="notifications"]'), element => {
+    if (element.notificationsStartup) return element.notificationsStartup
+
+    // The controller can still be importing when this page's load event fires.
+    return new Promise(resolve => element.addEventListener("notifications:startup", event => resolve(event.detail.completion), { once: true }))
+  }))
+}
+
+let reconciliation = 0
+
+async function reconcileServiceWorker() {
+  const generation = ++reconciliation
+  const body = document.body
+  const workerUrl = selectedServiceWorkerUrl()
+  if (!body || !serviceWorkerEnabled()) return
+
+  const controller = navigator.serviceWorker.controller
+  if (controller && controller.scriptURL !== new URL(workerUrl, document.baseURI).href) {
+    await waitForNotificationStartup(body)
+  }
+  await waitForStaticImages(body)
+
+  if (generation !== reconciliation || document.body !== body || workerUrl !== selectedServiceWorkerUrl() || !serviceWorkerEnabled()) return
+
+  navigator.serviceWorker.register(workerUrl, { scope: "/", updateViaCache: "none" }).catch(() => {})
 }
 
 if ("serviceWorker" in navigator) {

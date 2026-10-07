@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { post } from "@rails/request.js"
 import { pageIsTurboPreview } from "helpers/turbo_helpers"
-import { onNextEventLoopTick } from "helpers/timing_helpers"
+import { nextEventLoopTick } from "helpers/timing_helpers"
 import { getCookie, setCookie } from "lib/cookie"
 
 export default class extends Controller {
@@ -9,23 +9,37 @@ export default class extends Controller {
   static targets = [ "notAllowedNotice", "bell", "details" ]
   static classes = [ "attention" ]
 
-  async connect() {
+  connect() {
+    const completion = this.#startNotifications()
+    this.element.notificationsStartup = completion
+    this.dispatch("startup", { detail: { completion } })
+    completion.catch(() => {})
+  }
+
+  async #startNotifications() {
     if (!pageIsTurboPreview()) {
       if (window.notificationsPreviouslyReady) {
-        onNextEventLoopTick(() => this.dispatch("ready"))
+        await this.#dispatchReady()
       } else {
         const firstTimeReady = await this.isEnabled()
 
         this.#pulseBellButton()
 
         if (firstTimeReady) {
-          onNextEventLoopTick(() => this.dispatch("ready"))
           window.notificationsPreviouslyReady = true
+          await this.#dispatchReady()
         } else {
           this.#showBellAlert()
         }
       }
     }
+  }
+
+  async #dispatchReady() {
+    await nextEventLoopTick()
+    const completions = []
+    this.dispatch("ready", { detail: { completions } })
+    await Promise.allSettled(completions)
   }
 
   async attemptToSubscribe() {

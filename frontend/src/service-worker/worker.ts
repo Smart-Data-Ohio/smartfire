@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { classicToSpaUrl } from "../lib/screens.ts";
 import { pageBuildMessage, REQUEST_PAGE_BUILD } from "./messages.ts";
+import { installNetworkRoute } from "./routing.ts";
 import { type CacheCoordinator, type WorkerBuild, WorkerCache } from "./runtime.ts";
 
 declare const self: ServiceWorkerGlobalScope & { readonly smartfireBuild: WorkerBuild };
@@ -54,7 +55,12 @@ function maintain(work: () => Promise<void>): Promise<void> {
 }
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(cache.install().then(() => self.skipWaiting()));
+  event.waitUntil(
+    Promise.all([
+      installNetworkRoute(event, self.location.origin, self.smartfireBuild),
+      cache.install(),
+    ]).then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener("activate", (event) => {
