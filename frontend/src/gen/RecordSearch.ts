@@ -8,7 +8,7 @@
  * search for."), recording nothing; so is one past [`SearchResults`]' bounds (on `query`). `DELETE /api/v1/search/recents` forgets them all (204;
  * `searches#clear`).
  */
-export type RecordSearch = { 
+export type RecordSearch = {
 /**
  * Stored with whitespace collapsed.
  */

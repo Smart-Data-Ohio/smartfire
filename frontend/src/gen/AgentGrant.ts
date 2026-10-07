@@ -5,11 +5,11 @@ import type { AgentCapability } from "./AgentCapability";
  * One line of the grants summary (`Agent#grants_summary`): "{capability} workspace-wide" or
  * "{capability} in {n} rooms".
  */
-export type AgentGrant = { capability: AgentCapability, 
+export type AgentGrant = { capability: AgentCapability,
 /**
  * A grant with no room (`agent_grants.room_id IS NULL`) is active.
  */
-workspaceWide: boolean, 
+workspaceWide: boolean,
 /**
  * Rooms with an active grant; 0 when `workspaceWide`.
  */

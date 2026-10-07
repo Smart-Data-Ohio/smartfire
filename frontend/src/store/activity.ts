@@ -18,6 +18,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   type Cursor,
@@ -49,11 +50,9 @@ export interface ActivitySlice {
   /** The `updatedAt` of the newest server copy of each item (optimistic copies don't count). */
   readonly versions: Readonly<Record<number, string>>;
   /** The server's latest unread count, before the changes still on their way. */
-  readonly serverUnreadCount: number | null;
+  readonly serverUnread: ActivityUnreadCount | null;
   /** How each change on its way moves the badge, by its token. */
   readonly pendingUnread: Readonly<Record<number, number>>;
-  /** Bumped whenever a server count lands; REST replies count only if none landed since they left. */
-  readonly countEpoch: number;
 }
 
 export const emptyActivity: ActivitySlice = {
@@ -61,9 +60,8 @@ export const emptyActivity: ActivitySlice = {
   lists: {},
   unreadCount: null,
   versions: {},
-  serverUnreadCount: null,
+  serverUnread: null,
   pendingUnread: {},
-  countEpoch: 0,
 };
 
 /** Whether `incoming` is a later server copy than the `held` version. */
@@ -90,20 +88,24 @@ function shownCount(server: number | null, pending: ActivitySlice["pendingUnread
   );
 }
 
-/** `activity` with the server's count `unreadCount` (`null` keeps it) and its badge worked out. */
+/** Accepts only a strictly newer server snapshot, then projects the pending changes. */
 function withCounts(
   activity: ActivitySlice,
-  unreadCount: number | null,
+  unread: ActivityUnreadCount | null,
   pendingUnread: ActivitySlice["pendingUnread"] = activity.pendingUnread,
 ): ActivitySlice {
-  const server = unreadCount ?? activity.serverUnreadCount;
+  const held = activity.serverUnread;
+
+  const serverUnread =
+    unread !== null && (held === null || unread.unreadRevision > held.unreadRevision)
+      ? { unreadCount: unread.unreadCount, unreadRevision: unread.unreadRevision }
+      : held;
 
   return {
     ...activity,
-    serverUnreadCount: server,
+    serverUnread,
     pendingUnread,
-    unreadCount: shownCount(server, pendingUnread),
-    countEpoch: unreadCount === null ? activity.countEpoch : activity.countEpoch + 1,
+    unreadCount: shownCount(serverUnread?.unreadCount ?? null, pendingUnread),
   };
 }
 
@@ -226,10 +228,9 @@ export function setActivityListFailed(
   return updateList(state, tab, status, (list) => pagedFailed(list, error, generation));
 }
 
-/** Where a load started: the list's `generation` and the badge's `countEpoch` then. */
+/** The list generation a page belongs to. */
 export interface ActivityLoadStart {
   readonly generation: number;
-  readonly countEpoch: number;
 }
 
 /** What a load of `tab` in `status` started from; pass it back to `landActivityPage`. */
@@ -240,14 +241,13 @@ export function activityLoadStart(
 ): ActivityLoadStart {
   return {
     generation: activityListOf(state, tab, status).generation,
-    countEpoch: state.activity.countEpoch,
   };
 }
 
 /**
  * A page of one tab and state landed: its items join the store where newer than the copy held,
- * its people too, and the badge takes the page's count unless a newer one landed meanwhile. A
- * page from a load the list has since restarted changes nothing (`start`, when given).
+ * its people too, and the badge takes the page's count only if its revision is newer. A
+ * page from a load the list has since restarted contributes only its count snapshot.
  */
 export function landActivityPage(
   state: State,
@@ -257,8 +257,10 @@ export function landActivityPage(
   mode: "replace" | "more",
   start?: ActivityLoadStart,
 ): State {
+  const counted = withCounts(state.activity, page);
+
   if (!pagedCurrent(activityListOf(state, tab, status), start?.generation)) {
-    return state;
+    return withActivity(state, counted);
   }
 
   const items = { ...state.activity.items };
@@ -273,8 +275,6 @@ export function landActivityPage(
 
   const cursor: Cursor | null = page.nextCursor;
   const key = activityListKey(tab, status);
-  const countHolds = start === undefined || start.countEpoch === state.activity.countEpoch;
-  const counted = withCounts(state.activity, countHolds ? page.unreadCount : null);
 
   return {
     ...state,
@@ -337,15 +337,15 @@ function serverCopy(activity: ActivitySlice, item: ActivityItem): ActivitySlice 
 
 /**
  * An item as the server has it now (a reply or an `activity.item` event): shown unless an equal
- * or newer copy is already held. `unreadCount` is the server's count afterwards (`null` keeps
+ * or newer copy is already held. `unread` is the server's snapshot afterwards (`null` keeps
  * the badge); it lands even when the item doesn't.
  */
 export function applyActivityItem(
   state: State,
   item: ActivityItem,
-  unreadCount: number | null,
+  unread: ActivityUnreadCount | null,
 ): State {
-  const next = withCounts(serverCopy(state.activity, item), unreadCount);
+  const next = withCounts(serverCopy(state.activity, item), unread);
 
   return withActivity(state, next);
 }
@@ -373,10 +373,8 @@ export interface ActivityChangeEnd {
   readonly optimistic: ActivityItem | null;
   /** The server's reply, or the copy it started from when the server refused. */
   readonly settled: ActivityItem | null;
-  /** The server's count afterwards; `null` keeps it. */
-  readonly unreadCount: number | null;
-  /** The badge epoch before the request; a newer server count keeps precedence. */
-  readonly countEpoch: number;
+  /** The server's count snapshot afterwards; `null` keeps it. */
+  readonly unread: ActivityUnreadCount | null;
 }
 
 /**
@@ -407,20 +405,15 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     }
   }
 
-  const countHolds = end.countEpoch === activity.countEpoch;
-
-  return withActivity(
-    state,
-    withCounts(activity, countHolds ? end.unreadCount : null, pendingUnread),
-  );
+  return withActivity(state, withCounts(activity, end.unread, pendingUnread));
 }
 
 /** An item went with its source (`activity.removed`): out of the store and every list. */
-export function removeActivityItem(state: State, id: number, unreadCount: number): State {
+export function removeActivityItem(state: State, id: number, unread: ActivityUnreadCount): State {
   const activity = state.activity;
 
   if (activity.items[id] === undefined) {
-    return withActivity(state, withCounts(activity, unreadCount));
+    return withActivity(state, withCounts(activity, unread));
   }
 
   const { [id]: _gone, ...items } = activity.items;
@@ -435,20 +428,14 @@ export function removeActivityItem(state: State, id: number, unreadCount: number
         versions,
         lists: eachPaged(activity.lists, (list) => pagedWithout(list, id)),
       },
-      unreadCount,
+      unread,
     ),
   );
 }
 
 /** The badge, from `GET /activity/unread_count`. */
-export function setActivityUnreadCount(
-  state: State,
-  unreadCount: number,
-  countEpoch: number,
-): State {
-  return state.activity.countEpoch !== countEpoch
-    ? state
-    : withActivity(state, withCounts(state.activity, unreadCount));
+export function setActivityUnreadCount(state: State, unread: ActivityUnreadCount): State {
+  return withActivity(state, withCounts(state.activity, unread));
 }
 
 /** The server couldn't replay what was missed: every loaded list reloads when next shown. */

@@ -225,7 +225,7 @@ async fn the_inbox_lists_changes_and_publishes_items() {
 }
 
 #[tokio::test]
-async fn clearing_activity_stays_cleared_in_both_uis_after_signing_in_again() {
+async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
     let a = app(true)
         .await
         .expect("activity count test requires the default seed");
@@ -255,6 +255,7 @@ async fn clearing_activity_stays_cleared_in_both_uis_after_signing_in_again() {
             .await,
     );
     assert_eq!(changed.unread_count, 1);
+    assert_eq!(changed.unread_revision, count.unread_revision + 1);
     assert!(changed.item.read_at.is_some() && changed.item.handled_at.is_some());
     let response = david
         .write(
@@ -265,6 +266,10 @@ async fn clearing_activity_stays_cleared_in_both_uis_after_signing_in_again() {
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
 
     let mut reopened = a.sign_in(DAVID).await;
+    let final_count: api::ActivityUnreadCount =
+        parse(&reopened.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(final_count.unread_count, 0);
+    assert_eq!(final_count.unread_revision, changed.unread_revision + 1);
     for path in ["/api/v1/activity/unread_count", "/activity/unread_count"] {
         let response = reopened.send(get(path)).await;
         assert_eq!(response.status, StatusCode::OK, "{}", response.text());
@@ -279,6 +284,7 @@ async fn clearing_activity_stays_cleared_in_both_uis_after_signing_in_again() {
     let page: api::ActivityList = parse(&reopened.send(get("/api/v1/activity")).await);
     assert!(page.items.is_empty());
     assert_eq!(page.unread_count, 0);
+    assert_eq!(page.unread_revision, final_count.unread_revision);
 }
 
 #[tokio::test]
@@ -471,7 +477,8 @@ async fn saved_items_list_page_change_and_drop_their_reminders() {
         removed,
         api::ActivityItemRemoved {
             id: reminder,
-            unread_count: count.unread_count
+            unread_count: count.unread_count,
+            unread_revision: count.unread_revision,
         }
     );
     server.abort();

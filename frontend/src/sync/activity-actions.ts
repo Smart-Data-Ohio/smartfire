@@ -4,7 +4,7 @@
  * between lists and the badge, and roll back if the server refuses. Delayed replies keep newer
  * items and counts already in the store.
  */
-import { Clock, Effect, Semaphore } from "effect";
+import { Clock, Effect } from "effect";
 import * as api from "../api/activity-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
@@ -64,21 +64,14 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
   );
 });
 
-const countSerial = Semaphore.makeUnsafe(1);
+/** Refreshes the badge. Server revisions order overlapping replies. */
+export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
+  const unread = yield* api.activityUnreadCount();
 
-/** Refreshes the badge. Overlapping callers fetch in order, each from the server's current state. */
-export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(() =>
-  countSerial.withPermit(
-    Effect.gen(function* () {
-      const countEpoch = store.getState().activity.countEpoch;
-      const { unreadCount } = yield* api.activityUnreadCount();
+  mutations.setActivityUnreadCount(unread);
 
-      mutations.setActivityUnreadCount(unreadCount, countEpoch);
-
-      return unreadCount;
-    }),
-  ),
-);
+  return unread.unreadCount;
+});
 
 /** Changes to one item go one at a time, so each rolls back to a copy no other is holding. */
 const serial = keyedSerial<number>();
@@ -100,7 +93,6 @@ const change = (
     activityItemId,
     Effect.gen(function* () {
       const before = store.getState().activity.items[activityItemId];
-      const countEpoch = store.getState().activity.countEpoch;
       const token = nextToken++;
       let optimistic: ActivityItem | null = null;
 
@@ -123,32 +115,18 @@ const change = (
               token,
               optimistic,
               settled: before ?? null,
-              unreadCount: null,
-              countEpoch,
+              unread: null,
             }),
           ),
         ),
       );
 
-      const refreshCount = store.getState().activity.countEpoch !== countEpoch;
-
       mutations.endActivityChange({
         token,
         optimistic,
         settled: reply.item,
-        unreadCount: reply.unreadCount,
-        countEpoch,
+        unread: reply,
       });
-
-      // A concurrent reply or event may include this write already. After dropping its pending
-      // delta, reconcile from a fresh read instead of restoring the delayed reply's count.
-      if (refreshCount) {
-        yield* loadUnreadCount().pipe(
-          Effect.catch((error) =>
-            Effect.logWarning("activity count refresh failed", error.message),
-          ),
-        );
-      }
 
       return reply.item;
     }),

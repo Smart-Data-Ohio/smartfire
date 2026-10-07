@@ -613,17 +613,15 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
             return;
         };
         for (id, user_id) in items {
-            let count = campfire_db::User::find_by_id(conn, user_id).and_then(|user| match user {
-                Some(user) => campfire_db::ActivityItem::unread_count(conn, &user),
-                None => Ok(0),
-            });
+            let count = campfire_db::ActivityItem::unread_snapshot(conn, user_id);
             match count {
-                Ok(unread_count) => send(
+                Ok(unread) => send(
                     &server,
                     Audience::User(user_id),
                     &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
                         id,
-                        unread_count,
+                        unread_count: unread.count,
+                        unread_revision: unread.revision,
                     }),
                     |publication| publication,
                 ),

@@ -347,6 +347,7 @@ describe("S3 DTO schemas", () => {
       items: [activityItemJson],
       users: [userJson],
       unreadCount: 4,
+      unreadRevision: 1,
       nextCursor: "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
     });
     roundTrips(ActivityItem, {
@@ -367,11 +368,15 @@ describe("S3 DTO schemas", () => {
     expect(() =>
       Schema.decodeUnknownSync(ActivityItem)({ ...activityItemJson, source: null }),
     ).toThrowError();
-    roundTrips(ActivityUnreadCount, { unreadCount: 4 });
+    roundTrips(ActivityUnreadCount, { unreadCount: 4, unreadRevision: 1 });
+    expect(() => Schema.decodeUnknownSync(ActivityUnreadCount)({ unreadCount: 4 })).toThrowError();
+    expect(() =>
+      Schema.decodeUnknownSync(ActivityUnreadCount)({ unreadCount: 4, unreadRevision: "1" }),
+    ).toThrowError();
     roundTrips(UpdateActivityItem, { action: "unhandled" });
     expect(() => Schema.decodeUnknownSync(UpdateActivityItem)({ state: "read" })).toThrowError();
-    roundTrips(ActivityItemChanged, { item: activityItemJson, unreadCount: 3 });
-    roundTrips(ActivityItemRemoved, { id: 301, unreadCount: 2 });
+    roundTrips(ActivityItemChanged, { item: activityItemJson, unreadCount: 3, unreadRevision: 2 });
+    roundTrips(ActivityItemRemoved, { id: 301, unreadCount: 2, unreadRevision: 3 });
 
     const item = Schema.decodeUnknownSync(ActivityItem)(activityItemJson);
 
@@ -603,8 +608,11 @@ describe("S3 DTO schemas", () => {
 describe("S3 sync events", () => {
   it("round-trip in a batch", () => {
     const events = [
-      { type: "activity.item", data: { item: activityItemJson, unreadCount: 3 } },
-      { type: "activity.removed", data: { id: 301, unreadCount: 2 } },
+      {
+        type: "activity.item",
+        data: { item: activityItemJson, unreadCount: 3, unreadRevision: 2 },
+      },
+      { type: "activity.removed", data: { id: 301, unreadCount: 2, unreadRevision: 3 } },
       { type: "scheduled.changed", data: scheduledJson },
       { type: "scheduled.removed", data: { id: 4, roomId: 12 } },
       { type: "sidebar.category.upserted", data: categoryJson },

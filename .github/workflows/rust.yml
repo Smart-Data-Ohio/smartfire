@@ -315,6 +315,7 @@ jobs:
         run: |
           rm -f frontend/src/gen/*.ts
           bash ci/cargo.sh test --locked -p campfire_api_types export_bindings
+          node frontend/tools/trim-generated.mjs
           if [[ -n "$(git status --porcelain -- frontend/src/gen)" ]]; then
             git status --short -- frontend/src/gen
             git --no-pager diff -- frontend/src/gen

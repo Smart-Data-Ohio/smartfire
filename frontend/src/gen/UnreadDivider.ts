@@ -4,12 +4,12 @@
  * The first unread root message and how many root messages follow it, as the classic room page
  * computes them from the membership's `last_read_message_id` and `unread_at`.
  */
-export type UnreadDivider = { 
+export type UnreadDivider = {
 /**
  * The divider sits above this message. Load the timeline `around` it when it isn't on the
  * newest page.
  */
-firstUnreadMessageId: number, 
+firstUnreadMessageId: number,
 /**
  * Root messages from the first unread one to the newest, inclusive.
  */

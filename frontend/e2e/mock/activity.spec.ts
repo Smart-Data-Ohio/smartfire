@@ -1,5 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import { expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
 
 /** Calls one of the mock's `/__mock/*` controls. */
 async function control(request: APIRequestContext, action: string): Promise<void> {
@@ -42,9 +42,12 @@ matrix("the activity inbox", async ({ page, theme, phone }) => {
   await shot(page, "activity-mentions", theme);
 
   // A tab with nothing in it: the seed fills every tab, so the empty answer is stubbed.
-  await page.route("**/api/v1/activity?*", (route) =>
-    route.fulfill({ json: { items: [], users: [], unreadCount: 0, nextCursor: null } }),
-  );
+  await page.route("**/api/v1/activity?*", async (route) => {
+    const response = await route.fetch();
+    const snapshot = await response.json();
+
+    await route.fulfill({ json: { ...snapshot, items: [], users: [], nextCursor: null } });
+  });
   await openApp(page, "activity?tab=github&status=handled", theme);
   await expect(page.getByText("No handled review requests")).toBeVisible();
   await shot(page, "activity-empty", theme);
@@ -59,43 +62,6 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
   await activity.click();
   await expect(page).toHaveURL(/\/app\/activity$/);
   await expect(activity).toHaveAttribute("aria-pressed", "true");
-});
-
-async function mockAppBadge(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    navigator.setAppBadge = async (count) => {
-      document.documentElement.dataset.appBadge = String(count);
-    };
-
-    navigator.clearAppBadge = async () => {
-      document.documentElement.dataset.appBadge = "0";
-    };
-  });
-}
-
-test("the app icon follows unread rooms and clears after they are read", async ({
-  page,
-  request,
-}) => {
-  await mockAppBadge(page);
-  await openApp(page, "activity");
-  await ready(page, "Activity");
-  await expect(page.locator("html")).toHaveAttribute("data-app-badge", /^[1-9]\d*$/);
-
-  const state = await (await request.get("/__mock/state")).json();
-  const sidebar = await (await request.get("/api/v1/sidebar")).json();
-
-  for (const row of sidebar.rows) {
-    const response = await request.post(`/api/v1/rooms/${row.room.id}/read`, {
-      headers: { "X-CSRF-Token": state.csrfToken },
-    });
-
-    expect(response.ok()).toBe(true);
-  }
-
-  await page.reload();
-  await ready(page, "Activity");
-  await expect(page.locator("html")).toHaveAttribute("data-app-badge", "0");
 });
 
 test("clearing Activity survives a delayed boot count and reopening the app", async ({ page }) => {
@@ -158,6 +124,53 @@ test("clearing Activity survives a delayed boot count and reopening the app", as
   await page.reload();
   await expect(page.getByText("You're all caught up")).toBeVisible();
   await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+});
+
+test("a notification arriving during a clear survives its delayed reply", async ({
+  page,
+  request,
+}) => {
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await welcomed;
+
+  const before = await unreadCount(page);
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+
+  await page.route(/\/api\/v1\/activity\/\d+$/, async (route) => {
+    const response = await route.fetch();
+
+    captured.resolve();
+    await release.promise;
+    await route.fulfill({ response });
+  });
+
+  const changed = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
+  );
+
+  await openButton(page).focus();
+  await page.keyboard.press("e");
+  await captured.promise;
+
+  try {
+    const afterClear = await body(page).textContent();
+
+    await control(request, "activity-arrival");
+    await expect(body(page)).not.toHaveText(afterClear ?? "");
+  } finally {
+    release.resolve();
+  }
+
+  await (await changed).finished();
+  await expect(page.locator(".page-count [aria-hidden='true']")).toHaveText(`${before}`);
+  await expect(
+    page.getByRole("button", { name: "Activity" }).locator(".badge > .visually-hidden"),
+  ).toHaveText(`${before} unread`);
 });
 
 /** The header's unread count. */

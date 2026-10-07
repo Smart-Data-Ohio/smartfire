@@ -13,6 +13,7 @@ import {
   sidebarRowFixture,
   userFixture,
 } from "../api/testing.ts";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
@@ -109,6 +110,31 @@ function typingFrames(sent: readonly ClientFrame[]) {
     (frame): frame is Extract<ClientFrame, { t: "typing" }> => frame.t === "typing",
   );
 }
+
+const activityItem: ActivityItem = {
+  id: 40,
+  eventType: "mention",
+  state: "unread",
+  readAt: null,
+  handledAt: null,
+  createdAt: "2026-10-06T09:00:00Z",
+  updatedAt: "2026-10-06T09:00:00Z",
+  source: {
+    sourceType: "message",
+    sourceId: 900,
+    roomId: 12,
+    threadId: null,
+    messageId: 900,
+    eventId: null,
+    creatorId: 8,
+    title: "general",
+    body: "@you have a look?",
+    occurredAt: "2026-10-06T09:00:00Z",
+    approvalStatus: null,
+    budgetCap: null,
+    path: "/rooms/12/@900",
+  },
+};
 
 const unreadCount = (roomId: number) => store.getState().sidebar.rows[roomId]?.unreadCount;
 
@@ -328,6 +354,171 @@ describe("resuming", () => {
       );
     }),
   );
+
+  it.effect("excludes activity items and removals already covered by the initial snapshot", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 2,
+              unreadRevision: 2,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+          yield* startEngine;
+          yield* welcome(43, true);
+          yield* pushEvents(
+            {
+              seq: 41,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 0 },
+            },
+            {
+              seq: 42,
+              topic: "user",
+              type: "activity.removed",
+              data: { id: 40, unreadCount: 1, unreadRevision: 1 },
+            },
+          );
+
+          expect(store.getState().activity.items[40]).toBeDefined();
+          expect(store.getState().activity.items[41]).toBeUndefined();
+          expect(store.getState().activity.unreadCount).toBe(2);
+
+          yield* pushEvents(
+            {
+              seq: 44,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 3 },
+            },
+            {
+              seq: 45,
+              topic: "user",
+              type: "activity.removed",
+              data: { id: 40, unreadCount: 2, unreadRevision: 4 },
+            },
+          );
+
+          expect(store.getState().activity.items[40]).toBeUndefined();
+          expect(store.getState().activity.items[41]).toBeDefined();
+          expect(store.getState().activity.serverUnread).toEqual({
+            unreadCount: 2,
+            unreadRevision: 4,
+          });
+        }),
+      );
+    }),
+  );
+
+  it.effect("applies activity replay counts when the initial count refresh fails", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 1,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* api.route("GET /activity/unread_count", () =>
+            Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+          );
+          yield* startEngine;
+          yield* welcome(41, true);
+          yield* pushEvents({
+            seq: 41,
+            topic: "user",
+            type: "activity.item",
+            data: {
+              item: {
+                ...activityItem,
+                state: "read",
+                readAt: "2026-10-06T10:00:00Z",
+                updatedAt: "2026-10-06T10:00:00Z",
+              },
+              unreadCount: 0,
+              unreadRevision: 2,
+            },
+          });
+
+          expect(store.getState().activity.items[40]?.state).toBe("read");
+          expect(store.getState().activity.serverUnread).toEqual({
+            unreadCount: 0,
+            unreadRevision: 2,
+          });
+        }),
+      );
+    }),
+  );
+
+  for (const refreshFails of [false, true]) {
+    it.effect(
+      `accepts activity events after an epoch restart when refresh ${refreshFails ? "fails" : "succeeds"}`,
+      () =>
+        Effect.gen(function* () {
+          sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+          yield* withSync(
+            Effect.gen(function* () {
+              const api = yield* FakeApi;
+              const socket = yield* MemorySocket;
+
+              yield* serve([]);
+              yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+              yield* startEngine;
+              yield* welcome(43, true);
+              yield* socket.drop;
+              yield* TestClock.adjust(250);
+
+              if (refreshFails) {
+                yield* api.route("GET /activity/unread_count", () =>
+                  Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+                );
+              }
+
+              yield* welcome(0, false, "e2");
+              yield* pushEvents({
+                seq: 1,
+                topic: "user",
+                type: "activity.item",
+                data: { item: activityItem, unreadCount: 3, unreadRevision: 3 },
+              });
+
+              expect(store.getState().activity.items[40]).toBeDefined();
+              expect(store.getState().activity.serverUnread).toEqual({
+                unreadCount: 3,
+                unreadRevision: 3,
+              });
+            }),
+          );
+        }),
+    );
+  }
 
   it.effect("applies replays normally on a later reconnect", () =>
     Effect.gen(function* () {
@@ -1007,30 +1198,8 @@ describe("people", () => {
           type: "activity.item",
           data: {
             unreadCount: 1,
-            item: {
-              id: 40,
-              eventType: "mention",
-              state: "unread",
-              readAt: null,
-              handledAt: null,
-              createdAt: "2026-10-06T09:00:00Z",
-              updatedAt: "2026-10-06T09:00:00Z",
-              source: {
-                sourceType: "message",
-                sourceId: 900,
-                roomId: 12,
-                threadId: null,
-                messageId: 900,
-                eventId: null,
-                creatorId: 8,
-                title: "general",
-                body: "@you have a look?",
-                occurredAt: "2026-10-06T09:00:00Z",
-                approvalStatus: null,
-                budgetCap: null,
-                path: "/rooms/12/@900",
-              },
-            },
+            unreadRevision: 1,
+            item: activityItem,
           },
         });
 
@@ -1064,13 +1233,13 @@ describe("activity follows the room list", () => {
     const api = yield* FakeApi;
 
     yield* serve([]);
-    yield* api.reply("GET /activity/unread_count", { unreadCount: 2 });
+    yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
     yield* startEngine;
     yield* welcome(0, false);
     mutations.landActivityPage(
       "all",
       "unread",
-      { items: [], users: [], unreadCount: 2, nextCursor: null },
+      { items: [], users: [], unreadCount: 2, unreadRevision: 1, nextCursor: null },
       "replace",
     );
   });
@@ -1088,7 +1257,7 @@ describe("activity follows the room list", () => {
 
         expect(unreadListStale()).toBe(false);
 
-        yield* api.reply("GET /activity/unread_count", { unreadCount: 5 });
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
         yield* pushEvents(
           rowEvent(1, sidebarRowFixture(30, "design")),
           rowEvent(2, sidebarRowFixture(31, "ops")),

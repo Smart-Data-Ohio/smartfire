@@ -5,6 +5,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -190,17 +191,17 @@ export const mutations = {
     mode: "replace" | "more",
     start?: activity.ActivityLoadStart,
   ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode, start)),
-  /** An item as the server has it now; `unreadCount` `null` keeps the badge. */
-  applyActivityItem: (item: ActivityItem, unreadCount: number | null) =>
-    apply((state) => activity.applyActivityItem(state, item, unreadCount)),
+  /** An item as the server has it now; `unread` `null` keeps the badge. */
+  applyActivityItem: (item: ActivityItem, unread: ActivityUnreadCount | null) =>
+    apply((state) => activity.applyActivityItem(state, item, unread)),
   /** A change on its way, shown at once (see `activity.showActivityChange`). */
   showActivityChange: (item: ActivityItem, token: number, unreadDelta: number) =>
     apply((state) => activity.showActivityChange(state, item, token, unreadDelta)),
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  setActivityUnreadCount: (unreadCount: number, countEpoch: number) =>
-    apply((state) => activity.setActivityUnreadCount(state, unreadCount, countEpoch)),
+  setActivityUnreadCount: (unread: ActivityUnreadCount) =>
+    apply((state) => activity.setActivityUnreadCount(state, unread)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

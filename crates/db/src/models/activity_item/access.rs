@@ -12,7 +12,28 @@ pub struct ActivityQuery<'a> {
     pub limit: Option<usize>,
 }
 
+/// The badge count and its per-user ordering token from one SQLite statement.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ActivityUnread {
+    pub count: i64,
+    pub revision: i64,
+}
+
 impl ActivityItem {
+    pub fn unread_snapshot(conn: &Connection, user_id: i64) -> Result<ActivityUnread> {
+        let count =
+            include_str!("access.sql").replacen("SELECT activity_items.*", "SELECT COUNT(*)", 1)
+                + " AND activity_items.read_at IS NULL AND activity_items.handled_at IS NULL";
+        let sql = format!("SELECT ({count}), activity_revision FROM users WHERE id = ?1");
+        Ok(crate::sql::query_one(conn, &sql, [user_id], |row| {
+            Ok(ActivityUnread {
+                count: row.get(0)?,
+                revision: row.get(1)?,
+            })
+        })?
+        .unwrap_or_default())
+    }
+
     pub fn accessible_to(conn: &Connection, user: &User) -> Result<Vec<Self>> {
         Self::query_accessible(conn, user, ActivityQuery::default())
     }
