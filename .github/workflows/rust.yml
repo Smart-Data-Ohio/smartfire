@@ -40,11 +40,9 @@ on:
 permissions: {}
 
 # A new push to a pull request supersedes the run for its previous commit.
-# Pushes to main share one group and are never cancelled once running, but a newer push
-# replaces one still waiting: when merges land close together only the newest main commit
-# gets its full run (releases go from that commit), which keeps runner demand down.
+# Other runs have unique groups so main and release checks keep both queued and running jobs.
 concurrency:
-  group: rust-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || inputs.ref || (github.event_name == 'push' && 'main-push') || github.sha }}
+  group: rust-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -264,7 +262,8 @@ jobs:
         run: python3 parity/bin/frozen-seeds check
 
   # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
-  # by nextest into twelve slices.
+  # by nextest into two slices. The previous twelve slices each spent 3.5–5.5 minutes compiling
+  # the whole workspace for only 49–88 seconds of tests; two aim for about six minutes of tests.
   test:
     name: Rust tests (${{ matrix.shard }})
     needs: [source, changes]
@@ -278,7 +277,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ["1/12", "2/12", "3/12", "4/12", "5/12", "6/12", "7/12", "8/12", "9/12", "10/12", "11/12", "12/12"]
+        shard: ["1/2", "2/2"]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -315,7 +314,7 @@ jobs:
       # What the shards together must run, listed from the workspace harnesses compiled above.
       # `Rust port` checks their receipts against this unpartitioned list.
       - name: List the tests the shards must run
-        if: ${{ !cancelled() && matrix.shard == '1/12' }}
+        if: ${{ !cancelled() && matrix.shard == '1/2' }}
         shell: bash
         run: |
           llvm=()
@@ -327,7 +326,7 @@ jobs:
 
       # Lists ignored tests from the harnesses compiled above, with no partition or filter.
       - name: Enumerate compiled ignored tests
-        if: ${{ !cancelled() && matrix.shard == '1/12' }}
+        if: ${{ !cancelled() && matrix.shard == '1/2' }}
         run: bash ci/verify-ignored.sh
 
       - name: Retain test results
@@ -346,11 +345,11 @@ jobs:
           exit 1
 
       - name: Keep only dependency artifacts for the cache
-        if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        if: ${{ matrix.shard == '1/2' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         run: python3 ci/prune-target.py target
 
       - name: Save cargo registry and target
-        if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        if: ${{ matrix.shard == '1/2' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -626,7 +625,7 @@ jobs:
           shopt -s nullglob
           args=()
           results="$RUNNER_TEMP/results"
-          shards=("$results"/junit-*of12.xml)
+          shards=("$results"/junit-*of2.xml)
           for path in "${shards[@]}" "$results/junit-llvm.xml"; do args+=(--junit "$path"); done
           args+=(--doc-log "$results/db-doc.log" --doc-log "$results/workspace-doc.log")
           # Each listed test passed exactly once, each #[ignore] test was reported, and libtest
@@ -703,7 +702,7 @@ jobs:
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
-    needs: [source, changes]
+    needs: [source, changes, correctness-image]
     if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     env:
@@ -727,10 +726,19 @@ jobs:
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: seeds
+          toolchain: 'false'
           cargo-cache: correctness
 
-      - name: Build pinned correctness prerequisites
-        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
+      - name: Collect pinned correctness prerequisites
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
+          path: ${{ runner.temp }}/prerequisites
+      - name: Load pinned correctness prerequisites
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
+          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
 
       - name: Run prerequisite-backed correctness suite
         env:
@@ -748,7 +756,7 @@ jobs:
       - name: Warm the full correctness harness dependencies
         if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         env:
-          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+          RUST_CORRECTNESS_IMAGE: campfire-correctness
         run: bash ci/exec.sh cargo nextest list --locked -p campfire --profile ci --build-jobs 4 --message-format json > /dev/null
       - name: Keep only dependency artifacts for the cache
         if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
@@ -776,7 +784,8 @@ jobs:
       fail-fast: false
       matrix:
         suite: [browsers]
-        shard: ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        # The observed weights in ignored-tests.json balance these at about 7.3 minutes each.
+        shard: ["1/3", "2/3", "3/3"]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -986,7 +995,8 @@ jobs:
       fail-fast: false
       matrix:
         suite: [messaging]
-        shard: ["1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"]
+        # The old shards spent ~93 seconds on setup for ~34 seconds of suite work each.
+        shard: ["1/4", "2/4", "3/4", "4/4"]
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
       WS8BM_PREBUILT_APP: "1"
