@@ -119,4 +119,5 @@ mod tests;
 mod tests_s2;
 #[cfg(test)]
 mod tests_s3;
+#[cfg(test)]
 mod tests_s7;
