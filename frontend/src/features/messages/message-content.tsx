@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { inlineMentions } from "../../lib/body-html.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { CardSlot } from "../cards/card-slot.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { AttachmentView } from "./attachments.tsx";
+import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
 
 /** How much of a quoted message the reply line shows before it trails off. */
@@ -90,13 +90,7 @@ export function ReplyQuote({ message }: { readonly message: MessageDTO }) {
 }
 
 function Body({ message }: { readonly message: MessageDTO }) {
-  return (
-    <div
-      className="message-body"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
-    />
-  );
+  return <BodyHtml html={message.bodyHtml} className="message-body" />;
 }
 
 /** Where a forward came from, when the source message is in the store. */
