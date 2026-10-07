@@ -26,3 +26,7 @@ mod settings_tests;
 #[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
+
+#[cfg(test)]
+#[path = "spa_admin_tests.rs"]
+mod admin_tests;

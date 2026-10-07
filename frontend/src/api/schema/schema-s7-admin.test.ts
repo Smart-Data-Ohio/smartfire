@@ -97,6 +97,7 @@ describe("S7 admin schemas", () => {
       exportTruncated: false,
       exportLimit: 5000,
     };
+
     const page = Schema.decodeUnknownSync(AuditLogPage)(wire);
     const entry = page.entries[0];
 
