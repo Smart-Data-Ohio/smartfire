@@ -239,6 +239,14 @@
     opacity: 0.7;
   }
 
+  /*
+   * A muted room a mention made unread: bold, but still dimmed except for its count, which
+   * keeps full strength (the classic sidebar's `.sidebar-item.muted` spares its status the same way).
+   */
+  .sidebar-row[data-muted] :is(.sidebar-row-glyph, .sidebar-row-name, .sidebar-row-muted) {
+    opacity: 0.7;
+  }
+
   .sidebar-row[data-state="selected"] {
     background: var(--bg-selected);
     color: var(--text);

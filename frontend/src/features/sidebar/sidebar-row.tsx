@@ -17,7 +17,7 @@ import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { GroupAvatars } from "./group-avatars.tsx";
-import { rowPillCount } from "./sections.ts";
+import { rowPillCount, rowState } from "./sections.ts";
 
 /** How long a finger rests on a row before its menu opens. */
 const LONG_PRESS_MS = 500;
@@ -221,10 +221,9 @@ export function SidebarRow({
   const actions = use(RowActionsContext);
   const longPress = useLongPress(row);
   const { room, membership } = row;
-  const unread = membership.unreadAt !== null;
   const muted = membership.involvement === "muted";
   const pill = rowPillCount(row);
-  const state = selected ? "selected" : muted ? "muted" : unread ? "unread" : undefined;
+  const state = rowState(row, selected);
 
   return (
     <li
@@ -238,7 +237,8 @@ export function SidebarRow({
         to="/r/$roomId"
         params={{ roomId: room.id }}
         className="sidebar-row"
-        data-state={state}
+        data-state={state ?? undefined}
+        data-muted={(muted && state === "unread") || undefined}
         data-drag-handle={`room-${room.id}`}
         aria-current={selected ? "page" : undefined}
         aria-describedby={actions.hintId}
@@ -292,9 +292,9 @@ export function SidebarRow({
         <span className="sidebar-row-name">{row.displayName}</span>
         {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
         <Badge
-          count={muted ? 0 : pill}
+          count={pill}
           tone="danger"
-          label={`${pill} ${room.kind === "direct" ? "unread" : "mentions"}`}
+          label={`${pill} ${room.kind === "direct" && !muted ? "unread" : "mentions"}`}
         />
       </Link>
       <IconButton

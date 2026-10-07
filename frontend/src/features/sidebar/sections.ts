@@ -112,10 +112,35 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
 
 /**
  * The number on a row's pill: unread mentions, or for a direct message every unread message
- * (each one is addressed to you, as in Slack).
+ * (each one is addressed to you, as in Slack). A muted room counts its mentions only: the server
+ * makes it unread for nothing else (`Room#unread_memberships`).
  */
 export function rowPillCount(row: SidebarRow): number {
+  if (row.membership.involvement === "muted") {
+    return row.mentionCount;
+  }
+
   return row.room.kind === "direct" ? row.unreadCount : row.mentionCount;
+}
+
+/**
+ * How a row reads: selected, unread (bold), muted (faint), or plain. A muted room a mention made
+ * unread reads as unread, as the classic sidebar's `unread muted` row does; it stays dimmed but
+ * for its count.
+ */
+export function rowState(
+  row: SidebarRow,
+  selected: boolean,
+): "selected" | "unread" | "muted" | null {
+  if (selected) {
+    return "selected";
+  }
+
+  if (row.membership.unreadAt !== null) {
+    return "unread";
+  }
+
+  return row.membership.involvement === "muted" ? "muted" : null;
 }
 
 /** Unread rooms and unread mentions across the sidebar, for the rail and the tab title. */
@@ -124,6 +149,10 @@ export interface SidebarTotals {
   readonly mentions: number;
 }
 
+/**
+ * Muted rooms count too: one goes unread only when the viewer is mentioned, and then it counts,
+ * as the classic app badge counts every `unread` row.
+ */
 export function sidebarTotals(sidebar: SidebarState): SidebarTotals {
   let unreadRooms = 0;
   let mentions = 0;
@@ -131,7 +160,7 @@ export function sidebarTotals(sidebar: SidebarState): SidebarTotals {
   for (const roomId of sidebar.order) {
     const row = sidebar.rows[roomId];
 
-    if (row === undefined || row.membership.involvement === "muted") {
+    if (row === undefined) {
       continue;
     }
 

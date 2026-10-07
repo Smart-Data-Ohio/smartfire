@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
-import { sidebarSections, sidebarTotals } from "./sections.ts";
+import { rowPillCount, rowState, sidebarSections, sidebarTotals } from "./sections.ts";
 
 interface RowOptions {
   readonly kind?: RoomKind;
@@ -125,15 +125,34 @@ describe("sidebarSections", () => {
 });
 
 describe("sidebarTotals", () => {
-  it("counts unread rooms and mentions, DMs by message, skipping muted rooms", () => {
+  it("counts unread rooms and mentions, DMs by message, a muted room by its mentions", () => {
     const totals = sidebarTotals(
       sidebarOf([
         row(1, "alpha", { unread: 3, mentions: 1 }),
         row(2, "Ada", { kind: "direct", unread: 2 }),
+        // Muted: unread only because of the mention, which counts like any other.
         row(3, "noise", { unread: 9, mentions: 4, muted: true }),
+        row(4, "hush", { muted: true }),
+        row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true }),
       ]),
     );
 
-    expect(totals).toEqual({ unreadRooms: 2, mentions: 3 });
+    expect(totals).toEqual({ unreadRooms: 4, mentions: 1 + 2 + 4 + 1 });
+  });
+});
+
+describe("rows", () => {
+  it("count a muted room's mentions only, and read it as unread once mentioned", () => {
+    const mentioned = row(3, "noise", { unread: 9, mentions: 4, muted: true });
+    const quiet = row(4, "hush", { muted: true });
+    const direct = row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true });
+
+    expect(rowPillCount(mentioned)).toBe(4);
+    expect(rowPillCount(direct)).toBe(1);
+    expect(rowPillCount(row(2, "Ada", { kind: "direct", unread: 2 }))).toBe(2);
+    expect(rowState(mentioned, false)).toBe("unread");
+    expect(rowState(quiet, false)).toBe("muted");
+    expect(rowState(mentioned, true)).toBe("selected");
+    expect(rowState(row(1, "alpha"), false)).toBeNull();
   });
 });
