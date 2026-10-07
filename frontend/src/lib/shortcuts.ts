@@ -10,7 +10,7 @@ export const MOD = IS_APPLE ? "⌘" : "Ctrl";
 
 export const ALT = IS_APPLE ? "⌥" : "Alt";
 
-export type ShortcutGroup = "Navigation" | "Messages" | "Composer" | "Formatting";
+export type ShortcutGroup = "Navigation" | "Messages" | "Lists" | "Composer" | "Formatting";
 
 export interface Shortcut {
   readonly id: string;
@@ -55,6 +55,18 @@ export const SHORTCUTS = [
   { id: "message-link", group: "Messages", keys: ["L"], label: "Copy link" },
   { id: "message-delete", group: "Messages", keys: ["⌫"], label: "Delete your message" },
   { id: "message-menu", group: "Messages", keys: ["⇧", "F10"], label: "Open the message menu" },
+  {
+    id: "list-up",
+    group: "Lists",
+    keys: ["↑"],
+    label: "Previous item (Activity, Saved, Scheduled)",
+  },
+  { id: "list-down", group: "Lists", keys: ["↓"], label: "Next item" },
+  { id: "list-open", group: "Lists", keys: ["⏎"], label: "Open the item" },
+  { id: "list-read", group: "Lists", keys: ["U"], label: "Mark read or unread (Activity)" },
+  { id: "list-done", group: "Lists", keys: ["E"], label: "Mark handled or done" },
+  { id: "list-remove", group: "Lists", keys: ["⌫"], label: "Remove from saved, or cancel" },
+  { id: "list-menu", group: "Lists", keys: ["⇧", "F10"], label: "Open the item's menu" },
   {
     id: "edit-last",
     group: "Composer",

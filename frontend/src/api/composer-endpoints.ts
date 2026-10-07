@@ -7,6 +7,7 @@ import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { IconList } from "../gen/IconList.ts";
 import type { MessagePreview } from "../gen/MessagePreview.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
+import type { ScheduledMessageFilter } from "../gen/ScheduledMessageFilter.ts";
 import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
 import type { SlashCommandList } from "../gen/SlashCommandList.ts";
 import type { SlashCommandResult } from "../gen/SlashCommandResult.ts";
@@ -82,12 +83,35 @@ export const previewMessage = Effect.fn("api.previewMessage")(function* (
   );
 });
 
-/** `GET /scheduled_messages?roomId=`: the viewer's pending ones, soonest first. */
+/** `GET /scheduled_messages?roomId=`: the viewer's pending ones, soonest first (one page). */
 export const scheduledMessages = Effect.fn("api.scheduledMessages")(function* (
   roomId: number | null,
 ) {
+  return yield* scheduledMessagePage("pending", roomId, null);
+});
+
+/**
+ * `GET /scheduled_messages?status=&roomId=&before=`: 50 of the viewer's scheduled messages,
+ * pending (soonest first) or past (most recent first), across rooms or in one. `before` is the
+ * previous page's `nextCursor`.
+ */
+export const scheduledMessagePage = Effect.fn("api.scheduledMessagePage")(function* (
+  status: ScheduledMessageFilter,
+  roomId: number | null,
+  before: string | null,
+) {
+  const query = new URLSearchParams({ status });
+
+  if (roomId !== null) {
+    query.set("roomId", String(roomId));
+  }
+
+  if (before !== null) {
+    query.set("before", before);
+  }
+
   return yield* call(
-    get("/scheduled_messages", roomId === null ? undefined : { roomId: String(roomId) }),
+    get("/scheduled_messages", Object.fromEntries(query)),
     wire<ScheduledMessageList>(ScheduledMessageListSchema),
   );
 });

@@ -1,0 +1,149 @@
+/**
+ * The activity inbox's actions as Effect programs. Loads land in the store (failures too, as the
+ * list's error) unless the list reloaded meanwhile; state changes show at once, moving the item
+ * between lists and the badge, and roll back if the server refuses. Every reply carries the item
+ * and the unread count, which win.
+ */
+import { Clock, Effect } from "effect";
+import * as api from "../api/activity-endpoints.ts";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
+import type { ActivityState } from "../gen/ActivityState.ts";
+import type { ActivityTab } from "../gen/ActivityTab.ts";
+import {
+  type ActivityAction,
+  activityListOf,
+  activityLoadStart,
+  nextActivityItem,
+  unreadDelta,
+} from "../store/activity.ts";
+import { mutations, store } from "../store/store.ts";
+import { keyedSerial } from "./serial.ts";
+
+/** Loads (or reloads) a tab's first page in one state; a failure lands as the list's error. */
+export const load = Effect.fn("activity.load")(function* (tab: ActivityTab, status: ActivityState) {
+  mutations.setActivityListLoading(tab, status, false);
+
+  const start = activityLoadStart(store.getState(), tab, status);
+
+  yield* api.activityList(status, tab, null).pipe(
+    Effect.tap((page) =>
+      Effect.sync(() => mutations.landActivityPage(tab, status, page, "replace", start)),
+    ),
+    Effect.catch((error) =>
+      Effect.sync(() =>
+        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+      ),
+    ),
+  );
+});
+
+/** Loads the next page, if there is one and none is on its way. */
+export const loadMore = Effect.fn("activity.loadMore")(function* (
+  tab: ActivityTab,
+  status: ActivityState,
+) {
+  const list = activityListOf(store.getState(), tab, status);
+
+  if (list.nextCursor === null || list.loadingMore || list.status !== "ready") {
+    return;
+  }
+
+  mutations.setActivityListLoading(tab, status, true);
+
+  const start = activityLoadStart(store.getState(), tab, status);
+
+  yield* api.activityList(status, tab, list.nextCursor).pipe(
+    Effect.tap((page) =>
+      Effect.sync(() => mutations.landActivityPage(tab, status, page, "more", start)),
+    ),
+    Effect.catch((error) =>
+      Effect.sync(() =>
+        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+      ),
+    ),
+  );
+});
+
+/** Refreshes the badge. */
+export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
+  const { unreadCount } = yield* api.activityUnreadCount();
+
+  mutations.setActivityUnreadCount(unreadCount);
+
+  return unreadCount;
+});
+
+/** Changes to one item go one at a time, so each rolls back to a copy no other is holding. */
+const serial = keyedSerial<number>();
+
+/** Tells the changes on their way apart in the badge. */
+let nextToken = 0;
+
+/**
+ * Applies `action` here at once (the item moves lists, the badge follows), then on the server,
+ * whose reply wins. A refusal puts the item back, unless something newer replaced it meanwhile,
+ * and takes the change out of the badge.
+ */
+const change = (
+  activityItemId: number,
+  action: ActivityAction,
+  request: (id: number) => ReturnType<typeof api.openActivityItem>,
+) =>
+  serial.run(
+    activityItemId,
+    Effect.gen(function* () {
+      const before = store.getState().activity.items[activityItemId];
+      const token = nextToken++;
+      let optimistic: ActivityItem | null = null;
+
+      if (before !== undefined) {
+        const now = new Date(yield* Clock.currentTimeMillis).toISOString();
+        const after = nextActivityItem(before, action, now);
+
+        if (after !== before) {
+          optimistic = after;
+          mutations.showActivityChange(after, token, unreadDelta(before, after));
+        }
+      }
+
+      // A failure, or an interruption whose outcome is unknown, rolls back; the next event or
+      // reply corrects it if the server did take it.
+      const reply = yield* request(activityItemId).pipe(
+        Effect.onError(() =>
+          Effect.sync(() =>
+            mutations.endActivityChange({
+              token,
+              optimistic,
+              settled: before ?? null,
+              unreadCount: null,
+            }),
+          ),
+        ),
+      );
+
+      mutations.endActivityChange({
+        token,
+        optimistic,
+        settled: reply.item,
+        unreadCount: reply.unreadCount,
+      });
+
+      return reply.item;
+    }),
+  );
+
+/** Marks it read or unread, handled or not; answers the item as the server left it. */
+export const setState = Effect.fn("activity.setState")(function* (
+  activityItemId: number,
+  action: ActivityAction,
+) {
+  return yield* change(activityItemId, action, (id) => api.updateActivityItem(id, action));
+});
+
+/**
+ * Opens it: marks it read (never handled) here and on the server. Answers the item; go to its
+ * source with `activityDestination(item)`.
+ */
+export const open = Effect.fn("activity.open")(function* (activityItemId: number) {
+  return yield* change(activityItemId, "read", api.openActivityItem);
+});

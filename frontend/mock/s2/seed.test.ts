@@ -155,7 +155,10 @@ describe("the S2 seed", () => {
 
     expect(page.saved).toEqual([{ messageId: messages.generalSaved, savedItemId: 1 }]);
 
-    const scheduled = await get<ScheduledMessageList>(server, "/api/v1/scheduled_messages");
+    const scheduled = await get<ScheduledMessageList>(
+      server,
+      `/api/v1/scheduled_messages?roomId=${rooms.general}`,
+    );
 
     expect(scheduled.scheduledMessages).toHaveLength(1);
     expect(Date.parse(scheduled.scheduledMessages[0]?.sendAt ?? "")).toBeGreaterThan(

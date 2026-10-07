@@ -1,0 +1,247 @@
+/* The activity inbox: Slack's activity rows on the pane surface. */
+@layer app {
+  .activity-row {
+    position: relative;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 10px var(--space-3) 10px var(--space-4);
+  }
+
+  /* The unread dot, in the row's gutter. */
+  .activity-dot {
+    position: absolute;
+    top: 50%;
+    left: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-solid);
+    translate: 0 -50%;
+    opacity: 0;
+    scale: 0;
+    transition:
+      opacity var(--duration-small) var(--ease-move),
+      scale var(--duration-small) var(--ease-move);
+  }
+
+  .list-row[data-state="unread"] .activity-dot {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .activity-glyph {
+    --kind-bg: var(--bg-sunken);
+    --kind-fg: var(--text-muted);
+
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+  }
+
+  .activity-glyph[data-tone="mention"] {
+    --kind-bg: var(--mention-bg);
+    --kind-fg: var(--mention-text);
+  }
+
+  .activity-glyph[data-tone="agent"] {
+    --kind-bg: var(--agent-soft);
+    --kind-fg: var(--agent-text);
+  }
+
+  .activity-glyph[data-tone="danger"] {
+    --kind-bg: var(--danger-soft);
+    --kind-fg: var(--danger-text);
+  }
+
+  .activity-glyph[data-tone="accent"] {
+    --kind-bg: var(--accent-soft);
+    --kind-fg: var(--accent);
+  }
+
+  .activity-tile {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--kind-bg);
+    color: var(--kind-fg);
+  }
+
+  /* The kind, badged on the avatar's corner and ringed in the row's surface. */
+  .activity-kind-badge {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: grid;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-pill);
+    background: var(--kind-bg);
+    box-shadow: 0 0 0 2px var(--bg-pane);
+    color: var(--kind-fg);
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .activity-glyph[data-tone="neutral"] .activity-kind-badge {
+    background: var(--bg-active);
+  }
+
+  .list-row-inner:hover .activity-kind-badge,
+  .list-row-inner:has(> .list-row-open:focus-visible) .activity-kind-badge {
+    box-shadow: 0 0 0 2px var(--bg-hover);
+  }
+
+  .activity-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .activity-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-1-5);
+    min-width: 0;
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    white-space: nowrap;
+  }
+
+  .activity-kind {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  .activity-kind[data-tone="mention"] {
+    color: var(--mention-text);
+  }
+
+  .activity-kind[data-tone="agent"] {
+    color: var(--agent-text);
+  }
+
+  .activity-kind[data-tone="danger"] {
+    color: var(--danger-text);
+  }
+
+  .activity-sep {
+    color: var(--text-faint);
+  }
+
+  .activity-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+  }
+
+  .list-row[data-state="unread"] .activity-title {
+    font-weight: var(--weight-semibold);
+  }
+
+  .activity-body {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .list-row[data-state="unread"] .activity-body {
+    color: var(--text);
+  }
+
+  .activity-author {
+    margin-right: var(--space-1-5);
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .activity-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+  }
+
+  .activity-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 20px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-medium);
+  }
+
+  .activity-chip[data-status="handled"],
+  .activity-chip[data-status="approved"] {
+    background: color-mix(in oklch, var(--success) 14%, transparent);
+    color: var(--success-text);
+  }
+
+  .activity-chip[data-status="pending"],
+  .activity-chip[data-status="budget"] {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .activity-chip[data-status="denied"] {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .activity-time {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-sidebar);
+    white-space: nowrap;
+  }
+
+  /* Handled rows step back. */
+  .list-row[data-state="handled"] .activity-glyph {
+    opacity: 0.7;
+  }
+
+  .activity-handle {
+    color: var(--success-text);
+  }
+
+  /* The Unread / All switch in the header. */
+  .activity-status .t-tabs {
+    padding: 2px;
+  }
+
+  .activity-status .tab {
+    height: 24px;
+    padding-inline: 10px;
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 720px) {
+    .activity-row {
+      gap: 10px;
+      padding-inline: var(--space-3) var(--space-2);
+    }
+
+    .activity-dot {
+      left: 3px;
+    }
+  }
+}
