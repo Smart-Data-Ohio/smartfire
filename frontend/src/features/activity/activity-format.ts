@@ -257,6 +257,17 @@ export function targetFromPath(path: string): ActivityTarget {
 }
 
 /**
+ * Whether `href` is a path on this site ("/rooms/12/events") the classic hand-off may follow: not
+ * a URL, and not "//host" or "/\host", which browsers read as another site (the URL parser drops
+ * tabs and newlines first, so they don't hide one).
+ */
+export function isSitePath(href: string): boolean {
+  const path = href.replace(/[\t\n\r]/g, "");
+
+  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
+}
+
+/**
  * Where opening `item` leads: the data layer's destination from the item's ids, with a classic
  * path mapped into the SPA where it has the screen (`targetFromPath`).
  */

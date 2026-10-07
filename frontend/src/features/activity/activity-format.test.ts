@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivitySource } from "../../gen/ActivitySource.ts";
-import { activityTarget, emptyCopy, statusChip, targetFromPath } from "./activity-format.ts";
+import {
+  activityTarget,
+  emptyCopy,
+  isSitePath,
+  statusChip,
+  targetFromPath,
+} from "./activity-format.ts";
 import { parseActivitySearch } from "./activity-search.ts";
 
 function source(overrides: Partial<ActivitySource>): ActivitySource {
@@ -144,5 +150,22 @@ describe("statusChip", () => {
       label: "Message cap",
     });
     expect(statusChip(item({}))).toBeNull();
+  });
+});
+
+describe("isSitePath", () => {
+  it("follows a path on this site", () => {
+    expect(isSitePath("/rooms/12/events/4")).toBe(true);
+    expect(isSitePath("/account/sessions?x=1")).toBe(true);
+  });
+
+  it("refuses another site's URL, however it's spelled", () => {
+    expect(isSitePath("https://example.com/rooms/12")).toBe(false);
+    expect(isSitePath("javascript:alert(1)")).toBe(false);
+    expect(isSitePath("//example.com/rooms/12")).toBe(false);
+    expect(isSitePath("/\\example.com")).toBe(false);
+    expect(isSitePath("/\t/example.com")).toBe(false);
+    expect(isSitePath("rooms/12")).toBe(false);
+    expect(isSitePath("")).toBe(false);
   });
 });

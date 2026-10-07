@@ -21,6 +21,7 @@ import {
   type ActivityTarget,
   activityTarget,
   emptyCopy,
+  isSitePath,
 } from "./activity-format.ts";
 import { ActivityMenuItems, ActivityRow } from "./activity-row.tsx";
 import "./activity.css";
@@ -58,6 +59,17 @@ const ANNOUNCED = {
   unhandled: "Marked as not handled",
 } as const satisfies Record<ActivityAction, string>;
 
+/** Leaves the SPA for a classic page: only a path on this site, never another site's URL. */
+function openClassic(href: string): void {
+  if (!isSitePath(href)) {
+    console.warn(`Activity: not following "${href}", which isn't a path on this site.`);
+
+    return;
+  }
+
+  window.location.assign(href);
+}
+
 /** Follows an item's target: an SPA screen, or the classic page for one the SPA hasn't ported. */
 function useFollowTarget(): (target: ActivityTarget) => void {
   const navigate = useNavigate();
@@ -92,7 +104,7 @@ function useFollowTarget(): (target: ActivityTarget) => void {
 
         return;
       case "classic":
-        window.location.assign(target.href);
+        openClassic(target.href);
 
         return;
       case "none":
@@ -129,10 +141,22 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   );
 
   const open = (item: ActivityItem) => {
-    actions.activity.open(item.id).catch(() => {
+    const target = activityTarget(item);
+    const marking = actions.activity.open(item.id);
+
+    if (target.kind === "classic") {
+      // Leaving the page would abort the read mark, so it lands first; a failed one still goes.
+      const go = () => follow(target);
+
+      marking.then(go, go);
+
+      return;
+    }
+
+    marking.catch(() => {
       // Opening still goes there; the read mark just didn't stick.
     });
-    follow(activityTarget(item));
+    follow(target);
   };
 
   const change = (item: ActivityItem, action: ActivityAction) => {
