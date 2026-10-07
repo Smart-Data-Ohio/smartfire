@@ -79,6 +79,19 @@ impl ScheduledMessage {
         })
     }
 
+    /// Rows by id, for batch preloads (missing ids are skipped).
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM scheduled_messages WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         Self::find_by_id(conn, id)?.or_not_found("ScheduledMessage")
     }
@@ -236,6 +249,41 @@ impl ScheduledMessage {
         }));
     }
 
+    /// `scheduled.changed` for the pending ones in a room that its author (or, with `None`,
+    /// everyone) is losing: their `sendable` turns false with no write of their own. Call it
+    /// before the membership or room goes.
+    pub(crate) fn emit_pending_in_room(
+        tx: &mut Tx<'_>,
+        room_id: i64,
+        user_id: Option<i64>,
+    ) -> Result<()> {
+        let rows = query_all(
+            tx.conn(),
+            "SELECT * FROM scheduled_messages WHERE room_id = ?1 AND (?2 IS NULL OR user_id = ?2) AND sent_at IS NULL AND dropped_at IS NULL",
+            params![room_id, user_id],
+            Self::from_row,
+        )?;
+        for row in rows {
+            row.emit_change(tx, false);
+        }
+        Ok(())
+    }
+
+    /// `scheduled.changed` for the ones linked to a message being deleted: the foreign keys null
+    /// their `sent_message_id` or `reply_to_message_id`.
+    pub(crate) fn emit_linked_to_message(tx: &mut Tx<'_>, message_id: i64) -> Result<()> {
+        let rows = query_all(
+            tx.conn(),
+            "SELECT * FROM scheduled_messages WHERE sent_message_id = ?1 OR reply_to_message_id = ?1",
+            [message_id],
+            Self::from_row,
+        )?;
+        for row in rows {
+            row.emit_change(tx, false);
+        }
+        Ok(())
+    }
+
     /// The draft's editable fields. Ownership and the controller's refusal to edit/cancel a
     /// live claim are WS8b's; `claimed` is provided for that guard.
     pub fn update(&mut self, tx: &mut Tx<'_>, source: &str, send_at: Timestamp) -> Result<()> {
@@ -339,7 +387,8 @@ impl ScheduledMessage {
 
     /// Prepend to thread destruction, before the FK clears the stream identity. Sent history
     /// stays sent; pending rows become dropped history and retain their private inbox source.
-    pub(crate) fn drop_for_thread(tx: &mut Tx<'_>, thread_id: i64) -> Result<()> {
+    /// An import's undo (`importing`) tells no other tab, as it broadcasts nothing else.
+    pub(crate) fn drop_for_thread(tx: &mut Tx<'_>, thread_id: i64, importing: bool) -> Result<()> {
         let pending = query_all(
             tx.conn(),
             "SELECT * FROM scheduled_messages WHERE thread_id = ? AND sent_at IS NULL AND dropped_at IS NULL ORDER BY id",
@@ -348,6 +397,19 @@ impl ScheduledMessage {
         )?;
         for mut row in pending {
             row.drop(tx, Some("its thread was deleted"), tx.now())?;
+        }
+        if importing {
+            return Ok(());
+        }
+        // The thread's foreign key nulls `thread_id` on the sent and dropped ones too.
+        let settled = query_all(
+            tx.conn(),
+            "SELECT * FROM scheduled_messages WHERE thread_id = ? AND (sent_at IS NOT NULL OR dropped_at IS NOT NULL)",
+            [thread_id],
+            Self::from_row,
+        )?;
+        for row in settled {
+            row.emit_change(tx, false);
         }
         Ok(())
     }
@@ -365,6 +427,9 @@ impl ScheduledMessage {
 
     /// `dispatch_item!` / `dispatch_now!`. One real SQLite transaction is the critical section:
     /// a failure rolls back the claim, post and history, leaving the next tick able to retry.
+    ///
+    /// The claim never outlives the transaction (it commits with the post, or a release puts it
+    /// back), so other readers never see it change on its own and it sends no `scheduled.changed`.
     pub fn dispatch(tx: &mut Tx<'_>, id: i64, now: Timestamp, immediate: bool) -> Result<bool> {
         let count = tx.conn().execute_cached(
             "UPDATE scheduled_messages SET claimed_at = ?, updated_at = ? WHERE id = ? AND sent_at IS NULL AND dropped_at IS NULL AND (claimed_at IS NULL OR claimed_at < ?) AND (? OR send_at <= ?)",

@@ -211,6 +211,11 @@ impl Broadcasts {
         sync::activity_stream(&self.server, &self.sync, stream, payload);
     }
 
+    /// `activity.item` for an item changed without an `ActivityChannel` frame.
+    pub fn sync_activity_item(&self, user_id: i64, item_id: i64) {
+        sync::activity_item_later(&self.server, &self.sync, user_id, item_id);
+    }
+
     /// `activity.removed` for items deleted with their source.
     pub fn sync_activity_removed(&self, items: Vec<(i64, i64)>) {
         sync::activity_removed_later(&self.server, &self.sync, items);

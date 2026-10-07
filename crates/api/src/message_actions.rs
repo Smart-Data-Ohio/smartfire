@@ -537,25 +537,32 @@ async fn patch_saved(c: &mut Ctx) -> Result {
                 .into_iter()
                 .find(|item| item.id == id)
                 .ok_or(campfire_db::Error::RecordNotFound("SavedItem"))?;
-            item.update(
-                tx,
-                campfire_db::SavedItemChanges {
-                    status: Some(status.to_owned()),
-                    ..Default::default()
-                },
-            )?;
-            Ok(item)
+            let changed = item.status != status;
+            if changed {
+                item.update(
+                    tx,
+                    campfire_db::SavedItemChanges {
+                        status: Some(status.to_owned()),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok((item, changed))
         })
         .await
         .map_err(db_error)?;
+    let (item, changed) = item;
     let message_id = item.message_id;
     let item = dto::saved_item(&item);
-    campfire_app::cable::sync::saved_changed(
-        &c.app().cable,
-        user_id,
-        message_id,
-        Some(item.clone()),
-    );
+    // Other tabs already hold this state when nothing changed.
+    if changed {
+        campfire_app::cable::sync::saved_changed(
+            &c.app().cable,
+            user_id,
+            message_id,
+            Some(item.clone()),
+        );
+    }
     c.json(StatusCode::OK, &item)
 }
 

@@ -57,6 +57,8 @@ pub fn begin_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Res
         "UPDATE rooms SET deleted_at=?,direct_member_key=NULL,updated_at=? WHERE id=?",
         params![tx.now(), tx.now(), room.id],
     )?;
+    crate::ActivityItem::emit_hidden_in_room(tx, room.id, None)?;
+    ScheduledMessage::emit_pending_in_room(tx, room.id, None)?;
     tx.conn()
         .execute_cached("DELETE FROM memberships WHERE room_id=?", [room.id])?;
     revoke_huddle_grants(tx, room.id, config)?;

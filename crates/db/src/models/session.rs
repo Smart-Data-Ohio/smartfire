@@ -228,6 +228,7 @@ impl Session {
             r#"DELETE FROM "two_factor_setup_secrets" WHERE "two_factor_setup_secrets"."session_id" = ?"#,
             [self.id],
         )?;
+        crate::ActivityItem::emit_hidden_for_sources(tx, "Session", &[self.id])?;
         tx.conn().execute_cached(
             r#"DELETE FROM "sessions" WHERE "sessions"."id" = ?"#,
             [self.id],

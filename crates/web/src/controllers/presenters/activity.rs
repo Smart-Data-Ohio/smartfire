@@ -16,6 +16,17 @@ pub struct Sources {
     threads: HashMap<i64, campfire_db::ChannelThread>,
     actors: HashMap<i64, User>,
     room_names: RefCell<HashMap<i64, String>>,
+    /// The single-page app's batch ([`Sources::load_spa`]): what the classic rows read one at a
+    /// time. Empty for the classic loads, whose lookups fall back to a query per row.
+    events: HashMap<i64, campfire_db::models::calendar_event::CalendarEvent>,
+    grants: HashMap<i64, campfire_db::models::huddle_grant::HuddleGrant>,
+    approvals: HashMap<i64, campfire_db::AgentApproval>,
+    approval_agents: HashMap<i64, campfire_db::Agent>,
+    scheduled: HashMap<i64, campfire_db::models::scheduled_message::ScheduledMessage>,
+    credentials: HashMap<i64, campfire_db::TwoFactorCredential>,
+    users: HashMap<i64, User>,
+    message_threads: HashMap<i64, campfire_db::ChannelThread>,
+    extra_rooms: HashMap<i64, campfire_db::Room>,
 }
 impl Sources {
     pub fn load(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
@@ -23,6 +34,109 @@ impl Sources {
     }
     pub fn load_json(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
         Self::load_for(conn, rows, false)
+    }
+    /// [`Self::load`] plus every other source, room, thread and person the rows name, read in
+    /// one query each, for the single-page app's list ([`spa_row`]).
+    pub fn load_spa(conn: &Connection, rows: &[ActivityItem]) -> Result<Self> {
+        let mut sources = Self::load_for(conn, rows, true)?;
+        let ids = |kind: &str| {
+            rows.iter()
+                .filter(|row| row.source_type == kind)
+                .map(|row| row.source_id)
+                .collect::<Vec<_>>()
+        };
+        sources.events =
+            campfire_db::models::calendar_event::CalendarEvent::for_ids(conn, &ids("Event"))?
+                .into_iter()
+                .map(|event| (event.id, event))
+                .collect();
+        sources.grants =
+            campfire_db::models::huddle_grant::HuddleGrant::for_ids(conn, &ids("HuddleGrant"))?
+                .into_iter()
+                .map(|grant| (grant.id, grant))
+                .collect();
+        sources.approvals = campfire_db::AgentApproval::for_ids(conn, &ids("AgentApproval"))?
+            .into_iter()
+            .map(|approval| (approval.id, approval))
+            .collect();
+        sources.approval_agents = campfire_db::Agent::for_ids(
+            conn,
+            &sources
+                .approvals
+                .values()
+                .map(|approval| approval.agent_id)
+                .collect::<Vec<_>>(),
+        )?
+        .into_iter()
+        .map(|agent| (agent.id, agent))
+        .collect();
+        sources.scheduled = campfire_db::models::scheduled_message::ScheduledMessage::for_ids(
+            conn,
+            &ids("ScheduledMessage"),
+        )?
+        .into_iter()
+        .map(|scheduled| (scheduled.id, scheduled))
+        .collect();
+        sources.credentials =
+            campfire_db::TwoFactorCredential::for_ids(conn, &ids("TwoFactorCredential"))?
+                .into_iter()
+                .map(|credential| (credential.id, credential))
+                .collect();
+        let thread_ids = sources
+            .messages
+            .values()
+            .filter_map(|message| message.thread_id)
+            .filter(|id| !sources.threads.contains_key(id))
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        sources.message_threads = campfire_db::ChannelThread::for_ids(conn, &thread_ids)?
+            .into_iter()
+            .map(|thread| (thread.id, thread))
+            .collect();
+        let user_ids = sources
+            .messages
+            .values()
+            .map(|message| message.creator_id)
+            .chain(sources.events.values().map(|event| event.organizer_id))
+            .chain(sources.grants.values().map(|grant| grant.user_id))
+            .chain(
+                sources
+                    .scheduled
+                    .values()
+                    .map(|scheduled| scheduled.user_id),
+            )
+            .chain(sources.approval_agents.values().map(|agent| agent.user_id))
+            .filter(|id| !sources.actors.contains_key(id))
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        if !user_ids.is_empty() {
+            sources.users = User::where_ids(conn, &user_ids)?
+                .into_iter()
+                .map(|user| (user.id, user))
+                .collect();
+        }
+        let room_ids = sources
+            .events
+            .values()
+            .map(|event| event.room_id)
+            .chain(sources.grants.values().map(|grant| grant.room_id))
+            .chain(
+                sources
+                    .scheduled
+                    .values()
+                    .map(|scheduled| scheduled.room_id),
+            )
+            .filter(|id| !sources.rooms.contains_key(id))
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        sources.extra_rooms = campfire_db::Room::for_ids(conn, &room_ids)?
+            .into_iter()
+            .map(|room| (room.id, room))
+            .collect();
+        Ok(sources)
     }
     fn load_for(conn: &Connection, rows: &[ActivityItem], html: bool) -> Result<Self> {
         let session_ids: Vec<_> = rows
@@ -147,7 +261,86 @@ impl Sources {
             threads,
             actors,
             room_names: RefCell::default(),
+            events: HashMap::new(),
+            grants: HashMap::new(),
+            approvals: HashMap::new(),
+            approval_agents: HashMap::new(),
+            scheduled: HashMap::new(),
+            credentials: HashMap::new(),
+            users: HashMap::new(),
+            message_threads: HashMap::new(),
+            extra_rooms: HashMap::new(),
         })
+    }
+    fn event(
+        &self,
+        conn: &Connection,
+        id: i64,
+    ) -> Result<campfire_db::models::calendar_event::CalendarEvent> {
+        match self.events.get(&id) {
+            Some(event) => Ok(event.clone()),
+            None => campfire_db::models::calendar_event::CalendarEvent::find(conn, id),
+        }
+    }
+    fn grant(
+        &self,
+        conn: &Connection,
+        id: i64,
+    ) -> Result<Option<campfire_db::models::huddle_grant::HuddleGrant>> {
+        match self.grants.get(&id) {
+            Some(grant) => Ok(Some(grant.clone())),
+            None => campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, id),
+        }
+    }
+    fn approval(&self, conn: &Connection, id: i64) -> Result<Option<campfire_db::AgentApproval>> {
+        match self.approvals.get(&id) {
+            Some(approval) => Ok(Some(approval.clone())),
+            None => campfire_db::AgentApproval::find(conn, id),
+        }
+    }
+    fn approval_agent(&self, conn: &Connection, id: i64) -> Result<Option<campfire_db::Agent>> {
+        match self.approval_agents.get(&id) {
+            Some(agent) => Ok(Some(agent.clone())),
+            None => campfire_db::Agent::find(conn, id),
+        }
+    }
+    fn scheduled_message(
+        &self,
+        conn: &Connection,
+        id: i64,
+    ) -> Result<Option<campfire_db::models::scheduled_message::ScheduledMessage>> {
+        match self.scheduled.get(&id) {
+            Some(scheduled) => Ok(Some(scheduled.clone())),
+            None => campfire_db::models::scheduled_message::ScheduledMessage::find_by_id(conn, id),
+        }
+    }
+    fn credential(&self, conn: &Connection, id: i64) -> Result<campfire_db::TwoFactorCredential> {
+        match self.credentials.get(&id) {
+            Some(credential) => Ok(credential.clone()),
+            None => campfire_db::TwoFactorCredential::find(conn, id),
+        }
+    }
+    fn user_name(&self, conn: &Connection, id: i64) -> Result<Option<String>> {
+        match self.users.get(&id).or_else(|| self.actors.get(&id)) {
+            Some(user) => Ok(Some(user.name.clone())),
+            None => Ok(User::find_by_id(conn, id)?.map(|user| user.name)),
+        }
+    }
+    fn thread_name(&self, conn: &Connection, id: i64) -> Result<String> {
+        match self
+            .message_threads
+            .get(&id)
+            .or_else(|| self.threads.get(&id))
+        {
+            Some(thread) => Ok(thread.name.clone()),
+            None => Ok(campfire_db::ChannelThread::find(conn, id)?.name),
+        }
+    }
+    fn any_room(&self, conn: &Connection, id: i64) -> Result<campfire_db::Room> {
+        match self.extra_rooms.get(&id).or_else(|| self.rooms.get(&id)) {
+            Some(room) => Ok(room.clone()),
+            None => campfire_db::Room::find(conn, id),
+        }
     }
     fn budget_notice(&self, id: i64) -> Result<&campfire_db::AgentBudgetNotice> {
         self.budget_notices
@@ -229,17 +422,16 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
             .and_then(|nudge| messages.threads.get(&nudge.channel_thread_id))
             .map(|thread| format!("/rooms/{}?thread={}", thread.room_id, thread.id))
             .unwrap_or_else(fallback),
-        "HuddleGrant" => {
-            campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
-                .map(|grant| format!("/rooms/{}", grant.room_id))
-                .unwrap_or_else(fallback)
-        }
+        "HuddleGrant" => messages
+            .grant(conn, row.source_id)?
+            .map(|grant| format!("/rooms/{}", grant.room_id))
+            .unwrap_or_else(fallback),
         "Event" => {
-            let event =
-                campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            let event = messages.event(conn, row.source_id)?;
             format!("/rooms/{}/events/{}", event.room_id, event.id)
         }
-        "AgentApproval" => campfire_db::AgentApproval::find(conn, row.source_id)?
+        "AgentApproval" => messages
+            .approval(conn, row.source_id)?
             .map(|approval| format!("/agents/{}/approvals", approval.agent_id))
             .unwrap_or_else(fallback),
         "AgentBudgetNotice" => messages
@@ -293,9 +485,7 @@ pub fn source_refs(
             }
         }
         "HuddleGrant" => {
-            if let Some(grant) =
-                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
-            {
+            if let Some(grant) = sources.grant(conn, row.source_id)? {
                 refs.room_id = Some(grant.room_id);
                 refs.creator_id = Some(grant.user_id);
             }
@@ -320,23 +510,20 @@ pub fn source_refs(
             }
         }
         "Event" => {
-            let event =
-                campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            let event = sources.event(conn, row.source_id)?;
             refs.room_id = Some(event.room_id);
             refs.event_id = Some(event.id);
             refs.creator_id = Some(event.organizer_id);
         }
         "AgentApproval" => {
-            if let Some(approval) = campfire_db::AgentApproval::find(conn, row.source_id)? {
-                let agent = campfire_db::Agent::find(conn, approval.agent_id)?;
+            if let Some(approval) = sources.approval(conn, row.source_id)? {
+                let agent = sources.approval_agent(conn, approval.agent_id)?;
                 refs.room_id = approval.room_id;
                 refs.creator_id = agent.as_ref().map(|agent| agent.user_id);
                 refs.approval_status =
                     Some(approval.effective_status(app.db.env().now()).to_string());
                 refs.approval_title = match &agent {
-                    Some(agent) => {
-                        campfire_db::User::find_by_id(conn, agent.user_id)?.map(|user| user.name)
-                    }
+                    Some(agent) => sources.user_name(conn, agent.user_id)?,
                     None => None,
                 };
                 refs.approval_body = Some(truncate(approval.summary.clone()));
@@ -352,12 +539,7 @@ pub fn source_refs(
             }
         }
         "ScheduledMessage" => {
-            if let Some(scheduled) =
-                campfire_db::models::scheduled_message::ScheduledMessage::find_by_id(
-                    conn,
-                    row.source_id,
-                )?
-            {
+            if let Some(scheduled) = sources.scheduled_message(conn, row.source_id)? {
                 refs.room_id = Some(scheduled.room_id);
                 refs.thread_id = scheduled.thread_id;
                 refs.creator_id = Some(scheduled.user_id);
@@ -375,6 +557,33 @@ pub fn item(
     viewer: &User,
     messages: &Sources,
 ) -> Result<Item> {
+    item_with(conn, app, item, viewer, messages, true)
+}
+
+/// The single-page app's row: [`item`]'s title, body and time without the HTML approval card
+/// (the wire carries the approval's own fields, [`source_refs`]), and the row's source ids.
+/// `sources` should come from [`Sources::load_spa`].
+pub fn spa_row(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    row: &ActivityItem,
+    viewer: &User,
+    sources: &Sources,
+) -> Result<(Item, SourceRefs)> {
+    Ok((
+        item_with(conn, app, row, viewer, sources, false)?,
+        source_refs(conn, app, row, sources)?,
+    ))
+}
+
+fn item_with(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    item: &ActivityItem,
+    viewer: &User,
+    messages: &Sources,
+    cards: bool,
+) -> Result<Item> {
     let mut result = Item {
         id: item.id,
         state: item.state().into(),
@@ -387,15 +596,17 @@ pub fn item(
     };
     match item.source_type.as_str() {
         "AgentApproval" => {
-            if let Some(approval) = campfire_db::AgentApproval::find(conn, item.source_id)? {
+            if let Some(approval) = messages.approval(conn, item.source_id)? {
                 result.created_at = Some(approval.created_at.jiff());
-                result.approval = Some(super::agents::history::approval(
-                    conn,
-                    &app.secrets,
-                    &approval,
-                    viewer,
-                    app.db.env().now(),
-                )?);
+                if cards {
+                    result.approval = Some(super::agents::history::approval(
+                        conn,
+                        &app.secrets,
+                        &approval,
+                        viewer,
+                        app.db.env().now(),
+                    )?);
+                }
             }
         }
         "Message" | "SavedItem" => {
@@ -403,11 +614,9 @@ pub fn item(
                 result.created_at = Some(message.created_at.jiff());
                 result.title = messages.room_name(conn, message.room_id, viewer)?;
                 if let Some(id) = message.thread_id {
-                    result.title +=
-                        &format!(" · {}", campfire_db::ChannelThread::find(conn, id)?.name);
+                    result.title += &format!(" · {}", messages.thread_name(conn, id)?);
                 }
-                result.author =
-                    campfire_db::User::find_by_id(conn, message.creator_id)?.map(|u| u.name);
+                result.author = messages.user_name(conn, message.creator_id)?;
                 result.body = message.plain_text_body(conn, &*app.db.env().rich_text)?;
                 if item.event_type == "message_reminder" {
                     result.body = format!(
@@ -436,33 +645,31 @@ pub fn item(
             result.author = Some(user.name.clone());
         }
         "Event" => {
-            let event =
-                campfire_db::models::calendar_event::CalendarEvent::find(conn, item.source_id)?;
+            let event = messages.event(conn, item.source_id)?;
             result.created_at = Some(event.created_at.jiff());
             result.title = format!(
                 "{} · {}",
                 super::accounts::room_display_name(
                     conn,
-                    &campfire_db::Room::find(conn, event.room_id)?,
+                    &messages.any_room(conn, event.room_id)?,
                     viewer
                 )?,
                 event.title
             );
-            result.author =
-                campfire_db::User::find_by_id(conn, event.organizer_id)?.map(|u| u.name);
+            result.author = messages.user_name(conn, event.organizer_id)?;
             result.body = event_body(conn, &event, &item.event_type)?;
         }
         "HuddleGrant" => {
-            let grant =
-                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, item.source_id)?
-                    .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
+            let grant = messages
+                .grant(conn, item.source_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("HuddleGrant"))?;
             result.created_at = Some(grant.created_at.jiff());
             result.title = super::accounts::room_display_name(
                 conn,
-                &campfire_db::Room::find(conn, grant.room_id)?,
+                &messages.any_room(conn, grant.room_id)?,
                 viewer,
             )?;
-            result.author = campfire_db::User::find_by_id(conn, grant.user_id)?.map(|u| u.name);
+            result.author = messages.user_name(conn, grant.user_id)?;
             let caller = result.author.as_deref().unwrap_or("Someone");
             result.body = if item.event_type == "huddle_missed" {
                 format!("You missed a huddle from {caller}")
@@ -517,17 +724,16 @@ pub fn item(
             );
         }
         "ScheduledMessage" => {
-            let scheduled = campfire_db::models::scheduled_message::ScheduledMessage::find(
-                conn,
-                item.source_id,
-            )?;
+            let scheduled = messages
+                .scheduled_message(conn, item.source_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("ScheduledMessage"))?;
             result.created_at = Some(scheduled.created_at.jiff());
             result.title = super::accounts::room_display_name(
                 conn,
-                &campfire_db::Room::find(conn, scheduled.room_id)?,
+                &messages.any_room(conn, scheduled.room_id)?,
                 viewer,
             )?;
-            result.author = campfire_db::User::find_by_id(conn, scheduled.user_id)?.map(|u| u.name);
+            result.author = messages.user_name(conn, scheduled.user_id)?;
             result.body = if let Some(reason) = scheduled
                 .drop_reason
                 .filter(|s| !campfire_richtext::ruby::is_blank(s))
@@ -544,7 +750,7 @@ pub fn item(
             };
         }
         "TwoFactorCredential" => {
-            let credential = campfire_db::TwoFactorCredential::find(conn, item.source_id)?;
+            let credential = messages.credential(conn, item.source_id)?;
             result.created_at = Some(credential.created_at.jiff());
             result.title = "Two-step sign-in".into();
             result.body = "Several wrong sign-in codes were entered for your account.".into();

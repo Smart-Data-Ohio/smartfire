@@ -906,7 +906,7 @@ impl ChannelThread {
         let fresh = Self::find(tx.conn(), self.id)?;
         tx.register_record("channel_threads", self.id);
         let snapshot = super::agent_work_events::capture_deleted(tx, &fresh, deleted_by_id)?;
-        crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
+        crate::ScheduledMessage::drop_for_thread(tx, self.id, importing)?;
         // Rails suppresses a dependent tag's row replacement while its parent is destroyed.
         tx.conn().execute_cached(
             "DELETE FROM thread_tags WHERE channel_thread_id=?",

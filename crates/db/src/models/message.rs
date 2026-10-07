@@ -1239,6 +1239,9 @@ impl Message {
             [self.id],
         )?;
         crate::ActivityItem::destroy_for_source(tx, "Message", self.id)?;
+        if !importing {
+            crate::ScheduledMessage::emit_linked_to_message(tx, self.id)?;
+        }
         // The reference rows (none has destroy callbacks of its own), Drive attachments and
         // agent steps, in declaration order.
         for sql in [

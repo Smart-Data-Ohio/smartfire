@@ -122,6 +122,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["scheduled.changed", "scheduled.removed"],
     ),
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
+    ("activity_item::ActivityItemTouched", &["activity.item"]),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
@@ -472,9 +473,6 @@ pub fn activity_stream(
     stream: &str,
     payload: &serde_json::Value,
 ) {
-    let Some(renderer) = slot.get(server) else {
-        return;
-    };
     let (Some(user_id), Some(item_id)) = (
         stream
             .strip_prefix("user_")
@@ -487,6 +485,21 @@ pub fn activity_stream(
     ) else {
         return;
     };
+    activity_item_later(server, slot, user_id, item_id);
+}
+
+/// `activity.item` for the owner's item `item_id`, read afresh later: for an `ActivityChannel`
+/// frame, or a change the classic inbox doesn't hear (a grouped item re-pointed at a newer
+/// reply while still unread). Only read for an owner with a sync socket open; others get a gap
+/// marker, so a resume of theirs refetches.
+pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, item_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    if !server.sync_connected(user_id) {
+        server.sync_skipped_for(user_id);
+        return;
+    }
     let (server, slot) = (server.downgrade(), slot.clone());
     renderer.defer(Box::new(move |conn| {
         let Some(server) = server.upgrade() else {
@@ -513,6 +526,17 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i
     let Some(renderer) = slot.get(server) else {
         return;
     };
+    // Only owners with a sync socket open; the others get a gap marker.
+    let items = items
+        .into_iter()
+        .filter(|&(_, user_id)| {
+            let connected = server.sync_connected(user_id);
+            if !connected {
+                server.sync_skipped_for(user_id);
+            }
+            connected
+        })
+        .collect::<Vec<_>>();
     if items.is_empty() {
         return;
     }
@@ -549,6 +573,10 @@ pub fn scheduled_later(
     change: campfire_db::models::scheduled_message::ScheduledMessageChange,
 ) {
     if !server.sync_wanted() {
+        return;
+    }
+    if !server.sync_connected(change.user_id) {
+        server.sync_skipped_for(change.user_id);
         return;
     }
     if change.removed {

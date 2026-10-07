@@ -19,6 +19,7 @@ const PRIMITIVES: &[&str] = &[
     "sync_unread_rows",
     "sync_membership_row",
     "sync_activity_stream",
+    "sync_activity_item",
     "sync_activity_removed",
     "sync_scheduled",
     "turbo",

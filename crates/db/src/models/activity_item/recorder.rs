@@ -253,6 +253,15 @@ impl ActivityItem {
                     || before.updated_at != tx.now()
                 {
                     tx.conn().execute("UPDATE activity_items SET source_type=?,source_id=?,read_at=NULL,updated_at=? WHERE id=?",params![source_type,source_id,tx.now(),before.id])?;
+                    if before.read_at.is_none() {
+                        // Single-page app only: its row would otherwise keep the older reply.
+                        tx.emit_after_commit(crate::Event::broadcast(
+                            &super::ActivityItemTouched {
+                                id: before.id,
+                                user_id,
+                            },
+                        ));
+                    }
                 }
                 let item = Self::find(tx.conn(), before.id)?;
                 // app/models/activity_item.rb: source/updated_at changes alone do not broadcast.
