@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber } from "effect";
 import { Forbidden, ServerError } from "../api/errors.ts";
-import { FakeApi, pageFixture } from "../api/testing.ts";
+import { FakeApi, pageFixture, userFixture } from "../api/testing.ts";
 import { messageFixture, threadFixture } from "../features/threads/test-fixtures.ts";
 import {
   factsFixture,
@@ -455,6 +455,79 @@ describe("S4 revisions through held network responses", () => {
       expect(store.getState().threads[THREAD]?.work).toMatchObject({
         status: "planned",
         owner: null,
+      });
+
+      yield* Deferred.succeed(writeGate, undefined);
+      yield* Fiber.join(writing);
+
+      expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
+      expect(store.getState().work.writes[THREAD]).toBeUndefined();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "keep equal-event eligibility through a held ABA refresh while filling revisioned fields",
+    () =>
+      Effect.gen(function* () {
+        mutations.loadThreadDetail(detail(facts(0, { ownerActive: false })));
+
+        const fake = yield* FakeApi;
+        const readStarted = yield* Deferred.make<void>();
+        const readGate = yield* Deferred.make<void>();
+
+        yield* fake.route(`GET /threads/${THREAD}`, () =>
+          Deferred.succeed(readStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(readGate)),
+            Effect.as(
+              detail(facts(0, { ownerActive: true, runUrl: "https://example.test/run/held" })),
+            ),
+          ),
+        );
+
+        const reading = yield* Effect.forkChild(work.refresh(THREAD));
+
+        yield* Deferred.await(readStarted);
+        mutations.upsertThread(threadFixture(THREAD, { work: facts(0, { ownerActive: false }) }));
+        yield* Deferred.succeed(readGate, undefined);
+        yield* Fiber.join(reading);
+
+        expect(store.getState().threads[THREAD]?.work).toMatchObject({
+          ownerActive: false,
+          runUrl: "https://example.test/run/held",
+          updatedAt: new Date(NOW).toISOString(),
+        });
+        expect((yield* fake.requests).length).toBe(1);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep an optimistic owner's eligibility separate from the previous owner's GET", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const writeStarted = yield* Deferred.make<void>();
+      const writeGate = yield* Deferred.make<void>();
+      const confirmed = facts(2, { status: "planned", owner: userFixture(3), ownerActive: true });
+
+      yield* fake.route(`PATCH /threads/${THREAD}/work`, () =>
+        Deferred.succeed(writeStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(writeGate)),
+          Effect.as(detail(confirmed)),
+        ),
+      );
+      yield* fake.reply(
+        `GET /threads/${THREAD}`,
+        detail(facts(0, { status: "planned", ownerActive: false })),
+      );
+
+      const writing = yield* Effect.forkChild(work.assign(THREAD, 3));
+
+      yield* Deferred.await(writeStarted);
+      yield* work.refresh(THREAD);
+
+      expect(store.getState().threads[THREAD]?.work).toMatchObject({
+        owner: { id: 3 },
+        ownerActive: true,
       });
 
       yield* Deferred.succeed(writeGate, undefined);

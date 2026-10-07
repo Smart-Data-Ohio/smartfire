@@ -70,7 +70,11 @@ function withoutOverlay(state: State, threadId: number): State {
   return withWork(state, { overlays });
 }
 
-function showFacts(state: State, thread: Thread, observedAbsence = false): State {
+function showFacts(
+  state: State,
+  thread: Thread,
+  observations: { readonly absence?: boolean; readonly eligibility?: boolean } = {},
+): State {
   const before = state.threads[thread.id]?.work ?? null;
   const fields = state.work.fields[thread.id] ?? emptyFields;
   const next = upsertThread(state, thread);
@@ -100,11 +104,17 @@ function showFacts(state: State, thread: Thread, observedAbsence = false): State
         tracking:
           fields.tracking +
           Number(
-            observedAbsence ||
+            observations.absence === true ||
               (before === null) !== (thread.work === null) ||
               (before !== null && thread.work !== null && thread.work.updatedAt > before.updatedAt),
           ),
-        ownerActive: fields.ownerActive + Number(before?.ownerActive !== thread.work?.ownerActive),
+        ownerActive:
+          fields.ownerActive +
+          Number(
+            observations.eligibility === true ||
+              before?.owner?.id !== thread.work?.owner?.id ||
+              before?.ownerActive !== thread.work?.ownerActive,
+          ),
       },
     },
   });
@@ -127,7 +137,9 @@ function overlayFacts(overlay: WorkOverlay, confirmed: WorkFacts | null): WorkFa
     status: shown.status === before.status ? confirmed.status : shown.status,
     owner: shown.owner === before.owner ? confirmed.owner : shown.owner,
     ownerActive:
-      shown.ownerActive === before.ownerActive ? confirmed.ownerActive : shown.ownerActive,
+      shown.owner?.id === before.owner?.id && shown.ownerActive === before.ownerActive
+        ? confirmed.ownerActive
+        : shown.ownerActive,
   };
 }
 
@@ -142,6 +154,7 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
   const eligibilityCurrent = read === undefined || captured.ownerActive === fields.ownerActive;
 
   let confirmed = stored ?? null;
+  let observedEligibility = false;
 
   if (incoming === null) {
     if (event || (trackingCurrent && overlay === undefined)) {
@@ -152,6 +165,8 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
 
     // Membership/grants may change eligibility without republishing the work revision.
     if (confirmed.owner?.id === incoming.owner?.id) {
+      observedEligibility = eligibilityCurrent;
+
       const ownerActive = eligibilityCurrent
         ? incoming.ownerActive
         : stored != null && stored.owner?.id === incoming.owner?.id
@@ -173,6 +188,7 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
     facts: pending ? overlayFacts(overlay, confirmed) : confirmed,
     pending,
     confirmed,
+    observedEligibility,
     observedAbsence: incoming === null && !pending && (event || trackingCurrent),
   };
 }
@@ -197,7 +213,14 @@ export function receiveWorkThread(
         })
       : withoutOverlay(state, thread.id);
 
-  return showFacts(next, { ...thread, work: result.facts }, result.observedAbsence);
+  return showFacts(
+    next,
+    { ...thread, work: result.facts },
+    {
+      absence: result.observedAbsence,
+      eligibility: result.observedEligibility,
+    },
+  );
 }
 
 /** Thread permissions and membership land independently of the work record. */

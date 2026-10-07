@@ -13,8 +13,9 @@ import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
 import { approvalListKey, approvalListOf } from "./approvals.ts";
+import { initialState } from "./state.ts";
 import { mutations, store } from "./store.ts";
-import { workListOf } from "./work.ts";
+import { captureWorkRead, loadWorkThreadDetail, receiveWorkThread, workListOf } from "./work.ts";
 
 const THREAD = 7;
 
@@ -492,6 +493,36 @@ describe("server revisions on S4 records", () => {
     expect(store.getState().threads[THREAD]?.work).toMatchObject({
       status: "done",
       updatedAt: revision(2),
+    });
+  });
+
+  it("keeps equal-event owner eligibility through an ABA read while filling revisioned fields", () => {
+    const before = loadWorkThreadDetail(
+      initialState,
+      threadDetailFixture(THREAD, facts(0, { ownerActive: false }), workDetailFixture()),
+    );
+
+    const read = captureWorkRead(before);
+
+    const echoed = receiveWorkThread(
+      before,
+      threadFixture(THREAD, { work: facts(0, { ownerActive: false }) }),
+    );
+
+    const landed = loadWorkThreadDetail(
+      echoed,
+      threadDetailFixture(
+        THREAD,
+        facts(0, { ownerActive: true, runUrl: "https://example.test/run/held" }),
+        workDetailFixture(),
+      ),
+      read,
+    );
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({
+      ownerActive: false,
+      runUrl: "https://example.test/run/held",
+      updatedAt: revision(0),
     });
   });
 });
