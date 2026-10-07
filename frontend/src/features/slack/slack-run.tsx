@@ -12,7 +12,7 @@ import { auditTime } from "../admin/admin-format.ts";
 import { adminFailure, Confirm } from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { CONFIRM, countLines, peopleLine } from "./slack-format.ts";
+import { CONFIRM, countLines, keyed, peopleLine } from "./slack-format.ts";
 import { newestOnly, usePoll } from "./slack-poll.ts";
 import "../admin/admin.css";
 import "./slack.css";
@@ -363,9 +363,11 @@ export function Issues({
         <p className="text-muted">No issues recorded.</p>
       ) : (
         <ul className="slack-issues" ref={list}>
-          {issues.map((issue, index) => (
-            // Issues have no id on the wire; a page only ever grows at its end.
-            <li key={index} tabIndex={-1}>
+          {keyed(
+            issues,
+            (issue) => `${issue.level}\u0000${issue.slackRef}\u0000${issue.message}`,
+          ).map(({ key, row: issue }) => (
+            <li key={key} tabIndex={-1}>
               <strong>{issue.level}</strong>
               {issue.slackRef === null ? null : (
                 <>

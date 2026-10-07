@@ -9,9 +9,10 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { AdministratorsOnly, adminFailure, Confirm, useAdmin } from "../admin/admin-parts.tsx";
+import { BodyHtml } from "../messages/body-html.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { CONFIRM, importBody } from "./slack-format.ts";
+import { CONFIRM, importBody, keyed } from "./slack-format.ts";
 import { useRunId } from "./slack-run.tsx";
 import "../admin/admin.css";
 import "./slack.css";
@@ -176,12 +177,16 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                 </tr>
               </thead>
               <tbody>
-                {plan.samples.map((sample, index) => (
-                  // Samples have no id on the wire and never reorder.
-                  <tr key={index}>
+                {keyed(
+                  plan.samples,
+                  (sample) => `${sample.conversation}\u0000${sample.slackText}`,
+                ).map(({ key, row: sample }) => (
+                  <tr key={key}>
                     <td>{sample.conversation}</td>
                     <td className="slack-sample-text">{sample.slackText}</td>
-                    <td dangerouslySetInnerHTML={{ __html: sample.html }} />
+                    <td>
+                      <BodyHtml html={sample.html} className="message-body" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

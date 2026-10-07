@@ -5,6 +5,7 @@ import {
   adminConnectionSentence,
   countLines,
   importBody,
+  keyed,
   modeLabel,
   optional,
   peopleLine,
@@ -94,5 +95,16 @@ describe("the plan form", () => {
   it("treats blanks as unset", () => {
     expect(optional("  ")).toBeNull();
     expect(optional(" x ")).toBe("x");
+  });
+});
+
+describe("row keys", () => {
+  it("follow the content, numbering repeats, and hold as rows are added at the end", () => {
+    const first = keyed(["a", "b", "a"], (row) => row).map((each) => each.key);
+    const grown = keyed(["a", "b", "a", "a"], (row) => row).map((each) => each.key);
+
+    expect(new Set(first).size).toBe(3);
+    expect(grown.slice(0, 3)).toEqual(first);
+    expect(new Set(grown).size).toBe(4);
   });
 });

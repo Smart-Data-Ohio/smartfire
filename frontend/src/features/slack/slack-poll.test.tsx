@@ -86,6 +86,10 @@ describe("a run page's polling", () => {
     act(() => hide(false));
     await advance(0);
     expect(read).toHaveBeenCalledTimes(1);
+
+    // And on every few seconds after that.
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(2);
   });
 
   it("waits longer after each failed read and says so", async () => {

@@ -68,6 +68,27 @@ export function countLines(counts: SlackCounts) {
   };
 }
 
+/**
+ * React keys for rows the wire gives no id (issues, samples): each row's content, numbered when
+ * the same content repeats. They hold steady while rows are only added at the end, as an issues
+ * page grows.
+ */
+export function keyed<T>(
+  rows: readonly T[],
+  content: (row: T) => string,
+): { readonly key: string; readonly row: T }[] {
+  const seen = new Map<string, number>();
+
+  return rows.map((row) => {
+    const base = content(row);
+    const repeat = seen.get(base) ?? 0;
+
+    seen.set(base, repeat + 1);
+
+    return { key: repeat === 0 ? base : `${base}\u0000${repeat}`, row };
+  });
+}
+
 /** A form value: blank is none (no date bound, no new secret). */
 export function optional(value: string): string | null {
   const trimmed = value.trim();

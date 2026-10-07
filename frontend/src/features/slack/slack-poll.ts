@@ -49,10 +49,11 @@ export function usePoll(
   read: (id: number) => Promise<SlackRun | null>,
   onSettled: () => void,
 ): PollTrouble {
-  const [tick, setTick] = useState(0);
   const [failures, setFailures] = useState(0);
   const [stopped, setStopped] = useState(false);
   const [hidden, setHidden] = useState(() => document.hidden);
+  // Failed reads in a row; kept across a hidden spell so the backoff carries on after it.
+  const failed = useRef(0);
   // Set when the tab is shown again, so the next read goes at once.
   const woke = useRef(false);
   const id = run?.id ?? null;
@@ -75,36 +76,44 @@ export function usePoll(
     }
 
     let live = true;
-    const again = () => setTick((count) => count + 1);
-    const backoff = Math.min(POLL_MS * 2 ** failures, MAX_BACKOFF_MS);
-    const delay = woke.current ? 0 : backoff;
+    let timer = 0;
+    const backoff = () => Math.min(POLL_MS * 2 ** failed.current, MAX_BACKOFF_MS);
 
-    woke.current = false;
-
-    const timer = window.setTimeout(() => {
+    const poll = () => {
       read(id).then(
         (fresh) => {
           if (!live) return;
 
+          failed.current = 0;
           setFailures(0);
 
-          if (fresh === null || fresh.active) again();
+          if (fresh === null || fresh.active) timer = window.setTimeout(poll, POLL_MS);
           else onSettled();
         },
         (error: Error) => {
           if (!live) return;
 
-          if (error instanceof ActionError && FINAL.has(error.tag)) setStopped(true);
-          else setFailures((count) => count + 1);
+          if (error instanceof ActionError && FINAL.has(error.tag)) {
+            setStopped(true);
+
+            return;
+          }
+
+          failed.current += 1;
+          setFailures(failed.current);
+          timer = window.setTimeout(poll, backoff());
         },
       );
-    }, delay);
+    };
+
+    timer = window.setTimeout(poll, woke.current ? 0 : backoff());
+    woke.current = false;
 
     return () => {
       live = false;
       window.clearTimeout(timer);
     };
-  }, [id, active, stopped, hidden, failures, tick, read, onSettled]);
+  }, [id, active, stopped, hidden, read, onSettled]);
 
   if (stopped) return "stopped";
 
