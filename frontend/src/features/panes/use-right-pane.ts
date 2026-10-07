@@ -1,5 +1,6 @@
 import { useMatchRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import {
   closeStep,
   isPaneShowing,
@@ -105,7 +106,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
   const returnPane = useRoutePaneReturn(roomId);
 
   const leaveThread = () => {
-    void navigate({ to: "/r/$roomId", params: { roomId }, search: true });
+    void navigate({ to: "/r/$roomId", params: { roomId }, search: parseBoardSearch });
   };
 
   return {
@@ -118,7 +119,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       void navigate({
         to: "/r/$roomId/t/$threadId",
         params: { roomId, threadId },
-        search: true,
+        search: parseBoardSearch,
         replace: options?.replace ?? false,
       });
     },
@@ -132,7 +133,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
           const to = paneRoute(returnPane);
 
           if (to !== null) {
-            void navigate({ to, params: { roomId }, search: true });
+            void navigate({ to, params: { roomId }, search: parseBoardSearch });
           }
         }
       } else if (step === "close-pane") {
@@ -166,7 +167,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
           openPane(pane);
           leaveThread();
         } else {
-          void navigate({ to, params: { roomId }, search: true });
+          void navigate({ to, params: { roomId }, search: parseBoardSearch });
         }
 
         return;

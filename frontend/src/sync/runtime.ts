@@ -157,6 +157,8 @@ const threads = {
   ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),
   update: (threadId: number, body: UpdateThread): Promise<void> =>
     runAction(threadActions.update(threadId, body)),
+  /** Deletes the thread (a moderator's; a board post's "Delete post"). */
+  remove: (threadId: number): Promise<void> => runAction(threadActions.remove(threadId)),
   follow: (threadId: number, involvement: ThreadInvolvement | null): Promise<void> =>
     runAction(threadActions.follow(threadId, involvement)),
   markRead: (threadId: number): Promise<void> => runAction(threadActions.markRead(threadId)),

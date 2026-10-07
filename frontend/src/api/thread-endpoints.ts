@@ -11,7 +11,7 @@ import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import type { ThreadMembershipState } from "../gen/ThreadMembershipState.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
-import { call, get } from "./call.ts";
+import { call, get, noContent } from "./call.ts";
 import { cursorQuery, type PageCursor } from "./endpoints.ts";
 import { MessagePage as MessagePageSchema, MessageDTO as MessageSchema } from "./schema/message.ts";
 import {
@@ -77,6 +77,11 @@ export const updateThread = Effect.fn("api.updateThread")(function* (
     { method: "PATCH", path: `/threads/${threadId}`, body },
     wire<ThreadDetail>(ThreadDetailSchema),
   );
+});
+
+/** `DELETE /threads/:id` (204): deletes it and its replies; `thread.removed` follows. */
+export const deleteThread = Effect.fn("api.deleteThread")(function* (threadId: number) {
+  return yield* call({ method: "DELETE", path: `/threads/${threadId}` }, noContent);
 });
 
 /** `POST /threads/:id/join` (follow: `everything`) or `DELETE` (leave). */

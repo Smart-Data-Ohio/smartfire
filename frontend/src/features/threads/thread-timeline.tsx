@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
@@ -34,6 +34,28 @@ const NO_PENDING: readonly string[] = [];
 
 function mentionsViewer(bodyHtml: string, viewerId: number | null): boolean {
   return viewerId !== null && bodyHtml.includes(`data-user-id="${viewerId}"`);
+}
+
+/** A board post's top: its work, then the discussion rule ("No messages yet…" while empty). */
+function PostIntro({
+  intro,
+  replyCount,
+}: {
+  readonly intro: ReactNode;
+  readonly replyCount: number;
+}) {
+  return (
+    <div className="thread-parent thread-post-intro">
+      {intro}
+      <div className="thread-replies-rule">
+        <span className="thread-replies-label tabular">
+          {replyCount === 0
+            ? "No messages yet. Start the discussion below."
+            : `Discussion · ${replyCountLabel(replyCount)}`}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 /** The root message on top of the thread, then the "N replies" rule. */
@@ -99,6 +121,8 @@ interface ThreadTimelineProps {
   readonly ready: boolean;
   /** A reply's permalink: placed in view and highlighted instead of opening at the newest. */
   readonly focusMessageId: number | null;
+  /** In place of the parent message: a board post's work (posts have no parent). */
+  readonly intro?: ReactNode;
 }
 
 /**
@@ -113,6 +137,7 @@ export function ThreadTimeline({
   replyCount,
   ready,
   focusMessageId,
+  intro,
 }: ThreadTimelineProps) {
   const timeline = useStore((state) => state.threadTimelines[threadId] ?? emptyTimeline);
   const messages = useMessagesIn(timeline.ids);
@@ -164,6 +189,10 @@ export function ThreadTimeline({
 
     if (focusIndex >= 0) {
       list.scrollToIndex(focusIndex, { align: "center" });
+    } else if (intro !== undefined) {
+      // A board post opens at its work, as the classic post page does; the discussion follows.
+      atBottomRef.current = false;
+      list.scrollToIndex(0);
     } else {
       list.scrollToIndex(items.length - 1, { align: "end" });
     }
@@ -226,13 +255,15 @@ export function ThreadTimeline({
   const renderItem = (item: TimelineItem) => {
     switch (item.kind) {
       case "intro":
-        return (
+        return intro === undefined ? (
           <ThreadParent
             key={item.key}
             parent={parent}
             replyCount={replyCount}
             viewerId={viewerId}
           />
+        ) : (
+          <PostIntro key={item.key} intro={intro} replyCount={replyCount} />
         );
       case "loading":
         return (
