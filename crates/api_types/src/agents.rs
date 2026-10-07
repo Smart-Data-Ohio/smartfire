@@ -75,6 +75,9 @@ pub struct AgentDirectoryRow {
     pub last_seen_at: Option<Timestamp>,
     /// The server's revision of the agent's status facts (status, note, suspension and working
     /// presence): when they last changed on the server.
+    /// UTC with exactly six fractional digits and a `Z` suffix, for example
+    /// `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+    /// millisecond rows are padded with zeros.
     /// A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
     /// every path (reads, write replies, events and refetches), so a late or replayed copy never
     /// undoes a newer one.
@@ -237,6 +240,9 @@ pub struct AgentStatusChanged {
     pub working_presence_expires_at: Option<Timestamp>,
     /// The server's revision of the agent's status facts (status, note, suspension and working
     /// presence), as on [`AgentDirectoryRow::updated_at`].
+    /// UTC with exactly six fractional digits and a `Z` suffix, for example
+    /// `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+    /// millisecond rows are padded with zeros.
     /// A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
     /// every path (reads, write replies, events and refetches), so a late or replayed copy never
     /// undoes a newer one.
@@ -358,6 +364,9 @@ pub struct AgentApproval {
     pub deniable: bool,
     /// The server's revision of the request (its status, decision and note): when it last
     /// changed on the server.
+    /// UTC with exactly six fractional digits and a `Z` suffix, for example
+    /// `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+    /// millisecond rows are padded with zeros.
     /// A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
     /// every path (reads, write replies, events and refetches), so a late or replayed copy never
     /// undoes a newer one.

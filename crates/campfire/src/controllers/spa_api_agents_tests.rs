@@ -420,7 +420,11 @@ async fn revision_app() -> Option<(TestApp, Arc<FrozenClock>)> {
 }
 
 fn revision(value: &str) -> jiff::Timestamp {
-    value.parse().expect("a wire timestamp")
+    assert_eq!(value.len(), "2026-10-07T10:15:00.123456Z".len());
+    assert!(value.ends_with('Z'));
+    value
+        .parse()
+        .expect("a row version with fixed-width microseconds")
 }
 
 #[tokio::test]
@@ -511,7 +515,10 @@ async fn agent_status_revisions_cover_each_change_and_change_back_on_every_read(
             written.working_presence.as_deref()
         );
         assert_eq!(
-            changed.working_presence_expires_at.as_deref().map(revision),
+            changed
+                .working_presence_expires_at
+                .as_deref()
+                .map(|at| at.parse::<jiff::Timestamp>().unwrap()),
             written.working_presence_expires_at.map(|at| at.jiff())
         );
         previous = revision(&row.updated_at);
@@ -687,13 +694,18 @@ async fn approval_expiry_revision_covers_the_effective_status_before_the_settle_
         .await
         .unwrap();
     assert_eq!(effective.status, api::AgentApprovalStatus::Expired);
-    assert_eq!(effective.updated_at, effective.expires_at);
+    assert_eq!(
+        revision(&effective.updated_at),
+        effective.expires_at.parse::<jiff::Timestamp>().unwrap()
+    );
     assert!(revision(&effective.updated_at) > revision(&before.updated_at));
 
     clock.advance(jiff::SignedDuration::from_millis(10));
     let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
     let settled = page.approvals.iter().find(|row| row.id == id).unwrap();
-    assert!(revision(&settled.updated_at) >= revision(&settled.expires_at));
+    assert!(
+        revision(&settled.updated_at) >= settled.expires_at.parse::<jiff::Timestamp>().unwrap()
+    );
     assert!(revision(&settled.updated_at) > revision(&effective.updated_at));
     let event = sync.until(
         |event| matches!(&event.payload, api::SyncPayload::ApprovalUpdated(changed)

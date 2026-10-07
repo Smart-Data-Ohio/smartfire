@@ -16,7 +16,7 @@ async fn app_with_clock() -> (TestApp, Arc<FrozenClock>) {
 
 fn change_time(clock: &FrozenClock, second: usize) -> String {
     clock.set(format!("2026-03-02T16:01:{second:02}Z").parse().unwrap());
-    format!("2026-03-02T16:01:{second:02}.000Z")
+    format!("2026-03-02T16:01:{second:02}.000000Z")
 }
 
 async fn detail(browser: &mut Browser<'_>, thread_id: i64) -> api::ThreadDetail {
@@ -108,12 +108,16 @@ async fn human_work_revisions_move_on_changes_and_changes_back() {
             assert_eq!(index, 9, "only untracking removes the work facts");
             let stamp = a
                 .db()
-                .read(|conn| Ok(ChannelThread::find(conn, THREAD)?.updated_at.to_wire()))
+                .read(|conn| Ok(ChannelThread::find(conn, THREAD)?.updated_at.jiff()))
                 .await
                 .unwrap();
-            assert_eq!(stamp, expected, "untracking still advances the source");
-            assert!(stamp > previous);
-            previous = stamp;
+            assert_eq!(
+                stamp,
+                expected.parse::<jiff::Timestamp>().unwrap(),
+                "untracking still advances the source"
+            );
+            assert!(stamp > previous.parse::<jiff::Timestamp>().unwrap());
+            previous = expected;
         }
         same_copies(&mut david, &mut tab, &written.thread).await;
     }
@@ -186,7 +190,12 @@ async fn handoff_and_agent_work_revisions_use_the_same_source_in_replies_gets_an
         );
         let payload: serde_json::Value = parse(&reply);
         assert_eq!(
-            payload["updated_at"], expected,
+            payload["updated_at"]
+                .as_str()
+                .unwrap()
+                .parse::<jiff::Timestamp>()
+                .unwrap(),
+            expected.parse::<jiff::Timestamp>().unwrap(),
             "the existing agent reply uses the same source"
         );
         let read = detail(&mut david, PLANNED_POST).await;
@@ -254,7 +263,10 @@ async fn tracked_thread_created_revision_agrees_with_get() {
     let read = detail(&mut david, id).await;
     assert_eq!(created.work, read.thread.work);
     assert_eq!(created.work.as_ref().unwrap().updated_at, expected);
-    assert_eq!(thread.updated_at.to_wire(), expected);
+    assert_eq!(
+        thread.updated_at.jiff(),
+        expected.parse::<jiff::Timestamp>().unwrap()
+    );
     server.abort();
 }
 
@@ -354,11 +366,14 @@ async fn owner_hard_delete_cannot_regress_the_revision_after_live_profile_change
                         ..Default::default()
                     },
                 )?;
-                Ok(owner.updated_at.to_wire())
+                Ok(owner.updated_at.jiff())
             })
             .await
             .unwrap();
-        assert_eq!(user_stamp, user_revision);
+        assert_eq!(
+            user_stamp,
+            user_revision.parse::<jiff::Timestamp>().unwrap()
+        );
         let read = detail(&mut david, PLANNED_POST).await;
         let work = read.thread.work.as_ref().unwrap();
         assert_eq!(work.owner.as_ref().unwrap().name, name);

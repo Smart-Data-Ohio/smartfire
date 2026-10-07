@@ -18,8 +18,8 @@ pub fn time(time: Timestamp) -> String {
     time.to_wire()
 }
 
-/// `users.updated_at` with fixed-width microseconds, so string order preserves row order.
-pub fn user_updated_at(time: Timestamp) -> String {
+/// A row version in UTC with exactly six fractional digits and `Z`, so string order is time order.
+pub fn row_version(time: Timestamp) -> String {
     time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()
 }
 
@@ -183,7 +183,7 @@ pub fn user(
         avatar_icon: extras.icons.get(&user.id).cloned(),
         agent: extras.agents.get(&user.id).cloned(),
         created_at: time(user.created_at),
-        updated_at: user_updated_at(user.updated_at),
+        updated_at: row_version(user.updated_at),
     }
 }
 
@@ -1449,7 +1449,32 @@ fn room_file_rows(
 
 #[cfg(test)]
 mod tests {
-    use super::inline_mentions;
+    use super::{Timestamp, inline_mentions, row_version, time};
+
+    #[test]
+    fn row_versions_pad_seconds_and_preserve_microseconds() {
+        for (input, version, milliseconds) in [
+            (
+                "2026-10-07T10:15:00Z",
+                "2026-10-07T10:15:00.000000Z",
+                "2026-10-07T10:15:00.000Z",
+            ),
+            (
+                "2026-10-07T10:15:00.123Z",
+                "2026-10-07T10:15:00.123000Z",
+                "2026-10-07T10:15:00.123Z",
+            ),
+            (
+                "2026-10-07T10:15:00.123456Z",
+                "2026-10-07T10:15:00.123456Z",
+                "2026-10-07T10:15:00.123Z",
+            ),
+        ] {
+            let stamp = Timestamp::from_jiff(input.parse().unwrap());
+            assert_eq!(row_version(stamp), version);
+            assert_eq!(time(stamp), milliseconds);
+        }
+    }
 
     #[test]
     fn a_mention_wrapper_becomes_a_span_with_its_own_close() {

@@ -85,7 +85,7 @@ fn directory_row(record: &DirectoryRecord) -> api::AgentDirectoryRow {
         status_note: record.status_note.clone(),
         suspended: record.suspended,
         created_at: dto::time(record.created_at),
-        updated_at: dto::time(record.updated_at),
+        updated_at: dto::row_version(record.updated_at),
         status_changed_at: record.status_changed_at.map(dto::time),
         last_seen_at: record.last_seen_at.map(dto::time),
     }
@@ -102,7 +102,7 @@ fn agent_row(agent: &Agent) -> api::AgentDirectoryRow {
         status_note: agent.status_note.clone(),
         suspended: agent.suspended_at.is_some(),
         created_at: dto::time(agent.created_at),
-        updated_at: dto::time(agent.updated_at),
+        updated_at: dto::row_version(agent.updated_at),
         status_changed_at: agent.status_changed_at.map(dto::time),
         last_seen_at: agent.last_seen_at.map(dto::time),
     }
@@ -352,7 +352,7 @@ impl<'a> ApprovalCards<'a> {
             status: wire(approval.effective_status(now))?,
             expires_at: dto::time(approval.expires_at),
             created_at: dto::time(approval.created_at),
-            updated_at: dto::time(
+            updated_at: dto::row_version(
                 if approval.status == "pending" && approval.expires_at <= now {
                     approval.updated_at.max(approval.expires_at)
                 } else {
