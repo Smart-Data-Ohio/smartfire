@@ -1,4 +1,11 @@
-/** Work records use server revisions; local history covers only untimestamped fields. */
+/**
+ * Work tracking in the store (S4). A thread's work facts live on the thread itself
+ * (`state.threads[id].work`, kept by `thread.updated`); this slice holds each open pane's
+ * `WorkDetail`, the facts that detail was loaded with, the writes in flight and their overlays,
+ * and the work list per filter. List membership reloads when shown again; loaded rows follow
+ * live work facts. Server revisions order the thread fields, while local observations order
+ * untimestamped tracking absence, owner eligibility and links.
+ */
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { WorkDetail } from "../gen/WorkDetail.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
@@ -14,10 +21,13 @@ import { landsOver, mergeRevision } from "./revision.ts";
 import type { State } from "./state.ts";
 import { loadThreadDetail, upsertThread } from "./threads.ts";
 
+/** One filter's work list. */
 export interface WorkListState {
   readonly status: LoadStatus;
+  /** Most recently updated first, as the server sent them. */
   readonly rows: readonly WorkListRow[];
   readonly error: string | null;
+  /** Bumped by every load; older replies still merge records but cannot replace this list. */
   readonly generation: number;
 }
 
@@ -30,15 +40,20 @@ interface WorkOverlay {
 interface WorkFields {
   readonly tracking: number;
   readonly ownerActive: number;
+  readonly links: number;
 }
 
 export interface WorkSlice {
+  /** By thread id: the open pane's work section; absent while untracked or not loaded. */
   readonly details: Readonly<Record<number, WorkDetail>>;
+  /** By thread id: the facts the held detail goes with (`null`: loaded untracked). */
   readonly heldFacts: Readonly<Record<number, WorkFacts | null>>;
+  /** By thread id: work writes on their way (no refetch while any is). */
   readonly writes: Readonly<Record<number, number>>;
   readonly lists: Readonly<Partial<Record<WorkFilter, WorkListState>>>;
+  /** Each pending write keeps its base revision, displayed copy and latest confirmed fields. */
   readonly overlays: Readonly<Record<number, WorkOverlay>>;
-  /** Neither null tracking nor owner eligibility carries a server timestamp. */
+  /** Neither null tracking, owner eligibility nor links carries a server timestamp. */
   readonly fields: Readonly<Record<number, WorkFields>>;
 }
 
@@ -54,7 +69,7 @@ export const emptyWork: WorkSlice = {
   fields: {},
 };
 
-const emptyFields: WorkFields = { tracking: 0, ownerActive: 0 };
+const emptyFields: WorkFields = { tracking: 0, ownerActive: 0, links: 0 };
 
 export function captureWorkRead(state: State): WorkRead {
   return state.work.fields;
@@ -73,7 +88,11 @@ function withoutOverlay(state: State, threadId: number): State {
 function showFacts(
   state: State,
   thread: Thread,
-  observations: { readonly absence?: boolean; readonly eligibility?: boolean } = {},
+  observations: {
+    readonly absence?: boolean;
+    readonly eligibility?: boolean;
+    readonly links?: boolean;
+  } = {},
 ): State {
   const before = state.threads[thread.id]?.work ?? null;
   const fields = state.work.fields[thread.id] ?? emptyFields;
@@ -115,6 +134,12 @@ function showFacts(
               before?.owner?.id !== thread.work?.owner?.id ||
               before?.ownerActive !== thread.work?.ownerActive,
           ),
+        links:
+          fields.links +
+          Number(
+            observations.links === true ||
+              !sameLinks(before?.links ?? [], thread.work?.links ?? []),
+          ),
       },
     },
   });
@@ -152,9 +177,11 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
   const captured = read?.[id] ?? emptyFields;
   const trackingCurrent = read === undefined || captured.tracking === fields.tracking;
   const eligibilityCurrent = read === undefined || captured.ownerActive === fields.ownerActive;
+  const linksCurrent = read === undefined || captured.links === fields.links;
 
   let confirmed = stored ?? null;
   let observedEligibility = false;
+  let observedLinks = false;
 
   if (incoming === null) {
     if (event || (trackingCurrent && overlay === undefined)) {
@@ -162,6 +189,13 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
     }
   } else if (stored != null || trackingCurrent) {
     confirmed = mergeRevision(stored, incoming);
+
+    // Link rows can change without advancing the thread's work revision.
+    observedLinks = linksCurrent;
+
+    const links = linksCurrent ? incoming.links : (stored?.links ?? confirmed.links);
+
+    confirmed = confirmed.links === links ? confirmed : { ...confirmed, links };
 
     // Membership/grants may change eligibility without republishing the work revision.
     if (confirmed.owner?.id === incoming.owner?.id) {
@@ -189,6 +223,7 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
     pending,
     confirmed,
     observedEligibility,
+    observedLinks,
     observedAbsence: incoming === null && !pending && (event || trackingCurrent),
   };
 }
@@ -219,6 +254,7 @@ export function receiveWorkThread(
     {
       absence: result.observedAbsence,
       eligibility: result.observedEligibility,
+      links: result.observedLinks,
     },
   );
 }
@@ -231,6 +267,7 @@ export function loadWorkThreadDetail(state: State, detail: ThreadDetail, read?: 
   return mergeWorkDetail(loadThreadDetail(next, { ...detail, thread }), detail);
 }
 
+/** The filters, in the work page's tab order. */
 export const WORK_FILTERS: readonly WorkFilter[] = ["open", "done", "all", "agents", "boards"];
 
 export const emptyWorkList: WorkListState = {
@@ -240,6 +277,7 @@ export const emptyWorkList: WorkListState = {
   generation: 0,
 };
 
+/** One filter's list, or an empty one never loaded. */
 export function workListOf(state: State, filter: WorkFilter): WorkListState {
   return state.work.lists[filter] ?? emptyWorkList;
 }
@@ -258,6 +296,18 @@ function sameLink(a: WorkLink, b: WorkLink): boolean {
   );
 }
 
+function sameLinks(a: readonly WorkLink[], b: readonly WorkLink[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((link, index) => {
+      const other = b[index];
+
+      return other !== undefined && sameLink(link, other);
+    })
+  );
+}
+
+/** Whether two copies have the same revision and displayed work facts, links included. */
 export function sameWorkFacts(a: WorkFacts | null, b: WorkFacts | null): boolean {
   if (a === null || b === null) {
     return a === b;
@@ -270,16 +320,14 @@ export function sameWorkFacts(a: WorkFacts | null, b: WorkFacts | null): boolean
     a.ownerActive === b.ownerActive &&
     a.runUrl === b.runUrl &&
     a.resultUpdatedAt === b.resultUpdatedAt &&
-    a.links.length === b.links.length &&
-    a.links.every((link, index) => {
-      const other = b.links[index];
-
-      return other !== undefined && sameLink(link, other);
-    })
+    sameLinks(a.links, b.links)
   );
 }
 
-/** A revision may announce detail fields that the event itself cannot supply. */
+/**
+ * Whether the pane's loaded work detail is behind the live facts. Writes and overlays defer
+ * refetching; owner eligibility and links do not change the result or history it holds.
+ */
 export function workDetailStale(state: State, threadId: number): boolean {
   const held = state.work.heldFacts[threadId];
   const live = state.threads[threadId]?.work;
@@ -290,7 +338,9 @@ export function workDetailStale(state: State, threadId: number): boolean {
     (state.work.writes[threadId] ?? 0) === 0 &&
     state.work.overlays[threadId] === undefined &&
     !sameWorkFacts(
-      held === null || live === null ? held : { ...held, ownerActive: live.ownerActive },
+      held === null || live === null
+        ? held
+        : { ...held, ownerActive: live.ownerActive, links: live.links },
       live,
     )
   );
@@ -347,11 +397,12 @@ function mergeWorkDetail(state: State, detail: ThreadDetail): State {
   });
 }
 
-/** Direct detail callers use the same revision rule as the pane mutation. */
+/** A `ThreadDetail` landed: merge its work section by the same rule as the pane mutation. */
 export function landWorkDetail(state: State, detail: ThreadDetail): State {
   return loadWorkThreadDetail(state, detail);
 }
 
+/** A work write started (`+1`) or settled (`-1`). */
 export function countWorkWrite(state: State, threadId: number, delta: 1 | -1): State {
   const count = Math.max(0, (state.work.writes[threadId] ?? 0) + delta);
   const { [threadId]: _count, ...others } = state.work.writes;
@@ -359,6 +410,10 @@ export function countWorkWrite(state: State, threadId: number, delta: 1 | -1): S
   return withWork(state, { writes: count === 0 ? others : { ...others, [threadId]: count } });
 }
 
+/**
+ * The facts a status change shows at once: a new status (tracking starts unassigned, with no
+ * links), or `null` to stop tracking. A new local record starts below any confirmed revision.
+ */
 export function optimisticFacts(
   current: WorkFacts | null,
   status: WorkStatus | null,
@@ -380,6 +435,7 @@ export function optimisticFacts(
     : { ...current, status };
 }
 
+/** Show a write's optimistic facts while preserving the confirmed base for merge and rollback. */
 export function putWorkFacts(state: State, threadId: number, facts: WorkFacts | null): State {
   const thread = state.threads[threadId];
 
@@ -428,7 +484,18 @@ export function landWorkReply(
     if (thread !== undefined) {
       state = showFacts(withoutOverlay(state, id), { ...thread, work: overlay.confirmed });
 
-      return loadWorkThreadDetail(state, detail);
+      // The reply settles its own tracking/assignment; links may have changed independently.
+      const fields = state.work.fields[id] ?? emptyFields;
+
+      const replyRead =
+        read === undefined
+          ? undefined
+          : {
+              ...read,
+              [id]: { ...fields, links: (read[id] ?? emptyFields).links },
+            };
+
+      return loadWorkThreadDetail(state, detail, replyRead);
     }
   }
 
@@ -445,6 +512,7 @@ function updateList(
   });
 }
 
+/** A load started: a list never shown says loading; a shown one keeps its rows. */
 export function setWorkListLoading(state: State, filter: WorkFilter): State {
   return updateList(state, filter, (list) => ({
     ...list,
@@ -454,6 +522,7 @@ export function setWorkListLoading(state: State, filter: WorkFilter): State {
   }));
 }
 
+/** A load failed: a list never shown says so; a shown one keeps its rows and the message. */
 export function setWorkListFailed(
   state: State,
   filter: WorkFilter,
@@ -467,6 +536,7 @@ export function setWorkListFailed(
   );
 }
 
+/** Merge each row's facts and users; only the current load replaces the list's rows. */
 export function landWorkList(
   state: State,
   filter: WorkFilter,
