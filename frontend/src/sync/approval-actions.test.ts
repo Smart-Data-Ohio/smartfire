@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Exit, Fiber } from "effect";
-import { Forbidden, NotFound, Validation } from "../api/errors.ts";
+import { Conflict, Forbidden, NotFound, Validation } from "../api/errors.ts";
 import { FakeApi, meFixture } from "../api/testing.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import { approvalListKey, approvalListOf } from "../store/approvals.ts";
@@ -51,6 +51,48 @@ function pendingIds(): readonly number[] {
 
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
+
+  for (const refusal of [
+    new Validation({ message: "This request was already decided", fields: {} }),
+    new Validation({ message: "This request has expired", fields: {} }),
+    new Validation({
+      message: "Validation failed",
+      fields: { base: ["This request was already decided"] },
+    }),
+    new Conflict({ message: "This request changed" }),
+    new NotFound({ message: "Approval not found" }),
+  ]) {
+    it.effect(`refetch the decided copy after ${refusal._tag}: ${refusal.message}`, () =>
+      Effect.gen(function* () {
+        const fake = yield* withPending;
+
+        const decided: AgentApproval = {
+          ...pending,
+          status: refusal.message.includes("expired") ? "expired" : "denied",
+          decidedById: refusal.message.includes("expired") ? null : 4,
+          decidedAt: refusal.message.includes("expired") ? null : "2026-10-06T16:31:00.000Z",
+        };
+
+        yield* fake.route("PATCH /agent_approvals/100", () => Effect.fail(refusal));
+        yield* fake.route(`GET /agents/${AGENT}/approvals`, (request) =>
+          Effect.succeed({
+            approvals: request.query?.status === "pending" ? [] : [decided],
+            users: [],
+            nextCursor: null,
+          }),
+        );
+
+        const error = yield* Effect.flip(approvals.decide(100, "approved", null));
+
+        expect(error).toBe(refusal);
+        expect(store.getState().approvals.items[100]).toEqual(decided);
+        expect(pendingIds()).toEqual([]);
+        expect(
+          (yield* fake.requests).filter((request) => request.method === "GET").length,
+        ).toBeGreaterThan(1);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
 
   it.effect("show a decision at once, then land the server's copy", () =>
     Effect.gen(function* () {
@@ -105,11 +147,14 @@ describe("approval actions", () => {
       expect(pendingIds()).toEqual([100]);
 
       yield* fake.route("PATCH /agent_approvals/100", () =>
-        Effect.fail(new Validation({ message: "This request was already decided", fields: {} })),
+        Effect.fail(
+          new Validation({ message: "Note is too long", fields: { note: ["Too long"] } }),
+        ),
       );
       yield* Effect.exit(approvals.decide(100, "denied", null));
 
       expect(store.getState().approvals.items[100]).toEqual(pending);
+      expect((yield* fake.requests).filter((request) => request.method === "GET").length).toBe(1);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -135,7 +180,8 @@ describe("approval actions", () => {
       yield* Fiber.join(deciding);
 
       expect(store.getState().approvals.items[100]).toEqual(elsewhere);
-      expect(approvalListOf(store.getState(), approvalListKey(AGENT, "pending")).stale).toBe(true);
+      expect(approvalListOf(store.getState(), approvalListKey(AGENT, "pending")).stale).toBe(false);
+      expect(pendingIds()).toEqual([]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });
