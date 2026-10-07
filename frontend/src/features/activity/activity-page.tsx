@@ -5,6 +5,7 @@ import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
 import { useActivityList, useActivityUnread } from "../../store/inbox-hooks.ts";
+import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
@@ -132,7 +133,12 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   const follow = useFollowTarget();
   const { announce, region } = useAnnouncer();
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
-  const [menu, setMenu] = useState<{ request: PointMenuRequest; item: ActivityItem } | null>(null);
+  const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
+
+  // The context menu reads the item live, so its labels follow a change made while it's open.
+  const menuItem = useStore((state) =>
+    menu === null ? undefined : state.activity.items[menu.itemId],
+  );
 
   const rows = useListMotion(
     view.status === "ready" ? view.items : null,
@@ -176,7 +182,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   ) => {
     const id = (menu?.request.id ?? 0) + 1;
 
-    requestMenu(id, event, (request) => setMenu({ request, item }));
+    requestMenu(id, event, (request) => setMenu({ request, itemId: item.id }));
   };
 
   const copy = emptyCopy(tab, status);
@@ -242,14 +248,14 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
           />
         ))}
       </PagedList>
-      {menu === null ? null : (
+      {menu === null || menuItem === undefined ? null : (
         <PointMenu
           key={menu.request.id}
           request={menu.request}
           label="Activity actions"
           onClosed={(id) => setMenu((current) => (current?.request.id === id ? null : current))}
         >
-          <ActivityMenuItems item={menu.item} onOpen={open} onAction={change} />
+          <ActivityMenuItems item={menuItem} onOpen={open} onAction={change} />
         </PointMenu>
       )}
       {region}

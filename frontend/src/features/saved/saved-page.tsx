@@ -3,6 +3,7 @@ import { type KeyboardEvent, type MouseEvent, useState } from "react";
 import type { SavedFilter } from "../../gen/SavedFilter.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
 import { type SavedRow as SavedEntry, useSavedList } from "../../store/inbox-hooks.ts";
+import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Tabs } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -70,7 +71,12 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
   const { announce, region } = useAnnouncer();
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
   const [custom, setCustom] = useState<SavedItem | null>(null);
-  const [menu, setMenu] = useState<{ request: PointMenuRequest; item: SavedItem } | null>(null);
+  const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
+
+  // The context menu reads the item live, so its labels follow a change made while it's open.
+  const menuItem = useStore((state) =>
+    menu === null ? undefined : state.savedList.items[menu.itemId],
+  );
 
   const rows = useListMotion(
     view.status === "ready" ? view.rows : null,
@@ -142,7 +148,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
     onMenu: (item, event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => {
       const id = (menu?.request.id ?? 0) + 1;
 
-      requestMenu(id, event, (request) => setMenu({ request, item }));
+      requestMenu(id, event, (request) => setMenu({ request, itemId: item.id }));
     },
   };
 
@@ -186,14 +192,14 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
           />
         ))}
       </PagedList>
-      {menu === null ? null : (
+      {menu === null || menuItem === undefined ? null : (
         <PointMenu
           key={menu.request.id}
           request={menu.request}
           label="Saved message actions"
           onClosed={(id) => setMenu((current) => (current?.request.id === id ? null : current))}
         >
-          <SavedMenuItems item={menu.item} handlers={handlers} />
+          <SavedMenuItems item={menuItem} handlers={handlers} />
         </PointMenu>
       )}
       <LazyCustomTimeDialog
