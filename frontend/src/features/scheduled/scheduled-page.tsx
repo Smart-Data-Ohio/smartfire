@@ -164,9 +164,11 @@ export function ScheduledPage() {
   const conversationOf = (item: ScheduledMessage | null) =>
     item === null ? null : (byId.get(item.id)?.conversation ?? null);
 
-  const rowOf = (row: MotionRow<ScheduledEntry>) => (
+  // A message that just went out is briefly in both lists (leaving Upcoming, arriving in Past), so
+  // each list keys its rows apart.
+  const rowOf = (list: "pending" | "past") => (row: MotionRow<ScheduledEntry>) => (
     <ScheduledRow
-      key={row.key}
+      key={`${list}-${row.key}`}
       item={row.value.message}
       conversation={row.value.conversation}
       now={now}
@@ -185,7 +187,7 @@ export function ScheduledPage() {
     children.push(
       <Section key="upcoming" id="upcoming" title="Upcoming" count={upcoming.length} />,
     );
-    children.push(...upcoming.map(rowOf));
+    children.push(...upcoming.map(rowOf("pending")));
   }
 
   if (stranded.length > 0) {
@@ -198,12 +200,12 @@ export function ScheduledPage() {
         hint="You left these conversations, or they were deleted. Each one is dropped when it's due unless you get access back."
       />,
     );
-    children.push(...stranded.map(rowOf));
+    children.push(...stranded.map(rowOf("pending")));
   }
 
   if (shownPast.length > 0) {
     children.push(<Section key="past" id="past" title="Past" count={shownPast.length} />);
-    children.push(...shownPast.map(rowOf));
+    children.push(...shownPast.map(rowOf("past")));
   }
 
   const cancelConversation = conversationOf(cancelling);
