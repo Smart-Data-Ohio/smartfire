@@ -1,4 +1,4 @@
-import { Outlet, useMatches, useParams } from "@tanstack/react-router";
+import { Outlet, useMatches, useMatchRoute, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -38,8 +38,26 @@ function useDocumentTitle(roomId: number | null, page: Page): void {
 }
 
 /**
+ * Which column a phone shows: the conversation list, a tab's page beside the tab bar (the
+ * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled).
+ */
+function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
+  const matchRoute = useMatchRoute();
+
+  const pushed =
+    matchRoute({ to: "/saved" }) !== false || matchRoute({ to: "/scheduled" }) !== false;
+
+  if (roomId !== null || pushed) {
+    return "room";
+  }
+
+  return matchRoute({ to: "/activity" }) === false ? "list" : "tab";
+}
+
+/**
  * The signed-in app: rail, sidebar and the routed pane. Starts the sync engine once. On phones
- * only one column shows: the conversation list, or the open conversation or settings (`data-view`).
+ * only one column shows (`data-view`): the conversation list, a tab page, or a full screen
+ * (settings and the workspace pages are full screens too).
  */
 export function AppShell() {
   const params = useParams({ strict: false });
@@ -63,10 +81,12 @@ export function AppShell() {
   useDocumentTitle(roomId, page);
   useClassicLinks();
 
+  const view = usePhoneView(roomId);
+
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
 
   return (
-    <div className="app-shell" data-view={roomId === null && page === null ? "list" : "room"}>
+    <div className="app-shell" data-view={page === null ? view : "room"}>
       <Rail />
       <Sidebar />
       {viewerId === null ? null : (

@@ -9,6 +9,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
@@ -314,6 +315,7 @@ export function Sidebar() {
       />
       <JumpButton />
       <div className="sidebar-scroll">
+        <SidebarDestinations />
         {sidebar.status === "error" ? (
           <p className="sidebar-error text-meta">Couldn't load your conversations.</p>
         ) : (

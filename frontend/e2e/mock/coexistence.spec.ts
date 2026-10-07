@@ -41,14 +41,14 @@ test("Switch to classic posts the choice and where the person is", async ({ page
 });
 
 test("a destination the SPA hasn't ported opens on its classic page", async ({ page }) => {
-  await page.route("**/activity?classic=1", (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic activity</p>" }),
+  await page.route("**/searches?classic=1", (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic search</p>" }),
   );
 
-  await page.goto("/app/activity");
+  await page.goto("/app/search");
 
-  await expect(page.getByText("classic activity")).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe("/activity");
+  await expect(page.getByText("classic search")).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/searches");
 });
 
 test("a link to a ported classic page opens in place", async ({ page }) => {

@@ -135,6 +135,7 @@ describe("groupShortcuts", () => {
     expect(sections.map((section) => section.group)).toEqual([
       "Navigation",
       "Messages",
+      "Lists",
       "Composer",
       "Formatting",
     ]);

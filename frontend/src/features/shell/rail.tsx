@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { useActivityUnread } from "../../store/inbox-hooks.ts";
 import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -77,8 +78,19 @@ export function Rail() {
   const unreadRooms = useStore((state) => sidebarTotals(state.sidebar).unreadRooms);
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const directUnread = useDirectUnread();
+  const activityUnread = useActivityUnread() ?? 0;
+  const navigate = useNavigate();
+  const matchRoute = useMatchRoute();
+  const onActivity = matchRoute({ to: "/activity" }) !== false;
 
-  const select = (next: Destination) => () => setDestination(next);
+  // From the inbox, Home and DMs lead back to the conversations.
+  const select = (next: Destination) => () => {
+    setDestination(next);
+
+    if (onActivity) {
+      void navigate({ to: "/" });
+    }
+  };
 
   return (
     <nav className="rail" aria-label="Destinations">
@@ -90,7 +102,7 @@ export function Rail() {
       <span className="rail-divider" aria-hidden="true" />
       <RailItem
         label="Home"
-        active={destination === "home"}
+        active={!onActivity && destination === "home"}
         unread={unreadRooms > 0}
         count={mentions - directUnread}
         onSelect={select("home")}
@@ -99,12 +111,21 @@ export function Rail() {
       </RailItem>
       <RailItem
         label="DMs"
-        active={destination === "dms"}
+        active={!onActivity && destination === "dms"}
         unread={directUnread > 0}
         count={directUnread}
         onSelect={select("dms")}
       >
         <Icon name="dms" size={20} />
+      </RailItem>
+      <RailItem
+        label="Activity"
+        active={onActivity}
+        unread={activityUnread > 0}
+        count={activityUnread}
+        onSelect={() => void navigate({ to: "/activity" })}
+      >
+        <Icon name="inbox" size={20} />
       </RailItem>
     </nav>
   );

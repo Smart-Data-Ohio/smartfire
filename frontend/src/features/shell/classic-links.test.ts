@@ -22,11 +22,12 @@ describe("links to classic pages", () => {
       "/app/r/12/t/5?m=8#x",
     );
     expect(inPlaceTarget(link("/users/me/profile"), origin)).toBe("/app/settings");
+    expect(inPlaceTarget(link("/activity"), origin)).toBe("/app/activity");
   });
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/activity"),
+      link("/searches"),
       link("/users/7/profile"),
       link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),

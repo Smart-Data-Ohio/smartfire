@@ -18,6 +18,14 @@
 //!
 //! Rooms within a category (and within Channels, Voice and Direct messages) stay in name order:
 //! there's no per-room position.
+//!
+//! A hidden room (involvement `invisible`) has no sidebar row, but it's still the viewer's room:
+//! as in the classic controllers, the category and favourite calls accept it and it stays
+//! hidden. They answer as usual but publish no `sidebar.row.upserted` for it, since the sidebar
+//! has no row to update.
+//!
+//! Two tabs changing the same thing at once: the last write wins, and the events that follow
+//! bring every tab to the server's state.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -61,8 +69,10 @@ pub struct UpdateRoomCategory {
 
 /// `PUT /api/v1/room_categories/order`: the viewer's categories in their new order, every one of
 /// them exactly once. A list that doesn't match the viewer's current categories (one added or
-/// removed in another tab, or a repeat) is a 409 Conflict and changes nothing: refetch and retry. Sets `position` to 1, 2, … in this order and answers
-/// [`RoomCategoryList`], publishing `sidebar.category.upserted` for each one that moved.
+/// removed in another tab, or a repeat) is a 409 (`ApiError::Conflict`, no other body) and
+/// changes nothing: the client refetches the sidebar and lets the person try again. Sets
+/// `position` to 1, 2, … in this order and answers [`RoomCategoryList`], publishing
+/// `sidebar.category.upserted` for each one that moved.
 ///
 /// New: the classic app keeps creation order (`position` is set once and isn't a permitted
 /// parameter), though it already sorts by `(position, id)`.
@@ -105,9 +115,12 @@ pub struct AssignRoomCategory {
 }
 
 /// `PATCH /api/v1/rooms/:id/favorite`: move a favourite to `position`, 0-based among the
-/// viewer's favourites (`rooms/favorites#update`, `Membership#move_favorite_to`). The position
-/// is clamped to the list, and every favourite is renumbered 0, 1, … Answers
-/// [`FavoriteList`] and publishes `sidebar.row.upserted` for each favourite whose position
+/// favourites the viewer's sidebar shows (`rooms/favorites#update`,
+/// `Membership#move_favorite_to`). Hidden favourites aren't counted: the room lands just before
+/// the shown favourite now at `position` (after every favourite when `position` is past the
+/// end), and hidden ones keep their places. The position is clamped, never rejected, and every
+/// favourite, hidden ones included, is renumbered 0, 1, … Answers [`FavoriteList`] (the shown
+/// favourites) and publishes `sidebar.row.upserted` for each shown favourite whose position
 /// changed. A room that isn't a favourite is left alone (200 with the list unchanged).
 ///
 /// `POST /api/v1/rooms/:id/favorite` adds a room of any kind to the end of the favourites

@@ -65,13 +65,13 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // S3: workspace destinations (plan §4.7).
-    screen("activity_items#index", "/activity", "/app/activity", false),
-    screen("saved_items#index", "/saved", "/app/saved", false),
+    screen("activity_items#index", "/activity", "/app/activity", true),
+    screen("saved_items#index", "/saved", "/app/saved", true),
     screen(
         "scheduled_messages#index",
         "/scheduled_messages",
         "/app/scheduled",
-        false,
+        true,
     ),
     screen("searches#index", "/searches", "/app/search", false),
     screen("work_threads#index", "/work", "/app/work", false),

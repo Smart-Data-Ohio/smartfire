@@ -1,3 +1,5 @@
+import type { ConversationName } from "../gen/ConversationName.ts";
+import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -16,6 +18,8 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
+import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
 
 /**
  * The whole live store. Normalized: every entity lives once, by id; views hold ids. The sync
@@ -51,6 +55,14 @@ export interface State {
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
+  /** The activity inbox: items, per-tab-and-state lists, the unread badge (S3). */
+  readonly activity: ActivitySlice;
+  /** The Saved page: saved items and per-filter lists (S3). */
+  readonly savedList: SavedListSlice;
+  /** Scheduled messages and their lists: pending, past, per room (S3). */
+  readonly scheduled: ScheduledSlice;
+  /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
+  readonly conversationNames: Readonly<Record<string, ConversationName>>;
 }
 
 export interface SidebarState {
@@ -91,6 +103,10 @@ export const initialState: State = {
   roomThreads: {},
   typing: {},
   tombstones: {},
+  activity: emptyActivity,
+  savedList: emptySavedList,
+  scheduled: emptyScheduled,
+  conversationNames: {},
 };
 
 export const emptyTimeline: Timeline = {

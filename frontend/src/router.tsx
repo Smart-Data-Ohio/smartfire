@@ -6,6 +6,7 @@ import {
   notFound,
   Outlet,
 } from "@tanstack/react-router";
+import { parseActivitySearch } from "./features/activity/activity-search.ts";
 import { AdminView } from "./features/admin/admin-view.tsx";
 import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
 import { BotCredentialsSection } from "./features/admin/bot-credentials-section.tsx";
@@ -19,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { RoomRoute } from "./features/room/room-route.tsx";
+import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
 import { DevicesSection } from "./features/settings/devices-section.tsx";
@@ -206,10 +208,42 @@ const adminSections = [
   }),
 ] as const;
 
+/** `/app/activity?tab=&status=`: the activity inbox (its own chunk). */
+const activityRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "activity",
+  validateSearch: parseActivitySearch,
+  component: lazyRouteComponent(
+    () => import("./features/activity/activity-route.tsx"),
+    "ActivityRoute",
+  ),
+});
+
+/** `/app/saved?status=`: saved messages (Slack's "Later"). */
+const savedRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "saved",
+  validateSearch: parseSavedSearch,
+  component: lazyRouteComponent(() => import("./features/saved/saved-route.tsx"), "SavedRoute"),
+});
+
+/** `/app/scheduled`: every scheduled message, upcoming, stranded and past. */
+const scheduledRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "scheduled",
+  component: lazyRouteComponent(
+    () => import("./features/scheduled/scheduled-page.tsx"),
+    "ScheduledPage",
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
     homeRoute,
+    activityRoute,
+    savedRoute,
+    scheduledRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
