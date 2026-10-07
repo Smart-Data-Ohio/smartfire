@@ -189,3 +189,113 @@ describe("module-load update recovery", () => {
     expect(update.appUpdateRequired()).toBe(false);
   });
 });
+
+function pageWithEntry(src: string | null): Document {
+  const doc = document.implementation.createHTMLDocument("Smartfire");
+  const base = doc.createElement("base");
+
+  base.href = "https://smartfire.test/app/r/1";
+  doc.head.append(base);
+
+  if (src !== null) {
+    const script = doc.createElement("script");
+
+    script.type = "module";
+    script.setAttribute("src", src);
+    doc.head.append(script);
+  }
+
+  return doc;
+}
+
+const servedPage = (src: string) =>
+  `<!doctype html><html><head><script type="module" crossorigin src="${src}"></script></head><body></body></html>`;
+
+describe("telling a deploy apart from a failed load", () => {
+  it("confirms a newer build only when the server's page names a different entry", async () => {
+    const { newerBuildAvailable } = await import("./update-required.ts");
+    const current = pageWithEntry("/app/assets/index-AAAA1111.js");
+    const requests: Array<[string, RequestInit | undefined]> = [];
+
+    const serve = (src: string) => (url: RequestInfo | URL, init?: RequestInit) => {
+      requests.push([String(url), init]);
+
+      return Promise.resolve(new Response(servedPage(src), { status: 200 }));
+    };
+
+    await expect(
+      newerBuildAvailable(serve("/app/assets/index-BBBB2222.js"), current),
+    ).resolves.toBe(true);
+    await expect(
+      newerBuildAvailable(serve("/app/assets/index-AAAA1111.js"), current),
+    ).resolves.toBe(false);
+    expect(requests[0]?.[0]).toBe("https://smartfire.test/app/");
+    expect(requests[0]?.[1]?.cache).toBe("no-store");
+  });
+
+  it("counts offline, error responses and pages without an entry as no newer build", async () => {
+    const { newerBuildAvailable } = await import("./update-required.ts");
+    const current = pageWithEntry("/app/assets/index-AAAA1111.js");
+
+    await expect(
+      newerBuildAvailable(() => Promise.reject(new TypeError("Failed to fetch")), current),
+    ).resolves.toBe(false);
+    await expect(
+      newerBuildAvailable(
+        () =>
+          Promise.resolve(
+            new Response(servedPage("/app/assets/index-BBBB2222.js"), { status: 503 }),
+          ),
+        current,
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      newerBuildAvailable(
+        () => Promise.resolve(new Response("<!doctype html><p>Sign in</p>", { status: 200 })),
+        current,
+      ),
+    ).resolves.toBe(false);
+
+    const network = vi.fn<typeof fetch>();
+
+    await expect(newerBuildAvailable(network, pageWithEntry(null))).resolves.toBe(false);
+    expect(network).not.toHaveBeenCalled();
+  });
+
+  it("says Smartfire was updated only after the check confirms it, and re-checks after a failure", async () => {
+    const update = await import("./update-required.ts");
+    const { UpdateBanner } = await import("../features/shell/update-banner.tsx");
+    let answer!: (newer: boolean) => void;
+
+    const pending = () =>
+      new Promise<boolean>((resolve) => {
+        answer = resolve;
+      });
+
+    render(<UpdateBanner />);
+    const banner = screen.getByRole("status", { hidden: true });
+
+    expect(banner.dataset.open).toBe("false");
+
+    act(() => update.requireAppUpdate(pending));
+    expect(update.appUpdateRequired()).toBe(true);
+    expect(banner.dataset.open).toBe("false");
+
+    await act(async () => answer(false));
+    expect(banner.dataset.open).toBe("true");
+    expect(banner.textContent).toContain("Couldn't load part of Smartfire. Reload to try again.");
+
+    act(() => update.requireAppUpdate(pending));
+    await act(async () => answer(true));
+    expect(update.appUpdateKind()).toBe("updated");
+    expect(banner.textContent).toContain(
+      "Smartfire has been updated. Reload to get the latest version.",
+    );
+
+    const check = vi.fn(() => Promise.resolve(false));
+
+    act(() => update.requireAppUpdate(check));
+    expect(check).not.toHaveBeenCalled();
+    expect(update.appUpdateKind()).toBe("updated");
+  });
+});

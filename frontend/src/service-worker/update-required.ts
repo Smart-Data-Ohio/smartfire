@@ -1,6 +1,16 @@
 import { useSyncExternalStore } from "react";
 
+/**
+ * Why a part of the app couldn't load: a deploy replaced this tab's build ("updated"), or the
+ * load failed for some other reason, such as being offline ("failed").
+ */
+export type AppUpdateKind = "updated" | "failed";
+
 let required = false;
+
+let kind: AppUpdateKind | null = null;
+
+let checking: Promise<void> | null = null;
 
 const listeners = new Set<() => void>();
 
@@ -10,23 +20,97 @@ function subscribe(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-export const appUpdateRequired = () => required;
-
-/** A failed module load leaves the current page intact until its person chooses to reload. */
-export function requireAppUpdate(): void {
-  if (required) {
-    return;
-  }
-
-  required = true;
-
+function notify(): void {
   for (const listener of listeners) {
     listener();
   }
 }
 
+export const appUpdateRequired = () => required;
+
+export const appUpdateKind = () => kind;
+
+/** The entry module a page names, resolved against that page's address. */
+function entryScript(doc: Document, base: string): string | null {
+  const src = doc
+    .querySelector<HTMLScriptElement>('script[type="module"][src]')
+    ?.getAttribute("src");
+
+  return src ? new URL(src, base).href : null;
+}
+
+/**
+ * Whether the server now hands out a different build than this tab runs. Being offline, a
+ * failed request, or a page without an entry module all count as no newer build.
+ */
+export async function newerBuildAvailable(
+  network: typeof fetch = (...args) => fetch(...args),
+  doc: Document = document,
+): Promise<boolean> {
+  const current = entryScript(doc, doc.baseURI);
+
+  if (current === null) {
+    return false;
+  }
+
+  try {
+    const page = new URL("/app/", doc.baseURI).href;
+
+    const response = await network(page, {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "text/html" },
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const served = entryScript(
+      new DOMParser().parseFromString(await response.text(), "text/html"),
+      response.url || page,
+    );
+
+    return served !== null && served !== current;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A failed module load leaves the current page intact until its person chooses to reload. The
+ * strip only says Smartfire was updated once the server confirms a different build; a later
+ * failure re-checks, since a deploy can land after an offline blip.
+ */
+export function requireAppUpdate(check: () => Promise<boolean> = newerBuildAvailable): void {
+  if (!required) {
+    required = true;
+    notify();
+  }
+
+  if (kind === "updated" || checking !== null) {
+    return;
+  }
+
+  checking = check()
+    .catch(() => false)
+    .then((newer) => {
+      checking = null;
+      const next: AppUpdateKind = newer ? "updated" : "failed";
+
+      if (next !== kind) {
+        kind = next;
+        notify();
+      }
+    });
+}
+
 export function useAppUpdateRequired(): boolean {
   return useSyncExternalStore(subscribe, appUpdateRequired, appUpdateRequired);
+}
+
+export function useAppUpdateKind(): AppUpdateKind | null {
+  return useSyncExternalStore(subscribe, appUpdateKind, appUpdateKind);
 }
 
 export function reloadForUpdate(): void {

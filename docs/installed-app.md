@@ -8,7 +8,8 @@ stored preference wins over `SPA_DEFAULT`. Signed-out requests use `SPA_DEFAULT`
 Classic pages register the selected URL from their layout, including pages that
 remain classic for a person using the SPA. SPA pages register only for the next UI.
 The classic selection lives in a provisional head meta element, which Turbo replaces
-on each visit. Registration reconciles on both `load` and `turbo:load`, so signing
+on each visit. With `SPA_ENABLED` off the layout omits it, so classic pages stay
+byte-identical to Rails, and the scripts register `/service-worker.js` as Rails does. Registration reconciles on both `load` and `turbo:load`, so signing
 in as someone with a different preference also replaces the selected script. It
 never unregisters the root registration.
 The boot JSON carries that URL, or null. Mock boot data leave it null, and
@@ -82,17 +83,30 @@ does not span network fetching. Failed installation pins stay retained. Browsers
 without Web Locks keep serving and installing but skip cache pruning.
 
 If a lazy module still fails to load, the SPA records that an update is required
-(`useAppUpdateRequired()`), and a strip slides open over the panes: "Smartfire has
-been updated. Reload to get the latest version." with a Reload button
-(`reloadForUpdate()`). The page never reloads by itself, so drafts and open panes
-survive until the person chooses. Module-import guards and `vite:preloadError`
+(`useAppUpdateRequired()`) and asks the server whether a newer build exists: it
+fetches `/app/` with `cache: "no-store"` and compares that page's entry module
+with the one this tab runs (`newerBuildAvailable()`). A strip then slides open over
+the panes with a Reload button (`reloadForUpdate()`). When the server names a
+different entry it says "Smartfire has been updated. Reload to get the latest
+version." Otherwise, including offline and failed checks, it says "Couldn't load
+part of Smartfire. Reload to try again." A later failure re-checks, so a deploy
+after an offline blip still gets the update wording. The page never reloads by
+itself, so drafts and open panes survive until the person chooses. Module-import guards and `vite:preloadError`
 detection keep a failed import from crashing the view. They do not catch unrelated
 component render errors or API failures.
 
 The SPA worker cleans only its own cache namespace. It leaves the classic
 `smartfire-static-v1` cache in place so classic assets remain available and
-switching workers does not discard the classic cache. The classic worker's
-existing activation cleanup is unchanged.
+switching workers does not discard the classic cache.
+
+The classic worker is the Rails worker byte for byte except for one exception,
+kept as a documented patch (`SERVICE_WORKER_SPA_PATCH` in `crates/views/src/pwa.rs`)
+that the parity tests apply to the Rails source before comparing. Its activation
+cleanup keeps `smartfire-spa-*` caches, and it answers `/app/assets/` requests from
+them (ignoring Vary, like the SPA worker) before falling back to the network. It
+never writes to those caches. An SPA tab still open on an older build can keep
+loading its unloaded chunks after another tab switches the origin to the classic
+worker.
 
 ## Notifications
 
@@ -108,12 +122,17 @@ UI. The click handler navigates and focuses an existing workspace window, or
 opens one when none exists.
 
 Settings → Push devices has a "This browser" row: notifications off (with an
-"Enable notifications" button), on, blocked by the browser, or unsupported. The
+"Enable notifications" button), on, blocked by the browser, or unsupported. "On"
+needs the browser's permission, a subscription and a saved device whose endpoint
+matches it. A browser that subscribed but whose save failed shows "Notifications
+aren't set up yet" with a "Finish setting up" button, which saves the existing
+subscription without prompting again. While the device list loads the row says it is
+checking. The
 button calls `enablePushNotifications()`, the only place that requests permission.
 It registers the selected script at root scope,
 subscribes with the same VAPID public key as the classic page, and saves through
 the classic subscription creation path. `usePushEnrollment()` exposes permission,
-subscription and busy state for that row. The flow refreshes the
+subscription, endpoint and busy state for that row. The flow refreshes the
 existing Devices list. Removing the last saved subscription with the current
 browser's endpoint also unsubscribes it locally; another saved key triple for
 that endpoint keeps the browser subscribed. No enrollment control is rendered yet.
