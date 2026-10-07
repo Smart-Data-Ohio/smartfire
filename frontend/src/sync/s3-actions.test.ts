@@ -395,6 +395,134 @@ describe("activity actions", () => {
       expect(store.getState().activity.unreadCount).toBe(12);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
+
+  it.effect("keep a cleared inbox at zero when the boot count arrives late", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* fake.route("GET /activity/unread_count", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.as({ unreadCount: 10 }),
+        ),
+      );
+
+      const boot = yield* Effect.forkChild(activity.loadUnreadCount());
+
+      yield* Deferred.await(started);
+      mutations.landActivityPage(
+        "all",
+        "unread",
+        { items: [item(2, 20)], users: [], unreadCount: 1, nextCursor: null },
+        "replace",
+      );
+      yield* fake.reply("PATCH /activity/2", { item: item(2, 30, "handled"), unreadCount: 0 });
+      yield* activity.setState(2, "handled");
+
+      expect(store.getState().activity.unreadCount).toBe(0);
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(boot);
+
+      expect(inboxIds("unread")).toEqual([]);
+      expect(store.getState().activity.unreadCount).toBe(0);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a newer count when an older state reply arrives after an event", () =>
+    Effect.gen(function* () {
+      seedInbox();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /activity/2", () => {
+        mutations.applyActivityItem(item(2, 50, "handled"), 0);
+
+        return Effect.succeed({ item: item(2, 40, "read"), unreadCount: 4 });
+      });
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 0 });
+      yield* activity.setState(2, "read");
+
+      expect(store.getState().activity.items[2]?.state).toBe("handled");
+      expect(store.getState().activity.unreadCount).toBe(0);
+      expect(store.getState().activity.pendingUnread).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("reconcile concurrent clears whose replies arrive in reverse order", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+      mutations.landActivityPage(
+        "all",
+        "unread",
+        { items: [item(3, 30), item(2, 20)], users: [], unreadCount: 2, nextCursor: null },
+        "replace",
+      );
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* fake.route("PATCH /activity/3", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.as({ item: item(3, 40, "handled"), unreadCount: 1 }),
+        ),
+      );
+      yield* fake.reply("PATCH /activity/2", { item: item(2, 50, "read"), unreadCount: 0 });
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 0 });
+
+      const first = yield* Effect.forkChild(activity.setState(3, "handled"));
+
+      yield* Deferred.await(started);
+      yield* activity.setState(2, "read");
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(first);
+
+      expect(inboxIds("unread")).toEqual([]);
+      expect(store.getState().activity.unreadCount).toBe(0);
+      expect(store.getState().activity.pendingUnread).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("queue a fresh badge read behind a delayed count", () =>
+    Effect.gen(function* () {
+      seedInbox();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* fake.route("GET /activity/unread_count", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.as({ unreadCount: 10 }),
+        ),
+      );
+
+      const older = yield* Effect.forkChild(activity.loadUnreadCount());
+
+      yield* Deferred.await(started);
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 5 });
+
+      const newer = yield* Effect.forkChild(activity.loadUnreadCount());
+
+      yield* Effect.yieldNow;
+      expect(
+        (yield* fake.requests).filter((request) => request.path === "/activity/unread_count"),
+      ).toHaveLength(1);
+
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(older);
+      yield* Fiber.join(newer);
+
+      expect(store.getState().activity.unreadCount).toBe(5);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });
 
 describe("saved actions", () => {

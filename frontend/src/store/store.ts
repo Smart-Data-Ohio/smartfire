@@ -199,8 +199,8 @@ export const mutations = {
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  setActivityUnreadCount: (unreadCount: number) =>
-    apply((state) => activity.setActivityUnreadCount(state, unreadCount)),
+  setActivityUnreadCount: (unreadCount: number, countEpoch: number) =>
+    apply((state) => activity.setActivityUnreadCount(state, unreadCount, countEpoch)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

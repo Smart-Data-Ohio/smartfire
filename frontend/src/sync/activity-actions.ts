@@ -1,10 +1,10 @@
 /**
  * The activity inbox's actions as Effect programs. Loads land in the store (failures too, as the
  * list's error) unless the list reloaded meanwhile; state changes show at once, moving the item
- * between lists and the badge, and roll back if the server refuses. Every reply carries the item
- * and the unread count, which win.
+ * between lists and the badge, and roll back if the server refuses. Delayed replies keep newer
+ * items and counts already in the store.
  */
-import { Clock, Effect } from "effect";
+import { Clock, Effect, Semaphore } from "effect";
 import * as api from "../api/activity-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
@@ -64,14 +64,21 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
   );
 });
 
-/** Refreshes the badge. */
-export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
-  const { unreadCount } = yield* api.activityUnreadCount();
+const countSerial = Semaphore.makeUnsafe(1);
 
-  mutations.setActivityUnreadCount(unreadCount);
+/** Refreshes the badge. Overlapping callers fetch in order, each from the server's current state. */
+export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(() =>
+  countSerial.withPermit(
+    Effect.gen(function* () {
+      const countEpoch = store.getState().activity.countEpoch;
+      const { unreadCount } = yield* api.activityUnreadCount();
 
-  return unreadCount;
-});
+      mutations.setActivityUnreadCount(unreadCount, countEpoch);
+
+      return unreadCount;
+    }),
+  ),
+);
 
 /** Changes to one item go one at a time, so each rolls back to a copy no other is holding. */
 const serial = keyedSerial<number>();
@@ -81,8 +88,8 @@ let nextToken = 0;
 
 /**
  * Applies `action` here at once (the item moves lists, the badge follows), then on the server,
- * whose reply wins. A refusal puts the item back, unless something newer replaced it meanwhile,
- * and takes the change out of the badge.
+ * whose reply settles the change while preserving newer server values. A refusal puts the item
+ * back unless something newer replaced it meanwhile, and takes the change out of the badge.
  */
 const change = (
   activityItemId: number,
@@ -93,6 +100,7 @@ const change = (
     activityItemId,
     Effect.gen(function* () {
       const before = store.getState().activity.items[activityItemId];
+      const countEpoch = store.getState().activity.countEpoch;
       const token = nextToken++;
       let optimistic: ActivityItem | null = null;
 
@@ -116,17 +124,31 @@ const change = (
               optimistic,
               settled: before ?? null,
               unreadCount: null,
+              countEpoch,
             }),
           ),
         ),
       );
+
+      const refreshCount = store.getState().activity.countEpoch !== countEpoch;
 
       mutations.endActivityChange({
         token,
         optimistic,
         settled: reply.item,
         unreadCount: reply.unreadCount,
+        countEpoch,
       });
+
+      // A concurrent reply or event may include this write already. After dropping its pending
+      // delta, reconcile from a fresh read instead of restoring the delayed reply's count.
+      if (refreshCount) {
+        yield* loadUnreadCount().pipe(
+          Effect.catch((error) =>
+            Effect.logWarning("activity count refresh failed", error.message),
+          ),
+        );
+      }
 
       return reply.item;
     }),

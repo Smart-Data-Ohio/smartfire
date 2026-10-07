@@ -16,6 +16,7 @@ import {
   landActivityPage,
   markActivityStale,
   nextActivityItem,
+  removeActivityItem,
   setActivityListLoading,
   setActivityUnreadCount,
   unreadDelta,
@@ -404,8 +405,12 @@ describe("the activity inbox", () => {
 
     expect(applyActivityItem(state, read, 11).activity.unreadCount).toBe(11);
     expect(applyActivityItem(state, read, null).activity.unreadCount).toBe(3);
-    expect(setActivityUnreadCount(state, 3)).toBe(state);
-    expect(setActivityUnreadCount(state, 0).activity.unreadCount).toBe(0);
+    expect(setActivityUnreadCount(state, 3, state.activity.countEpoch).activity.unreadCount).toBe(
+      3,
+    );
+    expect(setActivityUnreadCount(state, 0, state.activity.countEpoch).activity.unreadCount).toBe(
+      0,
+    );
   });
 
   it("removes an item gone with its source from the store and every list", () => {
@@ -419,6 +424,15 @@ describe("the activity inbox", () => {
     expect(ids(next, "all", "unread")).toEqual([4, 3]);
     expect(ids(next, "mentions", "unread")).toEqual([3]);
     expect(next.activity.unreadCount).toBe(2);
+  });
+
+  it("invalidates a delayed count even when removal of an unseen item leaves the count unchanged", () => {
+    const state = inbox();
+    const next = removeActivityItem(state, 999, 3);
+
+    expect(setActivityUnreadCount(next, 10, state.activity.countEpoch).activity.unreadCount).toBe(
+      3,
+    );
   });
 
   it("marks only loaded lists stale, and keeps the rows shown while one reloads", () => {

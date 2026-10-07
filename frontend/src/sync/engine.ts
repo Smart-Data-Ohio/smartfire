@@ -10,7 +10,6 @@ import {
   type Scope,
   Stream,
 } from "effect";
-import { activityUnreadCount } from "../api/activity-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
@@ -21,6 +20,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
@@ -209,10 +209,7 @@ export class Engine extends Context.Service<
       });
 
       /** The badge from the server; a failure keeps the count shown. */
-      const refreshUnreadCount = activityUnreadCount().pipe(
-        Effect.tap(({ unreadCount }) =>
-          Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
-        ),
+      const refreshUnreadCount = loadUnreadCount().pipe(
         Effect.catch((error) =>
           Effect.logWarning("sync: activity count refresh failed", error.message),
         ),

@@ -52,7 +52,7 @@ export interface ActivitySlice {
   readonly serverUnreadCount: number | null;
   /** How each change on its way moves the badge, by its token. */
   readonly pendingUnread: Readonly<Record<number, number>>;
-  /** Bumped whenever the server's count lands; a page counts only if none landed since it left. */
+  /** Bumped whenever a server count lands; REST replies count only if none landed since they left. */
   readonly countEpoch: number;
 }
 
@@ -375,6 +375,8 @@ export interface ActivityChangeEnd {
   readonly settled: ActivityItem | null;
   /** The server's count afterwards; `null` keeps it. */
   readonly unreadCount: number | null;
+  /** The badge epoch before the request; a newer server count keeps precedence. */
+  readonly countEpoch: number;
 }
 
 /**
@@ -405,7 +407,12 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     }
   }
 
-  return withActivity(state, withCounts(activity, end.unreadCount, pendingUnread));
+  const countHolds = end.countEpoch === activity.countEpoch;
+
+  return withActivity(
+    state,
+    withCounts(activity, countHolds ? end.unreadCount : null, pendingUnread),
+  );
 }
 
 /** An item went with its source (`activity.removed`): out of the store and every list. */
@@ -413,9 +420,7 @@ export function removeActivityItem(state: State, id: number, unreadCount: number
   const activity = state.activity;
 
   if (activity.items[id] === undefined) {
-    return activity.serverUnreadCount === unreadCount
-      ? state
-      : withActivity(state, withCounts(activity, unreadCount));
+    return withActivity(state, withCounts(activity, unreadCount));
   }
 
   const { [id]: _gone, ...items } = activity.items;
@@ -436,8 +441,12 @@ export function removeActivityItem(state: State, id: number, unreadCount: number
 }
 
 /** The badge, from `GET /activity/unread_count`. */
-export function setActivityUnreadCount(state: State, unreadCount: number): State {
-  return state.activity.serverUnreadCount === unreadCount
+export function setActivityUnreadCount(
+  state: State,
+  unreadCount: number,
+  countEpoch: number,
+): State {
+  return state.activity.countEpoch !== countEpoch
     ? state
     : withActivity(state, withCounts(state.activity, unreadCount));
 }

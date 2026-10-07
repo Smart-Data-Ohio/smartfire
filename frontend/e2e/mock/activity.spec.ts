@@ -61,6 +61,105 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
   await expect(activity).toHaveAttribute("aria-pressed", "true");
 });
 
+async function mockAppBadge(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    navigator.setAppBadge = async (count) => {
+      document.documentElement.dataset.appBadge = String(count);
+    };
+
+    navigator.clearAppBadge = async () => {
+      document.documentElement.dataset.appBadge = "0";
+    };
+  });
+}
+
+test("the app icon follows unread rooms and clears after they are read", async ({
+  page,
+  request,
+}) => {
+  await mockAppBadge(page);
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await expect(page.locator("html")).toHaveAttribute("data-app-badge", /^[1-9]\d*$/);
+
+  const state = await (await request.get("/__mock/state")).json();
+  const sidebar = await (await request.get("/api/v1/sidebar")).json();
+
+  for (const row of sidebar.rows) {
+    const response = await request.post(`/api/v1/rooms/${row.room.id}/read`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+    });
+
+    expect(response.ok()).toBe(true);
+  }
+
+  await page.reload();
+  await ready(page, "Activity");
+  await expect(page.locator("html")).toHaveAttribute("data-app-badge", "0");
+});
+
+test("clearing Activity survives a delayed boot count and reopening the app", async ({ page }) => {
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+
+  await page.route("**/api/v1/activity/unread_count", async (route) => {
+    const response = await route.fetch();
+
+    captured.resolve();
+    await release.promise;
+    await route.fulfill({ response });
+  });
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await captured.promise;
+
+  const activity = page.getByRole("button", { name: "Activity" });
+
+  for (let cleared = 0; cleared < 100; cleared++) {
+    if (await page.getByText("You're all caught up").isVisible()) {
+      break;
+    }
+
+    await expect(rows(page).first()).toBeVisible();
+
+    const opening = rows(page).first().locator(".list-row-open");
+    const description = await opening.getAttribute("aria-describedby");
+
+    await opening.focus();
+
+    const changed = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
+    );
+
+    await page.keyboard.press("e");
+
+    const response = await changed;
+    const { unreadCount } = await response.json();
+
+    expect(response.ok()).toBe(true);
+    await expect(rows(page).locator(`[aria-describedby="${description}"]`)).toHaveCount(0);
+
+    if (unreadCount === 0) {
+      break;
+    }
+  }
+
+  await expect(page.getByText("You're all caught up")).toBeVisible();
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  const bootCount = page.waitForResponse("**/api/v1/activity/unread_count");
+
+  release.resolve();
+  await (await bootCount).finished();
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  await page.reload();
+  await expect(page.getByText("You're all caught up")).toBeVisible();
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+});
+
 /** The header's unread count. */
 async function unreadCount(page: Page): Promise<number> {
   return Number(await page.locator(".page-count [aria-hidden='true']").textContent());
