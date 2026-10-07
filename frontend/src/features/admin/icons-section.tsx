@@ -13,13 +13,13 @@ import {
   SettingsPage,
   useBusy,
 } from "../settings/settings-parts.tsx";
-import { ICON_NAME_HINT, neighbour } from "./admin-format.ts";
+import { ICON_NAME_HINT } from "./admin-format.ts";
 import {
   AdministratorsOnly,
   adminFailure,
   uploaded,
   useAdmin,
-  useFocusAfter,
+  useRowFocus,
 } from "./admin-parts.tsx";
 
 type Load =
@@ -153,7 +153,7 @@ export function IconsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [doomed, setDoomed] = useState<WorkspaceIcon | null>(null);
   const { busy, track } = useBusy();
-  const { container, focusAfter } = useFocusAfter();
+  const container = useRowFocus();
 
   const fetchIcons = useCallback(() => {
     admin.icons().then(
@@ -191,11 +191,7 @@ export function IconsSection() {
       admin.destroyIcon(icon.id).then(
         ({ icons }) => {
           // The deleted row was where the dialog handed focus back; the next row takes it.
-          const before = load.status === "ready" ? load.icons.map((each) => each.id) : [];
-          const next = neighbour(before, icon.id);
-
           shown(icons);
-          focusAfter({ row: next === null ? null : `${next}`, control: "delete" });
         },
         (error: Error) => adminFailure(`Couldn't delete :${icon.name}:`, error),
       ),

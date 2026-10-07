@@ -230,6 +230,29 @@ impl SyncRenderer for Renderer {
         crate::agents::approval_update(conn, &app, approval_id, &viewer, app.db.env().now())
     }
 
+    fn poll(
+        &self,
+        conn: &Connection,
+        poll_id: i64,
+        voter_id: Option<i64>,
+    ) -> campfire_db::Result<Option<(api::PollUpdated, Option<api::PollBallot>)>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        crate::cards::poll_changed(conn, poll_id, voter_id, app.db.env().now())
+    }
+
+    fn message_cards(
+        &self,
+        conn: &Connection,
+        messages: &[Message],
+    ) -> campfire_db::Result<Vec<api::MessageCards>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(Vec::new());
+        };
+        crate::cards::message_cards(conn, &app, messages)
+    }
+
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>) {
         let Some(app) = self.app.upgrade() else {
             return;

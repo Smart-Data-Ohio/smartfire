@@ -43,6 +43,15 @@ mod coexistence_tests;
 #[cfg(test)]
 #[path = "spa_huddle_tests.rs"]
 mod huddle_tests;
+#[cfg(test)]
+#[path = "spa_api_search_tests.rs"]
+mod api_search_tests;
+#[cfg(test)]
+#[path = "spa_api_organize_tests.rs"]
+mod api_organize_tests;
+#[cfg(test)]
+#[path = "spa_api_cards_tests.rs"]
+mod api_cards_tests;
 
 #[cfg(test)]
 #[path = "spa_admin_tests.rs"]
@@ -53,3 +62,7 @@ mod bots_tests;
 #[cfg(test)]
 #[path = "spa_slack_tests.rs"]
 mod slack_tests;
+
+#[cfg(test)]
+#[path = "spa_integrations_tests.rs"]
+mod integrations_tests;

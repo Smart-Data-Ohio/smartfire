@@ -503,6 +503,13 @@ impl Agent {
             }
         }
         // Budget notices, steps and handoffs are not declared Agent dependents.
+        let notices = crate::sql::query_all(
+            tx.conn(),
+            "SELECT id FROM agent_budget_notices WHERE agent_id=?",
+            [self.id],
+            |r| r.get::<_, i64>(0),
+        )?;
+        crate::ActivityItem::emit_hidden_for_sources(tx, "AgentBudgetNotice", &notices)?;
         tx.conn()
             .execute("DELETE FROM agents WHERE id=?", [self.id])?;
         Ok(())

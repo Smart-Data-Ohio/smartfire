@@ -59,6 +59,12 @@ export function SettingsView() {
         ? {
             settings: load.settings,
             replace: (settings: Settings) => setLoad({ status: "ready", settings }),
+            update: (change: (current: Settings) => Settings) =>
+              setLoad((current) =>
+                current.status === "ready"
+                  ? { status: "ready", settings: change(current.settings) }
+                  : current,
+              ),
           }
         : null,
     [load],

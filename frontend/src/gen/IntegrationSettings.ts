@@ -3,8 +3,7 @@ import type { Connection } from "./Connection";
 import type { GoogleIntegration } from "./GoogleIntegration";
 
 /**
- * The connected services. Connecting and disconnecting are OAuth or token round trips on the
- * classic page (`managePath`), so these are read-only here.
+ * The connected services. OAuth starts remain browser navigations on the classic page.
  */
 export type IntegrationSettings = { google: GoogleIntegration, github: Connection, 
 /**

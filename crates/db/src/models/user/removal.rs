@@ -112,7 +112,7 @@ impl User {
                 [self.id],
                 |r| r.get::<_, i64>(0),
             )? {
-                RoomCategory::find(tx.conn(), id)?.destroy(tx)?;
+                RoomCategory::find(tx.conn(), id)?.delete_rows(tx)?;
             }
             for session in Session::for_user(tx.conn(), self.id)? {
                 session.destroy(tx)?;

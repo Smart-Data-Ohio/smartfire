@@ -28,6 +28,19 @@ impl crate::events::Broadcast for ActivityItemsRemoved {
     const KIND: &'static str = "ActivityItem#sync_removed";
 }
 
+/// An unread grouped thread item re-pointed at a newer reply (`record_authorized`). The classic
+/// inbox isn't told (`app/models/activity_item.rb` broadcasts state changes only); the cable sink
+/// publishes the single-page app's `activity.item` so its row shows the newer reply.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ActivityItemTouched {
+    pub id: i64,
+    pub user_id: i64,
+}
+
+impl crate::events::Broadcast for ActivityItemTouched {
+    const KIND: &'static str = "ActivityItem#sync_touched";
+}
+
 /// `ActivityItem::EVENT_TYPES`
 pub const EVENT_TYPES: [&str; 20] = [
     "mention",
@@ -192,6 +205,28 @@ impl ActivityItem {
         source_id: i64,
         event_type: &str,
     ) -> Result<Self> {
+        Self::refresh_unread_inner(tx, user_id, source_type, source_id, event_type, true)
+    }
+
+    /// [`Self::refresh_unread`] without the broadcast, for a Slack import's undo.
+    pub(crate) fn refresh_unread_quietly(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        event_type: &str,
+    ) -> Result<Self> {
+        Self::refresh_unread_inner(tx, user_id, source_type, source_id, event_type, false)
+    }
+
+    fn refresh_unread_inner(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source_type: &str,
+        source_id: i64,
+        event_type: &str,
+        announce: bool,
+    ) -> Result<Self> {
         let previous = Self::find_by_user_and_source(tx.conn(), user_id, source_type, source_id)?;
         let mut errors = Errors::default();
         // Rails 8 validates required associations only on new/changed foreign keys.
@@ -242,7 +277,9 @@ impl ActivityItem {
                         r#"UPDATE "activity_items" SET "event_type" = ?, "read_at" = NULL, "handled_at" = NULL, "updated_at" = ? WHERE "id" = ?"#,
                         params![event_type, now, item.id],
                     )?;
-                    Self::broadcast_change(tx, user_id, item.id)?;
+                    if announce {
+                        Self::broadcast_change(tx, user_id, item.id)?;
+                    }
                 }
                 Self::find(tx.conn(), item.id)?
             }
@@ -252,7 +289,9 @@ impl ActivityItem {
                     params![now, event_type, source_id, source_type, now, user_id],
                     |r| r.get(0),
                 )?;
-                Self::broadcast_change(tx, user_id, id)?;
+                if announce {
+                    Self::broadcast_change(tx, user_id, id)?;
+                }
                 Self::find(tx.conn(), id)?
             }
         };
@@ -327,13 +366,63 @@ impl ActivityItem {
 
     /// `has_many :activity_items, as: :source, dependent: :destroy`
     pub(crate) fn destroy_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
-        let removed = crate::sql::query_all(
+        let removed = Self::delete_for_source(tx, source_type, source_id)?;
+        Self::emit_removed(tx, removed);
+        Ok(())
+    }
+
+    /// [`Self::destroy_for_source`] without telling anyone, for a Slack import's undo, which
+    /// broadcasts nothing. Answers the `(id, user_id)` of the rows it deleted.
+    pub(crate) fn delete_for_source(
+        tx: &Tx<'_>,
+        source_type: &str,
+        source_id: i64,
+    ) -> Result<Vec<(i64, i64)>> {
+        crate::sql::query_all(
             tx.conn(),
             r#"DELETE FROM "activity_items" WHERE "source_type" = ? AND "source_id" = ? RETURNING "id", "user_id""#,
             params![source_type, source_id],
             |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+    }
+
+    /// Tells the owners' other tabs that their items sourced in room `room_id` (on its messages
+    /// and their saved items, work events, SLA nudges, huddle grants and events) are about to
+    /// leave their reach: `user_id`'s on leaving it, everyone's when it's deleted. The rows stay,
+    /// as in Rails (`ActivityItem.accessible_to` hides them, and shows them again if access
+    /// returns). Call it before the memberships go.
+    pub(crate) fn emit_hidden_in_room(tx: &mut Tx<'_>, room_id: i64, user_id: Option<i64>) -> Result<()> {
+        let hidden = crate::sql::query_all(
+            tx.conn(),
+            "SELECT ai.id, ai.user_id FROM activity_items ai WHERE (?2 IS NULL OR ai.user_id = ?2) AND ( \
+             (ai.source_type = 'Message' AND ai.source_id IN (SELECT id FROM messages WHERE room_id = ?1)) \
+             OR (ai.source_type = 'SavedItem' AND ai.source_id IN (SELECT s.id FROM saved_items s JOIN messages m ON m.id = s.message_id WHERE m.room_id = ?1)) \
+             OR (ai.source_type = 'WorkThreadEvent' AND ai.source_id IN (SELECT e.id FROM work_thread_events e JOIN channel_threads t ON t.id = e.channel_thread_id WHERE t.room_id = ?1)) \
+             OR (ai.source_type = 'BoardSlaNudge' AND ai.source_id IN (SELECT id FROM board_sla_nudges WHERE room_id = ?1)) \
+             OR (ai.source_type = 'HuddleGrant' AND ai.source_id IN (SELECT id FROM huddle_grants WHERE room_id = ?1)) \
+             OR (ai.source_type = 'Event' AND ai.source_id IN (SELECT id FROM events WHERE room_id = ?1)))",
+            params![room_id, user_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
-        Self::emit_removed(tx, removed);
+        Self::emit_removed(tx, hidden);
+        Ok(())
+    }
+
+    /// Tells the owners' other tabs that the items sourced on these rows are about to leave
+    /// their reach because the rows are deleted without their items (a session, a two-step
+    /// credential, an agent's budget notices): the items stay, as in Rails, but
+    /// `ActivityItem.accessible_to` no longer finds them.
+    pub(crate) fn emit_hidden_for_sources(tx: &mut Tx<'_>, source_type: &str, source_ids: &[i64]) -> Result<()> {
+        if source_ids.is_empty() {
+            return Ok(());
+        }
+        let hidden = crate::sql::query_all(
+            tx.conn(),
+            "SELECT id, user_id FROM activity_items WHERE source_type = ? AND source_id IN (SELECT value FROM json_each(?))",
+            params![source_type, serde_json::json!(source_ids).to_string()],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        Self::emit_removed(tx, hidden);
         Ok(())
     }
 

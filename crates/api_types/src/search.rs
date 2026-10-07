@@ -41,7 +41,12 @@ use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 /// text). System notes are never found.
 ///
 /// Only rooms the viewer belongs to, which aren't deleted, are searched. A blank `q` (no words
-/// and no operators) answers an empty page, not an error.
+/// and no operators) answers an empty page, not an error. A date past the last instant the
+/// server holds (`after:9999-12-31`) lies after every message: `before:` it matches them all,
+/// `after:` or `on:` it matches none.
+///
+/// A `q` over 500 characters, or with more than 10 `from:` or more than 10 `in:` values, is a
+/// 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
 ///
 /// `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
 /// first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
@@ -185,7 +190,7 @@ pub struct RecentSearch {
 /// `Search::record`).
 /// Repeating a query moves it to the top instead of adding a row; the list is trimmed to the
 /// newest 10. Answers the [`RecentSearchList`] (201). A blank query is a 422 ("Enter a word to
-/// search for."), recording nothing. `DELETE /api/v1/search/recents` forgets them all (204;
+/// search for."), recording nothing; so is one past [`SearchResults`]' bounds (on `query`). `DELETE /api/v1/search/recents` forgets them all (204;
 /// `searches#clear`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import runpy
+import sys
 import tempfile
 import unittest
 from contextlib import nullcontext
@@ -11,6 +12,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 DIRECTORY = Path(__file__).resolve().parent
+sys.path.insert(0, str(DIRECTORY))
+import once_configuration
+
 spec = importlib.util.spec_from_file_location("google_configuration", DIRECTORY / "google-configuration.py")
 producer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(producer)
@@ -69,7 +73,7 @@ class GoogleConfigurationTest(unittest.TestCase):
             temporary = real_path(directory)
             with patch("sys.stdin", io.StringIO(json.dumps(payload))), patch("sys.stdout", stdout), patch("sys.stderr", stderr), \
                  patch("builtins.open", return_value=io.StringIO()), patch("fcntl.flock"), \
-                 patch("pathlib.Path", side_effect=lambda value: temporary if value == "/var/backups" else real_path(value)), \
+                 patch.object(once_configuration, "Path", side_effect=lambda value: temporary if value == "/var/backups" else real_path(value)), \
                  patch("subprocess.run", side_effect=fake_run), \
                  patch("urllib.request.urlopen", return_value=nullcontext(SimpleNamespace(status=200))):
                 code = 0

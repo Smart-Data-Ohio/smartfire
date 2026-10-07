@@ -5,7 +5,7 @@
  * `Search::record`).
  * Repeating a query moves it to the top instead of adding a row; the list is trimmed to the
  * newest 10. Answers the [`RecentSearchList`] (201). A blank query is a 422 ("Enter a word to
- * search for."), recording nothing. `DELETE /api/v1/search/recents` forgets them all (204;
+ * search for."), recording nothing; so is one past [`SearchResults`]' bounds (on `query`). `DELETE /api/v1/search/recents` forgets them all (204;
  * `searches#clear`).
  */
 export type RecordSearch = { 

@@ -6,6 +6,8 @@
  */
 import { me } from "../api/endpoints.ts";
 import {
+  connectService,
+  disconnectService,
   settings as loadSettings,
   pushSubscriptions,
   removeAvatar,
@@ -14,6 +16,7 @@ import {
   revokeSession,
   sessions,
   setDndAllowance,
+  type TokenService,
   updateAppearance,
   updateAvatar,
   updateCalls,
@@ -21,6 +24,7 @@ import {
   updateProfile,
   updateStatus,
 } from "../api/settings-endpoints.ts";
+import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
@@ -80,14 +84,16 @@ function refreshMe(): void {
   runAction(me()).then(mutations.setMe, () => undefined);
 }
 
-/** Runs a write that answers the settings page, then refreshes `/me`. */
-async function write(run: Promise<Settings>): Promise<Settings> {
+/** Runs a write, then refreshes `/me`. */
+async function write<A>(run: Promise<A>): Promise<A> {
   const next = await run;
 
   refreshMe();
 
   return next;
 }
+
+export type { TokenService };
 
 export const settings = {
   load: (): Promise<Settings> => runAction(loadSettings()),
@@ -130,4 +136,15 @@ export const settings = {
 
   removePushSubscription: (subscriptionId: number): Promise<PushSubscriptionList> =>
     runAction(removePushSubscription(subscriptionId)),
+
+  /** Connects GitHub or Fizzy with a personal access token. */
+  connect: (service: TokenService, accessToken: string): Promise<IntegrationChange> =>
+    write(runAction(connectService(service, accessToken))),
+
+  /**
+   * Disconnects GitHub, Fizzy or Google Calendar (dropping Google can end a calendar out of
+   * office, so `/me` is reloaded after each change).
+   */
+  disconnect: (service: TokenService | "google"): Promise<IntegrationChange> =>
+    write(runAction(disconnectService(service))),
 };

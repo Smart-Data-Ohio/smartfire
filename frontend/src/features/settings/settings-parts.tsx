@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, use, useCallback, useId, useState } from "react";
 import type { Settings } from "../../gen/Settings.ts";
 import { ActionError } from "../../sync/run.ts";
+import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import type { Choice } from "./settings-format.ts";
 
@@ -8,6 +9,11 @@ import type { Choice } from "./settings-format.ts";
 export interface SettingsState {
   readonly settings: Settings;
   readonly replace: (next: Settings) => void;
+  /**
+   * Changes the page from whatever it holds when the change lands, so answers that settle out of
+   * order each touch only their own part.
+   */
+  readonly update: (change: (current: Settings) => Settings) => void;
 }
 
 export const SettingsContext = createContext<SettingsState | null>(null);
@@ -208,5 +214,21 @@ export function FieldError({ message }: { readonly message: string | undefined }
     <p className="settings-error" role="alert">
       {message}
     </p>
+  );
+}
+
+/** A link to the classic page, which loads in full. */
+export function ClassicLink({
+  href,
+  children,
+}: {
+  readonly href: string;
+  readonly children: string;
+}) {
+  return (
+    <a className="settings-classic-link" href={href}>
+      {children}
+      <Icon name="external-link" size={14} />
+    </a>
   );
 }

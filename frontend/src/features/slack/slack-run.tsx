@@ -13,6 +13,7 @@ import { adminFailure, Confirm } from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { CONFIRM, countLines, keyed, peopleLine } from "./slack-format.ts";
+import { readPages, serialQueue } from "./slack-pages.ts";
 import { newestOnly, usePoll } from "./slack-poll.ts";
 import "../admin/admin.css";
 import "./slack.css";
@@ -409,9 +410,12 @@ type Load =
 export function SlackRunView({
   admin,
   runId,
+  throughPage = 1,
 }: {
   readonly admin: boolean;
   readonly runId: number;
+  /** How many pages of issues to show at first: a classic `?page=N` link shows through page N. */
+  readonly throughPage?: number;
 }) {
   const navigate = useNavigate();
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -419,23 +423,52 @@ export function SlackRunView({
   const [focusAsked, setFocusAsked] = useState(0);
   // A read that started before an undo must not put back the status the undo replaced.
   const [tickets] = useState(newestOnly);
+  // How many pages of issues are on the page, and where the next one starts: a reread (when the
+  // run settles) reads them all again. Rereads and "Older issues" take turns (`serial`), so
+  // neither drops the page the other just added.
+  const pages = useRef(throughPage);
+  const nextPage = useRef<number | null>(null);
+  const [serial] = useState(serialQueue);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+      // Any read still going stops before its next page.
+      tickets.take();
+    };
+  }, [tickets]);
 
   const fetchRun = useCallback(() => {
     const latest = tickets.take();
+    const live = () => mounted.current && latest();
 
-    const work = admin
-      ? slack.runPage(runId)
+    const work: Promise<Omit<Extract<Load, { status: "ready" }>, "status"> | null> = admin
+      ? serial(() =>
+          live()
+            ? readPages((page) => slack.runPage(runId, page), pages.current, live).then((read) => {
+                if (read === null) return null;
+
+                pages.current = read.pages;
+                nextPage.current = read.page.nextPage;
+
+                return { run: read.page.run, issues: read.issues, nextPage: read.page.nextPage };
+              })
+            : Promise.resolve(null),
+        )
       : slack.status(false, runId).then((run) => ({ run, issues: [], nextPage: null }));
 
     work.then(
       (page) => {
-        if (latest()) setLoad({ status: "ready", ...page });
+        if (page !== null && live()) setLoad({ status: "ready", ...page });
       },
       (error: Error) => {
-        if (latest()) setLoad({ status: "error", message: error.message });
+        if (live()) setLoad({ status: "error", message: error.message });
       },
     );
-  }, [admin, runId, tickets]);
+  }, [admin, runId, serial, tickets]);
 
   useEffect(fetchRun, [fetchRun]);
 
@@ -499,7 +532,7 @@ export function SlackRunView({
 
   const run = load.status === "ready" ? load.run : null;
 
-  // Once the run settles its issues are final: read the page again for them.
+  // Once the run settles its issues are final: read the pages on show again for them.
   const trouble = usePoll(run, read, fetchRun);
 
   const reload = () => {
@@ -526,18 +559,25 @@ export function SlackRunView({
   };
 
   const more = async () => {
-    if (load.status !== "ready" || load.nextPage === null) {
-      return;
-    }
-
     try {
-      const page = await slack.runPage(runId, load.nextPage);
+      await serial(async () => {
+        // Read when its turn comes: a reread just before it may have moved the next page on.
+        const next = nextPage.current;
 
-      setLoad((current) =>
-        current.status === "ready"
-          ? { ...current, issues: [...current.issues, ...page.issues], nextPage: page.nextPage }
-          : current,
-      );
+        if (next === null || !mounted.current) return;
+
+        const page = await slack.runPage(runId, next);
+
+        if (!mounted.current) return;
+
+        pages.current += 1;
+        nextPage.current = page.nextPage;
+        setLoad((current) =>
+          current.status === "ready"
+            ? { ...current, issues: [...current.issues, ...page.issues], nextPage: page.nextPage }
+            : current,
+        );
+      });
     } catch (error) {
       adminFailure(
         "Couldn't load older issues",

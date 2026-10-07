@@ -91,6 +91,10 @@ export const validation = (field: string, message: string) =>
     fields: { [field]: [message] },
   });
 
+/** 422 `Validation` with no fields: a classic alert, word for word (`api::admin::refusal`). */
+export const refused = (message: string) =>
+  new HttpError(422, { _tag: VALIDATION, message, fields: {} });
+
 /** The query string of a request, from `query` or the path's own `?…`. */
 export function queryOf(request: MockRequest): URLSearchParams {
   const inline = request.path.includes("?") ? request.path.slice(request.path.indexOf("?")) : "";

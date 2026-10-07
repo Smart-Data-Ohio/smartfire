@@ -37,48 +37,73 @@ endpoint!(
 /// `activity_items#index`' page size.
 const PAGE: usize = 100;
 
-/// The inbox rows as the wire carries them, sources read in one go (`activity::Sources`).
+/// The inbox rows as the wire carries them, their sources read in one batch
+/// (`activity::Sources::load_spa`). A row holding a value the contract doesn't know (a new event
+/// type, say), or whose source (or a row it leads to) has gone missing, is left out and logged
+/// rather than failing the whole list.
 pub(crate) fn items(
     conn: &Connection,
     app: &AppState,
     viewer: &User,
     rows: &[ActivityItem],
 ) -> campfire_db::Result<Vec<api::ActivityItem>> {
-    let sources = presenter::Sources::load(conn, rows)?;
-    rows.iter()
-        .map(|row| {
-            let view = presenter::item(conn, app, row, viewer, &sources)?;
-            let refs = presenter::source_refs(conn, app, row, &sources)?;
-            let occurred_at = view
-                .created_at
-                .map(Timestamp::from_jiff)
-                .unwrap_or(row.created_at);
-            Ok(api::ActivityItem {
-                id: row.id,
-                event_type: wire(&row.event_type)?,
-                state: wire(row.state())?,
-                read_at: row.read_at.map(dto::time),
-                handled_at: row.handled_at.map(dto::time),
-                created_at: dto::time(row.created_at),
-                updated_at: dto::time(row.updated_at),
-                source: api::ActivitySource {
-                    source_type: wire(&snake_case(&row.source_type))?,
-                    source_id: row.source_id,
-                    room_id: refs.room_id,
-                    thread_id: refs.thread_id,
-                    message_id: refs.message_id,
-                    event_id: refs.event_id,
-                    creator_id: refs.creator_id,
-                    title: refs.approval_title.unwrap_or(view.title),
-                    body: refs.approval_body.unwrap_or(view.body),
-                    occurred_at: dto::time(occurred_at),
-                    approval_status: refs.approval_status.as_deref().map(wire).transpose()?,
-                    budget_cap: refs.budget_cap.as_deref().map(wire).transpose()?,
-                    path: refs.path,
-                },
-            })
-        })
-        .collect()
+    let sources = presenter::Sources::load_spa(conn, rows)?;
+    let mut items = Vec::with_capacity(rows.len());
+    for row in rows {
+        let (view, refs) = match presenter::spa_row(conn, app, row, viewer, &sources) {
+            Ok(presented) => presented,
+            Err(
+                error @ (campfire_db::Error::RecordNotFound(_)
+                | campfire_db::Error::Sqlite(rusqlite::Error::QueryReturnedNoRows)),
+            ) => {
+                tracing::warn!(%error, item_id = row.id, "activity: row with a missing source left out of the list");
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
+        match wire_row(row, view, refs) {
+            Ok(item) => items.push(item),
+            Err(error) => {
+                tracing::warn!(%error, item_id = row.id, "activity: row left out of the list");
+            }
+        }
+    }
+    Ok(items)
+}
+
+fn wire_row(
+    row: &ActivityItem,
+    view: campfire_views::activity::Item,
+    refs: presenter::SourceRefs,
+) -> campfire_db::Result<api::ActivityItem> {
+    let occurred_at = view
+        .created_at
+        .map(Timestamp::from_jiff)
+        .unwrap_or(row.created_at);
+    Ok(api::ActivityItem {
+        id: row.id,
+        event_type: wire(&row.event_type)?,
+        state: wire(row.state())?,
+        read_at: row.read_at.map(dto::time),
+        handled_at: row.handled_at.map(dto::time),
+        created_at: dto::time(row.created_at),
+        updated_at: dto::time(row.updated_at),
+        source: api::ActivitySource {
+            source_type: wire(&snake_case(&row.source_type))?,
+            source_id: row.source_id,
+            room_id: refs.room_id,
+            thread_id: refs.thread_id,
+            message_id: refs.message_id,
+            event_id: refs.event_id,
+            creator_id: refs.creator_id,
+            title: refs.approval_title.unwrap_or(view.title),
+            body: refs.approval_body.unwrap_or(view.body),
+            occurred_at: dto::time(occurred_at),
+            approval_status: refs.approval_status.as_deref().map(wire).transpose()?,
+            budget_cap: refs.budget_cap.as_deref().map(wire).transpose()?,
+            path: refs.path,
+        },
+    })
 }
 
 /// A stored word as its wire enum (the enums' serde names are the stored values).
@@ -118,7 +143,9 @@ pub(crate) fn changed(
     let Some(row) = ActivityItem::find_accessible(conn, viewer, item_id)? else {
         return Ok(None);
     };
-    let item = items(conn, app, viewer, std::slice::from_ref(&row))?.remove(0);
+    let Some(item) = items(conn, app, viewer, std::slice::from_ref(&row))?.pop() else {
+        return Ok(None);
+    };
     Ok(Some(api::ActivityItemChanged {
         item,
         unread_count: ActivityItem::unread_count(conn, viewer)?,
@@ -283,6 +310,50 @@ async fn respond(c: &mut Ctx, viewer: User, item_id: i64) -> Result {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_stored_value_has_its_wire_variant() {
+        for event_type in campfire_db::models::activity_item::EVENT_TYPES {
+            assert!(
+                wire::<api::ActivityEventType>(event_type).is_ok(),
+                "{event_type}"
+            );
+        }
+        for state in ["unread", "read", "handled"] {
+            assert!(wire::<api::ActivityState>(state).is_ok(), "{state}");
+        }
+        // `ActivityItem::source_type`'s classes (access.sql's joins).
+        for class in [
+            "Message",
+            "SavedItem",
+            "WorkThreadEvent",
+            "BoardSlaNudge",
+            "HuddleGrant",
+            "Event",
+            "AgentApproval",
+            "AgentBudgetNotice",
+            "ScheduledMessage",
+            "TwoFactorCredential",
+            "Session",
+        ] {
+            assert!(
+                wire::<api::ActivitySourceType>(&snake_case(class)).is_ok(),
+                "{class}"
+            );
+        }
+        for status in campfire_db::models::agent_approval::STATUSES {
+            assert!(wire::<api::AgentApprovalStatus>(status).is_ok(), "{status}");
+        }
+        // `agent_posting::Cap`'s names, which `agent_budget_notices.cap` stores.
+        for cap in ["messages", "board_posts", "external_actions"] {
+            assert!(wire::<api::AgentBudgetCap>(cap).is_ok(), "{cap}");
+        }
+    }
+
+    #[test]
+    fn a_row_the_contract_cannot_carry_is_an_error_not_a_panic() {
+        assert!(wire::<api::ActivityEventType>("carrier_pigeon").is_err());
+    }
 
     #[test]
     fn source_classes_become_their_wire_names() {
