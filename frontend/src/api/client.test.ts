@@ -125,7 +125,7 @@ describe("ApiClient", () => {
     const { layer, seen } = harness((request) =>
       request.method === "GET"
         ? json(200, meFixture)
-        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null }),
+        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null, unreadCount: 0 }),
     );
 
     return Effect.gen(function* () {
@@ -170,7 +170,7 @@ describe("ApiClient", () => {
 
       return index === 0
         ? errorReply(422, new InvalidAuthenticityToken({ message: "stale" }))
-        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null });
+        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null, unreadCount: 0 });
     });
 
     return Effect.gen(function* () {
@@ -178,6 +178,7 @@ describe("ApiClient", () => {
         roomId: 12,
         unread: false,
         firstUnreadMessageId: null,
+        unreadCount: 0,
       });
       expect(seen.map((request) => [request.url.pathname, request.csrf])).toEqual([
         ["/api/v1/rooms/12/read", "old-token"],
@@ -218,7 +219,7 @@ describe("ApiClient", () => {
 
       return index === 0
         ? { status: 422, body: "Unprocessable" }
-        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null });
+        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null, unreadCount: 0 });
     });
 
     return Effect.gen(function* () {
@@ -232,7 +233,7 @@ describe("ApiClient", () => {
     const { layer, seen } = harness((request) =>
       request.url.pathname === "/api/v1/boot"
         ? json(200, { ...bootJson, csrfToken: "dev-token" })
-        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null }),
+        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null, unreadCount: 0 }),
     );
 
     return Effect.gen(function* () {
@@ -349,7 +350,7 @@ describe("readBoot", () => {
     const { layer, seen } = harness((request) =>
       request.url.pathname === "/api/v1/boot"
         ? json(200, { ...bootJson, csrfToken: "boot-token" })
-        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null }),
+        : json(200, { roomId: 12, unread: false, firstUnreadMessageId: null, unreadCount: 0 }),
     );
 
     return Effect.gen(function* () {

@@ -287,6 +287,13 @@ async fn index_members(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let found = room_members::for_room(conn, room.id, viewer, now)?;
+            let avatars = dto::uploaded_avatars(
+                conn,
+                &found
+                    .iter()
+                    .map(|member| member.user.id)
+                    .collect::<Vec<_>>(),
+            )?;
             let mut members = Vec::with_capacity(found.len());
             let mut users = Vec::with_capacity(found.len());
             for member in found {
@@ -336,7 +343,12 @@ async fn index_members(c: &mut Ctx) -> Result {
                     status_text,
                     starred: member.starred,
                 });
-                users.push(dto::user(&member.settings, &secrets, now));
+                users.push(dto::user(
+                    &member.settings,
+                    &secrets,
+                    now,
+                    avatars.contains(&member.user.id),
+                ));
             }
             Ok(api::MemberList { members, users })
         })

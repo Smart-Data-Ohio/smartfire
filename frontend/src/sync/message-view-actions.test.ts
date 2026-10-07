@@ -50,6 +50,7 @@ describe("message view actions", () => {
         roomId: ROOM,
         unread: true,
         firstUnreadMessageId: 40,
+        unreadCount: 3,
       });
 
       const first = yield* markUnreadFrom(ROOM, 40);
@@ -78,6 +79,7 @@ describe("message view actions", () => {
         roomId: ROOM,
         unread: true,
         firstUnreadMessageId: 40,
+        unreadCount: 3,
       });
 
       yield* markUnreadFrom(ROOM, 40);

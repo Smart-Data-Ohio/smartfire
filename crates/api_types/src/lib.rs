@@ -74,7 +74,8 @@ pub use me::{
     VoiceMode,
 };
 pub use message::{
-    CreateMessage, MessageDTO, MessagePage, MessageRemoved, MessageSource, UpdateMessage,
+    CreateMessage, MessageDTO, MessagePage, MessageRead, MessageRemoved, MessageSource,
+    UpdateMessage,
 };
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,

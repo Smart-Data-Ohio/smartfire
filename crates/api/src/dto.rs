@@ -24,7 +24,13 @@ fn present(value: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
-pub fn user(settings: &UserStatusSettings, secrets: &Secrets, now: Timestamp) -> api::User {
+/// `has_avatar` is [`uploaded_avatars`]' answer for this person.
+pub fn user(
+    settings: &UserStatusSettings,
+    secrets: &Secrets,
+    now: Timestamp,
+    has_avatar: bool,
+) -> api::User {
     let user = &settings.user;
     let expired = settings
         .custom_status_expires_at
@@ -54,6 +60,7 @@ pub fn user(settings: &UserStatusSettings, secrets: &Secrets, now: Timestamp) ->
         },
         bio: user.bio.clone(),
         avatar_url: presenters::avatar_path(secrets, user),
+        has_avatar,
         custom_status,
         created_at: time(user.created_at),
     }
@@ -72,11 +79,24 @@ pub fn users(
         .into_iter()
         .collect();
     let settings = UserStatusSettings::for_ids(conn, &ids)?;
+    let avatars = uploaded_avatars(conn, &ids)?;
     Ok(ids
         .iter()
         .filter_map(|id| settings.get(id))
-        .map(|settings| user(settings, secrets, now))
+        .map(|settings| user(settings, secrets, now, avatars.contains(&settings.user.id)))
         .collect())
+}
+
+/// Who among `ids` uploaded a picture (`has_one_attached :avatar`).
+pub fn uploaded_avatars(conn: &Connection, ids: &[i64]) -> Result<BTreeSet<i64>> {
+    Ok(ids_query(
+        conn,
+        r#"SELECT "active_storage_attachments"."record_id" FROM "active_storage_attachments" WHERE "active_storage_attachments"."record_type" = 'User' AND "active_storage_attachments"."name" = 'avatar' AND "active_storage_attachments"."record_id" IN ({})"#,
+        ids,
+        |row| row.get(0),
+    )?
+    .into_iter()
+    .collect())
 }
 
 pub fn room_kind(kind: RoomType) -> api::RoomKind {
@@ -808,7 +828,12 @@ pub fn me(
         _ => None,
     };
     Ok(api::Me {
-        user: user(&settings, secrets, now),
+        user: user(
+            &settings,
+            secrets,
+            now,
+            uploaded_avatars(conn, &[viewer.id])?.contains(&viewer.id),
+        ),
         email_address: viewer.email_address.clone(),
         preferences: api::Preferences {
             theme: match settings.theme.as_str() {

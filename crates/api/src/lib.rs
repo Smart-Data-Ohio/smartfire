@@ -71,7 +71,8 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         )
         .route(
             "/api/v1/messages/{message_id}",
-            patch(unparsed_action(message_actions::update))
+            get(action(message_actions::show))
+                .patch(unparsed_action(message_actions::update))
                 .delete(action(message_actions::destroy)),
         )
         .route(

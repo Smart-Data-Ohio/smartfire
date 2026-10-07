@@ -7,6 +7,7 @@ import type { ForwardDestinationList } from "../../src/gen/ForwardDestinationLis
 import type { ForwardResult } from "../../src/gen/ForwardResult.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../../src/gen/MessageReactions.ts";
+import type { MessageRead } from "../../src/gen/MessageRead.ts";
 import type { MessageSource } from "../../src/gen/MessageSource.ts";
 import type { PinList } from "../../src/gen/PinList.ts";
 import type { PinState } from "../../src/gen/PinState.ts";
@@ -531,8 +532,31 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
     return ok(result, 201);
   };
 
+  // --- one message ---
+
+  /** `GET /messages/:id`: the message with its conversation; a 404 when it isn't reachable. */
+  const read = (messageId: number): MessageRead => {
+    const { room, thread, message } = messageOr404(messageId);
+    const item = ctx.world().saved.get(message.id);
+
+    return {
+      message,
+      users: ctx.usersFor([message.creatorId, ...(message.thread?.replierIds ?? [])]),
+      conversation: {
+        roomId: room.room.id,
+        threadId: thread?.id ?? null,
+        roomKind: room.room.kind,
+        roomName: ctx.displayName(room),
+        roomIconName: room.room.iconName,
+        threadName: thread?.name ?? null,
+      },
+      saved: item === undefined ? null : { messageId: message.id, savedItemId: item.id },
+    };
+  };
+
   return {
     routes: [
+      route("GET", /^\/messages\/(\d+)$/, (request) => ok(read(firstId(request)))),
       route("PATCH", /^\/messages\/(\d+)$/, (request) => ok(edit(firstId(request), request.body))),
       route("GET", /^\/messages\/(\d+)\/source$/, (request) => ok(source(firstId(request)))),
       route("DELETE", /^\/messages\/(\d+)$/, (request) => remove(firstId(request))),

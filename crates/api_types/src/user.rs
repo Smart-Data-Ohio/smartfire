@@ -13,8 +13,12 @@ pub struct User {
     pub role: UserRole,
     pub status: UserStatus,
     pub bio: Option<String>,
-    /// The avatar image path, versioned so a changed avatar gets a new URL.
+    /// The avatar image path, versioned so a changed avatar gets a new URL. Always set: without
+    /// an uploaded picture it draws the classic initials (or a bot's icon) as an SVG.
     pub avatar_url: String,
+    /// Whether the person uploaded a picture (`has_one_attached :avatar`). When `false`, the
+    /// client may draw its own initials tile instead of loading `avatarUrl`.
+    pub has_avatar: bool,
     /// `null` when unset or expired.
     pub custom_status: Option<CustomStatus>,
     pub created_at: Timestamp,

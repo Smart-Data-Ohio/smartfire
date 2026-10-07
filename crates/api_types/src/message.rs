@@ -34,6 +34,11 @@ pub struct MessageDTO {
     pub streaming: bool,
     pub embeds_suppressed: bool,
     pub reply_to_message_id: Option<i64>,
+    /// The original of a forward; `null` for an original or once the source is deleted. Where it
+    /// came from is viewer-relative (the viewer may not see that room), so it isn't here: the
+    /// "Forwarded from" header reads `GET /api/v1/messages/:id` on this id, whose 404 means the
+    /// viewer can't see the source and the header says only "Forwarded", as the classic card's
+    /// hidden "View original" link does (`message_forwards#forward_source`).
     pub forwarded_from_message_id: Option<i64>,
     /// When this message was forwarded here (`messages.forwarded_at`); `null` for an original.
     /// Stays set after the source is deleted, when `forwardedFromMessageId` goes `null`, so the
@@ -114,6 +119,23 @@ pub struct MessagePage {
     /// The viewer's saved items among the page's messages (`saved_items` for this user and
     /// these message ids), so the Save action shows its state without another request.
     pub saved: Vec<crate::SavedMark>,
+}
+
+/// `GET /api/v1/messages/:id`: one message, from a room the viewer belongs to (or a thread in
+/// one), wherever it sits on its timeline (`Message::find_reachable`, as `message_forwards` and
+/// pin links look messages up). Anything else is a 404. For a link to a message outside the
+/// loaded window (a thread's root, a forward's source) without reloading the room around it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MessageRead {
+    pub message: MessageDTO,
+    /// Its creator, and the repliers its thread indicator names.
+    pub users: Vec<crate::User>,
+    /// The room and thread it's in, named for the viewer.
+    pub conversation: crate::ConversationName,
+    /// Whether the viewer saved it (`saved_items`); `null` when they haven't.
+    pub saved: Option<crate::SavedMark>,
 }
 
 /// `POST /api/v1/rooms/:id/messages`: post to the room's root timeline (`messages#create`).

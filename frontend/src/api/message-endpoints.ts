@@ -10,6 +10,7 @@ import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardResult } from "../gen/ForwardResult.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
+import type { MessageRead } from "../gen/MessageRead.ts";
 import type { MessageSource } from "../gen/MessageSource.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { PinState } from "../gen/PinState.ts";
@@ -24,11 +25,20 @@ import {
 } from "./schema/actions.ts";
 import { DirectUpload as DirectUploadSchema } from "./schema/attachment.ts";
 import {
+  MessageRead as MessageReadSchema,
   MessageDTO as MessageSchema,
   MessageSource as MessageSourceSchema,
 } from "./schema/message.ts";
 import { MessageReactions as MessageReactionsSchema } from "./schema/reaction.ts";
 import { wire } from "./wire.ts";
+
+/**
+ * `GET /messages/:id`: one message the viewer can reach, with its conversation (a forward's
+ * origin). `NotFound` means it's out of reach: show "Forwarded" only.
+ */
+export const readMessage = Effect.fn("api.readMessage")(function* (messageId: number) {
+  return yield* call(get(`/messages/${messageId}`), wire<MessageRead>(MessageReadSchema));
+});
 
 /** `PATCH /messages/:id`: the creator's edit; answers the updated message. */
 export const updateMessage = Effect.fn("api.updateMessage")(function* (

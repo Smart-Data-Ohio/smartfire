@@ -32,6 +32,8 @@ export const User = Schema.Struct({
   status: UserStatus,
   bio: Schema.NullOr(Schema.String),
   avatarUrl: Schema.String,
+  /** Whether they uploaded a picture; `false` means `avatarUrl` serves their initials. */
+  hasAvatar: Schema.Boolean,
   customStatus: Schema.NullOr(CustomStatus),
   createdAt: Timestamp,
 });

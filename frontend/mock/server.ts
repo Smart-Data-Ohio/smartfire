@@ -504,7 +504,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     markReadUpTo(record, record.messages.at(-1)?.id ?? null);
     hub.publish([{ topic: "user", type: "room.read", data: { roomId } }]);
 
-    return { roomId, unread: false, firstUnreadMessageId: null };
+    return { roomId, unread: false, firstUnreadMessageId: null, unreadCount: 0 };
   };
 
   const markUnread = (roomId: number, body: Json | undefined): ReadState => {
@@ -524,7 +524,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       { topic: "user", type: "room.unread", data: { roomId, messageId: null, mentioned: false } },
     ]);
 
-    return { roomId, unread: true, firstUnreadMessageId: message.id };
+    return {
+      roomId,
+      unread: true,
+      firstUnreadMessageId: message.id,
+      unreadCount: unreadMessages(record).length,
+    };
   };
 
   const userList = (query: URLSearchParams): UserList => ({ users: usersFor(idsParam(query)) });

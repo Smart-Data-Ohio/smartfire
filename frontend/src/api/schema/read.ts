@@ -11,6 +11,8 @@ export const ReadState = Schema.Struct({
   roomId: RoomId,
   unread: Schema.Boolean,
   firstUnreadMessageId: Schema.NullOr(MessageId),
+  /** Root messages from `firstUnreadMessageId` on, as `SidebarRow.unreadCount` counts them. */
+  unreadCount: Schema.Int,
 });
 
 export type ReadState = typeof ReadState.Type;

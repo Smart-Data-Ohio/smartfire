@@ -161,17 +161,16 @@ async fn index_user_suggestions(c: &mut Ctx) -> Result {
             let room = room.flatten().map(|room| room.id);
             let (users, unique) =
                 autocomplete_users::page(conn, room, query.as_deref(), 0, USER_SUGGESTIONS)?;
-            let settings = UserStatusSettings::for_ids(
-                conn,
-                &users.iter().map(|user| user.id).collect::<Vec<_>>(),
-            )?;
+            let ids = users.iter().map(|user| user.id).collect::<Vec<_>>();
+            let settings = UserStatusSettings::for_ids(conn, &ids)?;
+            let avatars = dto::uploaded_avatars(conn, &ids)?;
             Ok(Some(
                 users
                     .iter()
                     .filter_map(|user| {
                         let settings = settings.get(&user.id)?;
                         Some(api::UserSuggestion {
-                            user: dto::user(settings, &secrets, now),
+                            user: dto::user(settings, &secrets, now, avatars.contains(&user.id)),
                             mention_token: mention_token(&user.name, unique.contains(&user.name)),
                         })
                     })

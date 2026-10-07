@@ -44,7 +44,15 @@ action: boolean,
 /**
  * Still being written by an agent.
  */
-streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null, forwardedFromMessageId: number | null, 
+streaming: boolean, embedsSuppressed: boolean, replyToMessageId: number | null, 
+/**
+ * The original of a forward; `null` for an original or once the source is deleted. Where it
+ * came from is viewer-relative (the viewer may not see that room), so it isn't here: the
+ * "Forwarded from" header reads `GET /api/v1/messages/:id` on this id, whose 404 means the
+ * viewer can't see the source and the header says only "Forwarded", as the classic card's
+ * hidden "View original" link does (`message_forwards#forward_source`).
+ */
+forwardedFromMessageId: number | null, 
 /**
  * When this message was forwarded here (`messages.forwarded_at`); `null` for an original.
  * Stays set after the source is deleted, when `forwardedFromMessageId` goes `null`, so the

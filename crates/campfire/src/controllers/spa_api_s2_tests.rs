@@ -545,6 +545,91 @@ async fn forwards_list_destinations_copy_and_publish() {
 }
 
 #[tokio::test]
+async fn a_message_reads_with_its_conversation_or_not_at_all() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david.send(get(&format!("/api/v1/messages/{DAVIDS}"))).await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let read: api::MessageRead = parse(&reply);
+    assert_eq!(read.message.id, DAVIDS);
+    assert_eq!(
+        (read.conversation.room_id, read.conversation.thread_id),
+        (ALL_TALK, None)
+    );
+    assert_eq!(read.conversation.room_kind, api::RoomKind::Closed);
+    assert!(read.users.iter().any(|user| user.id == DAVID));
+    assert_eq!(read.saved, None);
+
+    let reply = david
+        .send(get(&format!("/api/v1/messages/{BOARD_REPLY}")))
+        .await;
+    let read: api::MessageRead = parse(&reply);
+    assert_eq!(
+        (read.conversation.room_id, read.conversation.thread_id),
+        (BOARD, Some(BOARD_THREAD))
+    );
+    assert!(read.conversation.thread_name.is_some());
+
+    // A message the viewer can't reach is a 404, so a forward's origin shows as "Forwarded" only.
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = kevin
+        .send(get(&format!("/api/v1/messages/{ALL_PETS_MESSAGE}")))
+        .await;
+    assert_eq!(
+        (reply.status, tag(&reply)),
+        (StatusCode::NOT_FOUND, "NotFound".into()),
+        "{}",
+        reply.text()
+    );
+    let reply = kevin.send(get("/api/v1/messages/999999999")).await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn people_say_whether_they_uploaded_a_picture() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let has_avatar = |page: &api::MessagePage, id: i64| {
+        page.users
+            .iter()
+            .find(|user| user.id == id)
+            .map(|user| user.has_avatar)
+    };
+    let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
+    let before: api::MessagePage = parse(&david.send(get(&path)).await);
+    assert_eq!(has_avatar(&before, DAVID), Some(false));
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "INSERT INTO active_storage_blobs (key, filename, content_type, metadata, service_name, byte_size, checksum, created_at) \
+                 VALUES ('avatar-david', 'david.png', 'image/png', '{}', 'local', 1, 'x', '2026-03-02 15:30:00')",
+                [],
+            )?;
+            let blob = tx.conn().last_insert_rowid();
+            tx.conn().execute(
+                "INSERT INTO active_storage_attachments (name, record_type, record_id, blob_id, created_at) \
+                 VALUES ('avatar', 'User', ?, ?, '2026-03-02 15:30:00')",
+                [DAVID, blob],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let page: api::MessagePage = parse(&david.send(get(&path)).await);
+    assert_eq!(has_avatar(&page, DAVID), Some(true));
+    for user in before.users.iter().filter(|user| user.id != DAVID) {
+        assert_eq!(
+            has_avatar(&page, user.id),
+            Some(user.has_avatar),
+            "{}",
+            user.id
+        );
+    }
+    let me: api::Me = parse(&david.send(get("/api/v1/me")).await);
+    assert!(me.user.has_avatar);
+}
+
+#[tokio::test]
 async fn a_page_names_its_thread_repliers() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;

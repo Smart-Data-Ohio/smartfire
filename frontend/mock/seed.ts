@@ -271,6 +271,7 @@ function seedUsers(now: number): Map<number, User> {
       status: person.status,
       bio: person.bio,
       avatarUrl: `/users/${person.id}/avatar`,
+      hasAvatar: USERS_WITH_PHOTOS.has(person.id),
       customStatus:
         person.customStatus === null
           ? null

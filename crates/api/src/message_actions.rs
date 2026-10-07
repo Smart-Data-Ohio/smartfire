@@ -19,6 +19,10 @@ use crate::endpoints::{before_actions, body, now, set_room};
 use crate::error::{fail, validation};
 
 endpoint!(
+    /// `GET /api/v1/messages/:message_id`
+    show => show_message
+);
+endpoint!(
     /// `PATCH /api/v1/messages/:message_id`
     update => update_message
 );
@@ -168,6 +172,40 @@ async fn update_message(c: &mut Ctx) -> Result {
     }
     let dto = render_message(c, updated).await?;
     c.json(StatusCode::OK, &dto)
+}
+
+async fn show_message(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (message, _) = reachable(c).await?;
+    let viewer = concerns::require_current_user(c)?.clone();
+    let (app, now) = (c.app().clone(), now(c));
+    let read = c
+        .app()
+        .db
+        .read(move |conn| {
+            let messages = std::slice::from_ref(&message);
+            let dto = dto::messages(conn, &app, messages)?.remove(0);
+            let repliers = dto
+                .thread
+                .iter()
+                .flat_map(|thread| thread.replier_ids.iter());
+            let people: Vec<i64> = std::iter::once(dto.creator_id)
+                .chain(repliers.copied())
+                .collect();
+            let conversation =
+                dto::conversation_names(conn, &viewer, [(message.room_id, message.thread_id)])?
+                    .pop()
+                    .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
+            Ok(api::MessageRead {
+                users: dto::users(conn, &app.secrets, people, now)?,
+                saved: dto::saved(conn, viewer.id, messages)?.pop(),
+                conversation,
+                message: dto,
+            })
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &read)
 }
 
 async fn show_source(c: &mut Ctx) -> Result {
