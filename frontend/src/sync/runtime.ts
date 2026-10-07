@@ -3,6 +3,8 @@ import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
@@ -20,11 +22,15 @@ import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { ActivityAction } from "../store/activity.ts";
+import type { ApprovalFilter } from "../store/approvals.ts";
+import type { LedgerFilter } from "../store/ledger.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
+import * as approvalActions from "./approval-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
+import * as ledgerActions from "./ledger-actions.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
@@ -209,6 +215,30 @@ const agents = {
   loadProfile: (agentId: number): Promise<void> => runAction(agentActions.loadProfile(agentId)),
 };
 
+/**
+ * Agents' approval requests (S4). Loads never reject; a decision shows at once and rejects (put
+ * back) when the server refuses it.
+ */
+const approvals = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.loadMore(agentId, filter)),
+  /** Approves or denies, with an optional note; answers the server's copy. */
+  decide: (id: number, decision: ApprovalDecision, note: string | null): Promise<AgentApproval> =>
+    runAction(approvalActions.decide(id, decision, note)),
+};
+
+/** Agents' event ledgers (S4). Loads land in the store (a 403 too) and never reject. */
+const ledger = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.loadMore(agentId, filter)),
+};
+
 /** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
 export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
@@ -222,6 +252,8 @@ export const actions = {
   saved,
   scheduled,
   agents,
+  approvals,
+  ledger,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

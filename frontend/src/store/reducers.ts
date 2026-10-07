@@ -5,6 +5,7 @@
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
 import { applyAgentStatus, applyAgentSteps, mergeMessageCopies } from "./agents.ts";
+import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
   Me,
@@ -762,7 +763,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        next = approvalRequested(
+          applyActivityItem(next, event.data.item, event.data.unreadCount),
+          event.data.item,
+        );
         break;
       case "activity.removed":
         next = removeActivityItem(next, event.data.id, event.data.unreadCount);
@@ -817,6 +821,9 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "agent.steps":
         next = applyAgentSteps(next, event.data);
+        break;
+      case "approval.updated":
+        next = applyApprovalUpdated(next, event.data);
         break;
     }
   }

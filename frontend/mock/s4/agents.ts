@@ -44,6 +44,43 @@ export const AGENT_IDS = {
   atlas: 44,
 } as const;
 
+/** Whether the viewer is an administrator. */
+export function viewerIsAdmin(ctx: S2Context): boolean {
+  return ctx.world().users.get(VIEWER_ID)?.role === "administrator";
+}
+
+/**
+ * Whether the viewer manages the agent (an administrator, or its owner): who sees its grants and
+ * budgets, decides its approval requests and reads its ledger.
+ */
+export function viewerManages(ctx: S2Context, row: AgentDirectoryRow): boolean {
+  return viewerIsAdmin(ctx) || row.ownerId === VIEWER_ID;
+}
+
+/**
+ * A room no one in the seed belongs to (the viewer included), named only to administrators: the
+ * approvals and ledger entries there show "a room you're not in" to an owner who isn't an
+ * administrator (see the `viewer-role` control).
+ */
+export const HIDDEN_ROOM = { id: 12, name: "ops-oncall" } as const;
+
+/**
+ * A room's name as the viewer may see it (`roomName` on approvals and ledger entries): `null`
+ * unless the viewer is an administrator or a member of the room.
+ */
+export function viewerRoomName(ctx: S2Context, roomId: number | null): string | null {
+  if (roomId === null) return null;
+
+  const record = ctx.world().rooms.get(roomId);
+  const member = record?.memberIds.includes(VIEWER_ID) ?? false;
+
+  if (!member && !viewerIsAdmin(ctx)) return null;
+
+  if (record !== undefined) return ctx.displayName(record);
+
+  return roomId === HIDDEN_ROOM.id ? HIDDEN_ROOM.name : null;
+}
+
 /** The seeded step ids start here. */
 const FIRST_STEP_ID = 9001;
 
@@ -523,8 +560,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
   };
 
   /** Administrators and the owner see grants and management. */
-  const manages = (record: AgentRecord) =>
-    ctx.world().users.get(VIEWER_ID)?.role === "administrator" || record.row.ownerId === VIEWER_ID;
+  const manages = (record: AgentRecord) => viewerManages(ctx, record.row);
 
   const profile = (agentId: number): AgentProfile => {
     const record = recordOr404(agentId);

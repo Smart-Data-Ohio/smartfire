@@ -1,13 +1,15 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import type { AgentActivitySummary } from "../../gen/AgentActivitySummary.ts";
 import type { AgentBudgetUsage } from "../../gen/AgentBudgetUsage.ts";
 import type { AgentProfile } from "../../gen/AgentProfile.ts";
 import { formatFull } from "../../lib/time.ts";
+import { profileOf } from "../../store/agents.ts";
 import { useStore } from "../../store/store.ts";
 import { directs } from "../../sync/directs.ts";
 import { Button } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneEmpty, PaneError } from "../panes/pane-states.tsx";
@@ -273,15 +275,81 @@ function ProfileSkeleton() {
   );
 }
 
+/** The profile's sections: the overview, then (for administrators and the owner) two lists. */
+export type AgentSection = "overview" | "approvals" | "events";
+
+const SECTIONS: readonly { readonly value: AgentSection; readonly label: string }[] = [
+  { value: "overview", label: "Overview" },
+  { value: "approvals", label: "Approvals" },
+  { value: "events", label: "Activity" },
+];
+
+/** The section tabs: each one is its own URL, so Back and links work. */
+function SectionTabs({
+  agentId,
+  section,
+  panelId,
+}: {
+  readonly agentId: number;
+  readonly section: AgentSection;
+  readonly panelId: string;
+}) {
+  const navigate = useNavigate();
+
+  const go = (value: string) => {
+    const params = { agentId };
+
+    switch (value) {
+      case "approvals":
+        void navigate({ to: "/agents/$agentId/approvals", params, replace: true });
+        break;
+      case "events":
+        void navigate({ to: "/agents/$agentId/events", params, replace: true });
+        break;
+      default:
+        void navigate({ to: "/agents/$agentId", params, replace: true });
+    }
+  };
+
+  return (
+    <Tabs
+      id={`${panelId}-sections`}
+      panelId={panelId}
+      label="Sections"
+      items={SECTIONS}
+      value={section}
+      onValueChange={go}
+    />
+  );
+}
+
+/** The overview section of a loaded profile (`/app/agents/$agentId`). */
+export function AgentOverviewRoute() {
+  const { agentId } = useParams({ from: "/shell/agents/$agentId/" });
+  const profile = useStore((state) => profileOf(state, agentId).profile);
+  const now = useNow();
+
+  return profile === null ? null : <AgentProfileContent profile={profile} now={now} />;
+}
+
 /**
  * `/app/agents/$agentId`: an agent's profile. The header has its avatar, badge, live status,
  * owner, description and provider, with a Message button; below are its rooms and, for
  * administrators and its owner, its grants, today's usage against its caps and its last 24 hours.
- * Read-only: the contract exposes no management actions.
+ * Administrators and the owner also get two more sections: its approval requests (to decide) and
+ * its activity ledger. The sections render in `children` (the route's outlet).
  */
-export function AgentProfilePage({ agentId }: { readonly agentId: number }) {
+export function AgentProfilePage({
+  agentId,
+  section,
+  children,
+}: {
+  readonly agentId: number;
+  readonly section: AgentSection;
+  readonly children: ReactNode;
+}) {
   const entry = useAgentProfile(agentId);
-  const now = useNow();
+  const panelId = `agent-${agentId}-panel`;
 
   const name = useStore((state) => {
     const userId = entry.profile?.agent.userId;
@@ -289,10 +357,12 @@ export function AgentProfilePage({ agentId }: { readonly agentId: number }) {
     return userId === undefined ? null : (state.users[userId]?.name ?? null);
   });
 
-  return (
-    <PageFrame title={name ?? "Agent"} icon="bot" back>
-      <div className="agents-scroll">
-        {entry.missing ? (
+  const manages = entry.profile !== null && entry.profile.management !== null;
+
+  const body = () => {
+    if (entry.missing) {
+      return (
+        <div className="agents-scroll">
           <div className="agent-missing">
             <PaneEmpty
               icon="bot"
@@ -303,16 +373,59 @@ export function AgentProfilePage({ agentId }: { readonly agentId: number }) {
               See every agent
             </Link>
           </div>
-        ) : entry.status === "error" && entry.profile === null ? (
-          <PaneError message="This agent couldn't be loaded." onRetry={entry.reload} />
-        ) : (
+        </div>
+      );
+    }
+
+    if (entry.status === "error" && entry.profile === null) {
+      return <PaneError message="This agent couldn't be loaded." onRetry={entry.reload} />;
+    }
+
+    // The overview resolves out of its skeleton; the lists bring their own skeletons.
+    if (section === "overview" || entry.profile === null) {
+      return (
+        <div className="agents-scroll">
           <SkeletonReveal loading={entry.profile === null} skeleton={<ProfileSkeleton />}>
-            {entry.profile === null ? null : (
-              <AgentProfileContent profile={entry.profile} now={now} />
-            )}
+            {entry.profile === null || section !== "overview" ? null : children}
           </SkeletonReveal>
-        )}
-      </div>
+        </div>
+      );
+    }
+
+    if (!manages) {
+      return (
+        <PaneEmpty
+          icon="lock"
+          title="Only for administrators and its owner"
+          text={`${name ?? "This agent"}'s approval requests and activity are shown to administrators and its owner.`}
+        />
+      );
+    }
+
+    return children;
+  };
+
+  return (
+    <PageFrame
+      title={name ?? "Agent"}
+      icon="bot"
+      back
+      toolbar={
+        manages ? <SectionTabs agentId={agentId} section={section} panelId={panelId} /> : undefined
+      }
+    >
+      {manages ? (
+        <div
+          className="page-panel"
+          id={panelId}
+          role="tabpanel"
+          aria-labelledby={tabId(`${panelId}-sections`, section)}
+        >
+          {body()}
+        </div>
+      ) : (
+        <div className="page-panel">{body()}</div>
+      )}
     </PageFrame>
   );
 }

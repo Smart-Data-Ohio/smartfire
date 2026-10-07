@@ -73,6 +73,14 @@ export interface Activity {
   record(draft: ActivityDraft): ActivityItem;
   /** Deletes every item `matches` picks (their source went), publishing each removal. */
   removeWhere(matches: (item: ActivityItem) => boolean): void;
+  /**
+   * Updates the source of every item `matches` picks (an approval was decided), publishing each;
+   * unlike `record`, the item keeps its state and place.
+   */
+  updateSourceWhere(
+    matches: (item: ActivityItem) => boolean,
+    change: (source: ActivitySource) => ActivitySource,
+  ): void;
   /** The viewer's unread items across every type. */
   unreadCount(): number;
 }
@@ -239,6 +247,20 @@ export function createActivity(ctx: S2Context): Activity {
     }
   };
 
+  const updateSourceWhere = (
+    matches: (item: ActivityItem) => boolean,
+    change: (source: ActivitySource) => ActivitySource,
+  ) => {
+    for (const item of [...items().values()]) {
+      if (!matches(item)) continue;
+
+      const next = { ...item, source: change(item.source) };
+
+      items().set(item.id, next);
+      publish(next);
+    }
+  };
+
   return {
     routes: [
       route("GET", /^\/activity$/, (request) => ok(list(request.query))),
@@ -254,6 +276,7 @@ export function createActivity(ctx: S2Context): Activity {
     ],
     record,
     removeWhere,
+    updateSourceWhere,
     unreadCount,
   };
 }

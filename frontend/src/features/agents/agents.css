@@ -593,4 +593,406 @@
       width: 100%;
     }
   }
+
+  /* ── Profile sections: the filter strip over a list ─────────────────── */
+
+  .agent-filters {
+    display: flex;
+    flex-shrink: 0;
+    max-width: 880px;
+    padding: var(--space-2) var(--space-5) var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .agent-filters .t-tabs {
+    flex-shrink: 0;
+  }
+
+  /* ── Approval requests ──────────────────────────────────────────────── */
+
+  /* A card is its own surface: the row adds no hover wash under it. */
+  .list-row-inner:has(.approval-card):hover {
+    background: none;
+  }
+
+  /* Inset to line up with the tab strips above (the row's own inset is smaller). */
+  .approval-card-pad {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .approval-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Pending cards without the beam (only one surface owns it) keep a still violet edge. */
+  .approval-card[data-status="pending"] {
+    border-color: color-mix(in oklch, var(--agent) 45%, var(--border));
+  }
+
+  .beam-host[data-beam] > .approval-card {
+    border-color: transparent;
+  }
+
+  .approval-card:not([data-status="pending"]) {
+    background: var(--bg-pane);
+    box-shadow: none;
+  }
+
+  .approval-head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .approval-glyph {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .approval-card:not([data-status="pending"]) .approval-glyph {
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+  }
+
+  .approval-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .approval-summary.list-row-open {
+    display: block;
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
+  }
+
+  .approval-meta,
+  .ledger-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .approval-action {
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    background: var(--bg-sunken);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .approval-room,
+  .ledger-room {
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  a.approval-room:hover,
+  a.ledger-room:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .approval-room[data-hidden],
+  .ledger-room[data-hidden] {
+    color: var(--text-faint);
+    font-style: italic;
+    font-weight: var(--weight-regular);
+  }
+
+  .approval-chip,
+  .ledger-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 20px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+
+  .approval-chip[data-status="pending"],
+  .ledger-chip[data-outcome="pending"] {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .approval-chip[data-status="approved"],
+  .ledger-chip[data-outcome="delivered"],
+  .ledger-chip[data-outcome="acknowledged"] {
+    background: color-mix(in oklch, var(--success) 14%, transparent);
+    color: var(--success-text);
+  }
+
+  .approval-chip[data-status="denied"] {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .ledger-chip[data-outcome="suppressed"] {
+    background: color-mix(in oklch, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+  }
+
+  .approval-acts,
+  .approval-decision,
+  .approval-admin-only {
+    margin: 0;
+    padding-left: calc(32px + var(--space-3));
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .approval-decision {
+    width: fit-content;
+  }
+
+  .approval-decision[data-status="pending"] {
+    color: var(--agent-text);
+  }
+
+  .approval-admin-only {
+    color: var(--text-faint);
+  }
+
+  .approval-note {
+    margin: 0 0 0 calc(32px + var(--space-3));
+    padding: var(--space-1) var(--space-3);
+    border-left: 2px solid var(--border-strong);
+    color: var(--text-body);
+    font-size: var(--text-meta);
+    overflow-wrap: anywhere;
+  }
+
+  .approval-decide {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-left: calc(32px + var(--space-3));
+  }
+
+  .approval-note-field {
+    max-width: 420px;
+  }
+
+  .approval-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* ── Activity ledger ────────────────────────────────────────────────── */
+
+  .ledger-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-2) var(--space-2);
+  }
+
+  .ledger-glyph {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+  }
+
+  .ledger-glyph[data-outcome="suppressed"] {
+    background: color-mix(in oklch, var(--warning) 16%, transparent);
+    color: var(--warning-text);
+  }
+
+  .ledger-glyph[data-outcome="pending"] {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .ledger-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .ledger-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .ledger-sentence.list-row-open {
+    display: block;
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ledger-time {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .ledger-detail,
+  .ledger-external,
+  .ledger-webhook {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    overflow-wrap: anywhere;
+  }
+
+  .ledger-label {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .ledger-content {
+    margin: 2px 0 0;
+    padding: 0 var(--space-2);
+    border-left: 2px solid var(--border-strong);
+    overflow: hidden;
+    color: var(--text-body);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ledger-content[data-unavailable] {
+    border-left-color: var(--border);
+    color: var(--text-faint);
+    font-style: italic;
+  }
+
+  .ledger-external {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-1);
+  }
+
+  .ledger-external-icon {
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .ledger-webhook {
+    color: var(--text-faint);
+  }
+
+  .ledger-webhook[data-status="failed"] {
+    color: var(--danger-text);
+  }
+
+  .ledger-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    width: fit-content;
+    margin-top: 2px;
+    border-radius: var(--radius-xs);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .ledger-open:hover {
+    text-decoration: underline;
+  }
+
+  .ledger-open:focus-visible,
+  .approval-room:focus-visible,
+  .ledger-room:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  @media (width < 720px) {
+    .agent-filters {
+      padding-inline: var(--space-3);
+    }
+
+    .approval-card {
+      padding: var(--space-3);
+    }
+
+    /* On a phone the card's lines use the full width under the glyph. */
+    .approval-acts,
+    .approval-decision,
+    .approval-admin-only,
+    .approval-decide {
+      padding-left: 0;
+    }
+
+    .approval-note {
+      margin-left: 0;
+    }
+
+    .approval-card-pad {
+      padding-inline: 0;
+    }
+
+    .ledger-content {
+      white-space: normal;
+    }
+
+    /* The sentence gets its own line; the outcome and time follow under it. */
+    .ledger-line {
+      flex-wrap: wrap;
+      row-gap: 2px;
+    }
+
+    .ledger-sentence.list-row-open {
+      flex-basis: 100%;
+      white-space: normal;
+    }
+  }
 }
