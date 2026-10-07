@@ -64,3 +64,15 @@ export type GithubPullRequestId = typeof GithubPullRequestId.Type;
 export const FizzyCardId = Schema.Int.pipe(Schema.brand("FizzyCardId"));
 
 export type FizzyCardId = typeof FizzyCardId.Type;
+
+export const AgentId = Schema.Int.pipe(Schema.brand("AgentId"));
+
+export type AgentId = typeof AgentId.Type;
+
+export const AgentStepId = Schema.Int.pipe(Schema.brand("AgentStepId"));
+
+export type AgentStepId = typeof AgentStepId.Type;
+
+export const AgentApprovalId = Schema.Int.pipe(Schema.brand("AgentApprovalId"));
+
+export type AgentApprovalId = typeof AgentApprovalId.Type;

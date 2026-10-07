@@ -52,6 +52,7 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     poll: null,
     cards: [],
     cardsAsOf: createdAt,
+    steps: [],
     createdAt,
     updatedAt: createdAt,
     ...extra,
