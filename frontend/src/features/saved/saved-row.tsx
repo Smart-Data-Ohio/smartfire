@@ -195,7 +195,7 @@ export function SavedRow({
         aria-label={`Open ${authorName}'s message in ${conversationText(conversation)}`}
         onClick={() => handlers.onOpen(item)}
       />
-      <div className="saved-row">
+      <div className="saved-row" data-message-id={item.messageId}>
         <UserAvatar userId={message?.creatorId ?? 0} size={36} decorative />
         <div className="saved-main">
           <div className="saved-line">
