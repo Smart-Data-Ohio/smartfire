@@ -1,7 +1,7 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { AGENT_IDS } from "../../mock/s4/agents.ts";
 import type { AgentLedgerPage } from "../../src/gen/AgentLedgerPage.ts";
-import { expect, matrix, openApp, shot, test, USER_IDS } from "./support.ts";
+import { expect, matrix, openApp, shot, syncWelcomed, test, USER_IDS } from "./support.ts";
 
 const { ember: EMBER, scout: SCOUT } = AGENT_IDS;
 
@@ -90,8 +90,12 @@ test("approving with a note moves the request out of Pending", async ({ page }) 
 });
 
 test("a decision made elsewhere and a new request arrive live", async ({ page }) => {
+  const welcomed = syncWelcomed(page);
+
   await openSection(page, `agents/${EMBER}/approvals?status=pending`);
   await expect(card(page, "Merge PR #318")).toBeVisible();
+  // Decided before the socket is up, it would arrive by the catch-up reload, unannounced.
+  await welcomed;
 
   await control(page.request, "approval-settle", {
     id: 99,
