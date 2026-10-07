@@ -13,7 +13,7 @@
 {% let form = h::form_with("/two_factor_challenge").class("auth-form") %}  {% filter form_with(form) %}
     <div class="field">
       {{ form.label("code", "Authenticator or backup code", h::attrs().class("field-label")) }}
-      {{ form.text_field("code", None, h::attrs().required(true).class("input auth-code").autofocus().autocomplete("one-time-code").maxlength(20).placeholder("123 456")) }}
+      {{ form.text_field("code", None, h::rejected_field(ctx, h::attrs().required(true).class("input auth-code").autofocus().autocomplete("one-time-code").maxlength(20).placeholder("123 456"))) }}
     </div>
 
     <label class="checkbox-row auth-check">

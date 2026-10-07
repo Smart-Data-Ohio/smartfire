@@ -226,6 +226,7 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
                 mismatches.push(name);
             }
         } else {
+            crate::form_contracts::assert_head(name, &actual, expected);
             let content = crate::form_contracts::page_content(&actual);
             crate::form_contracts::assert_forms(
                 name, content, crate::form_contracts::page_content(expected),

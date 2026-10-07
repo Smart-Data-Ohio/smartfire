@@ -709,3 +709,78 @@ async fn google_connection_unreadable_disconnect_drops_cache_preserves_flags_and
 }
 
 mod parity_cases;
+
+/// The boot data the SPA shell inlines on its next page.
+async fn spa_boot(b: &mut Browser<'_>) -> Value {
+    let html = b.get("/app/settings/integrations").await.text();
+    let json = html
+        .split("id=\"boot\"")
+        .nth(1)
+        .and_then(|rest| rest.split_once('>'))
+        .and_then(|(_, rest)| rest.split("</script>").next())
+        .expect("the SPA shell inlines its boot data");
+    serde_json::from_str(json).unwrap()
+}
+
+#[tokio::test]
+async fn google_connection_outcomes_return_new_ui_users_to_the_spa_with_their_flash() {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+    for preference in [UiPreference::Classic, UiPreference::Next] {
+        let a = TestApp::boot_seed_with_env(
+            "default",
+            crate::controllers::presenters::test_support::seed_clock(),
+            &[("SPA_ENABLED", "1")],
+        )
+        .await
+        .expect("default seed required");
+        let r = Recorded::new(vec![]);
+        support::install(&a, r.clone()).await;
+        a.db()
+            .write(move |tx| ui_preference::store(tx, DAVID, preference))
+            .await
+            .unwrap();
+        let destination = match preference {
+            UiPreference::Next => "http://campfire.test/app/settings/integrations",
+            _ => "http://campfire.test/users/me/profile",
+        };
+        let mut b = a.sign_in(DAVID).await;
+        let outcomes = [
+            ("forged", "Google connection expired. Try again."),
+            ("denied", "Google Calendar connection was not approved."),
+            (
+                "drive-only",
+                "Calendar permission was not granted. Reconnect to publish events.",
+            ),
+        ];
+        for (outcome, message) in outcomes {
+            let state = start(&a, &mut b).await;
+            let reply = match outcome {
+                "forged" => callback(&mut b, "forged").await,
+                "denied" => {
+                    b.get(&format!(
+                        "/google/callback?state={}&error=access_denied",
+                        encode(&state)
+                    ))
+                    .await
+                }
+                _ => {
+                    r.answer(
+                        200,
+                        tokens(&a, Some(campfire_db::models::google_account::DRIVE_SCOPE)),
+                    );
+                    callback(&mut b, &state).await
+                }
+            };
+            assert_eq!(reply.location(), Some(destination), "{outcome}");
+            if preference == UiPreference::Next {
+                assert_eq!(
+                    spa_boot(&mut b).await["flash"],
+                    json!({"kind": "alert", "message": message}),
+                    "{outcome}"
+                );
+            } else {
+                assert!(b.get("/users/me/profile").await.text().contains(message), "{outcome}");
+            }
+        }
+    }
+}

@@ -5,6 +5,9 @@ use campfire_richtext::dom::{Dom, NodeId};
 #[derive(Debug, PartialEq, Eq)]
 pub struct Form {
     action: String,
+    /// The `method` attribute the browser submits with (`get` or `post`).
+    html_method: String,
+    /// The method Rails routes on: `_method` when present, else the attribute.
     method: String,
     enctype: String,
     controls: Vec<Control>,
@@ -48,6 +51,7 @@ pub fn forms(html: &str) -> Vec<Form> {
                 .to_ascii_lowercase();
             Form {
                 action: dom.attr(form, "action").unwrap_or("").into(),
+                html_method: dom.attr(form, "method").unwrap_or("get").to_ascii_lowercase(),
                 method,
                 enctype: dom
                     .attr(form, "enctype")
@@ -85,7 +89,11 @@ fn control(dom: &Dom, id: NodeId) -> Control {
         _ => element.clone(),
     };
     let values = if name.as_deref() == Some("authenticity_token") {
-        vec!["<authenticity_token>".into()]
+        // Any token stands for any other, but an empty or missing one never matches a real one.
+        match dom.attr(id, "value") {
+            Some(value) if !value.is_empty() => vec!["<authenticity_token>".into()],
+            _ => vec!["<missing authenticity_token>".into()],
+        }
     } else if element == "textarea" {
         vec![dom.text_content(id)]
     } else if element == "select" {
@@ -130,10 +138,11 @@ fn control(dom: &Dom, id: NodeId) -> Control {
         "accept",
         "checked",
         "multiple",
+        "disabled",
     ]
     .into_iter()
     .map(|attr| {
-        if matches!(attr, "required" | "checked" | "multiple") {
+        if matches!(attr, "required" | "checked" | "multiple" | "disabled") {
             dom.has_attr(id, attr).then(String::new)
         } else {
             dom.attr(id, attr).map(str::to_owned)
@@ -149,7 +158,45 @@ fn control(dom: &Dom, id: NodeId) -> Control {
     }
 }
 
+/// The head metadata a page's behaviour depends on: the CSRF pair (any token stands for any
+/// other; an empty one stands for none), the signed-in user and Turbo's reload and cache directives.
+const HEAD_META: [&str; 5] = [
+    "csrf-param",
+    "csrf-token",
+    "current-user-id",
+    "turbo-visit-control",
+    "turbo-cache-control",
+];
+
+pub fn head(html: &str) -> Vec<(String, String)> {
+    let mut dom = Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    dom.descendants(root)
+        .into_iter()
+        .filter(|id| dom.name(*id) == "meta")
+        .filter_map(|id| {
+            let name = dom.attr(id, "name")?;
+            HEAD_META.contains(&name).then(|| {
+                let content = dom.attr(id, "content").unwrap_or_default();
+                let content = match (name, content.is_empty()) {
+                    ("csrf-token", false) => "<csrf-token>".to_owned(),
+                    _ => content.to_owned(),
+                };
+                (name.to_owned(), content)
+            })
+        })
+        .collect()
+}
+
+pub fn assert_head(name: &str, actual: &str, rails: &str) {
+    assert_eq!(head(actual), head(rails), "{name}: Rails head metadata");
+}
+
+/// The forms, and for complete documents the head metadata too.
 pub fn assert_forms(name: &str, actual: &str, rails: &str) {
+    if rails.contains("<head") {
+        assert_head(name, actual, rails);
+    }
     assert_eq!(forms(actual), forms(rails), "{name}: Rails form contract");
 }
 
@@ -159,9 +206,10 @@ pub fn reskinned(html: &str) -> bool {
     html.contains("<body class=\"auth\">") || html.contains("<body class=\"public-page")
 }
 
-/// The page's own forms (action, method, fields and values), comparable across presentations.
+/// The page's head metadata and its own forms (action, method, fields and values), comparable
+/// across presentations.
 pub fn contract(html: &str) -> String {
-    format!("{:?}", forms(page_content(html)))
+    format!("{:?} {:?}", head(html), forms(page_content(html)))
 }
 
 /// A restyled page matches its Rails vector when its forms do; any other page byte for byte.

@@ -104,12 +104,56 @@ test("the pages follow the theme the SPA remembers on this device", async ({ pag
   expect(scheme).toBe("dark");
 });
 
+test("a saved system theme follows the OS over the account's theme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      "smartfire.appearance",
+      JSON.stringify({ theme: "system", density: "comfortable", motion: "system" }),
+    ),
+  );
+  // As a signed-in page whose account theme is dark.
+  await page.route("**/__auth/sudo-totp.html", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(/data-theme="[a-z]+"/, 'data-theme="dark"');
+
+    await route.fulfill({ response, body });
+  });
+  await page.goto("/__auth/sudo-totp.html");
+
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", /./);
+
+  const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const light = await background();
+
+  await page.emulateMedia({ colorScheme: "dark" });
+
+  expect(await background()).not.toBe(light);
+});
+
 test("sign-in shows a rejected attempt above the card and shakes it", async ({ page }) => {
   await openPage(page, "sign-in-google-alert", "light");
 
   await expect(page.getByRole("alert")).toHaveText("Too many requests or unauthorized.");
   await expect(page.locator(".auth-card")).toHaveAttribute("data-shake", "");
+
+  for (const field of [page.getByLabel("Email address"), page.getByLabel("Password")]) {
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(field).toHaveAccessibleDescription("Too many requests or unauthorized.");
+  }
+
   await expect(page.getByRole("button", { name: "Sign in with Google" })).toBeVisible();
+});
+
+test("a rejected code names the rejection as the field's description", async ({ page }) => {
+  await openPage(page, "two-factor-challenge-alert", "light");
+
+  const code = page.getByLabel("Authenticator or backup code");
+
+  await expect(code).toHaveAttribute("aria-invalid", "true");
+  await expect(code).toHaveAccessibleDescription(
+    "That code didn't work. Check your authenticator app or try a backup code.",
+  );
 });
 
 test("a field's translations open from the globe and close on Escape or a click elsewhere", async ({

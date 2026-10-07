@@ -242,6 +242,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
     let update = std::env::var("UPDATE_AUTH_PAGE_FIXTURES").as_deref() == Ok("1");
     let mut differing = Vec::new();
     for (name, bytes) in files {
+        let bytes = tidy(&name, bytes);
         let path = directory.join(&name);
         if update {
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -254,4 +255,17 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         differing.is_empty(),
         "auth fixtures differ: {differing:?}. Rerun with UPDATE_AUTH_PAGE_FIXTURES=1 cargo test -j 4 -p campfire --bin campfire -- auth_pages_screenshot_fixtures"
     );
+}
+
+/// Text fixtures without trailing whitespace on any line, so they pass `git diff --check`; the
+/// pages have no preformatted text for that to change.
+fn tidy(name: &str, bytes: Vec<u8>) -> Vec<u8> {
+    if ![".html", ".css", ".js"].iter().any(|ext| name.ends_with(ext)) {
+        return bytes;
+    }
+    let text = String::from_utf8(bytes).unwrap();
+    let mut tidied = text.lines().map(str::trim_end).collect::<Vec<_>>().join("\n");
+    tidied.truncate(tidied.trim_end().len());
+    tidied.push('\n');
+    tidied.into_bytes()
 }

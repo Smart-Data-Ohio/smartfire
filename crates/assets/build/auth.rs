@@ -25,7 +25,10 @@ pub fn prepare(crate_dir: &Path, out_dir: &Path) -> PathBuf {
     fs::create_dir_all(destination.join("fonts")).unwrap();
     let mut bundle = Bundle {
         destination: &destination,
-        fonts: frontend.join("styles/fonts").canonicalize().unwrap(),
+        fonts: frontend
+            .join("styles/fonts")
+            .canonicalize()
+            .unwrap_or_else(|e| missing(&frontend.join("styles/fonts"), e)),
         visited: HashSet::new(),
         // Comments and strings are opaque; only actual import/url tokens are processed.
         tokens: Regex::new(r#"(?s)/\*.*?\*/|@import\s+(?:url\(\s*)?["'](?P<import>[^"']+)["']\s*\)?\s*;|url\(\s*(?:["'](?P<quoted>[^"']+)["']|(?P<bare>[^\s)]+))\s*\)|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'"#).unwrap(),
@@ -34,6 +37,17 @@ pub fn prepare(crate_dir: &Path, out_dir: &Path) -> PathBuf {
     fs::write(destination.join("auth.css"), css).unwrap();
     fs::copy(crate_dir.join("auth/auth.js"), destination.join("auth.js")).unwrap();
     destination
+}
+
+/// The auth stylesheet is built from frontend/src; a build without those sources (an image or CI
+/// step that didn't copy them) stops here, naming what's missing.
+fn missing(path: &Path, error: std::io::Error) -> ! {
+    panic!(
+        "auth assets: {} is unavailable ({error}). The build reads frontend/src/{{auth,styles,motion}} \
+         and frontend/src/ui/{{button,text-field,checkbox}}.css: copy them as the Dockerfile and \
+         ci/with-release-inputs.sh do.",
+        path.display()
+    )
 }
 
 struct Bundle<'a> {
@@ -45,9 +59,7 @@ struct Bundle<'a> {
 
 impl Bundle<'_> {
     fn inline(&mut self, path: &Path) -> String {
-        let path = path
-            .canonicalize()
-            .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        let path = path.canonicalize().unwrap_or_else(|e| missing(path, e));
         if !self.visited.insert(path.clone()) {
             return String::new();
         }
@@ -85,7 +97,8 @@ impl Bundle<'_> {
                     let (file, tail) = url
                         .find(['?', '#'])
                         .map_or((url.as_str(), ""), |i| (&url[..i], &url[i..]));
-                    let file = path.parent().unwrap().join(file).canonicalize().unwrap();
+                    let file = path.parent().unwrap().join(file);
+                    let file = file.canonicalize().unwrap_or_else(|e| missing(&file, e));
                     assert!(
                         file.starts_with(&self.fonts),
                         "auth CSS local URLs must name bundled fonts: {}",

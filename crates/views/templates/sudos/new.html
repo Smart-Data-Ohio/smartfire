@@ -1,7 +1,7 @@
 {% extends "layouts/auth.html" %}
 {% import "auth/_macros.html" as auth %}
 
-{% block head %}{% endblock %}
+{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
 
 {% block content %}
 <main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
@@ -15,7 +15,7 @@
     {{ h::hidden_field_tag("verifier", Some("password"), h::attrs()) }}
     <div class="field">
       {{ form.label("password", "Password", h::attrs().class("field-label")) }}
-      {{ form.password_field("password", h::attrs().required(true).class("input").autofocus().autocomplete("current-password").maxlength(72)) }}
+      {{ form.password_field("password", h::rejected_field(ctx, h::attrs().required(true).class("input").autofocus().autocomplete("current-password").maxlength(72))) }}
     </div>
 
     {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit").name("confirm"), "Confirm") }}

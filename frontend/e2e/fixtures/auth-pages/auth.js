@@ -13,8 +13,12 @@
     const saved = JSON.parse(localStorage.getItem("smartfire.appearance") || "null");
 
     if (saved && typeof saved === "object") {
+      // A saved preference wins over the server's account theme, "system" included: the SPA
+      // removes the attribute for it, so this page follows the OS just as the SPA does.
       if (saved.theme === "light" || saved.theme === "dark") root.dataset.theme = saved.theme;
+      else if (saved.theme === "system") delete root.dataset.theme;
       if (saved.motion === "reduce" || saved.motion === "full") root.dataset.motion = saved.motion;
+      else if (saved.motion === "system") delete root.dataset.motion;
     }
   } catch {
     // Storage can be unavailable or hold something else; the OS setting decides.

@@ -45,3 +45,16 @@ pub fn auth_stylesheet_tag() -> Html {
 pub fn auth_script_tag() -> Html {
     super::raw(format!("<script src=\"{}\"></script>", campfire_assets::javascript_path("auth")))
 }
+
+/// The `id` of the auth layout's rejection message (its alert flash).
+pub const AUTH_ALERT_ID: &str = "auth-alert";
+
+/// A field the auth page's rejection is about: described by the alert and marked invalid while
+/// one shows; unchanged otherwise.
+pub fn rejected_field(ctx: &ViewContext, attrs: Attrs) -> Attrs {
+    if ctx.flash_alert().is_some() {
+        attrs.attr("aria-describedby", AUTH_ALERT_ID).attr("aria-invalid", "true")
+    } else {
+        attrs
+    }
+}

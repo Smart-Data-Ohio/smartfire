@@ -917,6 +917,10 @@ pub async fn post_authentication_destination(c: &Ctx, url: String) -> Result<Str
         return Ok(url);
     };
     let (path, query) = local.split_once('?').map_or((local.as_str(), None), |(path, query)| (path, Some(query)));
+    // `?classic=1` stays on the classic page, as it does when routing any request to the SPA.
+    if campfire_spa::screens::bypassed(query) {
+        return Ok(url);
+    }
     for screen in campfire_spa::screens::SCREENS {
         if let Some(spa) = campfire_spa::screens::spa_url(screen.endpoint, path, query) {
             return Ok(c.url_for(&spa));
