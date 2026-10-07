@@ -113,9 +113,9 @@ export const CredentialId = Schema.Int.pipe(Schema.brand("CredentialId"));
 
 export type CredentialId = typeof CredentialId.Type;
 
-export const GrantId = Schema.Int.pipe(Schema.brand("GrantId"));
+export const AgentGrantId = Schema.Int.pipe(Schema.brand("AgentGrantId"));
 
-export type GrantId = typeof GrantId.Type;
+export type AgentGrantId = typeof AgentGrantId.Type;
 
 export const SlackRunId = Schema.Int.pipe(Schema.brand("SlackRunId"));
 
