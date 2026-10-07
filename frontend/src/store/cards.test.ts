@@ -118,13 +118,16 @@ describe("reconcileMessage", () => {
       createdAt: at(0),
       updatedAt: at(updated),
     });
+
     const withSteps = { ...held, steps: [step(1, 20, "done"), step(2, 20, "running")] };
+
     const newerBody = {
       ...held,
       updatedAt: at(50),
       poll: poll(at(30), [2, 0]),
       steps: [step(1, 5, "running")],
     };
+
     const merged = reconcileMessage(withSteps, newerBody, false);
 
     expect(merged.updatedAt).toBe(at(50));
