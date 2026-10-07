@@ -295,9 +295,11 @@ export const reorderCategories = Effect.fn("organize.reorderCategories")(functio
     ),
   );
 
+  // The ids are mapped when the call's turn comes: a category created just before has its real
+  // id by then.
   yield* pending(
     entry,
-    api.reorderCategories(categoryIds.map(serverCategoryId)).pipe(
+    Effect.suspend(() => api.reorderCategories(categoryIds.map(serverCategoryId))).pipe(
       Effect.tap((list) => Effect.sync(() => mutations.setCategories(list.categories))),
       Effect.catchTag("Conflict", (conflict) =>
         refetchSidebar.pipe(Effect.andThen(Effect.fail(conflict))),

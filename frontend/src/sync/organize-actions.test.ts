@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Effect, Exit } from "effect";
+import { Deferred, Effect, Exit, Fiber } from "effect";
 import { Conflict, Validation } from "../api/errors.ts";
 import {
   FakeApi,
@@ -273,6 +273,45 @@ describe("organize actions", () => {
       expect((yield* fake.requests).at(-1)?.path).toBe("/sidebar");
       expect(view().categories.map((category) => category.id)).toEqual([2, 1, 5]);
       expect(overlayIsEmpty()).toBe(true);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("reorder with a new category's real id when its create is still in flight", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const gate = yield* Deferred.make<void>();
+      const ops: RoomCategory = { id: 9, name: "Ops", collapsed: false, position: 3 };
+
+      yield* fake.route("POST /room_categories", () => Deferred.await(gate).pipe(Effect.as(ops)));
+      yield* fake.reply("PUT /room_categories/order", {
+        categories: [
+          { ...ops, position: 1 },
+          { ...launch, position: 2 },
+          { ...team, position: 3 },
+        ],
+      });
+
+      const created = yield* Effect.forkChild(organize.createCategory("Ops"));
+
+      yield* Effect.yieldNow;
+
+      const temporaryId = view().categories.at(-1)?.id ?? 0;
+
+      expect(temporaryId).toBeLessThan(0);
+
+      const reordered = yield* Effect.forkChild(
+        organize.reorderCategories([temporaryId, launch.id, team.id]),
+      );
+
+      yield* Effect.yieldNow;
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(created);
+      yield* Fiber.join(reordered);
+
+      expect((yield* fake.requests).at(-1)?.body).toEqual({ categoryIds: [9, 1, 2] });
+      expect(view().categories.map((category) => category.id)).toEqual([9, 1, 2]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
