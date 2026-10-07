@@ -76,12 +76,14 @@ fn profile_and_status_round_trip() {
                 dnd_allowed: Some(allowed),
                 email_address: Some("ada@example.com".into()),
                 transfer_url: Some("https://chat.example/session/transfers/token".into()),
+                transfer_qr_svg: Some("<svg>transfer</svg>".into()),
                 can_ban: true,
             },
             json!({
                 "user": user_json(), "status": wire, "dndAllowed": allowed,
                 "emailAddress": "ada@example.com",
-                "transferUrl": "https://chat.example/session/transfers/token", "canBan": true
+                "transferUrl": "https://chat.example/session/transfers/token",
+                "transferQrSvg": "<svg>transfer</svg>", "canBan": true
             }),
         );
     }
@@ -92,9 +94,10 @@ fn profile_and_status_round_trip() {
             dnd_allowed: None,
             email_address: None,
             transfer_url: None,
+            transfer_qr_svg: None,
             can_ban: false,
         },
         json!({"user": user_json(), "status": null, "dndAllowed": null,
-        "emailAddress": null, "transferUrl": null, "canBan": false}),
+        "emailAddress": null, "transferUrl": null, "transferQrSvg": null, "canBan": false}),
     );
 }

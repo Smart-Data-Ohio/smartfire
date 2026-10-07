@@ -4,6 +4,7 @@
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use campfire_db::{DndAllowedUser, Session, User, WorkspacePresenceLease};
+use campfire_people::controllers::qr_code;
 use serde_json::{Value, json};
 
 use super::admin_tests::{
@@ -61,6 +62,13 @@ async fn ban_and_remove_ban_match_classic() {
                 assert_eq!(
                     profile.transfer_url.is_some(),
                     status == api::UserStatus::Active
+                );
+                assert_eq!(
+                    profile.transfer_qr_svg,
+                    profile
+                        .transfer_url
+                        .as_deref()
+                        .and_then(qr_code::transfer_svg)
                 );
                 assert_eq!(
                     profile.dnd_allowed.is_some(),
@@ -438,6 +446,13 @@ async fn check_profile(
         }
     );
     assert_eq!(profile.can_ban, person && administrator && viewer != id);
+    assert_eq!(
+        profile.transfer_qr_svg,
+        profile
+            .transfer_url
+            .as_deref()
+            .and_then(qr_code::transfer_svg)
+    );
     profile
 }
 
@@ -457,6 +472,13 @@ async fn profile_fields_follow_classic_visibility_and_request_zone() {
     let member = check_profile(&a, &mut b, DAVID, KEVIN).await;
     assert_eq!(member.dnd_allowed, Some(false));
     assert!(member.email_address.is_some() && member.transfer_url.is_some() && member.can_ban);
+    assert_eq!(
+        member.transfer_qr_svg,
+        member
+            .transfer_url
+            .as_deref()
+            .and_then(qr_code::transfer_svg)
+    );
     let secrets = a.booted.app.secrets.clone();
     let now = a.db().env().now();
     let utc = a
@@ -481,6 +503,10 @@ async fn profile_fields_follow_classic_visibility_and_request_zone() {
     let own = check_profile(&a, &mut b, DAVID, DAVID).await;
     assert_eq!(own.dnd_allowed, None);
     assert!(!own.can_ban && own.transfer_url.is_some());
+    assert_eq!(
+        own.transfer_qr_svg,
+        own.transfer_url.as_deref().and_then(qr_code::transfer_svg)
+    );
     for id in [MALLORY, RITA, BENDER] {
         check_profile(&a, &mut b, DAVID, id).await;
     }
@@ -510,6 +536,13 @@ async fn profile_fields_follow_classic_visibility_and_request_zone() {
         let profile = check_profile(&a, &mut member, member_id, id).await;
         assert_eq!(profile.email_address, None);
         assert_eq!(profile.transfer_url, None);
+        assert_eq!(
+            profile.transfer_qr_svg,
+            profile
+                .transfer_url
+                .as_deref()
+                .and_then(qr_code::transfer_svg)
+        );
         assert!(!profile.can_ban);
     }
     assert_eq!(dump(&a).await, before);

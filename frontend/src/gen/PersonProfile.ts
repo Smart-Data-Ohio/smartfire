@@ -26,6 +26,12 @@ emailAddress: string | null,
  */
 transferUrl: string | null, 
 /**
+ * The classic QR encoder's SVG of `transfer_url` (`qr_code::transfer_svg`), so the page can draw
+ * the code itself instead of putting the link in a `/qr_code/...` URL. Set exactly when
+ * `transfer_url` is.
+ */
+transferQrSvg: string | null, 
+/**
  * Administrator, not the viewer, a person, not deactivated (`users/show.html:45,62-65`).
  * The button bans or removes the ban according to `user.status` (`users/_ban_button.html:1-7`).
  */

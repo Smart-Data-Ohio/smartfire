@@ -47,6 +47,10 @@ pub struct PersonProfile {
     /// Administrators only, for an active person (`users/show.html:51,58-61`). The absolute
     /// sign-in transfer URL (`users/profiles/_transfer.html:1`), as `AccountSettings` builds it.
     pub transfer_url: Option<String>,
+    /// The classic QR encoder's SVG of `transfer_url` (`qr_code::transfer_svg`), so the page can draw
+    /// the code itself instead of putting the link in a `/qr_code/...` URL. Set exactly when
+    /// `transfer_url` is.
+    pub transfer_qr_svg: Option<String>,
     /// Administrator, not the viewer, a person, not deactivated (`users/show.html:45,62-65`).
     /// The button bans or removes the ban according to `user.status` (`users/_ban_button.html:1-7`).
     pub can_ban: bool,

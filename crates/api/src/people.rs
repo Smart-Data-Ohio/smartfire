@@ -9,6 +9,7 @@ use campfire_app::app::AppCtx;
 use campfire_db::User;
 use campfire_db::models::user::presentation;
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action};
+use campfire_people::controllers::qr_code;
 use campfire_people::controllers::users::{bans, find_user};
 use campfire_web::controllers::presenters;
 
@@ -94,6 +95,16 @@ async fn reply(c: &mut Ctx, viewer: &User, user: User) -> Result {
         let transfer = presenters::accounts::transfer_id(&c.app().secrets, user.id, c.now());
         c.url_for(&campfire_routes::session_transfer(&transfer))
     });
+    let transfer_qr_svg = transfer_url
+        .as_deref()
+        .map(|url| {
+            qr_code::transfer_svg(url).ok_or_else(|| {
+                Error::internal(std::io::Error::other(
+                    "the sign-in link doesn't fit a QR code",
+                ))
+            })
+        })
+        .transpose()?;
     let (user, status) = c
         .app()
         .db
@@ -138,6 +149,7 @@ async fn reply(c: &mut Ctx, viewer: &User, user: User) -> Result {
             dnd_allowed,
             email_address,
             transfer_url,
+            transfer_qr_svg,
             can_ban: administrator && person && other,
         },
     )
