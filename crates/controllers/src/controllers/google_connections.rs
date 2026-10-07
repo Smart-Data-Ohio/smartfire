@@ -14,7 +14,7 @@ use rand::RngCore;
 use serde_json::{Value, json};
 use subtle::ConstantTimeEq;
 const STATE: &str = "google_oauth_state";
-fn configured(c: &Ctx) -> Result<()> {
+pub fn configured(c: &Ctx) -> Result<()> {
     if c.app().google.api().config.configured() {
         Ok(())
     } else {
@@ -133,6 +133,13 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     configured(c)?;
     concerns::sudo::require_sudo_mode(c)?;
     let user = concerns::require_current_user(c)?.clone();
+    let notice = disconnect_user(c, user).await?;
+    redirect(c, &notice, true)
+}
+
+/// The disconnect action after configuration, authentication and sudo. Local cleanup commits
+/// before the best-effort remote channel stop, then the account and audit finish together.
+pub async fn disconnect_user(c: &Ctx, user: campfire_db::User) -> Result<String> {
     let id = user.id;
     let secrets = c.app().secrets.clone();
     let for_prepare = user.clone();
@@ -146,5 +153,5 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             campfire_db::models::google_connection::finish_disconnect(tx, &user, plan, channel, &context)
         }).await.map_err(Error::internal)?;
     }
-    redirect(c, "Google Calendar disconnected.", true)
+    Ok("Google Calendar disconnected.".into())
 }

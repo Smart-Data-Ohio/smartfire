@@ -38,6 +38,7 @@ test("Switch to classic posts the choice and where the person is", async ({ page
   expect(posted && Object.fromEntries(posted)).toEqual({
     ui: "classic",
     return_to: `/app/r/${ROOM_IDS.general}`,
+    authenticity_token: expect.any(String),
   });
 });
 

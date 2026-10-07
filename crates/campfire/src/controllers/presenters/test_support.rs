@@ -344,6 +344,14 @@ impl TestApp {
         Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }
 
+    /// A seeded SPA with the same caller-owned GitHub network as the classic HTTP tests.
+    pub async fn boot_with_github_network_and_env(
+        network: crate::net::Network,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network.clone(), extra, Some(crate::integrations::github::client::AppClient::with_network(Some("fixture-client".into()), Some("fixture-secret".into()), network))).await
+    }
+
     /// Real durable GitHub fetch jobs with the owner's HTTP client over a caller-owned network.
     pub async fn boot_with_github_reader(
         reader: crate::integrations::github::client::ReadClient,
@@ -690,6 +698,16 @@ impl Browser<'_> {
         let encrypted = crypto.encrypt_cookie(key, &session, None);
         self.cookies
             .insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+    }
+
+    /// The classic flash without following its redirect (which would run more presenters).
+    pub fn flash(&self) -> serde_json::Value {
+        use campfire_kit::Crypto;
+        let key = campfire_kit::session::SESSION_KEY;
+        let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
+        let raw = rails_compat::cookies::unescape(self.cookies.get(key).unwrap());
+        let session = crypto.decrypt_cookie(key, &raw, self.app.booted.app.clock.now()).unwrap();
+        session["flash"]["flashes"].clone()
     }
 
     pub fn cookie_header(&self) -> String {

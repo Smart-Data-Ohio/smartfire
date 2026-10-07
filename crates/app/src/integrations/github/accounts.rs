@@ -57,6 +57,13 @@ impl Account {
             id: r.get(0)?, user_id: r.get(1)?, github_login: r.get(2)?, token_source: r.get(3)?, token_expires_at: r.get(4)?, disconnected_reason: r.get(5)?, last_error: r.get(6)?, created_at: r.get(7)?, updated_at: r.get(8)?, access_token: r.get(9)?, refresh_token: r.get(10)?,
         })).optional()?)
     }
+    /// Inspect the stored access token without repairing the connection or refreshing it.
+    pub fn decrypt_access_token(
+        &self,
+        crypto: &ArEncryption,
+    ) -> std::result::Result<Option<String>, rails_compat::ar_encryption::DecryptionError> {
+        crypto.decrypt(&self.access_token).map(|token| (!blank(&token)).then_some(token))
+    }
     pub fn connected(&self) -> bool {
         self.disconnected_reason.as_deref().is_none_or(blank)
     }
@@ -269,8 +276,8 @@ impl Accounts {
             .await
     }
     async fn decrypt_access(&self, account: &Account) -> Result<Option<String>> {
-        match self.crypto.decrypt(&account.access_token) {
-            Ok(token) => Ok((!blank(&token)).then_some(token)),
+        match account.decrypt_access_token(&self.crypto) {
+            Ok(token) => Ok(token),
             Err(_) => {
                 self.disconnect(account.id, UNREADABLE_TOKEN_REASON).await?;
                 Ok(None)

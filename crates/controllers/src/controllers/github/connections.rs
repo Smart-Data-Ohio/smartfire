@@ -44,6 +44,10 @@ fn redirect(c: &mut Ctx, path: &str, notice: Option<String>, alert: Option<Strin
     )
 }
 fn failure(c: &mut Ctx, path: &str, e: GithubError, app: bool) -> Result {
+    let text = connection_failure(e, app)?;
+    redirect(c, path, None, Some(text))
+}
+fn connection_failure(e: GithubError, app: bool) -> Result<String> {
     let text = match e.kind {
         ErrorKind::Unauthorized => {
             if app {
@@ -55,7 +59,7 @@ fn failure(c: &mut Ctx, path: &str, e: GithubError, app: bool) -> Result {
         ErrorKind::Refused | ErrorKind::Other => "Could not reach GitHub. Try again.",
         _ => return Err(Error::internal(e)),
     };
-    redirect(c, path, None, Some(text.into()))
+    Ok(text.into())
 }
 async fn before(c: &mut Ctx, bot: bool) -> Result<(User, String)> {
     concerns::before_actions(c, Before::default()).await?;
@@ -75,18 +79,27 @@ async fn before(c: &mut Ctx, bot: bool) -> Result<(User, String)> {
 }
 async fn link_pat(c: &mut Ctx, bot: bool) -> Result {
     let (user, path) = before(c, bot).await?;
-    let token = ruby_strip(&param(c, "access_token")).to_owned();
+    let token = param(c, "access_token");
+    match connect_token(c, user, &token, bot).await? {
+        Ok(notice) => redirect(c, &path, Some(notice), None),
+        Err(alert) => redirect(c, &path, None, Some(alert)),
+    }
+}
+
+/// The PAT action after authentication and sudo: the classic notice or alert.
+pub async fn connect_token(
+    c: &Ctx,
+    user: User,
+    token: &str,
+    bot: bool,
+) -> Result<std::result::Result<String, String>> {
+    let token = ruby_strip(token).to_owned();
     if crate::integrations::github::blank(&token) {
-        return redirect(
-            c,
-            &path,
-            None,
-            Some("Paste a token to connect GitHub.".into()),
-        );
+        return Ok(Err("Paste a token to connect GitHub.".into()));
     }
     let credentials = match service(c).pat(&token).await {
         Ok(v) => v,
-        Err(e) => return failure(c, &path, e, false),
+        Err(e) => return Ok(Err(connection_failure(e, false)?)),
     };
     let (account, matched) = service(c)
         .link(user, credentials, bot, audit(c)?)
@@ -100,15 +113,21 @@ async fn link_pat(c: &mut Ctx, bot: bool) -> Result {
             account.github_login
         )
     };
-    redirect(c, &path, Some(notice), None)
+    Ok(Ok(notice))
 }
 async fn unlink(c: &mut Ctx, bot: bool) -> Result {
     let (user, path) = before(c, bot).await?;
+    let notice = disconnect_user(c, user, bot).await?;
+    redirect(c, &path, Some(notice), None)
+}
+
+/// The disconnect action after authentication and sudo, including revocation and its audit.
+pub async fn disconnect_user(c: &Ctx, user: User, bot: bool) -> Result<String> {
     service(c)
         .disconnect(user, bot, audit(c)?)
         .await
         .map_err(Error::internal)?;
-    redirect(c, &path, Some("GitHub disconnected.".into()), None)
+    Ok("GitHub disconnected.".into())
 }
 pub async fn create(c: &mut Ctx) -> Result {
     link_pat(c, false).await

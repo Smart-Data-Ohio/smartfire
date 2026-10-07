@@ -748,7 +748,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...activity.routes,
     ...saved.routes,
     ...work.routes,
-    ...createSettings(ctx, uploads).routes,
+    ...createSettings(ctx, uploads, admin.requireSudo).routes,
     ...admin.routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
