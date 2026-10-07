@@ -164,24 +164,31 @@ beforeEach(async () => {
 });
 
 describe("polls", () => {
-  it("votes with one click, then changes and takes the vote back", async () => {
+  it("votes from a radio group, then changes and takes the vote back", async () => {
     const user = userEvent.setup();
 
     await renderCards(messages.pollOpen);
 
     const poll = screen.getByRole("region", { name: "Poll" });
+    const group = within(poll).getByRole("group", { name: "Cast your vote" });
+    const vote = within(poll).getByRole("button", { name: "Vote" });
 
     expect(total(poll)).toBe("4 votes");
-    await user.click(within(poll).getByRole("button", { name: "Tacos" }));
+    expect(vote.hasAttribute("disabled")).toBe(true);
+    await user.click(within(group).getByRole("radio", { name: "Tacos" }));
+    await user.click(vote);
     await waitFor(() => expect(total(poll)).toBe("5 votes"));
     expect(within(poll).getByText("(your vote)")).toBeTruthy();
     expect(poll.querySelector(".poll-result[data-mine]")?.textContent).toContain("60%");
 
     await user.click(within(poll).getByRole("button", { name: "Change vote" }));
-    expect(within(poll).getByRole("button", { name: "Tacos" }).getAttribute("aria-pressed")).toBe(
-      "true",
-    );
-    await user.click(within(poll).getByRole("button", { name: "Pizza" }));
+    expect(within(poll).getByRole<HTMLInputElement>("radio", { name: "Tacos" }).checked).toBe(true);
+
+    // The arrow keys move the choice within the group, as radios do.
+    within(poll).getByRole("radio", { name: "Tacos" }).focus();
+    await user.keyboard("{ArrowDown}");
+    expect(within(poll).getByRole<HTMLInputElement>("radio", { name: "Pizza" }).checked).toBe(true);
+    await user.click(within(poll).getByRole("button", { name: "Vote" }));
     await waitFor(() =>
       expect(poll.querySelector(".poll-result[data-mine] .poll-result-text")?.textContent).toBe(
         "Pizza",
@@ -189,7 +196,7 @@ describe("polls", () => {
     );
 
     await user.click(within(poll).getByRole("button", { name: "Retract" }));
-    await waitFor(() => expect(within(poll).getByRole("button", { name: "Tacos" })).toBeTruthy());
+    await waitFor(() => expect(within(poll).getByRole("radio", { name: "Tacos" })).toBeTruthy());
     expect(total(poll)).toBe("4 votes");
   });
 
@@ -202,6 +209,7 @@ describe("polls", () => {
 
     expect(within(poll).getByText(/Multiple choice/)).toBeTruthy();
     await user.click(within(poll).getByRole("button", { name: "Change vote" }));
+    expect(within(poll).getByRole("group", { name: /^Cast your vote/ })).toBeTruthy();
 
     const vote = within(poll).getByRole("button", { name: "Vote" });
 
@@ -300,7 +308,7 @@ describe("polls", () => {
     await control({ op: "close-poll", pollId: polls.open });
     await publish(2);
     await waitFor(() => expect(within(poll).getByText("Closed")).toBeTruthy());
-    expect(within(poll).queryByRole("button", { name: "Tacos" })).toBeNull();
+    expect(within(poll).queryByRole("radio", { name: "Tacos" })).toBeNull();
   });
 });
 

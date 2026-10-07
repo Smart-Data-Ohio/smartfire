@@ -206,20 +206,22 @@ matrix("voting in a poll, changing it and taking it back", async ({ page, theme 
   await settle(page);
   await shot(page, "cards-poll-before", theme);
 
-  await poll.getByRole("button", { name: "Tacos" }).click();
+  await poll.getByRole("radio", { name: "Tacos" }).check();
+  await poll.getByRole("button", { name: "Vote" }).click();
   await expect(poll.getByText("5 votes")).toBeVisible();
   await expect(poll.getByText("(your vote)")).toHaveCount(1);
   await settle(page);
   await shot(page, "cards-poll-after", theme);
 
   await poll.getByRole("button", { name: "Change vote" }).click();
-  await poll.getByRole("button", { name: "Pizza" }).click();
+  await poll.getByRole("radio", { name: "Pizza" }).check();
+  await poll.getByRole("button", { name: "Vote" }).click();
   await expect(poll.locator(".poll-result[data-mine] .poll-result-text")).toHaveText("Pizza");
   await expect(poll.getByText("5 votes")).toBeVisible();
 
   await poll.getByRole("button", { name: "Retract" }).click();
   await expect(poll.getByText("4 votes")).toBeVisible();
-  await expect(poll.getByRole("button", { name: "Tacos" })).toBeVisible();
+  await expect(poll.getByRole("radio", { name: "Tacos" })).toBeVisible();
 });
 
 matrix("creating a poll from the + menu", async ({ page, theme }) => {
@@ -282,7 +284,7 @@ test("another member's vote and a closing poll arrive live", async ({ page, requ
   await expect(poll.getByText("5 votes")).toBeVisible();
   await control(request, { op: "close-poll", pollId: polls.open });
   await expect(poll.getByText("Closed", { exact: true })).toBeVisible();
-  await expect(poll.getByRole("button", { name: "Tacos" })).toHaveCount(0);
+  await expect(poll.getByRole("radio", { name: "Tacos" })).toHaveCount(0);
 });
 
 test("unknown kinds and suppressed previews render nothing", async ({ page }) => {

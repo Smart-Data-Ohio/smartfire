@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { AnimatedNumber } from "../../motion/animated-number.tsx";
 import { pollView } from "../../store/cards.ts";
 import type { MessageDTO } from "../../store/model.ts";
@@ -134,65 +134,67 @@ interface ChoiceListProps {
   readonly onCancel: (() => void) | null;
 }
 
-/** Choosing: one click votes in a single-choice poll; a multiple-choice poll collects ticks first. */
+/**
+ * Choosing, as a form like classic's: a radio group in a single-choice poll (the arrow keys move
+ * between options) and checkboxes in a multiple-choice one, each in a fieldset, then Vote.
+ */
 function ChoiceList({ poll, initial, onVote, onCancel }: ChoiceListProps) {
+  const name = useId();
   const [picked, setPicked] = useState<readonly number[]>(initial);
 
-  if (!poll.multiple) {
-    return (
-      <div className="poll-choices">
-        <ul className="poll-options">
-          {poll.options.map((option) => (
-            <li key={option.id}>
-              <Button
-                variant="secondary"
-                className="poll-option"
-                aria-pressed={initial.includes(option.id)}
-                onClick={() => onVote([option.id])}
-              >
-                <span className="poll-radio" aria-hidden="true" />
-                <span className="poll-option-label">{option.label}</span>
-              </Button>
-            </li>
-          ))}
-        </ul>
-        {onCancel === null ? null : (
-          <div className="poll-actions">
-            <Button variant="ghost" size="sm" onClick={onCancel}>
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const pick = (optionId: number, checked: boolean) =>
+    setPicked((current) => {
+      if (!poll.multiple) {
+        return [optionId];
+      }
+
+      const others = current.filter((id) => id !== optionId);
+
+      return checked ? [...others, optionId] : others;
+    });
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (picked.length > 0) {
+      onVote(picked);
+    }
+  };
 
   return (
-    <div className="poll-choices">
-      <ul className="poll-options" data-multiple="">
-        {poll.options.map((option) => (
-          <li key={option.id} className="poll-option" data-checkbox="">
-            <Checkbox
-              checked={picked.includes(option.id)}
-              label={option.label}
-              onCheckedChange={(checked) =>
-                setPicked((current) =>
-                  checked
-                    ? [...current.filter((id) => id !== option.id), option.id]
-                    : current.filter((id) => id !== option.id),
-                )
-              }
-            />
-          </li>
-        ))}
-      </ul>
+    <form className="poll-choices" onSubmit={submit}>
+      <fieldset className="poll-options" data-multiple={poll.multiple || undefined}>
+        <legend className="visually-hidden">
+          {poll.multiple ? "Cast your vote: choose one or more" : "Cast your vote"}
+        </legend>
+        {poll.options.map((option) =>
+          poll.multiple ? (
+            <div key={option.id} className="poll-option" data-checkbox="">
+              <Checkbox
+                checked={picked.includes(option.id)}
+                label={option.label}
+                onCheckedChange={(checked) => pick(option.id, checked)}
+              />
+            </div>
+          ) : (
+            <label key={option.id} className="poll-option">
+              <span className="poll-radio">
+                <input
+                  type="radio"
+                  className="poll-radio-input"
+                  name={name}
+                  value={option.id}
+                  checked={picked.includes(option.id)}
+                  onChange={() => pick(option.id, true)}
+                />
+              </span>
+              <span className="poll-option-label">{option.label}</span>
+            </label>
+          ),
+        )}
+      </fieldset>
       <div className="poll-actions">
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={picked.length === 0}
-          onClick={() => onVote(picked)}
-        >
+        <Button type="submit" variant="primary" size="sm" disabled={picked.length === 0}>
           Vote
         </Button>
         {onCancel === null ? null : (
@@ -201,7 +203,7 @@ function ChoiceList({ poll, initial, onVote, onCancel }: ChoiceListProps) {
           </Button>
         )}
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -238,7 +240,7 @@ function LoadError({ retrying, onRetry }: LoadErrorProps) {
 }
 
 /**
- * A poll under its question: choose (or tick several), then the results as bars that grow into
+ * A poll under its question: pick an option (or tick several) and vote, then the results as bars that grow into
  * place; change or take back a vote while it's open; final results once closed (the client
  * closes it itself when `closesAt` passes). Anonymous polls show counts only, and fetch the
  * viewer's own vote, which their `voterIds` can't tell.
