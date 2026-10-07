@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
-import { settings as settingsActions } from "../../sync/settings.ts";
+import { settings as settingsActions, unsubscribePushEndpoint } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { deviceName } from "./settings-format.ts";
 import { SettingsGroup, SettingsPage, toastFailure } from "./settings-parts.tsx";
+import { usePushEnrollment } from "./use-push-enrollment.ts";
 
 type Load =
   | { readonly status: "loading" }
@@ -29,6 +30,15 @@ export function DevicesSection() {
   }, []);
 
   useEffect(fetchList, [fetchList]);
+
+  const enrolled = useCallback(
+    (list: PushSubscriptionList) => setLoad({ status: "ready", list }),
+    [],
+  );
+
+  const enrollment = usePushEnrollment(enrolled);
+  // LEAD-UI: the future Enable control here calls enrollment.enable directly from its click;
+  // permission, subscribed and busy are available without any automatic permission prompt.
 
   const reload = () => {
     setLoad({ status: "loading" });
@@ -58,11 +68,27 @@ export function DevicesSection() {
   };
 
   const remove = (id: number) => {
+    const endpoint =
+      load.status === "ready"
+        ? load.list.pushSubscriptions.find((subscription) => subscription.id === id)?.endpoint
+        : undefined;
+
     setBusy(id);
     settingsActions
       .removePushSubscription(id)
       .then(
-        (list) => setLoad({ status: "ready", list }),
+        (list) => {
+          setLoad({ status: "ready", list });
+
+          if (
+            endpoint !== undefined &&
+            !list.pushSubscriptions.some((subscription) => subscription.endpoint === endpoint)
+          ) {
+            void unsubscribePushEndpoint(endpoint)
+              .finally(enrollment.refresh)
+              .catch(() => undefined);
+          }
+        },
         (error: Error) => toastFailure("Couldn't remove that device", error),
       )
       .finally(() => setBusy(null));

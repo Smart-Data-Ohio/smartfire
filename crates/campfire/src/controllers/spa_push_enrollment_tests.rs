@@ -1,0 +1,379 @@
+//! Browser enrollment uses the classic push controller over the same frozen database.
+
+use std::sync::Arc;
+
+use axum::http::{Method, StatusCode};
+use campfire_api_types as api;
+use campfire_kit::FrozenClock;
+use serde_json::{Value, json};
+
+use crate::controllers::presenters::test_support::{
+    BENDER, BENDER_KEY, Browser, DAVID, KEVIN, Reply, Req, SEED_NOW, TestApp,
+};
+use crate::integrations::test_support::FakeResolver;
+
+const ENDPOINT: &str = "https://fcm.googleapis.com/fcm/send/spa-enrollment";
+const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0";
+const PATH: &str = "/api/v1/settings/push_subscriptions";
+// Public P-256 generator point and scalar 1: deterministic test keys, never production keys.
+const PUBLIC_KEY: &str =
+    "BGsX0fLhLEJH-Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT-NC4v4af5uO5-tKfA-eFivOM1drMV7Oy7ZAaDe_UfU=";
+const PRIVATE_KEY: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=";
+
+async fn app(extra: &[(&str, &str)]) -> Option<(TestApp, Arc<FrozenClock>, Arc<FakeResolver>)> {
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let resolver = Arc::new(FakeResolver::new([(
+        "fcm.googleapis.com",
+        vec!["142.250.1.1"],
+    )]));
+    let mut network = crate::net::Network::system();
+    network.resolver = resolver.clone();
+    let vars = [&[("SPA_ENABLED", "1")][..], extra].concat();
+    let app = TestApp::boot_with_network_clock_and_env(network, clock.clone(), &vars)
+        .await?
+        .without_job_runner()
+        .await;
+    Some((app, clock, resolver))
+}
+
+fn get(path: &str) -> Req {
+    Req::new(Method::GET, path).header("accept", "application/json")
+}
+
+fn json_body(method: Method, path: &str, body: Value) -> Req {
+    Req::new(method, path)
+        .header("accept", "application/json")
+        .header("content-type", "application/json")
+        .header("user-agent", USER_AGENT)
+        .body(body.to_string())
+}
+
+fn body(endpoint: &str, p256dh: &str, auth: &str) -> Value {
+    json!({"endpoint": endpoint, "p256dhKey": p256dh, "authKey": auth})
+}
+
+fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
+    serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
+}
+
+async fn rows(app: &TestApp) -> Value {
+    app.db().read(|conn| {
+        let strings = |sql: &str| -> rusqlite::Result<Vec<String>> {
+            conn.prepare(sql)?.query_map([], |row| row.get(0))?.collect()
+        };
+        Ok(json!({
+            "subscriptions": strings("SELECT json_array(id, user_id, endpoint, p256dh_key, auth_key, user_agent, created_at, updated_at) FROM push_subscriptions ORDER BY id")?,
+            "audit": strings("SELECT json_array(action, details, actor_id, target_id, created_at) FROM audit_logs ORDER BY id")?,
+            "jobs": conn.query_row("SELECT COUNT(*) FROM background_jobs", [], |row| row.get::<_, i64>(0))?,
+        }))
+    }).await.unwrap()
+}
+
+async fn create(
+    browser: &mut Browser<'_>,
+    classic: bool,
+    endpoint: &str,
+    p256dh: &str,
+    auth: &str,
+) -> Reply {
+    let request = if classic {
+        Req::new(Method::POST, "/users/me/push_subscriptions")
+            .header("user-agent", USER_AGENT)
+            .form(&[
+                ("push_subscription[endpoint]", endpoint),
+                ("push_subscription[p256dh_key]", p256dh),
+                ("push_subscription[auth_key]", auth),
+            ])
+    } else {
+        json_body(Method::POST, PATH, body(endpoint, p256dh, auth))
+    };
+    browser.write(request).await
+}
+
+#[tokio::test]
+async fn public_key_is_the_classic_presented_key_and_missing_or_invalid_config_is_null() {
+    for vars in [
+        vec![],
+        vec![
+            ("VAPID_PUBLIC_KEY", "invalid"),
+            ("VAPID_PRIVATE_KEY", "invalid"),
+        ],
+        vec![
+            ("VAPID_PUBLIC_KEY", PUBLIC_KEY),
+            ("VAPID_PRIVATE_KEY", PRIVATE_KEY),
+        ],
+    ] {
+        let Some((app, _, _)) = app(&vars).await else {
+            return;
+        };
+        let mut browser = app.sign_in(DAVID).await;
+        let reply = browser.send(get(&format!("{PATH}/key"))).await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.header("cache-control"), Some("no-store"));
+        let key: api::PushPublicKey = parse(&reply);
+        assert_eq!(key.public_key, app.booted.app.vapid_public_key());
+        assert_eq!(
+            key.public_key.is_some(),
+            vars.iter().any(|(_, value)| *value == PUBLIC_KEY)
+        );
+        let classic = browser.get("/users/me/profile").await.text();
+        if let Some(key) = key.public_key {
+            assert!(classic.contains(&format!("name=\"vapid-public-key\" content=\"{key}\"")));
+        }
+    }
+}
+
+#[tokio::test]
+async fn enrollment_matches_classic_rows_exact_deduplication_user_agent_and_user_scope() {
+    let Some((classic_app, classic_clock, _)) = app(&[]).await else {
+        return;
+    };
+    let Some((spa_app, spa_clock, _)) = app(&[]).await else {
+        return;
+    };
+    let mut classic = classic_app.sign_in(DAVID).await;
+    let mut spa = spa_app.sign_in(DAVID).await;
+    let classic_capture = classic_app.booted.app.cable.capture_every_publication();
+    let spa_capture = spa_app.booted.app.cable.capture_every_publication();
+    let before = rows(&spa_app).await;
+    for (p256dh, auth) in [
+        ("p256", "auth"),
+        ("p256", "auth"),
+        ("rotated", "auth"),
+        ("rotated", "rotated"),
+    ] {
+        classic_clock.advance(jiff::SignedDuration::from_secs(60));
+        spa_clock.advance(jiff::SignedDuration::from_secs(60));
+        assert_eq!(
+            create(&mut classic, true, ENDPOINT, p256dh, auth)
+                .await
+                .status,
+            StatusCode::OK
+        );
+        let reply = create(&mut spa, false, ENDPOINT, p256dh, auth).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let list: api::PushSubscriptionList = parse(&reply);
+        assert!(
+            list.push_subscriptions
+                .iter()
+                .any(|row| row.endpoint == ENDPOINT && row.browser == "Firefox")
+        );
+        assert_eq!(rows(&classic_app).await, rows(&spa_app).await);
+    }
+    let mut classic_other = classic_app.sign_in(KEVIN).await;
+    let mut spa_other = spa_app.sign_in(KEVIN).await;
+    create(&mut classic_other, true, ENDPOINT, "p256", "auth").await;
+    create(&mut spa_other, false, ENDPOINT, "p256", "auth").await;
+    assert_eq!(rows(&classic_app).await, rows(&spa_app).await);
+    let subscriptions = spa_app
+        .db()
+        .read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID))
+        .await
+        .unwrap();
+    let matches: Vec<_> = subscriptions
+        .iter()
+        .filter(|row| row.endpoint.as_deref() == Some(ENDPOINT))
+        .collect();
+    assert_eq!(
+        matches.len(),
+        3,
+        "repeat enrollment touches; rotated keys create separate rows"
+    );
+    assert!(
+        matches
+            .iter()
+            .all(|row| row.user_agent.as_deref() == Some(USER_AGENT))
+    );
+    assert!(matches.iter().any(|row| row.created_at != row.updated_at));
+    let after = rows(&spa_app).await;
+    assert_eq!(after["audit"], before["audit"]);
+    assert_eq!(after["jobs"], before["jobs"]);
+    tokio::task::yield_now().await;
+    assert!(classic_capture.take().is_empty());
+    assert!(spa_capture.take().is_empty());
+}
+
+#[tokio::test]
+async fn invalid_endpoints_and_repeated_enrollment_with_private_dns_refuse_as_classic_does() {
+    let Some((classic_app, _, classic_dns)) = app(&[]).await else {
+        return;
+    };
+    let Some((spa_app, _, spa_dns)) = app(&[]).await else {
+        return;
+    };
+    let mut classic = classic_app.sign_in(DAVID).await;
+    let mut spa = spa_app.sign_in(DAVID).await;
+    create(&mut classic, true, ENDPOINT, "p256", "auth").await;
+    create(&mut spa, false, ENDPOINT, "p256", "auth").await;
+    let before = rows(&spa_app).await;
+    classic_dns.set(
+        "fcm.googleapis.com",
+        vec![vec!["127.0.0.1".parse().unwrap()]],
+    );
+    spa_dns.set(
+        "fcm.googleapis.com",
+        vec![vec!["127.0.0.1".parse().unwrap()]],
+    );
+    for endpoint in [
+        "",
+        "invalid",
+        "http://fcm.googleapis.com/push",
+        "https://fcm.googleapis.com:8443/push",
+        "https://example.com/push",
+        ENDPOINT,
+    ] {
+        assert_eq!(
+            create(&mut classic, true, endpoint, "p256", "auth")
+                .await
+                .status,
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        let reply = create(&mut spa, false, endpoint, "p256", "auth").await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+        let error: api::ApiErrorResponse = parse(&reply);
+        assert!(matches!(error.error, api::ApiError::Validation { .. }));
+        assert_eq!(rows(&classic_app).await, before);
+        assert_eq!(rows(&spa_app).await, before);
+    }
+}
+
+#[tokio::test]
+async fn enrollment_requires_csrf_a_typed_body_and_the_settings_body_limit() {
+    let Some((app, _, _)) = app(&[]).await else {
+        return;
+    };
+    let mut browser = app.sign_in(DAVID).await;
+    browser.authenticity_token().await;
+    let before = rows(&app).await;
+    let reply = browser
+        .send(json_body(
+            Method::POST,
+            PATH,
+            body(ENDPOINT, "p256", "auth"),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(matches!(
+        parse::<api::ApiErrorResponse>(&reply).error,
+        api::ApiError::InvalidAuthenticityToken { .. }
+    ));
+    for body in [
+        json!({}),
+        json!({"endpoint": ENDPOINT, "p256dhKey": 2, "authKey": "auth"}),
+        json!({"endpoint": ENDPOINT, "p256dhKey": "p256", "authKey": "auth", "userId": KEVIN}),
+        body(ENDPOINT, &"a".repeat(65 * 1024), "auth"),
+    ] {
+        let reply = browser.write(json_body(Method::POST, PATH, body)).await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{}",
+            reply.text()
+        );
+        assert!(matches!(
+            parse::<api::ApiErrorResponse>(&reply).error,
+            api::ApiError::Validation { .. }
+        ));
+        assert_eq!(rows(&app).await, before);
+    }
+}
+
+#[tokio::test]
+async fn every_push_personal_route_refuses_anonymous_bot_sessions_bot_keys_and_warmed_agent_tokens()
+{
+    use crate::controllers::agent_http_tests::{SECRET, initialize};
+    let Some((app, _, _)) = app(&[]).await else {
+        return;
+    };
+    initialize(&app).await;
+    let mut anonymous = app.anonymous();
+    let mut bot = app.sign_in(BENDER).await;
+    let authorization = format!("Bearer {SECRET}");
+    anonymous
+        .send(get("/api/v1/me").header("authorization", &authorization))
+        .await;
+    let before = rows(&app).await;
+    for (method, path) in [
+        (Method::GET, PATH.to_string()),
+        (Method::GET, format!("{PATH}/key")),
+        (Method::POST, PATH.to_string()),
+        (Method::DELETE, format!("{PATH}/1")),
+    ] {
+        for (kind, expected) in [
+            ("anonymous", StatusCode::UNAUTHORIZED),
+            ("bot_key", StatusCode::FORBIDDEN),
+            ("agent", StatusCode::FORBIDDEN),
+            ("bot_session", StatusCode::FORBIDDEN),
+        ] {
+            let path = if kind == "bot_key" {
+                format!("{path}?bot_key={BENDER_KEY}")
+            } else {
+                path.clone()
+            };
+            let mut request = json_body(method.clone(), &path, body(ENDPOINT, "p256", "auth"));
+            if kind == "agent" {
+                request = request.header("authorization", &authorization);
+            }
+            let reply = if kind == "bot_session" {
+                bot.write(request).await
+            } else {
+                anonymous.send(request).await
+            };
+            assert_eq!(reply.status, expected, "{kind} {path}: {}", reply.text());
+            assert_eq!(rows(&app).await, before);
+        }
+    }
+}
+
+#[tokio::test]
+async fn delete_is_classic_scoped_and_idempotent_without_audit_jobs_or_broadcasts() {
+    let Some((classic_app, _, _)) = app(&[]).await else {
+        return;
+    };
+    let Some((spa_app, _, _)) = app(&[]).await else {
+        return;
+    };
+    let mut classic = classic_app.sign_in(DAVID).await;
+    let mut spa = spa_app.sign_in(DAVID).await;
+    create(&mut classic, true, ENDPOINT, "p256", "auth").await;
+    create(&mut spa, false, ENDPOINT, "p256", "auth").await;
+    let id = spa_app
+        .db()
+        .read(|conn| {
+            Ok(campfire_db::PushSubscription::find_for_user_by_keys(
+                conn, DAVID, ENDPOINT, "p256", "auth",
+            )?
+            .unwrap()
+            .id)
+        })
+        .await
+        .unwrap();
+    let capture = spa_app.booted.app.cable.capture_every_publication();
+    for viewer in [KEVIN, DAVID, DAVID] {
+        let mut classic = classic_app.sign_in(viewer).await;
+        let mut spa = spa_app.sign_in(viewer).await;
+        let classic_reply = classic
+            .write(Req::new(
+                Method::DELETE,
+                &format!("/users/me/push_subscriptions/{id}"),
+            ))
+            .await;
+        assert_eq!(classic_reply.status, StatusCode::FOUND);
+        let spa_reply = spa
+            .write(json_body(
+                Method::DELETE,
+                &format!("{PATH}/{id}"),
+                Value::Null,
+            ))
+            .await;
+        assert_eq!(spa_reply.status, StatusCode::OK);
+        assert_eq!(rows(&classic_app).await, rows(&spa_app).await);
+    }
+    tokio::task::yield_now().await;
+    assert!(capture.take().is_empty());
+}

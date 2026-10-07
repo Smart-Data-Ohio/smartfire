@@ -457,11 +457,30 @@ pub struct PushSubscriptionInfo {
     pub platform: String,
 }
 
-/// `GET /api/v1/settings/push_subscriptions`, and the answer to
-/// `DELETE /api/v1/settings/push_subscriptions/:id`.
+/// `GET /api/v1/settings/push_subscriptions`, and the answer to creating or deleting one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct PushSubscriptionList {
     pub push_subscriptions: Vec<PushSubscriptionInfo>,
+}
+
+/// `GET /api/v1/settings/push_subscriptions/key`: the same key the classic page presents.
+/// `null` means Web Push is not configured with valid keys.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct PushPublicKey {
+    pub public_key: Option<String>,
+}
+
+/// `POST /api/v1/settings/push_subscriptions`: this browser's endpoint and encryption keys.
+/// The owner comes from the session and the user agent from the request, never the body.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export)]
+pub struct CreatePushSubscription {
+    pub endpoint: String,
+    pub p256dh_key: String,
+    pub auth_key: String,
 }

@@ -42,6 +42,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     c.wrap_parameters("push_subscription", None);
     concerns::before_actions(c, Before::default()).await?;
     let user_id = concerns::require_current_user(c)?.id;
+    enroll(c, user_id).await
+}
+
+/// The classic save path after the caller has authenticated the owner and supplied its params.
+pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
     let params = push_subscription_params(c)?;
 
     let network = c.app().subscription_network.clone();

@@ -7,6 +7,10 @@ stored preference wins over `SPA_DEFAULT`. Signed-out requests use `SPA_DEFAULT`
 
 Classic pages register the selected URL from their layout, including pages that
 remain classic for a person using the SPA. SPA pages register only for the next UI.
+The classic selection lives in a provisional head meta element, which Turbo replaces
+on each visit. Registration reconciles on both `load` and `turbo:load`, so signing
+in as someone with a different preference also replaces the selected script. It
+never unregisters the root registration.
 The boot JSON carries that URL, or null. Mock boot data leave it null, and
 development builds skip registration. Classic automatic registration still respects `data-service-worker="false"`
 in the test environment. The SPA quietly calls `registration.update()` on startup.
@@ -59,11 +63,29 @@ Neither stable URL is immutable. Same-origin scripts work with the app's content
 security policy.
 
 Installation precaches the new build before calling `skipWaiting`. Activation
-claims clients, then retains the current cache and the immediately preceding
-activated version. Activation records determine this order, including when a
-failed installation or a rollback creates caches out of order. Tabs still running
-the previous build can load their cached chunks after a deploy. The following
-activation removes that previous version.
+claims clients, then retains the current cache, the immediately preceding activated
+version, and caches needed by every live window. Pages report the identity of their
+actual bundled entry script, including after a controller change. If an entry is
+shared by several builds, all matching caches survive. An unknown client keeps
+retention conservative, including tabs loaded before this reporting protocol.
+Activation records determine the previous version, including when a failed
+installation or a rollback creates caches out of order. Activation and later
+fetches/messages check live clients again; closed tabs stop retaining their builds.
+An unactivated cache also survives: another worker may still be installing it.
+This conservatively retains failed-install remnants rather than interrupting a
+concurrent installation. There is no worker timer to keep it alive.
+
+Installations pin their cache before fetching, including when a rollback reuses
+an activated cache. Short [Web Locks](https://www.w3.org/TR/web-locks/) serialize
+that pin and activation metadata with pruning across worker instances; the lock
+does not span network fetching. Failed installation pins stay retained. Browsers
+without Web Locks keep serving and installing but skip cache pruning.
+
+If a lazy module still fails to load, the SPA records that an update is required.
+The `useAppUpdateRequired()` hook and `reloadForUpdate()` function are the interface
+for a future shell prompt. Module-import guards and `vite:preloadError` detection
+keep a failed import from crashing the view. They do not catch unrelated component
+render errors or API failures. No automatic reload or visible prompt is added here.
 
 The SPA worker cleans only its own cache namespace. It leaves the classic
 `smartfire-static-v1` cache in place so classic assets remain available and
@@ -83,11 +105,31 @@ classic destinations can still redirect on the server according to the effective
 UI. The click handler navigates and focuses an existing workspace window, or
 opens one when none exists.
 
-There is no SPA flow for enabling push in this browser yet. Its settings screen
-lists and removes existing devices.
+The SPA exposes `enablePushNotifications()` for an explicit click. It requests
+permission only through that call, registers the selected script at root scope,
+subscribes with the same VAPID public key as the classic page, and saves through
+the classic subscription creation path. `usePushEnrollment()` exposes permission,
+subscription and busy state for the future Devices control. The flow refreshes the
+existing Devices list. Removing the last saved subscription with the current
+browser's endpoint also unsubscribes it locally; another saved key triple for
+that endpoint keeps the browser subscribed. No enrollment control is rendered yet.
+
+`GET /api/v1/settings/push_subscriptions/key` returns the public key, and
+`POST /api/v1/settings/push_subscriptions` accepts endpoint, p256dhKey and authKey.
+These personal settings routes require a human session. Creation preserves the
+classic key-triple deduplication, user-agent and user-ownership rules; the existing
+subscription table has no session link. Deletion preserves the classic destroy
+behaviour.
 
 Unit tests cover URL mapping, request policy, no-store responses and cache
 retention. Rust tests cover selection, manifests, embedding and response headers.
 The production-preview Playwright suite exercises offline navigation, worker
 click handling and successive worker updates. It runs in the `Frontend` CI job;
 the separate `Frontend e2e` jobs continue to run the mock suite.
+The `pwa` Rust correctness job serves the embedded production build from a frozen
+seed and drives the real registration code through Turbo sign-in and both UI
+switches. It checks a persistent Chromium profile's root registration identity
+and native push subscription. Locally, Chromium created a subscription and kept
+its endpoint and keys through SPA → classic → SPA → classic. A browser that
+cannot reach its push service reports that limitation and still checks the root
+registration's identity and scope; it does not substitute a fake subscription.
