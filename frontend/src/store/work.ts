@@ -197,6 +197,7 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
   const at = read?.at ?? observationOf(incoming ?? thread) ?? nextObservation();
   const mark = (field: keyof WorkFields) => read?.fields[id]?.[field] ?? at;
   const trackingCurrent = mark("tracking") > fields.tracking;
+
   // Every owner write advances the thread revision, so the newer revision's owner wins. User
   // deletion clears the owner without touching it, and it is the only change that can: at an
   // equal revision a cleared owner is the later state, whichever read observed it first.
@@ -209,6 +210,7 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
         : incoming.owner === null || stored.owner === null
           ? incoming.owner === null
           : incoming.owner.id === stored.owner.id && mark("owner") > fields.owner;
+
   const eligibilityCurrent = mark("ownerActive") > fields.ownerActive;
   const linksCurrent = mark("links") > fields.links;
 
