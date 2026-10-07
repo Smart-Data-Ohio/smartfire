@@ -31,8 +31,16 @@ async function browserPush(page: Page, permission: "granted" | "denied") {
         keyBytes: [],
       };
 
-      let heldPermission: NotificationPermission = "default";
-      let subscribed = false;
+      // The browser keeps its permission and subscription across reloads.
+      const stored = (key: string) => sessionStorage.getItem(`push-stub-${key}`);
+
+      const store = (key: string, value: string) =>
+        sessionStorage.setItem(`push-stub-${key}`, value);
+
+      // SAFETY: only this stub writes the key, and it stores a NotificationPermission value.
+      let heldPermission = (stored("permission") ?? "default") as NotificationPermission;
+
+      let subscribed = stored("subscribed") === "true";
 
       const subscription = {
         endpoint: "https://fcm.googleapis.com/fcm/send/mock-enrollment",
@@ -40,6 +48,7 @@ async function browserPush(page: Page, permission: "granted" | "denied") {
         unsubscribe: async () => {
           state.unsubscribes += 1;
           subscribed = false;
+          store("subscribed", "false");
 
           return true;
         },
@@ -63,6 +72,7 @@ async function browserPush(page: Page, permission: "granted" | "denied") {
             state.keyBytes = [...options.applicationServerKey];
             state.subscribes += 1;
             subscribed = true;
+            store("subscribed", "true");
 
             return subscription;
           },
@@ -76,6 +86,7 @@ async function browserPush(page: Page, permission: "granted" | "denied") {
           value: async () => {
             state.permissionRequests += 1;
             heldPermission = permission;
+            store("permission", permission);
 
             return permission;
           },
@@ -359,4 +370,37 @@ test("a declined prompt leaves this browser blocked with a way forward", async (
   await expect(thisBrowser).toContainText("Notifications are blocked");
   await expect(thisBrowser.getByRole("button", { name: "Enable notifications" })).toHaveCount(0);
   await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
+});
+
+test("a save that fails after the browser subscribed offers to finish, and finishing saves it", async ({
+  page,
+}) => {
+  let refuse = true;
+
+  await page.route("**/api/v1/settings/push_subscriptions", async (route) => {
+    if (refuse && route.request().method() === "POST") {
+      await route.fulfill({ status: 500, json: { error: "unavailable" } });
+    } else {
+      await route.continue();
+    }
+  });
+  await browserPush(page, "granted");
+  await openDevices(page);
+
+  const thisBrowser = page.getByRole("region", { name: "This browser" });
+
+  await thisBrowser.getByRole("button", { name: "Enable notifications" }).click();
+  await expect(thisBrowser).toContainText("Notifications aren't set up yet");
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(2);
+
+  // A reload keeps the browser's subscription; the row still offers to finish.
+  await page.reload();
+  await expect(thisBrowser).toContainText("Notifications aren't set up yet");
+
+  refuse = false;
+  await thisBrowser.getByRole("button", { name: "Finish setting up" }).click();
+  await expect(thisBrowser).toContainText("Notifications are on");
+  await expect(page.locator(".settings-list .settings-list-row")).toHaveCount(3);
+  // Finishing reuses the subscription the browser already holds.
+  expect(await page.evaluate(() => window.__smartfirePushBrowser?.subscribes)).toBe(0);
 });

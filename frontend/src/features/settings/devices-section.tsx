@@ -111,7 +111,7 @@ export function DevicesSection() {
       description="Browsers and phones that get push notifications for your account."
     >
       <SettingsGroup title="This browser">
-        <ThisBrowser enrollment={enrollment} />
+        <ThisBrowser enrollment={enrollment} saved={savedHere(enrollment, load)} />
       </SettingsGroup>
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
@@ -156,23 +156,38 @@ export function DevicesSection() {
   );
 }
 
+/**
+ * Whether the server has this browser's subscription: push only reaches it then. `null` while the
+ * device list is still loading (or failed), when it can't be told yet.
+ */
+function savedHere(enrollment: PushEnrollment, load: Load): boolean | null {
+  if (enrollment.endpoint === null) return false;
+
+  if (load.status !== "ready") return null;
+
+  return load.list.pushSubscriptions.some(
+    (subscription) => subscription.endpoint === enrollment.endpoint,
+  );
+}
+
 interface BrowserPushState {
-  readonly key: "unsupported" | "blocked" | "on" | "off";
+  readonly key: "unsupported" | "blocked" | "checking" | "unsaved" | "on" | "off";
   readonly icon: IconName;
   readonly title: string;
   readonly text: string;
-  readonly canEnable: boolean;
+  /** The button's label when this state offers one. */
+  readonly action: string | null;
 }
 
 /** What this browser can do about push, and the one control that asks for permission. */
-function browserState(enrollment: PushEnrollment): BrowserPushState {
+function browserState(enrollment: PushEnrollment, saved: boolean | null): BrowserPushState {
   if (enrollment.permission === "unsupported") {
     return {
       key: "unsupported",
       icon: "bell-off",
       title: "Push isn't available here",
       text: "This browser can't show push notifications. On an iPhone or iPad, add Smartfire to your Home Screen first.",
-      canEnable: false,
+      action: null,
     };
   }
 
@@ -182,17 +197,38 @@ function browserState(enrollment: PushEnrollment): BrowserPushState {
       icon: "bell-off",
       title: "Notifications are blocked",
       text: "Allow notifications for this site in your browser's settings, then come back here.",
-      canEnable: false,
+      action: null,
     };
   }
 
-  if (enrollment.permission === "granted" && enrollment.subscribed) {
+  if (enrollment.permission === "granted" && enrollment.subscribed && saved === true) {
     return {
       key: "on",
       icon: "bell-ring",
       title: "Notifications are on",
       text: "This browser gets push notifications, even when Smartfire isn't open.",
-      canEnable: false,
+      action: null,
+    };
+  }
+
+  if (enrollment.permission === "granted" && enrollment.subscribed && saved === null) {
+    return {
+      key: "checking",
+      icon: "bell",
+      title: "Notifications",
+      text: "Checking whether this browser is set up…",
+      action: null,
+    };
+  }
+
+  // The browser subscribed but the save never reached Smartfire: nothing arrives until it does.
+  if (enrollment.permission === "granted" && enrollment.subscribed) {
+    return {
+      key: "unsaved",
+      icon: "bell-off",
+      title: "Notifications aren't set up yet",
+      text: "This browser agreed to notifications, but Smartfire couldn't save it. Try again to finish.",
+      action: "Finish setting up",
     };
   }
 
@@ -201,12 +237,18 @@ function browserState(enrollment: PushEnrollment): BrowserPushState {
     icon: "bell",
     title: "Notifications are off",
     text: "Get push notifications in this browser, even when Smartfire isn't open.",
-    canEnable: true,
+    action: "Enable notifications",
   };
 }
 
-function ThisBrowser({ enrollment }: { readonly enrollment: PushEnrollment }) {
-  const state = browserState(enrollment);
+function ThisBrowser({
+  enrollment,
+  saved,
+}: {
+  readonly enrollment: PushEnrollment;
+  readonly saved: boolean | null;
+}) {
+  const state = browserState(enrollment, saved);
 
   // The permission prompt starts inside this click and nowhere else.
   const enable = () => {
@@ -238,11 +280,11 @@ function ThisBrowser({ enrollment }: { readonly enrollment: PushEnrollment }) {
         <strong>{state.title}</strong>
         <span className="text-muted">{state.text}</span>
       </span>
-      {state.canEnable ? (
+      {state.action === null ? null : (
         <Button variant="primary" size="sm" loading={enrollment.busy} onClick={enable}>
-          Enable notifications
+          {state.action}
         </Button>
-      ) : null}
+      )}
     </div>
   );
 }

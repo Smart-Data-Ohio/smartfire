@@ -7,7 +7,7 @@ import { settings } from "./settings.ts";
 export type PushPermission = NotificationPermission | "unsupported";
 
 export type PushEnrollmentOutcome =
-  | { readonly kind: "enabled"; readonly list: PushSubscriptionList }
+  | { readonly kind: "enabled"; readonly list: PushSubscriptionList; readonly endpoint: string }
   | { readonly kind: "denied"; readonly permission: "denied" | "default" }
   | { readonly kind: "unsupported" }
   | { readonly kind: "failed"; readonly message: string };
@@ -68,18 +68,27 @@ export function pushBrowser(): PushBrowser | null {
   };
 }
 
-/** Read the browser's state without registering anything or asking for permission. */
-export async function inspectPush(browser = pushBrowser()): Promise<{
+/** This browser's push state as the browser alone knows it (not whether the server saved it). */
+export interface BrowserPush {
   readonly permission: PushPermission;
   readonly subscribed: boolean;
-}> {
-  if (browser === null) return { permission: "unsupported", subscribed: false };
+  /** The browser subscription's endpoint, to match against the server's saved devices. */
+  readonly endpoint: string | null;
+}
+
+/** Read the browser's state without registering anything or asking for permission. */
+export async function inspectPush(browser = pushBrowser()): Promise<BrowserPush> {
+  if (browser === null) return { permission: "unsupported", subscribed: false, endpoint: null };
 
   const permission = browser.permission();
   const registration = await browser.currentRegistration();
   const subscription = (await registration?.pushManager.getSubscription()) ?? null;
 
-  return { permission, subscribed: subscription !== null };
+  return {
+    permission,
+    subscribed: subscription !== null,
+    endpoint: subscription?.endpoint ?? null,
+  };
 }
 
 /** Base64url VAPID public keys are passed as bytes, including on Safari. */
@@ -190,7 +199,7 @@ export async function enablePushNotifications(
       authKey,
     });
 
-    return { kind: "enabled", list };
+    return { kind: "enabled", list, endpoint: subscription.endpoint };
   } catch (error) {
     return {
       kind: "failed",

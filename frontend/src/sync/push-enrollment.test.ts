@@ -117,7 +117,7 @@ describe("explicit browser push enrollment", () => {
     const run = enablePushNotifications(f.browser, f.api);
 
     expect(f.events).toEqual(["permission"]);
-    expect(await run).toEqual({ kind: "enabled", list: LIST });
+    expect(await run).toEqual({ kind: "enabled", list: LIST, endpoint: ENDPOINT });
     expect(f.events).toEqual(["permission", "key", "register", "subscribe", "save"]);
     const options = f.subscribe.mock.calls[0]?.[0];
 
@@ -137,6 +137,7 @@ describe("explicit browser push enrollment", () => {
     expect(await enablePushNotifications(f.browser, f.api)).toEqual({
       kind: "enabled",
       list: LIST,
+      endpoint: ENDPOINT,
     });
     expect(f.requestPermission).not.toHaveBeenCalled();
     expect(f.subscribe).not.toHaveBeenCalled();
@@ -247,10 +248,30 @@ describe("explicit browser push enrollment", () => {
     const f = fixture();
 
     f.currentRegistration.mockResolvedValue(undefined);
-    expect(await inspectPush(f.browser)).toEqual({ permission: "default", subscribed: false });
+    expect(await inspectPush(f.browser)).toEqual({
+      permission: "default",
+      subscribed: false,
+      endpoint: null,
+    });
     expect(f.requestPermission).not.toHaveBeenCalled();
     expect(f.register).not.toHaveBeenCalled();
-    expect(await inspectPush(null)).toEqual({ permission: "unsupported", subscribed: false });
+    expect(await inspectPush(null)).toEqual({
+      permission: "unsupported",
+      subscribed: false,
+      endpoint: null,
+    });
+  });
+
+  it("inspection reports this browser's endpoint so Settings can match it against saved devices", async () => {
+    const f = fixture("granted");
+
+    f.getSubscription.mockResolvedValue(f.subscription);
+    expect(await inspectPush(f.browser)).toEqual({
+      permission: "granted",
+      subscribed: true,
+      endpoint: ENDPOINT,
+    });
+    expect(f.subscribe).not.toHaveBeenCalled();
   });
 
   it("unsubscribes only the local endpoint after removing a device", async () => {

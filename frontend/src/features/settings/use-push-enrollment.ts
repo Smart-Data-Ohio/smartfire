@@ -9,7 +9,10 @@ import {
 
 export interface PushEnrollment {
   readonly permission: PushPermission;
+  /** The browser holds a push subscription; the server may still lack it (a failed save). */
   readonly subscribed: boolean;
+  /** That subscription's endpoint, which the Devices list must contain for push to work. */
+  readonly endpoint: string | null;
   readonly busy: boolean;
   enable(): Promise<PushEnrollmentOutcome>;
   refresh(): void;
@@ -26,6 +29,7 @@ declare global {
 export function usePushEnrollment(onEnabled: (list: PushSubscriptionList) => void): PushEnrollment {
   const [permission, setPermission] = useState<PushPermission>("unsupported");
   const [subscribed, setSubscribed] = useState(false);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const running = useRef(false);
   const inspection = useRef(0);
@@ -39,6 +43,7 @@ export function usePushEnrollment(onEnabled: (list: PushSubscriptionList) => voi
 
         setPermission(state.permission);
         setSubscribed(state.subscribed);
+        setEndpoint(state.endpoint);
       },
       () => undefined,
     );
@@ -68,6 +73,7 @@ export function usePushEnrollment(onEnabled: (list: PushSubscriptionList) => voi
         if (outcome.kind === "enabled") {
           setPermission("granted");
           setSubscribed(true);
+          setEndpoint(outcome.endpoint);
           onEnabled(outcome.list);
         } else {
           refresh();
@@ -82,8 +88,8 @@ export function usePushEnrollment(onEnabled: (list: PushSubscriptionList) => voi
   }, [onEnabled, refresh]);
 
   const enrollment = useMemo<PushEnrollment>(
-    () => ({ permission, subscribed, busy, enable, refresh }),
-    [permission, subscribed, busy, enable, refresh],
+    () => ({ permission, subscribed, endpoint, busy, enable, refresh }),
+    [permission, subscribed, endpoint, busy, enable, refresh],
   );
 
   useEffect(() => {
