@@ -8,10 +8,13 @@ import {
   threadDetailFixture,
   workDetailFixture,
 } from "../features/work/test-fixtures.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
+import { approvalListKey, approvalListOf } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
 import { workDetailStale } from "../store/work.ts";
+import * as approvals from "./approval-actions.ts";
 import * as threads from "./thread-actions.ts";
 import * as work from "./work-actions.ts";
 
@@ -536,5 +539,73 @@ describe("S4 revisions through held network responses", () => {
       expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
       expect(store.getState().work.writes[THREAD]).toBeUndefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "keep an Approved row after an equal-membership event and a late empty ABA reload",
+    () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const readStarted = yield* Deferred.make<void>();
+        const readGate = yield* Deferred.make<void>();
+
+        const approved: AgentApproval = {
+          id: 1,
+          agentId: 9,
+          agentUserId: 9,
+          roomId: 4,
+          roomName: "engineering",
+          action: "messages.post",
+          summary: "Post the result",
+          status: "approved",
+          expiresAt: new Date(NOW + 3_600_000).toISOString(),
+          createdAt: new Date(NOW - 1000).toISOString(),
+          decidedById: 1,
+          decidedAt: new Date(NOW).toISOString(),
+          decisionNote: null,
+          githubLogin: null,
+          fizzyUserName: null,
+          adminOnly: false,
+          approvable: true,
+          deniable: true,
+          updatedAt: new Date(NOW).toISOString(),
+        };
+
+        const newest = { ...approved, updatedAt: new Date(NOW + 2).toISOString() };
+
+        yield* fake.reply("GET /agents/9/approvals", {
+          approvals: [approved],
+          users: [],
+          nextCursor: null,
+        });
+        yield* approvals.load(9, "approved");
+        yield* fake.route("GET /agents/9/approvals", () =>
+          Deferred.succeed(readStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(readGate)),
+            Effect.as({ approvals: [], users: [], nextCursor: null }),
+          ),
+        );
+
+        const reading = yield* Effect.forkChild(approvals.load(9, "approved"));
+
+        yield* Deferred.await(readStarted);
+        mutations.applyEvents(
+          [
+            {
+              seq: 1,
+              topic: "user:1",
+              type: "approval.updated",
+              data: { approval: newest, users: [] },
+            },
+          ],
+          NOW,
+        );
+        yield* Deferred.succeed(readGate, undefined);
+        yield* Fiber.join(reading);
+
+        expect(store.getState().approvals.items[1]).toEqual(newest);
+        expect(approvalListOf(store.getState(), approvalListKey(9, "approved")).ids).toEqual([1]);
+        expect((yield* fake.requests).length).toBe(2);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

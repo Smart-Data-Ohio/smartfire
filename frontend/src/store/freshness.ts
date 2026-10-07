@@ -91,6 +91,26 @@ export function membership(
   };
 }
 
+/** Equal observations still establish membership while a page is in flight. */
+export function observeMembership(
+  state: Freshness,
+  list: string,
+  id: number,
+  added: boolean,
+): Freshness {
+  if (!Object.values(state.reads).some((read) => read.list === list)) {
+    return state;
+  }
+
+  const at = state.clock + 1;
+
+  return {
+    ...state,
+    clock: at,
+    deltas: [...state.deltas, { list, id, added, at }],
+  };
+}
+
 export function replay(
   state: Freshness,
   list: string,

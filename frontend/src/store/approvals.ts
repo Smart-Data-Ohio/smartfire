@@ -15,7 +15,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
-import { membership, placeId, replay } from "./freshness.ts";
+import { membership, observeMembership, placeId, replay } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   eachPaged,
@@ -196,6 +196,10 @@ function placeApproval(state: State, approval: AgentApproval, sourceList?: Appro
     );
 
     freshness = membership(freshness, `approvals:${key}`, list.ids, ids);
+
+    if (ids === list.ids && (ids.includes(approval.id) || !belongs)) {
+      freshness = observeMembership(freshness, `approvals:${key}`, approval.id, belongs);
+    }
 
     return ids === list.ids ? list : { ...list, ids };
   });

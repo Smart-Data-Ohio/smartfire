@@ -12,7 +12,14 @@ import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
-import { approvalListKey, approvalListOf } from "./approvals.ts";
+import {
+  applyApprovalUpdated,
+  approvalListKey,
+  approvalListOf,
+  landApprovalPage,
+  setApprovalListLoading,
+} from "./approvals.ts";
+import { startRead } from "./freshness.ts";
 import { initialState } from "./state.ts";
 import { mutations, store } from "./store.ts";
 import { captureWorkRead, loadWorkThreadDetail, receiveWorkThread, workListOf } from "./work.ts";
@@ -524,5 +531,41 @@ describe("server revisions on S4 records", () => {
       runUrl: "https://example.test/run/held",
       updatedAt: revision(0),
     });
+  });
+
+  it("keeps Pending's last loaded row after an equal-membership event and a late omitting page", () => {
+    const key = approvalListKey(AGENT, "pending");
+
+    const before = landApprovalPage(
+      setApprovalListLoading(initialState, key, false),
+      key,
+      { approvals: [approval(0, { id: 4 }), approval(0)], users: [], nextCursor: "3" },
+      "replace",
+    );
+
+    const read = startRead(before.freshness, `approvals:${key}`);
+
+    const observed = applyApprovalUpdated(
+      { ...before, freshness: read.freshness },
+      { approval: approval(2), users: [] },
+    );
+
+    const offWindow = applyApprovalUpdated(observed, {
+      approval: approval(2, { id: 2 }),
+      users: [],
+    });
+
+    const landed = landApprovalPage(
+      offWindow,
+      key,
+      { approvals: [approval(0, { id: 4 }), approval(1, { id: 2 })], users: [], nextCursor: "2" },
+      "replace",
+      approvalListOf(before, key).generation,
+      read.ticket,
+    );
+
+    expect(landed.approvals.items[3]?.updatedAt).toBe(revision(2));
+    expect(landed.approvals.items[2]?.updatedAt).toBe(revision(2));
+    expect(approvalListOf(landed, key).ids).toEqual([4, 3, 2]);
   });
 });
