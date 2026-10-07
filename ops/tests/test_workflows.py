@@ -110,6 +110,37 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("always()", port[0]["if"])
         print("WORKFLOW GATE: rust.yml push/schedule success with its 'Rust port' aggregate is the single gate")
 
+    def test_spa_mode_uses_the_verified_cutover_or_a_read_only_dry_run(self):
+        workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
+        inputs = workflow.get("on", workflow.get("true"))["workflow_dispatch"]["inputs"]
+        self.assertEqual(inputs["spa_mode"]["type"], "choice")
+        self.assertEqual(inputs["spa_mode"]["default"], "unchanged")
+        self.assertEqual(inputs["spa_mode"]["options"], ["unchanged", "off", "opt-in", "default-next"])
+        steps = workflow["jobs"]["deploy"]["steps"]
+        by_id = {step["id"]: step for step in steps if "id" in step}
+        spa = by_id["spa_configuration"]
+        self.assertEqual(spa["if"], "inputs.spa_mode != 'unchanged' && (steps.plan.outputs.dry_run == 'true' || steps.cutover.conclusion == 'success')")
+        self.assertEqual(spa["env"], {
+            "SPA_MODE": "${{ inputs.spa_mode }}", "DRY_RUN": "${{ steps.plan.outputs.dry_run }}",
+            "EXPECTED_REVISION": "${{ steps.plan.outputs.sha }}", "EXPECTED_IMAGE": "${{ steps.image.outputs.reference }}",
+        })
+        self.assertIn("set -euo pipefail", spa["run"])
+        self.assertIn("python3 deploy/gcp/spa-configuration.py", spa["run"])
+        self.assertIn("sudo python3 /opt/campfire-deploy/configure-spa.py", spa["run"])
+        self.assertLess(steps.index(by_id["cutover"]), steps.index(by_id["google_configuration"]))
+        self.assertLess(steps.index(by_id["google_configuration"]), steps.index(spa))
+        self.assertLess(steps.index(spa), steps.index(by_id["finish"]))
+        validation = next(step for step in steps if step.get("run") == "python3 deploy/gcp/spa-configuration.py --validate")
+        self.assertNotIn("if", validation)
+        self.assertLess(steps.index(validation), steps.index(by_id["preflight"]))
+        for name in ["configure-google.py", "configure-spa.py", "once_configuration.py"]:
+            self.assertIn(f"/opt/campfire-deploy/{name}", by_id["copy"]["run"])
+        # Current-image settings runs retain the ordinary release and recovery conditions.
+        self.assertEqual(by_id["freeze"]["if"], "steps.plan.outputs.dry_run != 'true'")
+        self.assertEqual(by_id["cutover"]["if"], "steps.plan.outputs.dry_run != 'true'")
+        self.assertEqual(by_id["finish"]["if"], "success() && steps.plan.outputs.dry_run != 'true'")
+        self.assertIn("steps.cutover.outputs.rc != '20'", by_id["rollback"]["if"])
+
     def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
         image = yaml_json((ROOT / ".github/workflows/publish-image.yml").read_text())
         on = image.get("on", image.get("true"))
