@@ -747,10 +747,14 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                         assert_eq!(b.flash(), json!({"notice": notice}));
                         check_devices(b.app(), &context, case, all).await;
                     } else if case == "not_enabled" {
+                        // Forgetting has no enrollment check in classic: with two-step sign-in
+                        // off, the password still confirms it and the notice comes back.
+                        assert_eq!(reply.status, StatusCode::FOUND);
                         assert_eq!(
                             reply.location(),
-                            Some("http://campfire.test/two_factor_setup")
+                            Some("http://campfire.test/users/me/profile")
                         );
+                        assert_eq!(b.flash(), json!({"notice": notice}));
                     } else {
                         classic_alert(
                             b,
@@ -783,12 +787,11 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                         check_panel(b.app(), DAVID, &change.two_factor).await;
                         check_devices(b.app(), &context, case, all).await;
                     } else if case == "not_enabled" {
-                        api_alert(
-                            &reply,
-                            "Conflict",
-                            StatusCode::CONFLICT,
-                            "Set up two-step sign-in first.",
-                        );
+                        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+                        let change: api::TwoFactorChange = parse(&reply);
+                        assert_eq!(change.notice, notice);
+                        assert!(change.two_factor.confirmed_at.is_none());
+                        assert!(change.two_factor.devices.is_empty());
                     } else {
                         api_alert(
                             &reply,
@@ -822,11 +825,13 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
             else {
                 return;
             };
+            // With two-step sign-in off, classic still confirms and forgets (and audits it).
+            let confirmed = accepted || case == "not_enabled";
             assert_eq!(
                 audits(&outcome).contains("two_factor.devices.revoke_all"),
-                all && accepted
+                all && confirmed
             );
-            if !accepted || (!all && matches!(case, "other" | "missing")) {
+            if !confirmed || (!all && matches!(case, "other" | "missing")) {
                 assert_eq!(outcome.rows, outcome.before, "{case} all={all}");
             }
             assert!(outcome.frames.is_empty());
