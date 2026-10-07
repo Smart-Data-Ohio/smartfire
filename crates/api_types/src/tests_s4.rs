@@ -220,7 +220,7 @@ fn directory_and_profile_round_trip() {
             name: "general".into(),
         }],
         hidden_room_count: 2,
-        grants: AgentGrants {
+        grants: Some(AgentGrants {
             legacy: false,
             grants: vec![
                 AgentGrant {
@@ -234,7 +234,7 @@ fn directory_and_profile_round_trip() {
                     room_count: 0,
                 },
             ],
-        },
+        }),
         management: Some(AgentManagement {
             activity_summary: AgentActivitySummary {
                 delivered: 4,
@@ -283,12 +283,14 @@ fn directory_and_profile_round_trip() {
             "users": [],
         }),
     );
-    // Someone who is neither an administrator nor the owner gets no management section.
+    // Someone who is neither an administrator nor the owner gets no grants or management.
     let wire = serde_json::to_value(AgentProfile {
+        grants: None,
         management: None,
         ..profile
     })
     .unwrap();
+    assert_eq!(wire["grants"], serde_json::Value::Null);
     assert_eq!(wire["management"], serde_json::Value::Null);
 }
 
@@ -380,8 +382,9 @@ fn s4_sync_events_round_trip() {
             "user",
             SyncPayload::ApprovalUpdated(ApprovalUpdated {
                 approval: approval(),
+                users: vec![],
             }),
-            json!({"type": "approval.updated", "data": {"approval": approval_wire()}}),
+            json!({"type": "approval.updated", "data": {"approval": approval_wire(), "users": []}}),
         ),
     ];
     for (topic, payload, wire) in cases {

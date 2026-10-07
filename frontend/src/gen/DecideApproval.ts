@@ -17,6 +17,7 @@ import type { ApprovalDecision } from "./ApprovalDecision";
  */
 export type DecideApproval = { decision: ApprovalDecision, 
 /**
- * The decision note, up to 200 characters; a blank note is none. Omit for none.
+ * The decision note (the classic `decision_note` param), up to 200 characters; a blank
+ * note is none. Omit for none.
  */
 note?: string, };

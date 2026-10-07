@@ -283,7 +283,8 @@ function seedUsers(now: number): Map<number, User> {
       avatarIcon: null,
       agent:
         person.role === "bot"
-          ? { agentId: 1, kind: "workspace", status: "idle", suspended: false }
+          ? // One agent per bot; the mock reuses the bot user's id as the agent id.
+            { agentId: person.id, kind: "workspace", status: "idle", suspended: false }
           : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
     });

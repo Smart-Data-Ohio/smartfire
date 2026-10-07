@@ -7,7 +7,8 @@ import type { User } from "./User";
 
 /**
  * `GET /api/v1/agents/:agentId`: the agent's profile (the bot branch of `users#show`,
- * `presenters::agents::profile`). Any human may read it; an unknown agent is a 404.
+ * `presenters::agents::profile`). Any human may read it; an unknown agent is a 404. `grants`
+ * and `management` are only for administrators and the agent's owner.
  */
 export type AgentProfile = { agent: AgentDirectoryRow, 
 /**
@@ -25,7 +26,13 @@ rooms: Array<AgentProfileRoom>,
 /**
  * The agent's other rooms, which the viewer isn't in ("and {n} more").
  */
-hiddenRoomCount: number, grants: AgentGrants, 
+hiddenRoomCount: number, 
+/**
+ * `null` unless the viewer is an administrator or the agent's owner, like `management`.
+ * **Departs from classic**, which shows grants to every human: a grant's `roomCount`
+ * counts rooms the viewer may not be in.
+ */
+grants: AgentGrants | null, 
 /**
  * `null` unless the viewer is an administrator or the agent's owner.
  */

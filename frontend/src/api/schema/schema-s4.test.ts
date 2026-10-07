@@ -140,7 +140,36 @@ describe("S4 contract A schemas", () => {
       "dm_anyone",
     ]);
     accepts(ApprovalDecision, ["approved", "denied"]);
-    expect(() => Schema.decodeUnknownSync(AgentStatus)("busy")).toThrow();
+    expect(() => Schema.decodeUnknownSync(ApprovalDecision)("maybe")).toThrow();
+  });
+
+  it("read an agent status, kind or step status added later as unknown", () => {
+    expect(Schema.decodeUnknownSync(AgentStatus)("busy")).toBe("unknown");
+    expect(Schema.decodeUnknownSync(AgentKind)("team")).toBe("unknown");
+    expect(Schema.decodeUnknownSync(AgentStepStatus)("skipped")).toBe("unknown");
+    expect(() => Schema.decodeUnknownSync(AgentStatus)(3)).toThrow();
+
+    // One unknown value doesn't fail the user, the message or the list that carries it.
+    const user = Schema.decodeUnknownSync(User)({
+      ...agentUserJson,
+      agent: { ...agentUserJson.agent, kind: "team", status: "busy" },
+    });
+
+    expect(user.agent).toMatchObject({ kind: "unknown", status: "unknown" });
+
+    const message = Schema.decodeUnknownSync(MessageDTO)({
+      ...messageJson,
+      steps: [{ ...stepJson, status: "skipped" }],
+    });
+
+    expect(message.steps.map((step) => step.status)).toEqual(["unknown"]);
+
+    const directory = Schema.decodeUnknownSync(AgentDirectory)({
+      agents: [directoryRowJson, { ...directoryRowJson, agentId: 4, status: "sleeping" }],
+      users: [agentUserJson],
+    });
+
+    expect(directory.agents.map((row) => row.status)).toEqual(["working", "unknown"]);
   });
 
   it("round-trip an agent user with its badge and icon", () => {
@@ -176,7 +205,7 @@ describe("S4 contract A schemas", () => {
     } as const;
 
     roundTrips(AgentProfile, profile);
-    roundTrips(AgentProfile, { ...profile, management: null });
+    roundTrips(AgentProfile, { ...profile, grants: null, management: null });
   });
 
   it("round-trip a message with steps", () => {
@@ -225,7 +254,12 @@ describe("S4 contract A sync events", () => {
         type: "agent.steps",
         data: { roomId: 12, messageId: null, threadId: 88, steps: [] },
       },
-      { seq: 4, topic: "user", type: "approval.updated", data: { approval: approvalJson } },
+      {
+        seq: 4,
+        topic: "user",
+        type: "approval.updated",
+        data: { approval: approvalJson, users: [agentUserJson] },
+      },
     ] as const;
 
     const wire = { t: "batch", events } as const;

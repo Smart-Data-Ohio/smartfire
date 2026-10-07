@@ -31,6 +31,7 @@ import {
 } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
+import { tolerantLiterals } from "./tolerant.ts";
 import { User } from "./user.ts";
 
 export { AgentBadge, AgentKind, AgentStatus } from "./agent-identity.ts";
@@ -142,7 +143,10 @@ export type AgentManagement = typeof AgentManagement.Type;
 
 export type AgentManagementPin = Assert<Pinned<typeof AgentManagement, GeneratedAgentManagement>>;
 
-/** `GET /api/v1/agents/:agentId`. `management` is for administrators and the owner only. */
+/**
+ * `GET /api/v1/agents/:agentId`. `grants` and `management` are for administrators and the owner
+ * only (`grants` departs from classic, which shows it to everyone).
+ */
 export const AgentProfile = Schema.Struct({
   agent: AgentDirectoryRow,
   provider: Schema.NullOr(Schema.String),
@@ -150,7 +154,7 @@ export const AgentProfile = Schema.Struct({
   description: Schema.NullOr(Schema.String),
   rooms: Schema.Array(AgentProfileRoom),
   hiddenRoomCount: Schema.Int,
-  grants: AgentGrants,
+  grants: Schema.NullOr(AgentGrants),
   management: Schema.NullOr(AgentManagement),
   users: Schema.Array(User),
 });
@@ -180,7 +184,8 @@ export type AgentStatusChangedPin = Assert<
   Pinned<typeof AgentStatusChanged, GeneratedAgentStatusChanged>
 >;
 
-export const AgentStepStatus = Schema.Literals(["pending", "running", "done", "failed"]);
+/** Where a step is. Tolerant: a status added after this build decodes to `"unknown"`. */
+export const AgentStepStatus = tolerantLiterals(["pending", "running", "done", "failed"]);
 
 export type AgentStepStatus = typeof AgentStepStatus.Type;
 
@@ -225,7 +230,9 @@ export type AgentStepsChangedPin = Assert<
 
 /**
  * An approval request as this viewer sees it. `approvable` and `deniable` are the viewer's own
- * rights; the server checks them again on every decision.
+ * rights, meaningful only while `status` is `pending`; the server checks them again on every
+ * decision. `decidedById` stays set after the decider's account is deleted ("by someone" when
+ * no user matches).
  */
 export const AgentApproval = Schema.Struct({
   id: AgentApprovalId,
@@ -252,7 +259,11 @@ export type AgentApproval = typeof AgentApproval.Type;
 
 export type AgentApprovalPin = Assert<Pinned<typeof AgentApproval, GeneratedAgentApproval>>;
 
-/** `GET /api/v1/agents/:agentId/approvals?status=&before=`: newest first, 50 a page. */
+/**
+ * `GET /api/v1/agents/:agentId/approvals?status=&before=`: newest first, 50 a page. A new
+ * request publishes no `approval.updated`: refetch the first page on an `agent_approval_request`
+ * `activity.item`, and whenever the page is shown again.
+ */
 export const AgentApprovalPage = Schema.Struct({
   approvals: Schema.Array(AgentApproval),
   users: Schema.Array(User),
@@ -273,7 +284,7 @@ export type ApprovalDecisionPin = Assert<
   Pinned<typeof ApprovalDecision, GeneratedApprovalDecision>
 >;
 
-/** `PATCH /api/v1/agent_approvals/:id`. Leave `note` out for none. */
+/** `PATCH /api/v1/agent_approvals/:id`. `note` is the classic `decision_note`; leave it out for none. */
 export const DecideApproval = Schema.Struct({
   decision: ApprovalDecision,
   note: Schema.optionalKey(Schema.String),
@@ -283,8 +294,15 @@ export type DecideApproval = typeof DecideApproval.Type;
 
 export type DecideApprovalPin = Assert<Pinned<typeof DecideApproval, GeneratedDecideApproval>>;
 
-/** The `approval.updated` event, on the `user` topic of everyone who got the request's item. */
-export const ApprovalUpdated = Schema.Struct({ approval: AgentApproval });
+/**
+ * The `approval.updated` event, on the `user` topic of everyone who got the request's item: a
+ * subset of the page's audience, so a page refetches when shown again and after `sync.reset`.
+ * `users` holds the agent's bot user and the decider.
+ */
+export const ApprovalUpdated = Schema.Struct({
+  approval: AgentApproval,
+  users: Schema.Array(User),
+});
 
 export type ApprovalUpdated = typeof ApprovalUpdated.Type;
 

@@ -14,7 +14,12 @@ import type { User } from "./User";
  *   (`ApiError::Validation` on `before`).
  *
  * At most 50 a page. Listing first settles the overdue requests on the page, as the classic
- * page does.
+ * page does: a GET with a write (pending past `expiresAt` becomes `expired`, and publishes
+ * `approval.updated`). That's parity; the backend's tests should cover it.
+ *
+ * A new request publishes no `approval.updated`. It reaches deciders as an
+ * `agent_approval_request` `activity.item` (when their inbox preference allows), so a live
+ * approvals page refetches its first page on such an item, and whenever it's shown again.
  */
 export type AgentApprovalPage = { approvals: Array<AgentApproval>, 
 /**

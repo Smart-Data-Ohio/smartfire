@@ -7,8 +7,8 @@ import type { User } from "./User";
  * app). Every human may list it; a bot is a 403.
  *
  * Rows are in `Agent::directory_rows` order: active agents (not suspended, user active) first,
- * then by lower-cased name. Agents whose user is deactivated are left out. Not paged: the
- * classic page isn't either, and a workspace has few agents.
+ * then by lower-cased name. Agents whose user is deactivated are left out; banned ones stay,
+ * among the inactive. Not paged: the classic page isn't either, and a workspace has few agents.
  */
 export type AgentDirectory = { agents: Array<AgentDirectoryRow>, 
 /**

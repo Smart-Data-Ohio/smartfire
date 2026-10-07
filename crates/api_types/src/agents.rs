@@ -77,8 +77,8 @@ pub struct AgentDirectoryRow {
 /// app). Every human may list it; a bot is a 403.
 ///
 /// Rows are in `Agent::directory_rows` order: active agents (not suspended, user active) first,
-/// then by lower-cased name. Agents whose user is deactivated are left out. Not paged: the
-/// classic page isn't either, and a workspace has few agents.
+/// then by lower-cased name. Agents whose user is deactivated are left out; banned ones stay,
+/// among the inactive. Not paged: the classic page isn't either, and a workspace has few agents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -170,7 +170,8 @@ pub struct AgentManagement {
 }
 
 /// `GET /api/v1/agents/:agentId`: the agent's profile (the bot branch of `users#show`,
-/// `presenters::agents::profile`). Any human may read it; an unknown agent is a 404.
+/// `presenters::agents::profile`). Any human may read it; an unknown agent is a 404. `grants`
+/// and `management` are only for administrators and the agent's owner.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -185,7 +186,10 @@ pub struct AgentProfile {
     pub rooms: Vec<AgentProfileRoom>,
     /// The agent's other rooms, which the viewer isn't in ("and {n} more").
     pub hidden_room_count: i64,
-    pub grants: AgentGrants,
+    /// `null` unless the viewer is an administrator or the agent's owner, like `management`.
+    /// **Departs from classic**, which shows grants to every human: a grant's `roomCount`
+    /// counts rooms the viewer may not be in.
+    pub grants: Option<AgentGrants>,
     /// `null` unless the viewer is an administrator or the agent's owner.
     pub management: Option<AgentManagement>,
     /// The bot user and the owner.
@@ -316,7 +320,8 @@ pub struct AgentApproval {
     pub status: AgentApprovalStatus,
     pub expires_at: Timestamp,
     pub created_at: Timestamp,
-    /// Who approved or denied it; `null` while undecided ("by someone" when the user is gone).
+    /// Who approved or denied it; `null` while undecided. It stays set when that person's
+    /// account is later deleted, so no `users` entry matches it: the card reads "by someone".
     pub decided_by_id: Option<i64>,
     pub decided_at: Option<Timestamp>,
     /// Up to 200 characters; `null` for none.
@@ -329,9 +334,11 @@ pub struct AgentApproval {
     /// decide may deny them.
     pub admin_only: bool,
     /// The viewer may approve it (`AgentApproval#approvable_by`). The card then shows Approve;
-    /// otherwise "Only an administrator can approve {GitHub|Fizzy} write actions."
+    /// otherwise "Only an administrator can approve {GitHub|Fizzy} write actions." Like
+    /// `deniable`, it says who may decide, not whether the request is still open: it means
+    /// something only while `status` is `pending`, and the card shows no buttons otherwise.
     pub approvable: bool,
-    /// The viewer may deny it (`AgentApproval#decidable_by`).
+    /// The viewer may deny it (`AgentApproval#decidable_by`); only while `status` is `pending`.
     pub deniable: bool,
 }
 
@@ -346,7 +353,12 @@ pub struct AgentApproval {
 ///   (`ApiError::Validation` on `before`).
 ///
 /// At most 50 a page. Listing first settles the overdue requests on the page, as the classic
-/// page does.
+/// page does: a GET with a write (pending past `expiresAt` becomes `expired`, and publishes
+/// `approval.updated`). That's parity; the backend's tests should cover it.
+///
+/// A new request publishes no `approval.updated`. It reaches deciders as an
+/// `agent_approval_request` `activity.item` (when their inbox preference allows), so a live
+/// approvals page refetches its first page on such an item, and whenever it's shown again.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -386,7 +398,8 @@ pub enum ApprovalDecision {
 #[ts(export)]
 pub struct DecideApproval {
     pub decision: ApprovalDecision,
-    /// The decision note, up to 200 characters; a blank note is none. Omit for none.
+    /// The decision note (the classic `decision_note` param), up to 200 characters; a blank
+    /// note is none. Omit for none.
     #[ts(optional)]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
@@ -398,9 +411,14 @@ pub struct DecideApproval {
 /// Published when a request is approved, denied, cancelled by the agent or settled as expired,
 /// on the `user` topic of everyone who received its `agent_approval_request` activity item and
 /// can still see it (`ActivityItem::accessible_to`: an administrator or the owner, while active).
-/// That's the same audience as [`AgentApprovalPage`], so the payload shows nothing a recipient
-/// couldn't already read there. `approval` is built for each recipient (`approvable`,
-/// `deniable`, `roomName`).
+/// Every recipient may read [`AgentApprovalPage`], so the payload shows nothing they couldn't
+/// already read there. `approval` (`approvable`, `deniable`, `roomName`) and `users` are built
+/// for each recipient.
+///
+/// The audience is a subset of the page's, not all of it: a decider whose inbox preference for
+/// agent approvals is off got no activity item, and nor did one who became a decider after the
+/// request (a new administrator). So a page can miss an update: the client refetches it when
+/// it's shown again, and after `sync.reset`.
 ///
 /// The matching `activity.item` (with the new `approvalStatus`) goes to the same people.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -408,4 +426,6 @@ pub struct DecideApproval {
 #[ts(export)]
 pub struct ApprovalUpdated {
     pub approval: AgentApproval,
+    /// The agent's bot user and the decider (`decidedById`), once each, as on the page.
+    pub users: Vec<User>,
 }

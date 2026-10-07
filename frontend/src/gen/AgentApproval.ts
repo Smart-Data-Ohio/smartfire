@@ -37,7 +37,8 @@ summary: string,
  */
 status: AgentApprovalStatus, expiresAt: string, createdAt: string, 
 /**
- * Who approved or denied it; `null` while undecided ("by someone" when the user is gone).
+ * Who approved or denied it; `null` while undecided. It stays set when that person's
+ * account is later deleted, so no `users` entry matches it: the card reads "by someone".
  */
 decidedById: number | null, decidedAt: string | null, 
 /**
@@ -59,10 +60,12 @@ fizzyUserName: string | null,
 adminOnly: boolean, 
 /**
  * The viewer may approve it (`AgentApproval#approvable_by`). The card then shows Approve;
- * otherwise "Only an administrator can approve {GitHub|Fizzy} write actions."
+ * otherwise "Only an administrator can approve {GitHub|Fizzy} write actions." Like
+ * `deniable`, it says who may decide, not whether the request is still open: it means
+ * something only while `status` is `pending`, and the card shows no buttons otherwise.
  */
 approvable: boolean, 
 /**
- * The viewer may deny it (`AgentApproval#decidable_by`).
+ * The viewer may deny it (`AgentApproval#decidable_by`); only while `status` is `pending`.
  */
 deniable: boolean, };
