@@ -11,7 +11,8 @@ use serde_json::{Value, json};
 
 use super::api_tests::{ALL_PETS, Sync, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp,
+    ALL_TALK, BENDER, BENDER_KEY, Browser, DAVID, DIRECT_DAVID_JASON, JASON, KEVIN, Reply, Req,
+    TestApp,
 };
 
 const DESIGNERS: i64 = 654632876;
@@ -1409,4 +1410,401 @@ async fn spa_api_events_edit_and_cancel_refresh_existing_message_cards_on_sync()
         .unwrap();
     assert!(card.cancelled);
     server.abort();
+}
+
+const WATERCOOLER: i64 = 411254270;
+/// An event arranged in the open "All Pets" room, which Kevin hasn't joined.
+const OPEN_ROOM_EVENT: i64 = 800000101;
+
+/// How a refused caller authenticates.
+#[derive(Clone, Copy)]
+enum Caller<'a> {
+    /// A signed-in browser; writes carry its authenticity token.
+    Session,
+    /// `?bot_key=` in the URL (already in each call's path), with no session.
+    BotKey,
+    /// An agent's `Authorization: Bearer` credential, with no session.
+    Bearer(&'a str),
+}
+
+/// One event endpoint, as the classic pages and the SPA each send it.
+struct Call {
+    label: String,
+    write: bool,
+    classic: Req,
+    api: Req,
+}
+
+/// Every event endpoint on `room`/`event`: the calendar, its form, scheduling, the event page,
+/// its edit form, editing, cancelling and both attendance routes. Each write carries a valid
+/// body so only the guard stands between the caller and a row.
+fn event_calls(room: i64, event: i64, query: &str) -> Vec<Call> {
+    let base = format!("/rooms/{room}/events");
+    let mut calls: Vec<Call> = [
+        String::new(),
+        "/new".into(),
+        format!("/{event}"),
+        format!("/{event}/edit"),
+        format!("/{event}/attendance"),
+    ]
+    .into_iter()
+    .map(|suffix| {
+        let path = format!("{base}{suffix}{query}");
+        Call {
+            label: format!("GET {base}{suffix}"),
+            write: false,
+            classic: Req::new(Method::GET, &path),
+            api: get(&format!("/api/v1{path}")),
+        }
+    })
+    .collect();
+    let body = event_body(
+        "Guarded event",
+        "2026-03-10T09:00",
+        Some("2026-03-10T10:00"),
+    );
+    let create = format!("{base}{query}");
+    calls.push(Call {
+        label: format!("POST {base}"),
+        write: true,
+        classic: classic_form(Method::POST, &create, &body),
+        api: json_body(Method::POST, &format!("/api/v1{create}"), &body),
+    });
+    let update = format!("{base}/{event}{query}");
+    calls.push(Call {
+        label: format!("PATCH {base}/{event}"),
+        write: true,
+        classic: classic_form(Method::PATCH, &update, &body),
+        api: json_body(Method::PATCH, &format!("/api/v1{update}"), &body),
+    });
+    let cancel = format!("{base}/{event}/cancel{query}");
+    calls.push(Call {
+        label: format!("PATCH {base}/{event}/cancel"),
+        write: true,
+        classic: classic_form(
+            Method::PATCH,
+            &cancel,
+            &json!({"cancelScope": "this_event"}),
+        ),
+        api: json_body(
+            Method::PATCH,
+            &format!("/api/v1{cancel}"),
+            &json!({"cancelScope": "this_event"}),
+        ),
+    });
+    let respond = format!("{base}/{event}/attendance{query}");
+    calls.push(Call {
+        label: format!("respond {base}/{event}/attendance"),
+        write: true,
+        classic: Req::new(Method::PATCH, &respond).form(&[("response", "going")]),
+        api: json_body(
+            Method::PUT,
+            &format!("/api/v1{respond}"),
+            &json!({"response": "going"}),
+        ),
+    });
+    calls
+}
+
+/// Everything a guarded endpoint could write: the event snapshot plus every membership, so an
+/// event URL that joined a room would show up here.
+async fn guarded_state(a: &TestApp) -> Value {
+    let memberships = a
+        .db()
+        .read(|conn| {
+            rows(
+                conn,
+                "SELECT id,room_id,user_id,involvement FROM memberships ORDER BY id",
+            )
+        })
+        .await
+        .unwrap();
+    json!({"snapshot": snapshot(a).await, "memberships": memberships})
+}
+
+/// Sends every call to the classic pages and to `/api/v1`, asserting both answer `status` and
+/// neither app writes anything. Session browsers send writes with their authenticity token;
+/// bot keys and agent tokens send none, as their clients do.
+#[allow(clippy::too_many_arguments)]
+async fn assert_refused(
+    classic: &TestApp,
+    next: &TestApp,
+    old: &mut Browser<'_>,
+    new: &mut Browser<'_>,
+    calls: Vec<Call>,
+    caller: Caller<'_>,
+    status: StatusCode,
+    who: &str,
+) {
+    let (old_before, new_before) = (guarded_state(classic).await, guarded_state(next).await);
+    for Call {
+        label,
+        write,
+        mut classic,
+        mut api,
+    } in calls
+    {
+        if let Caller::Bearer(authorization) = caller {
+            classic = classic.header("authorization", authorization);
+            api = api.header("authorization", authorization);
+        }
+        let (expected, actual) = if write && matches!(caller, Caller::Session) {
+            (old.write(classic).await, new.write(api).await)
+        } else {
+            (old.send(classic).await, new.send(api).await)
+        };
+        assert_eq!(
+            (expected.status, actual.status),
+            (status, status),
+            "{who}: {label}: classic {}, API {}",
+            expected.text(),
+            actual.text()
+        );
+    }
+    assert_eq!(
+        guarded_state(classic).await,
+        old_before,
+        "{who}: classic refusals write nothing"
+    );
+    assert_eq!(
+        guarded_state(next).await,
+        new_before,
+        "{who}: API refusals write nothing"
+    );
+}
+
+#[tokio::test]
+async fn spa_api_events_refuse_non_members_of_private_rooms_like_classic() {
+    let (Some(classic), Some(next)) = (app().await, app().await) else {
+        return;
+    };
+    // Kevin isn't in the closed "All Talk" room, which holds the Watercooler event.
+    let mut old = classic.sign_in(KEVIN).await;
+    let mut new = next.sign_in(KEVIN).await;
+    old.authenticity_token().await;
+    new.authenticity_token().await;
+    assert_refused(
+        &classic,
+        &next,
+        &mut old,
+        &mut new,
+        event_calls(ALL_TALK, WATERCOOLER, ""),
+        Caller::Session,
+        StatusCode::NOT_FOUND,
+        "non-member of a private room",
+    )
+    .await;
+    // Not even an administrator outside the room sees it: the guard is membership, not role.
+    for a in [&classic, &next] {
+        sql(
+            a,
+            "DELETE FROM memberships WHERE room_id=486777696 AND user_id=149087659;",
+        )
+        .await;
+    }
+    let mut old_admin = classic.sign_in(JASON).await;
+    let mut new_admin = next.sign_in(JASON).await;
+    old_admin.authenticity_token().await;
+    new_admin.authenticity_token().await;
+    assert_refused(
+        &classic,
+        &next,
+        &mut old_admin,
+        &mut new_admin,
+        event_calls(ALL_TALK, WATERCOOLER, ""),
+        Caller::Session,
+        StatusCode::NOT_FOUND,
+        "administrator outside a private room",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn spa_api_events_direct_rooms_serve_participants_and_refuse_others_like_classic() {
+    let (Some(classic), Some(next)) = (app().await, app().await) else {
+        return;
+    };
+    let mut old_david = classic.sign_in(DAVID).await;
+    let mut new_david = next.sign_in(DAVID).await;
+    old_david.authenticity_token().await;
+    new_david.authenticity_token().await;
+    // Classic has no room-type check: a participant lists, opens the form and schedules.
+    let path = format!("/rooms/{DIRECT_DAVID_JASON}/events");
+    assert_eq!(old_david.get(&path).await.status, StatusCode::OK);
+    let list = ok(&new_david.send(get(&format!("/api/v1{path}"))).await);
+    assert_eq!(list["roomId"], DIRECT_DAVID_JASON);
+    assert_eq!(list["roomKind"], "direct");
+    assert_eq!(list["mayCreate"], true);
+    assert_eq!(
+        old_david.get(&format!("{path}/new")).await.status,
+        StatusCode::OK
+    );
+    let form = ok(&new_david.send(get(&format!("/api/v1{path}/new"))).await);
+    assert_eq!(form["roomId"], DIRECT_DAVID_JASON);
+    let body = event_body("Direct sync", "2026-03-10T09:00", Some("2026-03-10T10:00"));
+    let expected = old_david
+        .write(classic_form(Method::POST, &path, &body))
+        .await;
+    assert_eq!(expected.status, StatusCode::FOUND, "{}", expected.text());
+    let created = send(
+        &mut new_david,
+        Method::POST,
+        &format!("/api/v1{path}"),
+        &body,
+    )
+    .await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let id = parse::<Value>(&created)["event"]["id"]
+        .as_i64()
+        .expect("created event id");
+    assert!(
+        expected
+            .location()
+            .unwrap()
+            .ends_with(&format!("{path}/{id}"))
+    );
+    assert_eq!(
+        snapshot(&classic).await,
+        snapshot(&next).await,
+        "a direct-room event writes what classic writes"
+    );
+    let detail = ok(&new_david.send(get(&format!("/api/v1{path}/{id}"))).await);
+    assert_eq!(detail["roomId"], DIRECT_DAVID_JASON);
+    assert_eq!(detail["event"]["title"], "Direct sync");
+    // The other participant reads it too.
+    let mut old_jason = classic.sign_in(JASON).await;
+    let mut new_jason = next.sign_in(JASON).await;
+    assert_eq!(
+        old_jason.get(&format!("{path}/{id}")).await.status,
+        StatusCode::OK
+    );
+    ok(&new_jason.send(get(&format!("/api/v1{path}/{id}"))).await);
+
+    // Someone outside the conversation gets classic's 404 everywhere and writes nothing.
+    let mut old_kevin = classic.sign_in(KEVIN).await;
+    let mut new_kevin = next.sign_in(KEVIN).await;
+    old_kevin.authenticity_token().await;
+    new_kevin.authenticity_token().await;
+    assert_refused(
+        &classic,
+        &next,
+        &mut old_kevin,
+        &mut new_kevin,
+        event_calls(DIRECT_DAVID_JASON, id, ""),
+        Caller::Session,
+        StatusCode::NOT_FOUND,
+        "non-participant of a direct room",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn spa_api_events_refuse_bots_on_every_endpoint_like_classic() {
+    let (Some(classic), Some(next)) = (app().await, app().await) else {
+        return;
+    };
+    // Bender is a member of "All Talk", so only the bot rule can refuse him.
+    for a in [&classic, &next] {
+        crate::controllers::agent_http_tests::initialize(a).await;
+    }
+    let bot_key = format!("?bot_key={BENDER_KEY}");
+    assert_refused(
+        &classic,
+        &next,
+        &mut classic.anonymous(),
+        &mut next.anonymous(),
+        event_calls(ALL_TALK, WATERCOOLER, &bot_key),
+        Caller::BotKey,
+        StatusCode::FORBIDDEN,
+        "bot key",
+    )
+    .await;
+    let bearer = format!("Bearer {}", crate::controllers::agent_http_tests::SECRET);
+    assert_refused(
+        &classic,
+        &next,
+        &mut classic.anonymous(),
+        &mut next.anonymous(),
+        event_calls(ALL_TALK, WATERCOOLER, ""),
+        Caller::Bearer(&bearer),
+        StatusCode::FORBIDDEN,
+        "agent token",
+    )
+    .await;
+    // A bot's own browser session: take the authenticity token as a person, then restore the
+    // bot role so writes reach the bot rule rather than forgery protection.
+    for a in [&classic, &next] {
+        sql(a, "UPDATE users SET role=0 WHERE id=394959859;").await;
+    }
+    let mut old = classic.sign_in(BENDER).await;
+    let mut new = next.sign_in(BENDER).await;
+    old.authenticity_token().await;
+    new.authenticity_token().await;
+    for a in [&classic, &next] {
+        sql(a, "UPDATE users SET role=2 WHERE id=394959859;").await;
+    }
+    assert_refused(
+        &classic,
+        &next,
+        &mut old,
+        &mut new,
+        event_calls(ALL_TALK, WATERCOOLER, ""),
+        Caller::Session,
+        StatusCode::FORBIDDEN,
+        "bot session",
+    )
+    .await;
+}
+
+async fn kevin_in_all_pets(a: &TestApp) -> i64 {
+    a.db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM memberships WHERE room_id=? AND user_id=?",
+                [ALL_PETS, KEVIN],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn spa_api_events_never_join_an_open_room_like_classic() {
+    let (Some(classic), Some(next)) = (app().await, app().await) else {
+        return;
+    };
+    for a in [&classic, &next] {
+        sql(a, "INSERT INTO events (id,room_id,organizer_id,title,starts_at,time_zone,created_at,updated_at) VALUES (800000101,104393281,127326141,'Pets meetup','2026-03-05 16:00:00','UTC','2026-03-02 16:00:00','2026-03-02 16:00:00');").await;
+    }
+    assert_eq!(
+        kevin_in_all_pets(&next).await,
+        0,
+        "Kevin hasn't joined All Pets"
+    );
+    let mut old = classic.sign_in(KEVIN).await;
+    let mut new = next.sign_in(KEVIN).await;
+    old.authenticity_token().await;
+    new.authenticity_token().await;
+    assert_refused(
+        &classic,
+        &next,
+        &mut old,
+        &mut new,
+        event_calls(ALL_PETS, OPEN_ROOM_EVENT, ""),
+        Caller::Session,
+        StatusCode::NOT_FOUND,
+        "open room not joined",
+    )
+    .await;
+    assert_eq!(
+        kevin_in_all_pets(&classic).await,
+        0,
+        "classic joined nothing"
+    );
+    assert_eq!(
+        kevin_in_all_pets(&next).await,
+        0,
+        "event URLs joined nothing"
+    );
 }
