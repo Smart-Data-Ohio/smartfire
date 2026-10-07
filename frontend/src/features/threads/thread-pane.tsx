@@ -13,6 +13,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
@@ -105,7 +106,10 @@ interface ThreadMenuProps {
   readonly onRename: () => void;
 }
 
-/** Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock. */
+/**
+ * Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock,
+ * and track as work.
+ */
 function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
 
@@ -117,8 +121,10 @@ function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps
   const canLock = permissions?.canLock === true && status !== "locked";
   const canUnlock = permissions?.canUnlock === true && status === "locked";
 
+  const canConvert = permissions?.canConvertWork === true;
+
   const moderates =
-    permissions?.canRename === true || canClose || canReopen || canLock || canUnlock;
+    permissions?.canRename === true || canClose || canReopen || canLock || canUnlock || canConvert;
 
   return (
     <Menu
@@ -169,6 +175,7 @@ function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps
           Unlock thread
         </MenuItem>
       ) : null}
+      {canConvert ? <TrackAsWorkItem threadId={threadId} /> : null}
     </Menu>
   );
 }
@@ -347,6 +354,7 @@ export function ThreadPane({
     parentId === null ? null : (state.messages[parentId] ?? null),
   );
 
+  const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
   const status = pane?.status ?? "loading";
   // A reply's permalink: the pane opens around it and highlights it.
@@ -414,6 +422,7 @@ export function ThreadPane({
           </>
         ) : null
       }
+      toolbar={status === "ready" && tracked ? <WorkBar threadId={threadId} /> : undefined}
       footer={<ThreadFooter roomId={roomId} threadId={threadId} />}
     >
       <ThreadTimeline
@@ -424,6 +433,7 @@ export function ThreadPane({
         focusMessageId={focusMessageId}
       />
       <RenameDialog threadId={threadId} open={renaming} onOpenChange={setRenaming} />
+      <WorkLive threadId={threadId} />
     </PaneFrame>
   );
 }

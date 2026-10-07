@@ -69,7 +69,7 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     screen("searches#index", "/searches", "/app/search", false),
-    screen("work_threads#index", "/work", "/app/work", false),
+    screen("work_threads#index", "/work", "/app/work", true),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.

@@ -40,15 +40,26 @@ test("Switch to classic posts the choice and where the person is", async ({ page
   });
 });
 
-test("a destination the SPA hasn't ported opens on its classic page", async ({ page }) => {
-  await page.route("**/work?classic=1", (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic work</p>" }),
+test("a link to a page the SPA hasn't ported opens on its classic page", async ({ page }) => {
+  // An event's page: no train plans to port it soon, so it stays classic.
+  const eventPath = `/rooms/${ROOM_IDS.general}/events/7`;
+
+  await page.route(`**${eventPath}`, (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic event</p>" }),
   );
+  await openApp(page, "");
 
-  await page.goto("/app/work");
+  await page.evaluate((path) => {
+    const link = document.createElement("a");
 
-  await expect(page.getByText("classic work")).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe("/work");
+    link.href = path;
+    link.textContent = "event link";
+    document.querySelector("main")?.append(link);
+  }, eventPath);
+  await page.getByText("event link").click();
+
+  await expect(page.getByText("classic event")).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(eventPath);
 });
 
 test("a link to a ported classic page opens in place", async ({ page }) => {

@@ -22,11 +22,12 @@ describe("links to classic pages", () => {
       "/app/r/12/t/5?m=8#x",
     );
     expect(inPlaceTarget(link("/activity"), origin)).toBe("/app/activity");
+    expect(inPlaceTarget(link("/work?state=done"), origin)).toBe("/app/work?state=done");
   });
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/work"),
+      link("/rooms/12/events/3"),
       link("/users/me/profile"),
       link("/rooms/12?classic=1"),
       link("https://example.com/rooms/12"),

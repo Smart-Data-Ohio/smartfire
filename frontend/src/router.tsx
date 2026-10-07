@@ -12,6 +12,7 @@ import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
+import { parseWorkSearch } from "./features/work/work-search.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
 function parseId(segment: string): number {
@@ -147,6 +148,14 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** `/app/work?state=`: every work thread, by tab (its own chunk). */
+const workRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "work",
+  validateSearch: parseWorkSearch,
+  component: lazyRouteComponent(() => import("./features/work/work-route.tsx"), "WorkRoute"),
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
@@ -154,6 +163,7 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    workRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
   ]),
 ]);

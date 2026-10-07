@@ -66,38 +66,48 @@ export const WORK_FILTER_EMPTY: Readonly<Record<WorkFilter, string>> = {
   boards: "No board work yet. Create a post in one of your boards and it will appear here.",
 };
 
-const LINK_ICONS: Readonly<Record<string, IconName>> = {
-  pull_request: "git-pull-request",
-  event: "calendar",
-  drive_file: "file-text",
-};
-
-const LINK_KIND_LABEL: Readonly<Record<string, string>> = {
-  pull_request: "Pull request",
-  event: "Event",
-  drive_file: "Drive file",
-};
-
 /** A link's kind icon; a kind this client doesn't know gets a plain link. */
 export function linkIcon(kind: string): IconName {
-  return LINK_ICONS[kind] ?? "link";
+  switch (kind) {
+    case "pull_request":
+      return "git-pull-request";
+    case "event":
+      return "calendar";
+    case "drive_file":
+      return "file-text";
+    default:
+      return "link";
+  }
 }
 
 /** A link's kind, for screen readers; "Link" for one this client doesn't know. */
 export function linkKindLabel(kind: string): string {
-  return LINK_KIND_LABEL[kind] ?? "Link";
+  switch (kind) {
+    case "pull_request":
+      return "Pull request";
+    case "event":
+      return "Event";
+    case "drive_file":
+      return "Drive file";
+    default:
+      return "Link";
+  }
 }
-
-const PULL_REQUEST_STATE_LABEL: Readonly<Record<string, string>> = {
-  open: "Open",
-  draft: "Draft",
-  merged: "Merged",
-  closed: "Closed",
-};
 
 /** A pull request's state label, or `null` for none (or a state this client doesn't know). */
 export function pullRequestStateLabel(state: string | null): string | null {
-  return state === null ? null : (PULL_REQUEST_STATE_LABEL[state] ?? null);
+  switch (state) {
+    case "open":
+      return "Open";
+    case "draft":
+      return "Draft";
+    case "merged":
+      return "Merged";
+    case "closed":
+      return "Closed";
+    default:
+      return null;
+  }
 }
 
 /**
@@ -116,11 +126,10 @@ export function eventTimeLabel(startsAt: string, timeZone: string | null): strin
 
   const date = new Date(startsAt);
 
+  const zoned: Intl.DateTimeFormatOptions = timeZone === null ? options : { ...options, timeZone };
+
   try {
-    return new Intl.DateTimeFormat(undefined, {
-      ...options,
-      ...(timeZone === null ? {} : { timeZone }),
-    }).format(date);
+    return new Intl.DateTimeFormat(undefined, zoned).format(date);
   } catch {
     return new Intl.DateTimeFormat(undefined, options).format(date);
   }

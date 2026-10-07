@@ -4,7 +4,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import "./destinations.css";
 
 interface DestinationLinkProps {
-  readonly to: "/saved" | "/scheduled";
+  readonly to: "/saved" | "/scheduled" | "/work";
   readonly icon: IconName;
   readonly label: string;
 }
@@ -31,12 +31,16 @@ function DestinationLink({ to, icon, label }: DestinationLinkProps) {
   );
 }
 
-/** Saved and Scheduled, at the top of the sidebar as Slack keeps "Later" and "Scheduled". */
+/**
+ * Saved and Scheduled, at the top of the sidebar as Slack keeps "Later" and "Scheduled", then
+ * Work (every tracked thread).
+ */
 export function SidebarDestinations() {
   return (
-    <ul className="sidebar-destinations" aria-label="Your messages">
+    <ul className="sidebar-destinations" aria-label="Destinations">
       <DestinationLink to="/saved" icon="bookmark" label="Saved" />
       <DestinationLink to="/scheduled" icon="clock" label="Scheduled" />
+      <DestinationLink to="/work" icon="briefcase" label="Work" />
     </ul>
   );
 }
