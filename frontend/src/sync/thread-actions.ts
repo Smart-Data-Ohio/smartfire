@@ -170,13 +170,13 @@ export const update = Effect.fn("threads.update")(function* (threadId: number, b
       .pipe(Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket)))),
   );
 
+  // The update succeeded; a failed replacement read keeps what is shown rather than failing it.
   if (result.rejected) {
     yield* readFresh(workKey(threadId), (ticket) =>
-      api
-        .thread(threadId)
-        .pipe(
-          Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
-        ),
+      api.thread(threadId).pipe(
+        Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
+        Effect.ignore,
+      ),
     );
   }
 });
