@@ -216,7 +216,7 @@ export function RightPane({ roomId }: { readonly roomId: number }) {
   const navigation = usePaneNavigation(roomId);
   const { view } = navigation;
   const phone = usePhoneLayout();
-  const underPane = useOpenPane();
+  const underPane = useOpenPane(roomId);
   const headingId = useId();
   const presence = usePresence<HTMLElement>(view !== null);
   const [shown, setShown] = useState<RightPaneView | null>(view);

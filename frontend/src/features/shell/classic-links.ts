@@ -1,6 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { spaUrlFor } from "../../lib/screens.ts";
+import { messageLinkSnapshot } from "../room/message-link.ts";
 
 /** A plain left click: no modifier keys, so it isn't asking for a new tab or window. */
 function isPlainClick(event: MouseEvent): boolean {
@@ -68,8 +69,14 @@ export function useClassicLinks(): void {
       }
 
       event.preventDefault();
+      const snapshot = messageLinkSnapshot(spa);
+
       // `href` is the public path: the router strips its `/app/` basepath itself.
-      void router.navigate({ href: spa });
+      if (snapshot === null) {
+        void router.navigate({ href: spa });
+      } else {
+        void router.navigate({ href: spa, state: { smartfireMessageLink: snapshot } });
+      }
     };
 
     document.addEventListener("click", onClick);

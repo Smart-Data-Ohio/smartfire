@@ -51,7 +51,8 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
   const pushed =
     matchRoute({ to: "/saved" }) !== false ||
     matchRoute({ to: "/scheduled" }) !== false ||
-    matchRoute({ to: "/search" }) !== false;
+    matchRoute({ to: "/search" }) !== false ||
+    matchRoute({ to: "/m/$messageId" }) !== false;
 
   if (roomId !== null || pushed) {
     return "room";
