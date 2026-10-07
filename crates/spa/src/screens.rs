@@ -152,6 +152,9 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings/devices",
         true,
     ),
+    // S7: the people directory and a person's page.
+    screen("users#index", "/users", "/app/people", true),
+    screen("users#show", "/users/:id", "/app/people/:id", true),
     // S7: the workspace's account pages. The people list is the account page's lower half: it
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),

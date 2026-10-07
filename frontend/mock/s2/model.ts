@@ -102,6 +102,8 @@ export interface S2World {
   nextSavedId: number;
   /** People the viewer starred. */
   readonly stars: Set<number>;
+  /** People the viewer lets through Do Not Disturb (`dnd_allowed_users`, apart from the stars). */
+  readonly dndAllowed: Set<number>;
   readonly scheduled: Map<number, ScheduledMessage>;
   nextScheduledId: number;
   /** By signed id. */
@@ -129,6 +131,7 @@ export function emptyS2World(): S2World {
     saved: new Map(),
     nextSavedId: 1,
     stars: new Set(),
+    dndAllowed: new Set(),
     scheduled: new Map(),
     nextScheduledId: 1,
     blobs: new Map(),

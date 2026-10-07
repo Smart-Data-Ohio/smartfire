@@ -643,6 +643,8 @@ test("a failed room change never undoes a newer one", async ({ page }) => {
   await level.click();
   await page.getByRole("menuitemradio", { name: /Muted/ }).click();
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Muted`);
+  // Reopen only once the first menu has gone, or its fading items catch the next click.
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await level.click();
   await page.getByRole("menuitemradio", { name: newer }).click();
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: ${newer}`);
@@ -718,9 +720,7 @@ test("two failed changes from no level go back to none, not to the first choice"
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
   await level.click();
   await page.getByRole("menuitemradio", { name: /Muted/ }).click();
-  await expect(
-    page.getByRole("menu", { name: `Notifications for ${room}`, exact: true, includeHidden: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("menu")).toHaveCount(0);
   await level.click();
   await page.getByRole("menuitemradio", { name: "All messages" }).click();
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: All messages`);

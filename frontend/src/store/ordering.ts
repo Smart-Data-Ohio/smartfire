@@ -38,14 +38,25 @@ export function insertOrdered(
   return [...ids.slice(0, low), message.id, ...ids.slice(low)];
 }
 
+/**
+ * Lands `list` in `users`, each record only if it is at least as new as the one held
+ * (`users.updated_at`), so a slow reply never undoes a newer one, whatever order they arrive in.
+ * Answers `users` itself when nothing landed.
+ */
 export function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
-  if (list.length === 0) {
+  const landing = list.filter((user) => {
+    const held = users[user.id];
+
+    return held === undefined || user.updatedAt >= held.updatedAt;
+  });
+
+  if (landing.length === 0) {
     return users;
   }
 
   const next = { ...users };
 
-  for (const user of list) {
+  for (const user of landing) {
     next[user.id] = user;
   }
 

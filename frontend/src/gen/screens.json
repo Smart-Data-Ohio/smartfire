@@ -21,6 +21,8 @@
   { "endpoint": "users/statuses#edit", "classic": "/users/me/status/edit", "spa": "/app/settings/status", "ported": true },
   { "endpoint": "users/sessions#index", "classic": "/users/me/sessions", "spa": "/app/settings/sessions", "ported": true },
   { "endpoint": "users/push_subscriptions#index", "classic": "/users/me/push_subscriptions", "spa": "/app/settings/devices", "ported": true },
+  { "endpoint": "users#index", "classic": "/users", "spa": "/app/people", "ported": true },
+  { "endpoint": "users#show", "classic": "/users/:id", "spa": "/app/people/:id", "ported": true },
   { "endpoint": "accounts#edit", "classic": "/account/edit", "spa": "/app/admin", "ported": true },
   { "endpoint": "accounts#edit", "classic": "/account/edit", "spa": "/app/admin/people", "ported": true },
   { "endpoint": "accounts/icons#index", "classic": "/account/icons", "spa": "/app/admin/icons", "ported": true },

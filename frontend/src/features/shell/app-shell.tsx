@@ -15,11 +15,11 @@ import { Rail } from "./rail.tsx";
 import "./app-shell.css";
 
 /** A full-column page that isn't a conversation: its tab title, or `null` for a room. */
-type Page = "Settings" | "Workspace" | null;
+type Page = "Settings" | "Workspace" | "People" | null;
 
 /**
- * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings and the
- * workspace pages name themselves instead of a room.
+ * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings, the
+ * workspace pages and the people pages name themselves instead of a room.
  */
 function useDocumentTitle(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
@@ -71,15 +71,17 @@ export function AppShell() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? null;
 
-  // Settings and the workspace pages fill the main column, so phones show them rather than the
-  // conversation list.
+  // Settings, the workspace pages and the people pages fill the main column, so phones show them
+  // rather than the conversation list.
   const page = useMatches({
     select: (matches): Page =>
       matches.some((match) => match.routeId.startsWith("/shell/settings"))
         ? "Settings"
         : matches.some((match) => match.routeId.startsWith("/shell/admin"))
           ? "Workspace"
-          : null,
+          : matches.some((match) => match.routeId.startsWith("/shell/people"))
+            ? "People"
+            : null,
   });
 
   useEffect(() => {

@@ -346,6 +346,24 @@ const agentEventsRoute = createRoute({
   ),
 });
 
+/** `/app/people`: the workspace's people, to message or huddle with (its own chunk). */
+const peopleRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "people",
+  component: lazyRouteComponent(() => import("./features/people/people-page.tsx"), "PeoplePage"),
+});
+
+/** `/app/people/$userId`: someone's page (a bot's opens its agent or classic page). */
+const personRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "people/$userId",
+  params: {
+    parse: ({ userId }) => ({ userId: parseId(userId) }),
+    stringify: ({ userId }) => ({ userId: `${userId}` }),
+  },
+  component: lazyRouteComponent(() => import("./features/people/person-page.tsx"), "PersonRoute"),
+});
+
 /** The search page's query as the URL has it. */
 interface RawSearchPageSearch {
   readonly q?: unknown;
@@ -376,6 +394,8 @@ const routeTree = rootRoute.addChildren([
     agentsRoute,
     agentRoute.addChildren([agentOverviewRoute, agentApprovalsRoute, agentEventsRoute]),
     searchRoute,
+    peopleRoute,
+    personRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
