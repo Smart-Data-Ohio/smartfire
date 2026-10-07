@@ -51,6 +51,27 @@ pub(crate) fn validation(field: &str, message: &str) -> ApiError {
     }
 }
 
+/// A failed validation: each attribute's messages on its wire field (the one `rename` gives it,
+/// else its camelCased name), and the message as Rails' full messages read, by the attribute's
+/// own name.
+pub(crate) fn record_invalid(errors: &campfire_db::Errors, rename: &[(&str, &str)]) -> ApiError {
+    let mut fields: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (attribute, message) in &errors.0 {
+        let field = rename
+            .iter()
+            .find(|(from, _)| from == attribute)
+            .map_or_else(|| camel_case(attribute), |(_, to)| (*to).to_string());
+        fields.entry(field).or_default().push(message.clone());
+    }
+    let message = errors
+        .0
+        .iter()
+        .map(|(attribute, message)| format!("{} {message}", humanize(attribute)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    ApiError::Validation { message, fields }
+}
+
 fn render(c: &mut Ctx, api: &ApiError) -> Result<Response> {
     let status = StatusCode::from_u16(api.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     let mut response = c.json(status, &ApiErrorResponse { error: api.clone() })?;
@@ -80,22 +101,7 @@ fn envelope(c: &Ctx, error: &Error) -> Option<ApiError> {
         },
         Error::Internal(error) => match error.downcast_ref::<campfire_db::Error>()? {
             campfire_db::Error::RecordNotFound(_) => not_found(),
-            campfire_db::Error::RecordInvalid(errors) => {
-                let mut fields: BTreeMap<String, Vec<String>> = BTreeMap::new();
-                for (attribute, message) in &errors.0 {
-                    fields
-                        .entry(camel_case(attribute))
-                        .or_default()
-                        .push(message.clone());
-                }
-                let message = errors
-                    .0
-                    .iter()
-                    .map(|(attribute, message)| format!("{} {message}", humanize(attribute)))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                ApiError::Validation { message, fields }
-            }
+            campfire_db::Error::RecordInvalid(errors) => record_invalid(errors, &[]),
             _ => return None,
         },
         _ => return None,

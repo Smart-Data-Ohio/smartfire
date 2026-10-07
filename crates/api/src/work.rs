@@ -24,7 +24,7 @@ use rails_compat::Secrets;
 use crate::agents::human;
 use crate::dto;
 use crate::endpoints::{before_actions, body, now};
-use crate::error::{fail, not_found};
+use crate::error::{fail, not_found, record_invalid};
 use crate::threads::{FORBIDDEN_UPDATE, scope};
 
 endpoint!(
@@ -390,23 +390,6 @@ async fn work_scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
     Ok((thread, room, viewer))
 }
 
-/// A refused validation, its attributes renamed to the request's fields.
-fn renamed(errors: campfire_db::Errors, names: &[(&str, &'static str)]) -> campfire_db::Error {
-    campfire_db::Error::RecordInvalid(campfire_db::Errors(
-        errors
-            .0
-            .into_iter()
-            .map(|(attribute, message)| {
-                let field = names
-                    .iter()
-                    .find(|(from, _)| *from == attribute)
-                    .map_or(attribute, |(_, to)| *to);
-                (field, message)
-            })
-            .collect(),
-    ))
-}
-
 /// A 422 on `field` whose message is a whole sentence, as the classic page shows it.
 fn sentence(field: &str, message: &str) -> api::ApiError {
     api::ApiError::Validation {
@@ -477,10 +460,11 @@ async fn update_work(c: &mut Ctx) -> Result {
             return Err(forbidden(c, FORBIDDEN_UPDATE));
         }
         Err(campfire_db::Error::RecordInvalid(errors)) => {
-            return Err(db_error(renamed(
-                errors,
-                &[("work_owner", "owner_id"), ("work_status", "status")],
-            )));
+            let error = record_invalid(
+                &errors,
+                &[("work_owner", "ownerId"), ("work_status", "status")],
+            );
+            return Err(fail(c, error));
         }
         Err(error) => return Err(db_error(error)),
     }
@@ -545,10 +529,8 @@ async fn create_handoff(c: &mut Ctx) -> Result {
             return Err(fail(c, sentence("base", UNTRACKED)));
         }
         Err(campfire_db::Error::RecordInvalid(errors)) => {
-            return Err(db_error(renamed(
-                errors,
-                &[("work_owner", "receiver_agent_id")],
-            )));
+            let error = record_invalid(&errors, &[("work_owner", "receiverAgentId")]);
+            return Err(fail(c, error));
         }
         Err(error) => return Err(db_error(error)),
     }

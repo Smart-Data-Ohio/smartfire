@@ -356,6 +356,18 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         .write(json_body(Method::PATCH, &path, &json!({"ownerId": LOU})))
         .await;
     assert_eq!(validation_fields(&reply), vec!["ownerId".to_string()]);
+    // The message reads as the classic one, by the column's name.
+    assert_eq!(
+        envelope(&reply),
+        api::ApiError::Validation {
+            message: "Work owner must be an active human member of the parent room".into(),
+            fields: [(
+                "ownerId".to_string(),
+                vec!["must be an active human member of the parent room".to_string()]
+            )]
+            .into(),
+        }
+    );
     let reply = david
         .write(json_body(Method::PATCH, &path, &json!({"status": null})))
         .await;
@@ -655,6 +667,61 @@ async fn a_handoff_takes_the_classic_checks_and_moves_the_owner() {
         validation_fields(&reply),
         vec!["receiverAgentId".to_string()]
     );
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_classic_thread_update_publishes_thread_updated_once() {
+    use crate::controllers::presenters::test_support::Req;
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut kevins_tab =
+        Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    kevins_tab.welcome().await;
+    let path = format!("/rooms/{DESIGNERS}/threads/{THREAD}");
+    let mut marker = 0;
+
+    // A work change (the model publishes it), a work change with a rename beside it, and a
+    // rename alone (the controller publishes it): one `thread.updated` each, then nothing up to
+    // a message posted after it.
+    for form in [
+        vec![("thread[work_status]", "planned")],
+        vec![
+            ("thread[work_status]", "in_progress"),
+            ("thread[name]", "Work and a name"),
+        ],
+        vec![("thread[name]", "Only a name")],
+    ] {
+        let reply = david
+            .write(
+                Req::new(Method::PATCH, &path)
+                    .header("accept", "text/html")
+                    .form(&form),
+            )
+            .await;
+        assert!(reply.status.is_redirection(), "{form:?}: {}", reply.text());
+        kevins_tab.until(thread_updated(THREAD), |_| false).await;
+        marker += 1;
+        let body = format!("Marker {marker}");
+        let reply = david
+            .write(
+                Req::new(Method::POST, &format!("/rooms/{DESIGNERS}/messages"))
+                    .header("accept", "text/vnd.turbo-stream.html")
+                    .header("content-type", "application/json")
+                    .body(json!({"message": {"markdown_source": body, "client_message_id": format!("marker-{marker}")}}).to_string()),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        kevins_tab
+            .until(
+                super::api_tests::created_in(DESIGNERS),
+                thread_updated(THREAD),
+            )
+            .await;
+    }
     server.abort();
 }
 

@@ -426,6 +426,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let mut thread = ChannelThread::find(tx.conn(), thread_id)?;
+            let before = thread.clone();
             let mut pending_name = None;
             let mut pending_tags = None;
             let outcome = (|| {
@@ -533,13 +534,17 @@ pub async fn update(c: &mut Ctx) -> Result {
             };
             *capture.lock().expect("thread attempt") =
                 (thread.clone(), pending_name, pending_tags, history);
-            outcome.map(|()| thread)
+            outcome.map(|()| {
+                // A work change already publishes `thread.updated` from the model.
+                let published = thread.work_changed_from(&before);
+                (thread, published)
+            })
         })
         .await;
     let (attempted, pending_name, pending_tags, history) =
         attempted.lock().expect("thread attempt").clone();
-    let thread = match result {
-        Ok(thread) => thread,
+    let (thread, published) = match result {
+        Ok(updated) => updated,
         Err(campfire_db::Error::RecordNotFound(_)) => return forbidden_update(c, &thread),
         Err(campfire_db::Error::Other(message))
             if message == FORBIDDEN_UPDATE || message == WORK_UPDATE_FORBIDDEN =>
@@ -589,7 +594,9 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         Err(error) => return write_error(c, Error::internal(error)),
     };
-    c.app().broadcasts.thread_updated(thread_id);
+    if !published {
+        c.app().broadcasts.thread_updated(thread_id);
+    }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {
         return c.redirect_to(&c.url_for(&format!("/rooms/{room_id}/threads/{thread_id}")));
     }

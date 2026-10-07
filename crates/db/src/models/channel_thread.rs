@@ -50,7 +50,8 @@ impl crate::events::Broadcast for ThreadWorkChange {
 }
 impl ThreadWorkChange {
     pub fn emit(tx: &mut Tx<'_>, thread_id: i64) {
-        tx.emit_after_commit(Event::broadcast(&ThreadWorkChange { thread_id }));
+        // Once per transaction: a request that edits the result and the status publishes once.
+        tx.broadcast_after_commit_once(&ThreadWorkChange { thread_id });
     }
 }
 
@@ -561,17 +562,22 @@ impl ChannelThread {
             || changed.name != self.name
             || changed.work_owner_id != self.work_owner_id
             || changed.last_activity_at != self.last_activity_at;
-        let work_changed = status_changed
-            || changed.work_owner_id != self.work_owner_id
-            || changed.run_url != self.run_url
-            || changed.result_markdown != self.result_markdown
-            || changed.result_updated_at != self.result_updated_at;
-        if work_changed {
+        if changed.work_changed_from(self) {
             ThreadWorkChange::emit(tx, self.id);
         }
         *self = changed;
         self.register_board_update(tx, room, row_changed, status_changed)?;
         Ok(())
+    }
+
+    /// Whether a work column differs from `before`'s: the change [`ThreadWorkChange`] publishes
+    /// as `thread.updated`.
+    pub fn work_changed_from(&self, before: &ChannelThread) -> bool {
+        self.work_status != before.work_status
+            || self.work_owner_id != before.work_owner_id
+            || self.run_url != before.run_url
+            || self.result_markdown != before.result_markdown
+            || self.result_updated_at != before.result_updated_at
     }
 
     /// `update!(name:, auto_archive_after_minutes:)`: the thread settings form.
