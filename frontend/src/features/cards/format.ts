@@ -136,14 +136,20 @@ export function eventWhen(startsAt: string, endsAt: string | null, timeZone: str
   const startDay = formats.day.format(start);
 
   if (endsAt === null) {
-    return `${startDay} · ${formats.zonedTime.format(start)}`;
+    return `${startDay} · ${unbroken(formats.zonedTime.format(start))}`;
   }
 
   const end = Date.parse(endsAt);
   const endDay = formats.day.format(end);
-  const endPart = `${startDay === endDay ? "" : `${endDay} · `}${formats.zonedTime.format(end)}`;
+  const endTime = unbroken(formats.zonedTime.format(end));
+  const endPart = `${startDay === endDay ? "" : `${endDay} · `}${endTime}`;
 
-  return `${startDay} · ${formats.time.format(start)} – ${endPart}`;
+  return `${startDay} · ${unbroken(formats.time.format(start))} – ${endPart}`;
+}
+
+/** A time that wraps as one piece ("11:45 AM EDT"), so a narrow card breaks between parts. */
+function unbroken(text: string): string {
+  return text.replaceAll(" ", "\u00a0");
 }
 
 /** "Oct 5, 2026": when a post went up. */
