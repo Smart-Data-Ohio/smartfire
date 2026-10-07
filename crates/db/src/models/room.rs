@@ -543,7 +543,13 @@ impl Room {
 
     /// Room#destroy with its dependent callbacks; asynchronous deletion uses room_delete::perform.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        crate::models::room_delete::destroy(tx, self)
+        crate::models::room_delete::destroy(tx, self, false)
+    }
+
+    /// [`Self::destroy`] for a Slack import's undo: its messages and threads go as imported
+    /// ones, so nothing is broadcast.
+    pub fn destroy_imported(&self, tx: &mut Tx<'_>) -> Result<()> {
+        crate::models::room_delete::destroy(tx, self, true)
     }
 
     /// Immediately revoke access and atomically request asynchronous destruction.

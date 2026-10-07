@@ -614,3 +614,714 @@ async fn scheduled_messages_tell_the_other_tabs() {
     assert_eq!(item.unwrap().item.source.source_id, row.id);
     server.abort();
 }
+
+const ALL_PETS: i64 = super::api_tests::ALL_PETS;
+const HQ: i64 = crate::controllers::presenters::test_support::HQ;
+
+fn activity_removed(id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+    move |event| matches!(&event.payload, api::SyncPayload::ActivityRemoved(removed) if removed.id == id)
+}
+
+async fn post_in(
+    b: &mut crate::controllers::presenters::test_support::Browser<'_>,
+    room_id: i64,
+    client_id: &str,
+    source: &str,
+) -> api::MessageDTO {
+    let body = json!({"clientMessageId": format!("0199b3c4-1b-{client_id}"), "markdownSource": source, "replyToMessageId": null, "replyNotifyAuthor": null});
+    let reply = b
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room_id}/messages"),
+            &body,
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    parse(&reply)
+}
+
+/// An active agent owned by `owner`, with a pending approval (outside any room) and a
+/// `messages` budget notice: `(approval, notice)`.
+async fn agent_sources(a: &TestApp, owner: i64) -> (i64, i64) {
+    a.db()
+        .write(move |tx| {
+            let now = tx.now();
+            let user: i64 = tx.conn().query_row(
+                "INSERT INTO users (name, role, status, created_at, updated_at) VALUES ('Helper', 2, 0, ?, ?) RETURNING id",
+                rusqlite::params![now, now],
+                |row| row.get(0),
+            )?;
+            let agent: i64 = tx.conn().query_row(
+                "INSERT INTO agents (user_id, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?) RETURNING id",
+                rusqlite::params![user, owner, now, now],
+                |row| row.get(0),
+            )?;
+            let approval = tx.conn().query_row(
+                "INSERT INTO agent_approvals (action, agent_id, summary, expires_at, created_at, updated_at) VALUES ('post_message', ?, 'Post the launch note', '2030-01-01 00:00:00', ?, ?) RETURNING id",
+                rusqlite::params![agent, now, now],
+                |row| row.get(0),
+            )?;
+            let notice = tx.conn().query_row(
+                "INSERT INTO agent_budget_notices (agent_id, cap, day, created_at, updated_at) VALUES (?, 'messages', '2026-03-02', ?, ?) RETURNING id",
+                rusqlite::params![agent, now, now],
+                |row| row.get(0),
+            )?;
+            Ok((approval, notice))
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn inbox_items_leave_with_their_source_and_only_their_owner_hears() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let mut kevins_sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    kevins_sync.welcome().await;
+
+    // A deleted message: each owner hears of their own item only.
+    let posted = post_in(&mut david, DESIGNERS, "message", "Going away").await;
+    let davids = item(&a, DAVID, ("Message", posted.id), "mention", 5).await;
+    let kevins = item(&a, KEVIN, ("Message", posted.id), "mention", 5).await;
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/messages/{}", posted.id))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    sync.until(activity_removed(davids), activity_removed(kevins))
+        .await;
+    kevins_sync
+        .until(activity_removed(kevins), activity_removed(davids))
+        .await;
+
+    // A deleted thread takes its replies' items.
+    let in_thread = item(&a, DAVID, ("Message", JASONS_REPLY), "thread_activity", 5).await;
+    a.db()
+        .write(|tx| campfire_db::ChannelThread::find(tx.conn(), THREAD)?.destroy(tx))
+        .await
+        .unwrap();
+    sync.until(activity_removed(in_thread), |_| false).await;
+
+    // A deleted approval.
+    let (approval, _) = agent_sources(&a, DAVID).await;
+    let approval_item = item(
+        &a,
+        DAVID,
+        ("AgentApproval", approval),
+        "agent_approval_request",
+        5,
+    )
+    .await;
+    a.db()
+        .write(move |tx| {
+            campfire_db::AgentApproval::find(tx.conn(), approval)?
+                .expect("the approval")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    sync.until(activity_removed(approval_item), |_| false).await;
+
+    // A deleted room, soft first: its items leave reach at once.
+    let in_hq = post_in(&mut david, HQ, "hq", "Head office").await;
+    let hq_item = item(&a, DAVID, ("Message", in_hq.id), "mention", 5).await;
+    a.db()
+        .write(|tx| campfire_db::Room::find(tx.conn(), HQ)?.begin_destroy(tx))
+        .await
+        .unwrap();
+    sync.until(activity_removed(hq_item), |_| false).await;
+
+    // A room's events go with it.
+    let event_item = {
+        let event: i64 = a
+            .db()
+            .write(|tx| {
+                let now = tx.now();
+                Ok(tx.conn().query_row(
+                    "INSERT INTO events (room_id, organizer_id, title, starts_at, time_zone, created_at, updated_at) VALUES (?, ?, 'Pet show', '2030-01-01 12:00:00', 'UTC', ?, ?) RETURNING id",
+                    rusqlite::params![ALL_PETS, JASON, now, now],
+                    |row| row.get(0),
+                )?)
+            })
+            .await
+            .unwrap();
+        item(&a, DAVID, ("Event", event), "event_invitation", 5).await
+    };
+    a.db()
+        .write(|tx| campfire_db::Room::find(tx.conn(), ALL_PETS)?.destroy(tx))
+        .await
+        .unwrap();
+    sync.until(activity_removed(event_item), |_| false).await;
+
+    // Kevin heard none of David's: his next event is his own.
+    let kevins_post = post_in(&mut kevin, DESIGNERS, "kevin", "Still here").await;
+    let own = item(&a, KEVIN, ("Message", kevins_post.id), "mention", 1).await;
+    let reply = kevin
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/activity/{own}"),
+            &json!({"action": "read"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let david_ids = [in_thread, approval_item, hq_item, event_item];
+    kevins_sync
+        .until(activity_item(own), |event| match &event.payload {
+            api::SyncPayload::ActivityRemoved(removed) => david_ids.contains(&removed.id),
+            api::SyncPayload::ActivityItem(changed) => changed.item.id != own,
+            _ => false,
+        })
+        .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn agent_items_show_to_their_owner_and_admins_only() {
+    let Some(a) = app(true).await else { return };
+    // Kevin owns the agent; Jason is an administrator; JZ is neither.
+    let jz: i64 = a
+        .db()
+        .read(|conn| {
+            Ok(
+                conn.query_row("SELECT id FROM users WHERE name = 'JZ'", [], |row| {
+                    row.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    let (approval, notice) = agent_sources(&a, KEVIN).await;
+    for (viewer, sees) in [(KEVIN, true), (JASON, true), (jz, false)] {
+        let approval_item = item(
+            &a,
+            viewer,
+            ("AgentApproval", approval),
+            "agent_approval_request",
+            10,
+        )
+        .await;
+        let notice_item = item(
+            &a,
+            viewer,
+            ("AgentBudgetNotice", notice),
+            "agent_budget_exceeded",
+            5,
+        )
+        .await;
+        let mut browser = a.sign_in(viewer).await;
+        let list: api::ActivityList =
+            parse(&browser.send(get("/api/v1/activity?type=agents")).await);
+        let listed = |id: i64| list.items.iter().find(|item| item.id == id);
+        let count: api::ActivityUnreadCount =
+            parse(&browser.send(get("/api/v1/activity/unread_count")).await);
+        assert_eq!(list.unread_count, count.unread_count, "{viewer}");
+        let reply = browser
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/activity/{approval_item}"),
+                &json!({"action": "read"}),
+            ))
+            .await;
+        if !sees {
+            assert!(
+                listed(approval_item).is_none() && listed(notice_item).is_none(),
+                "{viewer}"
+            );
+            assert_eq!(reply.status, StatusCode::NOT_FOUND, "{viewer}");
+            continue;
+        }
+        let approval_row = listed(approval_item).expect("the approval item");
+        assert_eq!(
+            (
+                approval_row.event_type,
+                approval_row.source.source_type,
+                approval_row.source.approval_status,
+                approval_row.source.room_id
+            ),
+            (
+                api::ActivityEventType::AgentApprovalRequest,
+                api::ActivitySourceType::AgentApproval,
+                Some(api::AgentApprovalStatus::Pending),
+                None
+            ),
+            "{viewer}"
+        );
+        let notice_row = listed(notice_item).expect("the budget item");
+        assert_eq!(
+            (
+                notice_row.source.source_type,
+                notice_row.source.budget_cap,
+                notice_row.source.room_id
+            ),
+            (
+                api::ActivitySourceType::AgentBudgetNotice,
+                Some(api::AgentBudgetCap::Messages),
+                None
+            ),
+            "{viewer}"
+        );
+        assert!(
+            notice_row.source.title.starts_with("Helper"),
+            "{:?}",
+            notice_row.source
+        );
+        assert_eq!(reply.status, StatusCode::OK, "{viewer}: {}", reply.text());
+        let changed: api::ActivityItemChanged = parse(&reply);
+        assert_eq!(changed.unread_count, count.unread_count - 1, "{viewer}");
+    }
+}
+
+#[tokio::test]
+async fn losing_a_room_takes_its_items_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mention = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    let before: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
+    assert!(before.items.iter().any(|item| item.id == mention));
+
+    a.db()
+        .write(|tx| {
+            campfire_db::Membership::find_by_room_and_user(tx.conn(), DESIGNERS, DAVID)?
+                .expect("David is in Designers")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    let after: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
+    assert!(after.items.iter().all(|item| item.id != mention));
+    // Every unread item reached through Designers leaves the count. (Scheduled messages and
+    // agent approvals there stay: they're reached through their author or agent.)
+    let in_designers = before
+        .items
+        .iter()
+        .filter(|item| {
+            item.source.room_id == Some(DESIGNERS)
+                && !matches!(
+                    item.source.source_type,
+                    api::ActivitySourceType::ScheduledMessage
+                        | api::ActivitySourceType::AgentApproval
+                )
+        })
+        .count() as i64;
+    assert_eq!(after.unread_count, before.unread_count - in_designers);
+    let count: api::ActivityUnreadCount =
+        parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(count.unread_count, after.unread_count);
+    let path = format!("/api/v1/activity/{mention}");
+    let reply = david
+        .write(json_body(Method::PATCH, &path, &json!({"action": "read"})))
+        .await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND, "{}", reply.text());
+    let reply = david
+        .write(json_body(Method::POST, &format!("{path}/open"), &json!({})))
+        .await;
+    assert_eq!(reply.status, StatusCode::NOT_FOUND, "{}", reply.text());
+}
+
+#[tokio::test]
+async fn a_cursor_outlives_its_row() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let now = a.booted.app.db.env().now();
+    a.db()
+        .write(move |tx| {
+            for n in 0..110_i64 {
+                let at = campfire_db::Timestamp::from_second(now.as_second() - 1_000 + n);
+                let id: i64 = tx.conn().query_row(
+                    "INSERT INTO scheduled_messages (user_id, room_id, markdown_source, send_at, dropped_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                    rusqlite::params![DAVID, DESIGNERS, format!("Dropped {n}"), at, at, at, at],
+                    |row| row.get(0),
+                )?;
+                tx.conn().execute(
+                    "INSERT INTO activity_items (user_id, source_type, source_id, event_type, created_at, updated_at) VALUES (?, 'ScheduledMessage', ?, 'scheduled_message_dropped', ?, ?)",
+                    rusqlite::params![DAVID, id, at, at],
+                )?;
+                let message_id: i64 = tx.conn().query_row(
+                    "INSERT INTO messages (room_id, creator_id, client_message_id, markdown_source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+                    rusqlite::params![DESIGNERS, JASON, format!("cursor-{n}"), format!("Cursor {n}"), at, at],
+                    |row| row.get(0),
+                )?;
+                tx.conn().execute(
+                    "INSERT INTO saved_items (user_id, message_id, status, created_at, updated_at) VALUES (?, ?, 'in_progress', ?, ?)",
+                    rusqlite::params![DAVID, message_id, at, at],
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    // The inbox: the cursor's item is deleted.
+    let first: api::ActivityList = parse(&david.send(get("/api/v1/activity")).await);
+    let cursor = first.next_cursor.clone().expect("a second page");
+    let second_path = format!("/api/v1/activity?before={cursor}");
+    let second: api::ActivityList = parse(&david.send(get(&second_path)).await);
+    let last = first.items.last().unwrap().id;
+    a.db()
+        .write(move |tx| {
+            tx.conn()
+                .execute("DELETE FROM activity_items WHERE id = ?", [last])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let again: api::ActivityList = parse(&david.send(get(&second_path)).await);
+    let ids = |items: &[api::ActivityItem]| items.iter().map(|item| item.id).collect::<Vec<_>>();
+    assert_eq!(ids(&again.items), ids(&second.items));
+
+    // Saved: the cursor's item is unsaved.
+    let first: api::SavedItemList = parse(&david.send(get("/api/v1/saved")).await);
+    let cursor = first.next_cursor.clone().expect("a second page");
+    let second_path = format!("/api/v1/saved?before={cursor}");
+    let second: api::SavedItemList = parse(&david.send(get(&second_path)).await);
+    let last = first.items.last().unwrap().id;
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/saved/{last}"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    let again: api::SavedItemList = parse(&david.send(get(&second_path)).await);
+    assert_eq!(again.items, second.items);
+}
+
+#[tokio::test]
+async fn credentials_threads_scheduled_and_saved_tell_the_other_tabs() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    // Signing out another session, or removing two-step sign-in, takes their items.
+    let _other = a.sign_in(DAVID).await;
+    let (session, credential): (i64, i64) = a
+        .db()
+        .write(|tx| {
+            let now = tx.now();
+            let session = tx.conn().query_row(
+                "SELECT MAX(id) FROM sessions WHERE user_id = ?",
+                [DAVID],
+                |row| row.get(0),
+            )?;
+            tx.conn().execute(
+                "INSERT INTO two_factor_credentials (user_id, secret, created_at, updated_at) VALUES (?, 'JBSWY3DPEHPK3PXP', ?, ?) ON CONFLICT (user_id) DO NOTHING",
+                rusqlite::params![DAVID, now, now],
+            )?;
+            let credential = tx.conn().query_row(
+                "SELECT id FROM two_factor_credentials WHERE user_id = ?",
+                [DAVID],
+                |row| row.get(0),
+            )?;
+            Ok((session, credential))
+        })
+        .await
+        .unwrap();
+    let sign_in = item(&a, DAVID, ("Session", session), "new_sign_in", 5).await;
+    let lockout = item(
+        &a,
+        DAVID,
+        ("TwoFactorCredential", credential),
+        "two_factor_lockout",
+        5,
+    )
+    .await;
+    a.db()
+        .write(move |tx| campfire_db::Session::find(tx.conn(), session)?.destroy(tx))
+        .await
+        .unwrap();
+    sync.until(activity_removed(sign_in), |_| false).await;
+    a.db()
+        .write(move |tx| campfire_db::TwoFactorCredential::find(tx.conn(), credential)?.destroy(tx))
+        .await
+        .unwrap();
+    sync.until(activity_removed(lockout), |_| false).await;
+
+    // An unread grouped thread item moved to a newer reply is sent again.
+    a.db()
+        .write(|tx| {
+            let now = tx.now();
+            tx.conn().execute(
+                "UPDATE memberships SET involvement = 'everything' WHERE room_id = ? AND user_id = ?",
+                [DESIGNERS, DAVID],
+            )?;
+            tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?", [THREAD, DAVID])?;
+            tx.conn().execute(
+                "INSERT INTO thread_memberships (thread_id, user_id, involvement, joined_at, created_at, updated_at) VALUES (?, ?, 'everything', ?, ?, ?)",
+                rusqlite::params![THREAD, DAVID, now, now, now],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let path = format!("/api/v1/threads/{THREAD}/messages");
+    let mut replies = Vec::new();
+    for n in 0..2 {
+        let body = json!({"clientMessageId": format!("0199b3c4-1b-thread-{n}"), "markdownSource": format!("Reply {n}"), "replyToMessageId": null, "replyNotifyAuthor": null});
+        let reply = jason.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        replies.push(parse::<api::MessageDTO>(&reply).id);
+    }
+    let newer = replies[1];
+    let event = sync
+        .until(
+            move |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.source.message_id == Some(newer)),
+            |_| false,
+        )
+        .await;
+    let api::SyncPayload::ActivityItem(touched) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(
+        (touched.item.event_type, touched.item.state),
+        (
+            api::ActivityEventType::ThreadActivity,
+            api::ActivityState::Unread
+        )
+    );
+
+    // A sent scheduled message whose message is deleted loses its link.
+    let row: api::ScheduledMessage = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{DESIGNERS}/scheduled_messages"),
+                &json!({"markdownSource": "Later", "sendAt": LATER}),
+            ))
+            .await,
+    );
+    let sent: api::ScheduledMessage = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/scheduled_messages/{}/send_now", row.id),
+                &json!({}),
+            ))
+            .await,
+    );
+    let message = sent.sent_message_id.expect("sent");
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/messages/{message}"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    sync.until(
+        move |event| matches!(&event.payload, api::SyncPayload::ScheduledChanged(changed) if changed.id == row.id && changed.sent_message_id.is_none()),
+        |_| false,
+    )
+    .await;
+
+    // A PATCH that changes nothing tells no one.
+    let saved: api::SavedItem = parse(
+        &david
+            .write(json_body(
+                Method::POST,
+                "/api/v1/saved",
+                &json!({"messageId": ROOT_MESSAGE, "remindAt": null}),
+            ))
+            .await,
+    );
+    let one = format!("/api/v1/saved/{}", saved.id);
+    let saved_status = |status: api::SavedStatus| move |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::SavedChanged(changed) if changed.item.as_ref().is_some_and(|item| item.status == status));
+    for status in ["done", "done", "in_progress"] {
+        let reply = david
+            .write(json_body(Method::PATCH, &one, &json!({ "status": status })))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    }
+    sync.until(saved_status(api::SavedStatus::Done), |_| false)
+        .await;
+    sync.until(
+        saved_status(api::SavedStatus::InProgress),
+        saved_status(api::SavedStatus::Done),
+    )
+    .await;
+    server.abort();
+}
+
+/// Waits for the server to see that `user_id` has no sync socket open.
+async fn disconnected(a: &TestApp, user_id: i64) {
+    for _ in 0..500 {
+        if !a.booted.app.cable.sync_connected(user_id) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("{user_id} still connected");
+}
+
+/// The welcome's `(epoch, seq)`.
+async fn position(sync: &mut Sync) -> (String, i64) {
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("a welcome")
+    };
+    (epoch, seq)
+}
+
+#[tokio::test]
+async fn an_owner_away_from_every_tab_gets_a_gap_and_refetches() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let cookie = david.cookie_header();
+    let (approval, _) = agent_sources(&a, DAVID).await;
+    let approval_item = item(
+        &a,
+        DAVID,
+        ("AgentApproval", approval),
+        "agent_approval_request",
+        5,
+    )
+    .await;
+
+    // Away with nothing for David meanwhile: the resume carries on.
+    let mut sync = Sync::connect(addr, &cookie, &[]).await;
+    let (epoch, seq) = position(&mut sync).await;
+    drop(sync);
+    disconnected(&a, DAVID).await;
+    let mut sync = Sync::open(addr, &cookie, &[], json!({"epoch": epoch, "seq": seq})).await;
+    let Some(api::ServerFrame::Welcome {
+        resumed: true, seq, ..
+    }) = sync.next().await
+    else {
+        panic!("a resumed welcome")
+    };
+    drop(sync);
+    disconnected(&a, DAVID).await;
+
+    // Away while an item of David's leaves: no `activity.removed` is built for him, and his
+    // resume from before it starts afresh instead.
+    a.db()
+        .write(move |tx| {
+            campfire_db::AgentApproval::find(tx.conn(), approval)?
+                .expect("the approval")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    let mut sync = Sync::open(addr, &cookie, &[], json!({"epoch": epoch, "seq": seq})).await;
+    assert!(
+        matches!(
+            sync.next().await,
+            Some(api::ServerFrame::Welcome { resumed: false, .. })
+        ),
+        "a fresh start"
+    );
+    // Now connected, he hears the next one, and never the one he missed.
+    let mut david = david;
+    let posted = post_in(&mut david, DESIGNERS, "gap", "Back again").await;
+    let next = item(&a, DAVID, ("Message", posted.id), "mention", 1).await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/activity/{next}"),
+            &json!({"action": "read"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    sync.until(activity_item(next), activity_removed(approval_item))
+        .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn deleting_an_agent_takes_its_budget_notices_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let (_, notice) = agent_sources(&a, DAVID).await;
+    let notice_item = item(
+        &a,
+        DAVID,
+        ("AgentBudgetNotice", notice),
+        "agent_budget_exceeded",
+        5,
+    )
+    .await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    assert!(listed.items.iter().any(|item| item.id == notice_item));
+
+    a.db()
+        .write(move |tx| {
+            let agent: i64 = tx.conn().query_row(
+                "SELECT agent_id FROM agent_budget_notices WHERE id = ?",
+                [notice],
+                |row| row.get(0),
+            )?;
+            campfire_db::Agent::find(tx.conn(), agent)?
+                .expect("the agent")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    sync.until(activity_removed(notice_item), |_| false).await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    assert!(listed.items.iter().all(|item| item.id != notice_item));
+    let count: api::ActivityUnreadCount =
+        parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(count.unread_count, listed.unread_count);
+    server.abort();
+}
+
+#[tokio::test]
+async fn deactivating_an_agent_takes_its_approvals_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let (approval, notice) = agent_sources(&a, DAVID).await;
+    let approval_item = item(
+        &a,
+        DAVID,
+        ("AgentApproval", approval),
+        "agent_approval_request",
+        5,
+    )
+    .await;
+    let notice_item = item(
+        &a,
+        DAVID,
+        ("AgentBudgetNotice", notice),
+        "agent_budget_exceeded",
+        6,
+    )
+    .await;
+    a.db()
+        .write(move |tx| {
+            let agent_user: i64 = tx.conn().query_row(
+                "SELECT g.user_id FROM agents g JOIN agent_approvals p ON p.agent_id = g.id WHERE p.id = ?",
+                [approval],
+                |row| row.get(0),
+            )?;
+            campfire_db::User::find(tx.conn(), agent_user)?.deactivate(tx)
+        })
+        .await
+        .unwrap();
+    // `accessible_to` shows an approval only while its agent's user is active; a budget notice
+    // stays.
+    sync.until(
+        activity_removed(approval_item),
+        activity_removed(notice_item),
+    )
+    .await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    let ids: Vec<i64> = listed.items.iter().map(|item| item.id).collect();
+    assert!(
+        !ids.contains(&approval_item) && ids.contains(&notice_item),
+        "{ids:?}"
+    );
+    server.abort();
+}

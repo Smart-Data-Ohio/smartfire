@@ -18,6 +18,7 @@ macro_rules! endpoint {
 }
 
 pub mod activity;
+pub mod cards;
 pub mod composer;
 mod cursor;
 pub mod directory;
@@ -28,6 +29,8 @@ pub mod admin;
 pub mod bots;
 pub mod huddles;
 pub mod message_actions;
+pub mod organize;
+pub mod search;
 pub mod settings;
 pub mod slack;
 pub mod stage;
@@ -115,6 +118,68 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/saved/{saved_id}",
             patch(unparsed_action(message_actions::update_saved))
                 .delete(action(message_actions::unsave)),
+        )
+        .route(
+            "/api/v1/room_categories",
+            post(unparsed_action(organize::create_category)),
+        )
+        .route(
+            "/api/v1/room_categories/order",
+            put(unparsed_action(organize::order_categories)),
+        )
+        .route(
+            "/api/v1/room_categories/{category_id}",
+            patch(unparsed_action(organize::update_category))
+                .delete(action(organize::destroy_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/category",
+            put(unparsed_action(organize::assign_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/favorite",
+            post(action(organize::favorite))
+                .patch(unparsed_action(organize::move_favorite))
+                .delete(action(organize::unfavorite)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/involvement",
+            put(unparsed_action(organize::involvement)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls",
+            post(unparsed_action(cards::create_poll)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls/{poll_id}",
+            get(action(cards::poll)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls/{poll_id}/vote",
+            post(unparsed_action(cards::vote)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/{event_id}/attendance",
+            get(action(cards::attendance)).put(unparsed_action(cards::respond)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/github/pull_requests/{id}/card",
+            get(action(cards::github_card)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/fizzy/cards/{id}/card",
+            get(action(cards::fizzy_card)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/message_links/{reference_id}/card",
+            get(action(cards::quote_card)),
+        )
+        .route("/api/v1/search", get(action(search::index)))
+        .route(
+            "/api/v1/search/recents",
+            get(action(search::recents))
+                .post(unparsed_action(search::record))
+                .delete(action(search::clear)),
         )
         .route("/api/v1/activity", get(action(activity::index)))
         .route(

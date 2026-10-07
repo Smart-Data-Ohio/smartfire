@@ -646,6 +646,14 @@ impl User {
     }
     pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, audit: &super::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
+        // An agent's approvals leave their owners' and admins' inboxes with its user.
+        let approvals = crate::sql::query_all(
+            tx.conn(),
+            "SELECT a.id FROM agent_approvals a JOIN agents g ON g.id = a.agent_id WHERE g.user_id = ?",
+            [self.id],
+            |row| row.get::<_, i64>(0),
+        )?;
+        crate::ActivityItem::emit_hidden_for_sources(tx, "AgentApproval", &approvals)?;
         let hosted_stages = super::stage::hosted_room_ids(tx,self.id)?;
         super::stream::Stream::end_for_user(tx,self.id)?;
         let conn = tx.conn();

@@ -120,7 +120,8 @@ fn is_locked(error: &Error) -> bool {
 
 async fn detail(c: &Ctx, viewer: User, thread_id: i64) -> Result<api::ThreadDetail> {
     let (app, now) = (c.app().clone(), now(c));
-    c.app()
+    let (detail, fetches) = c
+        .app()
         .db
         .read(move |conn| {
             let thread = ChannelThread::find(conn, thread_id)?;
@@ -128,7 +129,9 @@ async fn detail(c: &Ctx, viewer: User, thread_id: i64) -> Result<api::ThreadDeta
             dto::thread_detail(conn, &app, &viewer, &thread, &room, now)
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    fetches.request(c.app()).await;
+    Ok(detail)
 }
 
 async fn index_threads(c: &mut Ctx) -> Result {

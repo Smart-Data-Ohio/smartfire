@@ -65,6 +65,7 @@ pub fn broadcast_updates(app: &App, card_id: i64) -> anyhow::Result<()> {
                     true,
                 );
             }
+            app2.broadcasts.sync_message_cards(conn, &messages);
             if messages.len() < message_batches::SIZE {
                 break;
             }

@@ -53,6 +53,19 @@ impl TwoFactorCredential {
         })
     }
 
+    /// Rows by id, for batch preloads (missing ids are skipped).
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM two_factor_credentials WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
+
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         query_one(
             conn,
@@ -238,6 +251,7 @@ impl TwoFactorCredential {
 
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         require_transaction(tx)?;
+        crate::ActivityItem::emit_hidden_for_sources(tx, "TwoFactorCredential", &[self.id])?;
         tx.conn().execute_cached(
             "DELETE FROM two_factor_backup_codes WHERE two_factor_credential_id = ?",
             [self.id],

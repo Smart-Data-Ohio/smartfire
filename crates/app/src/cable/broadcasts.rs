@@ -211,6 +211,11 @@ impl Broadcasts {
         sync::activity_stream(&self.server, &self.sync, stream, payload);
     }
 
+    /// `activity.item` for an item changed without an `ActivityChannel` frame.
+    pub fn sync_activity_item(&self, user_id: i64, item_id: i64) {
+        sync::activity_item_later(&self.server, &self.sync, user_id, item_id);
+    }
+
     /// `activity.removed` for items deleted with their source.
     pub fn sync_activity_removed(&self, items: Vec<(i64, i64)>) {
         sync::activity_removed_later(&self.server, &self.sync, items);
@@ -222,6 +227,23 @@ impl Broadcasts {
         change: campfire_db::models::scheduled_message::ScheduledMessageChange,
     ) {
         sync::scheduled_later(&self.server, &self.sync, change);
+    }
+
+    /// `sidebar.row.upserted`, `sidebar.category.upserted` and `sidebar.category.removed` for a
+    /// change to a person's sidebar organisation.
+    pub fn sync_organized(&self, change: campfire_db::models::room_category::SidebarOrganized) {
+        sync::organized_later(&self.server, &self.sync, change);
+    }
+
+    /// `poll.updated` and the voter's `poll.ballot` for a vote or a close.
+    pub fn sync_poll(&self, change: campfire_db::models::poll::PollChanged) {
+        sync::poll_later(&self.server, &self.sync, change);
+    }
+
+    /// `message.cards` for each of `messages`, for a card slot's replace a broadcast point
+    /// outside this type sent.
+    pub fn sync_message_cards(&self, conn: &Connection, messages: &[campfire_db::Message]) {
+        sync::message_cards(&self.server, &self.sync, conn, messages);
     }
 
     /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
