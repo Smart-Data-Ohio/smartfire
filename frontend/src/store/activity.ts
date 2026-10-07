@@ -3,8 +3,8 @@
  * the unread badge. Pure reducers and selectors; `store.ts` wraps the reducers in `mutations`.
  *
  * An item that changes state moves between the lists at once (handled leaves Unread and joins
- * Handled, if that list's loaded window reaches its place), and the unread count is the
- * server's latest word (every reply and event carries it) plus the changes still on their way.
+ * Handled, if that list's loaded window reaches its place). The unread count projects changes
+ * against a server snapshot until confirmations establish which adjustments the next count covers.
  *
  * Server copies (pages, replies, `activity.item`) replace a held item only when their `updatedAt`
  * is newer than the newest server copy seen, so a late reply or page can't undo a newer event.
@@ -47,6 +47,12 @@ interface PendingUnread {
   readonly revision: number | null;
   readonly version: string | undefined;
   readonly removed: boolean;
+  /** A snapshot at this revision or later includes the change. */
+  readonly coveredAtRevision: number | null;
+  /** A successful reply can finish before the shared count covers every adjustment. */
+  readonly settled: boolean;
+  readonly before: ActivityItem;
+  readonly optimistic: ActivityItem;
 }
 
 export interface ActivitySlice {
@@ -58,11 +64,11 @@ export interface ActivitySlice {
   readonly unreadCount: number | null;
   /** The `updatedAt` of the newest server copy of each item (optimistic copies don't count). */
   readonly versions: Readonly<Record<number, string>>;
-  /** The server count used as the base for changes still on their way. */
+  /** The server count used as the base for adjustments not yet absorbed by a snapshot. */
   readonly serverUnread: ActivityUnreadCount | null;
-  /** A count-only snapshot waiting for item confirmations to resolve its pending overlap. */
+  /** The newest snapshot waiting for confirmations to resolve its pending overlap. */
   readonly deferredUnread: ActivityUnreadCount | null;
-  /** Local fence for replies started before a new websocket boot epoch. */
+  /** Local fence for replies started before a reconnect, deadline or new server epoch. */
   readonly generation: number;
   /** The generation the held count belongs to; an older one is only a display fallback. */
   readonly serverUnreadGeneration: number;
@@ -106,47 +112,72 @@ function shownCount(server: number | null, pending: ActivitySlice["pendingUnread
   );
 }
 
-/** Accepts only a strictly newer server snapshot, then projects the pending changes. */
+/** Drops adjustments a count already covers, retaining active requests for row settlement. */
+function absorbedUnread(
+  pending: ActivitySlice["pendingUnread"],
+  revision: number | null,
+): ActivitySlice["pendingUnread"] {
+  return Object.fromEntries(
+    Object.entries(pending).flatMap(([token, change]) => {
+      const covered =
+        change.delta === 0 ||
+        (revision !== null &&
+          change.coveredAtRevision !== null &&
+          change.coveredAtRevision <= revision);
+
+      return !covered
+        ? [[token, change]]
+        : change.settled
+          ? []
+          : [[token, { ...change, delta: 0 }]];
+    }),
+  );
+}
+
+/** Installs the newest snapshot only when it covers every outstanding badge adjustment. */
 function withCounts(
   activity: ActivitySlice,
   unread: ActivityUnreadCount | null,
   pendingUnread: ActivitySlice["pendingUnread"] = activity.pendingUnread,
 ): ActivitySlice {
   const held = activity.serverUnread;
-  const deferred = activity.deferredUnread;
-  const waiting = Object.values(pendingUnread).some((change) => change.delta !== 0);
+  let snapshot = activity.serverUnreadGeneration === activity.generation ? held : null;
+  const projected = absorbedUnread(pendingUnread, snapshot?.unreadRevision ?? null);
 
-  const snapshot =
-    !waiting &&
-    deferred !== null &&
-    (unread === null || deferred.unreadRevision > unread.unreadRevision)
-      ? deferred
-      : unread;
+  // Equal revisions keep their first count, including a candidate still waiting for coverage.
+  for (const candidate of [activity.deferredUnread, unread]) {
+    if (
+      candidate !== null &&
+      (snapshot === null || candidate.unreadRevision > snapshot.unreadRevision)
+    ) {
+      snapshot = { unreadCount: candidate.unreadCount, unreadRevision: candidate.unreadRevision };
+    }
+  }
 
-  const serverUnread =
-    snapshot !== null &&
-    (held === null ||
-      activity.serverUnreadGeneration !== activity.generation ||
-      snapshot.unreadRevision > held.unreadRevision)
-      ? { unreadCount: snapshot.unreadCount, unreadRevision: snapshot.unreadRevision }
-      : held;
+  const waiting = Object.values(projected).some(
+    (change) =>
+      change.delta !== 0 &&
+      (change.coveredAtRevision === null ||
+        snapshot === null ||
+        snapshot.unreadRevision < change.coveredAtRevision),
+  );
+
+  const serverUnread = waiting ? held : (snapshot ?? held);
 
   const serverUnreadGeneration =
-    serverUnread !== held ? activity.generation : activity.serverUnreadGeneration;
+    !waiting && snapshot !== null ? activity.generation : activity.serverUnreadGeneration;
+
+  const remaining = waiting
+    ? projected
+    : absorbedUnread(projected, snapshot?.unreadRevision ?? null);
 
   return {
     ...activity,
     serverUnread,
     serverUnreadGeneration,
-    deferredUnread:
-      serverUnread !== null &&
-      serverUnreadGeneration === activity.generation &&
-      deferred !== null &&
-      serverUnread.unreadRevision >= deferred.unreadRevision
-        ? null
-        : deferred,
-    pendingUnread,
-    unreadCount: shownCount(serverUnread?.unreadCount ?? null, pendingUnread),
+    deferredUnread: waiting && snapshot !== held ? snapshot : null,
+    pendingUnread: remaining,
+    unreadCount: shownCount(serverUnread?.unreadCount ?? null, remaining),
   };
 }
 
@@ -192,7 +223,10 @@ function confirmedUnread(
         removed || confirmed
           ? {
               ...change,
-              delta: 0,
+              coveredAtRevision: Math.min(
+                change.coveredAtRevision ?? Infinity,
+                unread.unreadRevision,
+              ),
               removed: removed || change.removed,
             }
           : change,
@@ -201,16 +235,33 @@ function confirmedUnread(
   );
 }
 
-/** A new server boot: keep the last count shown while the first fenced snapshot loads. */
-export function beginActivityGeneration(state: State): State {
+/** Fences old requests and abandons optimism; only a new boot resets server ordering. */
+export function beginActivityGeneration(state: State, newEpoch = true): State {
+  let activity = state.activity;
+
+  for (const change of Object.values(activity.pendingUnread)) {
+    if (change.coveredAtRevision === null && activity.items[change.itemId] === change.optimistic) {
+      activity = showItem(activity, change.before);
+    }
+  }
+
+  // On the same server, the held candidate becomes authoritative once optimism is abandoned.
+  if (!newEpoch) {
+    activity = withCounts(activity, null, {});
+  }
+
   return withActivity(state, {
-    ...state.activity,
-    generation: state.activity.generation + 1,
+    ...activity,
+    generation: activity.generation + 1,
+    serverUnreadGeneration:
+      !newEpoch && activity.serverUnreadGeneration === activity.generation
+        ? activity.generation + 1
+        : activity.serverUnreadGeneration,
     deferredUnread: null,
-    versions: {},
+    versions: newEpoch ? {} : activity.versions,
     pendingUnread: {},
-    unreadCount: state.activity.serverUnread?.unreadCount ?? null,
-    lists: eachPaged(state.activity.lists, (list) => ({
+    unreadCount: activity.serverUnread?.unreadCount ?? null,
+    lists: eachPaged(activity.lists, (list) => ({
       ...pagedStale(list),
       status: list.status === "ready" ? "ready" : "idle",
       loadingMore: false,
@@ -502,6 +553,10 @@ export function showActivityChange(
             : null,
         removed: false,
         version: state.activity.versions[item.id],
+        coveredAtRevision: null,
+        settled: false,
+        before: state.activity.items[item.id] ?? item,
+        optimistic: item,
       },
     }),
   );
@@ -511,7 +566,7 @@ export function showActivityChange(
 export interface ActivityChangeEnd {
   /** The generation the request started in. */
   readonly generation: number;
-  /** The change's token (its badge move goes). */
+  /** The change's token. Its adjustment stays until a snapshot covers it. */
   readonly token: number;
   /** The copy it showed, if it showed one. */
   readonly optimistic: ActivityItem | null;
@@ -522,17 +577,34 @@ export interface ActivityChangeEnd {
 }
 
 /**
- * A change on its way ended: its badge move goes, and `settled` replaces the optimistic copy
- * while that's still shown. If something newer replaced it meanwhile (an event), `settled`
- * counts only as a server copy, so an older one changes nothing.
+ * A request ended: its badge adjustment stays until all adjustments have snapshot coverage.
+ * `settled` replaces the optimistic copy while that's still shown. If an event replaced it
+ * meanwhile, `settled` counts only as a server copy, so an older one changes nothing.
  */
 export function endActivityChange(state: State, end: ActivityChangeEnd): State {
   if (end.generation !== state.activity.generation) {
     return state;
   }
 
-  const removed = state.activity.pendingUnread[end.token]?.removed ?? false;
-  const { [end.token]: _done, ...pendingUnread } = state.activity.pendingUnread;
+  const change = state.activity.pendingUnread[end.token];
+  const removed = change?.removed ?? false;
+  const { [end.token]: _done, ...others } = state.activity.pendingUnread;
+  let pendingUnread = others;
+
+  if (change !== undefined && end.unread !== null && change.delta !== 0) {
+    pendingUnread = {
+      ...others,
+      [end.token]: {
+        ...change,
+        settled: true,
+        coveredAtRevision: Math.min(
+          change.coveredAtRevision ?? Infinity,
+          end.unread.unreadRevision,
+        ),
+      },
+    };
+  }
+
   let activity: ActivitySlice = state.activity;
 
   if (end.settled !== null && !removed) {
@@ -594,20 +666,6 @@ export function setActivityUnreadCount(
 
   if (generation !== activity.generation) {
     return state;
-  }
-
-  if (Object.values(activity.pendingUnread).some((change) => change.delta !== 0)) {
-    // A count alone cannot tell which pending changes it includes. Keep the optimistic
-    // projection until their items or replies confirm them, then use the newest snapshot.
-    const held = activity.serverUnread;
-    const deferred = activity.deferredUnread;
-
-    return (held === null ||
-      activity.serverUnreadGeneration !== generation ||
-      unread.unreadRevision > held.unreadRevision) &&
-      (deferred === null || unread.unreadRevision > deferred.unreadRevision)
-      ? withActivity(state, { ...activity, deferredUnread: unread })
-      : state;
   }
 
   return withActivity(state, withCounts(activity, unread));

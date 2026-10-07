@@ -176,7 +176,8 @@ export const mutations = {
   loadStageDetail: (detail: StageDetail) =>
     apply((state) => huddles.loadStageDetail(state, detail)),
   // --- S3: the activity inbox, saved items and scheduled messages ---
-  beginActivityGeneration: () => apply(activity.beginActivityGeneration),
+  beginActivityGeneration: (newEpoch = true) =>
+    apply((state) => activity.beginActivityGeneration(state, newEpoch)),
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),
   setActivityListFailed: (

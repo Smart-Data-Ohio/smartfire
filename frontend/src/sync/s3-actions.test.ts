@@ -607,6 +607,192 @@ describe("activity actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("never subtracts a read twice when replies settle in reverse order", () =>
+    Effect.gen(function* () {
+      seedInbox();
+      const fake = yield* FakeApi;
+      const firstStarted = yield* Deferred.make<void>();
+      const firstRelease = yield* Deferred.make<void>();
+      const secondStarted = yield* Deferred.make<void>();
+      const secondRelease = yield* Deferred.make<void>();
+
+      yield* fake.route("PATCH /activity/3", () =>
+        Deferred.succeed(firstStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(firstRelease)),
+          Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+        ),
+      );
+      yield* fake.route("PATCH /activity/2", () =>
+        Deferred.succeed(secondStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(secondRelease)),
+          Effect.as({ item: item(2, 50, "read"), unreadCount: 3, unreadRevision: 3 }),
+        ),
+      );
+
+      expect(store.getState().activity.unreadCount).toBe(5);
+      const first = yield* Effect.forkChild(activity.setState(3, "read"));
+
+      yield* Deferred.await(firstStarted);
+      expect(store.getState().activity.unreadCount).toBe(4);
+      const second = yield* Effect.forkChild(activity.setState(2, "read"));
+
+      yield* Deferred.await(secondStarted);
+      expect(store.getState().activity.unreadCount).toBe(3);
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 3 });
+      yield* activity.loadUnreadCount();
+      expect(store.getState().activity.unreadCount).toBe(3);
+      yield* Deferred.succeed(secondRelease, undefined);
+      yield* Fiber.join(second);
+      expect(store.getState().activity.unreadCount).toBe(3);
+      yield* Deferred.succeed(firstRelease, undefined);
+      yield* Fiber.join(first);
+      expect(store.getState().activity.unreadCount).toBe(3);
+      expect(store.getState().activity.pendingUnread).toEqual({});
+      expect(store.getState().activity.deferredUnread).toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("absorbs an already-counted no-op read while another read is unresolved", () =>
+    Effect.gen(function* () {
+      seedInbox();
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+
+      yield* fake.route("PATCH /activity/3", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(release)),
+          Effect.as({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+        ),
+      );
+      expect(store.getState().activity.unreadCount).toBe(5);
+      const first = yield* Effect.forkChild(activity.setState(3, "read"));
+
+      yield* Deferred.await(started);
+      expect(store.getState().activity.unreadCount).toBe(4);
+      yield* fake.route("PATCH /activity/2", () => {
+        expect(store.getState().activity.unreadCount).toBe(3);
+
+        // This item's read already belongs to the installed revision; the PATCH is a no-op.
+        return Effect.succeed({ item: item(2, 20, "read"), unreadCount: 5, unreadRevision: 1 });
+      });
+      yield* activity.setState(2, "read");
+      expect(store.getState().activity.unreadCount).toBe(4);
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(first);
+      expect(store.getState().activity.unreadCount).toBe(4);
+      expect(store.getState().activity.pendingUnread).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("releases the newest held count after a read stalls for 15 seconds", () =>
+    Effect.gen(function* () {
+      seedInbox();
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+
+      yield* fake.route("PATCH /activity/3", () =>
+        Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
+      );
+      const changing = yield* Effect.forkChild(Effect.exit(activity.setState(3, "read")));
+
+      yield* Deferred.await(started);
+      expect(store.getState().activity.unreadCount).toBe(4);
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 3 });
+      yield* activity.loadUnreadCount();
+      expect(store.getState().activity.unreadCount).toBe(4);
+      const refreshStarted = yield* Deferred.make<void>();
+      const refreshRelease = yield* Deferred.make<void>();
+
+      yield* fake.route("GET /activity/unread_count", () =>
+        Deferred.succeed(refreshStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(refreshRelease)),
+          Effect.as({ unreadCount: 5, unreadRevision: 2 }),
+        ),
+      );
+      yield* TestClock.adjust("14999 millis");
+      expect(store.getState().activity.unreadCount).toBe(4);
+      yield* TestClock.adjust("1 millis");
+      expect(store.getState().activity.unreadCount).toBe(6);
+      expect((yield* Fiber.join(changing))._tag).toBe("Failure");
+      expect(store.getState().activity.pendingUnread).toEqual({});
+      expect(store.getState().activity.items[3]?.state).toBe("unread");
+      yield* Deferred.await(refreshStarted);
+      yield* Deferred.succeed(refreshRelease, undefined);
+      yield* TestClock.adjust("20 millis");
+      expect(store.getState().activity.unreadCount).toBe(6);
+      yield* fake.reply("PATCH /activity/3", {
+        item: item(3, 40, "read"),
+        unreadCount: 5,
+        unreadRevision: 4,
+      });
+      yield* activity.setState(3, "read");
+      expect(store.getState().activity.unreadCount).toBe(5);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "clears 40 items without double subtraction as every reply arrives in reverse order",
+    () =>
+      Effect.gen(function* () {
+        mutations.reset();
+        const fake = yield* FakeApi;
+        const items = Array.from({ length: 40 }, (_, index) => item(index + 1, index));
+        // Three other unread items keep a zero clamp from hiding incorrect intermediate counts.
+        mutations.landActivityPage(
+          "all",
+          "unread",
+          {
+            items,
+            users: [],
+            unreadCount: 43,
+            unreadRevision: 1,
+            nextCursor: null,
+          },
+          "replace",
+        );
+        const changes = [];
+
+        for (const [index, current] of items.entries()) {
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* fake.route(`PATCH /activity/${current.id}`, () =>
+            Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.as({
+                item: item(current.id, 60 + index, "handled"),
+                unreadCount: 42 - index,
+                unreadRevision: 2 + index,
+              }),
+            ),
+          );
+          const changing = yield* Effect.forkChild(activity.setState(current.id, "handled"));
+
+          yield* Deferred.await(started);
+          expect(store.getState().activity.unreadCount).toBe(42 - index);
+          changes.push({ release, changing });
+        }
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 41 });
+        yield* activity.loadUnreadCount();
+        expect(store.getState().activity.unreadCount).toBe(3);
+
+        for (const { release, changing } of changes.reverse()) {
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(changing);
+          expect(store.getState().activity.unreadCount).toBe(3);
+        }
+
+        expect(inboxIds("unread")).toEqual([]);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+        expect(store.getState().activity.deferredUnread).toBeNull();
+        expect((yield* fake.requests).filter((request) => request.method === "PATCH")).toHaveLength(
+          40,
+        );
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("rejects a stale matching item when a newer opposite state is already held", () =>
     Effect.gen(function* () {
       seedInbox();

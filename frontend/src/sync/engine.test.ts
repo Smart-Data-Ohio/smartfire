@@ -148,6 +148,199 @@ beforeEach(() => {
 });
 
 describe("reconnecting", () => {
+  for (const resumed of [true, false]) {
+    it.effect(`reconciles a stalled read on a same-epoch reconnect (resumed=${resumed})`, () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* serve([]);
+          const fake = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* startEngine;
+          yield* welcome(10, false);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 5,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* fake.route("PATCH /activity/40", () =>
+            Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.as({
+                item: {
+                  ...activityItem,
+                  state: "read",
+                  readAt: "2026-10-06T09:01:00Z",
+                  updatedAt: "2026-10-06T09:01:00Z",
+                },
+                unreadCount: 4,
+                unreadRevision: 2,
+              }),
+            ),
+          );
+          const changing = yield* Effect.forkChild(activity.setState(40, "read"));
+
+          yield* Deferred.await(started);
+          expect(store.getState().activity.unreadCount).toBe(4);
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 3 });
+          yield* activity.loadUnreadCount();
+          expect(store.getState().activity.unreadCount).toBe(4);
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(11, resumed);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.pendingUnread).toEqual({});
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+          expect(activityListOf(store.getState(), "all", "unread").stale).toBe(true);
+          const versions = store.getState().activity.versions;
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* activity.loadUnreadCount();
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.versions).toBe(versions);
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(changing);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+        }),
+      ),
+    );
+  }
+
+  for (const kind of ["page", "tokenless mutation"] as const) {
+    it.effect(`fences an old ${kind} on reconnect without pending reads`, () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* serve([]);
+          const fake = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* startEngine;
+          yield* welcome(10, false);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 5,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+
+          const oldItem = { ...activityItem, updatedAt: "2026-10-06T09:01:00Z" };
+
+          const hold = Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+          );
+
+          if (kind === "page") {
+            yield* fake.route("GET /activity", () =>
+              hold.pipe(
+                Effect.as({
+                  items: [oldItem],
+                  users: [],
+                  unreadCount: 5,
+                  unreadRevision: 2,
+                  nextCursor: null,
+                }),
+              ),
+            );
+          } else {
+            yield* fake.route("PATCH /activity/40", () =>
+              hold.pipe(
+                Effect.as({
+                  item: oldItem,
+                  unreadCount: 5,
+                  unreadRevision: 2,
+                }),
+              ),
+            );
+          }
+
+          const oldRequest = yield* Effect.forkChild(
+            kind === "page"
+              ? activity.load("all", "unread")
+              : activity.setState(40, "unhandled").pipe(Effect.asVoid),
+          );
+
+          yield* Deferred.await(started);
+          expect(store.getState().activity.pendingUnread).toEqual({});
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(11, true);
+          yield* pushEvents({
+            seq: 12,
+            topic: "user",
+            type: "activity.item",
+            data: {
+              item: { ...activityItem, id: 41, updatedAt: "2026-10-06T09:02:00Z" },
+              unreadCount: 6,
+              unreadRevision: 3,
+            },
+          });
+          expect(activityListOf(store.getState(), "all", "unread").ids).toEqual([41, 40]);
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(oldRequest);
+          expect(activityListOf(store.getState(), "all", "unread").ids).toEqual([41, 40]);
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(activityListOf(store.getState(), "all", "unread").stale).toBe(true);
+        }),
+      ),
+    );
+  }
+
+  it.effect("replaces a fenced count request on a resumed reconnect without pending reads", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+          ),
+        );
+        const oldRequest = yield* Effect.forkChild(activity.loadUnreadCount());
+
+        yield* Deferred.await(started);
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 7, unreadRevision: 3 });
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(10, true);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+        expect(store.getState().activity.unreadCount).toBe(7);
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(oldRequest);
+        expect(store.getState().activity.unreadCount).toBe(7);
+      }),
+    ),
+  );
+
   it.effect("waits 250 ms, doubling to a 30 s cap; a minute online resets the backoff", () =>
     withSync(
       Effect.gen(function* () {
@@ -704,7 +897,9 @@ describe("resuming", () => {
           yield* welcome(42, true);
           yield* pushEvents(unreadEvent(41), unreadEvent(42));
 
-          expect((yield* api.requests).length).toBe(before);
+          expect((yield* api.requests).slice(before)).toEqual([
+            { method: "GET", path: "/activity/unread_count" },
+          ]);
           expect(unreadCount(12)).toBe(2);
         }),
       );
@@ -977,13 +1172,14 @@ describe("resync", () => {
     ),
   );
 
-  it.effect("fetches nothing when the server resumes", () =>
+  it.effect("refreshes only the activity count when the server resumes", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
         const api = yield* FakeApi;
 
         yield* serve([]);
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
         yield* startEngine;
         yield* welcome(5, false);
 
@@ -991,9 +1187,13 @@ describe("resync", () => {
 
         yield* socket.drop;
         yield* TestClock.adjust(250);
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 2 });
         yield* welcome(9, true);
 
-        expect((yield* api.requests).length).toBe(before);
+        expect((yield* api.requests).slice(before)).toEqual([
+          { method: "GET", path: "/activity/unread_count" },
+        ]);
+        expect(store.getState().activity.unreadCount).toBe(6);
       }),
     ),
   );

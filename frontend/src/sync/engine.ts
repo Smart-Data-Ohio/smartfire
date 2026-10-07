@@ -328,10 +328,10 @@ export class Engine extends Context.Service<
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
-        if (point?.epoch !== frame.epoch) {
-          // This fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
-          mutations.beginActivityGeneration();
-        }
+        const newEpoch = point?.epoch !== frame.epoch;
+
+        // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
+        mutations.beginActivityGeneration(newEpoch);
 
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
@@ -341,6 +341,8 @@ export class Engine extends Context.Service<
           if (afterReload && frame.seq > point.seq) {
             yield* Ref.set(snapshotThrough, frame.seq);
             yield* resync(["user"], frame.seq);
+          } else {
+            yield* refreshUnreadCount(frame.seq);
           }
 
           return;

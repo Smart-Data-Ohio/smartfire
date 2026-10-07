@@ -6,6 +6,7 @@
  */
 import { Clock, Effect } from "effect";
 import * as api from "../api/activity-endpoints.ts";
+import { NetworkError } from "../api/errors.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
@@ -92,6 +93,26 @@ const serial = keyedSerial<number>();
 /** Tells the changes on their way apart in the badge. */
 let nextToken = 0;
 
+/** An unanswered mutation must not hold the badge or the item's request lock indefinitely. */
+const SERVER_TIMEOUT = "15 seconds";
+
+const stalled = (generation: number) =>
+  Effect.gen(function* () {
+    if (generation === store.getState().activity.generation) {
+      mutations.beginActivityGeneration(false);
+      yield* Effect.forkDetach(
+        loadUnreadCount().pipe(
+          Effect.timeout(SERVER_TIMEOUT),
+          Effect.catch((error) => Effect.logWarning("activity count refresh failed", error)),
+        ),
+      );
+    }
+
+    return yield* Effect.fail(
+      new NetworkError({ message: "The activity change timed out. Please try again." }),
+    );
+  });
+
 /**
  * Applies `action` here at once (the item moves lists, the badge follows), then on the server,
  * whose reply settles the change while preserving newer server values. A refusal puts the item
@@ -123,6 +144,7 @@ const change = (
       // A failure, or an interruption whose outcome is unknown, rolls back; the next event or
       // reply corrects it if the server did take it.
       const reply = yield* request(activityItemId).pipe(
+        Effect.timeoutOrElse({ duration: SERVER_TIMEOUT, orElse: () => stalled(generation) }),
         Effect.onError(() =>
           Effect.sync(() =>
             mutations.endActivityChange({
