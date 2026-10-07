@@ -37,6 +37,8 @@ export const SEARCH_SEED = {
   /** A board the viewer belongs to. It isn't in the world, so the sidebar doesn't list it. */
   boardRoomId: 900,
   boardRoomName: "Roadmap",
+  /** Who belongs to the board: its posts are found only for them. */
+  boardMemberIds: [VIEWER_ID],
   /** Board posts on it (thread ids, clear of the world's). */
   boardPostIds: { onboardingChecklist: 9001, launchWeek: 9002, pricingPage: 9003 },
   /** Events in seeded rooms. */
@@ -425,10 +427,12 @@ export function createSearch(ctx: S2Context): Search {
             ),
           );
 
+    // `in:` names rooms; a direct message never matches it.
     const rooms = searchedRooms().filter(
       (record) =>
         filters.inRooms.length === 0 ||
-        filters.inRooms.some((name) => containsFolded(record.room.name, name)),
+        (record.room.kind !== "direct" &&
+          filters.inRooms.some((name) => containsFolded(record.room.name, name))),
     );
 
     const roomIds = new Set(rooms.map((record) => record.room.id));
@@ -496,31 +500,35 @@ export function createSearch(ctx: S2Context): Search {
     const world = ctx.world();
     const inRooms = parsed.filters.inRooms;
 
-    const inRoom = (name: string | null) =>
-      inRooms.length === 0 || inRooms.some((wanted) => containsFolded(name, wanted));
+    const inRoom = (name: string | null, kind: RoomKind = "open") =>
+      inRooms.length === 0 ||
+      (kind !== "direct" && inRooms.some((wanted) => containsFolded(name, wanted)));
 
     const named = (...fields: string[]) =>
       tokens.every((token) => fields.some((text) => containsFolded(text, token)));
 
     const rooms = new Map(searchedRooms().map((record) => [record.room.id, record]));
 
-    const boardPosts: SearchSectionRow[] = inRoom(SEARCH_SEED.boardRoomName)
-      ? BOARD_POSTS.flatMap((post) =>
-          named(post.name)
-            ? [
-                {
-                  id: post.id,
-                  roomId: SEARCH_SEED.boardRoomId,
-                  roomKind: "board",
-                  title: post.name,
-                  time: timestamp(builtAt - post.hoursAgo * 3_600_000),
-                  workStatus: post.workStatus,
-                  cancelled: false,
-                },
-              ]
-            : [],
-        )
-      : [];
+    const onBoard = SEARCH_SEED.boardMemberIds.includes(VIEWER_ID);
+
+    const boardPosts: SearchSectionRow[] =
+      onBoard && inRoom(SEARCH_SEED.boardRoomName, "board")
+        ? BOARD_POSTS.flatMap((post) =>
+            named(post.name)
+              ? [
+                  {
+                    id: post.id,
+                    roomId: SEARCH_SEED.boardRoomId,
+                    roomKind: "board",
+                    title: post.name,
+                    time: timestamp(builtAt - post.hoursAgo * 3_600_000),
+                    workStatus: post.workStatus,
+                    cancelled: false,
+                  },
+                ]
+              : [],
+          )
+        : [];
 
     const workThreads: SearchSectionRow[] = [...world.threads.values()].flatMap((thread) => {
       const record = rooms.get(thread.roomId);
@@ -528,7 +536,7 @@ export function createSearch(ctx: S2Context): Search {
 
       if (record === undefined || workStatus === null || record.room.kind === "board") return [];
 
-      if (!inRoom(record.room.name) || !named(thread.name)) return [];
+      if (!inRoom(record.room.name, record.room.kind) || !named(thread.name)) return [];
 
       return [
         {
@@ -546,7 +554,7 @@ export function createSearch(ctx: S2Context): Search {
     const events: SearchSectionRow[] = EVENTS.flatMap((event) => {
       const record = rooms.get(event.roomId);
 
-      if (record === undefined || !inRoom(record.room.name)) return [];
+      if (record === undefined || !inRoom(record.room.name, record.room.kind)) return [];
 
       if (!named(event.title, event.description)) return [];
 
