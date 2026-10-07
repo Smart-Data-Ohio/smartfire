@@ -13,7 +13,7 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { auditTime } from "./admin-format.ts";
-import { adminFailure, useFocusAfter } from "./admin-parts.tsx";
+import { adminFailure, useRowFocus } from "./admin-parts.tsx";
 import { BotBack, useBotId } from "./bot-parts.tsx";
 
 type Load =
@@ -157,7 +157,7 @@ export function BotGrantsSection() {
   const botId = useBotId();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const { busy, track } = useBusy();
-  const { container, focusAfter } = useFocusAfter();
+  const container = useRowFocus();
 
   const fetchGrants = useCallback(() => {
     bots.grants(botId).then(
@@ -179,7 +179,6 @@ export function BotGrantsSection() {
       bots.revokeGrant(botId, grant.id).then(
         (list) => {
           setLoad({ status: "ready", list });
-          focusAfter({ row: `${grant.id}`, control: "revoke" });
           toast({ title: `Revoked ${grant.capability}`, tone: "success" });
         },
         (error: Error) => adminFailure(`Couldn't revoke ${grant.capability}`, error),

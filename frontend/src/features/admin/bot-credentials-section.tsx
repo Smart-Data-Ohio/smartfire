@@ -14,7 +14,7 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { auditTime } from "./admin-format.ts";
-import { adminFailure, keepDraft, needsSudo, takeDraft, useFocusAfter } from "./admin-parts.tsx";
+import { adminFailure, keepDraft, needsSudo, takeDraft, useRowFocus } from "./admin-parts.tsx";
 import { CREDENTIAL_STATE, CREDENTIAL_USAGE, optional } from "./bot-format.ts";
 import { BotBack, SecretDialog, useBotId } from "./bot-parts.tsx";
 
@@ -180,7 +180,7 @@ export function BotCredentialsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [secret, setSecret] = useState<string | null>(null);
   const { busy, track } = useBusy();
-  const { container, focusAfter } = useFocusAfter();
+  const container = useRowFocus();
 
   const fetchCredentials = useCallback(() => {
     bots.credentials(botId).then(
@@ -201,9 +201,8 @@ export function BotCredentialsSection() {
       `credential-${credential.id}`,
       bots.revokeCredential(botId, credential.id).then(
         (list) => {
-          setLoad({ status: "ready", list });
           // Its Revoke button goes away; the row keeps the focus.
-          focusAfter({ row: `${credential.id}`, control: "revoke" });
+          setLoad({ status: "ready", list });
           toast({ title: `${credential.name} was revoked`, tone: "success" });
         },
         (error: Error) => adminFailure(`Couldn't revoke ${credential.name}`, error),
