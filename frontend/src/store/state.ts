@@ -2,6 +2,7 @@ import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import { type CardsState, emptyCards } from "./cards.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -20,6 +21,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
 
@@ -69,6 +71,8 @@ export interface State {
   readonly scheduled: ScheduledSlice;
   /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
+  /** Ballots, votes on their way and per-viewer card previews (see `cards.ts`). */
+  readonly cards: CardsState;
 }
 
 export interface SidebarState {
@@ -79,6 +83,8 @@ export interface SidebarState {
   readonly categories: readonly RoomCategory[];
   readonly placeholderUserIds: readonly number[];
   readonly canCreateRooms: boolean;
+  /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
+  readonly overlay: SidebarOverlay;
 }
 
 export const initialState: State = {
@@ -94,6 +100,7 @@ export const initialState: State = {
     categories: [],
     placeholderUserIds: [],
     canCreateRooms: false,
+    overlay: emptyOverlay,
   },
   rooms: {},
   messages: {},
@@ -115,6 +122,7 @@ export const initialState: State = {
   savedList: emptySavedList,
   scheduled: emptyScheduled,
   conversationNames: {},
+  cards: emptyCards,
 };
 
 export const emptyTimeline: Timeline = {

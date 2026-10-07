@@ -7,13 +7,18 @@
 //!   [`json`]) to open classic links it has ported in place, and to send a destination it hasn't
 //!   ported yet to its classic page with a full page load ([`classic_url`] is the same mapping).
 //!
-//! A slice that ports a screen adds its SPA route and flips `ported` here in the same PR. Unported
+//! One classic page can hold several SPA screens (the profile page's sections): each has a row, all
+//! map back to it, and its redirect goes to the first. A slice that ports a screen adds its SPA
+//! route and flips `ported` here in the same PR. Unported
 //! rows name where a screen will live, so the SPA can link there already: the server never
 //! redirects to them, and the SPA forwards them to the classic page.
 //!
 //! Patterns use the route table's syntax without `(.:format)`: a segment is a literal, or a
 //! literal prefix and a `:param` (`@:message_id`). Every parameter is a record id, so it matches
-//! only a positive integer: `/rooms/new` and `/rooms/5.json` aren't `/rooms/:id`.
+//! only a positive integer: `/rooms/new` and `/rooms/5.json` aren't `/rooms/:id`. The one
+//! exception is the route table's `:user_id` on a person's own pages, which the classic app links
+//! as `me` (`/users/me/profile`): a row spells it `me`, a literal, so other people's ids never
+//! match it.
 
 /// One classic page and its SPA URL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,8 +73,103 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
-    screen("searches#index", "/searches", "/app/search", false),
+    screen("searches#index", "/searches", "/app/search", true),
     screen("work_threads#index", "/work", "/app/work", false),
+    // S7: the signed-in person's own settings (`/users/me/...`).
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings",
+        true,
+    ),
+    // Sections of the classic profile page: they map back to it ("Switch to classic"), and its
+    // redirect goes to the row above.
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/notifications",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/appearance",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/calls",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/integrations",
+        true,
+    ),
+    screen(
+        "users/statuses#edit",
+        "/users/me/status/edit",
+        "/app/settings/status",
+        true,
+    ),
+    screen(
+        "users/sessions#index",
+        "/users/me/sessions",
+        "/app/settings/sessions",
+        true,
+    ),
+    screen(
+        "users/push_subscriptions#index",
+        "/users/me/push_subscriptions",
+        "/app/settings/devices",
+        true,
+    ),
+    // S7: the workspace's account pages. The people list is the account page's lower half: it
+    // maps back to the page, whose redirect goes to the workspace row above it.
+    screen("accounts#edit", "/account/edit", "/app/admin", true),
+    screen("accounts#edit", "/account/edit", "/app/admin/people", true),
+    screen("accounts/icons#index", "/account/icons", "/app/admin/icons", true),
+    screen(
+        "accounts/custom_styles#edit",
+        "/account/custom_styles/edit",
+        "/app/admin/styles",
+        true,
+    ),
+    screen(
+        "accounts/audit_logs#show",
+        "/account/audit_log",
+        "/app/admin/audit-log",
+        true,
+    ),
+    screen(
+        "accounts/integrations_health#show",
+        "/account/integrations_health",
+        "/app/admin/integrations",
+        true,
+    ),
+    // S7: the chat bot pages. Their writes stay classic; only the pages move.
+    screen("accounts/bots#index", "/account/bots", "/app/admin/bots", true),
+    screen("accounts/bots#new", "/account/bots/new", "/app/admin/bots/new", true),
+    screen(
+        "accounts/bots#edit",
+        "/account/bots/:id/edit",
+        "/app/admin/bots/:id",
+        true,
+    ),
+    screen(
+        "accounts/bots/credentials#index",
+        "/account/bots/:bot_id/credentials",
+        "/app/admin/bots/:bot_id/credentials",
+        true,
+    ),
+    screen(
+        "accounts/bots/grants#index",
+        "/account/bots/:bot_id/grants",
+        "/app/admin/bots/:bot_id/grants",
+        true,
+    ),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.

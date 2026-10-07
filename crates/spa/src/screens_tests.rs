@@ -15,6 +15,12 @@ fn sample(pattern: &str, ids: &[u64]) -> String {
     fill(pattern, &named)
 }
 
+/// A route table spec with its `/users/:user_id/` spelled `/users/me/`, as the screen map spells a
+/// person's own pages.
+fn own_pages(spec: &str) -> String {
+    spec.replacen("/users/:user_id/", "/users/me/", 1)
+}
+
 #[test]
 fn every_row_is_a_get_route_of_the_classic_table() {
     for screen in SCREENS {
@@ -28,7 +34,7 @@ fn every_row_is_a_get_route_of_the_classic_table() {
                 .iter()
                 .any(|route| route.verb == "GET"
                     && route.endpoint == screen.endpoint
-                    && route.spec == spec),
+                    && (route.spec == spec || own_pages(route.spec) == spec)),
             "{} {spec} isn't in the route table",
             screen.endpoint
         );
@@ -45,15 +51,76 @@ fn each_row_maps_the_same_parameters_both_ways() {
     }
 }
 
+/// The row a classic page redirects to: the first for its endpoint and pattern.
+fn first_for(screen: &Screen) -> &'static Screen {
+    SCREENS
+        .iter()
+        .find(|row| row.endpoint == screen.endpoint && row.classic == screen.classic)
+        .unwrap()
+}
+
 #[test]
 fn no_two_rows_claim_the_same_url() {
-    let classic: BTreeSet<_> = SCREENS
-        .iter()
-        .map(|screen| (screen.endpoint, screen.classic))
-        .collect();
     let spa: BTreeSet<_> = SCREENS.iter().map(|screen| screen.spa).collect();
-    assert_eq!(classic.len(), SCREENS.len());
     assert_eq!(spa.len(), SCREENS.len());
+    // A classic page shared by several rows: only the profile page's sections and the account
+    // page's people list, all ported.
+    for screen in SCREENS {
+        let first = first_for(screen);
+        if !std::ptr::eq(first, screen) {
+            assert!(
+                ["users/profiles#show", "accounts#edit"].contains(&screen.endpoint),
+                "{screen:?}"
+            );
+            assert!(screen.ported && first.ported, "{screen:?}");
+        }
+    }
+}
+
+#[test]
+fn the_profile_sections_map_back_to_the_profile_page() {
+    for section in ["notifications", "appearance", "calls", "integrations"] {
+        assert_eq!(
+            classic_url(&format!("/app/settings/{section}"), None).as_deref(),
+            Some("/users/me/profile"),
+            "{section}"
+        );
+    }
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
+        Some("/app/settings")
+    );
+}
+
+#[test]
+fn the_account_pages_map_to_the_admin_sections() {
+    for (endpoint, classic, spa) in [
+        ("accounts#edit", "/account/edit", "/app/admin"),
+        ("accounts/icons#index", "/account/icons", "/app/admin/icons"),
+        (
+            "accounts/custom_styles#edit",
+            "/account/custom_styles/edit",
+            "/app/admin/styles",
+        ),
+        (
+            "accounts/audit_logs#show",
+            "/account/audit_log",
+            "/app/admin/audit-log",
+        ),
+        (
+            "accounts/integrations_health#show",
+            "/account/integrations_health",
+            "/app/admin/integrations",
+        ),
+    ] {
+        assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
+    }
+    // The people list is the account page's lower half.
+    assert_eq!(
+        classic_url("/app/admin/people", None).as_deref(),
+        Some("/account/edit")
+    );
 }
 
 #[test]
@@ -100,6 +167,54 @@ fn only_record_ids_match_a_parameter() {
         spa_url("rooms#show", "/rooms/12/345", None),
         None,
         "the @ is part of the segment"
+    );
+}
+
+#[test]
+fn a_person_s_own_pages_match_only_as_me() {
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
+        Some("/app/settings")
+    );
+    assert_eq!(
+        spa_url(
+            "users/sessions#index",
+            "/users/me/sessions",
+            Some("classic=0")
+        )
+        .as_deref(),
+        Some("/app/settings/sessions")
+    );
+    assert_eq!(
+        spa_url(
+            "users/push_subscriptions#index",
+            "/users/me/push_subscriptions",
+            None
+        )
+        .as_deref(),
+        Some("/app/settings/devices")
+    );
+    assert_eq!(
+        spa_url("users/statuses#edit", "/users/me/status/edit", None).as_deref(),
+        Some("/app/settings/status")
+    );
+    // Someone else's id stays on the classic page.
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/7/profile", None),
+        None
+    );
+    assert_eq!(
+        classic_url("/app/settings", None).as_deref(),
+        Some("/users/me/profile")
+    );
+    assert_eq!(
+        classic_url("/app/settings/devices", None).as_deref(),
+        Some("/users/me/push_subscriptions")
+    );
+    // Sections of the profile page map back to it.
+    assert_eq!(
+        classic_url("/app/settings/appearance", None).as_deref(),
+        Some("/users/me/profile")
     );
 }
 
@@ -151,7 +266,7 @@ fn every_spa_url_maps_back_to_its_classic_page() {
         if screen.ported {
             assert_eq!(
                 spa_url(screen.endpoint, &classic, None).as_deref(),
-                Some(spa.as_str()),
+                Some(sample(first_for(screen).spa, &ids).as_str()),
                 "{screen:?}"
             );
         }

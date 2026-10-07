@@ -24,8 +24,11 @@ pub mod directory;
 mod dto;
 pub mod endpoints;
 mod error;
+pub mod admin;
+pub mod bots;
 pub mod huddles;
 pub mod message_actions;
+pub mod settings;
 pub mod stage;
 pub mod sync;
 pub mod threads;
@@ -239,5 +242,8 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             axum::routing::post(unparsed_action(stage::start_stream))
                 .delete(unparsed_action(stage::stop_stream)),
         )
+        .merge(settings::routes())
+        .merge(admin::routes())
+        .merge(bots::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }

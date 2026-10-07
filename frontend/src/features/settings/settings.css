@@ -1,0 +1,404 @@
+/* Settings: the header, the section nav, and the section pages' groups and controls. */
+@layer app {
+  .settings {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-pane);
+  }
+
+  .settings-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--pane-header-height);
+    padding: 0 var(--space-3) 0 var(--space-5);
+    box-shadow: 0 1px 0 var(--border);
+    z-index: 2;
+  }
+
+  .settings-back {
+    display: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: calc(var(--space-2) * -1);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+  }
+
+  .settings-header-icon {
+    color: var(--text-muted);
+  }
+
+  .settings-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ── The section nav ───────────────────────────────────────────────────── */
+
+  .settings-nav {
+    flex-shrink: 0;
+    width: 220px;
+    padding: var(--space-3) var(--space-2);
+    overflow-y: auto;
+    box-shadow: inset -1px 0 0 var(--border);
+  }
+
+  .settings-nav ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .settings-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--sidebar-row-height);
+    padding-inline: var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    text-decoration: none;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .settings-nav-link:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .settings-nav-link[aria-current="page"] {
+    background: var(--bg-selected);
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .settings-nav-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  /* ── A section page ────────────────────────────────────────────────────── */
+
+  .settings-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .settings-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-width: 640px;
+    padding: var(--space-6) var(--space-8) var(--space-10);
+  }
+
+  .settings-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .settings-page-header h1,
+  .settings-group-title {
+    margin: 0;
+  }
+
+  .settings-page-description,
+  .settings-group-description {
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border);
+  }
+
+  .settings-group-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  .settings-group-body p {
+    margin: 0;
+  }
+
+  .settings-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+  }
+
+  .settings-label {
+    padding: 0;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+  }
+
+  .settings-hint {
+    margin: 0;
+    font-size: var(--text-sidebar);
+  }
+
+  .settings-hint[data-over] {
+    color: var(--danger-text);
+  }
+
+  .settings-error {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-sidebar);
+  }
+
+  .settings-select {
+    max-width: 360px;
+  }
+
+  .settings-textarea {
+    height: auto;
+    min-height: calc(var(--control-lg) * 2);
+    padding-block: var(--space-2);
+    resize: vertical;
+    font: inherit;
+  }
+
+  .settings-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .settings-inline > :last-child {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .settings-emoji {
+    width: 88px;
+  }
+
+  .settings-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .settings-callout {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+  }
+
+  .settings-link,
+  .settings-classic-link {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .settings-classic-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    align-self: flex-start;
+  }
+
+  /* ── Radios ────────────────────────────────────────────────────────────── */
+
+  .settings-radios {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .settings-radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1-5);
+  }
+
+  .settings-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    height: var(--control-md);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-pill);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: pointer;
+    font-size: var(--text-ui);
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .settings-radio:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .settings-radio:has(input:checked) {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .settings-radio:has(input:focus-visible) {
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  .settings-radio input {
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  .settings-radios:disabled .settings-radio {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  /* ── Lists: DND exceptions, sessions, devices ──────────────────────────── */
+
+  .settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .settings-list-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+  }
+
+  .settings-list-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    min-width: 0;
+  }
+
+  .settings-endpoint {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-badge {
+    margin-left: var(--space-2);
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    vertical-align: 1px;
+  }
+
+  .settings-exceptions,
+  .settings-exception-search {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .settings-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    max-width: 360px;
+    padding: var(--space-1-5) var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .settings-pick:hover,
+  .settings-pick:focus-visible {
+    outline: none;
+    background: var(--bg-hover);
+  }
+
+  /* ── The avatar ────────────────────────────────────────────────────────── */
+
+  .settings-avatar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .settings-avatar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* ── Phones: the nav is a strip above the page ─────────────────────────── */
+
+  @media (width < 720px) {
+    .settings-header {
+      padding: 0 var(--space-2);
+    }
+
+    .settings-back {
+      display: grid;
+    }
+
+    .settings-body {
+      flex-direction: column;
+    }
+
+    .settings-nav {
+      width: auto;
+      padding: var(--space-2);
+      overflow-x: auto;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .settings-nav ul {
+      flex-direction: row;
+    }
+
+    .settings-nav-link {
+      white-space: nowrap;
+    }
+
+    .settings-page {
+      padding: var(--space-4) var(--space-3) var(--space-8);
+    }
+  }
+}

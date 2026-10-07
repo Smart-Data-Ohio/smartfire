@@ -4,6 +4,7 @@
  */
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
+import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
@@ -20,6 +21,7 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
+import { removeCategory, setDetailMembership, upsertCategory } from "./organize.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -77,6 +79,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
       categories: sidebar.categories,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
+      overlay: state.sidebar.overlay,
     },
   };
 }
@@ -269,9 +272,11 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
       continue;
     }
 
-    // A stale page must not undo a newer live edit.
-    if (held === undefined || held.updatedAt <= message.updatedAt) {
-      messages[message.id] = message;
+    // A stale page must not undo a newer live edit (nor an older poll or cards a newer one).
+    const kept = reconcileMessage(held, message, true);
+
+    if (kept !== held) {
+      messages[message.id] = kept;
     }
   }
 
@@ -524,11 +529,13 @@ export function receiveMessage(state: State, message: MessageDTO): State {
   const reconciled = removePending(state, message.clientMessageId);
   const held = reconciled.messages[message.id];
 
-  if (held !== undefined && held.updatedAt >= message.updatedAt) {
+  const kept = reconcileMessage(held, message, false);
+
+  if (held !== undefined && kept === held) {
     return reconciled;
   }
 
-  const messages = { ...reconciled.messages, [message.id]: message };
+  const messages = { ...reconciled.messages, [message.id]: kept };
   const threadId = message.threadId;
 
   const timeline =
@@ -565,15 +572,20 @@ export function receiveMessage(state: State, message: MessageDTO): State {
     : withThreadTimeline({ ...reconciled, messages }, threadId, next);
 }
 
-/** An edit lands only if it's newer than the copy held (and the message is held at all). */
+/**
+ * An edit lands only if it's newer than the copy held (and the message is held at all); its poll
+ * and cards each by their `asOf`.
+ */
 export function updateMessage(state: State, message: MessageDTO): State {
   const held = state.messages[message.id];
 
-  if (held === undefined || held.updatedAt >= message.updatedAt) {
+  if (held === undefined) {
     return state;
   }
 
-  return { ...state, messages: { ...state.messages, [message.id]: message } };
+  const kept = reconcileMessage(held, message, false);
+
+  return kept === held ? state : { ...state, messages: { ...state.messages, [message.id]: kept } };
 }
 
 export function removeMessage(
@@ -792,10 +804,16 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = markRoomRead(next, event.data.roomId);
         break;
       case "sidebar.row.upserted":
-        next = upsertRow(next, event.data);
+        next = setDetailMembership(upsertRow(next, event.data), event.data.membership);
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);
+        break;
+      case "sidebar.category.upserted":
+        next = upsertCategory(next, event.data);
+        break;
+      case "sidebar.category.removed":
+        next = removeCategory(next, event.data.id);
         break;
       case "presence":
         next = setPresence(next, [event.data]);
@@ -805,6 +823,15 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "stage.updated":
         next = setStage(next, event.data);
+        break;
+      case "poll.updated":
+        next = applyPoll(next, event.data.poll);
+        break;
+      case "poll.ballot":
+        next = applyPollBallot(next, event.data);
+        break;
+      case "message.cards":
+        next = applyMessageCards(next, event.data);
         break;
     }
   }

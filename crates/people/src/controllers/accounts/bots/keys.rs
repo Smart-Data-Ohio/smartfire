@@ -1,5 +1,6 @@
 //! `Accounts::Bots::KeysController` (app/controllers/accounts/bots/keys_controller.rb).
 
+use campfire_db::User;
 use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog, Target};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_views::accounts;
@@ -13,8 +14,22 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     concerns::sudo::require_sudo_mode(c)?;
-    let mut bot = super::find_active_bot(c, "bot_id").await?;
+    let bot = super::find_active_bot(c, "bot_id").await?;
     let name = bot.name.clone();
+    let key = reset_key(c, bot).await?;
+    c.set_header("cache-control", "no-store");
+    c.set_header("pragma", "no-cache");
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotKey {
+        ctx,
+        bot_name: &name,
+        bot_key: &key
+    })
+    .await
+}
+
+/// `update`'s writes once the gates passed: a new key, then the audit. Answers the key.
+pub async fn reset_key(c: &Ctx, bot: User) -> Result<String> {
+    let mut bot = bot;
     let context = Context {
         actor: Some(require_current_user(c)?.into()),
         ip_address: Some(c.request.remote_ip()?.to_string()),
@@ -57,12 +72,5 @@ pub async fn update(c: &mut Ctx) -> Result {
         .write(move |tx| AuditLog::record(tx, audit, &context).map(|_| ()))
         .await
         .map_err(Error::internal)?;
-    c.set_header("cache-control", "no-store");
-    c.set_header("pragma", "no-cache");
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotKey {
-        ctx,
-        bot_name: &name,
-        bot_key: &key
-    })
-    .await
+    Ok(key)
 }
