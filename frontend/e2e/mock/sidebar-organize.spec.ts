@@ -78,6 +78,8 @@ matrix("sidebar organisation", async ({ page, theme, phone }) => {
   await settledShot(page, "rename", theme);
   await field.press("Enter");
   await expect(heading(page, "category-2")).toHaveText("People & ops");
+  // The field goes; focus lands on the heading it stood in for.
+  await expect(heading(page, "category-2")).toBeFocused();
 
   // A row's menu, with Move to open.
   await row(list, "quiet").click({ button: "right" });
@@ -137,18 +139,25 @@ test("categories are created, folded, reordered and deleted, and it all survives
 
   const list = sidebar(page);
 
-  // New category from the Channels heading.
-  await section(page, "channels").hover();
-  await list.getByRole("button", { name: "New category" }).click();
-
+  // New category from the Channels heading; Escape hands focus back to the button.
+  const newCategory = list.getByRole("button", { name: "New category" });
   const field = list.getByRole("textbox", { name: "New category name" });
 
+  await section(page, "channels").hover();
+  await newCategory.click();
+  await field.press("Escape");
+  await expect(field).toHaveCount(0);
+  await expect(newCategory).toBeFocused();
+
+  await newCategory.click();
   await field.press("Enter");
   await expect(list.getByText("Give the category a name")).toBeVisible();
   await field.fill("Ops");
   await field.press("Enter");
   await expect(heading(page, "category-3")).toHaveText("Ops");
   await expect(section(page, "category-3")).toContainText("Drag channels here");
+  // Focus follows the new category from its draft to the one the server made.
+  await expect(heading(page, "category-3")).toBeFocused();
 
   // Folding is remembered by the server.
   await heading(page, "category-1").click();
@@ -172,6 +181,31 @@ test("categories are created, folded, reordered and deleted, and it all survives
       .locator('[data-drop-section^="category-"]')
       .evaluateAll((all) => all.map((element) => element.getAttribute("data-drop-section"))),
   ).toEqual(["category-3", "category-1", "category-2"]);
+
+  // Move up from the menu: the moved category's heading keeps focus.
+  await section(page, "category-2").hover();
+  await list.getByRole("button", { name: "Team options" }).click();
+  await page.getByRole("menuitem", { name: "Move up" }).click();
+  await expect
+    .poll(() =>
+      list
+        .locator('[data-drop-section^="category-"]')
+        .evaluateAll((all) => all.map((element) => element.getAttribute("data-drop-section"))),
+    )
+    .toEqual(["category-3", "category-2", "category-1"]);
+  await expect(heading(page, "category-2")).toBeFocused();
+
+  await section(page, "category-3").hover();
+  await list.getByRole("button", { name: "Ops options" }).click();
+  await page.getByRole("menuitem", { name: "Move down" }).click();
+  await expect
+    .poll(() =>
+      list
+        .locator('[data-drop-section^="category-"]')
+        .evaluateAll((all) => all.map((element) => element.getAttribute("data-drop-section"))),
+    )
+    .toEqual(["category-2", "category-3", "category-1"]);
+  await expect(heading(page, "category-3")).toBeFocused();
 
   // Delete asks first; its channels go back to Channels.
   await section(page, "category-1").hover();

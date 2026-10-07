@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
@@ -110,7 +110,8 @@ describe("CategoryNameField", () => {
 
     expect(document.activeElement).toBe(input);
     await user.keyboard("  People & ops  {Enter}");
-    expect(onSubmit).toHaveBeenCalledWith("People & ops");
+    // The field is going: focus is the sidebar's to place.
+    expect(onSubmit).toHaveBeenCalledWith("People & ops", true);
   });
 
   it("says why a blank name won't do, and saves nothing", async () => {
@@ -126,16 +127,37 @@ describe("CategoryNameField", () => {
     const escaped = field("Team");
 
     await escaped.user.keyboard("Other{Escape}");
-    expect(escaped.onCancel).toHaveBeenCalledOnce();
+    expect(escaped.onCancel).toHaveBeenCalledExactlyOnceWith(true);
     expect(escaped.onSubmit).not.toHaveBeenCalled();
   });
 
-  it("saves a changed name when focus leaves", async () => {
+  it("saves a changed name when focus leaves, leaving focus where it went", async () => {
     const { user, onSubmit } = field("Team");
 
     await user.keyboard("Ops");
     await user.tab();
-    expect(onSubmit).toHaveBeenCalledWith("Ops");
+    // Nothing else to take focus: it fell to the page, so the sidebar places it.
+    expect(onSubmit).toHaveBeenCalledWith("Ops", true);
+
+    cleanup();
+
+    const onElsewhere = vi.fn();
+
+    render(
+      <>
+        <CategoryNameField
+          label="Category name"
+          initial="Team"
+          onSubmit={onElsewhere}
+          onCancel={vi.fn()}
+        />
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+
+    await user.keyboard("Ops");
+    await user.tab();
+    expect(onElsewhere).toHaveBeenCalledWith("Ops", false);
   });
 
   it("caps names at 50 characters", () => {

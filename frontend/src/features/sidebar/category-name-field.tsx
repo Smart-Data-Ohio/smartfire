@@ -7,9 +7,14 @@ interface CategoryNameFieldProps {
   readonly label: string;
   readonly initial?: string;
   readonly placeholder?: string;
-  /** A trimmed name of 1 to 50 characters that differs from `initial`. */
-  readonly onSubmit: (name: string) => void;
-  readonly onCancel: () => void;
+  /**
+   * A trimmed name of 1 to 50 characters that differs from `initial`. `refocus` says focus is
+   * the sidebar's to place, since the field is going (Enter, or a blur that went nowhere); a blur
+   * to another control leaves focus there.
+   */
+  readonly onSubmit: (name: string, refocus: boolean) => void;
+  /** Escape, or nothing (new) to save: `refocus` as for `onSubmit`. */
+  readonly onCancel: (refocus: boolean) => void;
 }
 
 /**
@@ -35,13 +40,13 @@ export function CategoryNameField({
     inputRef.current?.select();
   }, []);
 
-  const settle = (name: string) => {
+  const settle = (name: string, refocus: boolean) => {
     settled.current = true;
 
     if (name === "" || name === initial.trim()) {
-      onCancel();
+      onCancel(refocus);
     } else {
-      onSubmit(name);
+      onSubmit(name, refocus);
     }
   };
 
@@ -57,7 +62,7 @@ export function CategoryNameField({
       return;
     }
 
-    settle(name);
+    settle(name, true);
   };
 
   return (
@@ -82,12 +87,12 @@ export function CategoryNameField({
             event.preventDefault();
             event.stopPropagation();
             settled.current = true;
-            onCancel();
+            onCancel(true);
           }
         }}
-        onBlur={() => {
+        onBlur={(event) => {
           if (!settled.current) {
-            settle(value.trim());
+            settle(value.trim(), event.relatedTarget === null);
           }
         }}
       />

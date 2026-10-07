@@ -518,11 +518,71 @@ function DragGhost({
   );
 }
 
-/** The name field being shown: a new category (maybe for a room), or a rename. */
+/**
+ * The name field being shown: a new category (maybe for a room), or a rename. A new one keeps
+ * what opened it, for focus to go back to when it's cancelled.
+ */
 type Editing =
-  | { readonly kind: "create"; readonly row: Row | null }
+  | { readonly kind: "create"; readonly row: Row | null; readonly opener: HTMLElement | null }
   | { readonly kind: "rename"; readonly categoryId: number }
   | null;
+
+/** Where focus should go once the sidebar has rendered the change that calls for it. */
+interface FocusRequest {
+  /** The element, once it's there (`null` keeps the request for the next render). */
+  readonly find: () => HTMLElement | null;
+  /** Only when focus has fallen to the page meanwhile (nobody put it anywhere else). */
+  readonly ifLost: boolean;
+}
+
+function focusIsLost(): boolean {
+  const active = document.activeElement;
+
+  return active === null || active === document.body;
+}
+
+/**
+ * Hands focus over after the next render that has the element: a category's heading back from
+ * its name field, a moved category's heading, a new category's heading once the server named it.
+ */
+function useFocusAfterRender(): (request: FocusRequest) => void {
+  const pending = useRef<FocusRequest | null>(null);
+  const [, rerender] = useState(0);
+
+  useLayoutEffect(() => {
+    const request = pending.current;
+    const element = request?.find() ?? null;
+
+    if (request === null || element === null) {
+      return;
+    }
+
+    pending.current = null;
+
+    if (!request.ifLost || focusIsLost()) {
+      element.focus({ preventScroll: true });
+    }
+  });
+
+  return (request) => {
+    pending.current = request;
+    rerender((count) => count + 1);
+  };
+}
+
+/** The toggle button in a section's heading, by section key. */
+function headingTrigger(container: HTMLElement | null, key: string): HTMLElement | null {
+  return (
+    container?.querySelector<HTMLElement>(
+      `[data-drop-section="${key}"] .sidebar-section-trigger`,
+    ) ?? null
+  );
+}
+
+/** What opened a new category's field, when focus can go back to it (not a closing menu's item). */
+function openerOf(active: Element | null): HTMLElement | null {
+  return active instanceof HTMLElement && active.closest('[role="menu"]') === null ? active : null;
+}
 
 /**
  * The conversation list: the workspace header, then Favourites, your categories, Channels, Voice
@@ -547,6 +607,7 @@ export function Sidebar() {
   const categories = view.categories;
   const all = sidebarSections(sidebar);
   const flip = useFlip(scrollRef);
+  const focusAfterRender = useFocusAfterRender();
 
   useEffect(() => commands.onBeforeOrganize(flip));
 
@@ -648,7 +709,59 @@ export function Sidebar() {
 
   const menuRow = menu === null ? undefined : view.rows[menu.roomId];
 
-  const newCategory = (row: Row | null = null) => setEditing({ kind: "create", row });
+  const newCategory = (row: Row | null = null) =>
+    setEditing({ kind: "create", row, opener: openerOf(document.activeElement) });
+
+  const focusHeading = (key: string, ifLost = false) =>
+    focusAfterRender({ find: () => headingTrigger(scrollRef.current, key), ifLost });
+
+  /** A cancelled new category: back to what opened it, else the room it was for, else Channels. */
+  const focusAfterCancel = (opener: HTMLElement | null, row: Row | null) =>
+    focusAfterRender({
+      find: () => {
+        if (opener?.isConnected === true) {
+          return opener;
+        }
+
+        const roomRow =
+          row === null
+            ? null
+            : scrollRef.current?.querySelector<HTMLElement>(
+                `[data-room-id="${row.room.id}"] .sidebar-row`,
+              );
+
+        return roomRow ?? headingTrigger(scrollRef.current, "channels");
+      },
+      ifLost: false,
+    });
+
+  /**
+   * Lands focus on a new category's heading: the draft's at once, the real one's once the server
+   * has named it (the draft's heading goes with it, so only if focus is still nowhere else).
+   */
+  const create = (name: string, row: Row | null, refocus: boolean) => {
+    const created = commands.createCategory(name, row);
+
+    if (!refocus) {
+      return;
+    }
+
+    focusAfterRender({
+      find: () =>
+        [
+          ...(scrollRef.current?.querySelectorAll<HTMLElement>(
+            '[data-drop-section^="category-"] .sidebar-section-trigger',
+          ) ?? []),
+        ].at(-1) ?? null,
+      ifLost: false,
+    });
+
+    void created.then((category) => {
+      if (category !== null) {
+        focusHeading(`category-${category.id}`, true);
+      }
+    });
+  };
 
   const newMessage = (
     <IconButton
@@ -708,7 +821,11 @@ export function Sidebar() {
           onPickUp={(event) => dnd.onKeyDown(event, { kind: "category", category })}
           onBlur={dnd.onBlur}
           onRename={() => setEditing({ kind: "rename", categoryId: category.id })}
-          onMove={(to) => commands.reorderCategories(reorderedIds(categories, category.id, to))}
+          onMove={(to) => {
+            commands.reorderCategories(reorderedIds(categories, category.id, to));
+            // The menu hands focus to its button, which moves with the section: the heading.
+            focusHeading(section.key);
+          }}
           onNew={() => newCategory()}
           onDelete={() => setDeleting(category)}
         />
@@ -736,11 +853,21 @@ export function Sidebar() {
       <CategoryNameField
         label={`Rename ${category.name}`}
         initial={category.name}
-        onSubmit={(name) => {
+        onSubmit={(name, refocus) => {
           commands.renameCategory(category, name);
           setEditing(null);
+
+          if (refocus) {
+            focusHeading(section.key);
+          }
         }}
-        onCancel={() => setEditing(null)}
+        onCancel={(refocus) => {
+          setEditing(null);
+
+          if (refocus) {
+            focusHeading(section.key);
+          }
+        }}
       />
     );
   };
@@ -755,11 +882,17 @@ export function Sidebar() {
               : `New category for ${editing.row.displayName}`
           }
           placeholder="New category"
-          onSubmit={(name) => {
-            commands.createCategory(name, editing.row);
+          onSubmit={(name, refocus) => {
+            create(name, editing.row, refocus);
             setEditing(null);
           }}
-          onCancel={() => setEditing(null)}
+          onCancel={(refocus) => {
+            setEditing(null);
+
+            if (refocus) {
+              focusAfterCancel(editing.opener, editing.row);
+            }
+          }}
         />
       </div>
     ) : null;

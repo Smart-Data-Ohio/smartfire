@@ -52,13 +52,21 @@ export function toggleFavorite(row: SidebarRow): void {
   );
 }
 
-/** A new category at the end; with `row`, that channel moves into it. */
-export function createCategory(name: string, row: SidebarRow | null = null): void {
+/**
+ * A new category at the end; with `row`, that channel moves into it. Resolves to the category the
+ * server made, or `null` after a refusal (already toasted).
+ */
+export function createCategory(
+  name: string,
+  row: SidebarRow | null = null,
+): Promise<RoomCategory | null> {
   beforeChange?.();
 
-  actions.organize
-    .createCategory(name, row?.room.id ?? null)
-    .catch(failed(`Couldn't create "${name.trim()}"`));
+  return actions.organize.createCategory(name, row?.room.id ?? null).catch((error: ActionError) => {
+    failed(`Couldn't create "${name.trim()}"`)(error);
+
+    return null;
+  });
 }
 
 export function renameCategory(category: RoomCategory, name: string): void {
