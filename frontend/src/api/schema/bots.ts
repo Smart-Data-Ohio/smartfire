@@ -22,7 +22,7 @@ import type { GrantList as GeneratedGrantList } from "../../gen/GrantList.ts";
 import type { GrantRoom as GeneratedGrantRoom } from "../../gen/GrantRoom.ts";
 import type { UpdateBot as GeneratedUpdateBot } from "../../gen/UpdateBot.ts";
 import type { UpdateBotAgent as GeneratedUpdateBotAgent } from "../../gen/UpdateBotAgent.ts";
-import { RoomId, UserId } from "./ids.ts";
+import { AgentGrantId, AgentId, CredentialId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
@@ -69,7 +69,7 @@ export type BotListPin = Assert<Pinned<typeof BotList, GeneratedBotList>>;
 
 /** The agent behind a bot. */
 export const BotAgent = Schema.Struct({
-  id: Schema.Int,
+  id: AgentId,
   provider: Schema.NullOr(Schema.String),
   runtime: Schema.NullOr(Schema.String),
   description: Schema.NullOr(Schema.String),
@@ -175,7 +175,7 @@ export type CredentialStatePin = Assert<Pinned<typeof CredentialState, Generated
 
 /** A bearer token for the agent API; its secret shows only when issued. */
 export const Credential = Schema.Struct({
-  id: Schema.Int,
+  id: CredentialId,
   name: Schema.String,
   lastFour: Schema.String,
   createdBy: Schema.String,
@@ -219,7 +219,7 @@ export type CredentialCreatedPin = Assert<
 
 /** A capability the agent holds, workspace-wide or in one room. */
 export const Grant = Schema.Struct({
-  id: Schema.Int,
+  id: AgentGrantId,
   capability: Schema.String,
   roomName: Schema.String,
   grantedBy: Schema.String,
