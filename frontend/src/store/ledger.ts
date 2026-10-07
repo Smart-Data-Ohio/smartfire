@@ -108,6 +108,7 @@ export function landLedgerPage(
 
   const items = { ...state.ledger.items };
 
+  // Ledger rows are append-only and have no mutable record revision to compare.
   for (const event of page.events) {
     items[event.id] = event;
   }

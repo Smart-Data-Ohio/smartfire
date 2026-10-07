@@ -55,6 +55,7 @@ function approval(id: number, status: AgentApprovalStatus = "pending"): AgentApp
     adminOnly: false,
     approvable: true,
     deniable: true,
+    updatedAt: status === "pending" ? at(0) : at(1),
   };
 }
 
@@ -124,7 +125,7 @@ describe("approval requests in the store", () => {
       loading,
       key,
       {
-        approvals: [{ ...approval(2, "approved"), decidedAt: at(1) }],
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) }],
         users: [],
         nextCursor: null,
       },
@@ -132,7 +133,7 @@ describe("approval requests in the store", () => {
     );
 
     const newer = applyApprovalUpdated(state, {
-      approval: { ...approval(2, "denied"), decidedAt: at(2) },
+      approval: { ...approval(2, "denied"), decidedAt: at(2), updatedAt: at(2) },
       users: [],
     });
 
@@ -157,11 +158,11 @@ describe("approval requests in the store", () => {
     expect(rollbackApproval(landed, shown, approval(2)).approvals.items[2]).toEqual(approval(2));
   });
 
-  it("never rolls back an equal server echo that confirmed the local decision", () => {
+  it("never rolls back a newer server echo that confirmed the local decision", () => {
     const before = approval(2);
     const shown = decidedLocally(before, "approved", 1, "Ok", NOW);
     const local = showApproval(loaded(), shown);
-    const echoed = applyApproval(local, { ...shown });
+    const echoed = applyApproval(local, { ...shown, updatedAt: at(1) });
 
     expect(rollbackApproval(echoed, shown, before)).toBe(echoed);
     expect(echoed.approvals.items[2]?.status).toBe("approved");
@@ -171,7 +172,11 @@ describe("approval requests in the store", () => {
     const key = approvalListKey(AGENT, "pending");
     const loading = setApprovalListLoading(loaded(), key, false);
     const generation = approvalListOf(loading, key).generation;
-    const confirmed = applyApproval(loading, decidedLocally(approval(2), "approved", 1, "Ok", NOW));
+
+    const confirmed = applyApproval(loading, {
+      ...decidedLocally(approval(2), "approved", 1, "Ok", NOW),
+      updatedAt: at(1),
+    });
 
     const landed = landApprovalPage(
       confirmed,
@@ -191,7 +196,7 @@ describe("approval requests in the store", () => {
     const loading = setApprovalListLoading(loaded(), key, false);
 
     const updated = applyApprovalUpdated(loading, {
-      approval: { ...approval(2, "denied"), decidedAt: at(1) },
+      approval: { ...approval(2, "denied"), decidedAt: at(1), updatedAt: at(1) },
       users: [],
     });
 
@@ -208,11 +213,17 @@ describe("approval requests in the store", () => {
   });
 
   it("keeps a newer event when an older event follows", () => {
-    const newer = { ...approval(2, "denied"), decidedAt: at(2), decisionNote: "Newer" };
+    const newer = {
+      ...approval(2, "denied"),
+      decidedAt: at(2),
+      updatedAt: at(2),
+      decisionNote: "Newer",
+    };
+
     const updated = applyApprovalUpdated(loaded(), { approval: newer, users: [] });
 
     const landed = applyApprovalUpdated(updated, {
-      approval: { ...approval(2, "approved"), decidedAt: at(1) },
+      approval: { ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) },
       users: [],
     });
 
@@ -228,7 +239,7 @@ describe("approval requests in the store", () => {
       state,
       approved,
       {
-        approvals: [{ ...approval(2, "approved"), decidedAt: at(1) }],
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) }],
         users: [],
         nextCursor: null,
       },
@@ -254,7 +265,7 @@ describe("approval requests in the store", () => {
   });
 
   it.each(["approved", "denied", "cancelled", "expired"] as const)(
-    "never downgrades %s to pending even without decidedAt",
+    "keeps a newer %s revision against an older pending copy without decidedAt",
     (status) => {
       const decided = applyApproval(loaded(), approval(2, status));
       const landed = applyApprovalUpdated(decided, { approval: approval(2), users: [] });
@@ -312,7 +323,12 @@ describe("approval requests in the store", () => {
           topic: "user:1",
           type: "approval.updated",
           data: {
-            approval: { ...approval(3, "denied"), decidedById: 4, decidedAt: at(1) },
+            approval: {
+              ...approval(3, "denied"),
+              decidedById: 4,
+              decidedAt: at(1),
+              updatedAt: at(1),
+            },
             users: [userFixture(4, "Priya")],
           },
         },
@@ -349,7 +365,7 @@ describe("approval requests in the store", () => {
     );
   });
 
-  it("drop a page from a load that restarted", () => {
+  it("keeps list membership when a restarted load's records arrive", () => {
     const key = approvalListKey(AGENT, "all");
     const first = setApprovalListLoading(initialState, key, false);
     const { generation } = approvalListOf(first, key);
@@ -363,7 +379,8 @@ describe("approval requests in the store", () => {
       generation,
     );
 
-    expect(landed).toBe(restarted);
+    expect(approvalListOf(landed, key)).toBe(approvalListOf(restarted, key));
+    expect(landed.approvals.items[1]).toEqual(approval(1));
   });
 });
 

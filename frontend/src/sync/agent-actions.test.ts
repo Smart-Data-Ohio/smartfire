@@ -21,6 +21,7 @@ function row(agentId: number): AgentDirectoryRow {
     createdAt: "2026-10-01T00:00:00.000Z",
     statusChangedAt: null,
     lastSeenAt: null,
+    updatedAt: "2026-10-07T16:00:00.000Z",
   };
 }
 
@@ -182,6 +183,7 @@ describe("agent actions", () => {
                 suspended: true,
                 workingPresence: "Reading logs",
                 workingPresenceExpiresAt: "2026-10-08T16:30:00.000Z",
+                updatedAt: "2026-10-07T16:10:00.000Z",
               },
             },
           ],
@@ -200,6 +202,7 @@ describe("agent actions", () => {
           suspended: true,
         });
         expect(workingPresenceAt(store.getState(), 40, 0)).toBe("Reading logs");
+        expect(calls).toBe(1);
 
         if (screen === "profile") {
           expect(profileOf(store.getState(), 40).profile?.agent.status).toBe("working");
@@ -215,7 +218,12 @@ describe("agent actions", () => {
         const started = yield* Deferred.make<void>();
         const gate = yield* Deferred.make<void>();
         const path = screen === "directory" ? "GET /agents" : "GET /agents/40";
-        const newer = { ...row(40), statusChangedAt: "2026-10-07T16:20:00.000Z" };
+
+        const newer = {
+          ...row(40),
+          statusChangedAt: "2026-10-07T16:20:00.000Z",
+          updatedAt: "2026-10-07T16:20:00.000Z",
+        };
 
         yield* fake.route(path, () =>
           Deferred.succeed(started, undefined).pipe(
@@ -245,6 +253,7 @@ describe("agent actions", () => {
                 status: "working",
                 statusNote: "Old",
                 statusChangedAt: "2026-10-07T16:10:00.000Z",
+                updatedAt: "2026-10-07T16:10:00.000Z",
                 suspended: false,
                 workingPresence: null,
                 workingPresenceExpiresAt: null,

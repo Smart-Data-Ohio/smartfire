@@ -30,6 +30,7 @@ const pending: AgentApproval = {
   adminOnly: true,
   approvable: true,
   deniable: true,
+  updatedAt: "2026-10-06T16:30:00.000Z",
 };
 
 /** The viewer (Ada, user 7) with the agent's pending list loaded. */
@@ -52,7 +53,7 @@ function pendingIds(): readonly number[] {
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
-  it.effect("keep a live Approved member after a late empty reload and refetch itself", () =>
+  it.effect("keep a live Approved member after a late empty reload without another GET", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
       const started = yield* Deferred.make<void>();
@@ -62,6 +63,7 @@ describe("approval actions", () => {
         ...pending,
         status: "approved",
         decidedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000Z",
       };
 
       yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
@@ -104,7 +106,7 @@ describe("approval actions", () => {
       expect(approvalListOf(store.getState(), approvalListKey(AGENT, "approved")).ids).toEqual([
         100,
       ]);
-      expect((yield* fake.requests).length).toBe(3);
+      expect((yield* fake.requests).length).toBe(2);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -170,6 +172,7 @@ describe("approval actions", () => {
           ...pending,
           status: refusal.message.includes("expired") ? "expired" : "denied",
           decidedById: refusal.message.includes("expired") ? null : 4,
+          updatedAt: "2026-10-06T16:31:00.000Z",
           decidedAt: refusal.message.includes("expired") ? null : "2026-10-06T16:31:00.000Z",
         };
 
@@ -206,6 +209,7 @@ describe("approval actions", () => {
         status: "approved",
         decidedById: 7,
         decidedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000Z",
         decisionNote: "Ship it",
       };
 
@@ -258,7 +262,13 @@ describe("approval actions", () => {
     Effect.gen(function* () {
       const fake = yield* withPending;
       const gate = yield* Deferred.make<void>();
-      const elsewhere: AgentApproval = { ...pending, status: "denied", decidedById: 4 };
+
+      const elsewhere: AgentApproval = {
+        ...pending,
+        status: "denied",
+        decidedById: 4,
+        updatedAt: "2026-10-06T16:31:00.000Z",
+      };
 
       yield* fake.route("PATCH /agent_approvals/100", () =>
         Deferred.await(gate).pipe(

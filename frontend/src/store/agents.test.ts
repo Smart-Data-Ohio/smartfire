@@ -23,7 +23,6 @@ import {
   setProfileFailed,
   workingPresenceAt,
 } from "./agents.ts";
-import { finishRead, startRead } from "./freshness.ts";
 import type { SyncEvent } from "./model.ts";
 import { applyEvents, applyPage, receiveMessage, updateMessage } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
@@ -58,6 +57,7 @@ function row(agentId: number, change: Partial<AgentDirectoryRow> = {}): AgentDir
     createdAt: at(-1000),
     statusChangedAt: null,
     lastSeenAt: null,
+    updatedAt: change.statusChangedAt ?? at(0),
     ...change,
   };
 }
@@ -89,6 +89,7 @@ function status(change: Partial<AgentStatusChanged> = {}): AgentStatusChanged {
     suspended: false,
     workingPresence: "Reading the logs",
     workingPresenceExpiresAt: at(300),
+    updatedAt: change.statusChangedAt ?? at(1),
     ...change,
   };
 }
@@ -109,13 +110,16 @@ function event(payload: SyncEvent): State {
 }
 
 describe("the agent directory and profiles", () => {
-  it("lands a load only in the generation it started in", () => {
+  it("lands directory membership only in the generation it started in", () => {
     const first = setDirectoryLoading(initialState);
     const stale = directoryGeneration(first);
     const second = setDirectoryLoading(first);
     const page = { agents: [row(40)], users: [bot(40, "Bea")] };
 
-    expect(landDirectory(second, page, stale)).toBe(second);
+    const late = landDirectory(second, page, stale);
+
+    expect(late.agents.directory).toBe(second.agents.directory);
+    expect(late.agents.rows[40]).toEqual(row(40));
     expect(landDirectory(second, page, directoryGeneration(second)).agents.directory).toMatchObject(
       {
         ids: [40],
@@ -175,7 +179,6 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(20) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.freshness.clock,
     );
 
     const next = applyEvents(
@@ -195,7 +198,7 @@ describe("agent.status", () => {
     expect(next.agents.rows[40]).toMatchObject({ status: "idle", statusChangedAt: at(20) });
   });
 
-  it("keeps a newer status when an event with an older statusChangedAt follows", () => {
+  it("keeps a newer status revision when an older event follows", () => {
     const newer = event({
       seq: 1,
       topic: "user:1",
@@ -240,7 +243,6 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(5) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.freshness.clock,
     );
 
     expect(next.agents.rows[40]?.status).toBe("working");
@@ -430,7 +432,7 @@ describe("agent steps", () => {
     expect(next).toBe(initialState);
   });
 
-  it("keeps a step event over a late detail with an equal updatedAt", () => {
+  it("lets a late detail fill a step on an equal updatedAt", () => {
     const before = landWorkDetail(
       initialState,
       threadDetailFixture(
@@ -440,10 +442,8 @@ describe("agent steps", () => {
       ),
     );
 
-    const read = startRead(before.freshness);
-
     const live = applyEvents(
-      { ...before, freshness: read.freshness },
+      before,
       [
         {
           seq: 1,
@@ -465,13 +465,12 @@ describe("agent steps", () => {
       threadDetailFixture(
         7,
         factsFixture(),
-        workDetailFixture({ steps: [step(1, 10, { status: "pending" })] }),
+        workDetailFixture({ steps: [step(1, 10, { status: "done", outputSummary: "Complete" })] }),
       ),
-      read.ticket,
     );
 
     expect(landed.work.details[7]?.steps[0]?.status).toBe("done");
-    expect(finishRead(landed.freshness, read.ticket).rejected).toBe(true);
+    expect(landed.work.details[7]?.steps[0]?.outputSummary).toBe("Complete");
   });
 
   it("keeps live thread steps when a detail with older steps lands", () => {

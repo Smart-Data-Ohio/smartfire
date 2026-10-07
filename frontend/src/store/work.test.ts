@@ -108,6 +108,7 @@ describe("work in the store", () => {
 
   it("builds optimistic facts for a start, a move and a stop", () => {
     expect(optimisticFacts(null, "planned")).toEqual({
+      updatedAt: "0001-01-01T00:00:00.000Z",
       status: "planned",
       owner: null,
       ownerActive: false,

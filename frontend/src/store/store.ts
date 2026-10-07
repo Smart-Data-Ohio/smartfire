@@ -91,11 +91,12 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
   );
 }
 
-const apply = (change: (state: State) => State) => store.setState(change, true);
+const apply = (change: (state: State) => State) =>
+  store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
-  startRead: (list: string | null = null) => {
+  startRead: (list: string) => {
     const read = freshness.startRead(store.getState().freshness, list);
 
     apply((state) => ({ ...state, freshness: read.freshness }));
@@ -106,8 +107,6 @@ export const mutations = {
     const read = freshness.finishRead(store.getState().freshness, ticket);
 
     apply((state) => ({ ...state, freshness: read.freshness }));
-
-    return read.rejected;
   },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
@@ -172,13 +171,13 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail, ticket?: number) =>
-    apply((state) => work.loadWorkThreadDetail(state, detail, ticket)),
+  loadThreadDetail: (detail: ThreadDetail, read?: work.WorkRead) =>
+    apply((state) => work.loadWorkThreadDetail(state, detail, read)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
-  threadCreated: (created: ThreadCreated) =>
+  threadCreated: (created: ThreadCreated, read?: work.WorkRead) =>
     apply((state) =>
       reduce.receiveMessage(
-        work.landWorkDetail(threads.loadThreadDetail(state, created.detail), created.detail),
+        work.loadWorkThreadDetail(state, created.detail, read),
         created.message,
       ),
     ),
@@ -189,12 +188,12 @@ export const mutations = {
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
   setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
-  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, ticket?: number) =>
+  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, read?: work.WorkRead) =>
     apply((state) => {
       let next = state;
 
       const summaries = list.threads.map((summary) => {
-        next = work.receiveWorkThread(next, summary.thread, ticket);
+        next = work.receiveWorkThread(next, summary.thread, read, "read");
 
         return { ...summary, thread: next.threads[summary.thread.id] ?? summary.thread };
       });
@@ -281,24 +280,31 @@ export const mutations = {
   /** Shows work facts on a thread at once: an optimistic change or its rollback. */
   putWorkFacts: (threadId: number, facts: WorkFacts | null) =>
     apply((state) => work.putWorkFacts(state, threadId, facts)),
+  rollbackWork: (threadId: number, shown: WorkFacts | null) =>
+    apply((state) => work.rollbackWork(state, threadId, shown)),
+  landWorkReply: (
+    detail: ThreadDetail,
+    shown: WorkFacts | null | undefined,
+    read?: work.WorkRead,
+  ) => apply((state) => work.landWorkReply(state, detail, shown, read)),
   countWorkWrite: (threadId: number, delta: 1 | -1) =>
     apply((state) => work.countWorkWrite(state, threadId, delta)),
   setWorkListLoading: (filter: WorkFilter) =>
     apply((state) => work.setWorkListLoading(state, filter)),
   setWorkListFailed: (filter: WorkFilter, error: string, generation: number) =>
     apply((state) => work.setWorkListFailed(state, filter, error, generation)),
-  landWorkList: (filter: WorkFilter, list: WorkList, generation: number, ticket?: number) =>
-    apply((state) => work.landWorkList(state, filter, list, generation, ticket)),
+  landWorkList: (filter: WorkFilter, list: WorkList, generation: number, read?: work.WorkRead) =>
+    apply((state) => work.landWorkList(state, filter, list, generation, read)),
   // --- S4: agents ---
   setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
-  landAgentDirectory: (page: AgentDirectory, generation: number, ticket?: number) =>
-    apply((state) => agents.landDirectory(state, page, generation, ticket)),
+  landAgentDirectory: (page: AgentDirectory, generation: number) =>
+    apply((state) => agents.landDirectory(state, page, generation)),
   setAgentDirectoryFailed: (error: string, generation: number) =>
     apply((state) => agents.setDirectoryFailed(state, error, generation)),
   setAgentProfileLoading: (agentId: number) =>
     apply((state) => agents.setProfileLoading(state, agentId)),
-  landAgentProfile: (profile: AgentProfile, generation: number, ticket?: number) =>
-    apply((state) => agents.landProfile(state, profile, generation, ticket)),
+  landAgentProfile: (profile: AgentProfile, generation: number) =>
+    apply((state) => agents.landProfile(state, profile, generation)),
   setAgentProfileFailed: (agentId: number, error: string, missing: boolean, generation: number) =>
     apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
   setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
@@ -312,8 +318,10 @@ export const mutations = {
     generation?: number,
     ticket?: number,
   ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket)),
-  applyApproval: (approval: AgentApproval, ticket?: number) =>
-    apply((state) => approvals.applyApproval(state, approval, ticket)),
+  applyApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.applyApproval(state, approval)),
+  settleApproval: (approval: AgentApproval, shown?: AgentApproval) =>
+    apply((state) => approvals.settleApproval(state, approval, shown)),
   showApproval: (approval: AgentApproval) =>
     apply((state) => approvals.showApproval(state, approval)),
   rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>

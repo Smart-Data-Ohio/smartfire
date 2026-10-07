@@ -15,7 +15,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
-import { land, markLocal, membership, placeId, receive, replay, sameRecord } from "./freshness.ts";
+import { membership, placeId, replay } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   eachPaged,
@@ -29,6 +29,7 @@ import {
   pagedLoadingMore,
   pagedStale,
 } from "./paged-list.ts";
+import { landsOver, mergeRevision, sameRecord } from "./revision.ts";
 import type { State } from "./state.ts";
 
 /** A status to list, or every one. */
@@ -42,9 +43,19 @@ export interface ApprovalsSlice {
   readonly items: Readonly<Record<number, AgentApproval>>;
   /** By `ApprovalListKey`. */
   readonly lists: Readonly<Record<string, PagedList>>;
+  readonly overlays: Readonly<
+    Record<
+      number,
+      {
+        readonly before: AgentApproval;
+        readonly shown: AgentApproval;
+        readonly confirmed: AgentApproval;
+      }
+    >
+  >;
 }
 
-export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {} };
+export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {}, overlays: {} };
 
 /** The key of `agentId`'s list in `filter`. */
 export function approvalListKey(agentId: number, filter: ApprovalFilter): ApprovalListKey {
@@ -96,7 +107,7 @@ export function setApprovalListFailed(
 
 /**
  * A page of one list landed: its requests and users join the store. A page from a load the list
- * has since restarted (`generation`) changes nothing.
+ * has since restarted (`generation`) merges records without replacing its list membership.
  */
 export function landApprovalPage(
   state: State,
@@ -106,14 +117,31 @@ export function landApprovalPage(
   generation?: number,
   ticket?: number,
 ): State {
-  if (!pagedCurrent(approvalListOf(state, key), generation)) {
-    return state;
-  }
+  const current = pagedCurrent(approvalListOf(state, key), generation);
 
   let next = state;
 
   for (const approval of page.approvals) {
-    next = applyApproval(next, approval, ticket, key);
+    next = applyApproval(next, approval, key);
+  }
+
+  if (!current) {
+    const held = approvalListOf(next, key);
+
+    const ids = held.ids.filter((id) => {
+      const item = next.approvals.items[id];
+
+      return item === undefined || belongsTo(key, item);
+    });
+
+    const filtered =
+      ids.length === held.ids.length ? next : updateList(next, key, (list) => ({ ...list, ids }));
+
+    return {
+      ...filtered,
+      freshness: membership(filtered.freshness, `approvals:${key}`, held.ids, ids),
+      users: mergeUserList(filtered.users, page.users),
+    };
   }
 
   const held = approvalListOf(next, key);
@@ -124,7 +152,7 @@ export function landApprovalPage(
 
   const loaded = pagedLanded(held, ids, page.nextCursor, mode);
 
-  const result = replay(
+  const replayed = replay(
     next.freshness,
     `approvals:${key}`,
     ticket ?? next.freshness.clock,
@@ -134,16 +162,14 @@ export function landApprovalPage(
 
   return {
     ...next,
-    freshness: membership(result.freshness, `approvals:${key}`, held.ids, result.ids),
+    freshness: membership(next.freshness, `approvals:${key}`, held.ids, replayed),
     users: mergeUserList(next.users, page.users),
     approvals: {
       ...next.approvals,
-      lists: { ...next.approvals.lists, [key]: { ...loaded, ids: result.ids } },
+      lists: { ...next.approvals.lists, [key]: { ...loaded, ids: replayed } },
     },
   };
 }
-
-const approvalKey = (id: number) => `approval:${id}`;
 
 function placeApproval(state: State, approval: AgentApproval, sourceList?: ApprovalListKey): State {
   let freshness = state.freshness;
@@ -185,58 +211,102 @@ function placeApproval(state: State, approval: AgentApproval, sourceList?: Appro
   };
 }
 
-/** Timestamp ordering and read tickets share the same rule as work and agent status. */
+function dropOverlay(state: State, id: number): State {
+  const { [id]: _overlay, ...overlays } = state.approvals.overlays;
+
+  return { ...state, approvals: { ...state.approvals, overlays } };
+}
+
+/** All server copies, including cancelled/expired ones, compare updatedAt. */
 export function applyApproval(
   state: State,
   approval: AgentApproval,
-  ticket?: number,
   sourceList?: ApprovalListKey,
 ): State {
-  const copies = {
-    held: state.approvals.items[approval.id],
-    incoming: approval,
-    same: sameRecord<AgentApproval>,
-    timestamp: (value: AgentApproval) => value.decidedAt,
-    keep: (held: AgentApproval, incoming: AgentApproval) =>
-      held.status !== "pending" && incoming.status === "pending",
-  };
+  const overlay = state.approvals.overlays[approval.id];
+  const stored = overlay?.confirmed ?? state.approvals.items[approval.id];
 
-  const result =
-    ticket === undefined
-      ? receive(state.freshness, approvalKey(approval.id), copies)
-      : land(state.freshness, approvalKey(approval.id), ticket, copies);
+  if (!landsOver(stored, approval)) {
+    return state;
+  }
 
-  return result.value === undefined
-    ? state
-    : placeApproval({ ...state, freshness: result.freshness }, result.value, sourceList);
+  if (overlay !== undefined && approval.updatedAt <= overlay.before.updatedAt) {
+    const confirmed = mergeRevision(overlay.confirmed, approval);
+
+    const shown = {
+      ...confirmed,
+      status: overlay.shown.status,
+      decidedById: overlay.shown.decidedById,
+      decidedAt: overlay.shown.decidedAt,
+      decisionNote: overlay.shown.decisionNote,
+      approvable: overlay.shown.approvable,
+      deniable: overlay.shown.deniable,
+    };
+
+    const unchanged = sameRecord(overlay.shown, shown);
+
+    return placeApproval(
+      {
+        ...state,
+        approvals: {
+          ...state.approvals,
+          overlays: { ...state.approvals.overlays, [approval.id]: { ...overlay, confirmed } },
+        },
+      },
+      unchanged ? overlay.shown : shown,
+      sourceList,
+    );
+  }
+
+  return placeApproval(dropOverlay(state, approval.id), approval, sourceList);
 }
 
-/** A local timestamp is for display; the shared mark identifies it as unconfirmed. */
+/** Only decision fields overlay the confirmed request while the write is pending. */
 export function showApproval(state: State, shown: AgentApproval): State {
-  return state.approvals.items[shown.id] === undefined
+  const before = state.approvals.items[shown.id];
+
+  return before === undefined
     ? state
     : placeApproval(
         {
           ...state,
-          freshness: markLocal(state.freshness, approvalKey(shown.id)),
+          approvals: {
+            ...state.approvals,
+            overlays: {
+              ...state.approvals.overlays,
+              [shown.id]: { before, shown, confirmed: before },
+            },
+          },
         },
         shown,
       );
 }
 
-/** A refusal restores only the local copy still shown, never a confirmed decision. */
-export function rollbackApproval(state: State, shown: AgentApproval, before: AgentApproval): State {
-  if (
-    state.approvals.items[shown.id] !== shown ||
-    !state.freshness.marks[approvalKey(shown.id)]?.local
-  ) {
-    return state;
+export function rollbackApproval(
+  state: State,
+  shown: AgentApproval,
+  _before: AgentApproval,
+): State {
+  const overlay = state.approvals.overlays[shown.id];
+
+  return overlay?.shown !== shown
+    ? state
+    : placeApproval(dropOverlay(state, shown.id), overlay.confirmed);
+}
+
+/** The write reply confirms ties too; an outdated reply leaves the unresolved overlay. */
+export function settleApproval(
+  state: State,
+  approval: AgentApproval,
+  shown?: AgentApproval,
+): State {
+  const overlay = state.approvals.overlays[approval.id];
+
+  if (overlay !== undefined && overlay.shown === shown && landsOver(overlay.before, approval)) {
+    state = placeApproval(dropOverlay(state, approval.id), overlay.confirmed);
   }
 
-  return placeApproval(
-    { ...state, freshness: markLocal(state.freshness, approvalKey(shown.id)) },
-    before,
-  );
+  return applyApproval(state, approval);
 }
 
 /** `approval.updated`: the request with its agent's and decider's users. */
