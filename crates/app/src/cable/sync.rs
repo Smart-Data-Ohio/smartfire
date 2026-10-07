@@ -129,6 +129,14 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
     ("activity_item::ActivityItemTouched", &["activity.item"]),
+    (
+        "room_category::SidebarOrganized",
+        &[
+            "sidebar.row.upserted",
+            "sidebar.category.upserted",
+            "sidebar.category.removed",
+        ],
+    ),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
@@ -195,8 +203,6 @@ pub const NOT_YET_TWINNED: &[&str] = &[
 /// their endpoints and twins come with the S3 and S4 server work). The coverage test fails when an
 /// event is in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
-    "sidebar.category.upserted",
-    "sidebar.category.removed",
     "poll.updated",
     "poll.ballot",
     "message.cards",
@@ -858,6 +864,84 @@ pub fn sidebar_rows_later(
             return;
         };
         sidebar_rows(&server, &slot, conn, &room, user_ids.as_deref());
+    }));
+}
+
+/// A change to a person's sidebar organisation, read afresh later and published in order: each
+/// membership's `sidebar.row.upserted` (none for a hidden room, which has no row), each
+/// category's `sidebar.category.upserted`, then `sidebar.category.removed`. Only the person's own
+/// connections get them; without one, their next resume refetches.
+pub fn organized_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    change: campfire_db::models::room_category::SidebarOrganized,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let user_id = change.user_id;
+    if !server.sync_connected(user_id) {
+        server.sync_skipped_for(user_id);
+        return;
+    }
+    let server = server.downgrade();
+    let job_renderer = renderer.clone();
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        for membership_id in change.membership_ids {
+            let found = match Membership::find(conn, membership_id) {
+                Ok(membership) if membership.user_id == user_id => membership,
+                Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => continue,
+                Err(error) => {
+                    tracing::warn!(%error, membership_id, "sync: organised row not read");
+                    continue;
+                }
+            };
+            let row = found
+                .room(conn)
+                .and_then(|room| job_renderer.sidebar_row(conn, &room, &found));
+            match row {
+                Ok(Some(row)) => send(
+                    &server,
+                    Audience::User(user_id),
+                    &SyncPayload::SidebarRowUpserted(row),
+                    |publication| publication,
+                ),
+                Ok(None) => {}
+                Err(error) => {
+                    tracing::warn!(%error, membership_id, "sync: organised row not rendered");
+                }
+            }
+        }
+        for category_id in change.category_ids {
+            match campfire_db::RoomCategory::find_by_id(conn, category_id) {
+                Ok(Some(category)) if category.user_id == user_id => send(
+                    &server,
+                    Audience::User(user_id),
+                    &SyncPayload::SidebarCategoryUpserted(campfire_api_types::RoomCategory {
+                        id: category.id,
+                        name: category.name,
+                        collapsed: category.collapsed,
+                        position: category.position,
+                    }),
+                    |publication| publication,
+                ),
+                Ok(_) => {}
+                Err(error) => tracing::warn!(%error, category_id, "sync: category not read"),
+            }
+        }
+        if let Some(id) = change.removed_category_id {
+            send(
+                &server,
+                Audience::User(user_id),
+                &SyncPayload::SidebarCategoryRemoved(campfire_api_types::RoomCategoryRemoved {
+                    id,
+                }),
+                |publication| publication,
+            );
+        }
     }));
 }
 

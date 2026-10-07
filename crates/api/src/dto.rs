@@ -685,6 +685,16 @@ pub fn sidebar_row(
     if !visible(room, membership) {
         return Ok(None);
     }
+    membership_row(conn, room, membership).map(Some)
+}
+
+/// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
+/// answer to an organising call on a hidden room.
+pub fn membership_row(
+    conn: &Connection,
+    room: &Room,
+    membership: &Membership,
+) -> Result<api::SidebarRow> {
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
         Some(members(conn, room.id)?)
@@ -703,7 +713,6 @@ pub fn sidebar_row(
         members.as_deref(),
         mentions,
     )
-    .map(Some)
 }
 
 pub fn sidebar(
@@ -741,12 +750,7 @@ pub fn sidebar(
     user_ids.extend(placeholders.iter().copied());
     let categories = campfire_db::RoomCategory::ordered_for_user(conn, viewer.id)?
         .into_iter()
-        .map(|category| api::RoomCategory {
-            id: category.id,
-            name: category.name,
-            collapsed: category.collapsed,
-            position: category.position,
-        })
+        .map(room_category)
         .collect();
     Ok(api::Sidebar {
         rows,
@@ -755,6 +759,15 @@ pub fn sidebar(
         direct_placeholder_user_ids: placeholders,
         can_create_rooms,
     })
+}
+
+pub fn room_category(category: campfire_db::RoomCategory) -> api::RoomCategory {
+    api::RoomCategory {
+        id: category.id,
+        name: category.name,
+        collapsed: category.collapsed,
+        position: category.position,
+    }
 }
 
 pub fn room_detail(

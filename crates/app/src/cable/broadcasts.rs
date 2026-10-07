@@ -229,6 +229,12 @@ impl Broadcasts {
         sync::scheduled_later(&self.server, &self.sync, change);
     }
 
+    /// `sidebar.row.upserted`, `sidebar.category.upserted` and `sidebar.category.removed` for a
+    /// change to a person's sidebar organisation.
+    pub fn sync_organized(&self, change: campfire_db::models::room_category::SidebarOrganized) {
+        sync::organized_later(&self.server, &self.sync, change);
+    }
+
     /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
     /// broadcast point outside this type replaced (its members or name changed).
     pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {

@@ -362,8 +362,19 @@ impl Membership {
         if self.room_category_id != category_id {
             tx.conn().execute_cached("UPDATE memberships SET room_category_id = ?, updated_at = ? WHERE id = ?", params![category_id, tx.now(), self.id])?;
             self.reload(tx.conn())?;
+            self.emit_organized(tx, vec![self.id]);
         }
         Ok(())
+    }
+
+    /// `sidebar.row.upserted` for these memberships of this person, after commit.
+    fn emit_organized(&self, tx: &mut Tx<'_>, membership_ids: Vec<i64>) {
+        crate::models::room_category::SidebarOrganized {
+            user_id: self.user_id,
+            membership_ids,
+            ..Default::default()
+        }
+        .emit(tx);
     }
 
     pub fn favorited(&self) -> bool { self.favorite_position.is_some() }
@@ -387,19 +398,69 @@ impl Membership {
         if self.favorite_position != position {
             tx.conn().execute_cached("UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?", params![position, tx.now(), self.id])?;
             self.reload(tx.conn())?;
+            self.emit_organized(tx, vec![self.id]);
         }
         Ok(())
     }
 
-    /// `move_favorite_to`: clamp to 0..other favorites, insert, compact; bulk updates stamp
-    /// every favorite's updated_at and bypass callbacks, exactly like Rails' update_all.
+    /// `move_favorite_to`, with `position` counting the favourites the sidebar shows (as both
+    /// the classic drag and the single-page app count them), not hidden (`invisible`) ones or
+    /// ones in deleted rooms. The
+    /// room lands just before the shown favourite now at `position` (clamped at 0), or after
+    /// every favourite past the end; hidden ones keep their places. Every favourite is then
+    /// numbered 0, 1, …, and bulk updates stamp every favorite's updated_at and bypass
+    /// callbacks, exactly like Rails' update_all.
+    ///
+    /// New: Rails inserts `position` among all favourites, hidden ones included, so a drop
+    /// with a hidden favourite ahead of it lands a place off. A classic bug fix.
     pub fn move_favorite_to(&mut self, tx: &mut Tx<'_>, position: i64) -> Result<()> {
         if !self.favorited() { return Ok(()); }
-        let mut ids: Vec<_> = Self::favorites_for_user(tx.conn(), self.user_id)?.into_iter().map(|m| m.id).filter(|id| *id != self.id).collect();
-        ids.insert(position.clamp(0, ids.len() as i64) as usize, self.id);
+        let favorites = Self::favorites_for_user(tx.conn(), self.user_id)?;
+        let mut ids: Vec<_> = favorites
+            .iter()
+            .map(|m| m.id)
+            .filter(|id| *id != self.id)
+            .collect();
+        // What `visible_with_ordered_room` shows: rooms not deleted, and `involvement !=
+        // 'invisible'`, which leaves out NULL too.
+        let shown: Vec<i64> = query_all(
+            tx.conn(),
+            r#"SELECT "memberships"."id" FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."favorite_position" IS NOT NULL AND "memberships"."involvement" != 'invisible' AND "memberships"."id" != ? ORDER BY "memberships"."favorite_position", "memberships"."id""#,
+            params![self.user_id, self.id],
+            |row| row.get(0),
+        )?;
+        let at = usize::try_from(position.max(0)).unwrap_or(usize::MAX);
+        let index = match shown.get(at) {
+            Some(before) => ids.iter().position(|id| id == before).unwrap_or(ids.len()),
+            None => ids.len(),
+        };
+        ids.insert(index, self.id);
+        self.renumber_favorites(tx, &favorites, ids)
+    }
+
+    /// Numbers the favourites `ids` 0, 1, … (stamping each, like Rails' update_all), and
+    /// publishes the rows whose place changed.
+    fn renumber_favorites(
+        &mut self,
+        tx: &mut Tx<'_>,
+        before: &[Self],
+        ids: Vec<i64>,
+    ) -> Result<()> {
+        let mut moved = Vec::new();
         for (position, id) in ids.into_iter().enumerate() {
-            tx.conn().execute_cached("UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?", params![position as i64, tx.now(), id])?;
+            let position = position as i64;
+            tx.conn().execute_cached(
+                "UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?",
+                params![position, tx.now(), id],
+            )?;
+            if before
+                .iter()
+                .any(|m| m.id == id && m.favorite_position != Some(position))
+            {
+                moved.push(id);
+            }
         }
+        self.emit_organized(tx, moved);
         self.reload(tx.conn())
     }
 

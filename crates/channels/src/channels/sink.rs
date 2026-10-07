@@ -53,6 +53,13 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::scheduled_message::ScheduledMessageChange::KIND => decode(request).map(|change| {
             if let Some(app) = app { app.broadcasts.sync_scheduled(change); }
         }),
+        campfire_db::models::room_category::SidebarOrganized::KIND => {
+            decode(request).map(|change| {
+                if let Some(app) = app {
+                    app.broadcasts.sync_organized(change);
+                }
+            })
+        }
         campfire_db::models::activity_item::ActivityItemTouched::KIND => decode::<
             campfire_db::models::activity_item::ActivityItemTouched,
         >(request)

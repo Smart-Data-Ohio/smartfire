@@ -26,6 +26,7 @@ pub mod endpoints;
 mod error;
 pub mod huddles;
 pub mod message_actions;
+pub mod organize;
 pub mod search;
 pub mod stage;
 pub mod sync;
@@ -112,6 +113,33 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/saved/{saved_id}",
             patch(unparsed_action(message_actions::update_saved))
                 .delete(action(message_actions::unsave)),
+        )
+        .route(
+            "/api/v1/room_categories",
+            post(unparsed_action(organize::create_category)),
+        )
+        .route(
+            "/api/v1/room_categories/order",
+            put(unparsed_action(organize::order_categories)),
+        )
+        .route(
+            "/api/v1/room_categories/{category_id}",
+            patch(unparsed_action(organize::update_category))
+                .delete(action(organize::destroy_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/category",
+            put(unparsed_action(organize::assign_category)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/favorite",
+            post(action(organize::favorite))
+                .patch(unparsed_action(organize::move_favorite))
+                .delete(action(organize::unfavorite)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/involvement",
+            put(unparsed_action(organize::involvement)),
         )
         .route("/api/v1/search", get(action(search::index)))
         .route(

@@ -36,3 +36,6 @@ mod huddle_tests;
 #[cfg(test)]
 #[path = "spa_api_search_tests.rs"]
 mod api_search_tests;
+#[cfg(test)]
+#[path = "spa_api_organize_tests.rs"]
+mod api_organize_tests;

@@ -1274,3 +1274,54 @@ async fn deleting_an_agent_takes_its_budget_notices_out_of_the_inbox() {
     assert_eq!(count.unread_count, listed.unread_count);
     server.abort();
 }
+
+#[tokio::test]
+async fn deactivating_an_agent_takes_its_approvals_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let (approval, notice) = agent_sources(&a, DAVID).await;
+    let approval_item = item(
+        &a,
+        DAVID,
+        ("AgentApproval", approval),
+        "agent_approval_request",
+        5,
+    )
+    .await;
+    let notice_item = item(
+        &a,
+        DAVID,
+        ("AgentBudgetNotice", notice),
+        "agent_budget_exceeded",
+        6,
+    )
+    .await;
+    a.db()
+        .write(move |tx| {
+            let agent_user: i64 = tx.conn().query_row(
+                "SELECT g.user_id FROM agents g JOIN agent_approvals p ON p.agent_id = g.id WHERE p.id = ?",
+                [approval],
+                |row| row.get(0),
+            )?;
+            campfire_db::User::find(tx.conn(), agent_user)?.deactivate(tx)
+        })
+        .await
+        .unwrap();
+    // `accessible_to` shows an approval only while its agent's user is active; a budget notice
+    // stays.
+    sync.until(
+        activity_removed(approval_item),
+        activity_removed(notice_item),
+    )
+    .await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    let ids: Vec<i64> = listed.items.iter().map(|item| item.id).collect();
+    assert!(
+        !ids.contains(&approval_item) && ids.contains(&notice_item),
+        "{ids:?}"
+    );
+    server.abort();
+}
