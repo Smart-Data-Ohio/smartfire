@@ -1,0 +1,7 @@
+{% import "auth/_macros.html" as auth %}
+{#- accounts/_help_contact in the SPA's look: the first administrator's address and the version. -#}
+{% if let Some(owner) = help_contact %}<div class="auth-help">
+  {% filter link_to("mailto:\"" ~ owner.name ~ "\" <" ~ owner.email_address ~ ">", h::attrs().title("Email " ~ owner.name)) %}{% call auth::life_buoy() %}<span>{{ owner.email_address }}</span>{% endfilter %}
+  <span>Smartfire&trade; version {{ h::version_badge(ctx) }}</span>
+</div>
+{% endif %}

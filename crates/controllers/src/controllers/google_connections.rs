@@ -28,8 +28,11 @@ fn scalar(c: &Ctx, key: &str) -> String {
         .unwrap_or_default()
 }
 fn redirect(c: &mut Ctx, message: &str, notice: bool) -> Result {
+    redirect_to(c, "/users/me/profile", message, notice)
+}
+fn redirect_to(c: &mut Ctx, path: &str, message: &str, notice: bool) -> Result {
     c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
+        &c.url_for(path),
         Redirect {
             notice: notice.then(|| message.into()),
             alert: (!notice).then(|| message.into()),
@@ -63,6 +66,16 @@ pub async fn connect(c: &mut Ctx) -> Result {
         },
     )
 }
+/// Where the consent screen's outcome lands: the SPA's integrations settings for someone who uses
+/// the new UI (its flash becomes a toast there), else the classic profile.
+async fn callback_redirect(c: &mut Ctx, message: &str, notice: bool) -> Result {
+    let next = match concerns::current_user(c).cloned() {
+        Some(user) => concerns::next_ui(c, &user).await?,
+        None => false,
+    };
+    let path = if next { "/app/settings/integrations" } else { "/users/me/profile" };
+    redirect_to(c, path, message, notice)
+}
 pub async fn callback(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     configured(c)?;
@@ -75,10 +88,10 @@ pub async fn callback(c: &mut Ctx) -> Result {
         _ => false,
     };
     if !valid {
-        return redirect(c, "Google connection expired. Try again.", false);
+        return callback_redirect(c, "Google connection expired. Try again.", false).await;
     }
     if c.params.get("error").is_some_and(|p| p.is_present()) {
-        return redirect(c, "Google Calendar connection was not approved.", false);
+        return callback_redirect(c, "Google Calendar connection was not approved.", false).await;
     }
     let api = c.app().google.api();
     let result = async {
@@ -115,16 +128,17 @@ pub async fn callback(c: &mut Ctx) -> Result {
     }
     .await;
     match result {
-        Ok(true) => redirect(c, "Google Calendar connected.", true),
-        Ok(false) => redirect(
+        Ok(true) => callback_redirect(c, "Google Calendar connected.", true).await,
+        Ok(false) => callback_redirect(
             c,
             "Calendar permission was not granted. Reconnect to publish events.",
             false,
-        ),
+        )
+        .await,
         Err(api::Error::Storage(e)) => Err(Error::internal(e)),
         Err(e) => {
             tracing::warn!("Google OAuth callback failed: {}", e.class());
-            redirect(c, "Could not connect Google Calendar. Try again.", false)
+            callback_redirect(c, "Could not connect Google Calendar. Try again.", false).await
         }
     }
 }

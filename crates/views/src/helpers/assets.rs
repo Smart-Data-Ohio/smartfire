@@ -35,3 +35,26 @@ pub fn image_tag(ctx: &ViewContext, source: impl std::fmt::Display, options: Att
     }
     legacy_tag("img", &options)
 }
+
+/// The standalone auth stylesheet, deliberately outside the classic stylesheet set.
+pub fn auth_stylesheet_tag() -> Html {
+    super::raw(format!("<link rel=\"stylesheet\" href=\"{}\">", campfire_assets::stylesheet_path("auth")))
+}
+
+/// A blocking same-origin script restores appearance before the page paints.
+pub fn auth_script_tag() -> Html {
+    super::raw(format!("<script src=\"{}\"></script>", campfire_assets::javascript_path("auth")))
+}
+
+/// The `id` of the auth layout's rejection message (its alert flash).
+pub const AUTH_ALERT_ID: &str = "auth-alert";
+
+/// A field the auth page's rejection is about: described by the alert and marked invalid while
+/// one shows; unchanged otherwise.
+pub fn rejected_field(ctx: &ViewContext, attrs: Attrs) -> Attrs {
+    if ctx.flash_alert().is_some() {
+        attrs.attr("aria-describedby", AUTH_ALERT_ID).attr("aria-invalid", "true")
+    } else {
+        attrs
+    }
+}

@@ -185,8 +185,12 @@ async fn ws11ui_casting_followups_sudo_replay_numeric_hidden_fields_match_rails(
                     .find("</form>")
                     .map(|end| body[start..start + end + 7].to_owned())
             });
-        let actual = json!({"challenge_status":challenged.status.as_u16(),"status":replay.status.as_u16(),"form":form});
-        let expected = json!({"challenge_status":case["challenge_status"],"status":case["status"],"form":case["form"]});
+        // The replayed form's contract (action, method, fields, values), not its markup.
+        let contract = |html: Option<&str>| {
+            format!("{:?}", crate::form_contracts::forms(html.unwrap_or_default()))
+        };
+        let actual = json!({"challenge_status":challenged.status.as_u16(),"status":replay.status.as_u16(),"form":contract(form.as_deref())});
+        let expected = json!({"challenge_status":case["challenge_status"],"status":case["status"],"form":contract(case["form"].as_str())});
         if actual != expected {
             failures.push(json!({"raw":raw,"actual":actual,"expected":expected}));
         }

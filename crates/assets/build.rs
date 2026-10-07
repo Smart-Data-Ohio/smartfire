@@ -2,6 +2,8 @@
 //! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
 //! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `web/`.
 
+#[path = "build/auth.rs"]
+mod auth;
 #[path = "build/importmap.rs"]
 mod importmap;
 #[path = "build/propshaft.rs"]
@@ -45,8 +47,10 @@ fn main() {
     println!("cargo:rerun-if-changed=build");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
 
+    let mut paths = load_path_dirs(&crate_dir, &rails_root);
+    paths.push(auth::prepare(&crate_dir, &out_dir));
     let load_path = propshaft::LoadPath::new(
-        &load_path_dirs(&crate_dir, &rails_root),
+        &paths,
         &assets_version(&rails_root),
         PREFIX,
     );
@@ -107,7 +111,7 @@ fn main() {
     for (index, _) in by_logical
         .iter()
         .enumerate()
-        .filter(|(_, e)| propshaft::extname(&e.0) == ".css")
+        .filter(|(_, e)| propshaft::extname(&e.0) == ".css" && e.0 != "auth.css")
     {
         writeln!(code, "    {:?},", by_logical[index].0).unwrap();
     }

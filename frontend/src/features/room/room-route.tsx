@@ -8,7 +8,7 @@ import { Composer } from "../composer/composer.tsx";
 import { JoinBanner } from "../huddle/call-alerts.tsx";
 import { CallView } from "../huddle/call-view.tsx";
 import { RightPane } from "../panes/right-pane.tsx";
-import { usePhoneLayout, useRightPaneView } from "../panes/use-right-pane.ts";
+import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes/use-right-pane.ts";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
@@ -23,6 +23,8 @@ export function RoomRoute() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? 0;
   const focusMessageId = params.messageId ?? null;
+
+  useRoomPaneLifecycle(roomId);
 
   useEffect(() => {
     void actions.openRoom(roomId, focusMessageId);

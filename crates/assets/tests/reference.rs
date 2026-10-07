@@ -55,7 +55,9 @@ fn overridden() -> BTreeMap<String, (String, String)> {
 /// Logical paths the overrides add, which the reference doesn't have at all.
 fn added() -> Vec<String> {
     let reference = json_fixture("manifest.json");
-    override_files().into_iter().filter(|logical| reference.get(logical).is_none()).collect()
+    let mut files = override_files().into_iter().filter(|logical| reference.get(logical).is_none()).collect::<Vec<_>>();
+    files.extend(["auth.css", "auth.js", "fonts/inter-latin-var.woff2", "fonts/inter-latin-var-italic.woff2", "fonts/jetbrains-mono-latin-var.woff2"].into_iter().map(str::to_owned));
+    files
 }
 
 fn collect_files(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {

@@ -1,0 +1,25 @@
+{% import "auth/_macros.html" as auth %}<!DOCTYPE html>
+<html lang="en" data-theme="{{ h::user_theme(ctx) }}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="color-scheme" content="{{ h::theme_color_scheme_meta_content(ctx) }}">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+    {{ h::csrf_meta_tags() }}
+    {{ h::csp_meta_tag() }}
+    {{ h::current_user_meta_tags(ctx) }}
+    {{ h::page_title_tag(self.page_title().as_deref()) }}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "icon").attr("href", ctx.account.logo_url.as_str()).type_("image/png")) }}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "apple-touch-icon").attr("href", ctx.account.logo_url.as_str())) }}
+    {{ h::auth_stylesheet_tag() }}
+    {{ h::auth_script_tag() }}
+    {{ h::custom_styles_tag(ctx) }}
+    {% block head %}{% endblock %}
+  </head>
+  <body class="auth">
+{% if let Some(notice) = ctx.flash_notice() %}    <div class="auth-flash" data-tone="success" role="status"><span class="auth-flash-icon">{% call auth::check() %}</span><span>{{ notice }}</span></div>
+{% else if let Some(alert) = ctx.flash_alert() %}    <div class="auth-flash" id="{{ h::AUTH_ALERT_ID }}" data-tone="danger" role="alert"><span class="auth-flash-icon">{% call auth::circle_alert() %}</span><span>{{ alert }}</span></div>
+{% endif %}    {% block content %}{% endblock %}
+  </body>
+</html>

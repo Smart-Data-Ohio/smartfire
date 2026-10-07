@@ -1,5 +1,9 @@
 //! The Campfire server: controllers, channels, jobs and integrations wired over the crates.
 
+#[cfg(test)]
+#[path = "../../../test-support/form_contracts.rs"]
+mod form_contracts;
+
 mod admin;
 mod channels;
 mod controllers;
@@ -55,6 +59,8 @@ mod app {
     mod admin_two_factor_tests;
     #[cfg(test)]
     mod full_page_tests;
+    #[cfg(test)]
+    mod auth_page_fixture_tests;
     #[cfg(test)]
     mod profile_security_tests;
     #[cfg(test)]

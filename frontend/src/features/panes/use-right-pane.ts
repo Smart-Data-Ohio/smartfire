@@ -3,23 +3,53 @@ import { useEffect, useState } from "react";
 import {
   closeStep,
   isPaneShowing,
+  paneRoute,
   type RightPaneView,
   selectRightPaneView,
 } from "./pane-selection.ts";
-import { openPane, type PaneKind, togglePane, useOpenPane } from "./pane-store.ts";
+import {
+  clearRoutePane,
+  openPane,
+  openRoutePane,
+  type PaneKind,
+  type RoutePaneKind,
+  togglePane,
+  useOpenPane,
+  useRoutePaneReturn,
+} from "./pane-store.ts";
+
+/** Which classic side-pane page is currently in the URL. */
+function useRoutePane(): RoutePaneKind | null {
+  const matchRoute = useMatchRoute();
+
+  if (matchRoute({ to: "/r/$roomId/threads" }) !== false) {
+    return "threads";
+  }
+
+  if (matchRoute({ to: "/r/$roomId/files" }) !== false) {
+    return "files";
+  }
+
+  return matchRoute({ to: "/r/$roomId/pins" }) === false ? null : "pins";
+}
 
 /** What the right pane shows now: the thread or draft in the URL, else the open side pane. */
 export function useRightPaneView(): RightPaneView | null {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const matchRoute = useMatchRoute();
-  const pane = useOpenPane();
+  const pane = useOpenPane(params.roomId ?? 0);
+  const routePane = useRoutePane();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+  // The notification URL is the room with its header menu open, never under a side pane. Read
+  // at render, so the conversation is not inert when the menu mounts and takes focus.
+  const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   return selectRightPaneView({
     threadId: params.threadId ?? null,
     newThreadParent: drafting ? (search.parent ?? null) : null,
-    openPane: pane,
+    routePane,
+    openPane: notifying ? null : pane,
   });
 }
 
@@ -35,10 +65,41 @@ export interface PaneNavigation {
   readonly toggle: (pane: PaneKind) => void;
 }
 
+/** The persistent room owns URL pane memory; nested pane bodies only navigate. */
+export function useRoomPaneLifecycle(roomId: number): void {
+  const routePane = useRoutePane();
+  const params = useParams({ strict: false });
+  const matchRoute = useMatchRoute();
+  const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+  const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
+
+  // Browser Back and room changes must not leave a URL pane as a local pane on the base room.
+  useEffect(() => {
+    if (routePane !== null) {
+      openRoutePane(roomId, routePane);
+    } else if (params.threadId === undefined && !drafting) {
+      clearRoutePane();
+    }
+  }, [params.threadId, drafting, routePane, roomId]);
+
+  // A side pane left open locally (say, opened after Escape and before Back) is hidden at once
+  // on the notification URL (see useRightPaneView); this forgets it, so it doesn't reappear when
+  // the menu closes.
+  useEffect(() => {
+    if (notifying) {
+      openPane(null);
+    }
+  }, [notifying]);
+
+  useEffect(() => () => clearRoutePane(roomId), [roomId]);
+}
+
 /** The right pane's navigation for one room. */
 export function usePaneNavigation(roomId: number): PaneNavigation {
   const navigate = useNavigate();
   const view = useRightPaneView();
+  const routePane = useRoutePane();
+  const returnPane = useRoutePaneReturn(roomId);
 
   const leaveThread = () => {
     void navigate({ to: "/r/$roomId", params: { roomId } });
@@ -47,6 +108,10 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
   return {
     view,
     openThread: (threadId, options) => {
+      if (routePane !== null) {
+        openRoutePane(roomId, routePane);
+      }
+
       void navigate({
         to: "/r/$roomId/t/$threadId",
         params: { roomId, threadId },
@@ -57,19 +122,52 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       const step = closeStep(view);
 
       if (step === "leave-thread") {
-        leaveThread();
+        if (returnPane === null) {
+          leaveThread();
+        } else {
+          const to = paneRoute(returnPane);
+
+          if (to !== null) {
+            void navigate({ to, params: { roomId } });
+          }
+        }
       } else if (step === "close-pane") {
         openPane(null);
+
+        if (routePane !== null) {
+          leaveThread();
+        }
       }
     },
     closeAll: () => {
       openPane(null);
 
-      if (view !== null && view.kind !== "pane") {
+      if (routePane !== null || (view !== null && view.kind !== "pane")) {
         leaveThread();
       }
     },
     toggle: (pane) => {
+      if (routePane !== null) {
+        openPane(null);
+
+        if (isPaneShowing(view, pane)) {
+          leaveThread();
+
+          return;
+        }
+
+        const to = paneRoute(pane);
+
+        if (to === null) {
+          openPane(pane);
+          leaveThread();
+        } else {
+          void navigate({ to, params: { roomId } });
+        }
+
+        return;
+      }
+
       if (view !== null && view.kind !== "pane") {
         openPane(pane);
         leaveThread();

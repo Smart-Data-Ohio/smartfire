@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!tools/oxlint-anti-slop", "!src/gen"]
+    "includes": ["**", "!tools/oxlint-anti-slop", "!src/gen", "!e2e/fixtures/auth-pages"]
   },
   "formatter": {
     "indentStyle": "space",

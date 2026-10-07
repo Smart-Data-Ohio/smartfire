@@ -100,6 +100,22 @@ impl Page for Application<'_> {
     }
 }
 
+/// Minimal auth shell, also usable around detached page content.
+#[derive(Template)]
+#[template(path = "layouts/auth_wrapper.html")]
+pub struct Auth<'a> {
+    pub ctx: &'a crate::ViewContext<'a>,
+    pub page_title: Option<String>,
+    pub head: h::Html,
+    pub content: h::Html,
+}
+
+impl Page for Auth<'_> {
+    fn page_title(&self) -> Option<String> {
+        self.page_title.clone()
+    }
+}
+
 /// turbo-rails' `layouts/turbo_rails/frame.html.erb`, used instead of the application layout
 /// whenever a request carries a `Turbo-Frame` header. Pages expose their blocks for it through
 /// askama's `blocks = ["head", "content"]` (see [`frame`]).
