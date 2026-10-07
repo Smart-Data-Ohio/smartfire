@@ -49,12 +49,12 @@ interface DragOptions {
   readonly categories: readonly RoomCategory[];
   /** A drop on a real change: the item and where it goes. */
   readonly onDrop: (item: DragItem, target: DropTarget) => void;
+  /** Says what was picked up, where it is, where it went (the page's live region). */
+  readonly announce: (text: string) => void;
 }
 
 export interface SidebarDrag {
   readonly drag: DragState | null;
-  /** The live region's text: what was picked up, where it is, where it went. */
-  readonly announcement: string;
   /** The floating copy that follows the pointer; the sidebar renders it while dragging. */
   readonly ghostRef: RefObject<HTMLDivElement | null>;
   readonly onPointerDown: (event: ReactPointerEvent<HTMLElement>, item: DragItem) => void;
@@ -116,9 +116,9 @@ export function useSidebarDrag({
   sectionsRef,
   categories,
   onDrop,
+  announce,
 }: DragOptions): SidebarDrag {
   const [drag, setDrag] = useState<DragState | null>(null);
-  const [announcement, setAnnouncement] = useState("");
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const pointer = useRef({ x: 0, y: 0 });
 
@@ -349,7 +349,7 @@ export function useSidebarDrag({
 
     keyboard.current = { targets, index };
     setDrag({ item, target: first.target, mode: "keyboard" });
-    setAnnouncement(
+    announce(
       `Picked up ${nameOf(item)}, at ${first.label}. Up and down arrows move it, Enter drops it, Escape cancels.`,
     );
   };
@@ -365,7 +365,7 @@ export function useSidebarDrag({
 
     keyboard.current = { targets, index: next };
     setDrag((current) => (current === null ? current : { ...current, target: chosen.target }));
-    setAnnouncement(chosen.label);
+    announce(chosen.label);
   };
 
   const dropFromKeyboard = (item: DragItem) => {
@@ -374,7 +374,7 @@ export function useSidebarDrag({
 
     focusAfter.current = handleKey(item);
     finish();
-    setAnnouncement(
+    announce(
       moved && chosen !== undefined
         ? `Dropped ${nameOf(item)} at ${chosen.label}.`
         : `${nameOf(item)} stays where it was.`,
@@ -383,7 +383,7 @@ export function useSidebarDrag({
 
   const cancelKeyboard = (item: DragItem) => {
     finish();
-    setAnnouncement(`Cancelled. ${nameOf(item)} stays where it was.`);
+    announce(`Cancelled. ${nameOf(item)} stays where it was.`);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>, item: DragItem) => {
@@ -437,5 +437,5 @@ export function useSidebarDrag({
     }
   };
 
-  return { drag, announcement, ghostRef, onPointerDown, onKeyDown, onBlur };
+  return { drag, ghostRef, onPointerDown, onKeyDown, onBlur };
 }

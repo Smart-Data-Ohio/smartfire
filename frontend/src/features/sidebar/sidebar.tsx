@@ -21,6 +21,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -608,6 +609,8 @@ export function Sidebar() {
   const all = sidebarSections(sidebar);
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
+  // A keyboard drag's steps interrupt: each one answers the key just pressed.
+  const announcer = useAnnouncer("assertive");
 
   useEffect(() => commands.onBeforeOrganize(flip));
 
@@ -628,6 +631,7 @@ export function Sidebar() {
     sectionsRef: shownRef,
     categories,
     onDrop,
+    announce: announcer.announce,
   });
 
   const { drag } = dnd;
@@ -959,9 +963,7 @@ export function Sidebar() {
       <p id={hintId} className="visually-hidden">
         Space picks it up to move it; Shift F10 opens its menu.
       </p>
-      <div className="visually-hidden" aria-live="assertive" aria-atomic="true">
-        {dnd.announcement}
-      </div>
+      {announcer.region}
       {drag?.mode === "pointer" ? <DragGhost item={drag.item} ghostRef={dnd.ghostRef} /> : null}
       {menu !== null && menuRow !== undefined ? (
         <RoomContextMenu
