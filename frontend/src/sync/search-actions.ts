@@ -115,17 +115,21 @@ export const record = Effect.fn("search.record")(function* (query: string) {
 
   const searchedAt = new Date().toISOString();
 
-  const reply = yield* changeRecents((held) => {
-    const guess: RecentSearch = {
-      id: held.find((search) => search.query === key)?.id ?? -1,
-      query: key,
-      searchedAt,
-    };
+  // The server's list lands inside the lock, so a later change can't start from the guess.
+  yield* changeRecents(
+    (held) => {
+      const guess: RecentSearch = {
+        id: held.find((search) => search.query === key)?.id ?? -1,
+        query: key,
+        searchedAt,
+      };
 
-    return [guess, ...held.filter((search) => search.query !== key)].slice(0, 10);
-  }, api.recordSearch(key));
-
-  searchMutations.setRecents(reply.searches);
+      return [guess, ...held.filter((search) => search.query !== key)].slice(0, 10);
+    },
+    api
+      .recordSearch(key)
+      .pipe(Effect.tap((reply) => Effect.sync(() => searchMutations.setRecents(reply.searches)))),
+  );
 });
 
 /** Forgets every recent search: the list empties at once and comes back if the server refuses. */
