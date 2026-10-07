@@ -127,10 +127,10 @@ pub use search::{
 };
 pub use settings::{
     AppearanceSettings, CallSettings, Connection, DndAllowedPerson, GoogleIntegration, InboxSwitch,
-    IntegrationSettings, NotificationSettings, OooPreset, ProfileSettings, PushSubscriptionInfo,
-    PushSubscriptionList, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings,
-    TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile,
-    UpdateStatus,
+    IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
+    ProfileSettings, PushSubscriptionInfo, PushSubscriptionList, SessionInfo, SessionList, Settings,
+    StatusExpiry, StatusSettings, TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls,
+    UpdateNotifications, UpdateProfile, UpdateStatus,
 };
 pub use slack::{
     SaveSlackCredentials, SlackConnectionState, SlackConversation, SlackCounts, SlackDisconnected,

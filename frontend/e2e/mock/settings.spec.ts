@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, matrix, openApp, shot, test } from "./support.ts";
 
 /** Opens a settings section (`""` for the profile) with motion reduced. */
@@ -145,13 +145,227 @@ test("an out-of-office end in the past is refused in place", async ({ page }) =>
   await expect(page.getByText("Out of office needs a future date and time.")).toBeVisible();
 });
 
-test("integrations link to the classic page, which stays classic", async ({ page }) => {
+/** Lapses the password confirmation and stands in for the classic page that asks for it. */
+async function lapseSudo(page: Page, request: APIRequestContext) {
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
+  await page.route("**/sudo/new", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<h1>Confirm your password</h1>",
+    }),
+  );
+}
+
+/** The integrations page's group for `title`. */
+function group(page: Page, title: string) {
+  return page.getByRole("region", { name: title, exact: true });
+}
+
+test("a pasted Fizzy token connects, a refused one says why, and disconnect asks first", async ({
+  page,
+}) => {
   await openSettings(page, "integrations");
 
-  await expect(page.getByRole("link", { name: "Connect Fizzy" })).toHaveAttribute(
+  const fizzy = group(page, "Fizzy");
+  const token = fizzy.getByLabel("Fizzy personal access token");
+
+  await token.fill("bad-token");
+  await fizzy.getByRole("button", { name: "Connect Fizzy" }).click();
+  await expect(fizzy.getByText("Fizzy rejected that token. Check it and try again.")).toBeVisible();
+  await expect(token).toHaveAttribute("aria-invalid", "true");
+
+  await token.fill("fizzy-token");
+  await fizzy.getByRole("button", { name: "Connect Fizzy" }).click();
+  await expect(page.getByText("Fizzy connected as Riel (Smart Data).")).toBeVisible();
+  await expect(fizzy.getByText("Connected as Riel (Smart Data).")).toBeVisible();
+  // The form went away: focus lands on what replaced it.
+  await expect(fizzy.getByRole("button", { name: "Disconnect Fizzy" })).toBeFocused();
+
+  await fizzy.getByRole("button", { name: "Disconnect Fizzy" }).click();
+
+  const ask = page.getByRole("alertdialog", { name: "Disconnect Fizzy?" });
+
+  await expect(ask).toContainText("Card previews will stop working");
+  await ask.getByRole("button", { name: "Disconnect" }).click();
+  await expect(page.getByText("Fizzy disconnected.")).toBeVisible();
+  await expect(fizzy.getByRole("button", { name: "Connect Fizzy" })).toBeVisible();
+  await expect(token).toBeFocused();
+});
+
+test("disconnecting GitHub offers the app or a token, and frees the profile's username", async ({
+  page,
+}) => {
+  await openSettings(page, "integrations");
+
+  const github = group(page, "GitHub");
+
+  await github.getByRole("button", { name: "Disconnect GitHub" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Disconnect GitHub?" })
+    .getByRole("button", { name: "Disconnect" })
+    .click();
+  await expect(page.getByText("GitHub disconnected.")).toBeVisible();
+
+  await expect(github.getByRole("link", { name: "Connect with GitHub" })).toHaveAttribute(
     "href",
-    "/users/me/profile?classic=1#fizzy-connection-title",
+    "/github/app/connect",
   );
+  await expect(github.getByRole("link", { name: "Connect with GitHub" })).toBeFocused();
+  await github.getByText("Or paste a personal access token instead").click();
+  await github.getByLabel("GitHub personal access token").fill("github_pat_1");
+  await github.getByRole("button", { name: "Connect GitHub" }).click();
+  await expect(page.getByText("GitHub connected as riel.")).toBeVisible();
+  await expect(github.getByRole("button", { name: "Disconnect GitHub" })).toBeFocused();
+
+  await nav(page).getByRole("link", { name: "Profile" }).click();
+  await expect(page.getByLabel("GitHub username")).toBeDisabled();
+});
+
+test("Google starts are full page loads with the session's token", async ({ page }) => {
+  let posted: URLSearchParams | null = null;
+
+  await page.route("**/google/connect", async (route) => {
+    posted = new URLSearchParams(route.request().postData() ?? "");
+    await route.fulfill({ status: 200, contentType: "text/html", body: "<p>to Google</p>" });
+  });
+  await openSettings(page, "integrations");
+
+  await group(page, "Google Calendar")
+    .getByRole("button", { name: "Enable Drive previews" })
+    .click();
+  await expect(page.getByText("to Google")).toBeVisible();
+  expect(posted && [...posted]).toEqual([
+    ["features[]", "drive"],
+    ["authenticity_token", expect.any(String)],
+  ]);
+});
+
+test("disconnecting Google Calendar asks first and offers to connect again", async ({ page }) => {
+  await openSettings(page, "integrations");
+
+  const calendar = group(page, "Google Calendar");
+
+  await calendar.getByRole("button", { name: "Disconnect" }).click();
+  await expect(
+    page.getByRole("alertdialog", { name: "Disconnect Google Calendar?" }),
+  ).toContainText("Your published event entries will be removed.");
+  await page
+    .getByRole("alertdialog", { name: "Disconnect Google Calendar?" })
+    .getByRole("button", { name: "Disconnect" })
+    .click();
+  await expect(page.getByText("Google Calendar disconnected.")).toBeVisible();
+  await expect(calendar.getByRole("button", { name: "Connect Google Calendar" })).toBeFocused();
+});
+
+test("dropping Google Calendar ends a calendar out of office on the status page", async ({
+  page,
+}) => {
+  const until = new Date(Date.now() + 2 * 24 * 60 * 60_000).toISOString();
+  let calendarOoo = true;
+
+  // Until Google is dropped, loads show an out of office read from the calendar's meeting cache
+  // (every load: development mode loads the page twice).
+  await page.route("**/api/v1/settings", async (route) => {
+    if (!calendarOoo || route.request().method() !== "GET") {
+      await route.fallback();
+
+      return;
+    }
+
+    const response = await route.fetch();
+    const json = await response.json();
+
+    json.status = { ...json.status, oooCalendarEnabled: true, oooUntil: until, oooManual: false };
+    await route.fulfill({ response, json });
+  });
+  await openSettings(page, "status");
+  await expect(page.getByText(/from your Google Calendar\./)).toBeVisible();
+
+  await nav(page).getByRole("link", { name: "Integrations" }).click();
+  await group(page, "Google Calendar").getByRole("button", { name: "Disconnect" }).click();
+  calendarOoo = false;
+  await page
+    .getByRole("alertdialog", { name: "Disconnect Google Calendar?" })
+    .getByRole("button", { name: "Disconnect" })
+    .click();
+  await expect(page.getByText("Google Calendar disconnected.")).toBeVisible();
+
+  await nav(page).getByRole("link", { name: "Status" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Status" })).toBeVisible();
+  await expect(page.getByText(/from your Google Calendar\./)).toBeHidden();
+});
+
+test("a slow reload from an earlier change never undoes a later one", async ({ page }) => {
+  await openSettings(page, "integrations");
+
+  const github = group(page, "GitHub");
+  const held = Promise.withResolvers<void>();
+  let holding = true;
+  let heldReload = false;
+
+  // Answer the reload the disconnect starts (GitHub missing), but deliver it only after the
+  // reconnect has fully landed.
+  await page.route("**/api/v1/settings", async (route) => {
+    if (!holding || route.request().method() !== "GET") {
+      await route.fallback();
+
+      return;
+    }
+
+    holding = false;
+
+    const response = await route.fetch();
+
+    heldReload = true;
+    await held.promise;
+    await route.fulfill({ response });
+  });
+
+  await github.getByRole("button", { name: "Disconnect GitHub" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Disconnect GitHub?" })
+    .getByRole("button", { name: "Disconnect" })
+    .click();
+  await expect(page.getByText("GitHub disconnected.")).toBeVisible();
+  await expect.poll(() => heldReload).toBe(true);
+
+  const reload = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/settings") && response.request().method() === "GET",
+  );
+
+  await github.getByText("Or paste a personal access token instead").click();
+  await github.getByLabel("GitHub personal access token").fill("github_pat_1");
+  await github.getByRole("button", { name: "Connect GitHub" }).click();
+  await expect(page.getByText("GitHub connected as riel.")).toBeVisible();
+  await reload;
+
+  // The disconnect's reload (GitHub missing) lands last.
+  const stale = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/settings") && response.request().method() === "GET",
+  );
+
+  held.resolve();
+  await stale;
+  await expect(github.getByRole("button", { name: "Disconnect GitHub" })).toBeVisible();
+  await expect(github.getByText(/^Comments and reviews you post/)).toBeVisible();
+});
+
+test("a lapsed password confirmation goes to confirm it", async ({ page, request }) => {
+  await lapseSudo(page, request);
+  await openSettings(page, "integrations");
+
+  await group(page, "GitHub").getByRole("button", { name: "Disconnect GitHub" }).click();
+  await page
+    .getByRole("alertdialog", { name: "Disconnect GitHub?" })
+    .getByRole("button", { name: "Disconnect" })
+    .click();
+
+  await expect(page.getByRole("heading", { name: "Confirm your password" })).toBeVisible();
 });
 
 test("a theme the server refuses is put back", async ({ page }) => {

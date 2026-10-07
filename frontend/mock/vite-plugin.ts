@@ -10,7 +10,8 @@
  *   (Vite's HMR) is left alone.
  * - `/users/:id/avatar` answers with a picture for a couple of people and 404 for the rest, so
  *   the UI's initials fallback shows.
- * - The dev `index.html` gets `<meta name="csrf-token">` with the mock's current token.
+ * - The dev `index.html` gets `<meta name="csrf-param">` and `<meta name="csrf-token">` with the
+ *   mock's current token, as the Rust shell writes them.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Duplex } from "node:stream";
@@ -221,6 +222,11 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
       );
     },
     transformIndexHtml: () => [
+      {
+        tag: "meta",
+        attrs: { name: "csrf-param", content: "authenticity_token" },
+        injectTo: "head",
+      },
       {
         tag: "meta",
         attrs: { name: "csrf-token", content: current().csrfToken() },

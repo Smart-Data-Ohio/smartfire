@@ -2,6 +2,8 @@ import { describe, expect, it } from "@effect/vitest";
 import { DateTime, Schema } from "effect";
 import {
   Connection,
+  IntegrationChange,
+  IntegrationToken,
   PushSubscriptionList,
   SessionList,
   Settings,
@@ -97,6 +99,14 @@ describe("S7 settings schemas", () => {
     expect(settings.notifications.allowedPeople[0]?.name).toBe("Grace Hopper");
     roundTrips(Settings, settingsJson);
     roundTrips(Connection, { state: "missing" });
+  });
+
+  it("round-trip a connect and its answer", () => {
+    roundTrips(IntegrationToken, { accessToken: "github_pat_1" });
+    roundTrips(IntegrationChange, {
+      integrations: settingsJson.integrations,
+      notice: "GitHub connected as ada.",
+    });
   });
 
   it("round-trip the write bodies", () => {

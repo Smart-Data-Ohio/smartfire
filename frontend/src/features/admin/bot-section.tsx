@@ -621,10 +621,6 @@ export function BotSection() {
           </div>
         </SettingsGroup>
       ) : null}
-      <a className="settings-classic-link" href={`/account/bots/${bot.id}/edit?classic=1`}>
-        Fizzy and the rest on the classic page
-        <Icon name="external-link" size={14} />
-      </a>
       <Confirm ask={ask} onCancel={() => setAsk(null)} />
       <KeyDialog shown={key} onClose={() => setKey(null)} />
     </SettingsPage>
