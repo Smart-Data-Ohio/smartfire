@@ -243,13 +243,37 @@ impl SearchQuery {
                 has_more: false,
             });
         }
+        let key = match before {
+            Some(before) => {
+                let cursor = Message::find_reachable(conn, user, before)?;
+                Some((cursor.created_at, cursor.id))
+            }
+            None => None,
+        };
+        self.messages_for_user_after(conn, user, zone, key)
+    }
+    /// The single-page app's page: [`Self::messages_for_user`] starting strictly after the
+    /// `(created_at, id)` key `after` in `created_at DESC, id DESC` order, whether or not that
+    /// message still exists or is reachable.
+    pub fn messages_for_user_after(
+        &self,
+        conn: &Connection,
+        user: i64,
+        zone: TimeZone,
+        after: Option<(Timestamp, i64)>,
+    ) -> Result<SearchPage> {
+        if self.blank_query() {
+            return Ok(SearchPage {
+                messages: vec![],
+                has_more: false,
+            });
+        }
         let (mut sql, mut values) = self.sql(&zone)?;
         sql.push_str(" AND EXISTS (SELECT 1 FROM memberships mem WHERE mem.room_id=rooms.id AND mem.user_id=?)");
         values.push(user.into());
-        if let Some(before) = before {
-            let cursor = Message::find_reachable(conn, user, before)?;
+        if let Some((created_at, id)) = after {
             sql.push_str(" AND (messages.created_at,messages.id)<(?,?)");
-            values.extend([cursor.created_at.to_db().into(), cursor.id.into()]);
+            values.extend([created_at.to_db().into(), id.into()]);
         }
         sql.push_str(" ORDER BY messages.created_at DESC,messages.id DESC LIMIT ?");
         values.push((super::message::PAGE_SIZE + 1).into());

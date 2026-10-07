@@ -26,6 +26,7 @@ pub mod endpoints;
 mod error;
 pub mod huddles;
 pub mod message_actions;
+pub mod search;
 pub mod stage;
 pub mod sync;
 pub mod threads;
@@ -111,6 +112,13 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/saved/{saved_id}",
             patch(unparsed_action(message_actions::update_saved))
                 .delete(action(message_actions::unsave)),
+        )
+        .route("/api/v1/search", get(action(search::index)))
+        .route(
+            "/api/v1/search/recents",
+            get(action(search::recents))
+                .post(unparsed_action(search::record))
+                .delete(action(search::clear)),
         )
         .route("/api/v1/activity", get(action(activity::index)))
         .route(
