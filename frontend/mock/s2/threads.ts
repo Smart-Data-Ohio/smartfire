@@ -92,6 +92,12 @@ export function createThreads(
       canLock: moderates && status !== "locked",
       canUnlock: moderates && status === "locked",
       canDelete: moderates,
+      // No mock thread is tracked as work yet.
+      canConvertWork: false,
+      canManageWork: false,
+      canUpdateWorkStatus: false,
+      canAssignWork: false,
+      canRemoveWork: false,
     };
   };
 
@@ -111,6 +117,7 @@ export function createThreads(
       membership: thread.viewerMembership,
       parentMessage: parent,
       permissions: permissions(thread),
+      work: null,
       users: ctx.usersFor([thread.creatorId, ...(parent === null ? [] : [parent.creatorId])]),
     };
   };
