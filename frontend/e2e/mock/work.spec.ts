@@ -221,7 +221,11 @@ test("a reply indicator carries the thread's work", async ({ page }) => {
   const work = page.locator(".thread-indicator-work").first();
 
   await expect(work.locator(".work-status")).toBeVisible();
-  await work.scrollIntoViewIfNeeded();
+  // The list remeasures rows (cards, polls) after the jump and may remount this one meanwhile.
+  await expect(async () => {
+    await work.scrollIntoViewIfNeeded({ timeout: 1000 });
+    await expect(work).toBeInViewport({ timeout: 500 });
+  }).toPass();
   await page.mouse.move(0, 0);
   await shot(page, "work-indicator", "light");
 });
