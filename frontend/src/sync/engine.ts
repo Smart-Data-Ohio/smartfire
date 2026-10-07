@@ -20,7 +20,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
-import { loadUnreadCount } from "./activity-actions.ts";
+import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
@@ -214,6 +214,7 @@ export class Engine extends Context.Service<
       /** The badge from the server; a failure keeps the count shown. */
       const refreshUnreadCount = (through?: number) =>
         loadUnreadCount().pipe(
+          Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
           Effect.tap(() =>
             through === undefined ? Effect.void : Ref.set(activitySnapshotThrough, through),
           ),

@@ -49,7 +49,7 @@ interface PendingUnread {
   readonly removed: boolean;
   /** A snapshot at this revision or later includes the change. */
   readonly coveredAtRevision: number | null;
-  /** A successful reply can finish before the shared count covers every adjustment. */
+  /** A request can finish before the shared count covers its confirmed adjustment. */
   readonly settled: boolean;
   readonly before: ActivityItem;
   readonly optimistic: ActivityItem;
@@ -590,16 +590,17 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
   const removed = change?.removed ?? false;
   const { [end.token]: _done, ...others } = state.activity.pendingUnread;
   let pendingUnread = others;
+  const coveredAtRevision = end.unread?.unreadRevision ?? change?.coveredAtRevision ?? null;
 
-  if (change !== undefined && end.unread !== null && change.delta !== 0) {
+  if (change !== undefined && coveredAtRevision !== null && change.delta !== 0) {
     pendingUnread = {
       ...others,
       [end.token]: {
         ...change,
         settled: true,
         coveredAtRevision: Math.min(
-          change.coveredAtRevision ?? Infinity,
-          end.unread.unreadRevision,
+          change.coveredAtRevision ?? coveredAtRevision,
+          coveredAtRevision,
         ),
       },
     };

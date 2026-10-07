@@ -93,8 +93,8 @@ const serial = keyedSerial<number>();
 /** Tells the changes on their way apart in the badge. */
 let nextToken = 0;
 
-/** An unanswered mutation must not hold the badge or the item's request lock indefinitely. */
-const SERVER_TIMEOUT = "15 seconds";
+/** An unanswered request must not hold the badge, an item lock or sync frames indefinitely. */
+export const ACTIVITY_REQUEST_TIMEOUT = "15 seconds";
 
 const stalled = (generation: number) =>
   Effect.gen(function* () {
@@ -102,7 +102,7 @@ const stalled = (generation: number) =>
       mutations.beginActivityGeneration(false);
       yield* Effect.forkDetach(
         loadUnreadCount().pipe(
-          Effect.timeout(SERVER_TIMEOUT),
+          Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
           Effect.catch((error) => Effect.logWarning("activity count refresh failed", error)),
         ),
       );
@@ -115,8 +115,8 @@ const stalled = (generation: number) =>
 
 /**
  * Applies `action` here at once (the item moves lists, the badge follows), then on the server,
- * whose reply settles the change while preserving newer server values. A refusal puts the item
- * back unless something newer replaced it meanwhile, and takes the change out of the badge.
+ * whose reply settles the change while preserving newer server values. A refusal drops an
+ * unconfirmed adjustment; confirmed adjustments stay until the displayed count includes them.
  */
 const change = (
   activityItemId: number,
@@ -141,10 +141,12 @@ const change = (
         }
       }
 
-      // A failure, or an interruption whose outcome is unknown, rolls back; the next event or
-      // reply corrects it if the server did take it.
+      // A failure or interruption removes only unconfirmed badge adjustments.
       const reply = yield* request(activityItemId).pipe(
-        Effect.timeoutOrElse({ duration: SERVER_TIMEOUT, orElse: () => stalled(generation) }),
+        Effect.timeoutOrElse({
+          duration: ACTIVITY_REQUEST_TIMEOUT,
+          orElse: () => stalled(generation),
+        }),
         Effect.onError(() =>
           Effect.sync(() =>
             mutations.endActivityChange({

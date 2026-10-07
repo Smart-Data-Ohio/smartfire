@@ -652,6 +652,67 @@ describe("activity actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  for (const outcome of ["failure", "interruption"] as const) {
+    for (const sameTime of [false, true]) {
+      it.effect(`retains a confirmed read after HTTP ${outcome} (same timestamp=${sameTime})`, () =>
+        Effect.gen(function* () {
+          seedInbox();
+          const fake = yield* FakeApi;
+          const firstStarted = yield* Deferred.make<void>();
+          const firstRelease = yield* Deferred.make<void>();
+          const secondStarted = yield* Deferred.make<void>();
+          const secondRelease = yield* Deferred.make<void>();
+          const read = item(3, sameTime ? 30 : 40, "read");
+
+          yield* fake.route("PATCH /activity/3", () =>
+            Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(firstRelease)),
+              Effect.andThen(refuse()),
+            ),
+          );
+          yield* fake.route("PATCH /activity/2", () =>
+            Deferred.succeed(secondStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(secondRelease)),
+              Effect.andThen(refuse()),
+            ),
+          );
+
+          expect(store.getState().activity.unreadCount).toBe(5);
+          const first = yield* Effect.forkChild(Effect.exit(activity.setState(3, "read")));
+
+          yield* Deferred.await(firstStarted);
+          expect(store.getState().activity.unreadCount).toBe(4);
+          const second = yield* Effect.forkChild(Effect.exit(activity.setState(2, "read")));
+
+          yield* Deferred.await(secondStarted);
+          expect(store.getState().activity.unreadCount).toBe(3);
+          mutations.applyActivityItem(read, { unreadCount: 4, unreadRevision: 2 });
+          expect(store.getState().activity.unreadCount).toBe(3);
+          expect(store.getState().activity.serverUnread?.unreadRevision).toBe(1);
+          expect(store.getState().activity.deferredUnread?.unreadRevision).toBe(2);
+
+          if (outcome === "failure") {
+            yield* Deferred.succeed(firstRelease, undefined);
+            expect((yield* Fiber.join(first))._tag).toBe("Failure");
+          } else {
+            yield* Fiber.interrupt(first);
+          }
+
+          expect(store.getState().activity.unreadCount).toBe(3);
+          expect(Object.values(store.getState().activity.pendingUnread)).toContainEqual(
+            expect.objectContaining({ itemId: 3, delta: -1, coveredAtRevision: 2, settled: true }),
+          );
+          yield* Deferred.succeed(secondRelease, undefined);
+          expect((yield* Fiber.join(second))._tag).toBe("Failure");
+          expect(store.getState().activity.unreadCount).toBe(4);
+          expect(store.getState().activity.items[2]?.state).toBe("unread");
+          expect(store.getState().activity.pendingUnread).toEqual({});
+          expect(store.getState().activity.deferredUnread).toBeNull();
+        }).pipe(Effect.provide(FakeApi.layerClient)),
+      );
+    }
+  }
+
   it.effect("absorbs an already-counted no-op read while another read is unresolved", () =>
     Effect.gen(function* () {
       seedInbox();

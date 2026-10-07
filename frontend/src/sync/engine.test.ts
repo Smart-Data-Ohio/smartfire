@@ -148,6 +148,134 @@ beforeEach(() => {
 });
 
 describe("reconnecting", () => {
+  it.effect("retains a confirmed read interrupted while the socket reconnects", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const firstStarted = yield* Deferred.make<void>();
+        const secondStarted = yield* Deferred.make<void>();
+        const secondRelease = yield* Deferred.make<void>();
+        const secondItem = { ...activityItem, id: 41 };
+
+        const read: ActivityItem = {
+          ...activityItem,
+          state: "read",
+          readAt: "2026-10-06T09:01:00Z",
+          updatedAt: "2026-10-06T09:01:00Z",
+        };
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        mutations.landActivityPage(
+          "all",
+          "unread",
+          {
+            items: [activityItem, secondItem],
+            users: [],
+            unreadCount: 5,
+            unreadRevision: 1,
+            nextCursor: null,
+          },
+          "replace",
+        );
+        yield* fake.route("PATCH /activity/40", () =>
+          Deferred.succeed(firstStarted, undefined).pipe(Effect.andThen(Effect.never)),
+        );
+        yield* fake.route("PATCH /activity/41", () =>
+          Deferred.succeed(secondStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(secondRelease)),
+            Effect.andThen(Effect.fail(new NetworkError({ message: "Connection lost" }))),
+          ),
+        );
+        const first = yield* Effect.forkChild(activity.setState(40, "read"));
+
+        yield* Deferred.await(firstStarted);
+        expect(store.getState().activity.unreadCount).toBe(4);
+        const second = yield* Effect.forkChild(Effect.exit(activity.setState(41, "read")));
+
+        yield* Deferred.await(secondStarted);
+        expect(store.getState().activity.unreadCount).toBe(3);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "activity.item",
+          data: { item: read, unreadCount: 4, unreadRevision: 2 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(3);
+        yield* socket.drop;
+        yield* Fiber.interrupt(first);
+        expect(store.getState().activity.unreadCount).toBe(3);
+        expect(store.getState().activity.items[40]).toEqual(read);
+
+        // The welcome abandons B's unconfirmed optimism and installs A's authoritative count.
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 4, unreadRevision: 2 });
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(11, true);
+        expect(store.getState().activity.unreadCount).toBe(4);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+        expect(store.getState().activity.items[40]).toEqual(read);
+        expect(store.getState().activity.items[41]).toBe(secondItem);
+        yield* Deferred.succeed(secondRelease, undefined);
+        expect((yield* Fiber.join(second))._tag).toBe("Failure");
+        expect(store.getState().activity.unreadCount).toBe(4);
+        expect(store.getState().activity.items[40]).toEqual(read);
+      }),
+    ),
+  );
+
+  it.effect("processes replay and live events after a reconnect count refresh times out", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const cancelled = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Effect.never),
+            Effect.ensuring(Deferred.succeed(cancelled, undefined)),
+          ),
+        );
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(11, true);
+        yield* Deferred.await(started);
+        yield* pushEvents(
+          {
+            seq: 11,
+            topic: "user",
+            type: "activity.item",
+            data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+          },
+          unreadEvent(12),
+        );
+        expect(store.getState().activity.unreadCount).toBe(5);
+        yield* TestClock.adjust("15 seconds");
+        yield* settle;
+        expect(store.getState().activity.unreadCount).toBe(6);
+        expect(store.getState().activity.items[40]).toEqual(activityItem);
+        expect(unreadCount(12)).toBe(1);
+        expect(yield* Deferred.isDone(cancelled)).toBe(true);
+        yield* pushEvents({
+          seq: 13,
+          topic: "user",
+          type: "activity.item",
+          data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(7);
+        expect(store.getState().activity.items[41]).toBeDefined();
+      }),
+    ),
+  );
+
   for (const resumed of [true, false]) {
     it.effect(`reconciles a stalled read on a same-epoch reconnect (resumed=${resumed})`, () =>
       withSync(
