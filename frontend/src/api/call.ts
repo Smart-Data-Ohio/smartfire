@@ -1,9 +1,18 @@
 import { Effect } from "effect";
+import { nextObservation, observeResponse } from "../lib/request-observation.ts";
 import { ApiClient, type ApiRequest, type ResponseDecoder } from "./client.ts";
 
 /** Runs one `/api/v1` request on the app's client. */
 export const call = <A>(request: ApiRequest, decode: ResponseDecoder<A>) =>
-  ApiClient.use((client) => client.execute(request, decode));
+  Effect.gen(function* () {
+    const observation = nextObservation();
+    const client = yield* ApiClient;
+    const response = yield* client.execute(request, decode);
+
+    observeResponse(response, observation);
+
+    return response;
+  });
 
 /** A `GET` with an optional query. */
 export const get = (path: string, query?: Readonly<Record<string, string>>): ApiRequest =>

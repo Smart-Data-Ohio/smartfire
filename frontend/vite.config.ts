@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
     server: { proxy: Object.fromEntries(proxy) },
     test: {
       include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts"],
+      maxWorkers: 4,
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.

@@ -101,7 +101,7 @@ export function peoplePagesOver(requests: PeopleRequests) {
         if (!overtaken(profile.user)) {
           landReadAllowance(userId, mark, profile.dndAllowed);
 
-          return profile;
+          return { ...profile, user: store.getState().users[userId] ?? profile.user };
         }
 
         if (signal?.aborted === true) throw new Error("The page was left");
@@ -127,7 +127,7 @@ export function peoplePagesOver(requests: PeopleRequests) {
 
       landReadAllowance(userId, mark, profile.dndAllowed);
 
-      return profile;
+      return { ...profile, user: store.getState().users[userId] ?? profile.user };
     },
 
     /**

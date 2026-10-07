@@ -13,6 +13,7 @@ import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
+import { nextObservation, observeResponse } from "../lib/request-observation.ts";
 import {
   applyApprovalUpdated,
   approvalListKey,
@@ -473,12 +474,11 @@ describe("server revisions on S4 records", () => {
 
   it("keeps an agent's confirmed badge when an unrelated page carries an older user copy", () => {
     landAgent(agentRow(0));
+    const page = { threads: [], users: [agentFixture(AGENT, "Refreshed name")] };
+
+    observeResponse(page, nextObservation());
     publishAgent(agentStatus(2, { status: "working", suspended: true }));
-    mutations.landWorkList(
-      "all",
-      { threads: [], users: [agentFixture(AGENT, "Refreshed name")] },
-      0,
-    );
+    mutations.landWorkList("all", page, 0);
 
     expect(store.getState().users[AGENT]).toMatchObject({
       name: "Refreshed name",

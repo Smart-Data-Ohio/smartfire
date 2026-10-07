@@ -15,6 +15,7 @@ import { threadFixture } from "../threads/test-fixtures.ts";
 export function agentFixture(id = 9, name = "Ember"): User {
   return {
     ...userFixture(id, name),
+    role: "bot",
     agent: { agentId: id, kind: "workspace", status: "idle", suspended: false },
   };
 }

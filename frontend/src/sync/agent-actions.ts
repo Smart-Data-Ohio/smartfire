@@ -5,7 +5,7 @@
  */
 import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
-import { directoryGeneration, profileOf } from "../store/agents.ts";
+import { captureAgentRead, directoryGeneration, profileOf } from "../store/agents.ts";
 import { mutations, store } from "../store/store.ts";
 
 /** Loads (or reloads) the directory; the rows shown stay while it reloads. */
@@ -13,9 +13,10 @@ export const loadDirectory = Effect.fn("agents.loadDirectory")(function* () {
   mutations.setAgentDirectoryLoading();
 
   const generation = directoryGeneration(store.getState());
+  const read = captureAgentRead(store.getState());
 
   yield* api.agentDirectory().pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.landAgentDirectory(page, generation))),
+    Effect.tap((page) => Effect.sync(() => mutations.landAgentDirectory(page, generation, read))),
     Effect.catch((error) =>
       Effect.sync(() => mutations.setAgentDirectoryFailed(error.message, generation)),
     ),
@@ -27,9 +28,12 @@ export const loadProfile = Effect.fn("agents.loadProfile")(function* (agentId: n
   mutations.setAgentProfileLoading(agentId);
 
   const generation = profileOf(store.getState(), agentId).generation;
+  const read = captureAgentRead(store.getState());
 
   yield* api.agentProfile(agentId).pipe(
-    Effect.tap((profile) => Effect.sync(() => mutations.landAgentProfile(profile, generation))),
+    Effect.tap((profile) =>
+      Effect.sync(() => mutations.landAgentProfile(profile, generation, read)),
+    ),
     Effect.catch((error) =>
       Effect.sync(() =>
         mutations.setAgentProfileFailed(
