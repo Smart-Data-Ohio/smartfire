@@ -138,7 +138,7 @@ pub struct Chrome {
     /// `service_worker_auto_register?`: true outside the test environment (the reference runs in
     /// production), or when the `enable_service_worker` cookie is present.
     pub service_worker_auto_register: bool,
-    /// The script chosen for this request, registered at scope `/` by either UI.
+    /// The script chosen for this request, in Turbo-refreshed head metadata, at scope `/`.
     pub service_worker_url: Option<String>,
     /// `Icons.client_icon_names` (the icons domain).
     pub brand_icon_names: Vec<String>,

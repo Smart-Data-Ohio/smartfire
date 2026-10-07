@@ -306,10 +306,9 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         let mut b = a.sign_in(DAVID).await;
         let classic = b.get("/users/me/profile?classic=1").await;
         assert_eq!(classic.status, StatusCode::OK, "{label}");
-        assert!(
-            classic
-                .text()
-                .contains(&format!("data-service-worker-url=\"{expected}\"")),
+        assert_eq!(
+            meta(&classic.text(), "service-worker-url").as_deref(),
+            Some(expected),
             "{label}"
         );
         assert!(
@@ -342,10 +341,9 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         };
         let signed_out = a.anonymous().get("/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
-        assert!(
-            signed_out
-                .text()
-                .contains(&format!("data-service-worker-url=\"{expected}\"")),
+        assert_eq!(
+            meta(&signed_out.text(), "service-worker-url").as_deref(),
+            Some(expected),
             "signed out: {label}"
         );
     }
@@ -482,4 +480,101 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
             ),
         }
     }
+}
+
+/// Application startup owns every registration: real Turbo sign-in and UI preference forms,
+/// the unchanged classic worker, and the built SPA (not a registration fixture or stub).
+#[tokio::test]
+#[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
+async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    assert!(
+        campfire_spa::built(),
+        "build frontend/dist before compiling this browser test"
+    );
+    assert!(campfire_spa::file("service-worker.js", None).is_some());
+    let app = TestApp::boot_frozen_with_env(&[
+        ("RAILS_ENV", "test"),
+        ("SPA_ENABLED", "1"),
+        ("SPA_DEFAULT", "next"),
+        ("VAPID_PUBLIC_KEY", "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ="),
+        ("VAPID_PRIVATE_KEY", "qfXLHghuG1rSHZUVo9SscNRI-0EIHRbIrfeGCqbAwak="),
+    ])
+    .await
+    .expect("PWA browser requires the restored default seed")
+    .without_job_runner()
+    .await;
+    unenroll(&app, DAVID).await;
+    app.db()
+        .write(|tx| ui_preference::store(tx, DAVID, UiPreference::Classic))
+        .await
+        .unwrap();
+    let email = app.db()
+        .read(|conn| Ok(User::find(conn, DAVID)?.email_address.unwrap()))
+        .await
+        .unwrap();
+    let listener = crate::test_support::bind_listener().await;
+    let target = format!("http://{}", listener.local_addr().unwrap());
+    let router = app.booted.router.clone();
+    struct Server(tokio::task::JoinHandle<()>);
+    impl Drop for Server {
+        fn drop(&mut self) {
+            self.0.abort();
+        }
+    }
+    let _server = Server(tokio::spawn(async move {
+        axum::serve(listener, router).await.unwrap();
+    }));
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..").canonicalize().unwrap();
+    let local = std::env::var("PWA_BROWSER_LOCAL").as_deref() == Ok("1");
+    // Killing a Docker CLI alone leaves its browser container running.
+    struct Container(String);
+    impl Drop for Container {
+        fn drop(&mut self) {
+            let _ = std::process::Command::new("docker")
+                .args(["rm", "-f", &self.0])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
+        }
+    }
+    let container = (!local).then(|| Container(format!("pwa-browser-{}", std::process::id())));
+    let mut command = if local {
+        tokio::process::Command::new("node")
+    } else {
+        let mut docker = tokio::process::Command::new("docker");
+        docker.args([
+            "run", "--rm", "--init", "--network", "host", "--ipc", "host", "--cpus", "1",
+        ])
+            .arg("--name")
+            .arg(&container.as_ref().unwrap().0)
+            .arg("--volume")
+            .arg(format!("{}:{}:ro", root.display(), root.display()))
+            .arg("--env")
+            .arg(format!("PWA_BROWSER_TARGET={target}"))
+            .arg("--env")
+            .arg(format!("PWA_BROWSER_EMAIL={email}"))
+            .arg(std::env::var("PWA_PLAYWRIGHT_IMAGE")
+                .expect("ci/correctness.sh pwa supplies the pinned browser image"))
+            .arg("node");
+        docker
+    };
+    let output = command
+        .arg(root.join("test-support/pwa_registration_browser.mjs"))
+        .env("PWA_BROWSER_TARGET", target)
+        .env("PWA_BROWSER_EMAIL", email)
+        .kill_on_drop(true).output().await.unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    println!("{stdout}");
+    assert!(
+        output.status.success(),
+        "real PWA browser failed\n{stdout}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        stdout.contains("PWA_REGISTRATION_RECEIPT "),
+        "browser completed every lifecycle assertion"
+    );
 }

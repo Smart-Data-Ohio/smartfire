@@ -25,5 +25,7 @@ Adding one needs the lead's approval: it is a deliberate divergence from the ref
 
 S8's installed SPA also overrides `initializers/service_worker.js` and
 `controllers/notifications_controller.js`. Both read the worker URL rendered by the classic
-layout and register it at scope `/`, so visiting a classic page retains the effective UI's
-worker. The copied `web/` assets remain unchanged.
+layout's provisional head metadata and register it at scope `/`. The initializer reconciles
+after both page loads and Turbo visits, including sign-in when a stored preference overrides
+the signed-out default. Neither override unregisters the root registration, preserving its
+push subscription when the UI changes. The copied `web/` assets remain unchanged.

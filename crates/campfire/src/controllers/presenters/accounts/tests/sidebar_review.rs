@@ -74,20 +74,21 @@ fn viewer<'a>(t: &'a TestApp, case: &Value) -> Browser<'a> {
     ));
     b
 }
-/// Keep the frozen Rails body exact except for S8's worker-selection metadata on the root.
+/// Keep the frozen Rails body exact except for S8's provisional worker-selection head meta.
 fn without_worker_url(body: &str) -> String {
-    let Some((before, root)) = body.split_once("<html ") else {
+    if !body.contains("<html ") {
         return body.to_string();
-    };
-    let (attributes, after) = root.split_once('>').unwrap();
-    let worker_url = " data-service-worker-url=\"/service-worker.js\"";
+    }
+    let (before, head) = body.split_once("<head>").unwrap();
+    let (head, after) = head.split_once("</head>").unwrap();
+    let worker_url = "    <meta name=\"service-worker-url\" content=\"/service-worker.js\">\n";
     assert!(
-        attributes.contains(worker_url),
+        head.matches(worker_url).count() == 1,
         "the classic page selects its classic worker"
     );
     format!(
-        "{before}<html {}>{after}",
-        attributes.replacen(worker_url, "", 1)
+        "{before}<head>{}</head>{after}",
+        head.replacen(worker_url, "", 1)
     )
 }
 
