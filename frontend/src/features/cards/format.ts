@@ -13,17 +13,61 @@ const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 const compact = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
 
-const eventDay = new Intl.DateTimeFormat(undefined, {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
+/** An event's formatters, all in the zone its times were set in. */
+interface EventFormats {
+  /** "Thu, Oct 8, 2026" (classic always shows the year). */
+  readonly day: Intl.DateTimeFormat;
+  readonly month: Intl.DateTimeFormat;
+  readonly date: Intl.DateTimeFormat;
+  /** "11:00 AM". */
+  readonly time: Intl.DateTimeFormat;
+  /** "11:45 AM EDT": the last time shown carries the zone. */
+  readonly zonedTime: Intl.DateTimeFormat;
+}
 
-const eventMonth = new Intl.DateTimeFormat(undefined, { month: "short" });
+const eventFormats = new Map<string, EventFormats>();
 
-const eventDate = new Intl.DateTimeFormat(undefined, { day: "numeric" });
+function makeEventFormats(timeZone: string | undefined): EventFormats {
+  return {
+    day: new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone,
+    }),
+    month: new Intl.DateTimeFormat(undefined, { month: "short", timeZone }),
+    date: new Intl.DateTimeFormat(undefined, { day: "numeric", timeZone }),
+    time: new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", timeZone }),
+    zonedTime: new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+      timeZone,
+    }),
+  };
+}
 
-const eventTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
+/** The formatters for `timeZone`, made once; the viewer's own zone if this browser doesn't know it. */
+function formatsIn(timeZone: string): EventFormats {
+  const held = eventFormats.get(timeZone);
+
+  if (held !== undefined) {
+    return held;
+  }
+
+  let made: EventFormats;
+
+  try {
+    made = makeEventFormats(timeZone);
+  } catch {
+    made = makeEventFormats(undefined);
+  }
+
+  eventFormats.set(timeZone, made);
+
+  return made;
+}
 
 const postedDate = new Intl.DateTimeFormat(undefined, {
   month: "short",
@@ -73,26 +117,33 @@ export interface EventTile {
   readonly day: string;
 }
 
-/** The month and day for an event's date tile. */
-export function eventTile(timestamp: string): EventTile {
+/** The month and day for an event's date tile, in the event's zone. */
+export function eventTile(timestamp: string, timeZone: string): EventTile {
   const millis = Date.parse(timestamp);
+  const formats = formatsIn(timeZone);
 
-  return { month: eventMonth.format(millis), day: eventDate.format(millis) };
+  return { month: formats.month.format(millis), day: formats.date.format(millis) };
 }
 
-/** "Thu, Oct 8 · 11:00 AM – 11:45 AM" (the end's date too when it falls on another day). */
-export function eventWhen(startsAt: string, endsAt: string | null): string {
+/**
+ * "Thu, Oct 8, 2026 · 11:00 AM – 11:45 AM EDT": when an event is, in the zone its organizer set
+ * it in (as classic shows it), with that zone named; the end's date too when it falls on another
+ * day.
+ */
+export function eventWhen(startsAt: string, endsAt: string | null, timeZone: string): string {
+  const formats = formatsIn(timeZone);
   const start = Date.parse(startsAt);
-  const head = `${eventDay.format(start)} · ${eventTime.format(start)}`;
+  const startDay = formats.day.format(start);
 
   if (endsAt === null) {
-    return head;
+    return `${startDay} · ${formats.zonedTime.format(start)}`;
   }
 
   const end = Date.parse(endsAt);
-  const sameDay = eventDay.format(start) === eventDay.format(end);
+  const endDay = formats.day.format(end);
+  const endPart = `${startDay === endDay ? "" : `${endDay} · `}${formats.zonedTime.format(end)}`;
 
-  return `${head} – ${sameDay ? "" : `${eventDay.format(end)} · `}${eventTime.format(end)}`;
+  return `${startDay} · ${formats.time.format(start)} – ${endPart}`;
 }
 
 /** "Oct 5, 2026": when a post went up. */

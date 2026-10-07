@@ -138,7 +138,7 @@ export function EventCard({ event }: { readonly event: EventCardData }) {
   useEffect(() => {
     actions.ensureUsers([event.organizerId]).catch(() => undefined);
   }, [event.organizerId]);
-  const tile = eventTile(event.startsAt);
+  const tile = eventTile(event.startsAt, event.timeZone);
 
   const load = useCallback(
     () => actions.cards.loadAttendance(event.roomId, event.eventId),
@@ -180,7 +180,7 @@ export function EventCard({ event }: { readonly event: EventCardData }) {
         </div>
         <div className="event-when">
           <Icon name="calendar" size={14} />
-          <span>{eventWhen(event.startsAt, event.endsAt)}</span>
+          <span>{eventWhen(event.startsAt, event.endsAt, event.timeZone)}</span>
         </div>
         {organizer === undefined ? null : (
           <div className="card-subtle">Organized by {organizer.name}</div>
