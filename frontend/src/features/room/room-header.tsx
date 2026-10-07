@@ -7,6 +7,8 @@ import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { HeaderSearch } from "../search/header-search.tsx";
+import { NotificationsButton } from "../sidebar/notifications-button.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
 
 const PRESENCE_TEXT = {
@@ -66,7 +68,9 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
       <div className="room-header-tools">
         {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
         <HuddleLauncher roomId={roomId} />
+        <NotificationsButton roomId={roomId} />
         <PaneButtons roomId={roomId} />
+        <HeaderSearch />
       </div>
     </header>
   );

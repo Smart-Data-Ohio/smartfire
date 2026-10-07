@@ -1,6 +1,7 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useActivityUnread } from "../../store/inbox-hooks.ts";
+import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -53,12 +54,18 @@ function initialsOf(name: string): string {
 /** Unread direct messages across the sidebar, for the DMs destination. */
 function useDirectUnread(): number {
   return useStore((state) => {
+    // Through pending changes, like the other totals: a DM being muted or hidden stops counting.
+    const view = organizedSidebar(state.sidebar);
     let total = 0;
 
-    for (const roomId of state.sidebar.order) {
-      const row = state.sidebar.rows[roomId];
+    for (const roomId of view.order) {
+      const row = view.rows[roomId];
 
-      if (row !== undefined && row.room.kind === "direct") {
+      if (
+        row !== undefined &&
+        row.room.kind === "direct" &&
+        row.membership.involvement !== "invisible"
+      ) {
         total += rowPillCount(row);
       }
     }

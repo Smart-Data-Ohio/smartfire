@@ -43,36 +43,12 @@ pub async fn create(c: &mut Ctx) -> Result {
         Some(Param::Bool(true)) => Some(rusqlite::types::Value::Integer(1)),
         _ => None,
     };
-    let actor = concerns::require_current_user(c)?.id;
-    let context = super::audit_context(c)?;
     let form_name = name.clone();
-    let bot_name = bot.name.clone();
-    let result = async {
-        let (secret, audit) = c
-            .app()
-            .db
-            .write(move |tx| {
-                let (credential, secret) = if let Some(raw) = raw_expiry {
-                    AgentCredential::create_with_raw_expiry_secret(tx, agent.id, &name, actor, raw)?
-                } else {
-                    let (credential, secret) = AgentCredential::create_with_secret(tx, agent.id, &name, actor, expires_at)?;
-                    (campfire_db::models::agent_credential::IssuedCredential {
-                        id: credential.id, name: credential.name, token_last_four: credential.token_last_four,
-                    }, secret)
-                };
-                let audit = NewAuditLog {
-                    action: "agent.credential.create".into(),
-                    target: Some(target(credential.id, &credential.name, &bot_name)),
-                    changes: Some(serde_json::json!({"name":credential.name,"last_four":credential.token_last_four})),
-                    ..Default::default()
-                };
-                Ok((secret, audit))
-            })
-            .await?;
-        // Rails commits create_with_secret! before the independent audit insert.
-        c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
-        Ok::<_, campfire_db::Error>(secret)
-    }.await;
+    let expiry = match raw_expiry {
+        Some(raw) => Expiry::Raw(raw),
+        None => Expiry::At(expires_at),
+    };
+    let result = issue(c, &bot, agent.id, name, expiry).await?;
     match result {
         Ok(secret) => {
             let bot_id = bot.id;
@@ -109,6 +85,55 @@ pub async fn create(c: &mut Ctx) -> Result {
         Err(error) => Err(Error::internal(error)),
     }
 }
+/// A new credential's expiry: the time the form's value casts to, or a raw non-time value
+/// (a number, `true`) stored as given, as Rails does.
+pub enum Expiry {
+    At(Option<campfire_db::Timestamp>),
+    Raw(rusqlite::types::Value),
+}
+
+/// `create`'s writes once the gates passed and the agent exists: the credential (its secret
+/// drawn), then the audit. The inner result is the save's: the secret, shown once, or
+/// `RecordInvalid` for the form.
+pub async fn issue(
+    c: &Ctx,
+    bot: &User,
+    agent_id: i64,
+    name: String,
+    expiry: Expiry,
+) -> Result<campfire_db::Result<String>> {
+    let actor = concerns::require_current_user(c)?.id;
+    let context = super::audit_context(c)?;
+    let bot_name = bot.name.clone();
+    Ok(async {
+        let (secret, audit) = c
+            .app()
+            .db
+            .write(move |tx| {
+                let (credential, secret) = match expiry {
+                    Expiry::Raw(raw) => AgentCredential::create_with_raw_expiry_secret(tx, agent_id, &name, actor, raw)?,
+                    Expiry::At(expires_at) => {
+                        let (credential, secret) = AgentCredential::create_with_secret(tx, agent_id, &name, actor, expires_at)?;
+                        (campfire_db::models::agent_credential::IssuedCredential {
+                            id: credential.id, name: credential.name, token_last_four: credential.token_last_four,
+                        }, secret)
+                    }
+                };
+                let audit = NewAuditLog {
+                    action: "agent.credential.create".into(),
+                    target: Some(target(credential.id, &credential.name, &bot_name)),
+                    changes: Some(serde_json::json!({"name":credential.name,"last_four":credential.token_last_four})),
+                    ..Default::default()
+                };
+                Ok((secret, audit))
+            })
+            .await?;
+        // Rails commits create_with_secret! before the independent audit insert.
+        c.app().db.write(move |tx| AuditLog::record(tx, audit, &context)).await?;
+        Ok::<_, campfire_db::Error>(secret)
+    }.await)
+}
+
 pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let bot = super::find_active_bot(c, "bot_id").await?;
@@ -119,6 +144,15 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .param_str("id")
         .and_then(crate::concerns::cast_integer)
         .ok_or(Error::NotFound)?;
+    if !revoke(c, &bot, agent.id, id).await? {
+        return Err(Error::NotFound);
+    }
+    c.redirect_to(&c.url_for(&campfire_routes::account_bot_credentials(bot.id)))
+}
+
+/// `destroy`'s writes once the gates passed and the agent exists: credential `id` revoked
+/// (once), then the audit. `false` when the agent has no such credential.
+pub async fn revoke(c: &Ctx, bot: &User, agent_id: i64, id: i64) -> Result<bool> {
     let context = super::audit_context(c)?;
     let bot_name = bot.name.clone();
     let audit = c
@@ -126,7 +160,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let Some(mut credential) =
-                AgentCredential::find(tx.conn(), id)?.filter(|c| c.agent_id == agent.id)
+                AgentCredential::find(tx.conn(), id)?.filter(|c| c.agent_id == agent_id)
             else {
                 return Ok(None);
             };
@@ -143,7 +177,9 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    let audit = audit.ok_or(Error::NotFound)?;
+    let Some(audit) = audit else {
+        return Ok(false);
+    };
     if let Some(audit) = audit {
         c.app()
             .db
@@ -151,7 +187,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             .await
             .map_err(Error::internal)?;
     }
-    c.redirect_to(&c.url_for(&campfire_routes::account_bot_credentials(bot.id)))
+    Ok(true)
 }
 fn target(id: i64, name: &str, bot: &str) -> Target {
     Target {

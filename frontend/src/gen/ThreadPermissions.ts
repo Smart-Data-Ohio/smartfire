@@ -26,4 +26,25 @@ canLock: boolean, canUnlock: boolean,
  * it; the parent stays, its indicator cleared (`thread.indicator` with `thread: null`), and
  * `thread.removed` follows. 204; 403 for anyone else.
  */
-canDelete: boolean, };
+canDelete: boolean, 
+/**
+ * An untracked thread: start tracking it as work. A moderator or the thread's creator
+ * (`settings_manageable`) who is an active member of the room. `false` once tracked.
+ */
+canConvertWork: boolean, 
+/**
+ * A tracked thread: edit its result and hand it off. As `canConvertWork`, or its owner.
+ */
+canManageWork: boolean, 
+/**
+ * A tracked thread: move its status. As `canManageWork`.
+ */
+canUpdateWorkStatus: boolean, 
+/**
+ * A tracked thread: assign its owner, or stop tracking it. As `canConvertWork`.
+ */
+canAssignWork: boolean, 
+/**
+ * Offer "stop tracking": `canAssignWork`, except on a board post, which stays tracked.
+ */
+canRemoveWork: boolean, };

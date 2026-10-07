@@ -41,6 +41,11 @@ describe("listing and opening threads", () => {
       canLock: false,
       canUnlock: true,
       canDelete: true,
+      canConvertWork: false,
+      canManageWork: false,
+      canUpdateWorkStatus: false,
+      canAssignWork: false,
+      canRemoveWork: false,
     });
     expect((await server.handle({ method: "GET", path: "/api/v1/threads/99" })).status).toBe(404);
   });

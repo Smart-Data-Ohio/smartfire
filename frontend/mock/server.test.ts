@@ -97,7 +97,7 @@ describe("seed", () => {
     expect(row(rooms.dmEmber)?.displayName).toBe("Ember");
     expect(row(rooms.random)?.membership.involvement).toBe("muted");
     expect(row(rooms.engineering)?.membership.favoritePosition).toBe(1);
-    expect(sidebar.categories.map((category) => category.name)).toEqual(["Launch"]);
+    expect(sidebar.categories.map((category) => category.name)).toEqual(["Launch", "Team"]);
     expect(await page(server, rooms.quiet)).toEqual({
       messages: [],
       users: [],

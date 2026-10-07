@@ -4,7 +4,7 @@ use crate::{
     concerns::{self, Before},
 };
 use campfire_db::{
-    Agent, Webhook,
+    Agent, User, Webhook,
     models::audit_log::{AuditLog, NewAuditLog, Target},
 };
 use campfire_kit::{Ctx, Error, Result};
@@ -17,6 +17,20 @@ pub async fn create(c: &mut Ctx) -> Result {
     let bot = super::find_active_bot(c, "bot_id").await?;
     super::ensure_can_manage_bot(c, &bot).await?;
     concerns::sudo::require_sudo_mode(c)?;
+    let id = bot.id;
+    if reset_signing_secret(c, bot).await? {
+        c.flash()
+            .set_notice("Signing secret reset. Update the receiving service with the new secret.");
+    } else {
+        c.flash()
+            .set_alert("Set a webhook URL before generating a signing secret.");
+    }
+    c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(id)))
+}
+
+/// `create`'s writes once the gates passed: a new signing secret (the agent's, else the legacy
+/// webhook's), then the audit. `false` when there's nothing to sign (no agent, no webhook).
+pub async fn reset_signing_secret(c: &Ctx, bot: User) -> Result<bool> {
     let id = bot.id;
     let crypto = c.app().ar_encryption.clone();
     let context = super::audit_context(c)?;
@@ -41,11 +55,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     match result {
-        Rotation::NoWebhook => {
-            c.flash()
-                .set_alert("Set a webhook URL before generating a signing secret.");
-            c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(id)))
-        }
+        Rotation::NoWebhook => Ok(false),
         Rotation::Reset(target) => {
             // Both Rails reset methods commit before the independent audit insert.
             c.app()
@@ -64,10 +74,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                 })
                 .await
                 .map_err(Error::internal)?;
-            c.flash().set_notice(
-                "Signing secret reset. Update the receiving service with the new secret.",
-            );
-            c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(id)))
+            Ok(true)
         }
     }
 }
