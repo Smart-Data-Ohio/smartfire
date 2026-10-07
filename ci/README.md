@@ -28,7 +28,7 @@ as is `frontend/src/gen/`, checked against the Rust type export by clippy.
 | Job | Runs |
 | --- | --- |
 | `Rust seeds` | `parity/bin/frozen-seeds check`: the committed seeds in `parity/seeds/frozen` match their manifest, the test keys and this checkout's schema migrations; its unit tests prove changed, missing, added or out-of-date seeds are rejected. |
-| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (the campfire crates on Cranelift; the nightly run builds them with LLVM, `--config ci/llvm.toml`). Shard 1 also lists the tests these shards must run and runs `verify-ignored.sh`, against the harnesses it compiled. |
+| `Rust tests (K/2)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/2`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (the campfire crates on Cranelift; the nightly run builds them with LLVM, `--config ci/llvm.toml`). Shard 1 also lists the tests these shards must run and runs `verify-ignored.sh`, against the harnesses it compiled. |
 | `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with the campfire crates on LLVM (`ci/llvm.toml`, the `ci-llvm` nextest profile): Cranelift can't unwind. Lists its own expected tests after running them, with the same packages, profile and compiler settings. Fails unless exactly those four ran and passed. |
 | `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
 | `Rust clippy, binaries and doctests` | ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
@@ -101,10 +101,10 @@ it under the pinned toolchain with `CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1`.
 | Job suffix | Execution |
 | --- | --- |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
-| browsers (5 shards) | Pinned Playwright image, gateway `ws` lockfile, shared normal `campfire` binary (`WS11UI_BROWSER_BINARY`) and archived test harness, then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
+| browsers (3 shards) | Pinned Playwright image, gateway `ws` lockfile, shared normal `campfire` binary (`WS11UI_BROWSER_BINARY`) and archived test harness, then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | drive | The pinned Chromium image, then exactly the 45 ignored Drive attachment, share, sudo and event-card declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
-| messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
+| messaging behaviour (4 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/4`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
@@ -141,7 +141,7 @@ docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campf
 RUNNER_TEMP=/tmp/campfire-ci bash ci/verify-ignored.sh
 RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
 # Repeat the last command for browsers, drive, livekit, messaging, and agents-ui.
-# CI's slices: CORRECTNESS_SHARD=2/5 ... correctness.sh browsers (exec.sh passes it through).
+# CI's slices: CORRECTNESS_SHARD=2/3 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
 The ignored runner uses `cargo nextest run --locked -p PACKAGE
