@@ -296,7 +296,7 @@ test("slash commands run, // escapes, unknown words post", async ({ page }) => {
 
   await typeInto(page, "/shrug fine by me");
   await composer(page).press("Enter");
-  await expect(posted(page, "fine by me ¯_(ツ)_/¯")).toBeVisible();
+  await expect(posted(page, String.raw`fine by me ¯\_(ツ)_/¯`)).toBeVisible();
 
   await typeInto(page, "//etc/hosts is the file");
   await composer(page).press("Enter");
@@ -319,7 +319,7 @@ test("a command's post takes a reader far back in the room to it", async ({ page
 
   await typeInto(page, "/shrug far back");
   await composer(page).press("Enter");
-  await expect(posted(page, "far back ¯_(ツ)_/¯")).toBeInViewport();
+  await expect(posted(page, String.raw`far back ¯\_(ツ)_/¯`)).toBeInViewport();
 });
 
 test("a command's usage shows while you type it", async ({ page }) => {

@@ -24,7 +24,10 @@ async fn shrug_posts_through_the_dispatcher() {
     assert_eq!(r.json()["status"], "posted");
     let id = r.json()["message_id"].as_i64().unwrap();
     let m = app.db().read(move |c| Message::find(c, id)).await.unwrap();
-    assert_eq!(m.markdown_source.as_deref(), Some("ship it ¯\\_(ツ)_/¯"));
+    assert_eq!(m.markdown_source.as_deref(), Some(r"ship it ¯\\\_(ツ)\_/¯"));
+    // The arm renders (classic dropped it: `¯_(ツ)_/¯`).
+    let body = app.db().read(move |c| m.body_html(c)).await.unwrap();
+    assert_eq!(body.as_deref(), Some(r"<p>ship it ¯\_(ツ)_/¯</p>"));
 }
 #[tokio::test]
 async fn unknown_commands_answer_an_error_without_posting() {

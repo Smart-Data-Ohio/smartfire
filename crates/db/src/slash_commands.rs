@@ -16,7 +16,9 @@ mod time_zone_writer_tests;
 pub(crate) mod user_settings;
 use time_parser::{WEEKDAYS, date_end_of_day, end_of_day, present, re, strip, zone};
 
-pub const SHRUG: &str = "¯\\_(ツ)_/¯";
+/// `/shrug`'s Markdown. Both backslashes are escaped, so CommonMark renders the arm: `¯\_(ツ)_/¯`.
+/// Classic stored `¯\_(ツ)_/¯`, which rendered as `¯_(ツ)_/¯` (an intentional change from Rails).
+pub const SHRUG: &str = r"¯\\\_(ツ)\_/¯";
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Command {
     pub name: String,
