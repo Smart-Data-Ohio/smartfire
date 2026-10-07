@@ -379,22 +379,14 @@ async fn delete_is_classic_scoped_and_idempotent_without_audit_jobs_or_broadcast
 }
 
 /// Holds the first two lookups until both have arrived, so two enrollments have both missed
-/// the row before either saves it. The first to arrive then resolves publicly; the second gets
-/// `second` a moment later (so it writes last). Later lookups resolve publicly at once.
+/// the row before either saves it. The first to arrive then resolves publicly at once; the
+/// second waits for `release` (sent once the first enrollment's row is committed), then answers
+/// `second`. Later lookups resolve publicly at once.
 struct OverlappingResolver {
     arrived: std::sync::atomic::AtomicUsize,
     both: tokio::sync::watch::Sender<bool>,
+    release: tokio::sync::watch::Sender<bool>,
     second: Option<&'static str>,
-}
-
-impl OverlappingResolver {
-    fn new(second: Option<&'static str>) -> Self {
-        Self {
-            arrived: Default::default(),
-            both: tokio::sync::watch::channel(false).0,
-            second,
-        }
-    }
 }
 
 const PUBLIC: &str = "142.250.1.1";
@@ -409,6 +401,7 @@ impl crate::net::Resolver for OverlappingResolver {
     ) -> crate::net::BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
         Box::pin(async move {
             let mut both = self.both.subscribe();
+            let mut release = self.release.subscribe();
             let arrival = self
                 .arrived
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
@@ -420,7 +413,7 @@ impl crate::net::Resolver for OverlappingResolver {
             if arrival != 2 {
                 return Ok(vec![PUBLIC.parse().unwrap()]);
             }
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            let _ = release.wait_for(|released| *released).await;
             match self.second {
                 Some(address) => Ok(vec![address.parse().unwrap()]),
                 None => Err(std::io::Error::new(
@@ -432,27 +425,28 @@ impl crate::net::Resolver for OverlappingResolver {
     }
 }
 
-/// A classic post and an SPA post for one subscription, overlapping as two tabs would.
-async fn overlapping_enrollments(second: Option<&'static str>) -> Option<(Vec<StatusCode>, usize)> {
-    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let mut network = crate::net::Network::system();
-    network.resolver = Arc::new(OverlappingResolver::new(second));
-    let app =
-        TestApp::boot_with_network_clock_and_env(network, clock, &[("SPA_ENABLED", "1")]).await?;
-    let app = app.without_job_runner().await;
-    let mut classic = app.sign_in(DAVID).await;
-    let mut spa = app.sign_in(DAVID).await;
-    let (classic_reply, spa_reply) =
-        tokio::time::timeout(std::time::Duration::from_secs(20), async {
-            tokio::join!(
-                create(&mut classic, true, ENDPOINT, "p256", "auth"),
-                create(&mut spa, false, ENDPOINT, "p256", "auth"),
-            )
-        })
-        .await
-        .expect("both enrollments reach name resolution and finish");
-    let saved = app
-        .db()
+#[derive(Clone)]
+struct LogCapture(Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for LogCapture {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+struct Overlap {
+    statuses: Vec<StatusCode>,
+    saved: usize,
+    log: String,
+}
+
+/// The saved rows with this test's subscription tuple.
+async fn saved_tuples(app: &TestApp) -> usize {
+    app.db()
         .read(|conn| campfire_db::PushSubscription::for_user(conn, DAVID))
         .await
         .unwrap()
@@ -462,21 +456,89 @@ async fn overlapping_enrollments(second: Option<&'static str>) -> Option<(Vec<St
                 && row.p256dh_key.as_deref() == Some("p256")
                 && row.auth_key.as_deref() == Some("auth")
         })
-        .count();
+        .count()
+}
+
+/// A classic post and an SPA post for one subscription, overlapping as two tabs would: both
+/// miss the row, the first commits its insert, and only then does the second resolve and write.
+async fn overlapping_enrollments(second: Option<&'static str>) -> Option<Overlap> {
+    let log = Arc::new(std::sync::Mutex::new(vec![]));
+    let writer = log.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .without_time()
+        .with_ansi(false)
+        .with_max_level(tracing::Level::DEBUG)
+        .with_writer(move || LogCapture(writer.clone()))
+        .finish();
+    // Current-thread test runtime: the capture covers every await below. A second registrar
+    // keeps callsite interest computed from both live dispatches (see the Google log test).
+    let _capture = tracing::subscriber::set_default(subscriber);
+    let _other_dispatch = tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default());
+
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let resolver = Arc::new(OverlappingResolver {
+        arrived: Default::default(),
+        both: tokio::sync::watch::channel(false).0,
+        release: tokio::sync::watch::channel(false).0,
+        second,
+    });
+    let mut network = crate::net::Network::system();
+    network.resolver = resolver.clone();
+    let app =
+        TestApp::boot_with_network_clock_and_env(network, clock, &[("SPA_ENABLED", "1")]).await?;
+    let app = app.without_job_runner().await;
+    let mut classic = app.sign_in(DAVID).await;
+    let mut spa = app.sign_in(DAVID).await;
+    let ((classic_reply, spa_reply), ()) =
+        tokio::time::timeout(std::time::Duration::from_secs(20), async {
+            tokio::join!(
+                async {
+                    tokio::join!(
+                        create(&mut classic, true, ENDPOINT, "p256", "auth"),
+                        create(&mut spa, false, ENDPOINT, "p256", "auth"),
+                    )
+                },
+                async {
+                    // The second lookup answers only after the first insert is committed.
+                    while saved_tuples(&app).await == 0 {
+                        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+                    }
+                    resolver.release.send_replace(true);
+                },
+            )
+        })
+        .await
+        .expect("both enrollments reach name resolution and finish");
     let mut statuses = vec![classic_reply.status, spa_reply.status];
     statuses.sort();
-    Some((statuses, saved))
+    let log = String::from_utf8(log.lock().unwrap().clone()).unwrap();
+    Some(Overlap {
+        statuses,
+        saved: saved_tuples(&app).await,
+        log,
+    })
 }
+
+const OVERLAP_LOG: &str = "push subscription enrollment found the row an overlapping request saved";
 
 #[tokio::test]
 async fn overlapping_classic_and_spa_enrollments_save_one_subscription() {
-    let Some((statuses, saved)) = overlapping_enrollments(Some(PUBLIC)).await else {
+    let Some(overlap) = overlapping_enrollments(Some(PUBLIC)).await else {
         return;
     };
-    assert_eq!(statuses, [StatusCode::OK, StatusCode::OK]);
+    assert_eq!(overlap.statuses, [StatusCode::OK, StatusCode::OK]);
     assert_eq!(
-        saved, 1,
+        overlap.saved, 1,
         "the later enrollment touches the row the earlier one saved"
+    );
+    assert_eq!(
+        overlap
+            .log
+            .matches(&format!("{OVERLAP_LOG} outcome=OverlapTouched"))
+            .count(),
+        1,
+        "the later enrollment took the in-transaction recheck: {}",
+        overlap.log
     );
 }
 
@@ -485,14 +547,23 @@ async fn an_overlapping_enrollment_that_fails_its_own_validation_is_refused() {
     // Sequentially, the second request would find the saved row, re-validate it with its own
     // resolution, and answer 422 when that resolution is private or fails. Overlapping must too.
     for second in [UNRESOLVABLE, Some("10.0.0.7"), Some("127.0.0.1")] {
-        let Some((statuses, saved)) = overlapping_enrollments(second).await else {
+        let Some(overlap) = overlapping_enrollments(second).await else {
             return;
         };
         assert_eq!(
-            statuses,
+            overlap.statuses,
             [StatusCode::OK, StatusCode::UNPROCESSABLE_ENTITY],
             "second resolution {second:?}"
         );
-        assert_eq!(saved, 1, "second resolution {second:?}");
+        assert_eq!(overlap.saved, 1, "second resolution {second:?}");
+        assert_eq!(
+            overlap
+                .log
+                .matches(&format!("{OVERLAP_LOG} outcome=OverlapRefused"))
+                .count(),
+            1,
+            "second resolution {second:?} was refused by the in-transaction recheck: {}",
+            overlap.log
+        );
     }
 }

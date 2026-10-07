@@ -96,26 +96,45 @@ pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
                     // it must pass current validations (with its own resolution) before touching
                     // that row instead of inserting a duplicate; the table has no unique index.
                     if let Some(saved) = find_by(tx.conn(), user_id, &params)? {
-                        subscription.validate(&resolve).into_result()?;
-                        return presenters::accounts::touch(
+                        if !subscription.validate(&resolve).is_empty() {
+                            return Ok(Enrolled::OverlapRefused);
+                        }
+                        presenters::accounts::touch(
                             tx.conn(),
                             "push_subscriptions",
                             saved.id,
                             tx.now(),
-                        );
+                        )?;
+                        return Ok(Enrolled::OverlapTouched);
                     }
-                    PushSubscription::create(tx, &subscription, &resolve).map(|_| ())
+                    PushSubscription::create(tx, &subscription, &resolve)?;
+                    Ok(Enrolled::Inserted)
                 })
                 .await;
+            if let Ok(outcome @ (Enrolled::OverlapTouched | Enrolled::OverlapRefused)) = &result {
+                tracing::debug!(
+                    ?outcome,
+                    "push subscription enrollment found the row an overlapping request saved"
+                );
+            }
             match result {
-                Ok(_) => Ok(c.head(StatusCode::OK)),
-                Err(campfire_db::Error::RecordInvalid(_)) => {
+                Ok(Enrolled::Inserted | Enrolled::OverlapTouched) => Ok(c.head(StatusCode::OK)),
+                Ok(Enrolled::OverlapRefused) | Err(campfire_db::Error::RecordInvalid(_)) => {
                     Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
                 }
                 Err(error) => Err(Error::internal(error)),
             }
         }
     }
+}
+
+/// How a new enrollment's write ended: its own row, or the row an overlapping request saved
+/// first (touched when this request's endpoint still validates, refused when it doesn't).
+#[derive(Debug, Clone, Copy)]
+enum Enrolled {
+    Inserted,
+    OverlapTouched,
+    OverlapRefused,
 }
 
 /// `@push_subscriptions.destroy_by(id: params[:id])`
