@@ -153,6 +153,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
     ("agent::AgentSyncChange", &["agent.status"]),
     ("agent_approval::ApprovalChange", &["approval.updated"]),
+    ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge

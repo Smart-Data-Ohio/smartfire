@@ -31,6 +31,9 @@ mod api_activity_tests;
 #[path = "spa_api_agents_tests.rs"]
 mod api_agents_tests;
 #[cfg(test)]
+#[path = "spa_api_work_tests.rs"]
+mod api_work_tests;
+#[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
 #[cfg(test)]

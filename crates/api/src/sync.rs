@@ -58,8 +58,14 @@ impl SyncRenderer for Renderer {
 
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
         let app = self.app.upgrade()?;
+        let now = app.db.env().now();
         Room::find(conn, thread.room_id)
-            .map(|room| dto::thread(thread, &room, app.db.env().now()))
+            .and_then(|room| {
+                let work =
+                    crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
+                        .remove(&thread.id);
+                Ok(dto::thread(thread, &room, now, work))
+            })
             .inspect_err(|error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"))
             .ok()
     }

@@ -1157,8 +1157,14 @@ pub fn forward_destinations(
     Ok(api::ForwardDestinationList { destinations })
 }
 
-/// A thread as every member of its room sees it.
-pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) -> api::Thread {
+/// A thread as every member of its room sees it, with its work facts ([`crate::work::facts`])
+/// when it's tracked.
+pub fn thread(
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    now: Timestamp,
+    work: Option<api::WorkFacts>,
+) -> api::Thread {
     api::Thread {
         id: thread.id,
         room_id: thread.room_id,
@@ -1170,8 +1176,7 @@ pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) 
         last_activity_at: time(thread.last_activity_at),
         auto_archive_after_minutes: thread.auto_archive_after_minutes,
         created_at: time(thread.created_at),
-        // Work facts still render in the HTML only; the S4 backend fills them.
-        work: None,
+        work,
     }
 }
 
@@ -1215,6 +1220,13 @@ pub fn thread_permissions(
     } else {
         settings
     };
+    let [
+        can_convert_work,
+        can_manage_work,
+        can_update_work_status,
+        can_assign_work,
+        can_remove_work,
+    ] = crate::work::permissions(thread, room, viewer);
     api::ThreadPermissions {
         can_rename: rename,
         can_close: status == Db::Active && if room.board() { moderator } else { settings },
@@ -1222,12 +1234,11 @@ pub fn thread_permissions(
         can_lock: moderator && !locked,
         can_unlock: moderator && locked,
         can_delete: moderator,
-        // With `work` still null, no work action is offered until the S4 backend.
-        can_convert_work: false,
-        can_manage_work: false,
-        can_update_work_status: false,
-        can_assign_work: false,
-        can_remove_work: false,
+        can_convert_work,
+        can_manage_work,
+        can_update_work_status,
+        can_assign_work,
+        can_remove_work,
     }
 }
 
@@ -1249,13 +1260,25 @@ pub fn thread_detail(
         .as_ref()
         .map(|parent| message(conn, app, parent))
         .transpose()?;
-    let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
+    let facts = crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
+        .remove(&thread.id);
+    let permissions = thread_permissions(thread, room, viewer, membership.is_some(), now);
+    let (work, work_people) = match facts {
+        Some(_) => {
+            let (work, people) = crate::work::detail(conn, app, thread, room, &permissions)?;
+            (Some(work), people)
+        }
+        None => (None, Vec::new()),
+    };
+    let people = std::iter::once(thread.creator_id)
+        .chain(parent.as_ref().map(|parent| parent.creator_id))
+        .chain(work_people);
     Ok(api::ThreadDetail {
-        thread: self::thread(thread, room, now),
-        permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
+        thread: self::thread(thread, room, now, facts),
+        permissions,
         membership: membership.as_ref().map(thread_membership),
         parent_message,
-        work: None,
+        work,
         users: users(conn, &app.secrets, people, now)?,
     })
 }
@@ -1287,11 +1310,12 @@ pub fn thread_list(
             })
             .collect(),
     };
+    let mut facts = crate::work::facts(conn, secrets, &threads, now)?;
     let mut summaries = Vec::with_capacity(threads.len());
     for thread in &threads {
         let membership = thread.membership_for(conn, viewer_id)?;
         summaries.push(api::ThreadSummary {
-            thread: self::thread(thread, room, now),
+            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
             membership: membership.as_ref().map(thread_membership),
         });
     }

@@ -61,11 +61,11 @@ endpoint!(
 );
 
 /// A refused thread change (`channel_threads#update`'s `FORBIDDEN_UPDATE`).
-const FORBIDDEN_UPDATE: &str = "You can't make that change to this thread";
+pub(crate) const FORBIDDEN_UPDATE: &str = "You can't make that change to this thread";
 
 /// The thread `:thread_id` names, with its room: a thread in an alive room the viewer belongs
 /// to. Anything else is a 404, as the classic nested routes' `set_room` makes it.
-async fn scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
+pub(crate) async fn scope(c: &mut Ctx) -> Result<(ChannelThread, Room, User)> {
     let viewer = concerns::require_current_user(c)?.clone();
     let Some(id) = c.param_str("thread_id").and_then(concerns::cast_integer) else {
         return Err(fail(c, not_found()));
@@ -118,7 +118,7 @@ fn is_locked(error: &Error) -> bool {
     )
 }
 
-async fn detail(c: &Ctx, viewer: User, thread_id: i64) -> Result<api::ThreadDetail> {
+pub(crate) async fn detail(c: &Ctx, viewer: User, thread_id: i64) -> Result<api::ThreadDetail> {
     let (app, now) = (c.app().clone(), now(c));
     c.app()
         .db

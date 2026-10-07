@@ -30,6 +30,7 @@ pub mod message_actions;
 pub mod stage;
 pub mod sync;
 pub mod threads;
+pub mod work;
 #[cfg(feature = "test-support")]
 pub mod test_hooks;
 
@@ -148,6 +149,15 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/threads/{thread_id}/read",
             post(action(threads::read)),
         )
+        .route(
+            "/api/v1/threads/{thread_id}/work",
+            patch(unparsed_action(work::update)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/work/handoff",
+            post(unparsed_action(work::handoff)),
+        )
+        .route("/api/v1/work", get(action(work::index)))
         .route("/api/v1/uploads", post(unparsed_action(composer::upload)))
         .route(
             "/api/v1/autocomplete/users",

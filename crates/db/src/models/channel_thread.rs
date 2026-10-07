@@ -37,6 +37,23 @@ pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_pa
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
+/// A tracked thread's work facts changed: its status, owner, result or run URL, or a link was
+/// added or removed. The classic app has no broadcast for it (only the board rows, which
+/// `register_board_update` emits as before); the cable sink publishes the single-page app's
+/// `thread.updated` with the new facts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadWorkChange {
+    pub thread_id: i64,
+}
+impl crate::events::Broadcast for ThreadWorkChange {
+    const KIND: &'static str = "ChannelThread#sync_work";
+}
+impl ThreadWorkChange {
+    pub fn emit(tx: &mut Tx<'_>, thread_id: i64) {
+        tx.emit_after_commit(Event::broadcast(&ThreadWorkChange { thread_id }));
+    }
+}
+
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
 pub const DEFAULT_AUTO_ARCHIVE_AFTER_MINUTES: i64 = 4_320;
@@ -544,6 +561,14 @@ impl ChannelThread {
             || changed.name != self.name
             || changed.work_owner_id != self.work_owner_id
             || changed.last_activity_at != self.last_activity_at;
+        let work_changed = status_changed
+            || changed.work_owner_id != self.work_owner_id
+            || changed.run_url != self.run_url
+            || changed.result_markdown != self.result_markdown
+            || changed.result_updated_at != self.result_updated_at;
+        if work_changed {
+            ThreadWorkChange::emit(tx, self.id);
+        }
         *self = changed;
         self.register_board_update(tx, room, row_changed, status_changed)?;
         Ok(())

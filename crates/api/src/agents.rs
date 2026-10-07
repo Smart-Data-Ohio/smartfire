@@ -59,7 +59,7 @@ fn present(value: Option<&str>) -> Option<String> {
 }
 
 /// The signed-in human, or `None` for a bot or an agent token (which never use this API).
-fn human(c: &Ctx) -> Result<Option<User>> {
+pub(crate) fn human(c: &Ctx) -> Result<Option<User>> {
     let viewer = concerns::require_current_user(c)?;
     Ok((!viewer.is_bot()
         && !matches!(
