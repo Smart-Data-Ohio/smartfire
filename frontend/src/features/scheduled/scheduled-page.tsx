@@ -71,7 +71,8 @@ function Section({
   hint?: string;
 }) {
   return (
-    <div>
+    // biome-ignore lint/a11y/useSemanticElements: virtua renders its items inside divs; a heading in a list needs an item of its own
+    <div role="listitem">
       <h2 className="page-section-title" id={`scheduled-${id}`}>
         {title}
         <span className="page-section-count">{count}</span>

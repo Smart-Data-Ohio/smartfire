@@ -30,7 +30,7 @@ interface PagedListProps {
   readonly empty: ReactNode;
   /** True when there's nothing to show (sections included). */
   readonly isEmpty: boolean;
-  /** Rows and section headings, each keyed, in order. */
+  /** Rows and section headings (each a listitem too), each keyed, in order. */
   readonly children: readonly ReactElement[];
 }
 
@@ -78,7 +78,7 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
 
   const footer =
     error !== null && status === "ready" ? (
-      <div key="more-error" className="page-more">
+      <div className="page-more">
         <span className="page-more-error" role="alert">
           {error}
           <Button variant="ghost" size="sm" icon="rotate-ccw" onClick={loadMore}>
@@ -87,7 +87,7 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
         </span>
       </div>
     ) : loadingMore ? (
-      <div key="more-loading" className="page-more" role="status">
+      <div className="page-more" role="status">
         <Spinner label="Loading more" />
       </div>
     ) : null;
@@ -109,17 +109,21 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
         ) : isEmpty ? (
           empty
         ) : (
-          <VList
-            ref={listRef}
-            className="page-list-scroll"
-            bufferSize={400}
-            onScroll={onScroll}
-            role="list"
-            aria-label={label}
-            data-list-root=""
-          >
-            {footer === null ? children : [...children, footer]}
-          </VList>
+          <>
+            <VList
+              ref={listRef}
+              className="page-list-scroll"
+              bufferSize={400}
+              onScroll={onScroll}
+              role="list"
+              aria-label={label}
+              data-list-root=""
+            >
+              {children}
+            </VList>
+            {/* Under the list, not in it: a list holds only its items. */}
+            {footer}
+          </>
         )}
       </SkeletonReveal>
     </div>
