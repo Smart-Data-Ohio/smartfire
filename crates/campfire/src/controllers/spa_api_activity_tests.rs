@@ -598,21 +598,20 @@ async fn scheduled_messages_tell_the_other_tabs() {
         panic!("{}", reply.text())
     };
     assert_eq!((message.as_str(), fields.len()), ("channel access lost", 0));
-    sync.until(
-        scheduled_changed(row.id, api::ScheduledMessageState::Dropped),
-        |_| false,
-    )
-    .await;
-    let event = sync
-        .until(
-            |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.event_type == api::ActivityEventType::ScheduledMessageDropped),
-            |_| false,
-        )
-        .await;
-    let api::SyncPayload::ActivityItem(dropped) = event.payload else {
-        unreachable!()
-    };
-    assert_eq!(dropped.item.source.source_id, row.id);
+    // The two twins are read afresh by separate deferred jobs, so either may come first.
+    let dropped_row = scheduled_changed(row.id, api::ScheduledMessageState::Dropped);
+    let dropped_item = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.event_type == api::ActivityEventType::ScheduledMessageDropped);
+    let (mut row_seen, mut item) = (false, None);
+    while !row_seen || item.is_none() {
+        let event = sync
+            .until(|event| dropped_row(event) || dropped_item(event), |_| false)
+            .await;
+        match event.payload {
+            api::SyncPayload::ActivityItem(changed) => item = Some(changed),
+            _ => row_seen = true,
+        }
+    }
+    assert_eq!(item.unwrap().item.source.source_id, row.id);
     server.abort();
 }
 
@@ -1147,5 +1146,131 @@ async fn credentials_threads_scheduled_and_saved_tell_the_other_tabs() {
         saved_status(api::SavedStatus::Done),
     )
     .await;
+    server.abort();
+}
+
+/// Waits for the server to see that `user_id` has no sync socket open.
+async fn disconnected(a: &TestApp, user_id: i64) {
+    for _ in 0..500 {
+        if !a.booted.app.cable.sync_connected(user_id) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    panic!("{user_id} still connected");
+}
+
+/// The welcome's `(epoch, seq)`.
+async fn position(sync: &mut Sync) -> (String, i64) {
+    let Some(api::ServerFrame::Welcome { epoch, seq, .. }) = sync.next().await else {
+        panic!("a welcome")
+    };
+    (epoch, seq)
+}
+
+#[tokio::test]
+async fn an_owner_away_from_every_tab_gets_a_gap_and_refetches() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let cookie = david.cookie_header();
+    let (approval, _) = agent_sources(&a, DAVID).await;
+    let approval_item = item(
+        &a,
+        DAVID,
+        ("AgentApproval", approval),
+        "agent_approval_request",
+        5,
+    )
+    .await;
+
+    // Away with nothing for David meanwhile: the resume carries on.
+    let mut sync = Sync::connect(addr, &cookie, &[]).await;
+    let (epoch, seq) = position(&mut sync).await;
+    drop(sync);
+    disconnected(&a, DAVID).await;
+    let mut sync = Sync::open(addr, &cookie, &[], json!({"epoch": epoch, "seq": seq})).await;
+    let Some(api::ServerFrame::Welcome {
+        resumed: true, seq, ..
+    }) = sync.next().await
+    else {
+        panic!("a resumed welcome")
+    };
+    drop(sync);
+    disconnected(&a, DAVID).await;
+
+    // Away while an item of David's leaves: no `activity.removed` is built for him, and his
+    // resume from before it starts afresh instead.
+    a.db()
+        .write(move |tx| {
+            campfire_db::AgentApproval::find(tx.conn(), approval)?
+                .expect("the approval")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    let mut sync = Sync::open(addr, &cookie, &[], json!({"epoch": epoch, "seq": seq})).await;
+    assert!(
+        matches!(
+            sync.next().await,
+            Some(api::ServerFrame::Welcome { resumed: false, .. })
+        ),
+        "a fresh start"
+    );
+    // Now connected, he hears the next one, and never the one he missed.
+    let mut david = david;
+    let posted = post_in(&mut david, DESIGNERS, "gap", "Back again").await;
+    let next = item(&a, DAVID, ("Message", posted.id), "mention", 1).await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/activity/{next}"),
+            &json!({"action": "read"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    sync.until(activity_item(next), activity_removed(approval_item))
+        .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn deleting_an_agent_takes_its_budget_notices_out_of_the_inbox() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let (_, notice) = agent_sources(&a, DAVID).await;
+    let notice_item = item(
+        &a,
+        DAVID,
+        ("AgentBudgetNotice", notice),
+        "agent_budget_exceeded",
+        5,
+    )
+    .await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    assert!(listed.items.iter().any(|item| item.id == notice_item));
+
+    a.db()
+        .write(move |tx| {
+            let agent: i64 = tx.conn().query_row(
+                "SELECT agent_id FROM agent_budget_notices WHERE id = ?",
+                [notice],
+                |row| row.get(0),
+            )?;
+            campfire_db::Agent::find(tx.conn(), agent)?
+                .expect("the agent")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    sync.until(activity_removed(notice_item), |_| false).await;
+    let listed: api::ActivityList = parse(&david.send(get("/api/v1/activity?type=agents")).await);
+    assert!(listed.items.iter().all(|item| item.id != notice_item));
+    let count: api::ActivityUnreadCount =
+        parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(count.unread_count, listed.unread_count);
     server.abort();
 }

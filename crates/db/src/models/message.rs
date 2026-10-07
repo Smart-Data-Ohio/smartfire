@@ -1233,13 +1233,16 @@ impl Message {
         }
         crate::models::Poll::destroy_for_message(tx, self.id)?;
         crate::models::MessagePin::destroy_for_message(tx, self)?;
-        crate::models::SavedItem::destroy_for_message(tx, self.id)?;
+        crate::models::SavedItem::destroy_for_message(tx, self.id, importing)?;
         tx.conn().execute_cached(
             r#"UPDATE "board_stale_digests" SET "message_id" = NULL WHERE "board_stale_digests"."message_id" = ?"#,
             [self.id],
         )?;
-        crate::ActivityItem::destroy_for_source(tx, "Message", self.id)?;
-        if !importing {
+        // A Slack import's undo broadcasts nothing, so tells no other tab either.
+        if importing {
+            crate::ActivityItem::delete_for_source(tx, "Message", self.id)?;
+        } else {
+            crate::ActivityItem::destroy_for_source(tx, "Message", self.id)?;
             crate::ScheduledMessage::emit_linked_to_message(tx, self.id)?;
         }
         // The reference rows (none has destroy callbacks of its own), Drive attachments and

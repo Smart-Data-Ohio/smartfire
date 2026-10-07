@@ -71,7 +71,7 @@ fn run(name: &str) {
                 "revoke" => HuddleGrant::find_by_id(tx.conn(), id)?.unwrap().revoke(tx, true, &config).map(|_| Value::Null),
                 "destroy_member" => Membership::find(tx.conn(), id)?.destroy(tx).map(|_| Value::Null),
                 "deactivate" => {let member = Membership::find(tx.conn(), id)?; crate::User::find(tx.conn(), member.user_id)?.deactivate(tx).map(|_| Value::Null)},
-                "destroy_room" => {let room = Room::find(tx.conn(), 9001)?; crate::models::room_delete::destroy(tx, &room).map(|_| Value::Null)},
+                "destroy_room" => {let room = Room::find(tx.conn(), 9001)?; crate::models::room_delete::destroy(tx, &room, false).map(|_| Value::Null)},
                 "add_member" => {let user = crate::fixtures::identify(op["user"].as_str().unwrap()); Membership::create_default(tx,9001,user).map(|member|json!(member.id))},
                 "chat" => {let body = if Room::find(tx.conn(),9001)?.stage() {"Hello from stage"} else {"Hello from voice"}; Message::create(tx,NewMessage {room_id:9001, creator_id:david, body:Some(body.into()), client_message_id:Some("ws13b-lifecycle-chat".into()), ..Default::default()}).map(|m| json!(m.id))},
                 "reachable" => Ok(json!({"david":Message::find_reachable(tx.conn(),david,1200000001).is_ok(),"jason":Message::find_reachable(tx.conn(),crate::fixtures::identify("jason"),1200000001).is_ok()})),

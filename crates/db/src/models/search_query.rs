@@ -70,9 +70,16 @@ fn like(s: &str) -> String {
             .replace('_', "\\_")
     )
 }
-fn midnight(date: Date, zone: &TimeZone) -> Result<Timestamp> {
+/// The start of `date` in `zone`, or `None` past the last representable instant (a date
+/// operator accepts any four-digit year, and `9999-12-31` can't be held in every zone). Such a
+/// bound lies after every message, as Ruby's unbounded dates do.
+fn midnight(date: Date, zone: &TimeZone) -> Option<Timestamp> {
     crate::slash_commands::time_parser::local_datetime(date.to_datetime(Time::MIN), zone)
-        .ok_or_else(|| crate::Error::Other("Invalid local search date".into()))
+}
+
+/// The start of the day after `date` in `zone`, or `None` past the last representable instant.
+fn next_midnight(date: Date, zone: &TimeZone) -> Option<Timestamp> {
+    midnight(date.checked_add(jiff::Span::new().days(1)).ok()?, zone)
 }
 impl SearchQuery {
     pub fn parse(raw: &str) -> Self {
@@ -200,26 +207,36 @@ impl SearchQuery {
    "pin"=>" AND EXISTS (SELECT 1 FROM message_pins p WHERE p.message_id=messages.id)",_=>unreachable!(),
   });
         }
-        if let Some(date) = self.before_date {
+        // A bound past the last representable instant comes after every message: `before:`
+        // then holds for all of them, and `after:`/`on:` for none.
+        if let Some(date) = self.before_date
+            && let Some(end) = midnight(date, zone)
+        {
             sql.push_str(" AND messages.created_at < ?");
-            values.push(midnight(date, zone)?.to_db().into());
+            values.push(end.to_db().into());
         }
         if let Some(date) = self.after_date {
-            sql.push_str(" AND messages.created_at >= ?");
-            let next = date
-                .checked_add(jiff::Span::new().days(1))
-                .map_err(|e| crate::Error::Other(e.to_string()))?;
-            values.push(midnight(next, zone)?.to_db().into());
+            match next_midnight(date, zone) {
+                Some(start) => {
+                    sql.push_str(" AND messages.created_at >= ?");
+                    values.push(start.to_db().into());
+                }
+                None => sql.push_str(" AND 0"),
+            }
         }
         if let Some(date) = self.on_date {
-            sql.push_str(" AND messages.created_at >= ? AND messages.created_at < ?");
-            let start = midnight(date, zone)?;
-            let resolved_date = start.jiff().to_zoned(zone.clone()).date();
-            let next = resolved_date
-                .checked_add(jiff::Span::new().days(1))
-                .map_err(|e| crate::Error::Other(e.to_string()))?;
-            values.push(start.to_db().into());
-            values.push(midnight(next, zone)?.to_db().into());
+            match midnight(date, zone) {
+                Some(start) => {
+                    sql.push_str(" AND messages.created_at >= ?");
+                    values.push(start.to_db().into());
+                    let resolved_date = start.jiff().to_zoned(zone.clone()).date();
+                    if let Some(end) = next_midnight(resolved_date, zone) {
+                        sql.push_str(" AND messages.created_at < ?");
+                        values.push(end.to_db().into());
+                    }
+                }
+                None => sql.push_str(" AND 0"),
+            }
         }
         if self.thread_only {
             sql.push_str(" AND messages.thread_id IS NOT NULL");
@@ -416,5 +433,24 @@ mod tests {
             serde_json::to_value(WORD_RANGES).unwrap(),
             oracle["word_ranges"]
         );
+    }
+
+    /// Ruby's dates run past year 9999, so a bound there just lies after every message.
+    #[test]
+    fn dates_past_the_last_instant_bound_after_every_message() {
+        let kiritimati = TimeZone::get("Pacific/Kiritimati").unwrap();
+        for zone in [TimeZone::UTC, kiritimati] {
+            let sql = |raw: &str| SearchQuery::parse(raw).sql(&zone).unwrap();
+            let (after, values) = sql("after:9999-12-31");
+            assert!(after.ends_with(" AND 0"), "{after}");
+            assert!(values.is_empty());
+            let (on, _) = sql("on:9999-12-31");
+            assert!(on.contains(" AND 0") || !on.contains("< ?"), "{on}");
+            let (before, _) = sql("before:9999-12-31 hello");
+            assert!(before.contains("MATCH ?"), "{before}");
+            let (ordinary, values) = sql("after:2026-01-01 before:2026-02-01");
+            assert!(ordinary.contains("created_at >= ?") && ordinary.contains("created_at < ?"));
+            assert_eq!(values.len(), 2);
+        }
     }
 }

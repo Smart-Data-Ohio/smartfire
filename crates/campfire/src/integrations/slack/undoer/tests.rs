@@ -451,3 +451,61 @@ async fn slack_undo_actual_overlapping_imports_require_lifo_and_name_later_impor
     .await
     .unwrap();
 }
+/// Undo broadcasts nothing (this sink fails the write on any broadcast), so an open tab
+/// hears nothing either: not when a room it destroys takes inbox items on its messages and on
+/// its threads' work events, nor their `activity.removed`.
+#[tokio::test]
+async fn slack_undo_of_a_room_with_inbox_items_tells_no_tab() {
+    let (db, _, _dir, id) = imported().await;
+    let room = db
+        .write(|tx| {
+            let thread_id =
+                users::mapped_id(tx.conn(), 1, "thread", "CCHAN:1700000002.000002")?.unwrap();
+            let thread = ChannelThread::find(tx.conn(), thread_id)?;
+            let reply: i64 = tx.conn().query_row(
+                "SELECT id FROM messages WHERE thread_id = ? ORDER BY id LIMIT 1",
+                [thread.id],
+                |r| r.get(0),
+            )?;
+            let event: i64 = tx.conn().query_row(
+                "INSERT INTO work_thread_events (channel_thread_id, event_type, created_at, updated_at) VALUES (?, 'status_changed', ?, ?) RETURNING id",
+                params![thread.id, tx.now(), tx.now()],
+                |r| r.get(0),
+            )?;
+            for (source_type, source_id, event_type) in [
+                ("Message", thread.parent_message_id.unwrap(), "mention"),
+                ("Message", reply, "thread_activity"),
+                ("WorkThreadEvent", event, "work_update"),
+            ] {
+                tx.conn().execute(
+                    "INSERT INTO activity_items (user_id, source_type, source_id, event_type, created_at, updated_at) VALUES (1, ?, ?, ?, ?, ?)",
+                    params![source_type, source_id, event_type, tx.now(), tx.now()],
+                )?;
+            }
+            Ok(thread.room_id)
+        })
+        .await
+        .unwrap();
+    let before = integer(&run(&db, id).await.stats["issues_count"]);
+    let row = undo(&db, id).await;
+    assert_eq!(
+        integer(&row.stats["issues_count"]),
+        before,
+        "{:?}",
+        row.stats
+    );
+    db.read(move |c| {
+        let errors: i64 = c.query_row(
+            "SELECT count(*) FROM slack_import_issues WHERE level = 'error'",
+            [],
+            |r| r.get(0),
+        )?;
+        assert_eq!(errors, 0);
+        assert!(Room::find_by_id(c, room)?.is_none());
+        let items: i64 = c.query_row("SELECT count(*) FROM activity_items", [], |r| r.get(0))?;
+        assert_eq!(items, 0);
+        Ok(())
+    })
+    .await
+    .unwrap();
+}

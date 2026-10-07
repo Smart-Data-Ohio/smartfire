@@ -363,17 +363,39 @@ impl ScheduledMessage {
     }
 
     pub fn drop(&mut self, tx: &mut Tx<'_>, reason: Option<&str>, now: Timestamp) -> Result<()> {
+        self.drop_inner(tx, reason, now, true)
+    }
+
+    fn drop_inner(
+        &mut self,
+        tx: &mut Tx<'_>,
+        reason: Option<&str>,
+        now: Timestamp,
+        announce: bool,
+    ) -> Result<()> {
         tx.conn().execute_cached("UPDATE scheduled_messages SET dropped_at = ?, drop_reason = ?, updated_at = ? WHERE id = ?",
             params![now, reason, tx.now(), self.id])?;
-        ActivityItem::refresh_unread(
-            tx,
-            self.user_id,
-            "ScheduledMessage",
-            self.id,
-            "scheduled_message_dropped",
-        )?;
+        if announce {
+            ActivityItem::refresh_unread(
+                tx,
+                self.user_id,
+                "ScheduledMessage",
+                self.id,
+                "scheduled_message_dropped",
+            )?;
+        } else {
+            ActivityItem::refresh_unread_quietly(
+                tx,
+                self.user_id,
+                "ScheduledMessage",
+                self.id,
+                "scheduled_message_dropped",
+            )?;
+        }
         *self = Self::find(tx.conn(), self.id)?;
-        self.emit_change(tx, false);
+        if announce {
+            self.emit_change(tx, false);
+        }
         Ok(())
     }
 
@@ -387,7 +409,8 @@ impl ScheduledMessage {
 
     /// Prepend to thread destruction, before the FK clears the stream identity. Sent history
     /// stays sent; pending rows become dropped history and retain their private inbox source.
-    /// An import's undo (`importing`) tells no other tab, as it broadcasts nothing else.
+    /// An import's undo (`importing`) tells no other tab, as it broadcasts nothing else (and
+    /// keeps a thread with a pending reply, so finds none to drop).
     pub(crate) fn drop_for_thread(tx: &mut Tx<'_>, thread_id: i64, importing: bool) -> Result<()> {
         let pending = query_all(
             tx.conn(),
@@ -396,7 +419,7 @@ impl ScheduledMessage {
             Self::from_row,
         )?;
         for mut row in pending {
-            row.drop(tx, Some("its thread was deleted"), tx.now())?;
+            row.drop_inner(tx, Some("its thread was deleted"), tx.now(), !importing)?;
         }
         if importing {
             return Ok(());

@@ -37,6 +37,27 @@ endpoint!(
 /// `searches#create`'s refusal of a blank query.
 const BLANK: &str = "Enter a word to search for.";
 
+/// The longest `q` (and stored recent search), in characters. New: the classic page has no
+/// limit; this one keeps a query's SQL (one term per word and name filter) well inside
+/// SQLite's limits.
+pub const MAX_QUERY_CHARS: usize = 500;
+/// The most `from:` values, and separately the most `in:` values, in one query. New, as above.
+pub const MAX_NAME_FILTERS: usize = 10;
+
+/// `q`'s bounds, as `field`'s 422 when they don't hold.
+fn bounded(field: &str, query: &SearchQuery) -> Option<api::ApiError> {
+    let message = if query.raw.chars().count() > MAX_QUERY_CHARS {
+        format!("is too long (maximum is {MAX_QUERY_CHARS} characters)")
+    } else if query.from_names.len() > MAX_NAME_FILTERS {
+        format!("has too many from: filters (maximum is {MAX_NAME_FILTERS})")
+    } else if query.in_rooms.len() > MAX_NAME_FILTERS {
+        format!("has too many in: filters (maximum is {MAX_NAME_FILTERS})")
+    } else {
+        return None;
+    };
+    Some(validation(field, &message))
+}
+
 /// `display_query`: runs of whitespace collapsed.
 fn squish(raw: &str) -> String {
     raw.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -79,7 +100,10 @@ fn section(section: SearchSection) -> api::SearchSection {
                 id: row.id,
                 room_id: row.room_id,
                 room_kind: dto::room_kind(
-                    RoomType::from_class_name(&row.room_type).unwrap_or(RoomType::Open),
+                    RoomType::from_class_name(&row.room_type).unwrap_or_else(|| {
+                        tracing::warn!(room_id = row.room_id, room_type = %row.room_type, "search section row in a room of an unknown type, shown as open");
+                        RoomType::Open
+                    }),
                 ),
                 title: row.title,
                 time: dto::time(row.time),
@@ -107,13 +131,16 @@ async fn index_search(c: &mut Ctx) -> Result {
             None => return Err(fail(c, validation("before", "is invalid"))),
         },
     };
+    let query = SearchQuery::parse(&raw);
+    if let Some(error) = bounded("q", &query) {
+        return Err(fail(c, error));
+    }
     let zone = features::user_zone(c).await?.tz().clone();
     let (app, now) = (c.app().clone(), now(c));
     let results = c
         .app()
         .db
         .read(move |conn| {
-            let query = SearchQuery::parse(&raw);
             let page = query.messages_for_user_after(conn, viewer.id, zone, after)?;
             // The page is oldest first; the next one starts past its oldest.
             let next_cursor = page
@@ -194,7 +221,11 @@ async fn create_recent(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let user_id = concerns::require_current_user(c)?.id;
     let api::RecordSearch { query } = body(c).await?;
-    if SearchQuery::parse(&query).blank_query() {
+    let parsed = SearchQuery::parse(&query);
+    if let Some(error) = bounded("query", &parsed) {
+        return Err(fail(c, error));
+    }
+    if parsed.blank_query() {
         return Err(fail(
             c,
             api::ApiError::Validation {

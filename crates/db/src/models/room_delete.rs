@@ -163,7 +163,9 @@ pub(crate) fn destroy_event(tx: &mut Tx<'_>, id: i64) -> Result<()> {
         .execute_cached("DELETE FROM events WHERE id=?", [id])?;
     Ok(())
 }
-fn destroy_row(tx: &mut Tx<'_>, table: &str, id: i64) -> Result<()> {
+/// `importing` (a Slack import's undo) destroys messages and threads as imported ones, which
+/// broadcast nothing.
+fn destroy_row(tx: &mut Tx<'_>, table: &str, id: i64, importing: bool) -> Result<()> {
     match table {
         "huddle_grants" => destroy_grant(tx, id),
         "scheduled_messages" => {
@@ -174,13 +176,21 @@ fn destroy_row(tx: &mut Tx<'_>, table: &str, id: i64) -> Result<()> {
         }
         "messages" => {
             if let Some(row) = Message::find_by_id(tx.conn(), id)? {
-                row.destroy_with_conversation(tx)?;
+                if importing {
+                    row.destroy_imported_with_conversation(tx)?;
+                } else {
+                    row.destroy_with_conversation(tx)?;
+                }
             }
             Ok(())
         }
         "channel_threads" => {
             if let Some(row) = ChannelThread::find_by_id(tx.conn(), id)? {
-                row.destroy(tx)?;
+                if importing {
+                    row.destroy_imported(tx)?;
+                } else {
+                    row.destroy(tx)?;
+                }
             }
             Ok(())
         }
@@ -227,7 +237,8 @@ pub async fn perform_with_config(db: &Database, room_id: i64, config: HuddleConf
                 break;
             }
             for id in batch {
-                db.write(move |tx| destroy_row(tx, table, id)).await?;
+                db.write(move |tx| destroy_row(tx, table, id, false))
+                    .await?;
             }
         }
     }
@@ -243,7 +254,8 @@ pub async fn perform_with_config(db: &Database, room_id: i64, config: HuddleConf
 /// Room#destroy's declared dependencies, distinct from DestroyJob's preliminary deletes.
 /// Huddle grants are only revoked by before_destroy; their cleanup links survive. Scheduled
 /// messages use dependent:delete_all, so their dropped-message inbox items survive too.
-pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room) -> Result<()> {
+/// A Slack import's undo (`importing`) broadcasts nothing.
+pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room, importing: bool) -> Result<()> {
     tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=?", [room.id])?;
     for table in ["messages", "channel_threads", "events"] {
         loop {
@@ -252,7 +264,7 @@ pub(crate) fn destroy(tx: &mut Tx<'_>, room: &Room) -> Result<()> {
                 break;
             }
             for id in batch {
-                destroy_row(tx, table, id)?;
+                destroy_row(tx, table, id, importing)?;
             }
         }
     }

@@ -39,7 +39,8 @@ const PAGE: usize = 100;
 
 /// The inbox rows as the wire carries them, their sources read in one batch
 /// (`activity::Sources::load_spa`). A row holding a value the contract doesn't know (a new event
-/// type, say) is left out and logged rather than failing the whole list.
+/// type, say), or whose source (or a row it leads to) has gone missing, is left out and logged
+/// rather than failing the whole list.
 pub(crate) fn items(
     conn: &Connection,
     app: &AppState,
@@ -49,7 +50,17 @@ pub(crate) fn items(
     let sources = presenter::Sources::load_spa(conn, rows)?;
     let mut items = Vec::with_capacity(rows.len());
     for row in rows {
-        let (view, refs) = presenter::spa_row(conn, app, row, viewer, &sources)?;
+        let (view, refs) = match presenter::spa_row(conn, app, row, viewer, &sources) {
+            Ok(presented) => presented,
+            Err(
+                error @ (campfire_db::Error::RecordNotFound(_)
+                | campfire_db::Error::Sqlite(rusqlite::Error::QueryReturnedNoRows)),
+            ) => {
+                tracing::warn!(%error, item_id = row.id, "activity: row with a missing source left out of the list");
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
         match wire_row(row, view, refs) {
             Ok(item) => items.push(item),
             Err(error) => {

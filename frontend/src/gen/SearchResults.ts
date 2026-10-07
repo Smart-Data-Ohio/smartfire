@@ -25,7 +25,12 @@ import type { User } from "./User";
  * text). System notes are never found.
  *
  * Only rooms the viewer belongs to, which aren't deleted, are searched. A blank `q` (no words
- * and no operators) answers an empty page, not an error.
+ * and no operators) answers an empty page, not an error. A date past the last instant the
+ * server holds (`after:9999-12-31`) lies after every message: `before:` it matches them all,
+ * `after:` or `on:` it matches none.
+ *
+ * A `q` over 500 characters, or with more than 10 `from:` or more than 10 `in:` values, is a
+ * 422 (`ApiError::Validation` on `q`). New: the classic page has no such limits.
  *
  * `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
  * first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on

@@ -927,7 +927,9 @@ impl ChannelThread {
             let removed = crate::sql::query_all(tx.conn(), sql, [self.id], |row| {
                 Ok((row.get(0)?, row.get(1)?))
             })?;
-            crate::ActivityItem::emit_removed(tx, removed);
+            if !importing {
+                crate::ActivityItem::emit_removed(tx, removed);
+            }
         }
         for sql in [
             r#"DELETE FROM "github_pull_request_threads" WHERE "channel_thread_id" = ?"#,
