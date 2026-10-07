@@ -307,40 +307,46 @@ test("an animated icon rests on its first frame and plays while pointed at", asy
   await expect(railTile(page).locator("img[data-animated]")).toHaveCount(0);
 });
 
-test("under reduced motion an animated icon never plays, even while uploading", async ({
-  page,
-}) => {
-  await openProfile(page);
+for (const [label, file] of [
+  ["GIF", ANIMATED_LOGO],
+  ["APNG", { name: "logo.png", mimeType: "image/png", buffer: twoFrameApng(64, 64) }],
+] as const) {
+  test(`under reduced motion an animated ${label} icon never plays, even while uploading`, async ({
+    page,
+  }) => {
+    await openProfile(page);
 
-  // Hold the upload's bytes so the preview shows the file being uploaded.
-  const { promise: held, resolve: release } = Promise.withResolvers<void>();
+    // Hold the upload's bytes so the preview shows the file being uploaded.
+    const { promise: held, resolve: release } = Promise.withResolvers<void>();
 
-  await page.route("**/rails/active_storage/disk/**", async (route) => {
-    await held;
-    await route.continue();
-  });
-  await page.getByLabel("Choose icon image").setInputFiles(ANIMATED_LOGO);
+    await page.route("**/rails/active_storage/disk/**", async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.getByLabel("Choose icon image").setInputFiles(file);
 
-  // The preview draws the file's first frame: a PNG, not the GIF itself.
-  const preview = page.locator(".profile-preview-icon img");
+    // The preview draws the file's first frame: a plain PNG, not the animated file itself.
+    const preview = page.locator(".profile-preview-icon img");
 
-  await expect(preview).toHaveAttribute("src", /^blob:/);
-  expect(
-    await preview.evaluate(async (image: HTMLImageElement) => {
+    await expect(preview).toHaveAttribute("src", /^blob:/);
+
+    const drawn = await preview.evaluate(async (image: HTMLImageElement) => {
       const bytes = new Uint8Array(await (await fetch(image.src)).arrayBuffer());
+      const text = String.fromCharCode(...bytes);
 
-      return String.fromCharCode(...bytes.subarray(1, 4));
-    }),
-  ).toBe("PNG");
+      return { png: text.slice(1, 4) === "PNG", animated: text.includes("acTL") };
+    });
 
-  release();
-  await expect(page.getByText("Icon updated")).toBeVisible();
-  await expect(preview).toHaveAttribute("src", /\/representations\//);
+    expect(drawn).toEqual({ png: true, animated: false });
 
-  await railTile(page).hover();
-  await expect(railTile(page).locator("img")).toHaveCount(1);
-  await expect(railTile(page).locator("img[data-animated]")).toHaveCount(0);
-});
+    release();
+    await expect(page.getByText("Icon updated")).toBeVisible();
+
+    await railTile(page).hover();
+    await expect(railTile(page).locator("img")).toHaveCount(1);
+    await expect(railTile(page).locator("img[data-animated]")).toHaveCount(0);
+  });
+}
 
 test("an animated PNG is taken as a still image", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });

@@ -80,10 +80,14 @@
     opacity: 0;
   }
 
+  /*
+   * Hover and press darken the shade further (a light fill would wash the white text out over a
+   * bright banner), so the text's contrast only rises from the shade's 5.7:1.
+   */
   .sidebar-header[data-banner]:not([data-folded]) .button {
     --button-fg: oklch(100% 0 0);
-    --button-bg-hover: oklch(100% 0 0 / 16%);
-    --button-bg-active: oklch(100% 0 0 / 24%);
+    --button-bg-hover: oklch(0% 0 0 / 28%);
+    --button-bg-active: oklch(0% 0 0 / 42%);
 
     color: var(--button-fg);
     text-shadow: 0 1px 2px oklch(0% 0 0 / 45%);

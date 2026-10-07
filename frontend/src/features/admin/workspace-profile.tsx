@@ -8,7 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { adminFailure, needsSudo, useAdmin } from "./admin-parts.tsx";
-import { mayAnimate, useFirstFrame } from "./first-frame.ts";
+import { useFirstFrame } from "./first-frame.ts";
 import {
   imageProblem,
   PROFILE_FORMATS,
@@ -57,22 +57,19 @@ function initialsOf(name: string): string {
 
 /**
  * The image as it should show here: animated unless motion is reduced. Under reduced motion a
- * file still uploading shows its first frame, drawn here (nothing until it's drawn).
+ * file still uploading shows its first frame, drawn here (nothing until it's drawn): any of the
+ * accepted types may move, a PNG included (APNG), so every one is drawn.
  */
 function useShownSrc(image: Shown): string | null {
   const reduced = useReducedMotion();
   const file = image.file ?? null;
-  const drawn = useFirstFrame(file, reduced && file !== null && mayAnimate(file));
+  const drawn = useFirstFrame(file, reduced && file !== null);
 
   if (!reduced) {
     return image.url;
   }
 
-  if (file !== null && mayAnimate(file)) {
-    return drawn;
-  }
-
-  return image.stillUrl ?? image.url;
+  return file === null ? (image.stillUrl ?? image.url) : drawn;
 }
 
 /**

@@ -1,13 +1,8 @@
 import { useEffect, useState } from "react";
 
-/** A GIF or WebP may move; other image types never do. */
-export function mayAnimate(file: File): boolean {
-  return file.type === "image/gif" || file.type === "image/webp";
-}
-
 /**
  * A still of `file`'s first frame as an object URL, while `enabled`: an image bitmap of an animated
- * file is its first frame, drawn once to a canvas. `null` while it's drawn, when disabled, or when
+ * file (a GIF, a WebP, or a PNG that is really an APNG) is its first frame, drawn once to a canvas. `null` while it's drawn, when disabled, or when
  * the browser can't read the file.
  */
 export function useFirstFrame(file: File | null, enabled: boolean): string | null {
