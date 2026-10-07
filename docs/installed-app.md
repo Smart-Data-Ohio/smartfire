@@ -8,8 +8,12 @@ stored preference wins over `SPA_DEFAULT`. Signed-out requests use `SPA_DEFAULT`
 Classic pages register the selected URL from their layout, including pages that
 remain classic for a person using the SPA. SPA pages register only for the next UI.
 The classic selection lives in a provisional head meta element, which Turbo replaces
-on each visit. With `SPA_ENABLED` off the layout omits it, so classic pages stay
-byte-identical to Rails, and the scripts register `/service-worker.js` as Rails does. Registration reconciles on both `load` and `turbo:load`, so signing
+on each visit. The scripts that read it are Smartfire variants of the Rails
+service-worker initializer and notifications controller, kept as added assets under
+`crates/assets/overrides/smartfire/`. Only a layout that names a worker maps those two
+module names to them (`javascript_importmap_tags_selecting_worker()`). With
+`SPA_ENABLED` off the layout omits the meta and keeps the Rails import map, so classic
+pages stay byte-identical to Rails and register `/service-worker.js` as Rails does. Registration reconciles on both `load` and `turbo:load`, so signing
 in as someone with a different preference also replaces the selected script. It
 never unregisters the root registration.
 The boot JSON carries that URL, or null. Mock boot data leave it null, and

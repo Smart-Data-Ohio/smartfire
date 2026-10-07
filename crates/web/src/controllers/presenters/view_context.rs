@@ -211,7 +211,12 @@ impl Layout {
             platform: self.platform.clone(),
             vapid_public_key: self.vapid_public_key.clone(),
             asset_path: &asset_path,
-            importmap_tags: campfire_assets::javascript_importmap_tags(),
+            // A head that names a worker loads the scripts that read it; otherwise the Rails map.
+            importmap_tags: if self.chrome.service_worker_url.is_some() {
+                campfire_assets::javascript_importmap_tags_selecting_worker()
+            } else {
+                campfire_assets::javascript_importmap_tags()
+            },
             stylesheet_tags: &stylesheets.html,
             custom_styles: self.custom_styles.clone(),
             cable_url: "/cable".into(),

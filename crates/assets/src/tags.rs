@@ -76,6 +76,36 @@ pub fn javascript_importmap_tags() -> &'static str {
     embedded::IMPORTMAP_TAGS
 }
 
+/// The Rails modules whose Smartfire variants register the worker the layout selects, as
+/// (Rails logical path, Smartfire logical path). The variants are added assets, so the Rails
+/// import map stays byte-identical while the SPA is off.
+pub const WORKER_SELECTION_MODULES: [(&str, &str); 2] = [
+    (
+        "initializers/service_worker.js",
+        "smartfire/initializers/service_worker.js",
+    ),
+    (
+        "controllers/notifications_controller.js",
+        "smartfire/controllers/notifications_controller.js",
+    ),
+];
+
+/// [`javascript_importmap_tags`] with [`WORKER_SELECTION_MODULES`] resolving to Smartfire's
+/// variants, for layouts that name a worker in their head (only with the SPA enabled).
+pub fn javascript_importmap_tags_selecting_worker() -> &'static str {
+    static TAGS: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    TAGS.get_or_init(|| {
+        WORKER_SELECTION_MODULES.iter().fold(
+            embedded::IMPORTMAP_TAGS.to_string(),
+            |tags, (rails, ours)| {
+                let rails = crate::asset_path(rails);
+                assert!(tags.contains(&rails), "{rails} is in the import map");
+                tags.replace(&rails, &crate::asset_path(ours))
+            },
+        )
+    })
+}
+
 /// ERB::Util.html_escape
 fn escape_html(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
