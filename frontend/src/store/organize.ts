@@ -12,6 +12,8 @@ export interface MembershipPatch {
   readonly favoritePosition?: number | null;
   readonly roomCategoryId?: number | null;
   readonly involvement?: Involvement;
+  /** Muting marks the room read: shown read at once, like the rest of the change. */
+  readonly unreadAt?: null;
 }
 
 /**

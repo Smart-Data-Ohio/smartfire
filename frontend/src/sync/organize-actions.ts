@@ -15,6 +15,7 @@ import {
   canCategorize,
   favoriteRows,
   isInSlot,
+  type MembershipPatch,
   organizedSidebar,
   placementPatches,
   type RoomSlot,
@@ -347,8 +348,11 @@ export const setInvolvement = Effect.fn("organize.setInvolvement")(function* (
   roomId: number,
   involvement: Involvement,
 ) {
+  const patch: MembershipPatch =
+    involvement === "muted" ? { involvement, unreadAt: null } : { involvement };
+
   yield* pending(
-    memberships({ [roomId]: { involvement } }),
+    memberships({ [roomId]: patch }),
     Effect.gen(function* () {
       mutations.setMembership(yield* api.updateInvolvement(roomId, involvement));
     }),

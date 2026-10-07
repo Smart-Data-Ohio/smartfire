@@ -391,8 +391,24 @@ describe("organize actions", () => {
       const fake = yield* FakeApi;
       let during: string | undefined;
 
+      mutations.applyEvents(
+        [
+          {
+            seq: 0,
+            topic: "user:7",
+            type: "sidebar.row.upserted",
+            data: withMembership(general, { unreadAt: "2026-10-05T00:00:00.000Z" }),
+          },
+        ],
+        0,
+      );
+
+      let unreadDuring: string | null | undefined;
+
       yield* fake.route("PUT /rooms/1/involvement", () => {
         during = view().rows[1]?.membership.involvement;
+        // Muting marks the room read: it shows read at once too.
+        unreadDuring = view().rows[1]?.membership.unreadAt;
 
         return Effect.succeed({ ...general.membership, involvement: "muted" });
       });
@@ -400,6 +416,7 @@ describe("organize actions", () => {
       yield* organize.setInvolvement(1, "muted");
 
       expect(during).toBe("muted");
+      expect(unreadDuring).toBeNull();
       expect(store.getState().sidebar.rows[1]?.membership.involvement).toBe("muted");
       expect(store.getState().rooms[1]?.detail?.membership.involvement).toBe("muted");
     }).pipe(Effect.provide(FakeApi.layerClient)),
