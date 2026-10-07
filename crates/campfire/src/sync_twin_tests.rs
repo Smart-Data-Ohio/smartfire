@@ -165,61 +165,138 @@ fn the_events_read_are_the_contracts() {
 
 #[tokio::test]
 async fn approval_sync_users_carry_their_row_timestamps() {
+    use crate::controllers::presenters::test_support::{
+        BENDER, DAVID, JASON, Req, TestApp, seed_clock,
+    };
+    use axum::http::{Method, StatusCode};
     use campfire_api_types as api;
-    use crate::controllers::presenters::test_support::{BENDER, DAVID, Req, TestApp, seed_clock};
+    use futures_util::{SinkExt, StreamExt};
+    use serde_json::json;
+    use std::collections::BTreeMap;
+    use std::time::Duration;
+    use tokio_tungstenite::{
+        connect_async,
+        tungstenite::{Message, client::IntoClientRequest},
+    };
 
-    let Some(a) = TestApp::boot_seed_with_env("default", seed_clock(), &[("SPA_ENABLED", "1")]).await
-    else { return };
-    a.db().write(|tx| {
-        tx.conn().execute(
-            "UPDATE users SET updated_at=? WHERE id IN (?,?)",
-            rusqlite::params![tx.now(), BENDER, DAVID],
-        )?;
-        Ok(())
-    }).await.unwrap();
-    let mut b = a.sign_in(DAVID).await;
-    let reply = b.send(
-        Req::new(axum::http::Method::GET, &format!("/api/v1/users?ids={BENDER},{DAVID}"))
-            .header("accept", "application/json"),
-    ).await;
-    assert_eq!(reply.status, axum::http::StatusCode::OK, "{}", reply.text());
-    let users: api::UserList = serde_json::from_slice(&reply.body).unwrap();
-    let now = a.db().env().now();
-    let timestamps = a.db().read(move |conn| {
-        [BENDER, DAVID].into_iter().map(|id| {
-            campfire_db::User::find(conn, id).map(|user| (id, user.updated_at.to_wire()))
-        }).collect::<campfire_db::Result<Vec<_>>>()
-    }).await.unwrap();
-    let payload = api::SyncPayload::ApprovalUpdated(api::ApprovalUpdated {
-        approval: api::AgentApproval {
-            id: 1,
-            agent_id: 1,
-            agent_user_id: BENDER,
-            room_id: None,
-            room_name: None,
-            action: "github.merge_pull_request".into(),
-            summary: "Merge the reviewed change".into(),
-            status: api::AgentApprovalStatus::Approved,
-            expires_at: now.to_wire(),
-            created_at: now.to_wire(),
-            decided_by_id: Some(DAVID),
-            decided_at: Some(now.to_wire()),
-            decision_note: None,
-            github_login: None,
-            fizzy_user_name: None,
-            admin_only: true,
-            approvable: true,
-            deniable: true,
-        },
-        users: users.users,
-    });
-    let wire = serde_json::to_value(&payload).unwrap();
-    assert_eq!(wire["type"], "approval.updated");
-    let users = wire["data"]["users"].as_array().unwrap();
-    assert_eq!(users.len(), timestamps.len());
-    for (id, updated_at) in timestamps {
-        let user = users.iter().find(|user| user["id"] == id).unwrap();
-        assert_eq!(user["updatedAt"], updated_at);
-    }
-    assert_eq!(serde_json::from_value::<api::SyncPayload>(wire).unwrap(), payload);
+    let Some(a) =
+        TestApp::boot_seed_with_env("default", seed_clock(), &[("SPA_ENABLED", "1")]).await
+    else {
+        return;
+    };
+    let mut david = a.sign_in(DAVID).await;
+    let jason = a.sign_in(JASON).await;
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    let router = a.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut request = format!("ws://{addr}/api/v1/sync")
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("cookie", jason.cookie_header().parse().unwrap());
+    request
+        .headers_mut()
+        .insert("host", "campfire.test".parse().unwrap());
+    request
+        .headers_mut()
+        .insert("origin", "http://campfire.test".parse().unwrap());
+    let (mut socket, _) = connect_async(request).await.unwrap();
+    socket
+        .send(Message::Text(
+            json!({"t": "hello", "v": 1, "resume": null, "topics": []})
+                .to_string()
+                .into(),
+        ))
+        .await
+        .unwrap();
+    let welcome = tokio::time::timeout(Duration::from_secs(10), socket.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    let Message::Text(welcome) = welcome else {
+        panic!("expected sync welcome")
+    };
+    assert!(matches!(
+        serde_json::from_str::<api::ServerFrame>(&welcome).unwrap(),
+        api::ServerFrame::Welcome { .. }
+    ));
+
+    a.db()
+        .write(|tx| {
+            for (id, at) in [
+                (BENDER, "2026-03-02T15:00:00.123456Z"),
+                (DAVID, "2026-03-02T15:00:00.123789Z"),
+            ] {
+                tx.conn().execute(
+                    "UPDATE users SET updated_at=? WHERE id=?",
+                    rusqlite::params![campfire_db::Timestamp::from_jiff(at.parse().unwrap()), id],
+                )?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(
+            Req::new(Method::PATCH, "/api/v1/agent_approvals/1")
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .body(json!({"decision": "approved", "note": "Ship it"}).to_string()),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    // Read Jason's real sync socket. A missing publisher times out instead of passing on an HTTP DTO.
+    let event = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let frame = socket.next().await.expect("sync stays open").expect("sync frame");
+            if let Message::Text(text) = frame
+                && let api::ServerFrame::Batch { events } = serde_json::from_str(&text).unwrap()
+                && let Some(event) = events.into_iter().find(|event| {
+                    matches!(&event.payload, api::SyncPayload::ApprovalUpdated(update) if update.approval.id == 1)
+                })
+            {
+                break event;
+            }
+        }
+    }).await.expect("approval.updated must actually be published");
+    assert_eq!(event.topic, "user");
+    let api::SyncPayload::ApprovalUpdated(update) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(update.approval.status, api::AgentApprovalStatus::Approved);
+    assert_eq!(update.approval.decided_by_id, Some(DAVID));
+    let expected = a
+        .db()
+        .read(|conn| {
+            [BENDER, DAVID]
+                .into_iter()
+                .map(|id| {
+                    campfire_db::User::find(conn, id).map(|user| {
+                        (
+                            id,
+                            user.updated_at
+                                .jiff()
+                                .strftime("%Y-%m-%dT%H:%M:%S%.6fZ")
+                                .to_string(),
+                        )
+                    })
+                })
+                .collect::<campfire_db::Result<BTreeMap<_, _>>>()
+        })
+        .await
+        .unwrap();
+    assert_eq!(expected[&BENDER], "2026-03-02T15:00:00.123456Z");
+    assert_eq!(expected[&DAVID], "2026-03-02T15:00:00.123789Z");
+    assert_eq!(update.users.len(), expected.len());
+    let published: BTreeMap<_, _> = update
+        .users
+        .into_iter()
+        .map(|user| (user.id, user.updated_at))
+        .collect();
+    assert_eq!(published, expected);
+    server.abort();
 }

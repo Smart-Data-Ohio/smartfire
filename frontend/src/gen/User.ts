@@ -37,6 +37,8 @@ avatarIcon: Icon | null,
 agent: AgentBadge | null, createdAt: string, 
 /**
  * `users.updated_at`: moves on every change to the users row, including status changes
- * from bans and unbans. Clients keep whichever copy of a user has the later value.
+ * from bans and unbans. UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; clients keep whichever copy
+ * of a user has the later value. Whole-second and millisecond rows are padded with zeros.
  */
 updatedAt: string, };

@@ -20,6 +20,111 @@ const RITA: i64 = 773523954;
 const MALLORY: i64 = 773523955;
 const UNKNOWN: i64 = 999_999_999;
 
+fn updated_at(user: &User) -> String {
+    user.updated_at
+        .jiff()
+        .strftime("%Y-%m-%dT%H:%M:%S%.6fZ")
+        .to_string()
+}
+
+#[tokio::test]
+async fn user_updates_within_one_millisecond_have_increasing_timestamps() {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    use campfire_db::UserChanges;
+    use campfire_kit::clock::FrozenClock;
+    use std::sync::Arc;
+
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let Some(a) =
+        TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")]).await
+    else {
+        return;
+    };
+    let mut b = a.sign_in(DAVID).await;
+    let created_at = a
+        .db()
+        .read(|conn| User::find(conn, DAVID))
+        .await
+        .unwrap()
+        .created_at
+        .to_wire();
+    let mut previous = String::new();
+    for (at, stored) in [
+        ("2026-03-02T16:00:00.123456Z", "2026-03-02 16:00:00.123456"),
+        ("2026-03-02T16:00:00.123789Z", "2026-03-02 16:00:00.123789"),
+    ] {
+        clock.set(at.parse().unwrap());
+        a.db()
+            .write(move |tx| {
+                User::find(tx.conn(), DAVID)?.update(
+                    tx,
+                    UserChanges {
+                        name: Some(format!("David at {at}")),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let raw: String = a
+            .db()
+            .read(|conn| {
+                Ok(
+                    conn.query_row("SELECT updated_at FROM users WHERE id=?", [DAVID], |row| {
+                        row.get(0)
+                    })?,
+                )
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            raw, stored,
+            "Rust writes all six microsecond digits to SQLite"
+        );
+        let response = b.send(get(&format!("/api/v1/users?ids={DAVID}"))).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let users: api::UserList = parse(&response);
+        assert_eq!(users.users.len(), 1);
+        let user = &users.users[0];
+        assert_eq!(user.id, DAVID);
+        assert_eq!(user.updated_at, at);
+        assert!(user.updated_at > previous);
+        assert_eq!(user.created_at, created_at);
+        previous = user.updated_at.clone();
+    }
+}
+
+#[tokio::test]
+async fn user_timestamps_pad_legacy_rows_without_changing_time_order() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let mut previous = String::new();
+    for (stored, expected) in [
+        ("2026-10-07 10:15:00", "2026-10-07T10:15:00.000000Z"),
+        ("2026-10-07 10:15:00.123", "2026-10-07T10:15:00.123000Z"),
+        ("2026-10-07 10:15:00.123456", "2026-10-07T10:15:00.123456Z"),
+        ("2026-10-07 10:15:01", "2026-10-07T10:15:01.000000Z"),
+    ] {
+        a.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET updated_at=? WHERE id=?",
+                    rusqlite::params![stored, DAVID],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let response = b.send(get(&format!("/api/v1/users?ids={DAVID}"))).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let users: api::UserList = parse(&response);
+        assert_eq!(users.users.len(), 1);
+        assert_eq!(users.users[0].updated_at, expected);
+        assert!(users.users[0].updated_at > previous);
+        previous = users.users[0].updated_at.clone();
+    }
+}
+
 /// Seed browser sessions have loopback IPs, which classic correctly refuses to ban.
 async fn public_sessions(a: &TestApp, _: &mut Browser<'_>) -> Value {
     a.db()
@@ -58,10 +163,10 @@ async fn ban_and_remove_ban_match_classic() {
                     spa(b, method.clone(), &api_path, Value::Null).await;
                 assert_eq!(profile.user.id, id);
                 assert_eq!(profile.user.status, status);
-                assert!(profile.user.updated_at > before.updated_at.to_wire());
+                assert!(profile.user.updated_at > updated_at(&before));
                 let after = b.app().db()
                     .read(move |conn| User::find(conn, id)).await.unwrap();
-                assert_eq!(profile.user.updated_at, after.updated_at.to_wire());
+                assert_eq!(profile.user.updated_at, updated_at(&after));
                 assert!(profile.status.is_some());
                 assert!(profile.email_address.is_some());
                 assert!(profile.can_ban);
@@ -332,7 +437,7 @@ async fn directory_matches_classic_presenters_in_order() {
         assert_eq!(user.avatar_url, source.user.avatar_path);
         let id = user.id;
         let row = a.db().read(move |conn| User::find(conn, id)).await.unwrap();
-        assert_eq!(user.updated_at, row.updated_at.to_wire());
+        assert_eq!(user.updated_at, updated_at(&row));
     }
     let ids = ids.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
     let users: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={ids}"))).await);
@@ -414,7 +519,7 @@ async fn check_profile(
     assert_eq!(profile.user.id, user.id);
     assert_eq!(profile.user.name, user.name);
     assert_eq!(profile.user.bio, user.bio);
-    assert_eq!(profile.user.updated_at, user.updated_at.to_wire());
+    assert_eq!(profile.user.updated_at, updated_at(&user));
     let users: api::UserList = parse(&b.send(get(&format!("/api/v1/users?ids={id}"))).await);
     assert_eq!(profile.user, users.users[0]);
     // Conditions in `users/show.html:21,45-49,51,58-65`.

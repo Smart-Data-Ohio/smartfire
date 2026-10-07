@@ -34,7 +34,7 @@ pub(crate) fn user() -> User {
         avatar_icon: None,
         agent: None,
         created_at: "2026-09-26T12:26:46.848Z".into(),
-        updated_at: "2026-10-06T09:15:00.123Z".into(),
+        updated_at: "2026-10-06T09:15:00.123456Z".into(),
     }
 }
 
@@ -86,7 +86,7 @@ fn user_is_camel_case_with_explicit_nulls() {
             "avatarIcon": null,
             "agent": null,
             "createdAt": "2026-09-26T12:26:46.848Z",
-            "updatedAt": "2026-10-06T09:15:00.123Z",
+            "updatedAt": "2026-10-06T09:15:00.123456Z",
         }),
     );
 }
