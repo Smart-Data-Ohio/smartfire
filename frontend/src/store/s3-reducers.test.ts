@@ -83,6 +83,7 @@ function user(id: number): User {
     customStatus: null,
     agent: null,
     createdAt: at(0),
+    updatedAt: at(0),
   };
 }
 

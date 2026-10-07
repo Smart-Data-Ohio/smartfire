@@ -74,3 +74,7 @@ mod integrations_tests;
 #[cfg(test)]
 #[path = "spa_account_tests.rs"]
 mod account_tests;
+
+#[cfg(test)]
+#[path = "spa_people_tests.rs"]
+mod people_tests;

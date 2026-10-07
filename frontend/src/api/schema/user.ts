@@ -8,7 +8,7 @@ import { AgentBadge } from "./agent-identity.ts";
 import { Icon } from "./icon.ts";
 import { UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { Timestamp } from "./time.ts";
+import { RowTimestamp, Timestamp } from "./time.ts";
 
 export const UserRole = Schema.Literals(["member", "administrator", "bot"]);
 
@@ -42,6 +42,8 @@ export const User = Schema.Struct({
   /** Set for an agent (a bot with an `agents` row); `null` for people and plain bots. */
   agent: Schema.NullOr(AgentBadge),
   createdAt: Timestamp,
+  /** `users.updated_at`, to the microsecond: of two copies of a user, the client keeps the later. */
+  updatedAt: RowTimestamp,
 });
 
 export type User = typeof User.Type;

@@ -31,6 +31,7 @@ mod me;
 mod message;
 mod organize;
 mod panes;
+mod people;
 mod presence;
 mod reaction;
 mod read;
@@ -116,6 +117,7 @@ pub use organize::{
     RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
 };
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
+pub use people::{DirectoryPerson, PeopleDirectory, PersonProfile, PersonStatus};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
@@ -185,3 +187,6 @@ mod tests_s7_admin;
 mod tests_s7_bots;
 #[cfg(test)]
 mod tests_s7_slack;
+
+#[cfg(test)]
+mod tests_s7_people;
