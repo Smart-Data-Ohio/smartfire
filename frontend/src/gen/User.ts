@@ -34,4 +34,11 @@ avatarIcon: Icon | null,
  * Set for an agent (a bot with an `agents` row); `null` for people and for bots without
  * one, which the classic pages label "Bot". Kept current by `agent.status`.
  */
-agent: AgentBadge | null, createdAt: string, };
+agent: AgentBadge | null, createdAt: string, 
+/**
+ * `users.updated_at`: moves on every change to the users row, including status changes
+ * from bans and unbans. UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; clients keep whichever copy
+ * of a user has the later value. Whole-second and millisecond rows are padded with zeros.
+ */
+updatedAt: string, };

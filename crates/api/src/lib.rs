@@ -31,6 +31,7 @@ pub mod bots;
 pub mod huddles;
 pub mod message_actions;
 pub mod organize;
+pub mod people;
 pub mod search;
 pub mod settings;
 pub mod slack;
@@ -333,6 +334,7 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/agent_approvals/{id}",
             patch(unparsed_action(agents::decide)),
         )
+        .merge(people::routes())
         .merge(settings::routes())
         .merge(admin::routes())
         .merge(bots::routes())

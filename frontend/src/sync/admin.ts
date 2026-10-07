@@ -40,6 +40,8 @@ import {
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
+import { peopleDirectory, personProfile, setBanned } from "../api/people-endpoints.ts";
+import { setDndAllowance } from "../api/settings-endpoints.ts";
 import {
   cancelSlackRun,
   disconnectSlack,
@@ -94,6 +96,7 @@ import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
+import { peoplePagesOver } from "./people-pages.ts";
 import { runAction } from "./runtime.ts";
 
 export const admin = {
@@ -232,3 +235,11 @@ export const slack = {
 
   disconnect: (): Promise<SlackDisconnected> => runAction(disconnectSlack()),
 };
+
+/** The people pages over the S7 people endpoints; see `peoplePagesOver`. */
+export const peoplePages = peoplePagesOver({
+  directory: () => runAction(peopleDirectory()),
+  profile: (userId) => runAction(personProfile(userId)),
+  setBanned: (userId, banned) => runAction(setBanned(userId, banned)),
+  setDndAllowance: (userId, allowed) => runAction(setDndAllowance(userId, allowed)),
+});
