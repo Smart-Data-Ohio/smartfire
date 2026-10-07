@@ -27,6 +27,9 @@ export default defineConfig(({ mode }) => {
       // The bundle-size report in CI reads the entry chunks from here.
       manifest: true,
       rolldownOptions: {
+        // The app's shell, and the page the service worker shows for a navigation that fails
+        // offline (src/features/offline).
+        input: { index: "index.html", offline: "offline.html" },
         output: {
           // Vendor code changes far less often than the app, so it ships in its own chunks and
           // stays cached across deploys. All three load with the entry (see the CI size report).
