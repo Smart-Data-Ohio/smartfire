@@ -17,6 +17,7 @@
 
 mod actions;
 mod activity;
+mod agents;
 mod attachment;
 mod cards;
 mod composer;
@@ -50,6 +51,12 @@ pub use activity::{
     ActivityAction, ActivityEventType, ActivityItem, ActivityItemChanged, ActivityItemRemoved,
     ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
+};
+pub use agents::{
+    AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
+    AgentCapability, AgentDirectory, AgentDirectoryRow, AgentGrant, AgentGrants, AgentKind,
+    AgentManagement, AgentProfile, AgentProfileRoom, AgentStatus, AgentStatusChanged, AgentStep,
+    AgentStepStatus, AgentStepsChanged, ApprovalDecision, ApprovalUpdated, DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use cards::{
@@ -123,5 +130,7 @@ mod tests;
 mod tests_s2;
 #[cfg(test)]
 mod tests_s3;
+#[cfg(test)]
+mod tests_s4;
 #[cfg(test)]
 mod tests_s5;

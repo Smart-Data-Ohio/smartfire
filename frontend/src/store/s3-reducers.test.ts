@@ -79,7 +79,9 @@ function user(id: number): User {
     bio: null,
     avatarUrl: `/avatars/${id}`,
     hasAvatar: true,
+    avatarIcon: null,
     customStatus: null,
+    agent: null,
     createdAt: at(0),
   };
 }
@@ -183,6 +185,7 @@ function message(id: number, roomId = ROOM, threadId: number | null = null): Mes
     poll: null,
     cards: [],
     cardsAsOf: createdAt,
+    steps: [],
     createdAt,
     updatedAt: createdAt,
   };

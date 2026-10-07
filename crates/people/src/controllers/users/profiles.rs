@@ -18,6 +18,21 @@ pub async fn show(c: &mut Ctx) -> Result {
     render_show(c, StatusCode::OK, user, None, None, None).await
 }
 
+/// The appearance panel's "Try the new Smartfire" switch, while the SPA is served.
+async fn next_ui(c: &mut Ctx, user_id: i64) -> Result<Option<users::NextUi>> {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+    let config = &c.app().config;
+    if !config.spa_enabled {
+        return Ok(None);
+    }
+    let default_next = config.spa_default_next;
+    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
+    Ok(Some(users::NextUi {
+        on: UiPreference::effective(stored, default_next) == UiPreference::Next,
+        return_to: c.request.path().to_string(),
+    }))
+}
+
 async fn render_show(
     c: &mut Ctx,
     status: StatusCode,
@@ -154,6 +169,7 @@ async fn render_show(
             .into_iter()
             .map(str::to_owned)
             .collect(),
+        next_ui: next_ui(c, id).await?,
     };
     let security = c
         .app()

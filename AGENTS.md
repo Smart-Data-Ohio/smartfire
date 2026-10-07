@@ -40,7 +40,12 @@ maps a Rails-relative path to its copy here.
 screen by screen, served under `/app/`. It's a pnpm project of its own (Vite 8, typescript@7,
 Biome, the vendored anti-slop Oxlint rules, Vitest, Playwright). `crates/spa` embeds its
 `frontend/dist` build into the binary (a stub page when there's none, so cargo never needs Node;
-`SPA_DIST` names another dist), and the app serves it only with `SPA_ENABLED` set. The image
+`SPA_DIST` names another dist), and the app serves it only with `SPA_ENABLED` set. Both UIs run
+side by side: a person opts in from the classic profile ("Try the new Smartfire") and out from
+the SPA's user menu; for people who use it, classic GETs of a screen the SPA has ported redirect
+to `/app/...` (`?classic=1` stays put), and `SPA_DEFAULT=next` makes it the UI of everyone who
+hasn't chosen. `crates/spa/src/screens.rs` is the screen map; a slice that ports a screen flips
+its row there (then `pnpm gen`). The image
 builds the SPA in a Node stage; the runtime image has no Node. `effect` is imported only in `src/api` and `src/sync`; Biome
 rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing frontend work. CI is
 `.github/workflows/frontend.yml` (the `Frontend` check). Commands and rules:

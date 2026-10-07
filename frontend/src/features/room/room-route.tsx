@@ -1,5 +1,6 @@
-import { useParams } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { classicPageFor } from "../../lib/screens.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -37,6 +38,13 @@ interface RoomPaneProps {
   readonly focusMessageId: number | null;
 }
 
+/** The classic page for where the SPA is now (`?classic=1`, so it doesn't send them back here). */
+function useClassicPage(): string {
+  const { pathname, searchStr } = useLocation();
+
+  return classicPageFor(pathname, searchStr);
+}
+
 function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const status = useStore((state) => state.rooms[roomId]?.status ?? "loading");
   const error = useStore((state) => state.rooms[roomId]?.error ?? null);
@@ -44,6 +52,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const paneOpen = useRightPaneView() !== null;
   const phone = usePhoneLayout();
   const covered = phone && paneOpen;
+  const classicPage = useClassicPage();
 
   // Learn which of the room's threads the viewer follows, so reply indicators can show unread.
   useEffect(() => {
@@ -52,6 +61,17 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
     }
   }, [roomId, kind]);
 
+  // Boards aren't ported yet (their own route comes later): the classic board opens instead.
+  useEffect(() => {
+    if (kind === "board") {
+      window.location.replace(classicPage);
+    }
+  }, [kind, classicPage]);
+
+  if (kind === "board") {
+    return null;
+  }
+
   if (status === "error") {
     return (
       <section className="room room-error enter-fade" aria-label="Room unavailable">
@@ -59,9 +79,17 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
         <p className="text-muted">
           {error ?? "It may have been deleted, or you may have left it."}
         </p>
-        <Button variant="secondary" onClick={() => void actions.reloadRoom(roomId, focusMessageId)}>
-          Try again
-        </Button>
+        <div className="room-error-actions">
+          <Button
+            variant="secondary"
+            onClick={() => void actions.reloadRoom(roomId, focusMessageId)}
+          >
+            Try again
+          </Button>
+          <a className="text-muted" href={classicPage}>
+            Open in classic
+          </a>
+        </div>
       </section>
     );
   }

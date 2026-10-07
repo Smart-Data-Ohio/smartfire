@@ -4,6 +4,8 @@ import type { User as GeneratedUser } from "../../gen/User.ts";
 import type { UserList as GeneratedUserList } from "../../gen/UserList.ts";
 import type { UserRole as GeneratedUserRole } from "../../gen/UserRole.ts";
 import type { UserStatus as GeneratedUserStatus } from "../../gen/UserStatus.ts";
+import { AgentBadge } from "./agent-identity.ts";
+import { Icon } from "./icon.ts";
 import { UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
@@ -35,6 +37,10 @@ export const User = Schema.Struct({
   /** Whether they uploaded a picture; `false` means `avatarUrl` serves their initials. */
   hasAvatar: Schema.Boolean,
   customStatus: Schema.NullOr(CustomStatus),
+  /** A bot without an uploaded avatar shows this icon instead; `null` for people. */
+  avatarIcon: Schema.NullOr(Icon),
+  /** Set for an agent (a bot with an `agents` row); `null` for people and plain bots. */
+  agent: Schema.NullOr(AgentBadge),
   createdAt: Timestamp,
 });
 

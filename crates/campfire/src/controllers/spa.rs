@@ -28,5 +28,8 @@ mod api_directory_tests;
 #[path = "spa_api_activity_tests.rs"]
 mod api_activity_tests;
 #[cfg(test)]
+#[path = "spa_coexistence_tests.rs"]
+mod coexistence_tests;
+#[cfg(test)]
 #[path = "spa_huddle_tests.rs"]
 mod huddle_tests;
