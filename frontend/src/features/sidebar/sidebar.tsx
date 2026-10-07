@@ -12,8 +12,10 @@ import {
 } from "react";
 import { setTheme, useAppearance } from "../../lib/appearance.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
+import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
@@ -51,6 +53,7 @@ import {
   RowGlyph,
   SidebarRow,
 } from "./sidebar-row.tsx";
+import { useBannerFold } from "./use-banner-fold.ts";
 import { useFlip } from "./use-flip.ts";
 import { type DragState, useSidebarDrag } from "./use-sidebar-drag.ts";
 import "./sidebar.css";
@@ -374,16 +377,63 @@ function SidebarSkeleton() {
   );
 }
 
+/** The workspace logo at rest: an animated one's first frame. */
+function workspaceLogo(state: State): string | null {
+  const account = state.boot?.account;
+
+  return account?.logoStillUrl ?? account?.logoUrl ?? null;
+}
+
+/** The workspace banner behind the header: animated unless motion is reduced. */
+function SidebarBanner({
+  url,
+  stillUrl,
+}: {
+  readonly url: string;
+  readonly stillUrl: string | null;
+}) {
+  const reduced = useReducedMotion();
+  const [broken, setBroken] = useState<string | null>(null);
+
+  const src = reduced && stillUrl !== null ? stillUrl : url;
+
+  return src === broken ? null : (
+    <div className="sidebar-banner" aria-hidden="true">
+      <img
+        className="sidebar-banner-image"
+        src={src}
+        alt=""
+        draggable={false}
+        onError={() => setBroken(src)}
+      />
+    </div>
+  );
+}
+
 /** The workspace header: the account's menu (shortcuts live there) and a new-message button. */
 function WorkspaceHeader({
   title,
+  logo,
+  banner,
+  folded,
   onNewCategory,
 }: {
   readonly title: string;
+  /** The workspace logo's still, beside the name where the rail is a tab bar (phones). */
+  readonly logo: string | null;
+  /** The workspace banner (Discord's server banner), when one is uploaded and shown here. */
+  readonly banner: { readonly url: string; readonly stillUrl: string | null } | null;
+  /** The list has scrolled: the banner folds into the plain header. */
+  readonly folded: boolean;
   readonly onNewCategory?: (() => void) | undefined;
 }) {
   return (
-    <header className="sidebar-header">
+    <header
+      className="sidebar-header"
+      data-banner={banner === null ? undefined : ""}
+      data-folded={banner !== null && folded ? "" : undefined}
+    >
+      {banner === null ? null : <SidebarBanner url={banner.url} stillUrl={banner.stillUrl} />}
       <Menu
         label={`${title} menu`}
         trigger={(props) => (
@@ -394,6 +444,9 @@ function WorkspaceHeader({
             trailingIcon="chevron-down"
             className="sidebar-workspace"
           >
+            {logo === null ? null : (
+              <img className="sidebar-workspace-logo" src={logo} alt="" width={20} height={20} />
+            )}
             <span className="sidebar-workspace-name">{title}</span>
           </Button>
         )}
@@ -595,6 +648,9 @@ function openerOf(active: Element | null): HTMLElement | null {
 export function Sidebar() {
   const sidebar = useStore((state) => state.sidebar);
   const accountName = useStore((state) => state.boot?.account.name ?? null);
+  const bannerUrl = useStore((state) => state.boot?.account.bannerUrl ?? null);
+  const bannerStillUrl = useStore((state) => state.boot?.account.bannerStillUrl ?? null);
+  const logo = useStore(workspaceLogo);
   const params = useParams({ strict: false });
   const [collapsed, setCollapsedKeys] = useState(readCollapsed);
   const [menu, setMenu] = useState<RoomMenuRequest | null>(null);
@@ -612,6 +668,14 @@ export function Sidebar() {
   const focusAfterRender = useFocusAfterRender();
   // A keyboard drag's steps interrupt: each one answers the key just pressed.
   const announcer = useAnnouncer("assertive");
+
+  // The banner shows over the workspace's conversations, not the direct-message list.
+  const banner =
+    destination === "dms" || bannerUrl === null
+      ? null
+      : { url: bannerUrl, stillUrl: bannerStillUrl };
+
+  const folded = useBannerFold(scrollRef, banner !== null);
 
   useEffect(() => commands.onBeforeOrganize(flip));
 
@@ -913,6 +977,9 @@ export function Sidebar() {
     <aside className="sidebar" aria-label="Conversations">
       <WorkspaceHeader
         title={destination === "dms" ? "Direct messages" : (accountName ?? "Smartfire")}
+        logo={destination === "dms" ? null : logo}
+        banner={banner}
+        folded={folded}
         onNewCategory={destination === "dms" ? undefined : () => newCategory()}
       />
       <JumpButton />

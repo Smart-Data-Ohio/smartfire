@@ -40,7 +40,13 @@ const errorReply = (status: number, error: ApiError): Reply =>
 
 const bootJson = {
   user: { id: 7, name: "Ada Lovelace", avatarUrl: "/users/7/avatar" },
-  account: { name: "Smart Data" },
+  account: {
+    name: "Smart Data",
+    logoUrl: null,
+    logoStillUrl: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
+  },
   theme: "dark",
   textSize: "default",
   cableUrl: "/cable",

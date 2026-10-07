@@ -331,7 +331,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
-      account: { name: "Smart Data" },
+      account: admin.branding(),
       theme: "system",
       textSize: "default",
       cableUrl: "/cable",

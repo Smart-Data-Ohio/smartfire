@@ -19,6 +19,7 @@ import type { StageState } from "../gen/StageState.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import type { WorkspaceBranding } from "../gen/WorkspaceBranding.ts";
 import * as activity from "./activity.ts";
 import * as huddles from "./huddles.ts";
 import * as extras from "./message-extras.ts";
@@ -47,6 +48,7 @@ import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
+import { setWorkspaceBranding } from "./workspace.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -83,6 +85,8 @@ const apply = (change: (state: State) => State) => store.setState(change, true);
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
+  setWorkspaceBranding: (branding: WorkspaceBranding) =>
+    apply((state) => setWorkspaceBranding(state, branding)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),

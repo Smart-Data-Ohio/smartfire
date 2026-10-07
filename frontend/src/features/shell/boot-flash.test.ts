@@ -5,7 +5,13 @@ import { showBootFlash } from "./boot-flash.ts";
 
 const base: Boot = {
   user: { id: 1, name: "Ada", avatarUrl: "/a.png" },
-  account: { name: "Signal" },
+  account: {
+    name: "Signal",
+    logoUrl: null,
+    logoStillUrl: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
+  },
   theme: "system",
   textSize: "default",
   cableUrl: "/cable",

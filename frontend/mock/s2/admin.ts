@@ -10,6 +10,7 @@ import type { AuditLogPage } from "../../src/gen/AuditLogPage.ts";
 import type { IntegrationsHealth } from "../../src/gen/IntegrationsHealth.ts";
 import type { Person } from "../../src/gen/Person.ts";
 import type { Workspace } from "../../src/gen/Workspace.ts";
+import type { WorkspaceBranding } from "../../src/gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
 import { HttpError, notFound, ok, plainError } from "../http.ts";
 import { booleanField, type Json, stringField } from "../json.ts";
@@ -25,9 +26,16 @@ interface Private {
   offerGoogleEmailLink: boolean;
 }
 
+/** An uploaded logo or banner: its URL, and its first frame's when it's animated. */
+interface Image {
+  readonly url: string;
+  readonly stillUrl: string | null;
+}
+
 interface State {
   name: string;
-  logoUrl: string | null;
+  logo: Image | null;
+  banner: Image | null;
   joinCode: string;
   restrict: boolean;
   css: string | null;
@@ -55,6 +63,11 @@ const ACTIONS = [
 const TARGET_TYPES = ["Account", "User", "WorkspaceIcon"];
 
 const ICON_NAME = /^[a-z0-9_]{2,32}$/;
+
+/** What a logo or banner may be, as the server checks it. */
+const PROFILE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+
+const PROFILE_MAX_BYTES = 10 * 1024 * 1024;
 
 /** The wire tag of a refused change (plain data here: Effect stays out of the mock). */
 const VALIDATION: ApiError["_tag"] = "Validation";
@@ -89,7 +102,8 @@ function initialState(world: World, now: number): State {
 
   return {
     name: "Smart Data",
-    logoUrl: null,
+    logo: null,
+    banner: null,
     joinCode: "mock-join-code",
     restrict: false,
     css: null,
@@ -128,6 +142,8 @@ export interface AdminModule {
   lapseSudo(on: boolean): void;
   /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
   readonly requireSudo: () => void;
+  /** The workspace's name, logo and banner, for the boot JSON. */
+  readonly branding: () => WorkspaceBranding;
 }
 
 /** Creates the admin module. */
@@ -175,8 +191,11 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
 
     return {
       name: held.name,
-      logoUrl: held.logoUrl ?? "/account/logo",
-      logoAttached: held.logoUrl !== null,
+      logoUrl: held.logo?.url ?? "/account/logo",
+      logoAttached: held.logo !== null,
+      logoStillUrl: held.logo?.stillUrl ?? null,
+      bannerUrl: held.banner?.url ?? null,
+      bannerStillUrl: held.banner?.stillUrl ?? null,
       joinUrl: `http://127.0.0.1/join/${held.joinCode}`,
       canAdminister: true,
       restrictRoomCreationToAdministrators: held.restrict,
@@ -232,6 +251,58 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         a.role === b.role ? a.name.localeCompare(b.name) : a.role === "administrator" ? -1 : 1,
       );
 
+  /** The workspace's name, logo and banner, as boot and `workspace.updated` carry them. */
+  const branding = (): WorkspaceBranding => {
+    const held = current();
+
+    return {
+      name: held.name,
+      logoUrl: held.logo?.url ?? null,
+      logoStillUrl: held.logo?.stillUrl ?? null,
+      bannerUrl: held.banner?.url ?? null,
+      bannerStillUrl: held.banner?.stillUrl ?? null,
+    };
+  };
+
+  /** Tells every tab the branding changed, as the server does after the write. */
+  const publishBranding = () => {
+    ctx.publish([{ topic: "user", type: "workspace.updated", data: branding() }]);
+  };
+
+  /** The uploaded image a logo or banner write names, checked as the server checks it. */
+  const profileImage = (body: Json | undefined): Image => {
+    const signedId = stringField(body, "signedId");
+
+    if (signedId === null) throw invalid({ signedId: ["isn't an uploaded file"] });
+
+    const attachment = uploads.attachment(signedId);
+
+    if (!PROFILE_TYPES.has(attachment.contentType)) {
+      throw invalid({ signedId: ["must be a PNG, JPEG, GIF or WebP image"] });
+    }
+
+    if (attachment.byteSize > PROFILE_MAX_BYTES) {
+      throw invalid({ signedId: ["must be 10 MB or smaller"] });
+    }
+
+    // A GIF or WebP stands in for an animated image; its thumbnail is the still.
+    const animated =
+      attachment.contentType === "image/gif" || attachment.contentType === "image/webp";
+
+    return { url: attachment.url, stillUrl: animated ? attachment.thumbnailUrl : null };
+  };
+
+  /** A logo or banner change: audited as the classic settings change, then published. */
+  const changed = (kind: "logo" | "banner", attached: boolean) => {
+    audit(
+      "account.settings.change",
+      current().name,
+      "Account",
+      `${kind}: ${!attached} → ${attached}`,
+    );
+    publishBranding();
+  };
+
   const updateWorkspace = (body: Json | undefined) => {
     const held = current();
     const name = stringField(body, "name");
@@ -241,6 +312,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     if (name !== null && name.trim() !== "" && name !== held.name) {
       audit("account.settings.change", name, "Account", `name: ${held.name} → ${name}`);
       held.name = name;
+      publishBranding();
     }
 
     if (restrict !== null && restrict !== held.restrict) {
@@ -469,23 +541,24 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       sudoLapsed = on;
     },
     requireSudo,
+    branding,
     routes: [
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
-      route("PUT", /^\/admin\/workspace\/logo$/, ({ body }) => {
-        const signedId = stringField(body, "signedId");
+      ...(["logo", "banner"] as const).flatMap((kind) => [
+        route("PUT", new RegExp(`^/admin/workspace/${kind}$`), ({ body }) => {
+          current()[kind] = profileImage(body);
+          changed(kind, true);
 
-        if (signedId === null) throw invalid({ signedId: ["isn't an uploaded file"] });
+          return ok(workspace());
+        }),
+        route("DELETE", new RegExp(`^/admin/workspace/${kind}$`), () => {
+          current()[kind] = null;
+          changed(kind, false);
 
-        current().logoUrl = uploads.attachment(signedId).url;
-
-        return ok(workspace());
-      }),
-      route("DELETE", /^\/admin\/workspace\/logo$/, () => {
-        current().logoUrl = null;
-
-        return ok(workspace());
-      }),
+          return ok(workspace());
+        }),
+      ]),
       route("POST", /^\/admin\/workspace\/join_code$/, () => {
         requireSudo();
         current().joinCode = ctx.hex(12);

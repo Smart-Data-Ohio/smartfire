@@ -7,6 +7,7 @@ import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
 import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
+import { WorkspaceBranding } from "./admin.ts";
 import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
@@ -99,6 +100,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("huddle.ring"), data: HuddleRing }),
   Schema.Struct({ type: Schema.Literal("stage.updated"), data: StageState }),
   Schema.Struct({ type: Schema.Literal("stage.stream.stopped"), data: StageStreamStopped }),
+  Schema.Struct({ type: Schema.Literal("workspace.updated"), data: WorkspaceBranding }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -199,6 +201,11 @@ export const SyncEvent = Schema.Union([
     ...eventFields,
     type: Schema.Literal("stage.stream.stopped"),
     data: StageStreamStopped,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("workspace.updated"),
+    data: WorkspaceBranding,
   }),
 ]);
 

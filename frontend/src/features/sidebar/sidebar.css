@@ -18,6 +18,73 @@
     box-shadow: 0 1px 0 var(--border);
   }
 
+  /*
+   * Discord's server banner: with a banner uploaded the header grows to show it, its controls in
+   * white over a top shade for legibility. Once the list scrolls it folds back to the plain
+   * header (the image fades as the height closes), and returns at the top.
+   */
+  .sidebar-header[data-banner] {
+    --sidebar-banner-height: calc(var(--pane-header-height) + 88px);
+
+    position: relative;
+    isolation: isolate;
+    align-items: flex-start;
+    height: var(--sidebar-banner-height);
+    padding-top: calc((var(--pane-header-height) - var(--control-sm)) / 2);
+    overflow: hidden;
+    box-shadow: none;
+    transition:
+      height var(--duration-medium) var(--ease-move),
+      padding-top var(--duration-medium) var(--ease-move),
+      box-shadow var(--duration-medium) var(--ease-move);
+  }
+
+  .sidebar-header[data-banner][data-folded] {
+    height: var(--pane-header-height);
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .sidebar-banner {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    transition: opacity var(--duration-medium) var(--ease-move);
+  }
+
+  /* The top shade keeps the name and buttons readable on any image. */
+  .sidebar-banner::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      oklch(0% 0 0 / 55%),
+      oklch(0% 0 0 / 18%) 45%,
+      oklch(0% 0 0 / 0%) 75%
+    );
+    content: "";
+  }
+
+  .sidebar-banner-image {
+    display: block;
+    width: 100%;
+    height: var(--sidebar-banner-height);
+    object-fit: cover;
+    user-select: none;
+  }
+
+  .sidebar-header[data-folded] .sidebar-banner {
+    opacity: 0;
+  }
+
+  .sidebar-header[data-banner]:not([data-folded]) .button {
+    --button-fg: oklch(100% 0 0);
+    --button-bg-hover: oklch(100% 0 0 / 16%);
+    --button-bg-active: oklch(100% 0 0 / 24%);
+
+    color: var(--button-fg);
+    text-shadow: 0 1px 2px oklch(0% 0 0 / 45%);
+  }
+
   .sidebar-workspace {
     --button-fg: var(--text);
 
@@ -32,6 +99,20 @@
   .sidebar-workspace .button-stack,
   .sidebar-workspace .button-label {
     min-width: 0;
+  }
+
+  /* The rail (and its logo tile) is a tab bar on phones: the logo sits beside the name there. */
+  .sidebar-workspace-logo {
+    display: none;
+    flex-shrink: 0;
+    border-radius: var(--radius-xs);
+    object-fit: cover;
+  }
+
+  @media (width < 720px) {
+    .sidebar-workspace-logo {
+      display: block;
+    }
   }
 
   .sidebar-workspace-name {
