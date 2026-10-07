@@ -16,8 +16,8 @@ import { Timeline } from "./timeline.tsx";
 import "./room.css";
 
 /**
- * `/app/r/$roomId` (and its permalink, thread and "Create Fizzy card" children): opens the room on the sync engine while it's on
- * screen, then lays out header, timeline and composer. Switching rooms keys the pane, so each
+ * `/app/r/$roomId` (and its permalink, thread and "Create Fizzy card" children): opens the room on
+ * the sync engine while it's on screen, then lays out header, timeline and composer. Switching rooms keys the pane, so each
  * conversation starts fresh and the header cross-fades in.
  */
 export function RoomRoute() {
@@ -35,8 +35,9 @@ export function RoomRoute() {
 
   return (
     <>
-      <RoomPane key={roomId} roomId={roomId} focusMessageId={focusMessageId} />
-      <FizzyCardOverlay key={roomId} roomId={roomId} />
+      {/* Siblings need their own keys: sharing one confuses React when the room changes. */}
+      <RoomPane key={`pane-${roomId}`} roomId={roomId} focusMessageId={focusMessageId} />
+      <FizzyCardOverlay key={`fizzy-${roomId}`} roomId={roomId} />
     </>
   );
 }
