@@ -17,6 +17,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
@@ -176,6 +177,9 @@ export function Composer({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
+  // Polls are posted to the room itself, never from a thread or a new thread's first reply.
+  const canPoll = !creating && threadId === null;
+  const [poll, setPoll] = useState({ open: false, question: "" });
   const [running, setRunning] = useState(false);
   const submitting = useRef(false);
   const [usage, setUsage] = useState<SlashCommand | null>(null);
@@ -376,10 +380,14 @@ export function Composer({
 
         return;
       case "open_poll":
-        toast({
-          title: "Polls aren't in this app yet",
-          description: "Create the poll from the classic view for now.",
-        });
+        if (canPoll) {
+          setPoll({ open: true, question: typed.replace(/^\/poll\b\s*/i, "") });
+        } else {
+          toast({
+            title: "Polls go in the room",
+            description: "Post it from the room's composer.",
+          });
+        }
 
         return;
       case "start_huddle":
@@ -662,6 +670,15 @@ export function Composer({
     });
   }
 
+  if (canPoll) {
+    plusActions.push({
+      id: "poll",
+      label: "Create a poll",
+      icon: "chart-bar",
+      onSelect: () => setPoll({ open: true, question: "" }),
+    });
+  }
+
   plusActions.push({
     id: "preview",
     label: previewOpen ? "Hide preview" : "Preview message",
@@ -816,6 +833,14 @@ export function Composer({
           onConfirm={schedule}
         />
       )}
+      {canPoll ? (
+        <LazyCreatePollDialog
+          roomId={roomId}
+          open={poll.open}
+          initialQuestion={poll.question}
+          onOpenChange={(open) => setPoll((current) => ({ ...current, open }))}
+        />
+      ) : null}
     </div>
   );
 }
