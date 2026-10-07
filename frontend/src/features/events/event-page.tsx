@@ -11,14 +11,14 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { eventWhen } from "../cards/format.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneEmpty, PaneError } from "../panes/pane-states.tsx";
 import { EventFormDialog } from "./event-form-dialog.tsx";
-import { EventTileMark } from "./event-format.tsx";
+import { EventTileMark, EventWhen } from "./event-format.tsx";
 import { overPageState, useCloseOverlay } from "./overlay-history.ts";
 import { ScopeChoice } from "./scope-choice.tsx";
-import { type Loaded, useLoad } from "./use-load.ts";
+import { useEventChanges } from "./use-event-changes.ts";
+import { type Landing, type Loaded, useLoad } from "./use-load.ts";
 import "./events.css";
 
 const RESPONSES = [
@@ -61,7 +61,9 @@ function Facts({ detail }: { readonly detail: EventDetail }) {
   return (
     <dl className="ev-info">
       <InfoRow icon="calendar" label="When">
-        <span>{eventWhen(event.startsAt, event.endsAt, event.timeZone)}</span>
+        <span>
+          <EventWhen event={event} />
+        </span>
         <span className="ev-info-sub">Organized by {event.organizerName}</span>
       </InfoRow>
       {venue === null ? null : (
@@ -146,14 +148,17 @@ function Facts({ detail }: { readonly detail: EventDetail }) {
 function Response({
   detail,
   focusOnMount,
-  onAnswered,
+  begin,
 }: {
   readonly detail: EventDetail;
   readonly focusOnMount: boolean;
-  readonly onAnswered: (detail: EventDetail) => void;
+  /** Starts an answer whose reply (the page's facts) replaces the page's, if still the newest. */
+  readonly begin: () => Landing<EventDetail>;
 }) {
   const [future, setFuture] = useState(false);
   const [pending, setPending] = useState<AttendanceResponse | null>(null);
+  // The latest answer: an earlier one's reply doesn't clear the one still on its way.
+  const asked = useRef(0);
   const sectionRef = useRef<HTMLElement | null>(null);
   const current = pending ?? detail.currentResponse;
 
@@ -171,6 +176,11 @@ function Response({
   }, [focusOnMount]);
 
   const respond = (response: AttendanceResponse) => {
+    asked.current += 1;
+
+    const mine = asked.current;
+    const landing = begin();
+
     setPending(response);
     actions.events
       .respond(
@@ -181,11 +191,14 @@ function Response({
       )
       .then(
         (next) => {
-          setPending(null);
-          onAnswered(next);
+          if (asked.current === mine) setPending(null);
+
+          landing.land(next);
         },
         (failure: Error) => {
-          setPending(null);
+          if (asked.current === mine) setPending(null);
+
+          landing.fail();
           toast({
             title: "Couldn't save your response",
             description: failure.message,
@@ -293,28 +306,35 @@ function Attendees({ detail }: { readonly detail: EventDetail }) {
 function CancelDialog({
   detail,
   open,
+  begin,
   onClose,
   onCancelled,
 }: {
   readonly detail: EventDetail;
   readonly open: boolean;
+  /** Starts the cancel, whose reply (the page's facts) replaces the page's, if still the newest. */
+  readonly begin: () => Landing<EventDetail>;
   readonly onClose: () => void;
-  readonly onCancelled: (detail: EventDetail) => void;
+  readonly onCancelled: () => void;
 }) {
   const [scope, setScope] = useState<EventScope>("this_event");
   const [busy, setBusy] = useState(false);
 
   const cancel = () => {
+    const landing = begin();
+
     setBusy(true);
     actions.events
       .cancel(detail.roomId, detail.event.id, { cancelScope: detail.event.series ? scope : null })
       .then(
         (next) => {
           setBusy(false);
-          onCancelled(next);
+          landing.land(next);
+          onCancelled();
         },
         (failure: Error) => {
           setBusy(false);
+          landing.fail();
           toast({
             title: "Couldn't cancel the event",
             description: failure.message,
@@ -411,26 +431,33 @@ export function EventRoute() {
   const answering = matchRoute({ to: "/r/$roomId/events/$eventId/attendance" }) !== false;
   const [cancelling, setCancelling] = useState(false);
   const read = () => actions.events.read(roomId, eventId);
-  const { state, reload, set } = useLoad(`${roomId}/${eventId}`, read);
+  const { state, reload, begin } = useLoad(`${roomId}/${eventId}`, read);
   const detail = state.status === "ready" ? state.value : null;
+
+  useEventChanges(roomId, reload);
 
   const closeEdit = useCloseOverlay(() => {
     void navigate({ to: "/r/$roomId/events/$eventId", params: { roomId, eventId }, replace: true });
   });
 
-  const saved = (next: EventDetail) => {
+  // `current` is false once the viewer dismissed the form while it saved: the dismissal already
+  // left the form, so only the page's facts change.
+  const saved = (next: EventDetail, current: boolean) => {
     toast({ title: "Event updated.", tone: "success" });
 
     if (next.event.id === eventId) {
-      set(next);
-      closeEdit();
-    } else {
+      begin().land(next);
+
+      if (current) closeEdit();
+    } else if (current) {
       // "This and following" splits the series: the edited event is the new one's head.
       void navigate({
         to: "/r/$roomId/events/$eventId",
         params: { roomId, eventId: next.event.id },
         replace: true,
       });
+    } else {
+      reload();
     }
   };
 
@@ -483,15 +510,11 @@ export function EventRoute() {
               </p>
             ) : null}
             <header className="ev-hero">
-              <EventTileMark
-                startsAt={detail.event.startsAt}
-                timeZone={detail.event.timeZone}
-                size="lg"
-              />
+              <EventTileMark startsAt={detail.event.startsAt} size="lg" />
               <div className="ev-hero-text">
                 <h2 className="ev-hero-title">{detail.event.title}</h2>
                 <p className="ev-hero-when">
-                  {eventWhen(detail.event.startsAt, detail.event.endsAt, detail.event.timeZone)}
+                  <EventWhen event={detail.event} />
                 </p>
               </div>
             </header>
@@ -507,7 +530,7 @@ export function EventRoute() {
               key={`${detail.event.id}`}
               detail={detail}
               focusOnMount={answering}
-              onAnswered={set}
+              begin={begin}
             />
             <Attendees detail={detail} />
           </article>
@@ -525,10 +548,10 @@ export function EventRoute() {
           <CancelDialog
             detail={detail}
             open={cancelling}
+            begin={begin}
             onClose={() => setCancelling(false)}
-            onCancelled={(next) => {
+            onCancelled={() => {
               setCancelling(false);
-              set(next);
               toast({ title: "Event cancelled.", tone: "success" });
             }}
           />

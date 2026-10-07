@@ -1,8 +1,132 @@
-import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import type { Page } from "@playwright/test";
+import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
 
 const UPCOMING = 8001;
 
 const WEEKLY_SECOND = 8101;
+
+const WEEKLY_THIRD = 8102;
+
+declare global {
+  interface Window {
+    /** History calls recorded by `watchHistory`. */
+    smartfireHistoryCalls?: string[];
+  }
+}
+
+interface HeldRead {
+  /** The server has answered: the answer is a snapshot of that moment. */
+  readonly answered: Promise<void>;
+  /** Hands the answer to the page. */
+  readonly release: () => void;
+  /** The page has the answer. */
+  readonly delivered: Promise<void>;
+}
+
+/**
+ * Holds the page's next read of `path` (under /api/v1) after the server has answered it, so the
+ * page gets an old snapshot late, after newer ones.
+ */
+async function holdNextRead(page: Page, path: string): Promise<HeldRead> {
+  const answered = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const delivered = Promise.withResolvers<void>();
+  let holding = true;
+
+  await page.route(`**/api/v1${path}`, async (route) => {
+    if (!holding || route.request().method() !== "GET") {
+      return route.fallback();
+    }
+
+    holding = false;
+
+    const response = await route.fetch();
+
+    answered.resolve();
+    await released.promise;
+    await route.fulfill({ response });
+    delivered.resolve();
+  });
+
+  return {
+    answered: answered.promise,
+    release: () => released.resolve(),
+    delivered: delivered.promise,
+  };
+}
+
+/** Holds `method` requests to `path` (under /api/v1) until the returned release is called. */
+async function holdWrite(page: Page, method: "POST" | "PATCH", path: string): Promise<() => void> {
+  const held = Promise.withResolvers<void>();
+
+  await page.route(`**/api/v1${path}`, async (route) => {
+    if (route.request().method() !== method) {
+      return route.fallback();
+    }
+
+    await held.promise;
+
+    return route.fallback();
+  });
+
+  return () => held.resolve();
+}
+
+/**
+ * Records the history calls the app makes from now on (back, forward, go, pushState,
+ * replaceState). A completion that navigates has made its call by the time it settles, even
+ * when the traversal it asked for hasn't landed yet, so an empty list proves it stayed put.
+ */
+async function watchHistory(page: Page): Promise<() => Promise<readonly string[]>> {
+  await page.evaluate(() => {
+    const calls: string[] = [];
+    const history = window.history;
+    const back = history.back.bind(history);
+    const forward = history.forward.bind(history);
+    const go = history.go.bind(history);
+    const pushState = history.pushState.bind(history);
+    const replaceState = history.replaceState.bind(history);
+
+    window.smartfireHistoryCalls = calls;
+
+    history.back = () => {
+      calls.push("back");
+      back();
+    };
+
+    history.forward = () => {
+      calls.push("forward");
+      forward();
+    };
+
+    history.go = (delta) => {
+      calls.push("go");
+      go(delta);
+    };
+
+    history.pushState = (data, unused, url) => {
+      calls.push("pushState");
+      pushState(data, unused, url);
+    };
+
+    history.replaceState = (data, unused, url) => {
+      calls.push("replaceState");
+      replaceState(data, unused, url);
+    };
+  });
+
+  return () => page.evaluate(() => [...(window.smartfireHistoryCalls ?? [])]);
+}
+
+/** Lets a reply the page just took in (and any navigation it starts) reach the screen. */
+async function settle(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 250)));
+      }),
+  );
+}
 
 test.describe("a room's events", () => {
   test.beforeEach(async ({ page }) => {
@@ -135,6 +259,199 @@ test.describe("a room's events", () => {
     await openApp(page, `r/${ROOM_IDS.general}/events/987654`);
 
     await expect(page.getByText("This event isn't here")).toBeVisible();
+  });
+
+  test("answering twice keeps the last answer when the first one's read lands last", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+
+    const attendees = page.getByRole("region", { name: /Attendees/ });
+    const first = await holdNextRead(page, `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`);
+
+    await page.getByRole("button", { name: "Going" }).click();
+    // The server's snapshot after Going is taken; the page gets it only after Maybe's.
+    await first.answered;
+    await page.getByRole("button", { name: "Maybe" }).click();
+    await expect(attendees).toContainText("1 going · 1 maybe");
+
+    first.release();
+    await first.delivered;
+    await settle(page);
+
+    await expect(page.getByText("Currently: Maybe")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Maybe" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(attendees).toContainText("1 going · 1 maybe");
+  });
+
+  test("an answer's read that lands after moving to the next occurrence stays off it", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
+    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+
+    const late = await holdNextRead(page, `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
+
+    await page.getByRole("button", { name: "Going" }).click();
+    await late.answered;
+    await page.getByRole("link", { name: "Next" }).click();
+    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
+    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+
+    late.release();
+    await late.delivered;
+    await settle(page);
+
+    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
+    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+    await expect(page.getByRole("status", { name: "Loading the event" })).toHaveCount(0);
+  });
+
+  for (const dismissal of ["Escape", "Back"] as const) {
+    test(`an edit that saves after ${dismissal} closed the form stays where ${dismissal} went`, async ({
+      page,
+    }) => {
+      await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+      await page.getByRole("link", { name: "Edit" }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Edit event" });
+
+      await dialog.getByLabel("Title").fill("Team check-in (moved)");
+
+      const release = await holdWrite(
+        page,
+        "PATCH",
+        `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`,
+      );
+
+      await dialog.getByRole("button", { name: "Save changes" }).click();
+
+      if (dismissal === "Escape") {
+        await page.keyboard.press("Escape");
+      } else {
+        await page.goBack();
+      }
+
+      await expect(dialog).toBeHidden();
+      await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
+
+      const historyCalls = await watchHistory(page);
+
+      release();
+      await expect(page.getByText("Event updated.")).toBeVisible();
+      await settle(page);
+      expect(await historyCalls()).toEqual([]);
+      await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
+      await expect(
+        page.getByRole("heading", { level: 2, name: "Team check-in (moved)" }),
+      ).toBeVisible();
+    });
+  }
+
+  test("a new event that saves after Escape closed the form stays on the list", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.general}/events`);
+    await page.getByRole("link", { name: "New event" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+
+    await dialog.getByLabel("Title").fill("Launch retro");
+
+    const release = await holdWrite(page, "POST", `/rooms/${ROOM_IDS.general}/events`);
+
+    await dialog.getByRole("button", { name: "Schedule event" }).click();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
+
+    const historyCalls = await watchHistory(page);
+
+    release();
+    await expect(page.getByText("Event scheduled.")).toBeVisible();
+    await settle(page);
+    expect(await historyCalls()).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
+    await expect(page.getByRole("link", { name: "Launch retro" })).toBeVisible();
+  });
+
+  test("another tab's edit and cancel reach an open list and event page", async ({
+    page,
+    context,
+  }) => {
+    const welcomed = syncWelcomed(page);
+
+    await openApp(page, `r/${ROOM_IDS.general}/events`);
+    await welcomed;
+
+    // Scheduling posts the event's announcement, whose card later changes are told through.
+    await page.getByRole("link", { name: "New event" }).click();
+
+    const create = page.getByRole("dialog", { name: "Schedule an event" });
+
+    await create.getByLabel("Title").fill("Sync check");
+    await create.getByRole("button", { name: "Schedule event" }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Sync check" })).toBeVisible();
+
+    const eventId = Number(/\/events\/(\d+)$/.exec(page.url())?.[1]);
+
+    await page.getByRole("link", { name: /All events in/ }).click();
+    await expect(page.getByRole("link", { name: "Sync check" })).toBeVisible();
+
+    const other = await context.newPage();
+
+    await openApp(other, `r/${ROOM_IDS.general}/events/${eventId}`);
+    await other.getByRole("link", { name: "Edit" }).click();
+
+    const edit = other.getByRole("dialog", { name: "Edit event" });
+
+    await edit.getByLabel("Title").fill("Sync check (renamed)");
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toBeHidden();
+
+    await expect(page.getByRole("link", { name: "Sync check (renamed)" })).toBeVisible();
+    await page.getByRole("link", { name: "Sync check (renamed)" }).click();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Sync check (renamed)" }),
+    ).toBeVisible();
+
+    await other.getByRole("button", { name: "Cancel event" }).click();
+    await other
+      .getByRole("alertdialog", { name: "Cancel this event?" })
+      .getByRole("button", { name: "Cancel event" })
+      .click();
+    await expect(other.getByText("This event was cancelled.", { exact: true })).toBeVisible();
+
+    await expect(page.getByText("This event was cancelled.", { exact: true })).toBeVisible();
+    await other.close();
+  });
+});
+
+test.describe("a prefilled new-event link", () => {
+  test.use({ timezoneId: "Europe/Berlin" });
+
+  test("the /event command's link opens the form with its title and start", async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+
+    // What the classic URL redirects to: Rails' nested keys, sorted, form-encoded.
+    const query = [
+      "event%5Bstarts_at%5D=2030-03-08T22%3A00%3A00Z",
+      "event%5Btime_zone%5D=Eastern+Time+%28US+%26+Canada%29",
+      "event%5Btitle%5D=Launch+party",
+    ].join("&");
+
+    await openApp(page, `r/${ROOM_IDS.general}/events/new?${query}`);
+
+    const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+
+    await expect(dialog.getByLabel("Title")).toHaveValue("Launch party");
+    // 22:00 UTC is 23:00 in Berlin, the zone the form schedules it in.
+    await expect(dialog.getByLabel("Starts")).toHaveValue("2030-03-08T23:00");
+    await expect(dialog.getByText(/Times are in your time zone/)).toContainText("Europe/Berlin");
   });
 });
 

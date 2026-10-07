@@ -18,8 +18,35 @@ export const events = Effect.fn("api.events")(function* (roomId: number) {
   return yield* call(get(`/rooms/${roomId}/events`), wire<EventList>(EventListSchema));
 });
 
-export const newEvent = Effect.fn("api.newEvent")(function* (roomId: number) {
-  return yield* call(get(`/rooms/${roomId}/events/new`), wire<EventForm>(EventFormSchema));
+/**
+ * What a prefilled new form starts with (the `/event` command's link fills these in). The server
+ * shows `startsAt` in `timeZone`; a `null` field stays blank.
+ */
+export interface EventPrefill {
+  readonly title: string | null;
+  readonly startsAt: string | null;
+  readonly timeZone: string;
+}
+
+export const newEvent = Effect.fn("api.newEvent")(function* (
+  roomId: number,
+  prefill: EventPrefill | null = null,
+) {
+  const query: Record<string, string> = {};
+
+  if (prefill !== null) {
+    query.timeZone = prefill.timeZone;
+
+    if (prefill.title !== null) {
+      query.title = prefill.title;
+    }
+
+    if (prefill.startsAt !== null) {
+      query.startsAt = prefill.startsAt;
+    }
+  }
+
+  return yield* call(get(`/rooms/${roomId}/events/new`, query), wire<EventForm>(EventFormSchema));
 });
 
 export const event = Effect.fn("api.event")(function* (roomId: number, eventId: number) {

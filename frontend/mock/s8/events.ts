@@ -21,6 +21,7 @@ import {
   displayDate,
   formValues,
   instant,
+  knownZone,
   localTime,
   phrase,
   repeatSlots,
@@ -273,7 +274,32 @@ export function createEvents(ctx: S2Context) {
     };
   };
 
-  const form = (roomId: number, event: CalendarRecord | null): EventForm => {
+  /**
+   * A new form's values with a prefilled link's `title`, `startsAt` and `timeZone` (what the
+   * `/event` command fills in), as the server reads them: the title trimmed to 255 characters,
+   * an unknown zone left at UTC, and the start shown in the zone as a `datetime-local` value.
+   */
+  const prefilled = (query: URLSearchParams): EventValues => {
+    const values = emptyValues();
+    const zone = query.get("timeZone");
+    const title = query.get("title")?.trim() ?? "";
+
+    if (zone !== null && knownZone(zone)) values.timeZone = zone;
+
+    if (title !== "") values.title = title.slice(0, 255);
+
+    const start = instant(query.get("startsAt"), values.timeZone);
+
+    if (start !== null) values.startsAt = localTime(start, values.timeZone);
+
+    return values;
+  };
+
+  const form = (
+    roomId: number,
+    event: CalendarRecord | null,
+    query = new URLSearchParams(),
+  ): EventForm => {
     const record = room(roomId);
     const venues = [];
 
@@ -295,7 +321,7 @@ export function createEvents(ctx: S2Context) {
       roomId,
       roomName: ctx.displayName(record),
       eventId: event?.id ?? null,
-      values: event === null ? emptyValues() : { ...event.values },
+      values: event === null ? prefilled(query) : { ...event.values },
       venues,
       meetAvailable: event?.values.meetLink === null || event === null,
       repeatOptions:
@@ -695,7 +721,9 @@ export function createEvents(ctx: S2Context) {
   return {
     routes: [
       route("GET", /^\/rooms\/(\d+)\/events$/, (request) => ok(list(firstId(request)))),
-      route("GET", /^\/rooms\/(\d+)\/events\/new$/, (request) => ok(form(firstId(request), null))),
+      route("GET", /^\/rooms\/(\d+)\/events\/new$/, (request) =>
+        ok(form(firstId(request), null, request.query)),
+      ),
       route("POST", /^\/rooms\/(\d+)\/events$/, (request) =>
         create(firstId(request), request.body),
       ),

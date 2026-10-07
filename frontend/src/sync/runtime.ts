@@ -1,6 +1,7 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { EventPrefill } from "../api/event-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
@@ -52,10 +53,13 @@ import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
+import { onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
+
+export type { EventPrefill };
 
 const API_BASE = "/api/v1";
 
@@ -298,7 +302,9 @@ const cards = {
 /** Calendar reads and writes return current facts; failures reject with field-aware ActionError. */
 const events = {
   list: (roomId: number): Promise<EventList> => runAction(eventActions.list(roomId)),
-  newForm: (roomId: number): Promise<EventForm> => runAction(eventActions.newForm(roomId)),
+  /** The new-event form, with a prefilled link's values if any. */
+  newForm: (roomId: number, prefill: EventPrefill | null = null): Promise<EventForm> =>
+    runAction(eventActions.newForm(roomId, prefill)),
   read: (roomId: number, eventId: number): Promise<EventDetail> =>
     runAction(eventActions.read(roomId, eventId)),
   editForm: (roomId: number, eventId: number): Promise<EventForm> =>
@@ -318,6 +324,25 @@ const events = {
     applyToFuture = false,
   ): Promise<EventDetail> =>
     runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
+  /**
+   * Calls `onChange` after each applied batch that changes an event in `roomId` (see
+   * `changesRoomEvents`), holding the room's topic meanwhile, so an open calendar screen can read
+   * itself again. Returns the stop.
+   */
+  watch(roomId: number, onChange: () => void): () => void {
+    runtime.runFork(eventActions.holdRoom(roomId));
+
+    const stop = onSyncEvents((applied) => {
+      if (applied.some((event) => eventActions.changesRoomEvents(event, roomId))) {
+        onChange();
+      }
+    });
+
+    return () => {
+      stop();
+      runtime.runFork(eventActions.releaseRoom(roomId));
+    };
+  },
 };
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */

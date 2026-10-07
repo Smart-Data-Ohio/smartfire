@@ -1,4 +1,4 @@
-import { Link, useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, useLocation, useMatchRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import type { ChannelEvent } from "../../gen/ChannelEvent.ts";
 import type { EventDetail } from "../../gen/EventDetail.ts";
@@ -7,13 +7,13 @@ import { actions } from "../../sync/runtime.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { eventWhen } from "../cards/format.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
 import { EventFormDialog } from "./event-form-dialog.tsx";
-import { EventTileMark, relativeDay, scheduledNotice } from "./event-format.tsx";
+import { EventTileMark, EventWhen, relativeDay, scheduledNotice } from "./event-format.tsx";
 import { overPageState, useCloseOverlay } from "./overlay-history.ts";
+import { useEventChanges } from "./use-event-changes.ts";
 import { type Loaded, useLoad } from "./use-load.ts";
 import "./events.css";
 
@@ -51,7 +51,7 @@ function EventRow({ event, now }: { readonly event: ChannelEvent; readonly now: 
 
   return (
     <li className="ev-row" data-cancelled={event.cancelled || undefined}>
-      <EventTileMark startsAt={event.startsAt} timeZone={event.timeZone} />
+      <EventTileMark startsAt={event.startsAt} />
       <div className="ev-row-main">
         <div className="ev-row-heading">
           <Link
@@ -74,7 +74,9 @@ function EventRow({ event, now }: { readonly event: ChannelEvent; readonly now: 
           ) : null}
         </div>
         <p className="ev-row-when">
-          <span>{eventWhen(event.startsAt, event.endsAt, event.timeZone)}</span>
+          <span>
+            <EventWhen event={event} />
+          </span>
           {event.remainingOccurrences === null || event.remainingOccurrences <= 1 ? null : (
             <span>{event.remainingOccurrences} more to come</span>
           )}
@@ -125,6 +127,8 @@ export function EventsRoute() {
   const navigate = useNavigate();
   const matchRoute = useMatchRoute();
   const creating = matchRoute({ to: "/r/$roomId/events/new" }) !== false;
+  // The new form's raw query: a prefilled link's `event[…]` values (see `newEventPrefill`).
+  const search = useLocation({ select: (location) => location.searchStr });
   const now = useNow();
   const tabsId = useId();
   const panelId = useId();
@@ -132,12 +136,22 @@ export function EventsRoute() {
   const { state, reload } = useLoad(`${roomId}`, () => actions.events.list(roomId));
   const list = state.status === "ready" ? state.value : null;
 
+  useEventChanges(roomId, reload);
+
   const closeForm = useCloseOverlay(() => {
     void navigate({ to: "/r/$roomId/events", params: { roomId }, replace: true });
   });
 
-  const scheduled = (detail: EventDetail) => {
+  const scheduled = (detail: EventDetail, current: boolean) => {
     toast({ title: scheduledNotice(detail), tone: "success" });
+
+    // Dismissed while it saved: stay where the dismissal went, with the new event listed.
+    if (!current) {
+      reload();
+
+      return;
+    }
+
     void navigate({
       to: "/r/$roomId/events/$eventId",
       params: { roomId, eventId: detail.event.id },
@@ -216,6 +230,7 @@ export function EventsRoute() {
         roomId={roomId}
         eventId={null}
         open={creating}
+        search={search}
         onClose={closeForm}
         onSaved={scheduled}
       />

@@ -1,23 +1,38 @@
+import type { ChannelEvent } from "../../gen/ChannelEvent.ts";
 import type { EventDetail } from "../../gen/EventDetail.ts";
-import { eventTile } from "../cards/format.ts";
+import { eventTile, localEventWhen } from "../cards/format.ts";
 
-/** The month-and-day tile an event's row and page lead with, in the event's zone. */
+/**
+ * The month-and-day tile an event's row and page lead with, in the viewer's zone like the times
+ * beside it (see `EventWhen`).
+ */
 export function EventTileMark({
   startsAt,
-  timeZone,
   size = "md",
 }: {
   readonly startsAt: string;
-  readonly timeZone: string;
   readonly size?: "md" | "lg";
 }) {
-  const tile = eventTile(startsAt, timeZone);
+  const tile = eventTile(startsAt, null);
 
   return (
     <div className="ev-tile" data-size={size} aria-hidden="true">
       <span className="ev-tile-month">{tile.month}</span>
       <span className="ev-tile-day tabular">{tile.day}</span>
     </div>
+  );
+}
+
+/**
+ * When an event is, as the classic calendar and event page show it: in the viewer's own zone,
+ * then its `zoneLabel`, the times in the zone it's scheduled in ("(11:00 AM–11:45 AM EDT)").
+ */
+export function EventWhen({ event }: { readonly event: ChannelEvent }) {
+  return (
+    <>
+      {localEventWhen(event.startsAt, event.endsAt)}{" "}
+      <span className="ev-zone">{event.zoneLabel}</span>
+    </>
   );
 }
 

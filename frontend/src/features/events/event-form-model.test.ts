@@ -4,6 +4,7 @@ import {
   createBody,
   initialDraft,
   isDirty,
+  newEventPrefill,
   showsRepeat,
   splitErrors,
   updateBody,
@@ -162,5 +163,28 @@ describe("relative days", () => {
     expect(relativeDay(at(10, 9), null, now)?.label).toBe("In 3 days");
     expect(relativeDay(at(20, 9), null, now)).toBeNull();
     expect(relativeDay(at(6, 9), at(6, 10), now)).toBeNull();
+  });
+});
+
+describe("prefilled links", () => {
+  it("reads the /event command's nested query as text, asking for the form's own zone", () => {
+    const search =
+      "?event%5Bstarts_at%5D=2030-03-08T22%3A00%3A00Z&event%5Btime_zone%5D=Eastern+Time+%28US+%26+Canada%29&event%5Btitle%5D=2026";
+
+    expect(newEventPrefill(search, "Europe/Berlin")).toEqual({
+      title: "2026",
+      startsAt: "2030-03-08T22:00:00Z",
+      timeZone: "Europe/Berlin",
+    });
+    expect(newEventPrefill("?event%5Btitle%5D=Launch+party", "UTC")).toEqual({
+      title: "Launch party",
+      startsAt: null,
+      timeZone: "UTC",
+    });
+  });
+
+  it("asks for a bare form when the link fills nothing in", () => {
+    expect(newEventPrefill("", "UTC")).toBeNull();
+    expect(newEventPrefill("?event%5Btime_zone%5D=UTC&other=1", "UTC")).toBeNull();
   });
 });

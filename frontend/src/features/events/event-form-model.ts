@@ -7,6 +7,7 @@ import type { EventForm } from "../../gen/EventForm.ts";
 import type { EventScope } from "../../gen/EventScope.ts";
 import type { EventVenueOption } from "../../gen/EventVenueOption.ts";
 import type { UpdateEvent } from "../../gen/UpdateEvent.ts";
+import type { EventPrefill } from "../../sync/runtime.ts";
 import { toLocalInput } from "../composer/schedule/presets.ts";
 
 /** What the form edits; selects hold strings ("" for none), as their controls do. */
@@ -29,6 +30,22 @@ export function browserZone(): string {
   } catch {
     return "UTC";
   }
+}
+
+/**
+ * What a prefilled new-event URL fills the form with. The `/event` command opens
+ * `…/events/new?event[title]=…&event[starts_at]=…&event[time_zone]=…` (Rails' nested keys, read
+ * from the raw query so a title like "2026" or "true" stays text). The start goes to the server
+ * with `timeZone`, the zone this form schedules in, rather than the link's: the server shows the
+ * start in the zone it's given, so asking for the form's own keeps the same moment. (Classic shows
+ * it in the link's zone, then its script swaps in the browser's, moving it when they differ.)
+ */
+export function newEventPrefill(search: string, timeZone: string): EventPrefill | null {
+  const query = new URLSearchParams(search);
+  const title = query.get("event[title]");
+  const startsAt = query.get("event[starts_at]");
+
+  return title === null && startsAt === null ? null : { title, startsAt, timeZone };
 }
 
 /** The next whole hour from `now`, as a `datetime-local` value in the browser's zone. */

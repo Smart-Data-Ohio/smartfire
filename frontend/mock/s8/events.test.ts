@@ -98,6 +98,35 @@ describe("S8 channel events mock", () => {
     expect(meet.attendees).toEqual([{ name: "Maya Okafor", response: "going" }]);
   });
 
+  it("prefills a new form's title and start, shown in the zone asked for", async () => {
+    const { server } = harness();
+
+    const query = new URLSearchParams({
+      title: "  Launch party  ",
+      startsAt: "2030-03-08T22:00:00Z",
+      timeZone: "Europe/Berlin",
+    });
+
+    const form = await get<EventForm>(server, `${base()}/new?${query}`);
+
+    expect(form.values).toMatchObject({
+      title: "Launch party",
+      startsAt: "2030-03-08T23:00",
+      timeZone: "Europe/Berlin",
+    });
+
+    const unknown = await get<EventForm>(
+      server,
+      `${base()}/new?${new URLSearchParams({ startsAt: "2030-03-08T22:00:00Z", timeZone: "Mars" })}`,
+    );
+
+    expect(unknown.values).toMatchObject({
+      title: "",
+      startsAt: "2030-03-08T22:00",
+      timeZone: "UTC",
+    });
+  });
+
   it("creates, edits and cancels an event, posting and refreshing its message card", async () => {
     const { server } = harness();
     const frames = collect(server, [`room:${ROOM_IDS.general}`]);

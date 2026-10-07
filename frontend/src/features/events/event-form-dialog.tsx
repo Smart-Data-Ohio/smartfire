@@ -17,6 +17,7 @@ import {
   type EventField,
   initialDraft,
   isDirty,
+  newEventPrefill,
   showsRepeat,
   splitErrors,
   updateBody,
@@ -34,13 +35,22 @@ interface EventFormDialogProps {
   /** The event to edit; `null` schedules a new one. */
   readonly eventId: number | null;
   readonly open: boolean;
+  /**
+   * A new event's URL query: a prefilled link (the `/event` command's) fills the form from its
+   * `event[…]` values.
+   */
+  readonly search?: string;
   readonly onClose: () => void;
-  /** The server's facts for the event it saved (the first one of a new series). */
-  readonly onSaved: (detail: EventDetail) => void;
+  /**
+   * The server's facts for the event it saved (the first one of a new series). `current` is false
+   * when the viewer closed the dialog (or opened it again) before the save finished: the save
+   * stands, but the dialog's owner mustn't close or navigate for it a second time.
+   */
+  readonly onSaved: (detail: EventDetail, current: boolean) => void;
 }
 
 /** Reads the form each time the dialog opens: someone may have changed the event since. */
-function useEventForm(roomId: number, eventId: number | null, open: boolean) {
+function useEventForm(roomId: number, eventId: number | null, open: boolean, search: string) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [tries, setTries] = useState(0);
 
@@ -55,7 +65,9 @@ function useEventForm(roomId: number, eventId: number | null, open: boolean) {
     setLoad({ status: "loading" });
 
     const read =
-      eventId === null ? actions.events.newForm(roomId) : actions.events.editForm(roomId, eventId);
+      eventId === null
+        ? actions.events.newForm(roomId, newEventPrefill(search, browserZone()))
+        : actions.events.editForm(roomId, eventId);
 
     read.then(
       (form) => {
@@ -69,7 +81,7 @@ function useEventForm(roomId: number, eventId: number | null, open: boolean) {
     return () => {
       live = false;
     };
-  }, [roomId, eventId, open, tries]);
+  }, [roomId, eventId, open, search, tries]);
 
   return { load, retry: () => setTries((count) => count + 1) };
 }
@@ -79,14 +91,43 @@ function useEventForm(roomId: number, eventId: number | null, open: boolean) {
  * channel or stage, and/or a Google Meet link), whether it repeats, and for a series whether a
  * change covers this event or this and the following ones. The classic new and edit pages.
  */
-export function EventFormDialog({ roomId, eventId, open, onClose, onSaved }: EventFormDialogProps) {
+export function EventFormDialog({
+  roomId,
+  eventId,
+  open,
+  search = "",
+  onClose,
+  onSaved,
+}: EventFormDialogProps) {
   const formId = useId();
-  const { load, retry } = useEventForm(roomId, eventId, open);
+  const { load, retry } = useEventForm(roomId, eventId, open, search);
   const form = load.status === "ready" ? load.form : null;
   const editing = eventId !== null;
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const touched = useTouchedWhile(open && form === null);
+  const opening = useOpening(open ? `${roomId}/${eventId ?? "new"}` : null);
+
+  // The opening a save belongs to: closing, the next opening (or another event) and unmounting
+  // all end it, so a save that finishes after the viewer dismissed the dialog (Escape, Cancel,
+  // Back) neither closes it again nor navigates.
+  const active = useRef<string | null>(null);
+
+  useEffect(() => {
+    active.current = opening;
+
+    return () => {
+      active.current = null;
+    };
+  }, [opening]);
+
+  const close = () => {
+    active.current = null;
+    onClose();
+  };
+
+  const saved = (submittedIn: string | null) => (detail: EventDetail) =>
+    onSaved(detail, submittedIn !== null && active.current === submittedIn);
 
   const footer = (
     <>
@@ -95,7 +136,7 @@ export function EventFormDialog({ roomId, eventId, open, onClose, onSaved }: Eve
           Unsaved changes
         </span>
       ) : null}
-      <Button variant="secondary" onClick={onClose}>
+      <Button variant="secondary" onClick={close}>
         Cancel
       </Button>
       <Button
@@ -115,7 +156,7 @@ export function EventFormDialog({ roomId, eventId, open, onClose, onSaved }: Eve
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) close();
       }}
       title={editing ? "Edit event" : "Schedule an event"}
       description={
@@ -137,12 +178,31 @@ export function EventFormDialog({ roomId, eventId, open, onClose, onSaved }: Eve
           form={form}
           onBusy={setBusy}
           onDirty={setDirty}
-          onSaved={onSaved}
+          onSaved={saved(opening)}
           touched={touched}
         />
       )}
     </Dialog>
   );
+}
+
+/**
+ * Names each opening of the dialog on `target` ("room/event", or `null` while closed): a new name
+ * for every opening, and for another event while open.
+ */
+function useOpening(target: string | null): string | null {
+  const [shown, setShown] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
+
+  if (target !== shown) {
+    setShown(target);
+
+    if (target !== null) {
+      setCount((held) => held + 1);
+    }
+  }
+
+  return target === null ? null : `${target}#${count}`;
 }
 
 /** Whether the viewer clicked or typed while `active` (the form loading) held. */
@@ -205,8 +265,18 @@ interface EventFormBodyProps {
   readonly touched: { readonly current: boolean };
 }
 
-/** A labelled field the form lays out itself (a select, a text area). */
-function Field({
+/** What a `Field`'s control carries: its id, and its error or hint as its description. */
+export interface FieldControl {
+  readonly id: string;
+  readonly "aria-invalid": true | undefined;
+  readonly "aria-describedby": string | undefined;
+}
+
+/**
+ * A labelled field the form lays out itself (a select, a text area). `children` renders the
+ * control from the attributes that tie the error (or hint) below to it, as `TextField` does.
+ */
+export function Field({
   id,
   label,
   hint,
@@ -217,14 +287,21 @@ function Field({
   readonly label: string;
   readonly hint?: string | undefined;
   readonly error?: string | undefined;
-  readonly children: ReactNode;
+  readonly children: (control: FieldControl) => ReactNode;
 }) {
+  const control: FieldControl = {
+    id,
+    "aria-invalid": error === undefined ? undefined : true,
+    "aria-describedby":
+      error === undefined ? (hint === undefined ? undefined : `${id}-hint`) : `${id}-error`,
+  };
+
   return (
     <div className={`field${error === undefined ? "" : " is-error"}`}>
       <label className="field-label" htmlFor={id}>
         {label}
       </label>
-      {children}
+      {children(control)}
       {error === undefined ? (
         hint === undefined ? null : (
           <p id={`${id}-hint`} className="field-hint">
@@ -431,19 +508,20 @@ function EventFormBody({ formId, form, onBusy, onDirty, onSaved, touched }: Even
       {repeat ? (
         <div className="ev-form-repeat">
           <Field id={ids.rule} label="Repeats" error={errors.recurrenceRule}>
-            <select
-              id={ids.rule}
-              className="input ev-select"
-              value={draft.recurrenceRule}
-              aria-invalid={errors.recurrenceRule === undefined ? undefined : true}
-              onChange={(event) => edit({ recurrenceRule: event.target.value })}
-            >
-              {form.repeatOptions.map((option) => (
-                <option key={option.value ?? "none"} value={option.value ?? ""}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            {(control) => (
+              <select
+                {...control}
+                className="input ev-select"
+                value={draft.recurrenceRule}
+                onChange={(event) => edit({ recurrenceRule: event.target.value })}
+              >
+                {form.repeatOptions.map((option) => (
+                  <option key={option.value ?? "none"} value={option.value ?? ""}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            )}
           </Field>
           {repeats ? (
             <TextField
@@ -467,25 +545,26 @@ function EventFormBody({ formId, form, onBusy, onDirty, onSaved, touched }: Even
         </p>
       ) : null}
       <Field id={ids.venue} label="Where" error={errors.venueRoomId}>
-        <select
-          id={ids.venue}
-          className="input ev-select"
-          value={draft.venueRoomId}
-          aria-invalid={errors.venueRoomId === undefined ? undefined : true}
-          onChange={(event) => edit({ venueRoomId: event.target.value })}
-        >
-          <option value="">No channel</option>
-          {keptVenue ? <option value={draft.venueRoomId}>The current channel</option> : null}
-          {groups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.options.map((venue) => (
-                <option key={venue.roomId} value={`${venue.roomId}`}>
-                  {venue.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+        {(control) => (
+          <select
+            {...control}
+            className="input ev-select"
+            value={draft.venueRoomId}
+            onChange={(event) => edit({ venueRoomId: event.target.value })}
+          >
+            <option value="">No channel</option>
+            {keptVenue ? <option value={draft.venueRoomId}>The current channel</option> : null}
+            {groups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((venue) => (
+                  <option key={venue.roomId} value={`${venue.roomId}`}>
+                    {venue.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        )}
       </Field>
       {form.values.meetLink === null ? (
         form.meetAvailable ? (
@@ -510,19 +589,21 @@ function EventFormBody({ formId, form, onBusy, onDirty, onSaved, touched }: Even
         </p>
       )}
       <Field id={ids.description} label="Description (optional)" error={errors.description}>
-        <textarea
-          id={ids.description}
-          className="input ev-description-input"
-          value={draft.description}
-          rows={4}
-          placeholder="Agenda, links, what to bring"
-          onChange={(event) => edit({ description: event.target.value })}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-              event.currentTarget.form?.requestSubmit();
-            }
-          }}
-        />
+        {(control) => (
+          <textarea
+            {...control}
+            className="input ev-description-input"
+            value={draft.description}
+            rows={4}
+            placeholder="Agenda, links, what to bring"
+            onChange={(event) => edit({ description: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+          />
+        )}
       </Field>
     </form>
   );
