@@ -396,6 +396,11 @@
   }
 
   .message-main {
+    /* One gap between the body and whatever hangs under it (cards, attachments, the reactions
+       row), and between those, so a reaction row sits as far from a link preview as the preview
+       sits from the text. */
+    --message-accessory-gap: var(--space-1-5);
+
     min-width: 0;
   }
 
@@ -535,10 +540,32 @@
     padding-left: var(--space-5);
   }
 
+  /* A picture in the body (a rich-text paste's remote images) is bounded like a Slack preview,
+     whatever its natural size or width/height attributes, keeping its aspect ratio. The quiet
+     checkerboard shows only through transparent pixels. */
   .message-body img {
-    max-width: min(100%, 360px);
+    width: auto;
     height: auto;
+    max-width: min(100%, 360px);
+    max-height: 320px;
     border-radius: var(--radius-md);
+    background-image: repeating-conic-gradient(
+      var(--image-backdrop-a) 0 25%,
+      var(--image-backdrop-b) 0 50%
+    );
+    background-size: 16px 16px;
+  }
+
+  /* `:name:` brand and workspace icons (crates/richtext icon_node) sit in the text like an emoji,
+     as the classic icons.css has them: 1.2em tall, on the baseline, no backdrop. Brand icons
+     invert in the dark theme (base.css). */
+  .message-body img.icon {
+    display: inline;
+    height: 1.2em;
+    max-height: none;
+    vertical-align: -0.25em;
+    border-radius: 0;
+    background: none;
   }
 
   /* Mentions as the server renders them (users/_mention): an inline chip with the name. */

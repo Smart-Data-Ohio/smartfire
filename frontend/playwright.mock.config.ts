@@ -3,6 +3,15 @@ import { defineConfig, devices } from "@playwright/test";
 // `SMARTFIRE_E2E_PORT` lets parallel worktrees run their own servers.
 const port = Number(process.env.SMARTFIRE_E2E_PORT ?? 4180);
 
+// `SMARTFIRE_E2E_BUILD=1` serves the production build (`vite build`, then `vite preview` with the
+// same mock) instead of the dev server, for what only the build can get wrong: its CSS chunk
+// order, its chunking. CI runs e2e/mock/inline-layout.spec.ts this way.
+const build = process.env.SMARTFIRE_E2E_BUILD === "1";
+
+const server = build
+  ? `pnpm exec vite build && pnpm exec vite preview --mode mock --host 127.0.0.1 --port ${port} --strictPort`
+  : `pnpm exec vite --mode mock --host 127.0.0.1 --port ${port} --strictPort`;
+
 /**
  * The S2 specs: the SPA on Vite's dev server with the in-memory mock backend (mock/vite-plugin.ts),
  * the simulation off so every run sees the same seeded workspace. `pnpm test:e2e:mock`.
@@ -24,9 +33,10 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `pnpm exec vite --mode mock --host 127.0.0.1 --port ${port} --strictPort`,
+    command: server,
     env: { SMARTFIRE_MOCK_SIMULATE: "0" },
     url: `http://127.0.0.1:${port}/app/`,
     reuseExistingServer: !process.env.CI,
+    timeout: build ? 180_000 : 60_000,
   },
 });

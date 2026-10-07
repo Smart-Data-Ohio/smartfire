@@ -41,6 +41,13 @@
     max-width: 100%;
   }
 
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from /assets/icons/brands/ and marks body ones `icon--brand`. */
+  img.icon--brand,
+  img[src*="/icons/brands/"] {
+    filter: var(--brand-icon-filter);
+  }
+
   input,
   button,
   textarea,
