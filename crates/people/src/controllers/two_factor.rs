@@ -43,7 +43,7 @@ fn limited(
             Some(&user_id.map(|id| id.to_string()).unwrap_or_default()),
         )?)
 }
-fn no_store(c: &mut Ctx) {
+pub fn no_store(c: &mut Ctx) {
     c.no_store();
     c.headers.insert("pragma", "no-cache".parse().unwrap());
 }
@@ -388,9 +388,9 @@ async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
     )
 }
 
-async fn reauthenticated(c: &mut Ctx, user: &User) -> Result<bool> {
-    if c.params.get("reauth").is_some_and(|p| p.is_present()) {
-        let value = scalar(c, "reauth");
+async fn reauthenticated(c: &mut Ctx, user: &User, reauth: Option<&str>) -> Result<bool> {
+    if let Some(value) = reauth {
+        let value = value.to_owned();
         if value.chars().all(char::is_whitespace) {
             return Ok(false);
         }
@@ -431,25 +431,41 @@ async fn reauthenticated(c: &mut Ctx, user: &User) -> Result<bool> {
         ))
     }
 }
-fn refuse_reauthentication(c: &mut Ctx, user: &User) -> Result {
-    let alert = if user.password_digest.as_ref().is_none_or(|s| s.is_empty()) {
+/// The classic confirmation refusal, independent of the transport.
+fn reauthentication_alert(user: &User) -> &'static str {
+    if user.password_digest.as_ref().is_none_or(|s| s.is_empty()) {
         "Enter your authenticator code or confirm with Google to continue."
     } else {
         "Enter your authenticator code or password to continue."
-    };
-    c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
-        Redirect {
-            alert: Some(alert.into()),
-            ..Default::default()
-        },
-    )
+    }
 }
+
+/// A present form value may be a non-scalar; preserve classic coercion.
+fn reauthentication_value(c: &Ctx) -> Option<String> {
+    c.params
+        .get("reauth")
+        .filter(|p| p.is_present())
+        .map(|_| scalar(c, "reauth"))
+}
+
+/// Management outcomes shared by the classic forms and the account JSON API.
+pub enum ManagementOutcome {
+    Notice(&'static str),
+    Alert(&'static str),
+    RateLimited,
+    NotEnabled,
+    NotHuman,
+    Codes(Vec<String>),
+}
+
+/// The exact classic rate-limit alert.
+pub const RATE_ALERT: &str = "Too many attempts. Try again in a few minutes.";
+
 fn rate_rejection(c: &mut Ctx) -> Result {
     c.redirect_to_with(
         &c.url_for("/users/me/profile"),
         Redirect {
-            alert: Some("Too many attempts. Try again in a few minutes.".into()),
+            alert: Some(RATE_ALERT.into()),
             ..Default::default()
         },
     )
@@ -457,15 +473,26 @@ fn rate_rejection(c: &mut Ctx) -> Result {
 pub async fn backup_create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = require_current_user(c)?.clone();
+    let reauth = reauthentication_value(c);
+    let outcome = regenerate_backup_codes(c, user, reauth.as_deref()).await?;
+    management_reply(c, outcome, false).await
+}
+
+/// New backup codes, including classic limits, confirmation and cache headers.
+pub async fn regenerate_backup_codes(
+    c: &mut Ctx,
+    user: User,
+    reauth: Option<&str>,
+) -> Result<ManagementOutcome> {
     if limited(c, "two_factor/backup_codes", "per-user", Some(user.id))? {
-        return rate_rejection(c);
+        return Ok(ManagementOutcome::RateLimited);
     }
     no_store(c);
     if !enabled(c).await? {
-        return c.redirect_to(&c.url_for("/two_factor_setup"));
+        return Ok(ManagementOutcome::NotEnabled);
     }
-    if !reauthenticated(c, &user).await? {
-        return refuse_reauthentication(c, &user);
+    if !reauthenticated(c, &user, reauth).await? {
+        return Ok(ManagementOutcome::Alert(reauthentication_alert(&user)));
     }
     let context = audit_context(c)?;
     let codes = c
@@ -474,20 +501,34 @@ pub async fn backup_create(c: &mut Ctx) -> Result {
         .write(move |tx| crate::authentication::regenerate_backups(tx, &user, &context))
         .await
         .map_err(Error::internal)?;
-    render_backups(c, codes, 0, c.url_for("/users/me/profile")).await
+    Ok(ManagementOutcome::Codes(codes))
 }
+
 pub async fn setup_destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = require_current_user(c)?.clone();
+    let reauth = reauthentication_value(c);
+    let outcome = disable_two_factor(c, user, reauth.as_deref()).await?;
+    management_reply(c, outcome, true).await
+}
+
+/// Disable enrollment, replace Current.session and delete the remember cookie exactly once.
+pub async fn disable_two_factor(
+    c: &mut Ctx,
+    user: User,
+    reauth: Option<&str>,
+) -> Result<ManagementOutcome> {
     if limited(c, "two_factor/setups", "per-user-destroy", Some(user.id))? {
-        return rate_rejection(c);
+        return Ok(ManagementOutcome::RateLimited);
     }
-    ensure_human(c)?;
+    if !user.requires_two_factor() {
+        return Ok(ManagementOutcome::NotHuman);
+    }
     if !enabled(c).await? {
-        return c.redirect_to(&c.url_for("/two_factor_setup"));
+        return Ok(ManagementOutcome::NotEnabled);
     }
-    if !reauthenticated(c, &user).await? {
-        return refuse_reauthentication(c, &user);
+    if !reauthenticated(c, &user, reauth).await? {
+        return Ok(ManagementOutcome::Alert(reauthentication_alert(&user)));
     }
     let context = audit_context(c)?;
     let session = current_session(c)
@@ -501,14 +542,11 @@ pub async fn setup_destroy(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     c.set_current(concerns::CurrentSession(session));
     c.cookies.delete("two_factor_remember");
-    c.redirect_to_with(
-        &c.url_for("/two_factor_setup"),
-        Redirect {
-            notice: Some("Two-step sign-in is off. Set it up again to keep signing in.".into()),
-            ..Default::default()
-        },
-    )
+    Ok(ManagementOutcome::Notice(
+        "Two-step sign-in is off. Set it up again to keep signing in.",
+    ))
 }
+
 pub async fn device_destroy(c: &mut Ctx) -> Result {
     revoke_devices(c, false).await
 }
@@ -518,18 +556,31 @@ pub async fn device_destroy_all(c: &mut Ctx) -> Result {
 async fn revoke_devices(c: &mut Ctx, all: bool) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let user = require_current_user(c)?.clone();
+    let reauth = reauthentication_value(c);
+    let id = c.param_str("id").and_then(concerns::cast_integer);
+    let outcome = forget_devices(c, user, reauth.as_deref(), id, all).await?;
+    management_reply(c, outcome, false).await
+}
+
+/// Forget one owned device or all of them, with the classic confirmation and limits.
+pub async fn forget_devices(
+    c: &mut Ctx,
+    user: User,
+    reauth: Option<&str>,
+    id: Option<i64>,
+    all: bool,
+) -> Result<ManagementOutcome> {
     if limited(
         c,
         "two_factor/remembered_devices",
         "per-user",
         Some(user.id),
     )? {
-        return rate_rejection(c);
+        return Ok(ManagementOutcome::RateLimited);
     }
-    if !reauthenticated(c, &user).await? {
-        return refuse_reauthentication(c, &user);
+    if !reauthenticated(c, &user, reauth).await? {
+        return Ok(ManagementOutcome::Alert(reauthentication_alert(&user)));
     }
-    let id = c.param_str("id").and_then(concerns::cast_integer);
     let context = audit_context(c)?;
     c.app()
         .db
@@ -541,13 +592,30 @@ async fn revoke_devices(c: &mut Ctx, all: bool) -> Result {
     } else {
         "Device forgotten. It will ask for a code at next sign-in."
     };
-    c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
-        Redirect {
-            notice: Some(notice.into()),
-            ..Default::default()
-        },
-    )
+    Ok(ManagementOutcome::Notice(notice))
+}
+
+async fn management_reply(c: &mut Ctx, outcome: ManagementOutcome, disabling: bool) -> Result {
+    match outcome {
+        ManagementOutcome::RateLimited => rate_rejection(c),
+        ManagementOutcome::NotEnabled => c.redirect_to(&c.url_for("/two_factor_setup")),
+        ManagementOutcome::NotHuman => c.redirect_to(&c.url_for("/")),
+        ManagementOutcome::Codes(codes) => {
+            render_backups(c, codes, 0, c.url_for("/users/me/profile")).await
+        }
+        ManagementOutcome::Alert(alert) => reauth_alert(c, alert),
+        ManagementOutcome::Notice(notice) => c.redirect_to_with(
+            &c.url_for(if disabling {
+                "/two_factor_setup"
+            } else {
+                "/users/me/profile"
+            }),
+            Redirect {
+                notice: Some(notice.into()),
+                ..Default::default()
+            },
+        ),
+    }
 }
 
 pub async fn reauthentication_create(c: &mut Ctx) -> Result {

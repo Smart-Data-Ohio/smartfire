@@ -6,9 +6,13 @@
  */
 import { me } from "../api/endpoints.ts";
 import {
+  accountSettings,
   connectService,
+  disableTwoFactor,
   disconnectService,
+  forgetDevices,
   settings as loadSettings,
+  newBackupCodes,
   pushSubscriptions,
   removeAvatar,
   removePushSubscription,
@@ -17,6 +21,7 @@ import {
   sessions,
   setDndAllowance,
   type TokenService,
+  testPush,
   updateAppearance,
   updateAvatar,
   updateCalls,
@@ -24,10 +29,13 @@ import {
   updateProfile,
   updateStatus,
 } from "../api/settings-endpoints.ts";
+import type { AccountSettings } from "../gen/AccountSettings.ts";
+import type { BackupCodes } from "../gen/BackupCodes.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
+import type { TwoFactorChange } from "../gen/TwoFactorChange.ts";
 import type { UpdateAppearance } from "../gen/UpdateAppearance.ts";
 import type { UpdateCalls } from "../gen/UpdateCalls.ts";
 import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
@@ -137,6 +145,9 @@ export const settings = {
   removePushSubscription: (subscriptionId: number): Promise<PushSubscriptionList> =>
     runAction(removePushSubscription(subscriptionId)),
 
+  /** Sends that device a test notification. */
+  testPush: (subscriptionId: number): Promise<void> => runAction(testPush(subscriptionId)),
+
   /** Connects GitHub or Fizzy with a personal access token. */
   connect: (service: TokenService, accessToken: string): Promise<IntegrationChange> =>
     write(runAction(connectService(service, accessToken))),
@@ -147,4 +158,18 @@ export const settings = {
    */
   disconnect: (service: TokenService | "google"): Promise<IntegrationChange> =>
     write(runAction(disconnectService(service))),
+
+  /** The rooms you're in, two-step sign-in and the sign-in link. */
+  account: (): Promise<AccountSettings> => runAction(accountSettings()),
+
+  /** New backup codes, confirmed with a code or password (empty after "Confirm with Google"). */
+  newBackupCodes: (reauth: string): Promise<BackupCodes> => runAction(newBackupCodes(reauth)),
+
+  /** Turns two-step sign-in off. */
+  disableTwoFactor: (reauth: string): Promise<TwoFactorChange> =>
+    runAction(disableTwoFactor(reauth)),
+
+  /** Forgets one remembered browser, or every one with `null`. */
+  forgetDevices: (deviceId: number | null, reauth: string): Promise<TwoFactorChange> =>
+    runAction(forgetDevices(deviceId, reauth)),
 };

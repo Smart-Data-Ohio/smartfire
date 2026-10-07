@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
+import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { deviceName } from "./settings-format.ts";
 import { SettingsGroup, SettingsPage, toastFailure } from "./settings-parts.tsx";
@@ -11,7 +13,10 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly list: PushSubscriptionList };
 
-/** Push devices: each browser that gets push notifications, and a way to stop one. */
+/**
+ * Push devices: each browser that gets push notifications, a test notification to check one, and
+ * a way to stop one.
+ */
 export function DevicesSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [busy, setBusy] = useState<number | null>(null);
@@ -28,6 +33,28 @@ export function DevicesSection() {
   const reload = () => {
     setLoad({ status: "loading" });
     fetchList();
+  };
+
+  // Each device's test runs on its own: one finishing never clears another still on its way.
+  const [testing, setTesting] = useState<ReadonlySet<number>>(new Set());
+
+  const test = (id: number) => {
+    setTesting((current) => new Set(current).add(id));
+    settingsActions
+      .testPush(id)
+      .then(
+        () => toast({ title: "Test notification sent", tone: "success" }),
+        (error: Error) => toastFailure("Couldn't send a test", error),
+      )
+      .finally(() =>
+        setTesting((current) => {
+          const next = new Set(current);
+
+          next.delete(id);
+
+          return next;
+        }),
+      );
   };
 
   const remove = (id: number) => {
@@ -64,6 +91,15 @@ export function DevicesSection() {
                   <strong>{deviceName(subscription)}</strong>
                   <span className="settings-endpoint text-faint">{subscription.endpoint}</span>
                 </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={testing.has(subscription.id)}
+                  disabled={busy !== null}
+                  onClick={() => test(subscription.id)}
+                >
+                  Send a test
+                </Button>
                 <IconButton
                   icon="trash"
                   size="sm"

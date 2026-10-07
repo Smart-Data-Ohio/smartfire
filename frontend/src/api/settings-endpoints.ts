@@ -1,25 +1,33 @@
 /**
  * The S7 settings endpoints: the profile page's sections, sessions, push subscriptions and the
- * personal GitHub, Fizzy and Google Calendar connections.
+ * personal GitHub, Fizzy and Google Calendar connections, the rooms list, two-step sign-in and
+ * the sign-in link.
  */
 import { Effect } from "effect";
+import type { AccountSettings } from "../gen/AccountSettings.ts";
+import type { BackupCodes } from "../gen/BackupCodes.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { IntegrationToken } from "../gen/IntegrationToken.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
+import type { Reauthentication } from "../gen/Reauthentication.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
+import type { TwoFactorChange } from "../gen/TwoFactorChange.ts";
 import type { UpdateAppearance } from "../gen/UpdateAppearance.ts";
 import type { UpdateCalls } from "../gen/UpdateCalls.ts";
 import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
 import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
-import { call, get } from "./call.ts";
+import { call, get, noContent } from "./call.ts";
 import type { ApiRequest } from "./client.ts";
 import {
+  AccountSettings as AccountSettingsSchema,
+  BackupCodes as BackupCodesSchema,
   IntegrationChange as IntegrationChangeSchema,
   PushSubscriptionList as PushSubscriptionListSchema,
   SessionList as SessionListSchema,
   Settings as SettingsSchema,
+  TwoFactorChange as TwoFactorChangeSchema,
 } from "./schema/settings.ts";
 import { wire } from "./wire.ts";
 
@@ -130,6 +138,14 @@ export const removePushSubscription = Effect.fn("api.removePushSubscription")(fu
   );
 });
 
+/** `POST /settings/push_subscriptions/:id/test`: sends that device a test notification. */
+export const testPush = Effect.fn("api.testPush")(function* (subscriptionId: number) {
+  return yield* call(
+    { method: "POST", path: `/settings/push_subscriptions/${subscriptionId}/test` },
+    noContent,
+  );
+});
+
 const integrationReply = wire<IntegrationChange>(IntegrationChangeSchema);
 
 /** A personal connection made with a pasted token. */
@@ -160,4 +176,52 @@ export const disconnectService = Effect.fn("api.disconnectService")(function* (
     { method: "DELETE", path: `/settings/${service}_connection` },
     integrationReply,
   );
+});
+
+const accountReply = wire<AccountSettings>(AccountSettingsSchema);
+
+/** `GET /settings/account`: the rooms you're in, two-step sign-in and the sign-in link. */
+export const accountSettings = Effect.fn("api.accountSettings")(function* () {
+  return yield* call(get("/settings/account"), accountReply);
+});
+
+const codesReply = wire<BackupCodes>(BackupCodesSchema);
+
+const twoFactorReply = wire<TwoFactorChange>(TwoFactorChangeSchema);
+
+/**
+ * `POST /settings/two_factor/backup_codes`: replaces the backup codes. Each two-step write is
+ * confirmed with `reauth` (a code or password); a refusal fails `Validation` or `RateLimited`
+ * with the classic alert, and two-step sign-in being off fails `Conflict`.
+ */
+export const newBackupCodes = Effect.fn("api.newBackupCodes")(function* (reauth: string) {
+  const body: Reauthentication = { reauth };
+
+  return yield* call(
+    { method: "POST", path: "/settings/two_factor/backup_codes", body },
+    codesReply,
+  );
+});
+
+/** `DELETE /settings/two_factor`: turns two-step sign-in off (the session is replaced). */
+export const disableTwoFactor = Effect.fn("api.disableTwoFactor")(function* (reauth: string) {
+  const body: Reauthentication = { reauth };
+
+  return yield* call({ method: "DELETE", path: "/settings/two_factor", body }, twoFactorReply);
+});
+
+/**
+ * `DELETE /settings/two_factor/devices/:id` forgets one remembered browser; without an id,
+ * `DELETE /settings/two_factor/devices` forgets them all.
+ */
+export const forgetDevices = Effect.fn("api.forgetDevices")(function* (
+  deviceId: number | null,
+  reauth: string,
+) {
+  const body: Reauthentication = { reauth };
+
+  const path =
+    deviceId === null ? "/settings/two_factor/devices" : `/settings/two_factor/devices/${deviceId}`;
+
+  return yield* call({ method: "DELETE", path, body }, twoFactorReply);
 });

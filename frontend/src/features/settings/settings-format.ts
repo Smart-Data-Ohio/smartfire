@@ -4,6 +4,7 @@ import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
 import type { OooPreset } from "../../gen/OooPreset.ts";
 import type { PresenceSetting } from "../../gen/PresenceSetting.ts";
 import type { PushSubscriptionInfo } from "../../gen/PushSubscriptionInfo.ts";
+import type { RememberedDevice } from "../../gen/RememberedDevice.ts";
 import type { SessionInfo } from "../../gen/SessionInfo.ts";
 import type { Settings } from "../../gen/Settings.ts";
 import type { StatusExpiry } from "../../gen/StatusExpiry.ts";
@@ -19,8 +20,10 @@ export const SECTIONS = [
   { key: "profile", label: "Profile", icon: "at", path: "/settings" },
   { key: "status", label: "Status", icon: "smile", path: "/settings/status" },
   { key: "notifications", label: "Notifications", icon: "bell", path: "/settings/notifications" },
+  { key: "rooms", label: "Rooms", icon: "hash", path: "/settings/rooms" },
   { key: "appearance", label: "Appearance", icon: "sun", path: "/settings/appearance" },
   { key: "calls", label: "Calls", icon: "headphones", path: "/settings/calls" },
+  { key: "security", label: "Security", icon: "shield", path: "/settings/security" },
   { key: "sessions", label: "Sessions", icon: "lock", path: "/settings/sessions" },
   { key: "devices", label: "Push devices", icon: "monitor", path: "/settings/devices" },
   { key: "integrations", label: "Integrations", icon: "link", path: "/settings/integrations" },
@@ -220,4 +223,41 @@ export function withConnection(
  */
 export function withDependents(current: Settings, fresh: Settings): Settings {
   return { ...current, profile: fresh.profile, status: fresh.status };
+}
+
+const longDay = new Intl.DateTimeFormat(undefined, {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
+/** "On since October 7, 2026.", the classic two-step panel's first line. */
+export function twoFactorSince(confirmedAt: string): string {
+  return `On since ${longDay.format(Date.parse(confirmedAt))}.`;
+}
+
+/**
+ * "203.0.113.9 · last used 3 hours ago" for a remembered browser, as the classic row's second line
+ * reads; `null` when it knows neither.
+ */
+export function rememberedMeta(device: RememberedDevice, now: number): string | null {
+  const parts = [
+    ...(device.ipAddress === null ? [] : [device.ipAddress]),
+    ...(device.lastUsedAt === null ? [] : [`last used ${timeAgo(device.lastUsedAt, now)}`]),
+  ];
+
+  return parts.length === 0 ? null : parts.join(" · ");
+}
+
+/** What the confirmation field asks for: a password only when the account has one. */
+export function reauthLabel(hasPassword: boolean): string {
+  return hasPassword ? "Authenticator code or password" : "Authenticator code";
+}
+
+/**
+ * An SVG document as an image source that never leaves the page: a `data:` URL, so the sign-in
+ * link it encodes reaches no request path, log or cache.
+ */
+export function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }

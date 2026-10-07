@@ -36,6 +36,7 @@ import {
 import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
+import { createAccount } from "./s2/account.ts";
 import { createAdmin } from "./s2/admin.ts";
 import { createAmbient } from "./s2/ambient.ts";
 import { createBots } from "./s2/bots.ts";
@@ -714,6 +715,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...activity.routes,
     ...saved.routes,
     ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...createAccount(ctx).routes,
     ...admin.routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,

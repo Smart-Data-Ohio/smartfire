@@ -6,12 +6,10 @@ import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { classicPage, fieldError } from "./settings-format.ts";
+import { fieldError } from "./settings-format.ts";
 import {
-  ClassicLink,
   FieldError,
   fieldsOf,
-  SettingsGroup,
   SettingsPage,
   toastFailure,
   useSettings,
@@ -263,12 +261,6 @@ export function ProfileSection() {
           </Button>
         </div>
       </form>
-      <SettingsGroup title="More on the classic page">
-        <p>Rooms you're in, two-step verification and signing in on another device.</p>
-        <ClassicLink href={classicPage(settings.integrations.managePath)}>
-          Open the classic profile
-        </ClassicLink>
-      </SettingsGroup>
     </SettingsPage>
   );
 }

@@ -9,7 +9,7 @@ import type { SessionInfo } from "../../src/gen/SessionInfo.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
 import type { StatusExpiry } from "../../src/gen/StatusExpiry.ts";
-import { notFound, ok, plainError, refused, validation } from "../http.ts";
+import { noContent, notFound, ok, plainError, refused, validation } from "../http.ts";
 import {
   booleanField,
   field,
@@ -659,6 +659,15 @@ export function createSettings(
       route("DELETE", /^\/settings\/fizzy_connection$/, () => disconnect("fizzy")),
       route("DELETE", /^\/settings\/google_connection$/, () => disconnectGoogle()),
       route("GET", /^\/settings\/push_subscriptions$/, () => ok(current().push)),
+      route("POST", /^\/settings\/push_subscriptions\/(\d+)\/test$/, (request) => {
+        const id = firstId(request);
+
+        if (!current().push.pushSubscriptions.some((subscription) => subscription.id === id)) {
+          throw notFound();
+        }
+
+        return noContent();
+      }),
       route("DELETE", /^\/settings\/push_subscriptions\/(\d+)$/, (request) =>
         removePush(firstId(request)),
       ),

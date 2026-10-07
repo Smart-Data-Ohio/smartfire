@@ -64,10 +64,7 @@ async fn render_show(
         }
         c.set_current(presenters::view_context::RenderedSettings(rendered));
     }
-    let has_password = user
-        .password_digest
-        .as_deref()
-        .is_some_and(|s| !campfire_richtext::ruby::is_blank(s));
+    let has_password = presenters::accounts::profile_has_password(&user);
     let secrets = c.app().secrets.clone();
     let transfer_id = presenters::accounts::transfer_id(&secrets, user.id, c.now());
     let (avatar_attached, (direct_memberships, shared_memberships)) = {
@@ -175,27 +172,7 @@ async fn render_show(
         .app()
         .db
         .read(move |conn| {
-            let credential = campfire_db::TwoFactorCredential::for_user(conn, id)?;
-            let devices = campfire_db::TwoFactorRememberedDevice::for_user(conn, id)?
-                .into_iter()
-                .filter(|d| d.expires_at.jiff() > now)
-                .map(|d| campfire_views::two_factor::Device {
-                    id: d.id,
-                    user_agent: d.user_agent,
-                    ip_address: d.ip_address,
-                    last_used_at: d.last_used_at.map(|t| t.jiff()),
-                })
-                .collect();
-            Ok(campfire_views::two_factor::ProfileData {
-                confirmed_at: credential.and_then(|c| c.confirmed_at).map(|t| t.jiff()),
-                devices,
-                google: google_reauthentication
-                    && conn.query_row(
-                        "SELECT EXISTS(SELECT 1 FROM google_identities WHERE user_id=?)",
-                        [id],
-                        |r| r.get::<_, bool>(0),
-                    )?,
-            })
+            presenters::accounts::profile_two_factor(conn, id, now, google_reauthentication)
         })
         .await
         .map_err(Error::internal)?;

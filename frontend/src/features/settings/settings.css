@@ -357,6 +357,85 @@
     vertical-align: 1px;
   }
 
+  /* ── Rooms: each room's notification level ─────────────────────────────── */
+
+  .settings-room-name {
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-room-name:hover {
+    text-decoration: underline;
+  }
+
+  .settings-level {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: 32px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-pane);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: var(--text-sidebar);
+    cursor: pointer;
+  }
+
+  .settings-level:hover,
+  .settings-level[aria-expanded="true"] {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .settings-level:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .settings-level[data-level="everything"] {
+    color: var(--accent);
+  }
+
+  /* ── Security: two-step sign-in and the sign-in link ───────────────────── */
+
+  .settings-subtitle {
+    margin: var(--space-2) 0 0;
+    font-weight: var(--weight-semibold);
+  }
+
+  .settings-codes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-1-5) var(--space-4);
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    list-style: none;
+    font-family: var(--font-mono);
+  }
+
+  .settings-transfer {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+  }
+
+  .settings-qr {
+    display: block;
+    width: min(240px, 100%);
+    margin: 0 auto;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--neutral-0);
+  }
+
   .settings-exceptions,
   .settings-exception-search {
     display: flex;

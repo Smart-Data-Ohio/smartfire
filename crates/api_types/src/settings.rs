@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{PresenceSetting, TextSize, Theme, Timestamp, VoiceMode};
+use crate::{Involvement, PresenceSetting, TextSize, Theme, Timestamp, VoiceMode};
 
 /// `GET /api/v1/settings`, and the answer to profile, appearance, notification and status writes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -26,6 +26,91 @@ pub struct Settings {
     pub status: StatusSettings,
     pub calls: CallSettings,
     pub integrations: IntegrationSettings,
+}
+
+/// `GET /api/v1/settings/account`: the classic profile's lower panels for the signed-in person.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct AccountSettings {
+    /// Shared rooms first, then direct messages, each in the classic page's order.
+    pub shared_rooms: Vec<RoomMembershipRow>,
+    pub direct_rooms: Vec<RoomMembershipRow>,
+    /// The two-step sign-in panel. These routes answer people only, so it is always there (the
+    /// classic page hides it for bots).
+    pub two_factor: TwoFactorSettings,
+    /// The absolute sign-in transfer URL the classic `_transfer.html` shows.
+    pub transfer_url: String,
+    /// `transfer_url`'s QR code, a whole SVG document drawn here, so the link never travels in a
+    /// request path the way the classic `/qr_code/:id` image's does.
+    pub transfer_qr_svg: String,
+}
+
+/// A room in the classic profile's membership list.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RoomMembershipRow {
+    pub room_id: i64,
+    /// `membership.room_display_name`, as the classic row shows it.
+    pub name: String,
+    /// The same involvement the room's existing involvement API changes. `None` for a membership
+    /// with none stored: the classic row labels it with nothing, and no mention reaches it.
+    pub involvement: Option<Involvement>,
+    pub direct: bool,
+}
+
+/// The classic two-step sign-in panel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TwoFactorSettings {
+    /// When it was turned on; `None` means not set up.
+    pub confirmed_at: Option<Timestamp>,
+    /// The account can "Confirm with Google" instead of a code (`data.google` in the partial).
+    pub google: bool,
+    /// The account has a password (decides the classic alert wording).
+    pub has_password: bool,
+    pub devices: Vec<RememberedDevice>,
+}
+
+/// An unexpired device in the classic two-step panel, in its displayed order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RememberedDevice {
+    pub id: i64,
+    /// The classic row's bold line (`self.agent(device)`), already worded.
+    pub description: String,
+    /// Where it was last used from, the start of the classic row's second line.
+    pub ip_address: Option<String>,
+    pub last_used_at: Option<Timestamp>,
+}
+
+/// The body of each two-step write: the authenticator code or password. Empty after a finished
+/// "Confirm with Google" round trip.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Reauthentication {
+    pub reauth: String,
+}
+
+/// `POST /api/v1/settings/two_factor/backup_codes`: the new codes, shown once.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BackupCodes {
+    pub codes: Vec<String>,
+}
+
+/// A two-step write that changed the account: the classic notice and the panel as it now stands.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct TwoFactorChange {
+    pub notice: String,
+    pub two_factor: TwoFactorSettings,
 }
 
 /// Name, email, password, bio, avatar and GitHub username (the profile form).

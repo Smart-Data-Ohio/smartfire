@@ -301,3 +301,51 @@ fn integration_changes_wire() {
         }),
     );
 }
+
+#[test]
+fn account_settings_and_two_factor_wire() {
+    let room = RoomMembershipRow {
+        room_id: 12, name: "Everyone".into(), involvement: Some(Involvement::Everything), direct: false,
+    };
+    let room_wire = json!({"roomId": 12, "name": "Everyone", "involvement": "everything", "direct": false});
+    assert_wire(&room, room_wire.clone());
+    assert_wire(&RoomMembershipRow {
+        room_id: 14, name: "Old room".into(), involvement: None, direct: false,
+    }, json!({"roomId": 14, "name": "Old room", "involvement": null, "direct": false}));
+    let device = RememberedDevice {
+        id: 6, description: "Unknown browser".into(), ip_address: None, last_used_at: None,
+    };
+    assert_wire(&device, json!({"id": 6, "description": "Unknown browser", "ipAddress": null, "lastUsedAt": null}));
+    let two_factor = TwoFactorSettings {
+        confirmed_at: Some("2026-10-07T10:00:00.000Z".into()), google: true,
+        has_password: false, devices: vec![RememberedDevice {
+            id: 7, description: "Firefox".into(), ip_address: Some("203.0.113.9".into()),
+            last_used_at: Some("2026-10-07T11:00:00.000Z".into()),
+        }],
+    };
+    let panel_wire = json!({
+        "confirmedAt": "2026-10-07T10:00:00.000Z", "google": true, "hasPassword": false,
+        "devices": [{"id": 7, "description": "Firefox", "ipAddress": "203.0.113.9", "lastUsedAt": "2026-10-07T11:00:00.000Z"}]
+    });
+    assert_wire(&two_factor, panel_wire.clone());
+    assert_wire(&TwoFactorSettings {
+        confirmed_at: None, google: false, has_password: true, devices: vec![],
+    }, json!({"confirmedAt": null, "google": false, "hasPassword": true, "devices": []}));
+    assert_wire(&AccountSettings {
+        shared_rooms: vec![room], direct_rooms: vec![RoomMembershipRow {
+            room_id: 13, name: "Grace".into(), involvement: Some(Involvement::Mentions), direct: true,
+        }], two_factor: two_factor.clone(), transfer_url: "https://chat.example/session/transfers/signed".into(),
+        transfer_qr_svg: "<svg/>".into(),
+    }, json!({
+        "sharedRooms": [room_wire],
+        "directRooms": [{"roomId": 13, "name": "Grace", "involvement": "mentions", "direct": true}],
+        "twoFactor": panel_wire, "transferUrl": "https://chat.example/session/transfers/signed",
+        "transferQrSvg": "<svg/>"
+    }));
+    assert_wire(&Reauthentication { reauth: "123456".into() }, json!({"reauth": "123456"}));
+    assert_wire(&Reauthentication { reauth: String::new() }, json!({"reauth": ""}));
+    assert_wire(&BackupCodes { codes: vec!["1234-5678".into()] }, json!({"codes": ["1234-5678"]}));
+    assert_wire(&TwoFactorChange {
+        notice: "Device forgotten. It will ask for a code at next sign-in.".into(), two_factor,
+    }, json!({"notice": "Device forgotten. It will ask for a code at next sign-in.", "twoFactor": panel_wire}));
+}
