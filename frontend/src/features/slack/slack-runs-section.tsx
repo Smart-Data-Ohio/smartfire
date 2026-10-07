@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import type { SlackRunList } from "../../gen/SlackRunList.ts";
 import { slack } from "../../sync/admin.ts";
@@ -95,10 +95,11 @@ export function SlackRunsSection() {
 export function SlackRunSection() {
   const { workspace } = useAdmin();
   const runId = useRunId();
+  const { page } = useSearch({ strict: false });
 
   if (!workspace.canAdminister) {
     return <AdministratorsOnly />;
   }
 
-  return <SlackRunView key={runId} admin runId={runId} />;
+  return <SlackRunView key={runId} admin runId={runId} throughPage={page ?? 1} />;
 }

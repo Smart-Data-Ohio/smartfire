@@ -1,4 +1,4 @@
-import { createContext, use, useEffect, useRef, useState } from "react";
+import { createContext, use, useRef } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
 import { ActionError } from "../../sync/run.ts";
@@ -6,6 +6,7 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { type RowParts, useKeepRowFocus } from "../destinations/row-focus.ts";
 
 /** The loaded workspace and the way a section hands back the server's answer to a write. */
 export interface AdminState {
@@ -174,83 +175,30 @@ export function AdministratorsOnly() {
   );
 }
 
-/** Where focus goes after a change moves or removes the row it was in: `control` in row `row`. */
-export interface RowFocus {
-  /** The row's `data-row`; `null` when there's no row left to go to. */
-  readonly row: string | null;
-  /** The control's `data-row-control` inside that row. */
-  readonly control: string;
-}
-
-/** Where focus waits while a dialog or menu opened from a row closes: it isn't lost there yet. */
-const OVERLAY = "dialog, [role='menu'], [popover]";
-
-/** How often, and how long, focus is checked while a closing overlay still holds it. */
-const WAIT_POLL_MS = 50;
-
-const WAIT_LIMIT_MS = 2000;
+/**
+ * How the admin lists mark their rows for features/destinations' row focus: rows carry `data-row`
+ * (and `tabIndex={-1}`), their controls `data-row-control`, inside an `.admin-focus-root`.
+ */
+const ADMIN_ROW_PARTS: RowParts = {
+  list: ".admin-focus-root",
+  row: "[data-row]",
+  open: "[data-row-control]",
+  leaving: "[data-motion='leave']",
+  id: "data-row",
+  control: "data-row-control",
+};
 
 /**
- * Keeps focus in a list when a change remounts or removes the focused row (features/destinations'
- * row focus does the same for its lists). Rows carry `data-row` (and `tabIndex={-1}`), their
- * controls `data-row-control`; `focusAfter` names the target with the change. Once the change
- * renders and focus has fallen to the page (after any closing dialog lets go of it), it goes to
- * that control, else its row, else the `container`. Focus someone moved elsewhere stays put.
+ * Keeps focus in an admin list as its rows change (features/destinations/row-focus.ts). A removed
+ * row hands focus to the same control in the next row, else the previous, else the container; a
+ * row that remounts or moves to the other list (a role change) keeps it on the control it was in;
+ * a control that goes away (a revoked credential's Revoke) leaves it on its row. Put the returned
+ * ref on the `.admin-focus-root` container around the rows.
  */
-export function useFocusAfter() {
+export function useRowFocus() {
   const container = useRef<HTMLDivElement | null>(null);
-  // A fresh object per request, so asking twice for the same row still runs the effect.
-  const [request, setRequest] = useState<{ readonly target: RowFocus } | null>(null);
 
-  useEffect(() => {
-    const root = container.current;
+  useKeepRowFocus(container, ADMIN_ROW_PARTS);
 
-    if (request === null || root === null) {
-      return;
-    }
-
-    const { target } = request;
-
-    // Whether there's nothing left to do: focus landed, or someone put it elsewhere.
-    const land = (): boolean => {
-      const active = document.activeElement;
-
-      if (active !== null && active !== document.body) {
-        return active.closest(OVERLAY) === null;
-      }
-
-      const row =
-        target.row === null
-          ? null
-          : root.querySelector<HTMLElement>(`[data-row="${CSS.escape(target.row)}"]`);
-
-      const control = row?.querySelector<HTMLElement>(
-        `[data-row-control="${CSS.escape(target.control)}"]:not(:disabled)`,
-      );
-
-      (control ?? row ?? root).focus();
-
-      return true;
-    };
-
-    if (land()) {
-      return;
-    }
-
-    let waited = 0;
-
-    const timer = window.setInterval(() => {
-      waited += WAIT_POLL_MS;
-
-      if (land() || waited >= WAIT_LIMIT_MS) {
-        window.clearInterval(timer);
-      }
-    }, WAIT_POLL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [request]);
-
-  const focusAfter = (target: RowFocus) => setRequest({ target });
-
-  return { container, focusAfter };
+  return container;
 }

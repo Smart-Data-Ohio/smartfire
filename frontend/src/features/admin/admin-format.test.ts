@@ -7,7 +7,6 @@ import {
   groupPeople,
   healthFacts,
   NO_FILTERS,
-  neighbour,
   visibleSections,
 } from "./admin-format.ts";
 
@@ -108,14 +107,5 @@ describe("integration health", () => {
     expect(facts.expiring).toEqual([{ subject: "user 7", detail: "expires unknown — gone" }]);
     expect(facts.fizzy).toBe("No Fizzy integration is configured in this workspace.");
     expect(facts.email).toBe("1 room with a forward-to address.");
-  });
-});
-
-describe("the row focus moves to", () => {
-  it("the next row, else the previous, else none", () => {
-    expect(neighbour([1, 2, 3], 2)).toBe(3);
-    expect(neighbour([1, 2, 3], 3)).toBe(2);
-    expect(neighbour([1], 1)).toBeNull();
-    expect(neighbour([1, 2], 9)).toBeNull();
   });
 });
