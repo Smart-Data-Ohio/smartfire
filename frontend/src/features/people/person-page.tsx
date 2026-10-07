@@ -5,7 +5,6 @@ import { useStore } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
 import { ActionError } from "../../sync/run.ts";
-import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -17,6 +16,7 @@ import { usePresenceStatus } from "./people.ts";
 import {
   BAN_CONFIRMATION,
   botPage,
+  landBan,
   OWN_TRANSFER_HINT,
   PRESENCE_LABEL,
   presenceOf,
@@ -170,7 +170,7 @@ function Profile({
 
   const setAllowance = (allowed: boolean) => {
     setSavingDnd(true);
-    settingsActions
+    peoplePages
       .setDndAllowance(user.id, allowed)
       .then(
         // Only the field this changed, so a ban that landed meanwhile stays.
@@ -206,7 +206,8 @@ function Profile({
       .setBanned(user.id, banned)
       .then(
         (next) => {
-          onChange(() => next);
+          // Only what a ban changes: a DND change may have landed after this reply was made.
+          onChange((current) => landBan(current, next));
           toast({
             title: banned ? `${user.name} is banned` : `${user.name}'s ban was removed`,
             tone: "success",

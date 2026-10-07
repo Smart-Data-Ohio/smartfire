@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import type { User } from "../../gen/User.ts";
 import {
   botPage,
   directoryBadge,
+  landBan,
   presenceOf,
   selectionPlan,
   toggleSelection,
@@ -111,5 +113,42 @@ describe("presenceOf", () => {
     expect(presenceOf("away", "online")).toBe("idle");
     expect(presenceOf("dnd", "offline")).toBe("dnd");
     expect(presenceOf(undefined, "online")).toBe("online");
+  });
+});
+
+describe("landBan", () => {
+  const page = (status: User["status"], dndAllowed: boolean | null): PersonProfile => ({
+    user: { ...user(5, "member"), status },
+    status: { presence: status === "active" ? "online" : "offline", statusText: null },
+    dndAllowed,
+    emailAddress: "sam@example.com",
+    transferUrl: status === "active" ? "https://chat.example/session/transfers/t" : null,
+    transferQrSvg: status === "active" ? "<svg/>" : null,
+    canBan: true,
+  });
+
+  it("keeps a DND change that landed after the unban's reply was made", () => {
+    // The page saved DND (true) while the unban's reply, made before it, still says false.
+    const current = { ...page("banned", null), dndAllowed: true };
+    const landed = landBan(current, page("active", false));
+
+    expect(landed.dndAllowed).toBe(true);
+    expect(landed.user.status).toBe("active");
+    expect(landed.transferUrl).not.toBeNull();
+    expect(landed.status?.presence).toBe("online");
+  });
+
+  it("takes the reply's DND exception when the page had none", () => {
+    expect(landBan(page("banned", null), page("active", false)).dndAllowed).toBe(false);
+  });
+
+  it("lands only the status from the reply's user", () => {
+    const current = page("active", true);
+    const reply = page("banned", null);
+    const landed = landBan(current, { ...reply, user: { ...reply.user, name: "Old name" } });
+
+    expect(landed.user).toEqual({ ...current.user, status: "banned" });
+    expect(landed.transferUrl).toBeNull();
+    expect(landed.dndAllowed).toBe(true);
   });
 });

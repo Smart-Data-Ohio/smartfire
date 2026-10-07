@@ -1,4 +1,5 @@
 /** The people pages' words and the selection bar's rules, as the classic directory has them. */
+import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import type { Presence } from "../../gen/Presence.ts";
 import type { User } from "../../gen/User.ts";
 import type { PresenceStatus } from "../../ui/avatar.tsx";
@@ -131,4 +132,21 @@ const FROM_STATUS = {
 /** The live presence from the store when it's known, else what the page was loaded with. */
 export function presenceOf(live: PresenceStatus | undefined, loaded: Presence): Presence {
   return live === undefined ? loaded : FROM_STATUS[live];
+}
+
+/**
+ * A person's page after a ban or its removal lands: the status and what follows from it (their
+ * presence, the sign-in link), from the server's reply. Their DND exception stays as the page has
+ * it, since a DND change can land after the ban's reply was made; the reply's only fills it in
+ * when the page had none (a page loaded while they were banned).
+ */
+export function landBan(current: PersonProfile, reply: PersonProfile): PersonProfile {
+  return {
+    ...current,
+    user: { ...current.user, status: reply.user.status },
+    status: reply.status,
+    transferUrl: reply.transferUrl,
+    transferQrSvg: reply.transferQrSvg,
+    dndAllowed: current.dndAllowed ?? reply.dndAllowed,
+  };
 }

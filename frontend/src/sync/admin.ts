@@ -41,6 +41,7 @@ import {
   updateBot,
 } from "../api/bot-endpoints.ts";
 import { peopleDirectory, personProfile, setBanned } from "../api/people-endpoints.ts";
+import { setDndAllowance } from "../api/settings-endpoints.ts";
 import {
   cancelSlackRun,
   disconnectSlack,
@@ -81,6 +82,7 @@ import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { PersonRemoved } from "../gen/PersonRemoved.ts";
 import type { PersonRole } from "../gen/PersonRole.ts";
 import type { SaveSlackCredentials } from "../gen/SaveSlackCredentials.ts";
+import type { Settings } from "../gen/Settings.ts";
 import type { SlackDisconnected } from "../gen/SlackDisconnected.ts";
 import type { SlackPersonal } from "../gen/SlackPersonal.ts";
 import type { SlackPlan } from "../gen/SlackPlan.ts";
@@ -95,11 +97,10 @@ import type { StartSlackDryRun } from "../gen/StartSlackDryRun.ts";
 import type { StartSlackImport } from "../gen/StartSlackImport.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
-import type { User } from "../gen/User.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
-import { mutations } from "../store/store.ts";
-import { landingOrder } from "./landing-order.ts";
+import { mutations, store } from "../store/store.ts";
+import { recordFreshness, touchChanged } from "./record-freshness.ts";
 import { runAction } from "./runtime.ts";
 
 export const admin = {
@@ -239,53 +240,94 @@ export const slack = {
   disconnect: (): Promise<SlackDisconnected> => runAction(disconnectSlack()),
 };
 
-/** The people replies' order, so a slow load never lands over a newer reply. */
-const peopleOrder = landingOrder();
+/**
+ * The people records' freshness, by user id. Every store writer that changes a user moves its
+ * mark (the subscription below catches sidebar resyncs, sync events and other pages' replies), as
+ * do bans and DND changes while they're in flight.
+ */
+const freshness = recordFreshness();
 
-/** Lands the users a people reply carries, unless a reply that started later already did. */
-function landPeople(started: number, users: readonly User[]): void {
-  const fresh = peopleOrder.claim(started, users, (user) => user.id);
+store.subscribe((state, previous) => touchChanged(freshness, previous.users, state.users));
 
-  if (fresh.length > 0) {
-    mutations.mergeUsers(fresh);
-  }
-}
+/** How many times a person's page load refetches after a change overtook it. */
+const PROFILE_ATTEMPTS = 4;
 
-/** A person page's reply, with their profile landed in the store so the page's avatar resolves. */
-function landProfile(started: number) {
-  return (profile: PersonProfile): PersonProfile => {
-    landPeople(started, [profile.user]);
+/**
+ * Runs a write on someone's record, keeping their reads off it until it settles; its reply lands
+ * (`land`) before that, so a read waiting on it starts after the change.
+ */
+function writePerson<A>(
+  userId: number,
+  write: () => Promise<A>,
+  land: (reply: A) => void = () => undefined,
+): Promise<A> {
+  const settle = freshness.startWrite(userId);
 
-    return profile;
-  };
+  return write()
+    .then((reply) => {
+      land(reply);
+
+      return reply;
+    })
+    .finally(settle);
 }
 
 /**
- * The people directory and a person's page: plain promises over the S7 people endpoints, each
- * reply's profiles landed in the store first unless a later reply already landed them. Banning
- * fails as `admin`'s writes do.
+ * The people directory and a person's page: plain promises over the S7 people endpoints. A read
+ * lands a user in the store only while nothing has changed them since it started; a person's page
+ * load refetches until it gets a reply nothing overtook. Writes land only what they changed.
+ * Banning fails as `admin`'s writes do.
  */
 export const peoplePages = {
   directory: (): Promise<readonly DirectoryPerson[]> => {
-    const started = peopleOrder.start();
+    const ticket = freshness.startRead();
 
     return runAction(peopleDirectory()).then((list) => {
-      landPeople(started, list.users);
+      const fresh = list.users.filter((user) => freshness.fresh(ticket, user.id));
+
+      if (fresh.length > 0) mutations.mergeUsers(fresh);
 
       return list.people;
     });
   },
 
-  profile: (userId: number): Promise<PersonProfile> => {
-    const started = peopleOrder.start();
+  /**
+   * Someone's page, as it stands once their writes settle. A reply that a change overtook is
+   * dropped and fetched again; after `PROFILE_ATTEMPTS` the last reply is answered unlanded.
+   */
+  profile: async (userId: number): Promise<PersonProfile> => {
+    for (let attempt = 1; ; attempt += 1) {
+      await freshness.settled(userId);
 
-    return runAction(personProfile(userId)).then(landProfile(started));
+      const ticket = freshness.startRead();
+      const profile = await runAction(personProfile(userId));
+
+      if (freshness.fresh(ticket, userId)) {
+        mutations.mergeUsers([profile.user]);
+
+        return profile;
+      }
+
+      if (attempt >= PROFILE_ATTEMPTS) return profile;
+    }
   },
 
-  /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
-  setBanned: (userId: number, banned: boolean): Promise<PersonProfile> => {
-    const started = peopleOrder.start();
+  /**
+   * Bans them (`true`) or removes the ban (`false`); answers their page as the server now has it.
+   * Only their status lands in the store: the rest of the reply may be older than other changes.
+   */
+  setBanned: (userId: number, banned: boolean): Promise<PersonProfile> =>
+    writePerson(
+      userId,
+      () => runAction(setBanned(userId, banned)),
+      (profile) => {
+        const current = store.getState().users[userId] ?? profile.user;
 
-    return runAction(setBanned(userId, banned)).then(landProfile(started));
-  },
+        mutations.mergeUsers([{ ...current, status: profile.user.status }]);
+      },
+    ),
+
+  /** Lets them through your Do Not Disturb (`true`) or not, as a write on their record. */
+  setDndAllowance: (userId: number, allowed: boolean): Promise<Settings> =>
+    writePerson(userId, () => runAction(setDndAllowance(userId, allowed))),
 };
