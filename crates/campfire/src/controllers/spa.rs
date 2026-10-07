@@ -18,7 +18,29 @@ mod api_s2_tests;
 #[cfg(test)]
 #[path = "spa_api_threads_tests.rs"]
 mod api_threads_tests;
+#[cfg(test)]
+#[path = "spa_api_composer_tests.rs"]
+mod api_composer_tests;
+#[cfg(test)]
+#[path = "spa_api_directory_tests.rs"]
+mod api_directory_tests;
+#[cfg(test)]
+#[path = "spa_api_activity_tests.rs"]
+mod api_activity_tests;
+#[cfg(test)]
+#[path = "spa_settings_tests.rs"]
+mod settings_tests;
 
 #[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
+#[cfg(test)]
+#[path = "spa_huddle_tests.rs"]
+mod huddle_tests;
+
+#[cfg(test)]
+#[path = "spa_admin_tests.rs"]
+mod admin_tests;
+#[cfg(test)]
+#[path = "spa_bots_tests.rs"]
+mod bots_tests;

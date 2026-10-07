@@ -4,6 +4,7 @@ import { inlineMentions } from "../../lib/body-html.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { CardSlot } from "../cards/card-slot.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { AttachmentView } from "./attachments.tsx";
 import { plainText } from "./commands.ts";
@@ -135,13 +136,19 @@ interface MessageContentProps {
   readonly message: MessageDTO;
   /** Shown at the end of the body's last line ("(edited)" on a continuation row). */
   readonly trailing?: ReactNode;
+  /** Rendered in a thread pane (the pane's root message heads its thread, cards and all). */
+  readonly inThread?: boolean;
 }
 
 /**
  * The message's own content under the header: the body (or, for a forward, the forwarder's note
- * and the forwarded card), then its file.
+ * and the forwarded card), then its file, then its poll and cards.
  */
-export function MessageContent({ message, trailing }: MessageContentProps) {
+export function MessageContent({ message, trailing, inThread = false }: MessageContentProps) {
+  // The thread pane's root message heads that thread; its replies head nothing.
+  const heads = inThread && message.threadId === null ? (message.thread?.threadId ?? null) : null;
+  const cards = <CardSlot message={message} threadId={heads} />;
+
   if (message.forwardedAt === null) {
     return (
       <>
@@ -150,6 +157,7 @@ export function MessageContent({ message, trailing }: MessageContentProps) {
           {trailing}
         </div>
         {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        {cards}
       </>
     );
   }
@@ -175,6 +183,7 @@ export function MessageContent({ message, trailing }: MessageContentProps) {
           {message.forwardNote === null ? trailing : null}
         </div>
         {message.attachment === null ? null : <AttachmentView attachment={message.attachment} />}
+        {cards}
       </div>
     </>
   );

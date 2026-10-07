@@ -1,6 +1,7 @@
 //! Rendering and cable delivery for huddle effects, after the domain write commits.
 use super::broadcasts::{Stream, room_dom_id};
 use crate::app::App;
+use crate::cable::huddle_sync;
 use campfire_db::models::huddle_grant::HuddleGrant;
 use campfire_db::{Membership, Room};
 
@@ -40,7 +41,31 @@ pub(crate) fn stream_changed(app: &App, room_id: i64) -> anyhow::Result<()> {
             &stage.render("panel_body"),
         );
     }
+    if app.cable.sync_wanted() {
+        let now = app.db.env().now();
+        sync_read(app, "stream", room.id, |conn| {
+            huddle_sync::publish_stage(&app.cable, conn, room.id);
+            if app.config.huddle.configured() {
+                huddle_sync::publish_presence(&app.cable, conn, &room, now);
+            }
+            Ok(())
+        });
+    }
     Ok(())
+}
+
+/// Runs a sync twin's read after the classic frames have gone out: a failure there is logged, not
+/// returned, so it can't fail an effect whose frames were already delivered (as `huddle_sync`'s own
+/// publishers do).
+fn sync_read(
+    app: &App,
+    what: &str,
+    room_id: i64,
+    f: impl FnOnce(&campfire_db::Connection) -> campfire_db::Result<()>,
+) {
+    if let Err(error) = app.db.read_blocking(f) {
+        tracing::warn!(%error, room_id, what, "sync: huddle twin not read");
+    }
 }
 
 pub(crate) fn stream_stopped(app: &App, room_id: i64, user_id: i64) -> anyhow::Result<()> {
@@ -53,6 +78,7 @@ pub(crate) fn stream_stopped(app: &App, room_id: i64, user_id: i64) -> anyhow::R
             "huddle_role_events",
             &campfire_views::huddle_stage::stream_event(room_id),
         );
+        huddle_sync::publish_stream_stopped(&app.cable, room_id, user_id);
     }
     Ok(())
 }
@@ -68,6 +94,19 @@ pub(crate) fn stage_roster(app: &App, room_id: i64) -> anyhow::Result<()> {
             &stage.dom_id("stage_roster"),
             &stage.render("roster"),
         );
+    }
+    publish_stage(app, room_id)
+}
+
+/// `stage.updated`, for a stage that's still there.
+fn publish_stage(app: &App, room_id: i64) -> anyhow::Result<()> {
+    if app.cable.sync_wanted() {
+        sync_read(app, "stage", room_id, |conn| {
+            if Room::find_by_id(conn, room_id)?.is_some_and(|r| r.deleted_at.is_none() && r.stage()) {
+                huddle_sync::publish_stage(&app.cable, conn, room_id);
+            }
+            Ok(())
+        });
     }
     Ok(())
 }
@@ -88,6 +127,7 @@ pub(crate) fn role_event(app: &App, room_id: i64, membership_id: i64) -> anyhow:
                 member.server_muted_at.is_some(),
             ),
         );
+        huddle_sync::publish_role(&app.cable, &member);
     }
     Ok(())
 }
@@ -143,6 +183,12 @@ pub fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
         &room_dom_id(&room, "header_voice_participants"),
         &header,
     );
+    if app.cable.sync_wanted() {
+        sync_read(app, "presence", room_id, |conn| {
+            huddle_sync::publish_presence(&app.cable, conn, &room, now);
+            Ok(())
+        });
+    }
     Ok(())
 }
 
@@ -151,6 +197,7 @@ pub(crate) fn stage_panel(app:&App,room_id:i64,membership_id:i64)->anyhow::Resul
     if let Some(member)=stage.members.iter().find(|m|m.id==membership_id) {
         app.broadcasts.replace(&Stream::user_rooms(member.user_id),&stage.dom_id("stage_panel"),&stage.panel(false));
     }
+    // No `stage.updated` here: the panel only ever goes out beside a `StageRoster`, which sends it.
     Ok(())
 }
 
@@ -167,6 +214,13 @@ pub fn stage_note_html(app:&App,conn:&campfire_db::Connection,message_id:i64)->c
 pub(crate) fn stage_ended_note(app:&App,message_id:i64)->anyhow::Result<()> {
     if let Some((room,html))=app.db.read_blocking(|conn|stage_note_html(app,conn,message_id))? {
         app.broadcasts.append(&Stream::room_messages(&room),&room_dom_id(&room,"messages"),&html);
+        // `message.created`, the same twin as any post's.
+        sync_read(app, "stage ended note", room.id, |conn| {
+            if let Some(message) = campfire_db::Message::find_by_id(conn, message_id)? {
+                app.broadcasts.sync_message(conn, &message, true);
+            }
+            Ok(())
+        });
     }
     Ok(())
 }

@@ -66,7 +66,7 @@ export const ROOM_IDS = {
   engineering: 3,
   /** #random: muted, 3 unread (dimmed but bold). */
   random: 4,
-  /** #announcements: six messages, read. */
+  /** #announcements: six messages, read; in the "Team" category. */
   announcements: 5,
   /** #quiet: no messages at all. */
   quiet: 6,
@@ -80,10 +80,12 @@ export const ROOM_IDS = {
   dmEmber: 10,
   /** Group direct message with Jonah and Priya. */
   groupDm: 11,
+  /** "Town Hall": a stage room the viewer hosts; no messages. */
+  townHall: 12,
 } as const;
 
-/** The viewer's sidebar category. */
-export const CATEGORY_IDS = { launch: 1 } as const;
+/** The viewer's sidebar categories: "Launch" (#design, #launch-planning) and "Team" (#announcements). */
+export const CATEGORY_IDS = { launch: 1, team: 2 } as const;
 
 /**
  * Seeded message ids are stable whatever the seed and clock: a room's root messages are
@@ -117,7 +119,8 @@ export interface World extends S2World, S3World {
   readonly users: Map<number, User>;
   readonly presence: Map<number, UserPresence>;
   readonly rooms: Map<number, RoomRecord>;
-  readonly categories: readonly RoomCategory[];
+  /** The viewer's categories by `(position, id)`; replaced as they change (mock/s3/organize.ts). */
+  categories: RoomCategory[];
   nextMessageId: number;
 }
 
@@ -272,6 +275,7 @@ function seedUsers(now: number): Map<number, User> {
       status: person.status,
       bio: person.bio,
       avatarUrl: `/users/${person.id}/avatar`,
+      hasAvatar: USERS_WITH_PHOTOS.has(person.id),
       customStatus:
         person.customStatus === null
           ? null
@@ -409,7 +413,7 @@ const ROOMS: readonly RoomSeed[] = [
     unread: 0,
     unreadMentions: 0,
     involvement: "everything",
-    categoryId: null,
+    categoryId: CATEGORY_IDS.team,
     favoritePosition: null,
   },
   {
@@ -505,6 +509,22 @@ const ROOMS: readonly RoomSeed[] = [
     unread: 0,
     unreadMentions: 0,
     involvement: "everything",
+    categoryId: null,
+    favoritePosition: null,
+  },
+  {
+    id: ROOM_IDS.townHall,
+    kind: "stage",
+    name: "Town Hall",
+    memberIds: HUMANS,
+    createdDaysAgo: 30,
+    count: 0,
+    lines: [],
+    breakChance: 0,
+    lastAgoMs: 0,
+    unread: 0,
+    unreadMentions: 0,
+    involvement: "mentions",
     categoryId: null,
     favoritePosition: null,
   },
@@ -688,7 +708,8 @@ function viewerMembership(seed: RoomSeed, messages: readonly MessageDTO[]): Memb
     lastReadMessageId: lastRead === undefined ? null : lastRead.id,
     roomCategoryId: seed.categoryId,
     favoritePosition: seed.favoritePosition,
-    stageRole: null,
+    // Every stage membership has a role; the viewer hosts the seeded stage.
+    stageRole: seed.kind === "stage" ? "host" : null,
   };
 }
 
@@ -782,7 +803,10 @@ export function seedWorld(now: number, random: Random): World {
     users,
     presence: seedPresence(),
     rooms,
-    categories: [{ id: CATEGORY_IDS.launch, name: "Launch", collapsed: false, position: 0 }],
+    categories: [
+      { id: CATEGORY_IDS.launch, name: "Launch", collapsed: false, position: 1 },
+      { id: CATEGORY_IDS.team, name: "Team", collapsed: false, position: 2 },
+    ],
     nextMessageId: FIRST_LIVE_MESSAGE_ID,
   };
 }

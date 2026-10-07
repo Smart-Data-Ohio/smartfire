@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
-import { sidebarSections, sidebarTotals } from "./sections.ts";
+import { rowPillCount, rowState, sidebarSections, sidebarTotals } from "./sections.ts";
 
 interface RowOptions {
   readonly kind?: RoomKind;
@@ -80,24 +80,107 @@ describe("sidebarSections", () => {
     ]);
   });
 
-  it("keeps Channels and Direct messages even when empty", () => {
+  it("keeps every category, Channels and Direct messages even when empty", () => {
     expect(sidebarSections(sidebarOf([])).map((section) => section.key)).toEqual([
+      "category-7",
       "channels",
       "direct",
+    ]);
+  });
+
+  it("leaves invisible rooms out", () => {
+    const hidden = row(2, "hidden");
+
+    const sections = sidebarSections(
+      sidebarOf([
+        row(1, "alpha"),
+        { ...hidden, membership: { ...hidden.membership, involvement: "invisible" } },
+      ]),
+    );
+
+    expect(
+      sections.find((section) => section.key === "channels")?.rows.map((entry) => entry.room.id),
+    ).toEqual([1]);
+  });
+
+  it("draws pending organising changes over the server's rows", () => {
+    const base = sidebarOf([row(1, "alpha"), row(2, "beta", { favorite: 0 })]);
+
+    const sections = sidebarSections({
+      ...base,
+      overlay: {
+        memberships: { 1: { roomCategoryId: -1 }, 2: { favoritePosition: null } },
+        categories: { [-1]: { id: -1, name: "Drafts", collapsed: false, position: 1 }, 7: null },
+      },
+    });
+
+    expect(
+      sections.map((section) => [section.key, section.rows.map((entry) => entry.room.id)]),
+    ).toEqual([
+      ["category--1", [1]],
+      ["channels", [2]],
+      ["direct", []],
     ]);
   });
 });
 
 describe("sidebarTotals", () => {
-  it("counts unread rooms and mentions, DMs by message, skipping muted rooms", () => {
+  it("counts unread rooms and mentions, DMs by message, a muted room by its mentions", () => {
     const totals = sidebarTotals(
       sidebarOf([
         row(1, "alpha", { unread: 3, mentions: 1 }),
         row(2, "Ada", { kind: "direct", unread: 2 }),
+        // Muted: unread only because of the mention, which counts like any other.
         row(3, "noise", { unread: 9, mentions: 4, muted: true }),
+        row(4, "hush", { muted: true }),
+        row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true }),
       ]),
     );
 
-    expect(totals).toEqual({ unreadRooms: 2, mentions: 3 });
+    expect(totals).toEqual({ unreadRooms: 4, mentions: 1 + 2 + 4 + 1 });
+  });
+});
+
+describe("sidebarTotals through pending changes", () => {
+  it("stops counting a room at once when it is being hidden or muted", () => {
+    const base = sidebarOf([
+      row(1, "alpha", { unread: 3, mentions: 1 }),
+      row(2, "Ada", { kind: "direct", unread: 2 }),
+      row(3, "beta", { unread: 1, mentions: 2 }),
+    ]);
+
+    const pending: SidebarState = {
+      ...base,
+      overlay: {
+        memberships: {
+          1: { involvement: "invisible" },
+          2: { involvement: "muted", unreadAt: null },
+        },
+        categories: {},
+      },
+    };
+
+    expect(sidebarTotals(base)).toEqual({ unreadRooms: 3, mentions: 5 });
+    expect(sidebarTotals(pending)).toEqual({ unreadRooms: 1, mentions: 2 });
+  });
+});
+
+describe("rows", () => {
+  it("count a muted room's mentions only, and read it as unread once mentioned", () => {
+    const mentioned = row(3, "noise", { unread: 9, mentions: 4, muted: true });
+    const quiet = row(4, "hush", { muted: true });
+    const direct = row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true });
+
+    expect(rowPillCount(mentioned)).toBe(4);
+    expect(rowPillCount(direct)).toBe(1);
+    expect(rowPillCount(row(2, "Ada", { kind: "direct", unread: 2 }))).toBe(2);
+    expect(rowState(mentioned, false)).toBe("unread");
+    expect(rowState(quiet, false)).toBe("muted");
+    // Read again, the mention no longer shows.
+    expect(
+      rowPillCount({ ...mentioned, membership: { ...mentioned.membership, unreadAt: null } }),
+    ).toBe(0);
+    expect(rowState(mentioned, true)).toBe("selected");
+    expect(rowState(row(1, "alpha"), false)).toBeNull();
   });
 });

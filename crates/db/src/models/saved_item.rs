@@ -122,6 +122,29 @@ impl SavedItem {
         )
     }
 
+    /// [`Self::accessible_to`] a page at a time for `GET /api/v1/saved`: at most `limit` items
+    /// with `status` (all when `None`), strictly after the `(created_at, id)` key `after` in
+    /// `created_at DESC, id DESC` order.
+    pub fn accessible_page(
+        conn: &Connection,
+        user_id: i64,
+        status: Option<&str>,
+        after: Option<(Timestamp, i64)>,
+        limit: usize,
+    ) -> Result<Vec<Self>> {
+        let Some(user) = User::find_by_id(conn, user_id)? else { return Ok(Vec::new()) };
+        if !user.is_active() || user.is_bot() {
+            return Ok(Vec::new());
+        }
+        let (after_at, after_id) = after.map_or((None, None), |(at, id)| (Some(at), Some(id)));
+        query_all(
+            conn,
+            r#"SELECT "saved_items".* FROM "saved_items" INNER JOIN "messages" ON "messages"."id" = "saved_items"."message_id" INNER JOIN "rooms" ON "rooms"."id" = "messages"."room_id" INNER JOIN memberships AS saved_item_memberships ON saved_item_memberships.room_id = messages.room_id AND saved_item_memberships.user_id = ?1 WHERE "rooms"."deleted_at" IS NULL AND "saved_items"."user_id" = ?1 AND (?2 IS NULL OR "saved_items"."status" = ?2) AND (?3 IS NULL OR "saved_items"."created_at" < ?3 OR ("saved_items"."created_at" = ?3 AND "saved_items"."id" < ?4)) ORDER BY "saved_items"."created_at" DESC, "saved_items"."id" DESC LIMIT ?5"#,
+            params![user_id, status, after_at, after_id, i64::try_from(limit).unwrap_or(i64::MAX)],
+            Self::from_row,
+        )
+    }
+
     /// `SavedItem.due_reminders(now)`: pending reminders whose time has come.
     pub fn due_reminders(conn: &Connection, now: Timestamp) -> Result<Vec<Self>> {
         query_all(conn, &format!(r#"{SELECT_DUE} ORDER BY "saved_items"."id" ASC"#), [now], Self::from_row)

@@ -239,6 +239,14 @@
     opacity: 0.7;
   }
 
+  /*
+   * A muted room a mention made unread: bold, but still dimmed except for its count, which
+   * keeps full strength (the classic sidebar's `.sidebar-item.muted` spares its status the same way).
+   */
+  .sidebar-row[data-muted] :is(.sidebar-row-glyph, .sidebar-row-name, .sidebar-row-muted) {
+    opacity: 0.7;
+  }
+
   .sidebar-row[data-state="selected"] {
     background: var(--bg-selected);
     color: var(--text);
@@ -454,6 +462,270 @@
 
     .sidebar-section-trigger {
       height: 32px;
+    }
+  }
+}
+
+/* Organising: the row's "⋯", drag and drop, the category name field. */
+@layer app {
+  .sidebar-row-item {
+    position: relative;
+  }
+
+  .sidebar-row,
+  .sidebar-section-trigger {
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  /* An avatar would start the browser's own image drag, which ends the pointer's. */
+  .sidebar-row img {
+    -webkit-user-drag: none;
+  }
+
+  .sidebar-section {
+    position: relative;
+    border-radius: var(--radius-md);
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      box-shadow var(--duration-small) var(--ease-enter),
+      opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .sidebar-section-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Slack's hover "⋯": over the row's end, the count making way for it. */
+  .sidebar-row-more {
+    --button-height: 22px;
+
+    position: absolute;
+    /* The row's middle, not the item's: a call room lists its participants below the row. */
+    top: calc((var(--sidebar-row-height) + 2px) / 2);
+    right: calc(var(--space-2) + var(--space-1));
+    translate: 0 -50%;
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  @media (width < 720px) {
+    .sidebar-row-more {
+      top: 20px;
+    }
+  }
+
+  .sidebar-row-item:hover .sidebar-row-more,
+  .sidebar-row-more[aria-expanded="true"] {
+    opacity: 1;
+  }
+
+  .sidebar-row-item:hover .sidebar-row {
+    padding-right: calc(var(--space-1-5) + 24px);
+  }
+
+  .sidebar-row-item:hover .sidebar-row .badge,
+  .sidebar-row-item:hover .sidebar-row-muted {
+    opacity: 0;
+  }
+
+  /* Touch opens the menu with a long press; a dragging pointer has no use for it either. */
+  @media (hover: none) {
+    .sidebar-row-more,
+    .sidebar-category-grip {
+      display: none;
+    }
+  }
+
+  .sidebar-scroll[data-dragging] .sidebar-row-more {
+    display: none;
+  }
+
+  .sidebar-category-grip {
+    cursor: grab;
+  }
+
+  :root[data-sidebar-dragging],
+  :root[data-sidebar-dragging] * {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  /* What is being dragged stays put, faded, until the drop moves it. */
+  .sidebar-row-item[data-dragging] > .sidebar-row,
+  .sidebar-section[data-dragging] {
+    opacity: 0.4;
+  }
+
+  /* Sections a dragged room can't go to step back. */
+  .sidebar-section[data-drop-disabled] {
+    opacity: 0.45;
+  }
+
+  /* A section that would take the room whole: tinted and ringed. */
+  .sidebar-section[data-drop-active] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 50%);
+  }
+
+  .sidebar-section[data-drop-active] .sidebar-section-trigger {
+    color: var(--accent);
+  }
+
+  /* The drop line between favourites, and between categories. */
+  .sidebar-row-item[data-drop-edge]::after,
+  .sidebar-section[data-drop-edge]::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    left: var(--space-1);
+    right: var(--space-1);
+    height: 2px;
+    border-radius: var(--radius-pill);
+    background: var(--accent);
+    box-shadow: 0 0 0 1px var(--bg-sidebar);
+    pointer-events: none;
+  }
+
+  .sidebar-row-item[data-drop-edge="before"]::after {
+    top: -1px;
+  }
+
+  .sidebar-row-item[data-drop-edge="after"]::after {
+    bottom: -1px;
+  }
+
+  .sidebar-section[data-drop-edge]::after {
+    left: var(--space-3);
+    right: var(--space-3);
+  }
+
+  .sidebar-section[data-drop-edge="before"]::after {
+    top: calc(var(--space-3) / -2 - 1px);
+  }
+
+  .sidebar-section[data-drop-edge="after"]::after {
+    bottom: calc(var(--space-3) / -2 - 1px);
+  }
+
+  /* The copy under the pointer: a lifted row, tilted a touch. */
+  .sidebar-drag-ghost {
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: calc(var(--sidebar-width) - var(--space-6));
+    height: calc(var(--sidebar-row-height) + 4px);
+    padding: 0 var(--space-3) 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-medium);
+    pointer-events: none;
+    rotate: -1.5deg;
+    animation: sidebar-ghost-lift var(--duration-small) var(--ease-spring-soft);
+  }
+
+  .sidebar-drag-ghost[data-kind="category"] {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  @keyframes sidebar-ghost-lift {
+    from {
+      opacity: 0;
+      scale: 0.96;
+      rotate: 0deg;
+    }
+  }
+
+  @keyframes sidebar-ghost-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* Reduced motion (the OS setting, unless the app says full, or the app's own "reduce"): no
+     tilt or lift, just a fade in. */
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .sidebar-drag-ghost {
+      rotate: none;
+      animation-name: sidebar-ghost-fade;
+    }
+  }
+
+  :root[data-motion="reduce"] .sidebar-drag-ghost {
+    rotate: none;
+    animation-name: sidebar-ghost-fade;
+  }
+
+  /* The invisible button a row's menu hangs from. */
+  .sidebar-menu-anchor {
+    position: fixed;
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* The category name field, in a heading's place: compact, its label for screen readers. */
+  /* Size containment: the input's intrinsic width mustn't widen the whole list. */
+  .sidebar-name-field {
+    flex: 1;
+    min-width: 0;
+    contain: inline-size;
+    padding: var(--space-0-5) var(--space-2) var(--space-0-5) var(--space-1);
+  }
+
+  .sidebar-new-category {
+    margin-top: var(--space-3);
+    padding: 0 var(--space-2);
+  }
+
+  .sidebar-name-field .field {
+    gap: var(--space-1);
+  }
+
+  .sidebar-name-field .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sidebar-name-field .input {
+    height: 28px;
+    padding-inline: var(--space-2);
+    background: var(--bg-pane);
+    font-size: var(--text-sidebar);
+  }
+
+  .sidebar-name-field .field-error {
+    padding-inline: var(--space-1);
+    font-size: var(--text-meta);
+  }
+
+  .sidebar-name-field .field:not(.is-error) .field-error {
+    display: none;
+  }
+}
+
+@layer app {
+  @media (width < 720px) {
+    .sidebar-name-field .input {
+      height: 36px;
+      font-size: var(--text-body);
     }
   }
 }

@@ -24,6 +24,7 @@ const userJson = {
   status: "active",
   bio: null,
   avatarUrl: "/users/7/avatar?v=1700000000",
+  hasAvatar: true,
   customStatus: null,
   avatarIcon: null,
   agent: null,

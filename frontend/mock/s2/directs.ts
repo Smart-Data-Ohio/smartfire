@@ -149,8 +149,8 @@ export function createDirects(ctx: S2Context): Directs {
     const record = groupOr422(roomId);
     const fresh = activeOthers(body).filter((id) => !record.memberIds.includes(id));
 
-    if (fresh.length === 0)
-      throw validation("userIds", "Choose someone who isn't in the group yet");
+    // Nobody new is the model's no-op: the room as it is, and no event.
+    if (fresh.length === 0) return ctx.roomDetail(roomId);
 
     if (record.memberIds.length + fresh.length > MAX_DIRECT_MEMBERS) {
       throw validation("userIds", `A group can have at most ${MAX_DIRECT_MEMBERS} people`);

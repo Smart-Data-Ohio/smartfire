@@ -591,7 +591,8 @@ async fn reads_and_unreads_answer_the_read_state() {
         api::ReadState {
             room_id: ALL_TALK,
             unread: true,
-            first_unread_message_id: Some(message_id)
+            first_unread_message_id: Some(message_id),
+            unread_count: 1,
         }
     );
     let detail: api::RoomDetail = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);
@@ -614,7 +615,8 @@ async fn reads_and_unreads_answer_the_read_state() {
         api::ReadState {
             room_id: ALL_TALK,
             unread: false,
-            first_unread_message_id: None
+            first_unread_message_id: None,
+            unread_count: 0,
         }
     );
     let detail: api::RoomDetail = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}"))).await);

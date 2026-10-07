@@ -15,7 +15,7 @@ use rails_compat::Secrets;
 
 /// A [`Timestamp`] as the wire carries it: RFC 3339 in UTC with milliseconds.
 pub fn time(time: Timestamp) -> String {
-    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    time.to_wire()
 }
 
 fn present(value: Option<&str>) -> Option<String> {
@@ -24,7 +24,13 @@ fn present(value: Option<&str>) -> Option<String> {
         .map(str::to_string)
 }
 
-pub fn user(settings: &UserStatusSettings, secrets: &Secrets, now: Timestamp) -> api::User {
+/// `has_avatar` is [`uploaded_avatars`]' answer for this person.
+pub fn user(
+    settings: &UserStatusSettings,
+    secrets: &Secrets,
+    now: Timestamp,
+    has_avatar: bool,
+) -> api::User {
     let user = &settings.user;
     let expired = settings
         .custom_status_expires_at
@@ -54,6 +60,7 @@ pub fn user(settings: &UserStatusSettings, secrets: &Secrets, now: Timestamp) ->
         },
         bio: user.bio.clone(),
         avatar_url: presenters::avatar_path(secrets, user),
+        has_avatar,
         custom_status,
         // Agent identity still renders in the HTML only; the S4 backend fills these.
         avatar_icon: None,
@@ -75,24 +82,87 @@ pub fn users(
         .into_iter()
         .collect();
     let settings = UserStatusSettings::for_ids(conn, &ids)?;
+    let avatars = uploaded_avatars(conn, &ids)?;
     Ok(ids
         .iter()
         .filter_map(|id| settings.get(id))
-        .map(|settings| user(settings, secrets, now))
+        .map(|settings| user(settings, secrets, now, avatars.contains(&settings.user.id)))
         .collect())
+}
+
+/// Who among `ids` uploaded a picture (`has_one_attached :avatar`).
+pub fn uploaded_avatars(conn: &Connection, ids: &[i64]) -> Result<BTreeSet<i64>> {
+    Ok(ids_query(
+        conn,
+        r#"SELECT "active_storage_attachments"."record_id" FROM "active_storage_attachments" WHERE "active_storage_attachments"."record_type" = 'User' AND "active_storage_attachments"."name" = 'avatar' AND "active_storage_attachments"."record_id" IN ({})"#,
+        ids,
+        |row| row.get(0),
+    )?
+    .into_iter()
+    .collect())
+}
+
+pub fn room_kind(kind: RoomType) -> api::RoomKind {
+    match kind {
+        RoomType::Open => api::RoomKind::Open,
+        RoomType::Closed => api::RoomKind::Closed,
+        RoomType::Direct => api::RoomKind::Direct,
+        RoomType::Voice => api::RoomKind::Voice,
+        RoomType::Stage => api::RoomKind::Stage,
+        RoomType::Board => api::RoomKind::Board,
+    }
+}
+
+/// The names a cross-room list's rows refer to, one per distinct `(room, thread)` pair, as the
+/// classic pages name them: `Room::display_names_for` for the room and the thread's name. A
+/// room or thread that no longer exists is left out.
+pub fn conversation_names(
+    conn: &Connection,
+    viewer: &User,
+    pairs: impl IntoIterator<Item = (i64, Option<i64>)>,
+) -> Result<Vec<api::ConversationName>> {
+    let pairs = pairs.into_iter().collect::<BTreeSet<_>>();
+    let mut rooms = Vec::new();
+    for room_id in pairs
+        .iter()
+        .map(|(room_id, _)| *room_id)
+        .collect::<BTreeSet<_>>()
+    {
+        rooms.extend(Room::find_by_id(conn, room_id)?);
+    }
+    let names = Room::display_names_for(conn, &rooms, Some(viewer))?;
+    let rooms = rooms
+        .into_iter()
+        .map(|room| (room.id, room))
+        .collect::<HashMap<_, _>>();
+    let mut out = Vec::with_capacity(pairs.len());
+    for (room_id, thread_id) in pairs {
+        let Some(room) = rooms.get(&room_id) else {
+            continue;
+        };
+        let thread_name = match thread_id {
+            Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                Some(thread) if thread.room_id == room_id => Some(thread.name),
+                _ => continue,
+            },
+            None => None,
+        };
+        out.push(api::ConversationName {
+            room_id,
+            thread_id,
+            room_kind: room_kind(room.room_type),
+            room_name: names.get(&room_id).cloned().unwrap_or_default(),
+            room_icon_name: room.icon_name.clone(),
+            thread_name,
+        });
+    }
+    Ok(out)
 }
 
 pub fn room(room: &Room) -> api::Room {
     api::Room {
         id: room.id,
-        kind: match room.room_type {
-            RoomType::Open => api::RoomKind::Open,
-            RoomType::Closed => api::RoomKind::Closed,
-            RoomType::Direct => api::RoomKind::Direct,
-            RoomType::Voice => api::RoomKind::Voice,
-            RoomType::Stage => api::RoomKind::Stage,
-            RoomType::Board => api::RoomKind::Board,
-        },
+        kind: room_kind(room.room_type),
         name: if room.direct() {
             None
         } else {
@@ -308,7 +378,7 @@ fn sentence_case(title: &str) -> String {
 /// The body with each mention's `<div class="mention …">` wrapper as a `<span>`: inside a `<p>`,
 /// an HTML parser closes the paragraph at a `<div>`, splitting the sentence. Only the JSON copy
 /// changes; the classic pages render the body as before.
-fn inline_mentions(html: &str) -> String {
+pub(crate) fn inline_mentions(html: &str) -> String {
     const OPEN: &str = r#"<div class="mention"#;
     if !html.contains(OPEN) {
         return html.to_owned();
@@ -763,7 +833,12 @@ pub fn me(
         _ => None,
     };
     Ok(api::Me {
-        user: user(&settings, secrets, now),
+        user: user(
+            &settings,
+            secrets,
+            now,
+            uploaded_avatars(conn, &[viewer.id])?.contains(&viewer.id),
+        ),
         email_address: viewer.email_address.clone(),
         preferences: api::Preferences {
             theme: match settings.theme.as_str() {
@@ -1057,6 +1132,94 @@ pub fn thread_list(
         users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
         threads: summaries,
     })
+}
+
+/// Files a page of `GET /api/v1/rooms/:id/files` holds.
+const FILES_PAGE: i64 = 30;
+/// The last page `rooms/files#index` serves.
+const FILES_LAST_PAGE: i64 = 20;
+
+/// `rooms/files#index`'s uploads, the `page`th 30 (from 1, at most 20), with their messages'
+/// creators.
+pub fn room_files(
+    conn: &Connection,
+    app: &AppState,
+    room_id: i64,
+    file_type: &str,
+    filename: &str,
+    page: i64,
+    now: Timestamp,
+) -> Result<api::FileList> {
+    use campfire_db::models::room_files;
+    let presenter = Presenter::new(conn, app, None);
+    let size = page * FILES_PAGE;
+    let rows = room_files::uploads(conn, room_id, file_type, filename, size)?;
+    let start = (((page - 1) * FILES_PAGE) as usize).min(rows.len());
+    let end = (size as usize).min(rows.len());
+    let files = room_file_rows(conn, &presenter, &rows[start..end])?;
+    // Another page only if a row past this one would show: rows whose message or file is
+    // gone are left out, so look on until one shows or none are left.
+    let mut more = false;
+    if page < FILES_LAST_PAGE && rows.len() > end {
+        let (mut seen, mut window) = (end, size);
+        loop {
+            window += FILES_PAGE;
+            let rows = room_files::uploads(conn, room_id, file_type, filename, window)?;
+            let upto = rows.len().min(window as usize);
+            if seen < upto && !room_file_rows(conn, &presenter, &rows[seen..upto])?.is_empty() {
+                more = true;
+                break;
+            }
+            if rows.len() <= window as usize {
+                break;
+            }
+            seen = upto;
+        }
+    }
+    let creators: Vec<i64> = files.iter().map(|file| file.creator_id).collect();
+    Ok(api::FileList {
+        users: users(conn, &app.secrets, creators, now)?,
+        files,
+        next_page: more.then_some(page + 1),
+    })
+}
+
+/// The rows that still show: a message and a file that both exist.
+fn room_file_rows(
+    conn: &Connection,
+    presenter: &Presenter<'_>,
+    rows: &[campfire_db::models::room_files::Upload],
+) -> Result<Vec<api::RoomFile>> {
+    let messages: HashMap<i64, Message> = Message::for_ids(
+        conn,
+        &rows.iter().map(|row| row.message_id).collect::<Vec<_>>(),
+    )?
+    .into_iter()
+    .map(|message| (message.id, message))
+    .collect();
+    let blobs = campfire_storage::Blob::find_many(
+        conn,
+        &rows.iter().map(|row| row.blob_id).collect::<Vec<_>>(),
+    )
+    .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+    let mut files = Vec::with_capacity(rows.len());
+    for row in rows {
+        let (Some(message), Some(blob)) = (messages.get(&row.message_id), blobs.get(&row.blob_id))
+        else {
+            continue;
+        };
+        let Some(view) = presenter.attachment(message)? else {
+            continue;
+        };
+        files.push(api::RoomFile {
+            message_id: message.id,
+            thread_id: row.thread_id,
+            creator_id: message.creator_id,
+            attachment: attachment(view, blob.content_type.as_deref(), blob.byte_size),
+            created_at: time(row.created_at),
+        });
+    }
+    Ok(files)
 }
 
 #[cfg(test)]

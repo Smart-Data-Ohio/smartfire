@@ -10,6 +10,8 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
+import type { HuddlePresence } from "../gen/HuddlePresence.ts";
+import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
@@ -17,6 +19,8 @@ import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedItemList } from "../gen/SavedItemList.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
+import type { StageDetail } from "../gen/StageDetail.ts";
+import type { StageState } from "../gen/StageState.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
@@ -26,17 +30,21 @@ import type { WorkList } from "../gen/WorkList.ts";
 import * as activity from "./activity.ts";
 import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
+import * as huddles from "./huddles.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
   ConnectionStatus,
   Me,
+  Membership,
   MessageDTO,
   MessagePage,
   PendingMessage,
+  RoomCategory,
   RoomDetail,
   Sidebar,
+  SidebarRow,
   SyncEvent,
   Thread,
   ThreadFilter,
@@ -44,6 +52,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import * as organize from "./organize.ts";
 import * as reduce from "./reducers.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
@@ -167,6 +176,13 @@ export const mutations = {
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
   loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
     apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  setHuddlePresence: (presence: HuddlePresence) =>
+    apply((state) => huddles.setHuddlePresence(state, presence)),
+  loadHuddlePresence: (list: HuddlePresenceList) =>
+    apply((state) => huddles.loadHuddlePresence(state, list)),
+  setStage: (stage: StageState) => apply((state) => huddles.setStage(state, stage)),
+  loadStageDetail: (detail: StageDetail) =>
+    apply((state) => huddles.loadStageDetail(state, detail)),
   // --- S3: the activity inbox, saved items and scheduled messages ---
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),
@@ -224,6 +240,8 @@ export const mutations = {
   markSavedStale: () => apply((state) => savedList.markSavedStale(state)),
   /** Every scheduled list reloads when next shown (a send that dropped it instead). */
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
+  /** Every activity list reloads when next shown (a room came into the sidebar). */
+  markActivityStale: () => apply((state) => activity.markActivityStale(state)),
   /**
    * Missed events the server can't replay: every S3 list, and every agent's approvals, reload when
    * next shown.
@@ -288,6 +306,26 @@ export const mutations = {
     mode: "replace" | "more",
     generation?: number,
   ) => apply((state) => ledger.landLedgerPage(state, key, agentId, page, mode, generation)),
+  /** Sidebar organisation (S3): pending changes, category replies, membership replies. */
+  addSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.addOverlay(state, entry)),
+  dropSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.dropOverlay(state, entry)),
+  upsertCategory: (category: RoomCategory) =>
+    apply((state) => organize.upsertCategory(state, category)),
+  mergeOrganization: (rows: readonly SidebarRow[]) =>
+    apply((state) => organize.mergeOrganization(state, rows)),
+  landCreatedCategory: (
+    category: RoomCategory,
+    draft: organize.SidebarOverlay,
+    settled: organize.SidebarOverlay,
+  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled)),
+  setCategories: (categories: readonly RoomCategory[]) =>
+    apply((state) => organize.setCategories(state, categories)),
+  removeCategory: (categoryId: number) =>
+    apply((state) => organize.removeCategory(state, categoryId)),
+  setMembership: (membership: Membership) =>
+    apply((state) => organize.setMembership(state, membership)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };

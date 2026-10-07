@@ -97,7 +97,7 @@ describe("seed", () => {
     expect(row(rooms.dmEmber)?.displayName).toBe("Ember");
     expect(row(rooms.random)?.membership.involvement).toBe("muted");
     expect(row(rooms.engineering)?.membership.favoritePosition).toBe(1);
-    expect(sidebar.categories.map((category) => category.name)).toEqual(["Launch"]);
+    expect(sidebar.categories.map((category) => category.name)).toEqual(["Launch", "Team"]);
     expect(await page(server, rooms.quiet)).toEqual({
       messages: [],
       users: [],
@@ -301,13 +301,24 @@ describe("read state", () => {
     const path = `/api/v1/rooms/${rooms.design}/read`;
     const read = await send(server, "POST", path, null);
 
-    expect(read.json).toEqual({ roomId: rooms.design, unread: false, firstUnreadMessageId: null });
+    expect(read.json).toEqual({
+      roomId: rooms.design,
+      unread: false,
+      firstUnreadMessageId: null,
+      unreadCount: 0,
+    });
     expect((await get<RoomDetail>(server, `/api/v1/rooms/${rooms.design}`)).unread).toBeNull();
 
     const { messages } = await page(server, rooms.design);
     const target = messages.at(-3)?.id ?? 0;
     const unread = await send(server, "DELETE", path, { messageId: target });
-    const state: ReadState = { roomId: rooms.design, unread: true, firstUnreadMessageId: target };
+
+    const state: ReadState = {
+      roomId: rooms.design,
+      unread: true,
+      firstUnreadMessageId: target,
+      unreadCount: 3,
+    };
 
     expect(unread.json).toEqual(state);
     expect((await get<RoomDetail>(server, `/api/v1/rooms/${rooms.design}`)).unread).toEqual({

@@ -62,7 +62,7 @@ export function viewerManages(ctx: S2Context, row: AgentDirectoryRow): boolean {
  * approvals and ledger entries there show "a room you're not in" to an owner who isn't an
  * administrator (see the `viewer-role` control).
  */
-export const HIDDEN_ROOM = { id: 12, name: "ops-oncall" } as const;
+export const HIDDEN_ROOM = { id: 61, name: "ops-oncall" } as const;
 
 /**
  * A room's name as the viewer may see it (`roomName` on approvals and ledger entries): `null`
@@ -394,6 +394,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       status: "active",
       bio: held?.bio ?? seed.bio,
       avatarUrl: held?.avatarUrl ?? `/users/${seed.id}/avatar`,
+      hasAvatar: held?.hasAvatar ?? false,
       customStatus: null,
       avatarIcon: seed.avatarIcon,
       agent: { agentId: seed.id, kind: seed.kind, status: seed.status, suspended: seed.suspended },

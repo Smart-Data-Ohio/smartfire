@@ -41,6 +41,11 @@
       filter var(--duration-micro) var(--ease-enter);
   }
 
+  /* A link styled as a button (a router <Link>) reads as one: no underline. */
+  a.button {
+    text-decoration: none;
+  }
+
   .button:hover {
     background: var(--button-bg-hover);
   }

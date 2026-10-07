@@ -3,6 +3,7 @@
 //! broadcasts ([`broadcasts`]). The channels themselves are `crate::channels`.
 
 pub mod broadcasts;
+pub mod huddle_sync;
 pub mod sync;
 
 use campfire_cable::{Identified, Server};

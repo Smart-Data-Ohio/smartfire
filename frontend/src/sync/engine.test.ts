@@ -16,7 +16,9 @@ import {
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
@@ -1037,6 +1039,98 @@ describe("people", () => {
         expect(lookups.at(-1)?.query).toEqual({ ids: "8" });
         expect(store.getState().activity.items[40]?.source.creatorId).toBe(8);
         expect(store.getState().users[8]?.name).toBe("Lucía Fernández");
+      }),
+    ),
+  );
+});
+
+describe("activity follows the room list", () => {
+  const countRequests = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    return (yield* api.requests).filter((request) => request.path === "/activity/unread_count")
+      .length;
+  });
+
+  const rowEvent = (seq: number, row: SidebarRow): SyncEvent => ({
+    seq,
+    topic: "user",
+    type: "sidebar.row.upserted",
+    data: row,
+  });
+
+  /** The sidebar loaded and the inbox's Unread tab shown once, the badge at 2. */
+  const loaded = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    yield* serve([]);
+    yield* api.reply("GET /activity/unread_count", { unreadCount: 2 });
+    yield* startEngine;
+    yield* welcome(0, false);
+    mutations.landActivityPage(
+      "all",
+      "unread",
+      { items: [], users: [], unreadCount: 2, nextCursor: null },
+      "replace",
+    );
+  });
+
+  const unreadListStale = () => activityListOf(store.getState(), "all", "unread").stale;
+
+  it.effect("reloads the inbox and its badge when a room comes into the sidebar", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* loaded;
+
+        const before = yield* countRequests;
+
+        expect(unreadListStale()).toBe(false);
+
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 5 });
+        yield* pushEvents(
+          rowEvent(1, sidebarRowFixture(30, "design")),
+          rowEvent(2, sidebarRowFixture(31, "ops")),
+        );
+
+        expect(unreadListStale()).toBe(true);
+        expect((yield* countRequests) - before).toBe(1);
+        expect(store.getState().activity.unreadCount).toBe(5);
+      }),
+    ),
+  );
+
+  it.effect("leaves the inbox alone when a row it already shows changes", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+
+        const before = yield* countRequests;
+
+        yield* pushEvents(rowEvent(1, { ...sidebarRowFixture(12, "general"), unreadCount: 4 }));
+
+        expect(unreadListStale()).toBe(false);
+        expect((yield* countRequests) - before).toBe(0);
+      }),
+    ),
+  );
+
+  it.effect("reloads it too for a room the viewer adds here, like a new DM", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+
+        const before = yield* countRequests;
+
+        mutations.applyEvents(
+          [{ ...rowEvent(0, sidebarRowFixture(44, "Ada")), topic: "user:1" }],
+          0,
+        );
+        yield* settle;
+
+        expect(unreadListStale()).toBe(true);
+        expect((yield* countRequests) - before).toBe(1);
       }),
     ),
   );

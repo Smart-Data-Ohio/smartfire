@@ -1,0 +1,102 @@
+/*
+ * Input clear with dissolve: adapted from the free "Input clear with dissolve" recipe on
+ * transitions.dev by Jakub Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add input-clear-dissolve`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the spring duration for the
+ * text out and the placeholder in, two and a half of it for the whole clear, --distance-pane for
+ * the fly, --blur-small, --ease-move), so reduced motion collapses the fly, blur and glow to a
+ * short crossfade. The mirror only shows while a clear plays (the input keeps its own glyphs at
+ * rest), and dark mode screens white streaks instead of multiplying black ones. The per-frame
+ * orchestration is playClearDissolve (src/motion/clear-dissolve.ts); the search field drives it.
+ */
+
+@layer recipes {
+  :root {
+    --clear-dur: calc(var(--duration-spring) * 2.5);
+    --clear-out-dur: var(--duration-spring);
+    --clear-in-dur: var(--duration-spring);
+    --clear-out-fly: var(--distance-pane);
+    --clear-in-fly: var(--distance-pane);
+    --clear-out-ease: var(--ease-move);
+    --clear-in-ease: var(--ease-move);
+    --clear-blur: var(--blur-small);
+    --glow-delay: 50ms;
+    --glow-peak-at: 0.15;
+    --glow-opacity: 0.42;
+    --glow-spread: 1.5;
+  }
+
+  :root[data-theme="dark"] {
+    --glow-opacity: 0.85;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --glow-opacity: 0.85;
+    }
+  }
+
+  /* The wrap clips the glow to its rounded box; size, padding and surface are the field's. */
+  .t-clear {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .t-clear-mirror,
+  .t-clear-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .t-clear-mirror {
+    opacity: 0;
+  }
+
+  .t-clear.is-clearing .t-clear-mirror {
+    opacity: 1;
+  }
+
+  .t-clear.has-value .t-clear-placeholder {
+    opacity: 0;
+  }
+
+  /* JS writes a stack of radial gradients here during a clear and animates its opacity. */
+  .t-clear-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    opacity: 0;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+
+  :root[data-theme="dark"] .t-clear-glow {
+    mix-blend-mode: screen;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .t-clear-glow {
+      mix-blend-mode: screen;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-clear-glow {
+      opacity: 0 !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-clear-glow {
+    opacity: 0 !important;
+  }
+}

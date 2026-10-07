@@ -40,8 +40,8 @@ export const VIEWER_TIME_ZONE = "America/New_York";
 /** At most this many people in a mention list. */
 export const USER_SUGGESTIONS = 20;
 
-/** What `/shrug` appends. */
-export const SHRUG = "¯\\_(ツ)_/¯";
+/** What `/shrug` appends: both backslashes escaped, so the arm renders (`¯\_(ツ)_/¯`). */
+export const SHRUG = String.raw`¯\\\_(ツ)\_/¯`;
 
 /** One built-in command (`slash_commands::Command`). */
 interface BuiltIn {

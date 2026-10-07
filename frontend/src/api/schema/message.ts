@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import type { CreateMessage as GeneratedCreateMessage } from "../../gen/CreateMessage.ts";
 import type { MessageDTO as GeneratedMessageDTO } from "../../gen/MessageDTO.ts";
 import type { MessagePage as GeneratedMessagePage } from "../../gen/MessagePage.ts";
+import type { MessageRead as GeneratedMessageRead } from "../../gen/MessageRead.ts";
 import type { MessageRemoved as GeneratedMessageRemoved } from "../../gen/MessageRemoved.ts";
 import type { MessageSource as GeneratedMessageSource } from "../../gen/MessageSource.ts";
 import type { SavedMark as GeneratedSavedMark } from "../../gen/SavedMark.ts";
@@ -9,6 +10,7 @@ import type { UpdateMessage as GeneratedUpdateMessage } from "../../gen/UpdateMe
 import { AgentStep } from "./agents.ts";
 import { Attachment } from "./attachment.ts";
 import { MessageCard, Poll } from "./cards.ts";
+import { ConversationName } from "./conversation.ts";
 import { MessageId, RoomId, SavedItemId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Boost, Reaction } from "./reaction.ts";
@@ -90,6 +92,22 @@ export const MessagePage = Schema.Struct({
 export type MessagePage = typeof MessagePage.Type;
 
 export type MessagePagePin = Assert<Pinned<typeof MessagePage, GeneratedMessagePage>>;
+
+/**
+ * `GET /api/v1/messages/:id`: one message the viewer can reach, with its author and indicator
+ * repliers, its conversation and the viewer's save. A 404 for anything else, so a forward whose
+ * origin is out of reach shows as "Forwarded" only.
+ */
+export const MessageRead = Schema.Struct({
+  message: MessageDTO,
+  users: Schema.Array(User),
+  conversation: ConversationName,
+  saved: Schema.NullOr(SavedMark),
+});
+
+export type MessageRead = typeof MessageRead.Type;
+
+export type MessageReadPin = Assert<Pinned<typeof MessageRead, GeneratedMessageRead>>;
 
 /** The body of `POST /api/v1/rooms/:id/messages`. Idempotent on `clientMessageId`. */
 export const CreateMessage = Schema.Struct({

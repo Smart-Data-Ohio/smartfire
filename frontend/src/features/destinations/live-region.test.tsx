@@ -32,4 +32,28 @@ describe("the page's live region", () => {
     expect(region.textContent).toBe("Marked handled");
     expect(region.firstElementChild).not.toBe(first);
   });
+
+  it("can interrupt instead, and still repeats", () => {
+    function Urgent() {
+      const { announce, region } = useAnnouncer("assertive");
+
+      say = announce;
+
+      return region;
+    }
+
+    const { container } = render(<Urgent />);
+    const region = container.querySelector('[aria-live="assertive"]');
+
+    expect(region?.getAttribute("role")).toBeNull();
+
+    act(() => say("Team"));
+
+    const first = region?.firstElementChild;
+
+    act(() => say("Team"));
+
+    expect(region?.textContent).toBe("Team");
+    expect(region?.firstElementChild).not.toBe(first);
+  });
 });

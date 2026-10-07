@@ -11,6 +11,7 @@ use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use campfire_web::concerns::{self, Authentication, Before};
 use campfire_web::controllers::presenters::attachments::Assignment;
 use campfire_web::controllers::presenters::page::db_error;
+use campfire_web::controllers::presenters::room_shell;
 use serde::de::DeserializeOwned;
 
 use crate::dto;
@@ -394,6 +395,7 @@ async fn create_read(c: &mut Ctx) -> Result {
             room_id: room.id,
             unread: false,
             first_unread_message_id: None,
+            unread_count: 0,
         },
     )
 }
@@ -403,11 +405,14 @@ async fn destroy_read(c: &mut Ctx) -> Result {
     let (mut membership, room) = set_room(c).await?;
     let api::MarkUnread { message_id } = body(c).await?;
     let room_id = room.id;
-    c.app()
+    let unread_count = c
+        .app()
         .db
         .write(move |tx| {
             let message = Message::find_in(tx.conn(), Timeline::Room(room_id), message_id)?;
-            membership.mark_unread_before(tx, &message)
+            membership.mark_unread_before(tx, &message)?;
+            // The count the sidebar row shows from here on.
+            Ok(room_shell::first_unread(tx.conn(), &membership)?.map_or(0, |(_, count)| count))
         })
         .await
         .map_err(db_error)?;
@@ -419,6 +424,7 @@ async fn destroy_read(c: &mut Ctx) -> Result {
             room_id,
             unread: true,
             first_unread_message_id: Some(message_id),
+            unread_count,
         },
     )
 }

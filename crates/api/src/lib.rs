@@ -17,10 +17,19 @@ macro_rules! endpoint {
     };
 }
 
+pub mod activity;
+pub mod composer;
+mod cursor;
+pub mod directory;
 mod dto;
 pub mod endpoints;
 mod error;
+pub mod admin;
+pub mod bots;
+pub mod huddles;
 pub mod message_actions;
+pub mod settings;
+pub mod stage;
 pub mod sync;
 pub mod threads;
 #[cfg(feature = "test-support")]
@@ -29,7 +38,7 @@ pub mod test_hooks;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::{delete, get, patch, post};
+use axum::routing::{delete, get, patch, post, put};
 use campfire_app::app::AppState;
 use campfire_kit::{Kit, action, unparsed_action};
 
@@ -69,7 +78,8 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         )
         .route(
             "/api/v1/messages/{message_id}",
-            patch(unparsed_action(message_actions::update))
+            get(action(message_actions::show))
+                .patch(unparsed_action(message_actions::update))
                 .delete(action(message_actions::destroy)),
         )
         .route(
@@ -96,10 +106,27 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/forward_destinations",
             get(action(message_actions::forward_destinations)),
         )
-        .route("/api/v1/saved", post(unparsed_action(message_actions::save)))
+        .route(
+            "/api/v1/saved",
+            get(action(message_actions::saved)).post(unparsed_action(message_actions::save)),
+        )
         .route(
             "/api/v1/saved/{saved_id}",
-            delete(action(message_actions::unsave)),
+            patch(unparsed_action(message_actions::update_saved))
+                .delete(action(message_actions::unsave)),
+        )
+        .route("/api/v1/activity", get(action(activity::index)))
+        .route(
+            "/api/v1/activity/unread_count",
+            get(action(activity::unread_count)),
+        )
+        .route(
+            "/api/v1/activity/{id}",
+            patch(unparsed_action(activity::update)),
+        )
+        .route(
+            "/api/v1/activity/{id}/open",
+            post(action(activity::open)),
         )
         .route(
             "/api/v1/rooms/{room_id}/threads",
@@ -123,7 +150,100 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/threads/{thread_id}/read",
             post(action(threads::read)),
         )
+        .route("/api/v1/uploads", post(unparsed_action(composer::upload)))
+        .route(
+            "/api/v1/autocomplete/users",
+            get(action(composer::autocomplete_users)),
+        )
+        .route(
+            "/api/v1/autocomplete/icons",
+            get(action(composer::autocomplete_icons)),
+        )
+        .route("/api/v1/icons", get(action(composer::icons)))
+        .route(
+            "/api/v1/rooms/{room_id}/slash_commands",
+            get(action(composer::slash_commands))
+                .post(unparsed_action(composer::run_slash_command)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/messages/preview",
+            post(unparsed_action(composer::preview)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/scheduled_messages",
+            post(unparsed_action(composer::schedule)),
+        )
+        .route(
+            "/api/v1/scheduled_messages",
+            get(action(composer::scheduled_messages)),
+        )
+        .route(
+            "/api/v1/scheduled_messages/{id}",
+            patch(unparsed_action(composer::update_scheduled))
+                .delete(action(composer::cancel_scheduled)),
+        )
+        .route(
+            "/api/v1/scheduled_messages/{id}/send_now",
+            post(action(composer::send_scheduled_now)),
+        )
+        .route(
+            "/api/v1/directs/candidates",
+            get(action(directory::direct_candidates)),
+        )
+        .route(
+            "/api/v1/directs",
+            post(unparsed_action(directory::create_direct)),
+        )
+        .route(
+            "/api/v1/directs/{room_id}",
+            patch(unparsed_action(directory::rename_direct)),
+        )
+        .route(
+            "/api/v1/directs/{room_id}/members",
+            post(unparsed_action(directory::add_direct_members)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/members",
+            get(action(directory::members)),
+        )
+        .route("/api/v1/rooms/{room_id}/files", get(action(directory::files)))
+        .route(
+            "/api/v1/users/{user_id}/star",
+            put(action(directory::star)).delete(action(directory::unstar)),
+        )
+        .route("/api/v1/switcher", get(action(directory::switcher)))
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))
+        .route("/api/v1/huddles", get(action(huddles::index)))
+        .route(
+            "/api/v1/rooms/{room_id}/huddle",
+            get(action(huddles::show)).post(unparsed_action(huddles::join)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/huddle/leave",
+            axum::routing::post(unparsed_action(huddles::leave)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/huddle/moderation",
+            axum::routing::post(unparsed_action(huddles::moderate)),
+        )
+        .route("/api/v1/rooms/{room_id}/stage", get(action(stage::show)))
+        .route(
+            "/api/v1/rooms/{room_id}/stage/members/{membership_id}",
+            axum::routing::patch(unparsed_action(stage::change_role)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/stage/hand",
+            axum::routing::post(unparsed_action(stage::raise_hand))
+                .delete(unparsed_action(stage::lower_hand)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/stage/stream",
+            axum::routing::post(unparsed_action(stage::start_stream))
+                .delete(unparsed_action(stage::stop_stream)),
+        )
+        .merge(settings::routes())
+        .merge(admin::routes())
+        .merge(bots::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }

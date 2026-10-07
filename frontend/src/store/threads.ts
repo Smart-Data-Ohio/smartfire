@@ -2,6 +2,7 @@
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadIndicatorChanged } from "../gen/ThreadIndicatorChanged.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import { reconcileMessage } from "./cards.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
@@ -149,12 +150,13 @@ export function loadThreadDetail(state: State, detail: ThreadDetail): State {
   const parent = detail.parentMessage;
   const held = parent === null ? undefined : state.messages[parent.id];
   const next = upsertThread(state, detail.thread);
-  const keepHeld = parent === null || (held !== undefined && held.updatedAt > parent.updatedAt);
+  const kept = parent === null ? undefined : reconcileMessage(held, parent, true);
 
   return {
     ...next,
     users: mergeUserList(next.users, detail.users),
-    messages: keepHeld ? next.messages : { ...next.messages, [parent.id]: parent },
+    messages:
+      kept === undefined || kept === held ? next.messages : { ...next.messages, [kept.id]: kept },
     threadMemberships: { ...next.threadMemberships, [threadId]: detail.membership },
     threadPanes: {
       ...next.threadPanes,

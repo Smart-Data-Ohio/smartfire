@@ -1,7 +1,10 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
+import type { HuddlePresence } from "../gen/HuddlePresence.ts";
+import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type AgentsSlice, emptyAgents } from "./agents.ts";
 import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
+import { type CardsState, emptyCards } from "./cards.ts";
 import { emptyLedger, type LedgerSlice } from "./ledger.ts";
 import type {
   Boot,
@@ -21,6 +24,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
 import { emptyWork, type WorkSlice } from "./work.ts";
@@ -59,6 +63,10 @@ export interface State {
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
+  /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
+  readonly huddles: Readonly<Record<number, HuddlePresence>>;
+  /** Each loaded stage's roster and live stream, by room id. */
+  readonly stages: Readonly<Record<number, StageState>>;
   /** The activity inbox: items, per-tab-and-state lists, the unread badge (S3). */
   readonly activity: ActivitySlice;
   /** The Saved page: saved items and per-filter lists (S3). */
@@ -75,6 +83,8 @@ export interface State {
   readonly approvals: ApprovalsSlice;
   /** Agents' event ledgers: entries and per-agent lists (S4). */
   readonly ledger: LedgerSlice;
+  /** Ballots, votes on their way and per-viewer card previews (see `cards.ts`). */
+  readonly cards: CardsState;
 }
 
 export interface SidebarState {
@@ -85,6 +95,8 @@ export interface SidebarState {
   readonly categories: readonly RoomCategory[];
   readonly placeholderUserIds: readonly number[];
   readonly canCreateRooms: boolean;
+  /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
+  readonly overlay: SidebarOverlay;
 }
 
 export const initialState: State = {
@@ -100,6 +112,7 @@ export const initialState: State = {
     categories: [],
     placeholderUserIds: [],
     canCreateRooms: false,
+    overlay: emptyOverlay,
   },
   rooms: {},
   messages: {},
@@ -115,6 +128,8 @@ export const initialState: State = {
   roomThreads: {},
   typing: {},
   tombstones: {},
+  huddles: {},
+  stages: {},
   activity: emptyActivity,
   savedList: emptySavedList,
   scheduled: emptyScheduled,
@@ -123,6 +138,7 @@ export const initialState: State = {
   agents: emptyAgents,
   approvals: emptyApprovals,
   ledger: emptyLedger,
+  cards: emptyCards,
 };
 
 export const emptyTimeline: Timeline = {

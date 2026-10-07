@@ -114,6 +114,9 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
 
     let user = Arc::new(user);
     let user_id = engine.handler.user_id(&user);
+    // Counted before the resume point is read, so a skip from here on is built instead, or its
+    // gap marker lands past the point and is read.
+    let _person = OpenPerson::new(&engine, user_id);
     let session = engine.handler.open(user.clone()).await;
     let mut connection = Connection {
         engine: engine.clone(),
@@ -245,6 +248,32 @@ fn encode(frame: &ServerFrame) -> Frame {
         .into()
 }
 
+/// Counts the socket in [`Engine::people`] as its person's until it's dropped, clearing their
+/// gap marker: a skip from here on needs a new one.
+struct OpenPerson<U: Send + Sync + 'static>(Arc<Engine<U>>, i64);
+
+impl<U: Send + Sync + 'static> OpenPerson<U> {
+    fn new(engine: &Arc<Engine<U>>, user_id: i64) -> Self {
+        let mut people = engine.people.lock().unwrap();
+        *people.open.entry(user_id).or_default() += 1;
+        people.gapped.remove(&user_id);
+        drop(people);
+        Self(engine.clone(), user_id)
+    }
+}
+
+impl<U: Send + Sync + 'static> Drop for OpenPerson<U> {
+    fn drop(&mut self) {
+        let mut people = self.0.people.lock().unwrap();
+        if let Some(open) = people.open.get_mut(&self.1) {
+            *open -= 1;
+            if *open == 0 {
+                people.open.remove(&self.1);
+            }
+        }
+    }
+}
+
 /// Counts the socket in [`Engine::connections`] until it's dropped.
 struct OpenConnection<U: Send + Sync + 'static>(Arc<Engine<U>>);
 
@@ -301,6 +330,13 @@ impl<U> Connection<U> {
     fn catch_up(&mut self, replay: bool) -> Option<ServerFrame> {
         match self.engine.ring.read(self.cursor) {
             Read::Events(events, head) => {
+                // A gap marker for this person: events were skipped for them, as if lost.
+                let skipped = events
+                    .iter()
+                    .any(|entry| entry.gap && entry.delivered_to(self.user_id, |_| false));
+                if skipped {
+                    return Some(self.lost(head, "skipped"));
+                }
                 self.cursor = head;
                 for entry in events {
                     if !(replay && entry.ephemeral) {
@@ -309,16 +345,19 @@ impl<U> Connection<U> {
                 }
                 None
             }
-            Read::Lost(head) => {
-                self.cursor = head;
-                let topics = std::iter::once(USER_TOPIC.to_string())
-                    .chain(self.topics.keys().cloned())
-                    .collect();
-                Some(ServerFrame::Resync {
-                    topics,
-                    reason: "ring_rolled_over".into(),
-                })
-            }
+            Read::Lost(head) => Some(self.lost(head, "ring_rolled_over")),
+        }
+    }
+
+    /// The cursor moves to `head` past events this connection didn't get: the `resync` for it.
+    fn lost(&mut self, head: u64, reason: &str) -> ServerFrame {
+        self.cursor = head;
+        let topics = std::iter::once(USER_TOPIC.to_string())
+            .chain(self.topics.keys().cloned())
+            .collect();
+        ServerFrame::Resync {
+            topics,
+            reason: reason.into(),
         }
     }
 
@@ -476,6 +515,7 @@ mod tests {
                 ring: Ring::new(config),
                 handler: Arc::new(Nobody),
                 connections: Default::default(),
+                people: Default::default(),
             }),
             session: Box::new(Nobody),
             user_id: 1,
@@ -526,6 +566,58 @@ mod tests {
                 .collect::<Vec<_>>(),
             [1, 5]
         );
+    }
+
+    #[test]
+    fn a_gap_marker_for_the_person_is_a_resync_and_anyone_elses_is_ignored() {
+        let mut connection = connection(SyncConfig::default());
+        publish(&connection, 1, Audience::User(1));
+        connection.engine.ring.push_gap(2, 7);
+        assert!(connection.catch_up(false).is_none());
+        assert_eq!(
+            connection.pending.len(),
+            1,
+            "someone else's marker isn't delivered"
+        );
+        assert_eq!(connection.cursor, 2);
+
+        publish(&connection, 3, Audience::User(1));
+        connection.engine.ring.push_gap(4, 1);
+        publish(&connection, 5, Audience::User(1));
+        assert_eq!(
+            connection.catch_up(false),
+            Some(ServerFrame::Resync {
+                topics: vec!["user".into(), "room:1".into()],
+                reason: "skipped".into(),
+            })
+        );
+        assert_eq!(connection.cursor, 5);
+        assert_eq!(connection.pending.len(), 1, "nothing read past the marker");
+
+        // A resume from before a marker starts afresh, as for a lost one.
+        let start = connection
+            .engine
+            .ring
+            .resume(Some((connection.engine.ring.epoch(), 3)));
+        assert_eq!(start, (3, true));
+        let welcome = connection.welcome(start);
+        assert_eq!(
+            welcome,
+            ServerFrame::Welcome {
+                epoch: connection.engine.ring.epoch().to_string(),
+                seq: 5,
+                resumed: false
+            }
+        );
+        // From past it, the resume goes on.
+        let start = connection
+            .engine
+            .ring
+            .resume(Some((connection.engine.ring.epoch(), 4)));
+        assert!(matches!(
+            connection.welcome(start),
+            ServerFrame::Welcome { resumed: true, .. }
+        ));
     }
 
     fn unsubscribe(connection: &Connection<()>, seq: u64) {

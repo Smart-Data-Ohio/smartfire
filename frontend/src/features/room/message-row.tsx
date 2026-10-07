@@ -149,7 +149,9 @@ export function MessageRow({
           </span>
         ) : null}
         {row.editing ? (
-          <Suspense fallback={<MessageContent message={message} trailing={null} />}>
+          <Suspense
+            fallback={<MessageContent message={message} trailing={null} inThread={inThread} />}
+          >
             <MessageEditor
               message={message}
               onClose={row.closeEditor}
@@ -159,6 +161,7 @@ export function MessageRow({
         ) : (
           <MessageContent
             message={message}
+            inThread={inThread}
             trailing={!header && edited ? <span className="message-edited">(edited)</span> : null}
           />
         )}

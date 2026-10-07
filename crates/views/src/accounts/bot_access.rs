@@ -14,6 +14,18 @@ pub enum CredentialExpiry {
         microseconds: bnum::types::I512,
     },
 }
+impl CredentialExpiry {
+    /// Whether the credential has expired at `now`: the row shows "Expired" instead of Revoke.
+    pub fn passed(&self, now: jiff::Timestamp) -> bool {
+        match self {
+            CredentialExpiry::Time(at) => *at <= now,
+            CredentialExpiry::Extended { microseconds, .. } => {
+                *microseconds <= bnum::types::I512::from(now.as_microsecond())
+            }
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Credential {
     pub id: i64,
@@ -67,12 +79,7 @@ impl CredentialRow<'_> {
         self.credential
             .expires_at
             .as_ref()
-            .is_some_and(|at| match at {
-                CredentialExpiry::Time(at) => *at <= self.now,
-                CredentialExpiry::Extended { microseconds, .. } => {
-                    *microseconds <= bnum::types::I512::from(self.now.as_microsecond())
-                }
-            })
+            .is_some_and(|at| at.passed(self.now))
     }
     fn ago(&self, at: &jiff::Timestamp) -> String {
         h::time_ago_in_words(&self.ctx.time_zone, *at, self.now)
@@ -132,6 +139,17 @@ pub struct Grant {
     pub created_at: jiff::Timestamp,
     pub revoked: bool,
 }
+/// The capabilities the grant form offers, in its order.
+pub const CAPABILITIES: [&str; 7] = [
+    "read_messages",
+    "post_messages",
+    "react",
+    "manage_threads",
+    "external_action",
+    "fizzy",
+    "dm_anyone",
+];
+
 #[derive(Clone, Debug, Default)]
 pub struct GrantForm {
     pub capability: Option<String>,
@@ -183,16 +201,8 @@ impl Grants<'_> {
         }
     }
     fn capabilities(&self) -> Vec<(String, String)> {
-        [
-            "read_messages",
-            "post_messages",
-            "react",
-            "manage_threads",
-            "external_action",
-            "fizzy",
-            "dm_anyone",
-        ]
-        .into_iter()
+        CAPABILITIES
+            .into_iter()
         .map(|name| (name.into(), name.into()))
         .collect()
     }

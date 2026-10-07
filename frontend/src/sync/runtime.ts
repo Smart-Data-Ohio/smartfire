@@ -1,10 +1,13 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
+import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
+import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
@@ -12,8 +15,10 @@ import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
+import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { PinList } from "../gen/PinList.ts";
+import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -28,21 +33,25 @@ import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ApprovalFilter } from "../store/approvals.ts";
 import type { LedgerFilter } from "../store/ledger.ts";
+import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
+import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import * as ledgerActions from "./ledger-actions.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
+import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { ActionError, asAction } from "./run.ts";
+import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
+import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -77,7 +86,7 @@ let started: Promise<void> | null = null;
 type AppServices = ManagedRuntime.ManagedRuntime.Services<typeof runtime>;
 
 /** Runs an action; failures reject with an `ActionError` whose message is fit to show. */
-export const runAction = <A, E extends { readonly _tag: string; readonly message: string }>(
+export const runAction = <A, E extends ActionFailure>(
   effect: Effect.Effect<A, E, AppServices>,
 ): Promise<A> => runtime.runPromise(asAction(effect));
 
@@ -275,6 +284,75 @@ const work = {
     runAction(workActions.handOff(threadId, body)),
 };
 
+/**
+ * Global search (S3). Loads land in the search store (errors too) and never reject; writes to
+ * the recent searches reject on failure, after putting the list back.
+ */
+const search = {
+  /** Loads the query's first page (sections included); a held list keeps its rows meanwhile. */
+  run: (query: string): Promise<void> => runAction(searchActions.run(query)),
+  /** The next older page of the query's matches. */
+  loadMore: (query: string): Promise<void> => runAction(searchActions.loadMore(query)),
+  loadRecents: (): Promise<void> => runAction(searchActions.loadRecents()),
+  /** Remembers a submitted query (it moves to the top of the recents at once). */
+  record: (query: string): Promise<void> => runAction(searchActions.record(query)),
+  /** Forgets every recent search. */
+  clearRecents: (): Promise<void> => runAction(searchActions.clearRecents()),
+};
+
+/**
+ * Sidebar organisation (S3). Each change shows at once and rolls back if the server refuses;
+ * failures reject with an `ActionError` (a stale category order's is tagged `Conflict`, and the
+ * sidebar has been fetched again by then).
+ */
+const organize = {
+  moveRoom: (roomId: number, slot: RoomSlot): Promise<void> =>
+    runAction(organizeActions.moveRoom(roomId, slot)),
+  favorite: (roomId: number, index?: number): Promise<void> =>
+    runAction(organizeActions.favorite(roomId, index)),
+  unfavorite: (roomId: number): Promise<void> => runAction(organizeActions.unfavorite(roomId)),
+  createCategory: (name: string, roomId: number | null = null): Promise<RoomCategory> =>
+    runAction(organizeActions.createCategory(name, roomId)),
+  renameCategory: (categoryId: number, name: string): Promise<void> =>
+    runAction(organizeActions.renameCategory(categoryId, name)),
+  setCollapsed: (categoryId: number, collapsed: boolean): Promise<void> =>
+    runAction(organizeActions.setCollapsed(categoryId, collapsed)),
+  deleteCategory: (categoryId: number): Promise<void> =>
+    runAction(organizeActions.deleteCategory(categoryId)),
+  reorderCategories: (categoryIds: readonly number[]): Promise<void> =>
+    runAction(organizeActions.reorderCategories(categoryIds)),
+  setInvolvement: (roomId: number, involvement: Involvement): Promise<void> =>
+    runAction(organizeActions.setInvolvement(roomId, involvement)),
+};
+
+/** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
+const cards = {
+  /** The viewer's results for a poll (an anonymous poll's own choice comes only from here). */
+  loadPoll: (roomId: number, pollId: number): Promise<void> =>
+    runAction(cardActions.loadPoll(roomId, pollId)),
+  /** Sends the viewer's whole ballot (`[]` takes it back); shown at once, put back if refused. */
+  vote: (roomId: number, pollId: number, optionIds: readonly number[]): Promise<void> =>
+    runAction(cardActions.vote(roomId, pollId, optionIds)),
+  /** Posts a question with its poll; a retry with the same `clientMessageId` posts nothing new. */
+  createPoll: (roomId: number, body: CreatePoll): Promise<MessageDTO> =>
+    runAction(cardActions.createPoll(roomId, body)),
+  loadAttendance: (roomId: number, eventId: number): Promise<void> =>
+    runAction(cardActions.loadAttendance(roomId, eventId)),
+  /** Answers an event; shown at once, put back if refused. */
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture: boolean,
+  ): Promise<void> => runAction(cardActions.respond(roomId, eventId, response, applyToFuture)),
+  loadGithub: (roomId: number, pullRequestId: number, scope: GithubCardScope): Promise<void> =>
+    runAction(cardActions.loadGithub(roomId, pullRequestId, scope)),
+  loadFizzy: (roomId: number, fizzyCardId: number, messageId: number): Promise<void> =>
+    runAction(cardActions.loadFizzy(roomId, fizzyCardId, messageId)),
+  loadQuote: (roomId: number, referenceId: number): Promise<void> =>
+    runAction(cardActions.loadQuote(roomId, referenceId)),
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -286,6 +364,9 @@ export const actions = {
   agents,
   approvals,
   ledger,
+  search,
+  organize,
+  cards,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

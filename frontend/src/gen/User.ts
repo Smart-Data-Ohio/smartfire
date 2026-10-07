@@ -10,9 +10,15 @@ import type { UserStatus } from "./UserStatus";
  */
 export type User = { id: number, name: string, role: UserRole, status: UserStatus, bio: string | null, 
 /**
- * The avatar image path, versioned so a changed avatar gets a new URL.
+ * The avatar image path, versioned so a changed avatar gets a new URL. Always set: without
+ * an uploaded picture it draws the classic initials (or a bot's icon) as an SVG.
  */
 avatarUrl: string, 
+/**
+ * Whether the person uploaded a picture (`has_one_attached :avatar`). When `false`, the
+ * client may draw its own initials tile instead of loading `avatarUrl`.
+ */
+hasAvatar: boolean, 
 /**
  * `null` when unset or expired.
  */

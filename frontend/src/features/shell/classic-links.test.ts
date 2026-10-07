@@ -21,6 +21,7 @@ describe("links to classic pages", () => {
     expect(inPlaceTarget(link(`${origin}/rooms/12/threads/5?m=8#x`), origin)).toBe(
       "/app/r/12/t/5?m=8#x",
     );
+    expect(inPlaceTarget(link("/users/me/profile"), origin)).toBe("/app/settings");
     expect(inPlaceTarget(link("/activity"), origin)).toBe("/app/activity");
     expect(inPlaceTarget(link("/work?state=done"), origin)).toBe("/app/work?state=done");
   });
@@ -28,7 +29,8 @@ describe("links to classic pages", () => {
   it("leave everything else to the browser", () => {
     for (const anchor of [
       link("/rooms/12/events/3"),
-      link("/users/me/profile"),
+      link("/users/7/profile"),
+      link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),
       link("https://example.com/rooms/12"),
       link("/rooms/12", { target: "_blank" }),

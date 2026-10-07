@@ -10,6 +10,7 @@ import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
 import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
+import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import { RoomCategoryRemoved } from "./organize.ts";
@@ -18,6 +19,7 @@ import { UserPresence } from "./presence.ts";
 import { MessageReactions } from "./reaction.ts";
 import { RoomRead, RoomUnread } from "./read.ts";
 import { RoomCategory, SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
+import { StageState, StageStreamStopped } from "./stage.ts";
 import {
   Thread,
   ThreadIndicatorChanged,
@@ -91,6 +93,12 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("agent.status"), data: AgentStatusChanged }),
   Schema.Struct({ type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
   Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
+  Schema.Struct({ type: Schema.Literal("huddle.presence"), data: HuddlePresence }),
+  Schema.Struct({ type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
+  Schema.Struct({ type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
+  Schema.Struct({ type: Schema.Literal("huddle.ring"), data: HuddleRing }),
+  Schema.Struct({ type: Schema.Literal("stage.updated"), data: StageState }),
+  Schema.Struct({ type: Schema.Literal("stage.stream.stopped"), data: StageStreamStopped }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -177,6 +185,20 @@ export const SyncEvent = Schema.Union([
     ...eventFields,
     type: Schema.Literal("approval.updated"),
     data: ApprovalUpdated,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("huddle.presence"),
+    data: HuddlePresence,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.role"), data: HuddleRoleChanged }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.notice"), data: HuddleNotice }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("huddle.ring"), data: HuddleRing }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("stage.updated"), data: StageState }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("stage.stream.stopped"),
+    data: StageStreamStopped,
   }),
 ]);
 

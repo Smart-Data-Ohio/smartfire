@@ -5,9 +5,10 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
-    PollBallot, PollUpdated, RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged,
-    ScheduledMessage, ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, Thread,
+    ApprovalUpdated, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, MessageCards,
+    MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory,
+    RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
+    ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
 };
 
@@ -72,8 +73,9 @@ pub enum ServerFrame {
     },
     /// Events in sequence order, flushed every 25 ms or 64 events.
     Batch { events: Vec<SyncEvent> },
-    /// The server can't replay these topics (epoch changed or the replay ring rolled over):
-    /// refetch them over REST.
+    /// The server can't replay these topics (epoch changed, the replay ring rolled over, or
+    /// events were skipped for this person while they had no socket open): refetch them over
+    /// REST.
     Resync { topics: Vec<String>, reason: String },
     /// The server is closing the socket; reconnect if `reconnect`.
     Bye { reconnect: bool, reason: String },
@@ -214,6 +216,27 @@ pub enum SyncPayload {
     /// (see [`ApprovalUpdated`]). New.
     #[serde(rename = "approval.updated")]
     ApprovalUpdated(ApprovalUpdated),
+    /// On every member's `user` topic: who's in the room's call changed, or a stage stream
+    /// started or stopped. Latest per room in a batch.
+    #[serde(rename = "huddle.presence")]
+    HuddlePresence(HuddlePresence),
+    /// On the member's `user` topic: their stage role or server mute changed and their grant was
+    /// revoked; rejoin for a fresh token.
+    #[serde(rename = "huddle.role")]
+    HuddleRole(HuddleRoleChanged),
+    /// On the viewer's `user` topic: someone joined or left a call in one of their rooms, or it
+    /// ended.
+    #[serde(rename = "huddle.notice")]
+    HuddleNotice(HuddleNotice),
+    /// On the recipient's `user` topic: an incoming call rings, or stops ringing.
+    #[serde(rename = "huddle.ring")]
+    HuddleRing(HuddleRing),
+    /// On `room:<id>` of a stage: its roster or live stream changed. Latest per room in a batch.
+    #[serde(rename = "stage.updated")]
+    StageUpdated(StageState),
+    /// On the presenter's `user` topic: someone else ended their stream.
+    #[serde(rename = "stage.stream.stopped")]
+    StageStreamStopped(StageStreamStopped),
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

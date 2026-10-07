@@ -17,13 +17,16 @@
 
 mod actions;
 mod activity;
+mod admin;
 mod agents;
 mod attachment;
+mod bots;
 mod cards;
 mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod huddle;
 mod me;
 mod message;
 mod organize;
@@ -34,7 +37,9 @@ mod read;
 mod room;
 mod saved;
 mod search;
+mod settings;
 mod sidebar;
+mod stage;
 mod switcher;
 mod sync;
 mod thread;
@@ -51,6 +56,13 @@ pub use activity::{
     ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
+pub use admin::{
+    AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
+    EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
+    IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
+    PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    WorkspaceIconList,
+};
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
     AgentCapability, AgentDeliveryOutcome, AgentDirectory, AgentDirectoryRow, AgentExternalResult,
@@ -60,6 +72,12 @@ pub use agents::{
     DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use bots::{
+    Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
+    BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
+    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, UpdateBot,
+    UpdateBotAgent,
+};
 pub use cards::{
     AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
     FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
@@ -79,12 +97,18 @@ pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
 pub use error::{ApiError, ApiErrorResponse};
+pub use huddle::{
+    HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
+    HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
+    HuddleRoleChanged, ModerateHuddle,
+};
 pub use me::{
     DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
     VoiceMode,
 };
 pub use message::{
-    CreateMessage, MessageDTO, MessagePage, MessageRemoved, MessageSource, UpdateMessage,
+    CreateMessage, MessageDTO, MessagePage, MessageRead, MessageRemoved, MessageSource,
+    UpdateMessage,
 };
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
@@ -100,7 +124,18 @@ pub use search::{
     RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
+pub use settings::{
+    AppearanceSettings, CallSettings, Connection, DndAllowedPerson, GoogleIntegration, InboxSwitch,
+    IntegrationSettings, NotificationSettings, OooPreset, ProfileSettings, PushSubscriptionInfo,
+    PushSubscriptionList, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings,
+    TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile,
+    UpdateStatus,
+};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
+pub use stage::{
+    ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
+    StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
+};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
 pub use thread::{
@@ -130,3 +165,11 @@ mod tests_s3;
 mod tests_s4;
 #[cfg(test)]
 mod tests_s4b;
+#[cfg(test)]
+mod tests_s5;
+#[cfg(test)]
+mod tests_s7;
+#[cfg(test)]
+mod tests_s7_admin;
+#[cfg(test)]
+mod tests_s7_bots;

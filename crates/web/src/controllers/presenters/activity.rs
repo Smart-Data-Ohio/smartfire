@@ -254,6 +254,120 @@ fn source_path(conn: &Connection, row: &ActivityItem, messages: &Sources) -> Res
         _ => fallback(),
     })
 }
+/// The ids, classic destination and extras behind an inbox row, for the single-page app's
+/// `ActivitySource` (`campfire_api::activity`). `sources` must come from [`Sources::load`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SourceRefs {
+    pub room_id: Option<i64>,
+    pub thread_id: Option<i64>,
+    pub message_id: Option<i64>,
+    pub event_id: Option<i64>,
+    pub creator_id: Option<i64>,
+    pub path: String,
+    /// `AgentApproval#effective_status`, for approvals.
+    pub approval_status: Option<String>,
+    /// `agent_budget_notices.cap`, for budget notices.
+    pub budget_cap: Option<String>,
+    /// An approval's own heading and summary, which the HTML row renders as a card instead.
+    pub approval_title: Option<String>,
+    pub approval_body: Option<String>,
+}
+
+pub fn source_refs(
+    conn: &Connection,
+    app: &crate::app::AppState,
+    row: &ActivityItem,
+    sources: &Sources,
+) -> Result<SourceRefs> {
+    let mut refs = SourceRefs {
+        path: source_path(conn, row, sources)?,
+        ..SourceRefs::default()
+    };
+    match row.source_type.as_str() {
+        "Message" | "SavedItem" => {
+            if let Some(message) = sources.message(row) {
+                refs.room_id = Some(message.room_id);
+                refs.thread_id = message.thread_id;
+                refs.message_id = Some(message.id);
+                refs.creator_id = Some(message.creator_id);
+            }
+        }
+        "HuddleGrant" => {
+            if let Some(grant) =
+                campfire_db::models::huddle_grant::HuddleGrant::find_by_id(conn, row.source_id)?
+            {
+                refs.room_id = Some(grant.room_id);
+                refs.creator_id = Some(grant.user_id);
+            }
+        }
+        "WorkThreadEvent" => {
+            if let Some(event) = sources.work_events.get(&row.source_id) {
+                refs.thread_id = Some(event.channel_thread_id);
+                refs.room_id = sources
+                    .threads
+                    .get(&event.channel_thread_id)
+                    .map(|thread| thread.room_id);
+                refs.creator_id = event.actor_id;
+            }
+        }
+        "BoardSlaNudge" => {
+            if let Some(nudge) = sources.nudges.get(&row.source_id) {
+                refs.thread_id = Some(nudge.channel_thread_id);
+                refs.room_id = sources
+                    .threads
+                    .get(&nudge.channel_thread_id)
+                    .map(|thread| thread.room_id);
+            }
+        }
+        "Event" => {
+            let event =
+                campfire_db::models::calendar_event::CalendarEvent::find(conn, row.source_id)?;
+            refs.room_id = Some(event.room_id);
+            refs.event_id = Some(event.id);
+            refs.creator_id = Some(event.organizer_id);
+        }
+        "AgentApproval" => {
+            if let Some(approval) = campfire_db::AgentApproval::find(conn, row.source_id)? {
+                let agent = campfire_db::Agent::find(conn, approval.agent_id)?;
+                refs.room_id = approval.room_id;
+                refs.creator_id = agent.as_ref().map(|agent| agent.user_id);
+                refs.approval_status =
+                    Some(approval.effective_status(app.db.env().now()).to_string());
+                refs.approval_title = match &agent {
+                    Some(agent) => {
+                        campfire_db::User::find_by_id(conn, agent.user_id)?.map(|user| user.name)
+                    }
+                    None => None,
+                };
+                refs.approval_body = Some(truncate(approval.summary.clone()));
+            }
+        }
+        "AgentBudgetNotice" => {
+            if let Some(notice) = sources.budget_notices.get(&row.source_id) {
+                refs.budget_cap = Some(notice.cap.clone());
+                refs.creator_id = sources
+                    .budget_agents
+                    .get(&notice.agent_id)
+                    .map(|agent| agent.user_id);
+            }
+        }
+        "ScheduledMessage" => {
+            if let Some(scheduled) =
+                campfire_db::models::scheduled_message::ScheduledMessage::find_by_id(
+                    conn,
+                    row.source_id,
+                )?
+            {
+                refs.room_id = Some(scheduled.room_id);
+                refs.thread_id = scheduled.thread_id;
+                refs.creator_id = Some(scheduled.user_id);
+            }
+        }
+        _ => {}
+    }
+    Ok(refs)
+}
+
 pub fn item(
     conn: &Connection,
     app: &crate::app::AppState,

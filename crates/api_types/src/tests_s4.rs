@@ -187,6 +187,7 @@ fn an_agent_user_carries_its_badge_and_icon() {
             "status": "active",
             "bio": null,
             "avatarUrl": "/users/40/avatar?v=1700000001",
+            "hasAvatar": true,
             "customStatus": null,
             "avatarIcon": {
                 "name": "github",

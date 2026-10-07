@@ -36,7 +36,9 @@ import {
 import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
+import { createAdmin } from "./s2/admin.ts";
 import { createAmbient } from "./s2/ambient.ts";
+import { createBots } from "./s2/bots.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
@@ -53,11 +55,15 @@ import {
 import { createPanes } from "./s2/panes.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
+import { createSettings } from "./s2/settings.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
 import { createServerInboxAmbient } from "./s3/ambient.ts";
+import { CARD_IDS, createCards } from "./s3/cards.ts";
+import { createOrganize } from "./s3/organize.ts";
 import { createSaved } from "./s3/saved.ts";
+import { createSearch } from "./s3/search.ts";
 import {
   buildWorld,
   DUE_REMINDER_DELAY_MS,
@@ -72,6 +78,7 @@ import { createLedger, UNKNOWN_LEDGER_TYPE } from "./s4/ledger.ts";
 import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts";
 import { createWork } from "./s4/work.ts";
 import { WORK_STATUSES } from "./s4/work-model.ts";
+import { createHuddles } from "./s5/huddles.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -130,6 +137,7 @@ export const SEED_IDS = {
     hiddenRoom: HIDDEN_ROOM,
     unknownLedgerType: UNKNOWN_LEDGER_TYPE,
   },
+  cards: CARD_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -536,7 +544,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     markReadUpTo(record, record.messages.at(-1)?.id ?? null);
     hub.publish([{ topic: "user", type: "room.read", data: { roomId } }]);
 
-    return { roomId, unread: false, firstUnreadMessageId: null };
+    return { roomId, unread: false, firstUnreadMessageId: null, unreadCount: 0 };
   };
 
   const markUnread = (roomId: number, body: Json | undefined): ReadState => {
@@ -556,7 +564,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       { topic: "user", type: "room.unread", data: { roomId, messageId: null, mentioned: false } },
     ]);
 
-    return { roomId, unread: true, firstUnreadMessageId: message.id };
+    return {
+      roomId,
+      unread: true,
+      firstUnreadMessageId: message.id,
+      unreadCount: unreadMessages(record).length,
+    };
   };
 
   const userList = (query: URLSearchParams): UserList => ({ users: usersFor(idsParam(query)) });
@@ -684,6 +697,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const uploads = createUploads(ctx);
+  const admin = createAdmin(ctx, uploads);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
@@ -715,10 +729,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   approvals.seed();
   ledger.seed();
 
+  const huddles = createHuddles(ctx, simulate);
+  const cards = createCards(ctx);
+
   const routes = [
     ...agents.routes,
     ...approvals.routes,
     ...ledger.routes,
+    ...huddles.routes,
+    ...cards.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -728,6 +747,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...activity.routes,
     ...saved.routes,
     ...work.routes,
+    ...createSettings(ctx, uploads).routes,
+    ...admin.routes,
+    ...createBots(ctx, uploads, admin.requireSudo).routes,
+    ...createOrganize(ctx).routes,
   ];
 
   composer.arm();
@@ -807,6 +830,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     approvals.start();
   }
 
+  /** Global search (S3), after the other modules' routes. */
+  const searchRoutes = createSearch(ctx).routes;
+
   // --- routing ---
 
   const api = (request: MockRequest, path: string): MockResponse | Promise<MockResponse> => {
@@ -849,7 +875,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       case "DELETE /rooms/:id/read":
         return { status: 200, json: markUnread(roomId, request.body) };
       default: {
-        const handler = dispatch(routes, method, path, query, request.body);
+        const handler = dispatch([...routes, ...searchRoutes], method, path, query, request.body);
 
         if (handler === null) throw notFound(`No route for ${method} /api/v1${path}`);
 
@@ -939,6 +965,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "release-sends":
         release();
+
+        return ok;
+      case "lapse-sudo":
+        admin.lapseSudo(flag("on", true));
 
         return ok;
       case "hold-uploads":
@@ -1052,12 +1082,24 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         };
       }
 
+      case "cards":
+        return { status: 200, json: cards.control(body) };
       case "reset":
         server.reset();
 
         return ok;
-      default:
-        throw notFound(`No mock control named ${action}`);
+      default: {
+        const handled = huddles.control(action, {
+          int,
+          text,
+          flag,
+          optionalText: (key) => stringField(body, key) ?? query.get(key),
+        });
+
+        if (handled === null) throw notFound(`No mock control named ${action}`);
+
+        return handled;
+      }
     }
   };
 
@@ -1120,6 +1162,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     reset() {
       release();
       uploads.reset();
+      admin.lapseSudo(false);
       composer.stop();
       saved.stop();
       simulation.stop();

@@ -361,7 +361,7 @@ interface MenuItemProps {
   readonly icon?: IconName;
   /** Shown faint at the end, e.g. ["⌘", "E"]. */
   readonly shortcut?: readonly string[];
-  readonly tone?: "danger";
+  readonly tone?: "danger" | undefined;
   readonly disabled?: boolean;
   readonly onSelect?: () => void;
   readonly children: ReactNode;
@@ -450,6 +450,9 @@ export function MenuCheckboxItem({ checked, onCheckedChange, children }: MenuChe
 
 interface MenuRadioItemProps {
   readonly checked: boolean;
+  readonly icon?: IconName;
+  /** A faint second line under the label. */
+  readonly description?: string;
   readonly onSelect: () => void;
   /** Read by typeahead when the children aren't plain text. */
   readonly label?: string;
@@ -457,10 +460,17 @@ interface MenuRadioItemProps {
 }
 
 /**
- * One choice of several inside a menu (a status, an owner): checked shows a tick. Choosing it
- * selects it and closes the menu, as a plain item does.
+ * One choice of a set inside a menu (wrap the set in a MenuGroup). Choosing it closes the menu,
+ * like an item; the chosen one carries a check at the end.
  */
-export function MenuRadioItem({ checked, onSelect, label, children }: MenuRadioItemProps) {
+export function MenuRadioItem({
+  checked,
+  icon,
+  description,
+  onSelect,
+  label,
+  children,
+}: MenuRadioItemProps) {
   const { closeAll } = use(MenuContext);
 
   return (
@@ -477,8 +487,18 @@ export function MenuRadioItem({ checked, onSelect, label, children }: MenuRadioI
         closeAll(true);
       }}
     >
-      <span className="menu-item-icon">{checked ? <Icon name="check" /> : null}</span>
-      <span className="menu-item-label">{children}</span>
+      <span className="menu-item-icon menu-item-lead">
+        {icon === undefined ? null : <Icon name={icon} />}
+      </span>
+      <span className="menu-item-label">
+        {children}
+        {description === undefined ? null : (
+          <span className="menu-item-description">{description}</span>
+        )}
+      </span>
+      <span className="menu-item-check" aria-hidden="true">
+        {checked ? <Icon name="check" /> : null}
+      </span>
     </div>
   );
 }
