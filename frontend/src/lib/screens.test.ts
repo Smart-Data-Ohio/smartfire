@@ -24,6 +24,16 @@ describe("the screen map", () => {
     expect(spaUrlFor("//rooms/12/")).toBe("/app/r/12");
   });
 
+  it("opens every ported classic path, including aliases of an existing destination", () => {
+    for (const screen of SCREENS.filter((row) => row.ported)) {
+      const canonical = SCREENS.find((row) => row.ported && row.classic === screen.classic);
+
+      expect(spaUrlFor(sample(screen.classic)), screen.classic).toBe(
+        canonical === undefined ? null : sample(canonical.spa),
+      );
+    }
+  });
+
   it("matches only record ids, as the server does", () => {
     for (const path of [
       "/rooms/new",
@@ -44,9 +54,13 @@ describe("the screen map", () => {
     }
   });
 
-  it("maps every SPA URL back to its classic page", () => {
+  it("maps every SPA URL back to its first classic page, including shared destination aliases", () => {
     for (const screen of SCREENS) {
-      expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(sample(screen.classic));
+      const canonical = SCREENS.find((row) => row.spa === screen.spa);
+
+      expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(
+        canonical === undefined ? null : sample(canonical.classic),
+      );
     }
 
     expect(classicUrlFor("/app")).toBe("/");

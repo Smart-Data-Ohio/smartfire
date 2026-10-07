@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { Button } from "./button.tsx";
 import { Menu, MenuItem, MenuSeparator, SubMenu } from "./menu.tsx";
@@ -38,6 +39,37 @@ function focusedName(): string {
 }
 
 describe("Menu", () => {
+  it("uses controlled open state and reports selection and trigger changes", async () => {
+    const changes: boolean[] = [];
+
+    function ControlledMenu() {
+      const [open, setOpen] = useState(true);
+
+      return (
+        <Menu
+          trigger={(props) => <Button {...props}>Controlled actions</Button>}
+          open={open}
+          onOpenChange={(next) => {
+            changes.push(next);
+            setOpen(next);
+          }}
+        >
+          <MenuItem>Choose</MenuItem>
+        </Menu>
+      );
+    }
+
+    const user = userEvent.setup();
+
+    render(<ControlledMenu />);
+    expect(screen.getByRole("menu", { name: "Controlled actions" })).toBeTruthy();
+    await user.click(screen.getByRole("menuitem", { name: "Choose" }));
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    await user.click(screen.getByRole("button", { name: "Controlled actions" }));
+    expect(screen.getByRole("menu")).toBeTruthy();
+    expect(changes).toEqual([false, true]);
+  });
+
   it("opens from the trigger on ArrowDown with the first item focused", async () => {
     await openWithKeyboard("{ArrowDown}");
 

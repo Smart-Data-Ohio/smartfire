@@ -3,22 +3,49 @@ import { useEffect, useState } from "react";
 import {
   closeStep,
   isPaneShowing,
+  paneRoute,
   type RightPaneView,
   selectRightPaneView,
 } from "./pane-selection.ts";
-import { openPane, type PaneKind, togglePane, useOpenPane } from "./pane-store.ts";
+import {
+  clearRoutePane,
+  openPane,
+  openRoutePane,
+  type PaneKind,
+  type RoutePaneKind,
+  togglePane,
+  useOpenPane,
+  useRoutePaneReturn,
+} from "./pane-store.ts";
+
+/** Which classic side-pane page is currently in the URL. */
+function useRoutePane(): RoutePaneKind | null {
+  const matchRoute = useMatchRoute();
+
+  if (matchRoute({ to: "/r/$roomId/threads" }) !== false) {
+    return "threads";
+  }
+
+  if (matchRoute({ to: "/r/$roomId/files" }) !== false) {
+    return "files";
+  }
+
+  return matchRoute({ to: "/r/$roomId/pins" }) === false ? null : "pins";
+}
 
 /** What the right pane shows now: the thread or draft in the URL, else the open side pane. */
 export function useRightPaneView(): RightPaneView | null {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const matchRoute = useMatchRoute();
-  const pane = useOpenPane();
+  const pane = useOpenPane(params.roomId ?? 0);
+  const routePane = useRoutePane();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
 
   return selectRightPaneView({
     threadId: params.threadId ?? null,
     newThreadParent: drafting ? (search.parent ?? null) : null,
+    routePane,
     openPane: pane,
   });
 }
@@ -39,6 +66,20 @@ export interface PaneNavigation {
 export function usePaneNavigation(roomId: number): PaneNavigation {
   const navigate = useNavigate();
   const view = useRightPaneView();
+  const routePane = useRoutePane();
+  const returnPane = useRoutePaneReturn(roomId);
+  const params = useParams({ strict: false });
+  const matchRoute = useMatchRoute();
+  const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+
+  // Browser Back and room changes must not leave a URL pane as a local pane on the base room.
+  useEffect(() => {
+    if (routePane !== null) {
+      openRoutePane(roomId, routePane);
+    } else if (params.threadId === undefined && !drafting) {
+      clearRoutePane();
+    }
+  }, [params.threadId, drafting, routePane, roomId]);
 
   const leaveThread = () => {
     void navigate({ to: "/r/$roomId", params: { roomId } });
@@ -47,6 +88,10 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
   return {
     view,
     openThread: (threadId, options) => {
+      if (routePane !== null) {
+        openRoutePane(roomId, routePane);
+      }
+
       void navigate({
         to: "/r/$roomId/t/$threadId",
         params: { roomId, threadId },
@@ -57,19 +102,52 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       const step = closeStep(view);
 
       if (step === "leave-thread") {
-        leaveThread();
+        if (returnPane === null) {
+          leaveThread();
+        } else {
+          const to = paneRoute(returnPane);
+
+          if (to !== null) {
+            void navigate({ to, params: { roomId } });
+          }
+        }
       } else if (step === "close-pane") {
         openPane(null);
+
+        if (routePane !== null) {
+          leaveThread();
+        }
       }
     },
     closeAll: () => {
       openPane(null);
 
-      if (view !== null && view.kind !== "pane") {
+      if (routePane !== null || (view !== null && view.kind !== "pane")) {
         leaveThread();
       }
     },
     toggle: (pane) => {
+      if (routePane !== null) {
+        openPane(null);
+
+        if (isPaneShowing(view, pane)) {
+          leaveThread();
+
+          return;
+        }
+
+        const to = paneRoute(pane);
+
+        if (to === null) {
+          openPane(pane);
+          leaveThread();
+        } else {
+          void navigate({ to, params: { roomId } });
+        }
+
+        return;
+      }
+
       if (view !== null && view.kind !== "pane") {
         openPane(pane);
         leaveThread();

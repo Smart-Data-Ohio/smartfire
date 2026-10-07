@@ -1,3 +1,5 @@
+import { useMatchRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
@@ -11,6 +13,10 @@ import { NotificationItems } from "./room-menu.tsx";
  * own copy of the membership.
  */
 export function NotificationsButton({ roomId }: { readonly roomId: number }) {
+  const matchRoute = useMatchRoute();
+  const navigate = useNavigate();
+  const routeOpen = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
+  const [localOpen, setLocalOpen] = useState(false);
   const row = useStore((state) => organizedSidebar(state.sidebar).rows[roomId]);
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const room = row?.room ?? detail?.room;
@@ -27,6 +33,14 @@ export function NotificationsButton({ roomId }: { readonly roomId: number }) {
     <Menu
       label="Notifications"
       placement="bottom-end"
+      open={routeOpen || localOpen}
+      onOpenChange={(open) => {
+        setLocalOpen(open);
+
+        if (!open && routeOpen) {
+          void navigate({ to: "/r/$roomId", params: { roomId } });
+        }
+      }}
       trigger={(props) => (
         <IconButton
           {...props}
