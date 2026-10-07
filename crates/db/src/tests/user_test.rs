@@ -27,7 +27,7 @@ fn create_new_user(t: &TestDb) -> User {
 }
 
 #[test]
-fn user_revisions_advance_for_same_clock_ban_unban_with_stale_snapshots() {
+fn user_revisions_keep_rails_stamps_for_same_clock_ban_unban_with_stale_snapshots() {
     let t = TestDb::new();
     t.clock.travel_to(t.now());
     let original = user(&t, "david");
@@ -38,14 +38,14 @@ fn user_revisions_advance_for_same_clock_ban_unban_with_stale_snapshots() {
         Ok(first_ban)
     });
     assert_eq!(banned.status, Status::Banned);
-    assert!(banned.updated_at > original.updated_at);
+    assert_eq!(banned.updated_at, t.now());
 
     let active = t.write(move |tx| {
         stale_unban.unban(tx)?;
         Ok(stale_unban)
     });
     assert_eq!(active.status, Status::Active);
-    assert!(active.updated_at > banned.updated_at);
+    assert_eq!(active.updated_at, banned.updated_at);
     assert_eq!(active, user(&t, "david"));
 
     let mut stale_ban = banned;
@@ -54,7 +54,7 @@ fn user_revisions_advance_for_same_clock_ban_unban_with_stale_snapshots() {
         Ok(stale_ban)
     });
     assert_eq!(banned_again.status, Status::Banned);
-    assert!(banned_again.updated_at > active.updated_at);
+    assert_eq!(banned_again.updated_at, active.updated_at);
     assert_eq!(banned_again, user(&t, "david"));
 }
 
@@ -86,7 +86,7 @@ fn stale_user_updates_return_the_persisted_state_with_the_new_revision() {
     });
     assert_eq!(updated.name, "Changed name");
     assert_eq!(updated.bio.as_deref(), Some("Changed bio"));
-    assert!(updated.updated_at > renamed.updated_at);
+    assert_eq!(updated.updated_at, renamed.updated_at);
     assert_eq!(updated, user(&t, "david"));
 }
 

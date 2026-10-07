@@ -289,7 +289,11 @@ fn changed_settings_touch_updated_at_and_an_unchanged_save_does_not() {
     assert_eq!(settings(&t).user.updated_at, updated);
 }
 
+/// A core change persisted ahead of the frozen clock (a later writer's clock), then the clock
+/// returns: touches at the frozen time must keep that later revision.
 fn later_core_revision(t: &TestDb) -> crate::User {
+    let frozen = t.now();
+    t.clock.travel(SignedDuration::from_mins(1));
     let user = t.write(|tx| {
         let mut user = crate::User::find(tx.conn(), id("david"))?;
         for name in ["First core change", "Latest core change"] {
@@ -303,6 +307,7 @@ fn later_core_revision(t: &TestDb) -> crate::User {
         }
         Ok(user)
     });
+    t.clock.travel_to(frozen);
     assert!(user.updated_at > t.now());
     user
 }

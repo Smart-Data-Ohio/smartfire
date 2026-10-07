@@ -592,14 +592,10 @@ impl User {
         if sets.is_empty() {
             return Ok(());
         }
-        let core_changed = sets
-            .iter()
-            .any(|(key, _)| matches!(*key, "name" | "role" | "status" | "bio" | "icon_name"));
-        let revision = if core_changed {
-            Self::revision_for_update(tx, self.id)?
-        } else {
-            Self::revision_for_touch(tx, self.id, tx.now())?
-        };
+        // Rails stamps `updated_at = now`, even when a frozen clock repeats the stored value, and
+        // classic responses hash it (the avatar ETag is `users/<id>-<updated_at>`). Keep that
+        // value; only never move it backwards past a later persisted change.
+        let revision = Self::revision_for_touch(tx, self.id, tx.now())?;
         sets.push(("updated_at", Box::new(revision)));
         let assignments: Vec<String> = sets.iter().map(|(c, _)| format!(r#""{c}" = ?"#)).collect();
         let sql = format!(
@@ -613,15 +609,6 @@ impl User {
         self.reload(tx.conn())?;
         self.plain_bot_token = plain_bot_token;
         Ok(())
-    }
-
-    pub(crate) fn revision_for_update(tx: &Tx<'_>, user_id: i64) -> Result<Timestamp> {
-        let previous = tx.conn().query_row(
-            "SELECT updated_at FROM users WHERE id=?",
-            [user_id],
-            |row| row.get::<_, Timestamp>(0),
-        )?;
-        Ok(tx.revision_after(previous))
     }
 
     pub(crate) fn revision_for_touch(
