@@ -5,6 +5,7 @@ import { normalizeQuery } from "./match.ts";
 export const GROUP_ORDER = [
   "Navigation",
   "Messages",
+  "Lists",
   "Composer",
   "Formatting",
 ] as const satisfies readonly ShortcutGroup[];
@@ -33,7 +34,7 @@ function searchable(shortcut: Shortcut): string {
 }
 
 /**
- * The catalogue in dialog order (Navigation, Messages, Composer, Formatting), each group in
+ * The catalogue in dialog order (Navigation, Messages, Lists, Composer, Formatting), each group in
  * catalogue order. A query keeps the shortcuts whose label, keys or group match it, by word:
  * every word of the query must match somewhere.
  */

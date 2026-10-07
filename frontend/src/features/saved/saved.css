@@ -1,0 +1,129 @@
+/* Saved for later: the saved messages, each with its conversation, reminder and status. */
+@layer app {
+  .saved-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 10px var(--space-3) 10px var(--space-4);
+  }
+
+  .saved-row > .avatar,
+  .saved-row > span:first-child {
+    flex-shrink: 0;
+  }
+
+  .saved-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .saved-line {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    white-space: nowrap;
+  }
+
+  .saved-author {
+    flex-shrink: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .saved-line .conversation-label {
+    flex: 1;
+  }
+
+  .saved-time {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A few lines of the message as the timeline renders it. */
+  .saved-body {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .saved-body :is(p, ul, ol, pre, blockquote) {
+    margin: 0;
+  }
+
+  .saved-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+  }
+
+  .saved-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: 100%;
+    height: 20px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-medium);
+  }
+
+  .saved-chip-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .saved-chip[data-tone="accent"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .saved-chip[data-tone="success"] {
+    background: color-mix(in oklch, var(--success) 14%, transparent);
+    color: var(--success-text);
+  }
+
+  /* Done rows step back. */
+  .list-row[data-state="done"] .saved-body {
+    color: var(--text-muted);
+  }
+
+  .saved-remove:hover {
+    --button-fg: var(--danger-text);
+  }
+
+  @media (width < 720px) {
+    .saved-row {
+      gap: 10px;
+      padding-inline: var(--space-3) var(--space-2);
+    }
+
+    .saved-line {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
+
+    .saved-line .conversation-label {
+      order: 3;
+      flex-basis: 100%;
+    }
+  }
+}

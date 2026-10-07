@@ -25,6 +25,7 @@ import {
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import type { Random } from "./random.ts";
 import { emptyS2World, type S2World } from "./s2/model.ts";
+import { emptyS3World, type S3World } from "./s3/model.ts";
 
 const MINUTE = 60_000;
 
@@ -112,7 +113,7 @@ export interface RoomRecord {
 }
 
 /** Everything the mock knows. Mutated in place by the server. */
-export interface World extends S2World {
+export interface World extends S2World, S3World {
   readonly users: Map<number, User>;
   readonly presence: Map<number, UserPresence>;
   readonly rooms: Map<number, RoomRecord>;
@@ -771,6 +772,7 @@ export function seedWorld(now: number, random: Random): World {
 
   return {
     ...emptyS2World(),
+    ...emptyS3World(),
     users,
     presence: seedPresence(),
     rooms,

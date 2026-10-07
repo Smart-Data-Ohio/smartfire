@@ -3,7 +3,6 @@
  * slash commands (listed and run, mirroring the Rust registry), Markdown preview and scheduled
  * messages, which a timer on the scheduler posts when they fall due.
  */
-import type { ConversationName } from "../../src/gen/ConversationName.ts";
 import type { IconList } from "../../src/gen/IconList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePreview } from "../../src/gen/MessagePreview.ts";
@@ -14,6 +13,7 @@ import type { SlashCommandList } from "../../src/gen/SlashCommandList.ts";
 import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
 import {
+  conflict,
   forbidden,
   HttpError,
   type MockResponse,
@@ -24,6 +24,8 @@ import {
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
+import { conversationNames } from "../s3/conversations.ts";
+import { beforeOf, keysetPage } from "../s3/model.ts";
 import { type RoomRecord, VIEWER_ID } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import { imageIcons, searchIcons } from "./emoji.ts";
@@ -136,13 +138,35 @@ export interface Composer {
   arm(): void;
   /** Cancels every timer. */
   stop(): void;
+  /**
+   * Marks a pending one as held by another runner (`sending`: edits and cancels get 409,
+   * send_now 202), or lets it go again.
+   */
+  markSending(id: number, on: boolean): ScheduledMessage;
 }
 
-/** Creates the composer module. `save` sets a reminder on a message (`/remind`). */
+/** What the composer tells other modules about scheduled messages. */
+export interface ScheduledHooks {
+  /** One was dropped (when due, or by send_now): the inbox records it. */
+  readonly dropped: (message: ScheduledMessage) => void;
+  /** One was cancelled: its inbox items go. */
+  readonly cancelled: (id: number) => void;
+}
+
+const NO_HOOKS: ScheduledHooks = { dropped: () => undefined, cancelled: () => undefined };
+
+/** Scheduled messages a page (`GET /scheduled_messages`). */
+export const SCHEDULED_PAGE_SIZE = 50;
+
+/**
+ * Creates the composer module. `save` sets a reminder on a message (`/remind`); `hooks` hear
+ * about dropped and cancelled scheduled messages.
+ */
 export function createComposer(
   ctx: S2Context,
   threads: Threads,
   save: (messageId: number, remindAt: string) => void,
+  hooks: ScheduledHooks = NO_HOOKS,
 ): Composer {
   const timers = new Map<number, number>();
 
@@ -492,13 +516,48 @@ export function createComposer(
 
   // --- scheduled messages ---
 
+  /** Not yet sent or dropped (`sending` ones too: a runner holds them). */
   const pending = (message: ScheduledMessage) =>
     message.sentAt === null && message.droppedAt === null;
+
+  /** Whether a pending one could be posted now (`ScheduledMessage::sendable_ids`). */
+  const sendableNow = (message: ScheduledMessage): boolean => {
+    try {
+      ctx.roomOr404(message.roomId);
+    } catch {
+      return false;
+    }
+
+    if (message.threadId === null) return true;
+
+    return ctx.world().threads.get(message.threadId)?.roomId === message.roomId;
+  };
+
+  /** As the wire shows it: `sendable` worked out now for a pending one, `false` otherwise. */
+  const shown = (message: ScheduledMessage): ScheduledMessage => ({
+    ...message,
+    sendable: pending(message) && sendableNow(message),
+  });
+
+  const changed = (message: ScheduledMessage) => {
+    ctx.publish([{ topic: "user", type: "scheduled.changed", data: shown(message) }]);
+  };
 
   const scheduledOr404 = (id: number): ScheduledMessage => {
     const message = ctx.world().scheduled.get(id);
 
     if (message === undefined || !pending(message)) throw notFound("Scheduled message not found");
+
+    return message;
+  };
+
+  /** A pending one that isn't `sending` (editing or cancelling that one is a 409). */
+  const idleOr409 = (id: number): ScheduledMessage => {
+    const message = scheduledOr404(id);
+
+    if (message.state === "sending") {
+      throw conflict("That message is sending right now; try again in a moment.");
+    }
 
     return message;
   };
@@ -533,7 +592,9 @@ export function createComposer(
 
         const current = ctx.world().scheduled.get(message.id);
 
-        if (current !== undefined && pending(current)) send(current);
+        if (current !== undefined && pending(current) && current.state !== "sending") {
+          send(current);
+        }
       }),
     );
   };
@@ -546,48 +607,72 @@ export function createComposer(
     timers.delete(id);
   };
 
-  /** Posts it as the viewer, or drops it when they can no longer post there. */
+  const drop = (message: ScheduledMessage, reason: string | null): ScheduledMessage => {
+    const next: ScheduledMessage = {
+      ...message,
+      state: "dropped",
+      sendable: false,
+      droppedAt: iso(ctx.now()),
+      dropReason: reason,
+    };
+
+    ctx.world().scheduled.set(message.id, next);
+    changed(next);
+    hooks.dropped(next);
+
+    return next;
+  };
+
+  /**
+   * Posts it as the viewer, or drops it when it can't be posted there any more: no access to the
+   * room (no reason, "access lost"), its thread gone, or the post refused. A locked thread holds
+   * it instead: it stays scheduled, unchanged.
+   */
   const send = (message: ScheduledMessage): ScheduledMessage => {
     const world = ctx.world();
-    const stamp = iso(ctx.now());
-    let next: ScheduledMessage;
+    let record: RoomRecord;
 
     disarm(message.id);
 
     try {
-      const record = ctx.roomOr404(message.roomId);
-      const thread = message.threadId === null ? null : world.threads.get(message.threadId);
+      record = ctx.roomOr404(message.roomId);
+    } catch {
+      return drop(message, null);
+    }
 
-      if (thread === undefined || thread?.locked === true) throw notFound("Thread not found");
+    const thread = message.threadId === null ? null : world.threads.get(message.threadId);
 
-      const draft: MessageDraft = {
-        ...plainDraft(VIEWER_ID, message.markdownSource, ctx.uuid()),
-        replyToMessageId: message.replyToMessageId,
-      };
+    if (thread === undefined || (thread !== null && thread.roomId !== message.roomId)) {
+      return drop(message, "its thread was deleted");
+    }
 
-      const posted =
-        thread === null ? ctx.postToRoom(record, draft) : threads.postReply(thread, draft);
+    if (thread?.locked === true) return message;
 
-      next = {
-        ...message,
-        state: "sent",
-        sendable: false,
-        sentAt: stamp,
-        sentMessageId: posted.id,
-      };
+    const draft: MessageDraft = {
+      ...plainDraft(VIEWER_ID, message.markdownSource, ctx.uuid()),
+      replyToMessageId: message.replyToMessageId,
+    };
+
+    let posted: MessageDTO;
+
+    try {
+      posted = thread === null ? ctx.postToRoom(record, draft) : threads.postReply(thread, draft);
     } catch (error) {
       if (!(error instanceof HttpError)) throw error;
 
-      next = {
-        ...message,
-        state: "dropped",
-        sendable: false,
-        droppedAt: stamp,
-        dropReason: error.message,
-      };
+      return drop(message, error.message);
     }
 
+    const next: ScheduledMessage = {
+      ...message,
+      state: "sent",
+      sendable: false,
+      sentAt: iso(ctx.now()),
+      sentMessageId: posted.id,
+    };
+
     world.scheduled.set(message.id, next);
+    changed(next);
 
     return next;
   };
@@ -611,46 +696,35 @@ export function createComposer(
     }
   };
 
+  /** Pending ones soonest first; past ones (sent or dropped) most recent first. 50 a page. */
   const listScheduled = (query: URLSearchParams): ScheduledMessageList => {
     const rawRoom = query.get("roomId");
     const roomId = rawRoom === null || rawRoom === "" ? null : Number(rawRoom);
+    const status = query.get("status") === "past" ? "past" : "pending";
 
     if (roomId !== null) ctx.roomOr404(roomId);
 
-    const scheduledMessages = [...ctx.world().scheduled.values()]
-      .filter((message) => pending(message) && (roomId === null || message.roomId === roomId))
-      .sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt) || a.id - b.id);
+    const matching = [...ctx.world().scheduled.values()].filter(
+      (message) =>
+        pending(message) === (status === "pending") &&
+        (roomId === null || message.roomId === roomId),
+    );
+
+    const page = keysetPage(
+      matching,
+      (message) => ({ at: message.sendAt, id: message.id }),
+      beforeOf(query),
+      SCHEDULED_PAGE_SIZE,
+      status === "pending",
+    );
+
+    const scheduledMessages = page.rows.map(shown);
 
     return {
       scheduledMessages,
-      conversations: conversationsOf(scheduledMessages),
-      nextCursor: null,
+      conversations: conversationNames(ctx, scheduledMessages),
+      nextCursor: page.nextCursor,
     };
-  };
-
-  const conversationsOf = (messages: readonly ScheduledMessage[]): ConversationName[] => {
-    const seen = new Map<string, ConversationName>();
-
-    for (const message of messages) {
-      const key = `${message.roomId}:${message.threadId ?? ""}`;
-      const record = ctx.world().rooms.get(message.roomId);
-
-      if (seen.has(key) || record === undefined) continue;
-
-      const thread =
-        message.threadId === null ? undefined : ctx.world().threads.get(message.threadId);
-
-      seen.set(key, {
-        roomId: record.room.id,
-        threadId: message.threadId,
-        roomKind: record.room.kind,
-        roomName: ctx.displayName(record),
-        roomIconName: record.room.iconName,
-        threadName: thread?.name ?? null,
-      });
-    }
-
-    return [...seen.values()];
   };
 
   const createScheduled = (roomId: number, body: Json | undefined): MockResponse => {
@@ -683,12 +757,14 @@ export function createComposer(
 
     world.scheduled.set(message.id, message);
     arm(message);
+    changed(message);
 
-    return ok(message, 201);
+    return ok(shown(message), 201);
   };
 
+  /** Absent fields keep their values. */
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
-    const current = scheduledOr404(id);
+    const current = idleOr409(id);
 
     const next = {
       ...current,
@@ -699,26 +775,45 @@ export function createComposer(
 
     ctx.world().scheduled.set(id, next);
     arm(next);
+    changed(next);
 
-    return next;
+    return shown(next);
   };
 
   const cancelScheduled = (id: number): MockResponse => {
-    scheduledOr404(id);
+    const current = idleOr409(id);
+
     disarm(id);
     ctx.world().scheduled.delete(id);
+    hooks.cancelled(id);
+    ctx.publish([
+      { topic: "user", type: "scheduled.removed", data: { id, roomId: current.roomId } },
+    ]);
 
     return noContent();
   };
 
-  const sendNow = (id: number): ScheduledMessage => {
-    const sent = send(scheduledOr404(id));
+  /** 200 sent; 202 still pending (another runner holds it, or its thread is locked); 422 dropped. */
+  const sendNow = (id: number): MockResponse => {
+    const current = scheduledOr404(id);
 
-    if (sent.droppedAt !== null) {
-      throw validation("base", sent.dropReason ?? "This message can no longer be sent here");
+    if (current.state === "sending") return ok(shown(current), 202);
+
+    const after = send(current);
+
+    if (after.droppedAt !== null) {
+      // The contract's `message` is the drop reason itself; a drop for lost access has none, and
+      // reads as the classic page's "Not sent (channel access lost)".
+      throw validation("base", after.dropReason ?? "channel access lost");
     }
 
-    return sent;
+    if (after.sentAt === null) {
+      arm(after);
+
+      return ok(shown(after), 202);
+    }
+
+    return ok(shown(after));
   };
 
   return {
@@ -746,15 +841,20 @@ export function createComposer(
         cancelScheduled(firstId(request)),
       ),
       route("POST", /^\/scheduled_messages\/(\d+)\/send_now$/, (request) =>
-        ok(sendNow(firstId(request))),
+        sendNow(firstId(request)),
       ),
     ],
     fireScheduled(all) {
       const due = [...ctx.world().scheduled.values()]
-        .filter((message) => pending(message) && (all || Date.parse(message.sendAt) <= ctx.now()))
+        .filter(
+          (message) =>
+            pending(message) &&
+            message.state !== "sending" &&
+            (all || Date.parse(message.sendAt) <= ctx.now()),
+        )
         .sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt) || a.id - b.id);
 
-      return due.map(send);
+      return due.map(send).filter((message) => !pending(message));
     },
     arm() {
       for (const id of [...timers.keys()]) disarm(id);
@@ -765,6 +865,17 @@ export function createComposer(
     },
     stop() {
       for (const id of [...timers.keys()]) disarm(id);
+    },
+    markSending(id, on) {
+      const current = scheduledOr404(id);
+      const next: ScheduledMessage = { ...current, state: on ? "sending" : "pending" };
+
+      ctx.world().scheduled.set(id, next);
+      changed(next);
+
+      if (!on) arm(next);
+
+      return shown(next);
     },
   };
 }
