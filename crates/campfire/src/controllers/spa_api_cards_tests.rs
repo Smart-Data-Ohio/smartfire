@@ -8,7 +8,7 @@ use serde_json::{Value, json};
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve};
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, Browser, DAVID, HQ, KEVIN, Reply, Req, TestApp,
+    Browser, DAVID, HQ, KEVIN, Reply, Req, TestApp,
 };
 
 /// The seed's card fixtures, all in Designers (David, Jason and Kevin are members; Kevin isn't
@@ -933,6 +933,21 @@ async fn attendance_answers_and_takes_responses() {
     )
     .await;
     assert_eq!(fields(&reply), ["response"]);
+
+    // A bot sees the counts but can't respond.
+    sql(&a, "UPDATE users SET role = 2 WHERE id = ?", vec![KEVIN]).await;
+    let shown: api::EventAttendance = ok(&kevin.send(get(&path)).await);
+    assert!(!shown.respondable);
+    assert_eq!(shown.going_count, before.going_count);
+    let reply = send(
+        &mut kevin,
+        Method::PUT,
+        &path,
+        json!({"response": "going", "applyToFuture": false}),
+    )
+    .await;
+    assert_eq!(fields(&reply), ["response"]);
+    sql(&a, "UPDATE users SET role = 0 WHERE id = ?", vec![KEVIN]).await;
 
     // Another room's event, through this room, is a 404.
     let reply = kevin

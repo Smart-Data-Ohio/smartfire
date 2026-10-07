@@ -828,15 +828,9 @@ async fn post_vote(c: &mut Ctx) -> Result {
 async fn set_event(c: &mut Ctx) -> Result<(CalendarEvent, User)> {
     before_actions(c).await?;
     let (_, room) = set_room(c).await?;
+    // Anyone in the room sees the counts; `respondable` says whether they may answer (bots and
+    // deactivated people may not), and a response they can't give is a 422.
     let viewer = concerns::require_current_user(c)?.clone();
-    if !viewer.is_active() || viewer.is_bot() {
-        return Err(fail(
-            c,
-            api::ApiError::Forbidden {
-                message: "Only active people can respond to events".into(),
-            },
-        ));
-    }
     let event_id = path_id(c, "event_id")?;
     let user_id = viewer.id;
     let event = c
@@ -910,7 +904,7 @@ async fn put_attendance(c: &mut Ctx) -> Result {
             if !event.respondable_by(tx.conn(), Some(&viewer))? {
                 return Ok(Err(validation(
                     "response",
-                    "can't be given: this event is no longer open for responses",
+                    "can't be given: this event is cancelled or you can't respond to it",
                 )));
             }
             CalendarEvent::respond(tx, event.id, viewer.id, response, input.apply_to_future)?;
