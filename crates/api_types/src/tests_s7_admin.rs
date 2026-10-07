@@ -163,6 +163,7 @@ fn an_audit_log_page() {
             export_url: "/account/audit_log.csv?actor=ada".into(),
             export_truncated: false,
             export_limit: 5000,
+            time_zone: "America/New_York".into(),
         },
         json!({
             "filters": {
@@ -187,7 +188,8 @@ fn an_audit_log_page() {
             "targetTypes": ["User"],
             "exportUrl": "/account/audit_log.csv?actor=ada",
             "exportTruncated": false,
-            "exportLimit": 5000
+            "exportLimit": 5000,
+            "timeZone": "America/New_York"
         }),
     );
 }

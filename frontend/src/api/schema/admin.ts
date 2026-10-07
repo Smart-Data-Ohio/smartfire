@@ -188,6 +188,7 @@ export const AuditLogPage = Schema.Struct({
   exportUrl: Schema.String,
   exportTruncated: Schema.Boolean,
   exportLimit: Schema.Int,
+  timeZone: Schema.String,
 });
 
 export type AuditLogPage = typeof AuditLogPage.Type;

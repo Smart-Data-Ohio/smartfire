@@ -216,6 +216,9 @@ pub struct AuditLogPage {
     /// The export stops at `exportLimit` rows and these filters match more.
     pub export_truncated: bool,
     pub export_limit: i64,
+    /// The IANA zone the `from` and `to` dates are read in (the viewer's profile zone, UTC when
+    /// unset): show the entries' times in it too.
+    pub time_zone: String,
 }
 
 /// One problem a health section lists: what it concerns, and what went wrong.

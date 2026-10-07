@@ -96,6 +96,7 @@ describe("S7 admin schemas", () => {
       exportUrl: "/account/audit_log.csv?actor=ada",
       exportTruncated: false,
       exportLimit: 5000,
+      timeZone: "America/New_York",
     };
 
     const page = Schema.decodeUnknownSync(AuditLogPage)(wire);

@@ -21,4 +21,9 @@ exportUrl: string,
 /**
  * The export stops at `exportLimit` rows and these filters match more.
  */
-exportTruncated: boolean, exportLimit: number, };
+exportTruncated: boolean, exportLimit: number, 
+/**
+ * The IANA zone the `from` and `to` dates are read in (the viewer's profile zone, UTC when
+ * unset): show the entries' times in it too.
+ */
+timeZone: string, };

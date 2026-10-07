@@ -1159,6 +1159,12 @@ async fn the_audit_log_filters_as_the_classic_page_does() {
             .any(|action| action == "user.role.change")
     );
     assert_eq!(all.export_url, "/account/audit_log.csv");
+    // The zone the dates are read in, for the client to show times in.
+    assert!(
+        jiff::tz::TimeZone::get(&all.time_zone).is_ok(),
+        "{}",
+        all.time_zone
+    );
 
     let filtered: api::AuditLogPage = parse(
         &b.send(get(

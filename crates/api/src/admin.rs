@@ -916,6 +916,7 @@ async fn show_audit_log(c: &mut Ctx) -> Result {
             .collect(),
         export_truncated: count > limit,
         export_limit: limit,
+        time_zone: zone.tz().iana_name().unwrap_or("UTC").to_string(),
     };
     c.json(StatusCode::OK, &page)
 }
