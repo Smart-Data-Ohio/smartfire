@@ -32,4 +32,8 @@ unreadCount: number,
  * (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`); drives the numeric
  * pill.
  */
-mentionCount: number, };
+mentionCount: number, 
+/**
+ * Management changed the room's metadata or membership; reload a loaded room's detail.
+ */
+refreshRoom?: boolean, };

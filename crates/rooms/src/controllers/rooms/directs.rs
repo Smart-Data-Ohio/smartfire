@@ -300,6 +300,11 @@ fn sentence(names: &[String]) -> String {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::Directs).await?;
+    ensure_can_delete(c, &room).await?;
+    destroy_room(c, room).await
+}
+
+pub async fn ensure_can_delete(c: &Ctx, room: &Room) -> Result<()> {
     let id = room.id;
     let group = c
         .app()
@@ -310,7 +315,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     if group && !require_current_user(c)?.is_administrator() {
         return campfire_kit::halt(crate::concerns::head(StatusCode::FORBIDDEN));
     }
-    destroy_room(c, room).await
+    Ok(())
 }
 
 /// `broadcast_create_room`: `users/sidebars/rooms/_direct` for each membership, to its user.

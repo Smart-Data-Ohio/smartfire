@@ -923,6 +923,27 @@ pub fn sidebar_rows(
     room: &Room,
     user_ids: Option<&[i64]>,
 ) {
+    sidebar_rows_with_refresh(server, slot, conn, room, user_ids, None);
+}
+
+pub fn management_sidebar_rows(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    room: &Room,
+    user_ids: Option<&[i64]>,
+) {
+    sidebar_rows_with_refresh(server, slot, conn, room, user_ids, Some(true));
+}
+
+fn sidebar_rows_with_refresh(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    room: &Room,
+    user_ids: Option<&[i64]>,
+    refresh_room: Option<bool>,
+) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -936,39 +957,67 @@ pub fn sidebar_rows(
         if user_ids.is_some_and(|ids| !ids.contains(&membership.user_id)) {
             continue;
         }
-        if !server.sync_connected(membership.user_id) {
-            server.sync_skipped_for(membership.user_id);
-            continue;
-        }
-        match renderer.sidebar_row(conn, room, &membership) {
-            Ok(Some(row)) => send(
+        publish_sidebar_row(
+            server,
+            renderer.as_ref(),
+            conn,
+            room,
+            &membership,
+            refresh_room,
+        );
+    }
+}
+
+fn publish_sidebar_row(
+    server: &Cable,
+    renderer: &dyn SyncRenderer,
+    conn: &Connection,
+    room: &Room,
+    membership: &Membership,
+    refresh_room: Option<bool>,
+) {
+    if !server.sync_connected(membership.user_id) {
+        server.sync_skipped_for(membership.user_id);
+        return;
+    }
+    match renderer.sidebar_row(conn, room, membership) {
+        Ok(Some(mut row)) => {
+            row.refresh_room = refresh_room;
+            send(
                 server,
                 Audience::User(membership.user_id),
                 &SyncPayload::SidebarRowUpserted(row),
                 |publication| publication,
-            ),
-            Ok(None) if room.deleted() => sidebar_row_removed(server, membership.user_id, room.id),
-            Ok(None) => sidebar_row_hidden(server, membership.user_id, room.id),
-            Err(error) => tracing::warn!(
-                %error,
-                room_id = room.id,
-                user_id = membership.user_id,
-                "sync: sidebar row not rendered"
-            ),
+            );
         }
+        Ok(None) if room.deleted() => sidebar_row_removed(server, membership.user_id, room.id),
+        Ok(None) => sidebar_row_hidden(server, membership.user_id, room.id, refresh_room),
+        Err(error) => tracing::warn!(
+            %error,
+            room_id = room.id,
+            user_id = membership.user_id,
+            "sync: sidebar row not rendered"
+        ),
     }
 }
 
 /// `sidebar.row.upserted` for one membership's own row, when its person's sidebar shows it.
 pub fn membership_row(server: &Cable, slot: &RendererSlot, conn: &Connection, membership_id: i64) {
-    if slot.get(server).is_none() {
+    let Some(renderer) = slot.get(server) else {
         return;
-    }
+    };
     let found = Membership::find(conn, membership_id)
         .and_then(|membership| Ok((membership.room(conn)?, membership)));
     match found {
         Ok((room, membership)) => {
-            sidebar_rows(server, slot, conn, &room, Some(&[membership.user_id]));
+            publish_sidebar_row(
+                server,
+                renderer.as_ref(),
+                conn,
+                &room,
+                &membership,
+                Some(true),
+            );
         }
         Err(campfire_db::Error::RecordNotFound(_)) => {}
         Err(error) => tracing::warn!(%error, membership_id, "sync: membership row not read"),
@@ -982,6 +1031,25 @@ pub fn sidebar_rows_later(
     room_id: i64,
     user_ids: Option<Vec<i64>>,
 ) {
+    sidebar_rows_later_with_refresh(server, slot, room_id, user_ids, None);
+}
+
+pub fn management_sidebar_rows_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    room_id: i64,
+    user_ids: Option<Vec<i64>>,
+) {
+    sidebar_rows_later_with_refresh(server, slot, room_id, user_ids, Some(true));
+}
+
+fn sidebar_rows_later_with_refresh(
+    server: &Cable,
+    slot: &RendererSlot,
+    room_id: i64,
+    user_ids: Option<Vec<i64>>,
+    refresh_room: Option<bool>,
+) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -991,7 +1059,14 @@ pub fn sidebar_rows_later(
         else {
             return;
         };
-        sidebar_rows(&server, &slot, conn, &room, user_ids.as_deref());
+        sidebar_rows_with_refresh(
+            &server,
+            &slot,
+            conn,
+            &room,
+            user_ids.as_deref(),
+            refresh_room,
+        );
     }));
 }
 
@@ -1079,7 +1154,10 @@ pub fn sidebar_row_removed(server: &Cable, user_id: i64, room_id: i64) {
     if !server.sync_wanted() {
         return;
     }
-    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
+    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
+        room_id,
+        refresh_room: Some(true),
+    });
     send(server, Audience::User(user_id), &payload, |publication| {
         SyncPublication {
             unsubscribe: Some(room_topic(room_id)),
@@ -1090,8 +1168,11 @@ pub fn sidebar_row_removed(server: &Cable, user_id: i64, room_id: i64) {
 
 /// The person hid the room (an invisible membership): `sidebar.row.removed` on their `user`
 /// topic, while their connections go on following it.
-fn sidebar_row_hidden(server: &Cable, user_id: i64, room_id: i64) {
-    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
+fn sidebar_row_hidden(server: &Cable, user_id: i64, room_id: i64, refresh_room: Option<bool>) {
+    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
+        room_id,
+        refresh_room,
+    });
     send(server, Audience::User(user_id), &payload, |publication| {
         publication
     });
@@ -1102,7 +1183,10 @@ pub fn room_removed(server: &Cable, room_id: i64) {
     if !server.sync_wanted() {
         return;
     }
-    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
+    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
+        room_id,
+        refresh_room: Some(true),
+    });
     send(server, Audience::Everyone, &payload, |publication| {
         SyncPublication {
             unsubscribe: Some(room_topic(room_id)),
