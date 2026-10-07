@@ -269,10 +269,13 @@ export function createOrganize(ctx: S2Context): Organize {
     if (position === null) throw validation("position", "Position must be a number");
 
     if (record.membership.favoritePosition !== null) {
-      // `Membership#move_favorite_to`: `position` is an index among every other favourite,
-      // hidden ones included, clamped to the list; then every favourite is renumbered from 0.
+      // `position` is an index among the favourites the sidebar shows: the room lands just before
+      // the shown favourite now at that index (or after every favourite). Hidden favourites keep
+      // their places, and every favourite is renumbered from 0.
       const others = allFavorites().filter((held) => held !== record);
-      const at = Math.min(Math.max(position, 0), others.length);
+      const shown = others.filter(visible);
+      const anchor = shown[Math.min(Math.max(position, 0), shown.length)];
+      const at = anchor === undefined ? others.length : others.indexOf(anchor);
       const order = [...others.slice(0, at), record, ...others.slice(at)];
 
       const changed: RoomRecord[] = [];
