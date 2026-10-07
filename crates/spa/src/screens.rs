@@ -109,6 +109,18 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/rooms",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/security",
+        true,
+    ),
+    screen(
         "users/statuses#edit",
         "/users/me/status/edit",
         "/app/settings/status",
