@@ -172,6 +172,38 @@ async function seededPoll(request: APIRequestContext): Promise<Poll | undefined>
   return page.messages.find((message) => message.poll !== null)?.poll ?? undefined;
 }
 
+/** Both room pages and thread detail put the parent into the shared message store. */
+async function mockThreadParent(
+  page: Page,
+  { threadId, bodyHtml, poll }: { threadId: number; bodyHtml: string; poll: Poll | undefined },
+) {
+  const withParent = (message: MessagePage["messages"][number]) => ({
+    ...message,
+    bodyHtml,
+    poll: poll ?? message.poll,
+  });
+
+  await page.route(`**/api/v1/threads/${threadId}`, async (route) => {
+    const response = await route.fetch();
+    const body: ThreadDetail = await response.json();
+
+    expect(body.parentMessage).not.toBeNull();
+
+    if (body.parentMessage !== null) body.parentMessage = withParent(body.parentMessage);
+
+    await route.fulfill({ response, json: body });
+  });
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.messages = body.messages.map((message) =>
+      message.thread?.threadId === threadId ? withParent(message) : message,
+    );
+    await route.fulfill({ response, json: body });
+  });
+}
+
 test("a permalinked row stays in view when the cards chunk arrives late", async ({ page }) => {
   const chunk = await holdCardsChunk(page);
 
@@ -275,21 +307,60 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   const anchorRow = row(page, Number(anchor));
 
   const anchorTop = () =>
-    anchorRow.evaluate((element) => {
+    anchorRow.evaluate(async (element) => {
       const list = element.closest("[data-message-list]");
 
       if (list === null) throw new Error("The anchor is outside the message list");
 
-      return element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      const measure = () => element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const before = measure();
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      return {
+        before,
+        after: measure(),
+        settled: list.getAttribute("data-scroll-settled") === "true",
+      };
     });
 
-  await list.evaluate((element) => {
-    element.scrollTop = 0;
-  });
+  // Virtua's scroll end follows the placement measurements and their scroll event.
+  await expect(list).toHaveAttribute("data-scroll-settled", "true");
+  await list.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        element.addEventListener("scroll", () => resolve(), { once: true });
+        element.scrollTop = 0;
+      }),
+  );
 
   await expect(anchorRow).toBeInViewport();
 
-  const top = await anchorTop();
+  let top = 0;
+
+  await expect
+    .poll(async () => {
+      const position = await anchorTop();
+
+      top = position.after;
+
+      return position.settled ? Math.abs(position.after - position.before) : Infinity;
+    })
+    .toBeLessThanOrEqual(1);
+
+  const anchorDelta = async () => {
+    const position = await anchorTop();
+
+    return position.settled
+      ? Math.max(
+          Math.abs(position.before - top),
+          Math.abs(position.after - top),
+          Math.abs(position.after - position.before),
+        )
+      : Infinity;
+  };
 
   releaseOlder();
   // The older rows are in (the injected one mounted above), the row that was at the top stays in
@@ -297,11 +368,11 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   await expect(row(page, await injected)).toBeAttached();
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
   await expect(anchorRow).toBeInViewport();
-  await expect.poll(async () => Math.abs((await anchorTop()) - top)).toBeLessThanOrEqual(3);
+  await expect.poll(anchorDelta).toBeLessThanOrEqual(3);
   chunk.release();
   await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
   await expect(anchorRow).toBeInViewport();
-  await expect.poll(async () => Math.abs((await anchorTop()) - top)).toBeLessThanOrEqual(3);
+  await expect.poll(anchorDelta).toBeLessThanOrEqual(3);
 });
 
 test("reading a tall thread parent while the cards chunk loads keeps its place", async ({
@@ -314,24 +385,12 @@ test("reading a tall thread parent while the cards chunk loads keeps its place",
   const threadId = THREAD_IDS.generalActive;
 
   expect(poll).toBeTruthy();
-  await page.route(`**/api/v1/threads/${threadId}`, async (route) => {
-    const response = await route.fetch();
-    const body: ThreadDetail = await response.json();
-
-    expect(body.parentMessage).not.toBeNull();
-
-    if (body.parentMessage !== null && poll !== undefined) {
-      body.parentMessage = {
-        ...body.parentMessage,
-        bodyHtml: Array.from(
-          { length: 40 },
-          (_, index) => `<p>Parent paragraph ${index + 1}</p>`,
-        ).join(""),
-        poll,
-      };
-    }
-
-    await route.fulfill({ response, json: body });
+  await mockThreadParent(page, {
+    threadId,
+    bodyHtml: Array.from({ length: 40 }, (_, index) => `<p>Parent paragraph ${index + 1}</p>`).join(
+      "",
+    ),
+    poll,
   });
   await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
   await chunk.requested;
@@ -340,6 +399,7 @@ test("reading a tall thread parent while the cards chunk loads keeps its place",
   const parent = list.locator(".thread-parent [data-message-row]");
 
   await expect(list.locator("[data-message-row]").last()).toBeInViewport();
+  await expect(list).toHaveAttribute("data-scroll-settled", "true");
   // Establish an end anchor, then move entirely inside the tall parent.
   await list.evaluate(
     (element) =>
@@ -404,21 +464,10 @@ test("a short thread stays at the end when the cards chunk makes it overflow", a
   const threadId = THREAD_IDS.generalActive;
 
   expect(poll).toBeTruthy();
-  await page.route(`**/api/v1/threads/${threadId}`, async (route) => {
-    const response = await route.fetch();
-    const body: ThreadDetail = await response.json();
-
-    expect(body.parentMessage).not.toBeNull();
-
-    if (body.parentMessage !== null && poll !== undefined) {
-      body.parentMessage = {
-        ...body.parentMessage,
-        bodyHtml: Array.from({ length: 6 }, () => "<p>A short parent paragraph</p>").join(""),
-        poll,
-      };
-    }
-
-    await route.fulfill({ response, json: body });
+  await mockThreadParent(page, {
+    threadId,
+    bodyHtml: Array.from({ length: 6 }, () => "<p>A short parent paragraph</p>").join(""),
+    poll,
   });
   await page.route(`**/api/v1/threads/${threadId}/messages`, async (route) => {
     const response = await route.fetch();

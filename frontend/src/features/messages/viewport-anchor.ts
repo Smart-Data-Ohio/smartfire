@@ -189,8 +189,7 @@ export function useViewportAnchor({
 
         heights.set(entry.target, entry.contentRect.height);
 
-        if (previous !== undefined && Math.abs(previous - entry.contentRect.height) > 1)
-          changed = true;
+        if (previous !== entry.contentRect.height) changed = true;
       }
 
       // Virtua observes these wrappers first and applies its measurements and native jump
@@ -231,8 +230,6 @@ export function useViewportAnchor({
       for (const row of content.children) {
         if (!observed.has(row)) {
           observed.add(row);
-
-          if (!chunkLoaded()) heights.set(row, row.getBoundingClientRect().height);
 
           resizes.observe(row);
         }

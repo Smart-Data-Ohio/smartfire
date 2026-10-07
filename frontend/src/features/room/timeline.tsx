@@ -160,6 +160,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
 
     setPlaced(placement);
+    const viewport = containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
+
+    if (viewport) viewport.dataset.scrollSettled = "false";
 
     const focusIndex =
       focusMessageId === null
@@ -367,12 +370,23 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             shift={shift}
             bufferSize={600}
             onScroll={onScroll}
+            onScrollCapture={(event) => {
+              if (event.target === event.currentTarget)
+                event.currentTarget.dataset.scrollSettled = "false";
+            }}
+            onScrollEnd={() => {
+              const viewport =
+                containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
+
+              if (viewport) viewport.dataset.scrollSettled = "true";
+            }}
             data={items}
             aria-label="Messages"
             role="log"
             // Focusable from script only: Home/End hold focus here while the edge row is drawn.
             tabIndex={-1}
             data-message-list
+            data-scroll-settled="false"
           >
             {renderItem}
           </VList>

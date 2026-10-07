@@ -169,6 +169,9 @@ export function ThreadTimeline({
     }
 
     setPlaced(placement);
+    const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+    if (viewport) viewport.dataset.scrollSettled = "false";
 
     const focusIndex =
       focusMessageId === null
@@ -289,7 +292,17 @@ export function ThreadTimeline({
             shift={shift}
             bufferSize={400}
             onScroll={onScroll}
+            onScrollCapture={(event) => {
+              if (event.target === event.currentTarget)
+                event.currentTarget.dataset.scrollSettled = "false";
+            }}
+            onScrollEnd={() => {
+              const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+              if (viewport) viewport.dataset.scrollSettled = "true";
+            }}
             data={items}
+            data-scroll-settled="false"
             aria-label="Replies"
             role="log"
             // Focusable from script only: Home/End hold focus here while the edge row is drawn.
