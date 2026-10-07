@@ -138,9 +138,12 @@ def prepare_source(root):
     # paths permit Cargo caching, while every input is refreshed on each run.
     paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root, text=True).split("\0")
     tracked = {Path(path) for path in paths if path}
+    # Auth asset sources mirror ci/with-release-inputs.sh and the Dockerfile.
     wanted = [Path(path) for path in paths
-              if path.startswith(("crates/", "vectors/", "test-support/", "web/", "fixtures/")) or
-              path in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "parity/.env.reference", "parity/reference.sha")]
+              if path.startswith(("crates/", "vectors/", "test-support/", "web/", "fixtures/",
+                                  "frontend/src/auth/", "frontend/src/styles/", "frontend/src/motion/")) or
+              path in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "parity/.env.reference", "parity/reference.sha",
+                       "frontend/src/ui/button.css", "frontend/src/ui/text-field.css", "frontend/src/ui/checkbox.css")]
     contents = {}
     for relative in wanted:
         content = (root / relative).read_bytes()
