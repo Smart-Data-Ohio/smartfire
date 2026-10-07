@@ -23,6 +23,7 @@ import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
+import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
@@ -994,6 +995,7 @@ export function Sidebar() {
         }}
         onConfirm={commands.deleteCategory}
       />
+      <HuddleDock />
       <YouPanel />
     </aside>
   );

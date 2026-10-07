@@ -261,6 +261,8 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
+    // Work tracking comes with the S4 work mock.
+    work: null,
   };
 }
 

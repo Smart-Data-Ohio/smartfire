@@ -8,7 +8,6 @@ import type { SearchResults as GeneratedSearchResults } from "../../gen/SearchRe
 import type { SearchSection as GeneratedSearchSection } from "../../gen/SearchSection.ts";
 import type { SearchSectionKind as GeneratedSearchSectionKind } from "../../gen/SearchSectionKind.ts";
 import type { SearchSectionRow as GeneratedSearchSectionRow } from "../../gen/SearchSectionRow.ts";
-import type { WorkStatus as GeneratedWorkStatus } from "../../gen/WorkStatus.ts";
 import { ConversationName } from "./conversation.ts";
 import { RecentSearchId, RoomId } from "./ids.ts";
 import { MessageDTO } from "./message.ts";
@@ -16,6 +15,9 @@ import type { Assert, Pinned } from "./pin.ts";
 import { RoomKind } from "./room.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
+import { WorkStatus } from "./work-parts.ts";
+
+export { WorkStatus } from "./work-parts.ts";
 
 export const SearchOperator = Schema.Literals(["from", "in", "has", "before", "after", "on", "is"]);
 
@@ -35,13 +37,6 @@ export const SearchChip = Schema.Struct({
 export type SearchChip = typeof SearchChip.Type;
 
 export type SearchChipPin = Assert<Pinned<typeof SearchChip, GeneratedSearchChip>>;
-
-/** `threads.work_status`. */
-export const WorkStatus = Schema.Literals(["planned", "in_progress", "blocked", "done"]);
-
-export type WorkStatus = typeof WorkStatus.Type;
-
-export type WorkStatusPin = Assert<Pinned<typeof WorkStatus, GeneratedWorkStatus>>;
 
 export const SearchSectionKind = Schema.Literals(["board_posts", "work_threads", "events"]);
 

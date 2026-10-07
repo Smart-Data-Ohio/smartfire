@@ -504,11 +504,18 @@
     --button-height: 22px;
 
     position: absolute;
-    top: 50%;
+    /* The row's middle, not the item's: a call room lists its participants below the row. */
+    top: calc((var(--sidebar-row-height) + 2px) / 2);
     right: calc(var(--space-2) + var(--space-1));
     translate: 0 -50%;
     opacity: 0;
     transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  @media (width < 720px) {
+    .sidebar-row-more {
+      top: 20px;
+    }
   }
 
   .sidebar-row-item:hover .sidebar-row-more,

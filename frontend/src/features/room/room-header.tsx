@@ -3,6 +3,7 @@ import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { DirectHeaderActions } from "../directs/direct-header-actions.tsx";
+import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -66,6 +67,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
       )}
       <div className="room-header-tools">
         {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
+        <HuddleLauncher roomId={roomId} />
         <NotificationsButton roomId={roomId} />
         <PaneButtons roomId={roomId} />
         <HeaderSearch />

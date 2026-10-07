@@ -49,7 +49,9 @@ pub struct CreateDirect {
 /// `POST /api/v1/directs/:id/members` (`rooms/directs#add_members`): add people to a
 /// group-capable direct room in place. Answers the updated [`crate::RoomDetail`].
 ///
-/// 422 when the room isn't group-capable, nobody new was given, or it would pass 10 members.
+/// 422 when the room isn't group-capable or it would pass 10 members. Naming nobody new (people
+/// already in it, or nobody active) is a no-op that answers the room unchanged and publishes
+/// nothing, as `Room#add_direct_members` treats it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

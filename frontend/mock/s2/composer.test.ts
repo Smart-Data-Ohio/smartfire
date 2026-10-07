@@ -150,7 +150,7 @@ describe("slash commands", () => {
       "is reviewing the deploy",
       "/play trombone",
     ]);
-    expect(page.messages[0]?.bodyHtml).toBe("<p>fine ¯_(ツ)_/¯</p>");
+    expect(page.messages[0]?.bodyHtml).toBe(String.raw`<p>fine ¯\_(ツ)_/¯</p>`);
     expect(page.messages[1]?.action).toBe(true);
     expect(me.status).toBe("posted");
     expect(play.status).toBe("posted");

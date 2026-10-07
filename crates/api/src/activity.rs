@@ -1,0 +1,301 @@
+//! The S3 activity inbox on `/api/v1` (`campfire_api_types::activity` documents each endpoint):
+//! listing, the badge count, the state actions and `open`. Each reuses `activity_items`' lookup
+//! (`ActivityItem::find_accessible`, `query_accessible`) and the model's state writes, whose
+//! `ActivityChannel` frames the classic inbox hears and whose `activity.item` twins the other tabs
+//! do.
+
+use campfire_api_types as api;
+use campfire_app::app::{AppCtx, AppState};
+use campfire_db::models::activity_item::ActivityQuery;
+use campfire_db::{ActivityItem, Connection, Timestamp, User};
+use campfire_kit::{Ctx, Error, Result, StatusCode};
+use campfire_web::concerns;
+use campfire_web::controllers::presenters::activity as presenter;
+use campfire_web::controllers::presenters::page::db_error;
+
+use crate::dto;
+use crate::endpoints::{before_actions, body, now};
+use crate::error::{fail, validation};
+
+endpoint!(
+    /// `GET /api/v1/activity`
+    index => index_activity
+);
+endpoint!(
+    /// `GET /api/v1/activity/unread_count`
+    unread_count => show_unread_count
+);
+endpoint!(
+    /// `PATCH /api/v1/activity/:id`
+    update => update_item
+);
+endpoint!(
+    /// `POST /api/v1/activity/:id/open`
+    open => open_item
+);
+
+/// `activity_items#index`' page size.
+const PAGE: usize = 100;
+
+/// The inbox rows as the wire carries them, sources read in one go (`activity::Sources`).
+pub(crate) fn items(
+    conn: &Connection,
+    app: &AppState,
+    viewer: &User,
+    rows: &[ActivityItem],
+) -> campfire_db::Result<Vec<api::ActivityItem>> {
+    let sources = presenter::Sources::load(conn, rows)?;
+    rows.iter()
+        .map(|row| {
+            let view = presenter::item(conn, app, row, viewer, &sources)?;
+            let refs = presenter::source_refs(conn, app, row, &sources)?;
+            let occurred_at = view
+                .created_at
+                .map(Timestamp::from_jiff)
+                .unwrap_or(row.created_at);
+            Ok(api::ActivityItem {
+                id: row.id,
+                event_type: wire(&row.event_type)?,
+                state: wire(row.state())?,
+                read_at: row.read_at.map(dto::time),
+                handled_at: row.handled_at.map(dto::time),
+                created_at: dto::time(row.created_at),
+                updated_at: dto::time(row.updated_at),
+                source: api::ActivitySource {
+                    source_type: wire(&snake_case(&row.source_type))?,
+                    source_id: row.source_id,
+                    room_id: refs.room_id,
+                    thread_id: refs.thread_id,
+                    message_id: refs.message_id,
+                    event_id: refs.event_id,
+                    creator_id: refs.creator_id,
+                    title: refs.approval_title.unwrap_or(view.title),
+                    body: refs.approval_body.unwrap_or(view.body),
+                    occurred_at: dto::time(occurred_at),
+                    approval_status: refs.approval_status.as_deref().map(wire).transpose()?,
+                    budget_cap: refs.budget_cap.as_deref().map(wire).transpose()?,
+                    path: refs.path,
+                },
+            })
+        })
+        .collect()
+}
+
+/// A stored word as its wire enum (the enums' serde names are the stored values).
+fn wire<T: serde::de::DeserializeOwned>(value: &str) -> campfire_db::Result<T> {
+    serde_json::from_value(serde_json::Value::String(value.to_owned())).map_err(|_| {
+        campfire_db::Error::Other(format!(
+            "an activity value the contract doesn't know: {value}"
+        ))
+    })
+}
+
+/// `activity_items.source_type`'s class name (`WorkThreadEvent`) as its wire form
+/// (`work_thread_event`).
+fn snake_case(class: &str) -> String {
+    let mut out = String::with_capacity(class.len() + 4);
+    for (index, letter) in class.chars().enumerate() {
+        if letter.is_ascii_uppercase() {
+            if index > 0 {
+                out.push('_');
+            }
+            out.push(letter.to_ascii_lowercase());
+        } else {
+            out.push(letter);
+        }
+    }
+    out
+}
+
+/// The item as `activity.item` and the state actions carry it, with the owner's unread count;
+/// `Ok(None)` when they can't see it (any more).
+pub(crate) fn changed(
+    conn: &Connection,
+    app: &AppState,
+    viewer: &User,
+    item_id: i64,
+) -> campfire_db::Result<Option<api::ActivityItemChanged>> {
+    let Some(row) = ActivityItem::find_accessible(conn, viewer, item_id)? else {
+        return Ok(None);
+    };
+    let item = items(conn, app, viewer, std::slice::from_ref(&row))?.remove(0);
+    Ok(Some(api::ActivityItemChanged {
+        item,
+        unread_count: ActivityItem::unread_count(conn, viewer)?,
+    }))
+}
+
+/// `activity_items#no_store`: the inbox is never cached.
+fn no_store(c: &mut Ctx) {
+    c.no_store();
+    c.set_header("cache-control", "no-store");
+    c.set_header("pragma", "no-cache");
+}
+
+async fn index_activity(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    no_store(c);
+    let viewer = concerns::require_current_user(c)?.clone();
+    let status = c
+        .param_str("status")
+        .filter(|status| ["unread", "read", "handled"].contains(status))
+        .unwrap_or("unread")
+        .to_owned();
+    let tab = c
+        .param_str("type")
+        .filter(|tab| {
+            campfire_views::activity::TYPES
+                .iter()
+                .any(|(key, _)| key == tab)
+        })
+        .unwrap_or("all")
+        .to_owned();
+    let after = match c.param_str("before").filter(|raw| !raw.is_empty()) {
+        None => None,
+        Some(raw) => match crate::cursor::decode(raw) {
+            Some(key) => Some(key),
+            None => return Err(fail(c, validation("before", "is invalid"))),
+        },
+    };
+    // Listing settles overdue huddle invitations and agent approvals first, as the page does.
+    let viewer_id = viewer.id;
+    c.app()
+        .db
+        .write(move |tx| {
+            campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;
+            campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))
+        })
+        .await
+        .map_err(db_error)?;
+    let (app, now) = (c.app().clone(), now(c));
+    let list = c
+        .app()
+        .db
+        .read(move |conn| {
+            let mut rows = ActivityItem::query_accessible_after(
+                conn,
+                &viewer,
+                ActivityQuery {
+                    state: Some(&status),
+                    type_filter: Some(&tab),
+                    before: None,
+                    limit: Some(PAGE + 1),
+                },
+                after,
+            )?;
+            let more = rows.len() > PAGE;
+            rows.truncate(PAGE);
+            let next_cursor = rows
+                .last()
+                .filter(|_| more)
+                .map(|row| crate::cursor::encode(row.updated_at, row.id));
+            let items = items(conn, &app, &viewer, &rows)?;
+            let creators = items
+                .iter()
+                .filter_map(|item| item.source.creator_id)
+                .collect::<std::collections::BTreeSet<_>>();
+            Ok(api::ActivityList {
+                users: dto::users(conn, &app.secrets, creators, now)?,
+                unread_count: ActivityItem::unread_count(conn, &viewer)?,
+                items,
+                next_cursor,
+            })
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &list)
+}
+
+async fn show_unread_count(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    no_store(c);
+    let viewer = concerns::require_current_user(c)?.clone();
+    let unread_count = c
+        .app()
+        .db
+        .read(move |conn| ActivityItem::unread_count(conn, &viewer))
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &api::ActivityUnreadCount { unread_count })
+}
+
+/// `activity_items#find`: the viewer's accessible item `:id`, or a 404.
+async fn find(c: &mut Ctx) -> Result<(User, ActivityItem)> {
+    before_actions(c).await?;
+    no_store(c);
+    let viewer = concerns::require_current_user(c)?.clone();
+    let id = c
+        .param_str("id")
+        .and_then(concerns::cast_integer)
+        .ok_or(Error::NotFound)?;
+    let reader = viewer.clone();
+    let item = c
+        .app()
+        .db
+        .read(move |conn| ActivityItem::find_accessible(conn, &reader, id))
+        .await
+        .map_err(db_error)?
+        .ok_or(Error::NotFound)?;
+    Ok((viewer, item))
+}
+
+async fn update_item(c: &mut Ctx) -> Result {
+    let (viewer, item) = find(c).await?;
+    let api::UpdateActivityItem { action } = body(c).await?;
+    let saved = c
+        .app()
+        .db
+        .write(move |tx| match action {
+            api::ActivityAction::Read => item.mark_read(tx),
+            api::ActivityAction::Unread => item.mark_unread(tx),
+            api::ActivityAction::Handled => item.mark_handled(tx),
+            api::ActivityAction::Unhandled => item.mark_unhandled(tx),
+        })
+        .await
+        .map_err(db_error)?;
+    respond(c, viewer, saved.id).await
+}
+
+/// `activity_items#open`: marks it read (never handled) before the client navigates to it.
+async fn open_item(c: &mut Ctx) -> Result {
+    let (viewer, item) = find(c).await?;
+    let saved = c
+        .app()
+        .db
+        .write(move |tx| item.mark_read(tx))
+        .await
+        .map_err(db_error)?;
+    respond(c, viewer, saved.id).await
+}
+
+async fn respond(c: &mut Ctx, viewer: User, item_id: i64) -> Result {
+    let app = c.app().clone();
+    let changed = c
+        .app()
+        .db
+        .read(move |conn| changed(conn, &app, &viewer, item_id))
+        .await
+        .map_err(db_error)?
+        .ok_or(Error::NotFound)?;
+    c.json(StatusCode::OK, &changed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn source_classes_become_their_wire_names() {
+        for (class, wire_name) in [
+            ("Message", "message"),
+            ("WorkThreadEvent", "work_thread_event"),
+            ("TwoFactorCredential", "two_factor_credential"),
+        ] {
+            assert_eq!(snake_case(class), wire_name);
+            assert!(
+                wire::<api::ActivitySourceType>(wire_name).is_ok(),
+                "{wire_name}"
+            );
+        }
+    }
+}

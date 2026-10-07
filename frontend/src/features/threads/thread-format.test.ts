@@ -64,6 +64,7 @@ describe("threadTitle", () => {
     lastActivityAt: ago(HOUR),
     autoArchiveAfterMinutes: 1440,
     createdAt: ago(DAY),
+    work: null,
   };
 
   it("uses the name, or Thread when it's blank or unknown", () => {

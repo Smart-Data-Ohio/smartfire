@@ -5,6 +5,7 @@
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
 import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
+import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
   Me,
@@ -816,6 +817,12 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "presence":
         next = setPresence(next, [event.data]);
+        break;
+      case "huddle.presence":
+        next = setHuddlePresence(next, event.data);
+        break;
+      case "stage.updated":
+        next = setStage(next, event.data);
         break;
       case "poll.updated":
         next = applyPoll(next, event.data.poll);

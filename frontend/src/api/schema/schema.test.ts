@@ -18,6 +18,7 @@ const userJson = {
   status: "active",
   bio: null,
   avatarUrl: "/users/7/avatar?v=1700000000",
+  hasAvatar: true,
   customStatus: { emoji: "🌴", text: "On a beach", expiresAt: null },
   avatarIcon: null,
   agent: null,
@@ -158,7 +159,7 @@ describe("DTO schemas", () => {
       directPlaceholderUserIds: [7],
       canCreateRooms: true,
     });
-    roundTrips(ReadState, { roomId: 12, unread: true, firstUnreadMessageId: 9000 });
+    roundTrips(ReadState, { roomId: 12, unread: true, firstUnreadMessageId: 9000, unreadCount: 4 });
     roundTrips(UserList, { users: [userJson] });
     roundTrips(PresenceList, {
       presences: [{ userId: 7, presence: "dnd", statusText: "In a meeting" }],

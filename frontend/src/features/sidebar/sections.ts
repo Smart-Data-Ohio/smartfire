@@ -79,7 +79,7 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
       categorized.set(membership.roomCategoryId, list);
     } else if (room.kind === "direct") {
       direct.push(row);
-    } else if (room.kind === "voice") {
+    } else if (room.kind === "voice" || room.kind === "stage") {
       voice.push(row);
     } else {
       channels.push(row);

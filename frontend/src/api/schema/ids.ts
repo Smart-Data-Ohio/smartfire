@@ -76,3 +76,15 @@ export type AgentStepId = typeof AgentStepId.Type;
 export const AgentApprovalId = Schema.Int.pipe(Schema.brand("AgentApprovalId"));
 
 export type AgentApprovalId = typeof AgentApprovalId.Type;
+
+export const AgentEventId = Schema.Int.pipe(Schema.brand("AgentEventId"));
+
+export type AgentEventId = typeof AgentEventId.Type;
+
+export const WorkLinkId = Schema.Int.pipe(Schema.brand("WorkLinkId"));
+
+export type WorkLinkId = typeof WorkLinkId.Type;
+
+export const WorkEventId = Schema.Int.pipe(Schema.brand("WorkEventId"));
+
+export type WorkEventId = typeof WorkEventId.Type;

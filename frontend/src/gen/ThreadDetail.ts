@@ -4,6 +4,7 @@ import type { Thread } from "./Thread";
 import type { ThreadMembership } from "./ThreadMembership";
 import type { ThreadPermissions } from "./ThreadPermissions";
 import type { User } from "./User";
+import type { WorkDetail } from "./WorkDetail";
 
 /**
  * `GET /api/v1/threads/:id` (`channel_threads#show`): the pane's header. The replies come from
@@ -16,6 +17,12 @@ export type ThreadDetail = { thread: Thread, membership: ThreadMembership | null
  */
 parentMessage: MessageDTO | null, permissions: ThreadPermissions, 
 /**
- * The thread's creator and the parent's, once each.
+ * The work section, for a tracked thread; `null` otherwise.
+ */
+work: WorkDetail | null, 
+/**
+ * The thread's creator and the parent's, once each; for a tracked thread also the result's
+ * editor, every history actor, owner candidate and handoff receiver. (The owner is whole
+ * on [`crate::WorkFacts::owner`].)
  */
 users: Array<User>, };

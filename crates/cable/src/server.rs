@@ -308,6 +308,7 @@ impl<U: Send + Sync + 'static> Server<U> {
             ring: Ring::new(config),
             handler: Arc::new(handler),
             connections: std::sync::atomic::AtomicUsize::new(0),
+            people: Default::default(),
         }));
     }
 
@@ -329,6 +330,33 @@ impl<U: Send + Sync + 'static> Server<U> {
             self.inner.hub.sequenced(|seq| engine.ring.skip(seq));
         }
         false
+    }
+
+    /// Whether `user_id` has a sync socket open, for the per-person events worth building only
+    /// then. While they have none, [`Server::sync_skipped_for`] records the gap instead.
+    pub fn sync_connected(&self, user_id: i64) -> bool {
+        self.inner.sync.get().is_some_and(|engine| {
+            engine
+                .people
+                .lock()
+                .unwrap()
+                .open
+                .get(&user_id)
+                .is_some_and(|&open| open > 0)
+        })
+    }
+
+    /// Records that an event for `user_id` was skipped while they had no socket open: a gap
+    /// marker on their `user` topic, so a resume of theirs from before it refetches. One marker
+    /// stands for every skip until their next socket opens.
+    pub fn sync_skipped_for(&self, user_id: i64) {
+        let Some(engine) = self.inner.sync.get() else {
+            return;
+        };
+        if !engine.people.lock().unwrap().gapped.insert(user_id) {
+            return;
+        }
+        self.inner.hub.sequenced(|seq| engine.ring.push_gap(seq, user_id));
     }
 
     /// The sync engine's epoch and latest sequence, once installed.

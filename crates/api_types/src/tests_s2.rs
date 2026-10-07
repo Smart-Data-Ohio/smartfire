@@ -53,6 +53,7 @@ fn thread() -> Thread {
         last_activity_at: "2026-10-06T10:00:00.000Z".into(),
         auto_archive_after_minutes: 4320,
         created_at: "2026-10-06T09:20:00.000Z".into(),
+        work: None,
     }
 }
 
@@ -537,6 +538,7 @@ fn threads_round_trip() {
         "lastActivityAt": "2026-10-06T10:00:00.000Z",
         "autoArchiveAfterMinutes": 4320,
         "createdAt": "2026-10-06T09:20:00.000Z",
+        "work": null,
     });
     let membership_wire = json!({
         "threadId": 88,
@@ -568,7 +570,13 @@ fn threads_round_trip() {
             can_lock: false,
             can_unlock: false,
             can_delete: false,
+            can_convert_work: true,
+            can_manage_work: false,
+            can_update_work_status: false,
+            can_assign_work: false,
+            can_remove_work: false,
         },
+        work: None,
         users: vec![user()],
     };
     let wire = serde_json::to_value(&detail).unwrap();
@@ -582,6 +590,11 @@ fn threads_round_trip() {
             "canLock": false,
             "canUnlock": false,
             "canDelete": false,
+            "canConvertWork": true,
+            "canManageWork": false,
+            "canUpdateWorkStatus": false,
+            "canAssignWork": false,
+            "canRemoveWork": false,
         })
     );
     assert_wire(&detail, wire.clone());

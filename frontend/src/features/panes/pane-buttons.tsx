@@ -2,6 +2,7 @@ import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { StageButton } from "../huddle/stage-button.tsx";
 import { AvatarGroup } from "../threads/avatar-group.tsx";
 import { isPaneShowing } from "./pane-selection.ts";
 import { usePaneNavigation } from "./use-right-pane.ts";
@@ -57,6 +58,13 @@ export function PaneButtons({ roomId }: { readonly roomId: number }) {
 
   return (
     <div className="pane-buttons">
+      {kind === "stage" ? (
+        <StageButton
+          roomId={roomId}
+          pressed={isPaneShowing(view, "stage")}
+          onClick={() => toggle("stage")}
+        />
+      ) : null}
       {direct ? null : (
         <IconButton
           icon="thread"

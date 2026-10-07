@@ -78,6 +78,7 @@ function user(id: number): User {
     status: "active",
     bio: null,
     avatarUrl: `/avatars/${id}`,
+    hasAvatar: true,
     avatarIcon: null,
     customStatus: null,
     agent: null,

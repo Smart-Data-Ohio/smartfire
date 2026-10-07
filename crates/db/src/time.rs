@@ -154,6 +154,11 @@ impl Timestamp {
         )
     }
 
+    /// The time as the JSON API carries it: RFC 3339 in UTC with milliseconds.
+    pub fn to_wire(self) -> String {
+        self.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    }
+
     /// The exact text Active Record writes to SQLite, including signed years.
     pub fn to_db(self) -> String {
         let (proxy, shift) = self.calendar_proxy();

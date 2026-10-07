@@ -21,6 +21,7 @@ export function userFixture(id: number, name = `User ${id}`): User {
     status: "active",
     bio: null,
     avatarUrl: `/users/${id}/avatar`,
+    hasAvatar: false,
     customStatus: null,
     avatarIcon: null,
     agent: null,
@@ -218,6 +219,7 @@ export class FakeApi extends Context.Service<
             ),
           ),
         setCsrfToken: () => Effect.void,
+        csrfToken: Effect.succeed("test-csrf-token"),
       }),
     ),
   ).pipe(Layer.provideMerge(FakeApi.layer));

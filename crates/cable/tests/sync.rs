@@ -494,6 +494,75 @@ async fn nothing_is_wanted_without_a_socket_and_the_gap_ends_resumes() {
 }
 
 #[tokio::test]
+async fn a_skip_for_someone_without_a_socket_ends_their_resume_only() {
+    let app = app(fast()).await;
+    // Person 2 keeps a socket open throughout, so events are wanted.
+    let (mut other, _) = app.hello(2, Value::Null, &[]).await;
+    let (client, welcome) = app.hello(1, Value::Null, &[]).await;
+    let epoch = welcome["epoch"].as_str().unwrap().to_string();
+    assert!(app.cable.server.sync_connected(1));
+    drop(client);
+    wait_for(&app, "close 1").await;
+    let mut waits = 0;
+    while app.cable.server.sync_connected(1) {
+        waits += 1;
+        assert!(waits < 500, "the closed socket is still counted");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(app.cable.server.sync_connected(2));
+    let before = app.publish(Audience::User(2), json!("before"));
+    assert_eq!(
+        other.batch().await,
+        [(before, "user".into(), json!("before"))]
+    );
+
+    // Two skips for person 1 leave one marker; person 2 doesn't see it.
+    app.cable.server.sync_skipped_for(1);
+    app.cable.server.sync_skipped_for(1);
+    let after = app.publish(Audience::User(2), json!("after"));
+    assert_eq!(after, before + 2, "one marker for both skips");
+    assert_eq!(
+        other.batch().await,
+        [(after, "user".into(), json!("after"))]
+    );
+
+    // Person 1 resuming from before the marker starts afresh.
+    let (client, welcome) = app
+        .hello(1, json!({ "epoch": epoch, "seq": before }), &[])
+        .await;
+    assert_eq!(welcome["resumed"], false, "{welcome}");
+    assert_eq!(welcome["seq"], after);
+    drop(client);
+    wait_for_closes(&app, 2).await;
+
+    // The marker was cleared when that socket opened: the next skip leaves another.
+    app.cable.server.sync_skipped_for(1);
+    let last = app.publish(Audience::User(2), json!("last"));
+    assert_eq!(last, after + 2);
+    let (_client, welcome) = app
+        .hello(1, json!({ "epoch": epoch, "seq": after }), &[])
+        .await;
+    assert_eq!(welcome["resumed"], false, "{welcome}");
+}
+
+/// Waits until person 1's sockets have closed `count` times in all.
+async fn wait_for_closes(app: &App, count: usize) {
+    let mut waits = 0;
+    while app
+        .logged()
+        .iter()
+        .filter(|line| *line == "close 1")
+        .count()
+        < count
+        || app.cable.server.sync_connected(1)
+    {
+        waits += 1;
+        assert!(waits < 500, "the socket didn't close");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test]
 async fn unauthenticated_and_unsupported_clients_are_turned_away() {
     let app = app(fast()).await;
     let mut anonymous = app.connect(None).await;

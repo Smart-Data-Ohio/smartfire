@@ -10,4 +10,9 @@ export type ReadState = { roomId: number, unread: boolean,
 /**
  * The message the room is unread from; `null` after marking it read.
  */
-firstUnreadMessageId: number | null, };
+firstUnreadMessageId: number | null, 
+/**
+ * Root messages from `firstUnreadMessageId` to the newest, as `SidebarRow.unreadCount`
+ * counts them, for the sidebar badge; 0 after marking it read.
+ */
+unreadCount: number, };

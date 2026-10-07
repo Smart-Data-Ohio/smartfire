@@ -34,6 +34,8 @@ export const User = Schema.Struct({
   status: UserStatus,
   bio: Schema.NullOr(Schema.String),
   avatarUrl: Schema.String,
+  /** Whether they uploaded a picture; `false` means `avatarUrl` serves their initials. */
+  hasAvatar: Schema.Boolean,
   customStatus: Schema.NullOr(CustomStatus),
   /** A bot without an uploaded avatar shows this icon instead; `null` for people. */
   avatarIcon: Schema.NullOr(Icon),

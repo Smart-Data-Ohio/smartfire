@@ -48,6 +48,7 @@ export function threadFixture(id: number, extra: Partial<Thread> = {}): Thread {
     lastActivityAt: "2026-10-06T09:00:00.000Z",
     autoArchiveAfterMinutes: 1440,
     createdAt: "2026-10-06T08:00:00.000Z",
+    work: null,
     ...extra,
   };
 }

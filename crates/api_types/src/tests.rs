@@ -25,6 +25,7 @@ pub(crate) fn user() -> User {
         status: UserStatus::Active,
         bio: None,
         avatar_url: "/users/7/avatar?v=1700000000".into(),
+        has_avatar: true,
         custom_status: Some(CustomStatus {
             emoji: Some("🌴".into()),
             text: Some("On a beach".into()),
@@ -79,6 +80,7 @@ fn user_is_camel_case_with_explicit_nulls() {
             "status": "active",
             "bio": null,
             "avatarUrl": "/users/7/avatar?v=1700000000",
+            "hasAvatar": true,
             "customStatus": {"emoji": "🌴", "text": "On a beach", "expiresAt": null},
             "avatarIcon": null,
             "agent": null,
@@ -580,6 +582,32 @@ fn message_page_carries_its_authors_and_cursors() {
 }
 
 #[test]
+fn a_message_read_names_its_conversation() {
+    let read = MessageRead {
+        message: message(),
+        users: vec![user()],
+        conversation: ConversationName {
+            room_id: 12,
+            thread_id: None,
+            room_kind: RoomKind::Open,
+            room_name: "general".into(),
+            room_icon_name: None,
+            thread_name: None,
+        },
+        saved: None,
+    };
+    let wire = serde_json::to_value(&read).unwrap();
+    assert_eq!(wire["message"], serde_json::to_value(message()).unwrap());
+    assert_eq!(
+        wire["conversation"],
+        json!({"roomId": 12, "threadId": null, "roomKind": "open", "roomName": "general",
+               "roomIconName": null, "threadName": null})
+    );
+    assert_eq!(wire["saved"], Value::Null);
+    assert_wire(&read, wire);
+}
+
+#[test]
 fn create_message_requests_round_trip() {
     assert_wire(
         &CreateMessage {
@@ -641,16 +669,18 @@ fn read_state_round_trips() {
             room_id: 12,
             unread: false,
             first_unread_message_id: None,
+            unread_count: 0,
         },
-        json!({"roomId": 12, "unread": false, "firstUnreadMessageId": null}),
+        json!({"roomId": 12, "unread": false, "firstUnreadMessageId": null, "unreadCount": 0}),
     );
     assert_wire(
         &ReadState {
             room_id: 12,
             unread: true,
             first_unread_message_id: Some(9000),
+            unread_count: 3,
         },
-        json!({"roomId": 12, "unread": true, "firstUnreadMessageId": 9000}),
+        json!({"roomId": 12, "unread": true, "firstUnreadMessageId": 9000, "unreadCount": 3}),
     );
     assert_wire(&MarkUnread { message_id: 9000 }, json!({"messageId": 9000}));
 }

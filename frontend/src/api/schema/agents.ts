@@ -4,10 +4,15 @@ import type { AgentApproval as GeneratedAgentApproval } from "../../gen/AgentApp
 import type { AgentApprovalPage as GeneratedAgentApprovalPage } from "../../gen/AgentApprovalPage.ts";
 import type { AgentBudgetUsage as GeneratedAgentBudgetUsage } from "../../gen/AgentBudgetUsage.ts";
 import type { AgentCapability as GeneratedAgentCapability } from "../../gen/AgentCapability.ts";
+import type { AgentDeliveryOutcome as GeneratedAgentDeliveryOutcome } from "../../gen/AgentDeliveryOutcome.ts";
 import type { AgentDirectory as GeneratedAgentDirectory } from "../../gen/AgentDirectory.ts";
 import type { AgentDirectoryRow as GeneratedAgentDirectoryRow } from "../../gen/AgentDirectoryRow.ts";
+import type { AgentExternalResult as GeneratedAgentExternalResult } from "../../gen/AgentExternalResult.ts";
 import type { AgentGrant as GeneratedAgentGrant } from "../../gen/AgentGrant.ts";
 import type { AgentGrants as GeneratedAgentGrants } from "../../gen/AgentGrants.ts";
+import type { AgentLedgerEvent as GeneratedAgentLedgerEvent } from "../../gen/AgentLedgerEvent.ts";
+import type { AgentLedgerEventType as GeneratedAgentLedgerEventType } from "../../gen/AgentLedgerEventType.ts";
+import type { AgentLedgerPage as GeneratedAgentLedgerPage } from "../../gen/AgentLedgerPage.ts";
 import type { AgentManagement as GeneratedAgentManagement } from "../../gen/AgentManagement.ts";
 import type { AgentProfile as GeneratedAgentProfile } from "../../gen/AgentProfile.ts";
 import type { AgentProfileRoom as GeneratedAgentProfileRoom } from "../../gen/AgentProfileRoom.ts";
@@ -15,6 +20,7 @@ import type { AgentStatusChanged as GeneratedAgentStatusChanged } from "../../ge
 import type { AgentStep as GeneratedAgentStep } from "../../gen/AgentStep.ts";
 import type { AgentStepStatus as GeneratedAgentStepStatus } from "../../gen/AgentStepStatus.ts";
 import type { AgentStepsChanged as GeneratedAgentStepsChanged } from "../../gen/AgentStepsChanged.ts";
+import type { AgentWebhookStatus as GeneratedAgentWebhookStatus } from "../../gen/AgentWebhookStatus.ts";
 import type { ApprovalDecision as GeneratedApprovalDecision } from "../../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated as GeneratedApprovalUpdated } from "../../gen/ApprovalUpdated.ts";
 import type { DecideApproval as GeneratedDecideApproval } from "../../gen/DecideApproval.ts";
@@ -22,6 +28,7 @@ import { AgentApprovalStatus, AgentBudgetCap } from "./activity.ts";
 import { AgentKind, AgentStatus } from "./agent-identity.ts";
 import {
   AgentApprovalId,
+  AgentEventId,
   AgentId,
   AgentStepId,
   MessageId,
@@ -307,3 +314,108 @@ export const ApprovalUpdated = Schema.Struct({
 export type ApprovalUpdated = typeof ApprovalUpdated.Type;
 
 export type ApprovalUpdatedPin = Assert<Pinned<typeof ApprovalUpdated, GeneratedApprovalUpdated>>;
+
+/** What a ledger entry records. Tolerant: a type added after this build decodes to `"unknown"`. */
+export const AgentLedgerEventType = tolerantLiterals([
+  "mention",
+  "direct_message",
+  "reply",
+  "approval_decided",
+  "github_action_completed",
+  "fizzy_action_completed",
+  "work_assigned",
+  "work_unassigned",
+  "work_handed_off",
+  "slash_command",
+  "posted",
+  "delivery_suppressed_rate_limit",
+  "delivery_suppressed_hop_limit",
+  "delivery_suppressed_revoked",
+]);
+
+export type AgentLedgerEventType = typeof AgentLedgerEventType.Type;
+
+export type AgentLedgerEventTypePin = Assert<
+  Pinned<typeof AgentLedgerEventType, GeneratedAgentLedgerEventType>
+>;
+
+/** A delivery's outcome; the ledger's filter. Tolerant, like `AgentLedgerEventType`. */
+export const AgentDeliveryOutcome = tolerantLiterals([
+  "pending",
+  "delivered",
+  "acknowledged",
+  "suppressed",
+]);
+
+export type AgentDeliveryOutcome = typeof AgentDeliveryOutcome.Type;
+
+export type AgentDeliveryOutcomePin = Assert<
+  Pinned<typeof AgentDeliveryOutcome, GeneratedAgentDeliveryOutcome>
+>;
+
+/** Whether the entry was pushed to the agent's webhook (`none` shows no webhook line). */
+export const AgentWebhookStatus = tolerantLiterals(["none", "pending", "delivered", "failed"]);
+
+export type AgentWebhookStatus = typeof AgentWebhookStatus.Type;
+
+export type AgentWebhookStatusPin = Assert<
+  Pinned<typeof AgentWebhookStatus, GeneratedAgentWebhookStatus>
+>;
+
+/** A GitHub or Fizzy action's result: "GitHub {action}: {status} — {message}". */
+export const AgentExternalResult = Schema.Struct({
+  action: Schema.NullOr(Schema.String),
+  status: Schema.NullOr(Schema.String),
+  message: Schema.NullOr(Schema.String),
+});
+
+export type AgentExternalResult = typeof AgentExternalResult.Type;
+
+export type AgentExternalResultPin = Assert<
+  Pinned<typeof AgentExternalResult, GeneratedAgentExternalResult>
+>;
+
+/**
+ * One ledger entry. `content` is the message's plain text, cut to 140 characters, only when the
+ * agent may read the room and the viewer is an administrator or a member of it; `null` reads
+ * "Content unavailable" when there's a `messageId`.
+ */
+export const AgentLedgerEvent = Schema.Struct({
+  id: AgentEventId,
+  eventType: AgentLedgerEventType,
+  outcome: Schema.NullOr(AgentDeliveryOutcome),
+  createdAt: Timestamp,
+  roomId: Schema.NullOr(RoomId),
+  roomName: Schema.NullOr(Schema.String),
+  actorId: Schema.NullOr(UserId),
+  messageId: Schema.NullOr(MessageId),
+  hop: Schema.Int,
+  detail: Schema.NullOr(Schema.String),
+  webhookStatus: AgentWebhookStatus,
+  webhookAttempts: Schema.Int,
+  webhookLastError: Schema.NullOr(Schema.String),
+  external: Schema.NullOr(AgentExternalResult),
+  handoffSummary: Schema.NullOr(Schema.String),
+  content: Schema.NullOr(Schema.String),
+});
+
+export type AgentLedgerEvent = typeof AgentLedgerEvent.Type;
+
+export type AgentLedgerEventPin = Assert<
+  Pinned<typeof AgentLedgerEvent, GeneratedAgentLedgerEvent>
+>;
+
+/**
+ * `GET /api/v1/agents/:agentId/events?outcome=&before=`: newest first, 50 a page, for
+ * administrators and the agent's owner (403 for anyone else). No live updates: refetch the
+ * first page when the ledger is shown again.
+ */
+export const AgentLedgerPage = Schema.Struct({
+  events: Schema.Array(AgentLedgerEvent),
+  users: Schema.Array(User),
+  nextCursor: Schema.NullOr(Schema.String),
+});
+
+export type AgentLedgerPage = typeof AgentLedgerPage.Type;
+
+export type AgentLedgerPagePin = Assert<Pinned<typeof AgentLedgerPage, GeneratedAgentLedgerPage>>;

@@ -447,6 +447,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "campfire_api_types",
  "campfire_app",
  "campfire_assets",
@@ -458,6 +459,7 @@ dependencies = [
  "campfire_messages",
  "campfire_people",
  "campfire_richtext",
+ "campfire_rooms",
  "campfire_routes",
  "campfire_storage",
  "campfire_views",

@@ -13,6 +13,8 @@ import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { JoinPill } from "../huddle/call-alerts.tsx";
+import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -291,6 +293,7 @@ export function SidebarRow({
         <RowGlyph row={row} />
         <span className="sidebar-row-name">{row.displayName}</span>
         {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
+        <CallMark roomId={room.id} />
         <Badge
           count={pill}
           tone="danger"
@@ -307,6 +310,10 @@ export function SidebarRow({
         className="sidebar-row-more"
         onClick={(event) => actions.openMenuFrom(row, event.currentTarget, event.detail === 0)}
       />
+      {room.kind === "voice" || room.kind === "stage" ? (
+        <VoiceParticipants roomId={room.id} />
+      ) : null}
+      <JoinPill roomId={room.id} />
     </li>
   );
 }

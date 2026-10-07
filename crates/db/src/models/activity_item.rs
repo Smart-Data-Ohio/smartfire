@@ -17,6 +17,17 @@ use crate::models::User;
 use crate::sql::{CachedStatements, query_one};
 use crate::time::Timestamp;
 
+/// Items deleted with their source, as `(id, user_id)`. The classic inbox drops them only on
+/// reload, so it has no frame; the cable sink publishes the single-page app's `activity.removed`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ActivityItemsRemoved {
+    pub items: Vec<(i64, i64)>,
+}
+
+impl crate::events::Broadcast for ActivityItemsRemoved {
+    const KIND: &'static str = "ActivityItem#sync_removed";
+}
+
 /// `ActivityItem::EVENT_TYPES`
 pub const EVENT_TYPES: [&str; 20] = [
     "mention",
@@ -315,11 +326,21 @@ impl ActivityItem {
     }
 
     /// `has_many :activity_items, as: :source, dependent: :destroy`
-    pub(crate) fn destroy_for_source(tx: &Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
-        tx.conn().execute_cached(
-            r#"DELETE FROM "activity_items" WHERE "source_type" = ? AND "source_id" = ?"#,
+    pub(crate) fn destroy_for_source(tx: &mut Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
+        let removed = crate::sql::query_all(
+            tx.conn(),
+            r#"DELETE FROM "activity_items" WHERE "source_type" = ? AND "source_id" = ? RETURNING "id", "user_id""#,
             params![source_type, source_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
+        Self::emit_removed(tx, removed);
         Ok(())
+    }
+
+    /// Tells the owners' other tabs that these `(id, user_id)` items went with their source.
+    pub(crate) fn emit_removed(tx: &mut Tx<'_>, items: Vec<(i64, i64)>) {
+        if !items.is_empty() {
+            tx.emit_after_commit(crate::Event::broadcast(&ActivityItemsRemoved { items }));
+        }
     }
 }

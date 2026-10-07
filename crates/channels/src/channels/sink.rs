@@ -50,15 +50,22 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
             app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
         }),
+        campfire_db::models::scheduled_message::ScheduledMessageChange::KIND => decode(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.sync_scheduled(change); }
+        }),
+        campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
+            if let Some(app) = app { app.broadcasts.sync_activity_removed(removed.items); }
+        }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
             if let Some(app) = app
                 && (super::message_features::deliver(cable, app, &broadcast)?
                     || super::room_composition::deliver(app, &broadcast)?)
             {
-                return Ok(());
+                return direct_sidebar_twin(cable, Some(app), &broadcast);
             }
-            messaging(cable, app, &broadcast)
+            messaging(cable, app, &broadcast)?;
+            direct_sidebar_twin(cable, app, &broadcast)
         }),
         campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>
             decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
@@ -266,10 +273,14 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
             Broadcast::Cable { .. } => {
                 cable.broadcast(&stream, &payload);
                 crate::cable::sync::cable_stream(cable, &stream, &payload);
+                if let Some(app) = app { app.broadcasts.sync_activity_stream(&stream, &payload); }
             }
             Broadcast::UnreadRoom { user_id, room_id, message_id } => {
                 cable.broadcast(&stream, &payload);
                 crate::cable::sync::unread_room(cable, app.map(|app| &app.db), *user_id, *room_id, *message_id);
+                if let (Some(app), Some(_)) = (app, message_id) {
+                    app.broadcasts.sync_unread_rows(*room_id, vec![*user_id]);
+                }
             }
             Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
         }
@@ -313,6 +324,18 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
         && cable.sync_wanted()
     {
         app.db.read_blocking(|conn| { app.broadcasts.sync_thread_indicator(conn, *message_id); Ok(()) })?;
+    }
+    Ok(())
+}
+
+/// A direct room's sidebar row was replaced (its members or name changed): the membership's
+/// `sidebar.row.upserted`, after the frame.
+fn direct_sidebar_twin(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+    if let (Some(app), campfire_db::broadcasts::Broadcast::Turbo(frame)) = (app, broadcast)
+        && let Some(campfire_db::broadcasts::Partial::DirectSidebar { membership_id, .. }) = &frame.partial
+        && cable.sync_wanted()
+    {
+        app.db.read_blocking(|conn| { app.broadcasts.sync_membership_row(conn, *membership_id); Ok(()) })?;
     }
     Ok(())
 }

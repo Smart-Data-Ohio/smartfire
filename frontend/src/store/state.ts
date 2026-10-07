@@ -1,4 +1,6 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
+import type { HuddlePresence } from "../gen/HuddlePresence.ts";
+import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type CardsState, emptyCards } from "./cards.ts";
 import type {
@@ -57,6 +59,10 @@ export interface State {
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
+  /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
+  readonly huddles: Readonly<Record<number, HuddlePresence>>;
+  /** Each loaded stage's roster and live stream, by room id. */
+  readonly stages: Readonly<Record<number, StageState>>;
   /** The activity inbox: items, per-tab-and-state lists, the unread badge (S3). */
   readonly activity: ActivitySlice;
   /** The Saved page: saved items and per-filter lists (S3). */
@@ -110,6 +116,8 @@ export const initialState: State = {
   roomThreads: {},
   typing: {},
   tombstones: {},
+  huddles: {},
+  stages: {},
   activity: emptyActivity,
   savedList: emptySavedList,
   scheduled: emptyScheduled,

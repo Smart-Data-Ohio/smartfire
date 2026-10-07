@@ -5,6 +5,8 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { HuddlePresence } from "../gen/HuddlePresence.ts";
+import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
@@ -12,10 +14,13 @@ import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedItemList } from "../gen/SavedItemList.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
+import type { StageDetail } from "../gen/StageDetail.ts";
+import type { StageState } from "../gen/StageState.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import * as activity from "./activity.ts";
+import * as huddles from "./huddles.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
@@ -156,6 +161,13 @@ export const mutations = {
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
   loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
     apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  setHuddlePresence: (presence: HuddlePresence) =>
+    apply((state) => huddles.setHuddlePresence(state, presence)),
+  loadHuddlePresence: (list: HuddlePresenceList) =>
+    apply((state) => huddles.loadHuddlePresence(state, list)),
+  setStage: (stage: StageState) => apply((state) => huddles.setStage(state, stage)),
+  loadStageDetail: (detail: StageDetail) =>
+    apply((state) => huddles.loadStageDetail(state, detail)),
   // --- S3: the activity inbox, saved items and scheduled messages ---
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),

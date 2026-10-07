@@ -43997,19 +43997,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "¯\\_(ツ)_/¯",
+        "markdown_source": "¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>¯_(ツ)_/¯</p>",
+        "body": "<p>¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "¯_(ツ)_/¯",
+      "index": "¯\\_(ツ)_/¯",
       "thread": null,
       "jobs": [
         "Room::PushMessageJob"
@@ -44077,19 +44077,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "¯\\_(ツ)_/¯",
+        "markdown_source": "¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>¯_(ツ)_/¯</p>",
+        "body": "<p>¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "¯_(ツ)_/¯",
+      "index": "¯\\_(ツ)_/¯",
       "thread": {
         "messages_count": 1,
         "closed_at": null,
@@ -44214,19 +44214,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "ship it ¯\\_(ツ)_/¯",
+        "markdown_source": "ship it ¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>ship it ¯_(ツ)_/¯</p>",
+        "body": "<p>ship it ¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "ship it ¯_(ツ)_/¯",
+      "index": "ship it ¯\\_(ツ)_/¯",
       "thread": null,
       "jobs": [
         "Room::PushMessageJob"
@@ -44294,19 +44294,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "ship it ¯\\_(ツ)_/¯",
+        "markdown_source": "ship it ¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>ship it ¯_(ツ)_/¯</p>",
+        "body": "<p>ship it ¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "ship it ¯_(ツ)_/¯",
+      "index": "ship it ¯\\_(ツ)_/¯",
       "thread": {
         "messages_count": 1,
         "closed_at": null,
@@ -51187,19 +51187,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "hi\nthere ¯\\_(ツ)_/¯",
+        "markdown_source": "hi\nthere ¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>hi\nthere ¯_(ツ)_/¯</p>",
+        "body": "<p>hi\nthere ¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "hi\nthere ¯_(ツ)_/¯",
+      "index": "hi\nthere ¯\\_(ツ)_/¯",
       "thread": null,
       "jobs": [
         "Room::PushMessageJob"
@@ -51267,19 +51267,19 @@
         "action": false,
         "system_note": false,
         "streaming": false,
-        "markdown_source": "hi\nthere ¯\\_(ツ)_/¯",
+        "markdown_source": "hi\nthere ¯\\\\\\_(ツ)\\_/¯",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
       "saved": null,
       "rich_text": {
         "name": "body",
-        "body": "<p>hi\nthere ¯_(ツ)_/¯</p>",
+        "body": "<p>hi\nthere ¯\\_(ツ)_/¯</p>",
         "record_type": "Message",
         "created_at": "2026-09-23 12:00:00",
         "updated_at": "2026-09-23 12:00:00"
       },
-      "index": "hi\nthere ¯_(ツ)_/¯",
+      "index": "hi\nthere ¯\\_(ツ)_/¯",
       "thread": {
         "messages_count": 1,
         "closed_at": null,

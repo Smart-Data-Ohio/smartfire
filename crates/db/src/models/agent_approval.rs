@@ -539,7 +539,7 @@ impl AgentApproval {
             json!({"id":self.id,"action":self.action,"summary":self.summary,"payload":payload,"room_id":self.room_id,"room_name":room,"external_id":self.external_id,"status":self.effective_status(now),"expires_at":json_time(self.expires_at),"created_at":json_time(self.created_at),"decided_by":decided_by,"decided_by_id":self.decided_by_id,"decided_at":self.decided_at.map(json_time),"decision_note":self.decision_note,"note":self.decision_note}),
         ))
     }
-    pub fn destroy(&self, tx: &Tx<'_>) -> Result<()> {
+    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         ActivityItem::destroy_for_source(tx, "AgentApproval", self.id)?;
         tx.conn()
             .execute("DELETE FROM agent_approvals WHERE id=?", [self.id])?;

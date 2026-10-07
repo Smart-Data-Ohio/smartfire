@@ -26,6 +26,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod huddle;
 mod me;
 mod message;
 mod organize;
@@ -39,10 +40,12 @@ mod search;
 mod settings;
 mod sidebar;
 mod slack;
+mod stage;
 mod switcher;
 mod sync;
 mod thread;
 mod user;
+mod work;
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
@@ -63,9 +66,11 @@ pub use admin::{
 };
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
-    AgentCapability, AgentDirectory, AgentDirectoryRow, AgentGrant, AgentGrants, AgentKind,
+    AgentCapability, AgentDeliveryOutcome, AgentDirectory, AgentDirectoryRow, AgentExternalResult,
+    AgentGrant, AgentGrants, AgentKind, AgentLedgerEvent, AgentLedgerEventType, AgentLedgerPage,
     AgentManagement, AgentProfile, AgentProfileRoom, AgentStatus, AgentStatusChanged, AgentStep,
-    AgentStepStatus, AgentStepsChanged, ApprovalDecision, ApprovalUpdated, DecideApproval,
+    AgentStepStatus, AgentStepsChanged, AgentWebhookStatus, ApprovalDecision, ApprovalUpdated,
+    DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use bots::{
@@ -93,12 +98,18 @@ pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
 pub use error::{ApiError, ApiErrorResponse};
+pub use huddle::{
+    HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
+    HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
+    HuddleRoleChanged, ModerateHuddle,
+};
 pub use me::{
     DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
     VoiceMode,
 };
 pub use message::{
-    CreateMessage, MessageDTO, MessagePage, MessageRemoved, MessageSource, UpdateMessage,
+    CreateMessage, MessageDTO, MessagePage, MessageRead, MessageRemoved, MessageSource,
+    UpdateMessage,
 };
 pub use organize::{
     AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
@@ -129,6 +140,10 @@ pub use slack::{
     SlackSetupChange, StartPersonalSlackImport, StartSlackDryRun, StartSlackImport,
 };
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
+pub use stage::{
+    ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
+    StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
+};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
 pub use thread::{
@@ -138,6 +153,11 @@ pub use thread::{
     UpdateThread,
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
+pub use work::{
+    CreateWorkHandoff, UpdateWork, WorkDetail, WorkFacts, WorkFilter, WorkHandoffReceiver,
+    WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink, WorkLinkKind, WorkList,
+    WorkListRow, WorkOwnerCandidate, WorkOwnerSnapshot, WorkPullRequestState,
+};
 
 /// A UTC instant as Rails' JSON encodes it: RFC 3339 with millisecond precision and a `Z`
 /// suffix, e.g. `"2026-09-26T12:26:46.848Z"` (what `json_time` produces across the app).
@@ -151,6 +171,10 @@ mod tests_s2;
 mod tests_s3;
 #[cfg(test)]
 mod tests_s4;
+#[cfg(test)]
+mod tests_s4b;
+#[cfg(test)]
+mod tests_s5;
 #[cfg(test)]
 mod tests_s7;
 #[cfg(test)]

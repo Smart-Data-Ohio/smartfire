@@ -13,6 +13,9 @@ pub struct ReadState {
     pub unread: bool,
     /// The message the room is unread from; `null` after marking it read.
     pub first_unread_message_id: Option<i64>,
+    /// Root messages from `firstUnreadMessageId` to the newest, as `SidebarRow.unreadCount`
+    /// counts them, for the sidebar badge; 0 after marking it read.
+    pub unread_count: i64,
 }
 
 /// The body of `DELETE /api/v1/rooms/:id/read`.

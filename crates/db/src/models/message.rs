@@ -1238,10 +1238,7 @@ impl Message {
             r#"UPDATE "board_stale_digests" SET "message_id" = NULL WHERE "board_stale_digests"."message_id" = ?"#,
             [self.id],
         )?;
-        tx.conn().execute_cached(
-            r#"DELETE FROM "activity_items" WHERE "activity_items"."source_type" = 'Message' AND "activity_items"."source_id" = ?"#,
-            [self.id],
-        )?;
+        crate::ActivityItem::destroy_for_source(tx, "Message", self.id)?;
         // The reference rows (none has destroy callbacks of its own), Drive attachments and
         // agent steps, in declaration order.
         for sql in [

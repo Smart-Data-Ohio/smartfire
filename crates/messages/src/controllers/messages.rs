@@ -212,14 +212,19 @@ pub async fn preview(c: &mut Ctx) -> Result {
         let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"error": "Markdown is limited to 50,000 characters"}));
         return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY, &format::JSON, body));
     }
-    let (app, request_host) = (c.app().clone(), Some(c.request.host()));
-    let html = c.app().db.read(move |conn| {
-        let body = app.db.env().rich_text.render_markdown(conn, &source, room.id).map_err(campfire_db::Error::Other)?;
-        let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
-        crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
-    }).await.map_err(db_error)?;
+    let html = render_preview(c, room.id, source).await?;
     let body = serde_json::to_string(&serde_json::json!({"html": html})).map_err(Error::internal)?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
+}
+
+/// `messages#preview`'s rendering: `source` as a message in `room_id` would present it.
+pub async fn render_preview(c: &Ctx, room_id: i64, source: String) -> Result<String> {
+    let (app, request_host) = (c.app().clone(), Some(c.request.host()));
+    c.app().db.read(move |conn| {
+        let body = app.db.env().rich_text.render_markdown(conn, &source, room_id).map_err(campfire_db::Error::Other)?;
+        let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
+        crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
+    }).await.map_err(db_error)
 }
 
 pub fn ensure_can_edit(c: &mut Ctx, message: &Message) -> Result<()> {

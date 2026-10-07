@@ -3,6 +3,7 @@ import type { ForwardDestinationList } from "../../src/gen/ForwardDestinationLis
 import type { ForwardResult } from "../../src/gen/ForwardResult.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessageReactions } from "../../src/gen/MessageReactions.ts";
+import type { MessageRead } from "../../src/gen/MessageRead.ts";
 import type { MessageSource } from "../../src/gen/MessageSource.ts";
 import type { PinList } from "../../src/gen/PinList.ts";
 import type { PinState } from "../../src/gen/PinState.ts";
@@ -23,6 +24,34 @@ async function postOwn(server: Parameters<typeof send>[0], text: string): Promis
     201,
   );
 }
+
+describe("reading one message", () => {
+  it("answers the message with its conversation, author and the viewer's save", async () => {
+    const { server } = harness();
+    const read = await get<MessageRead>(server, `/api/v1/messages/${messages.generalSaved}`);
+
+    expect(read.message.id).toBe(messages.generalSaved);
+    expect(read.conversation).toMatchObject({ roomId: rooms.general, threadId: null });
+    expect(read.users.map((user) => user.id)).toContain(read.message.creatorId);
+    expect(read.saved).toEqual({ messageId: messages.generalSaved, savedItemId: 1 });
+
+    const reply = await get<MessageRead>(
+      server,
+      `/api/v1/messages/${messages.generalThreadViewerReply}`,
+    );
+
+    expect(reply.conversation.threadId).toBe(threads.generalActive);
+    expect(reply.conversation.threadName).not.toBeNull();
+  });
+
+  it("is a 404 for a message out of reach", async () => {
+    const { server } = harness();
+    const response = await server.handle({ method: "GET", path: "/api/v1/messages/999999999" });
+
+    expect(response.status).toBe(404);
+    expect(errorOf(response.json).tag).toBe("NotFound");
+  });
+});
 
 describe("editing and deleting", () => {
   it("edits the viewer's own message and publishes message.updated", async () => {

@@ -80,6 +80,8 @@ export const ROOM_IDS = {
   dmEmber: 10,
   /** Group direct message with Jonah and Priya. */
   groupDm: 11,
+  /** "Town Hall": a stage room the viewer hosts; no messages. */
+  townHall: 12,
 } as const;
 
 /** The viewer's sidebar categories: "Launch" (#design, #launch-planning) and "Team" (#announcements). */
@@ -273,6 +275,7 @@ function seedUsers(now: number): Map<number, User> {
       status: person.status,
       bio: person.bio,
       avatarUrl: `/users/${person.id}/avatar`,
+      hasAvatar: USERS_WITH_PHOTOS.has(person.id),
       customStatus:
         person.customStatus === null
           ? null
@@ -509,6 +512,22 @@ const ROOMS: readonly RoomSeed[] = [
     categoryId: null,
     favoritePosition: null,
   },
+  {
+    id: ROOM_IDS.townHall,
+    kind: "stage",
+    name: "Town Hall",
+    memberIds: HUMANS,
+    createdDaysAgo: 30,
+    count: 0,
+    lines: [],
+    breakChance: 0,
+    lastAgoMs: 0,
+    unread: 0,
+    unreadMentions: 0,
+    involvement: "mentions",
+    categoryId: null,
+    favoritePosition: null,
+  },
 ];
 
 /** A message before it has an id: ids are handed out in global time order afterwards. */
@@ -689,7 +708,8 @@ function viewerMembership(seed: RoomSeed, messages: readonly MessageDTO[]): Memb
     lastReadMessageId: lastRead === undefined ? null : lastRead.id,
     roomCategoryId: seed.categoryId,
     favoritePosition: seed.favoritePosition,
-    stageRole: null,
+    // Every stage membership has a role; the viewer hosts the seeded stage.
+    stageRole: seed.kind === "stage" ? "host" : null,
   };
 }
 

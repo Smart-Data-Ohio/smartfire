@@ -43,19 +43,46 @@ impl ActivityItem {
         if !user.is_active() || user.is_bot() {
             return Ok(Vec::new());
         }
-        let mut sql = include_str!("access.sql").to_string();
-        let mut values = vec![Value::Integer(user.id)];
-        if let Some(before) = query
+        let key = match query
             .before
             .filter(|s| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit()))
-            && let Ok(id) = before.parse()
-            && let Some(cursor) = Self::find_accessible(conn, user, id)?
+            .and_then(|before| before.parse().ok())
         {
+            Some(id) => Self::find_accessible(conn, user, id)?.map(|row| (row.updated_at, row.id)),
+            None => None,
+        };
+        Self::query_keyed(conn, user, &query, key)
+    }
+
+    /// The single-page app's page: [`Self::query_accessible`] with `query.before` ignored, starting
+    /// strictly after the sort key `after` (`updated_at`, `id`) in `updated_at DESC, id DESC`
+    /// order, whether or not that row still exists.
+    pub fn query_accessible_after(
+        conn: &Connection,
+        user: &User,
+        query: ActivityQuery<'_>,
+        after: Option<(crate::Timestamp, i64)>,
+    ) -> Result<Vec<Self>> {
+        if !user.is_active() || user.is_bot() {
+            return Ok(Vec::new());
+        }
+        Self::query_keyed(conn, user, &query, after)
+    }
+
+    fn query_keyed(
+        conn: &Connection,
+        user: &User,
+        query: &ActivityQuery<'_>,
+        key: Option<(crate::Timestamp, i64)>,
+    ) -> Result<Vec<Self>> {
+        let mut sql = include_str!("access.sql").to_string();
+        let mut values = vec![Value::Integer(user.id)];
+        if let Some((updated_at, id)) = key {
             sql.push_str(" AND (activity_items.updated_at < ? OR (activity_items.updated_at = ? AND activity_items.id < ?))");
             values.extend([
-                Value::Text(cursor.updated_at.to_db()),
-                Value::Text(cursor.updated_at.to_db()),
-                Value::Integer(cursor.id),
+                Value::Text(updated_at.to_db()),
+                Value::Text(updated_at.to_db()),
+                Value::Integer(id),
             ]);
         }
         match query.state {

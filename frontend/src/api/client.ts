@@ -70,6 +70,11 @@ export class ApiClient extends Context.Service<
     ) => Effect.Effect<A, ApiFailure>;
     /** Adopts a CSRF token learned elsewhere (the dev boot endpoint carries one). */
     readonly setCsrfToken: (token: string) => Effect.Effect<void>;
+    /**
+     * The CSRF token writes carry (fetched first when none is held), for the few requests that
+     * must go out as a raw `keepalive` fetch; `null` when it can't be had.
+     */
+    readonly csrfToken: Effect.Effect<string | null>;
   }
 >()("smartfire/api/ApiClient") {
   /** Needs an `HttpClient`, `ApiConfig` and `Navigation`. */
@@ -119,7 +124,11 @@ export class ApiClient extends Context.Service<
           ),
         );
 
-      return ApiClient.of({ execute, setCsrfToken: (fresh) => Ref.set(token, fresh) });
+      const csrfToken = Effect.flatMap(Ref.get(token), (held) =>
+        held === null ? Effect.orElseSucceed(refreshToken, () => null) : Effect.succeed(held),
+      );
+
+      return ApiClient.of({ execute, setCsrfToken: (fresh) => Ref.set(token, fresh), csrfToken });
     }),
   );
 

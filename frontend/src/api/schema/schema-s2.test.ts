@@ -24,6 +24,7 @@ const userJson = {
   status: "active",
   bio: null,
   avatarUrl: "/users/7/avatar?v=1700000000",
+  hasAvatar: true,
   customStatus: null,
   avatarIcon: null,
   agent: null,
@@ -104,6 +105,7 @@ const threadJson = {
   lastActivityAt: "2026-10-06T10:00:00.000Z",
   autoArchiveAfterMinutes: 4320,
   createdAt: "2026-10-06T09:20:00.000Z",
+  work: null,
 } as const;
 
 const threadMembershipJson = {
@@ -256,7 +258,13 @@ describe("S2 DTO schemas", () => {
         canLock: false,
         canUnlock: false,
         canDelete: false,
+        canConvertWork: false,
+        canManageWork: false,
+        canUpdateWorkStatus: false,
+        canAssignWork: false,
+        canRemoveWork: false,
       },
+      work: null,
       users: [userJson],
     } as const;
 

@@ -73,6 +73,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { createHuddles } from "./s5/huddles.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -530,7 +531,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     markReadUpTo(record, record.messages.at(-1)?.id ?? null);
     hub.publish([{ topic: "user", type: "room.read", data: { roomId } }]);
 
-    return { roomId, unread: false, firstUnreadMessageId: null };
+    return { roomId, unread: false, firstUnreadMessageId: null, unreadCount: 0 };
   };
 
   const markUnread = (roomId: number, body: Json | undefined): ReadState => {
@@ -550,7 +551,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       { topic: "user", type: "room.unread", data: { roomId, messageId: null, mentioned: false } },
     ]);
 
-    return { roomId, unread: true, firstUnreadMessageId: message.id };
+    return {
+      roomId,
+      unread: true,
+      firstUnreadMessageId: message.id,
+      unreadCount: unreadMessages(record).length,
+    };
   };
 
   const userList = (query: URLSearchParams): UserList => ({ users: usersFor(idsParam(query)) });
@@ -693,9 +699,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const huddles = createHuddles(ctx, simulate);
   const cards = createCards(ctx);
 
   const routes = [
+    ...huddles.routes,
     ...cards.routes,
     ...uploads.routes,
     ...threads.routes,
@@ -962,8 +970,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         server.reset();
 
         return ok;
-      default:
-        throw notFound(`No mock control named ${action}`);
+      default: {
+        const handled = huddles.control(action, {
+          int,
+          text,
+          flag,
+          optionalText: (key) => stringField(body, key) ?? query.get(key),
+        });
+
+        if (handled === null) throw notFound(`No mock control named ${action}`);
+
+        return handled;
+      }
     }
   };
 

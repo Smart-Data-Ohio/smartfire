@@ -2,7 +2,7 @@ import { useStore as useZustand } from "zustand";
 import { createStore } from "zustand/vanilla";
 
 /** The right pane's non-thread views. An open thread is in the URL (`/r/$roomId/t/$threadId`). */
-export type PaneKind = "members" | "pins" | "files" | "threads";
+export type PaneKind = "members" | "pins" | "files" | "threads" | "stage";
 
 interface PaneState {
   readonly open: PaneKind | null;

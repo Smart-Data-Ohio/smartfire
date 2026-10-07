@@ -72,6 +72,35 @@ impl SyncRenderer for Renderer {
         dto::thread_indicator(conn, parent)
     }
 
+    fn activity_item(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+        item_id: i64,
+    ) -> campfire_db::Result<Option<api::ActivityItemChanged>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(viewer) = campfire_db::User::find_by_id(conn, user_id)? else {
+            return Ok(None);
+        };
+        crate::activity::changed(conn, &app, &viewer, item_id)
+    }
+
+    fn scheduled_message(
+        &self,
+        conn: &Connection,
+        id: i64,
+    ) -> campfire_db::Result<Option<api::ScheduledMessage>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(row) = campfire_db::ScheduledMessage::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
+        Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now())?.pop())
+    }
+
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>) {
         let Some(app) = self.app.upgrade() else {
             return;
