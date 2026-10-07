@@ -74,7 +74,9 @@ def main(argv=None):
         head = checkout_head(args.head)
         {"record": record, "verify": verify}[args.command](args.file, head)
     except (OSError, ValueError) as error:
-        print(f"artifact provenance: {error}", file=sys.stderr)
+        hint = ("; artifacts expired; re-run all jobs"
+                if args.command == "verify" and isinstance(error.__cause__, FileNotFoundError) else "")
+        print(f"artifact provenance: {error}{hint}", file=sys.stderr)
         return 1
     print(f"{args.command}: {args.file.name} at {head}")
     return 0

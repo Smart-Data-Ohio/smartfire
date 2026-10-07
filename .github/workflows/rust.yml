@@ -674,7 +674,6 @@ jobs:
           ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
-        id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: none
@@ -699,19 +698,8 @@ jobs:
             target/correctness-tests.tar.zst
             target/correctness-tests.tar.zst.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           compression-level: 0
-      - name: Keep only dependency artifacts for the cache
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 ci/prune-target.py target
-      - name: Save cargo registry and target
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .cargo-home/registry
-            target
-          key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
@@ -735,6 +723,7 @@ jobs:
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
+        id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: seeds
@@ -756,6 +745,22 @@ jobs:
           name: rust-correctness-${{ matrix.suite }}-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
+      - name: Warm the full correctness harness dependencies
+        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        env:
+          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+        run: bash ci/exec.sh cargo nextest list --locked -p campfire --profile ci --build-jobs 4 --message-format json > /dev/null
+      - name: Keep only dependency artifacts for the cache
+        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        run: python3 ci/prune-target.py target
+      - name: Save cargo registry and target
+        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cargo-home/registry
+            target
+          key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   correctness-browsers:
     name: Rust correctness (browsers ${{ matrix.shard }})
@@ -784,11 +789,13 @@ jobs:
           parity: seeds
           toolchain: 'false'
       - name: Collect the correctness test harness
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect the application server
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-messaging-host-app-${{ needs.source.outputs.sha }}
@@ -798,6 +805,7 @@ jobs:
           python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/server/messaging-host.tar" --head "$CI_SOURCE_SHA"
           tar -C target -xf "$RUNNER_TEMP/server/messaging-host.tar"
       - name: Collect pinned correctness prerequisites
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
@@ -863,7 +871,7 @@ jobs:
             ${{ runner.temp }}/messaging-host.tar
             ${{ runner.temp }}/messaging-host.tar.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
 
   correctness-image:
@@ -905,7 +913,7 @@ jobs:
             ${{ runner.temp }}/correctness-image.tar.zst
             ${{ runner.temp }}/correctness-image.tar.zst.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
           compression-level: 0
 
   messaging-hosts:
@@ -963,7 +971,7 @@ jobs:
             ${{ runner.temp }}/messaging-host.tar
             ${{ runner.temp }}/messaging-host.tar.json
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
 
 
   correctness-messaging:
@@ -995,6 +1003,7 @@ jobs:
           # The prerequisite image comes from its own producer.
           toolchain: 'false'
       - name: Collect the Rust hosts
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-messaging-host-*-${{ needs.source.outputs.sha }}
@@ -1010,6 +1019,7 @@ jobs:
           done
           echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/target/$(cat target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
       - name: Collect pinned correctness prerequisites
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
@@ -1067,11 +1077,13 @@ jobs:
           parity: seeds
           toolchain: 'false'
       - name: Collect the correctness test harness
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect pinned correctness prerequisites
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
@@ -1122,11 +1134,13 @@ jobs:
           parity: seeds
           toolchain: 'false'
       - name: Collect the correctness test harness
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect pinned correctness prerequisites
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}

@@ -36,11 +36,16 @@ as is `frontend/src/gen/`, checked against the Rust type export by clippy.
 Correctness builds run through `ci/exec.sh`, which selects the Dockerfile's stable release
 (`RUSTUP_TOOLCHAIN`) and hides `.cargo/config.toml`, so they use the stable toolchain and LLVM
 and restore their
-own `correctness` Cargo cache (saved on main by `Rust correctness test build`); the test shards' cache
+own `correctness` Cargo cache (saved on main by `Rust correctness (agents-ui)`); the test shards' cache
 holds nightly artifacts. Cargo caches hold only registry dependencies, so their keys are the
 toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves one only when
 no entry with that key exists. Build and result uploads overwrite their earlier attempt's,
 so a failed job can be re-run on its own. The source pin is written only on the first attempt.
+The shared test build finishes after publishing its archive. On a main push with a cache
+miss, the agents UI job lists the full `campfire` test harness after its suite and receipt
+upload, with the archive build's stable toolchain and `ci` profile. This compiles the full
+harness dependencies without running tests, then prunes and saves the dependency cache.
+Cache maintenance does not delay the archive consumers, and pull requests skip these steps.
 
 Test and correctness jobs restore the committed seeds (`frozen-seeds restore`, through the
 setup action's `parity: seeds`); nothing in the workflow runs Ruby, Rails or a reference
@@ -77,7 +82,10 @@ once. Those suites download it and run its executables with the current workspac
 without rebuilding. Browsers also download the normal server from `Rust messaging host (app)`.
 Producers and consumers use the same default checkout path. The harness embeds compile-time
 fixture paths, so changing that layout requires rebuilding it at the consumer's path.
-Missing archives or executables fail the job; there is no rebuild fallback. Local suite runs
+Shared archives, images and app/test messaging hosts are retained for seven days.
+Missing payloads or sidecars fail with `artifacts expired; re-run all jobs` before execution.
+Re-run all jobs to rebuild expired inputs at the run's pinned SHA. The source pin retains its
+90-day lifetime. Missing executables also fail the job; there is no rebuild fallback. Local suite runs
 without `CORRECTNESS_ARCHIVE` still build their own harnesses and server.
 
 Every shared archive, server, test host and image has a JSON sidecar with its producer SHA

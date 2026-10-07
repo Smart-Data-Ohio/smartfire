@@ -67,7 +67,9 @@ class ArtifactProvenance(unittest.TestCase):
         with self.payload.open("r+b") as payload:
             payload.seek(1024 * 1024 + 3)
             payload.write(b"corruption")
-        self.assert_rejected(self.run_cli("verify"), "SHA256 mismatch")
+        result = self.run_cli("verify")
+        self.assert_rejected(result, "SHA256 mismatch")
+        self.assertNotIn("artifacts expired", result.stderr)
 
     def test_old_payload_is_rejected_after_the_requested_branch_advances(self):
         self.record()
@@ -83,11 +85,23 @@ class ArtifactProvenance(unittest.TestCase):
         self.assertFalse(self.sidecar.exists())
 
     def test_missing_payload_or_metadata_is_rejected(self):
-        self.assert_rejected(self.run_cli("verify"), "metadata")
+        result = self.run_cli("verify")
+        self.assert_rejected(result, "metadata")
+        self.assertIn("artifacts expired; re-run all jobs", result.stderr)
         self.record()
         self.payload.unlink()
-        self.assert_rejected(self.run_cli("verify"), "payload")
-        self.assert_rejected(self.run_cli("record"), "payload")
+        result = self.run_cli("verify")
+        self.assert_rejected(result, "payload")
+        self.assertIn("artifacts expired; re-run all jobs", result.stderr)
+        result = self.run_cli("record")
+        self.assert_rejected(result, "payload")
+        self.assertNotIn("artifacts expired", result.stderr)
+
+    def test_missing_download_directory_reports_expiry(self):
+        missing = self.root / "hosts/rust-messaging-host-app/messaging-host.tar"
+        result = self.run_cli("verify", payload=missing)
+        self.assert_rejected(result, "artifacts expired; re-run all jobs")
+        self.assertIn(str(missing), result.stderr)
 
     def test_malformed_metadata_is_rejected(self):
         valid = self.record()
@@ -99,9 +113,13 @@ class ArtifactProvenance(unittest.TestCase):
         for metadata in cases:
             with self.subTest(metadata=metadata):
                 self.sidecar.write_text(json.dumps(metadata))
-                self.assert_rejected(self.run_cli("verify"), "metadata")
+                result = self.run_cli("verify")
+                self.assert_rejected(result, "metadata")
+                self.assertNotIn("artifacts expired", result.stderr)
         self.sidecar.write_text("{not json")
-        self.assert_rejected(self.run_cli("verify"), "metadata")
+        result = self.run_cli("verify")
+        self.assert_rejected(result, "metadata")
+        self.assertNotIn("artifacts expired", result.stderr)
 
     def test_malformed_expected_heads_are_rejected(self):
         for head in ("main", "a" * 39, "a" * 41, "g" * 40):
