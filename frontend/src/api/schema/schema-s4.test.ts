@@ -48,7 +48,7 @@ const agentUserJson = {
   },
   agent: { agentId: 3, kind: "personal", status: "working", suspended: false },
   createdAt: "2026-09-26T12:26:46.848Z",
-  updatedAt: "2026-09-26T12:26:46.848Z",
+  updatedAt: "2026-09-26T12:26:46.848000Z",
 } as const;
 
 const stepJson = {

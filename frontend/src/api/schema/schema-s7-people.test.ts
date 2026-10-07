@@ -15,7 +15,7 @@ const user = {
   avatarIcon: null,
   agent: null,
   createdAt: "2026-09-26T12:26:46.848Z",
-  updatedAt: "2026-09-26T12:26:46.848Z",
+  updatedAt: "2026-09-26T12:26:46.848000Z",
 } as const;
 
 const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S["Encoded"]) =>
@@ -57,6 +57,26 @@ describe("S7 people schemas", () => {
       transferQrSvg: null,
       canBan: false,
     });
+  });
+
+  it("takes a user's updatedAt only to the microsecond, so strings sort as times", () => {
+    const profile = {
+      user,
+      status: null,
+      dndAllowed: null,
+      emailAddress: null,
+      transferUrl: null,
+      transferQrSvg: null,
+      canBan: false,
+    };
+
+    expect(() =>
+      Schema.decodeUnknownSync(PersonProfile)({
+        ...profile,
+        user: { ...user, updatedAt: "2026-09-26T12:26:46.848Z" },
+      }),
+    ).toThrow();
+    expect(() => Schema.decodeUnknownSync(PersonProfile)(profile)).not.toThrow();
   });
 
   it("refuses an unknown presence", () => {

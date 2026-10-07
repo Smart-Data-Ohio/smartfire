@@ -7,7 +7,7 @@ const ADA = 7;
 
 /** Ada as the server had her at `minute` past ten. */
 function ada(minute: number, change: Partial<User> = {}): User {
-  const at = `2026-10-07T10:${String(minute).padStart(2, "0")}:00.000Z`;
+  const at = `2026-10-07T10:${String(minute).padStart(2, "0")}:00.000000Z`;
 
   return { ...userFixture(ADA, "Ada Lovelace"), updatedAt: at, ...change };
 }

@@ -142,21 +142,8 @@ export function newerUser(first: User, second: User | undefined): User {
 /**
  * A person's page after a ban or its removal lands. A reply older than the page's copy of them
  * changes nothing. Otherwise their user and what follows from its status (their presence, the
- * sign-in link) come from the reply. Their DND exception lives in its own table and changes only
- * through its own write, so it stays as the page has it; the reply's only fills it in when the
- * page had none (a page loaded while they were banned).
+ * sign-in link, whether a DND exception applies) come from the reply.
  */
 export function landBan(current: PersonProfile, reply: PersonProfile): PersonProfile {
-  if (reply.user.updatedAt < current.user.updatedAt) {
-    return current;
-  }
-
-  return {
-    ...current,
-    user: reply.user,
-    status: reply.status,
-    transferUrl: reply.transferUrl,
-    transferQrSvg: reply.transferQrSvg,
-    dndAllowed: current.dndAllowed ?? reply.dndAllowed,
-  };
+  return reply.user.updatedAt < current.user.updatedAt ? current : reply;
 }

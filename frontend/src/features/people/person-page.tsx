@@ -5,7 +5,6 @@ import { useStore } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
 import { ActionError } from "../../sync/run.ts";
-import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -171,14 +170,17 @@ function Profile({
   const own = user.id === viewerId;
   const active = user.status === "active";
   const deactivated = user.status === "deactivated";
+  const stored = useStore((state) => state.dndAllowances[profile.user.id]);
+  // Their DND exception as the store has it, so a change that finished after you left and came
+  // back still shows; the page's own copy only until the store has one.
+  const dndAllowed = active && !own ? (stored ?? profile.dndAllowed) : null;
 
   const setAllowance = (allowed: boolean) => {
     setSavingDnd(true);
-    settingsActions
+    peoplePages
       .setDndAllowance(user.id, allowed)
       .then(
-        // Only the field this changed, so a ban that landed meanwhile stays.
-        () => onChange((current) => ({ ...current, dndAllowed: allowed })),
+        () => undefined,
         (error: Error) =>
           toast({
             title: allowed ? "Couldn't allow them during DND" : "Couldn't mute them during DND",
@@ -264,15 +266,15 @@ function Profile({
       <StatusBadge profile={profile} />
       {active ? (
         <div className="person-actions">
-          {profile.dndAllowed === null ? null : (
+          {dndAllowed === null ? null : (
             <Button
               variant="secondary"
-              icon={profile.dndAllowed ? "bell-off" : "bell-ring"}
-              aria-pressed={profile.dndAllowed}
+              icon={dndAllowed ? "bell-off" : "bell-ring"}
+              aria-pressed={dndAllowed}
               loading={savingDnd}
-              onClick={() => setAllowance(!profile.dndAllowed)}
+              onClick={() => setAllowance(!dndAllowed)}
             >
-              {profile.dndAllowed ? "Mute during DND" : "Allow during DND"}
+              {dndAllowed ? "Mute during DND" : "Allow during DND"}
             </Button>
           )}
           <Button
@@ -383,7 +385,8 @@ export function PersonPage({
     }
   }, [bot, hasAgentPage, navigate]);
 
-  const title = load.status === "ready" ? load.profile.user.name : "Person";
+  const heldUser = useStore((state) => state.users[userId]);
+  const title = load.status === "ready" ? newerUser(load.profile.user, heldUser).name : "Person";
   const own = load.status === "ready" && load.profile.user.id === viewerId;
 
   return (

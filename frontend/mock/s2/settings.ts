@@ -19,7 +19,7 @@ import {
   stringArrayField,
   stringField,
 } from "../json.ts";
-import { timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { VIEWER_TIME_ZONE } from "./composer.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import type { Uploads } from "./uploads.ts";
@@ -265,7 +265,7 @@ export function createSettings(
     const viewer = users.get(VIEWER_ID);
 
     if (viewer !== undefined) {
-      users.set(VIEWER_ID, { ...viewer, name, updatedAt: new Date(ctx.now()).toISOString() });
+      users.set(VIEWER_ID, { ...viewer, name, updatedAt: rowTimestamp(ctx.now()) });
     }
   };
 

@@ -129,6 +129,11 @@ export function timestamp(ms: number): string {
   return new Date(ms).toISOString();
 }
 
+/** A user's row version (`updatedAt`): RFC 3339 with six fraction digits and `Z`. */
+export function rowTimestamp(ms: number): string {
+  return timestamp(ms).replace(/Z$/, "000Z");
+}
+
 /** A random UUID-formatted id from the seeded PRNG (the client's ids are UUID v7). */
 export function seededUuid(random: Random): string {
   const hex = Array.from({ length: 32 }, () => random.int(0, 15).toString(16)).join("");
@@ -291,7 +296,7 @@ function seedUsers(now: number): Map<number, User> {
             { agentId: person.id, kind: "workspace", status: "idle", suspended: false }
           : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
-      updatedAt: timestamp(now - person.joinedDaysAgo * DAY),
+      updatedAt: rowTimestamp(now - person.joinedDaysAgo * DAY),
     });
   }
 

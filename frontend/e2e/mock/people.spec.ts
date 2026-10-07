@@ -175,6 +175,41 @@ test("the DND exception toggles on a person's page", async ({ page }) => {
   );
 });
 
+test("a DND change that finishes after you leave and come back still shows", async ({ page }) => {
+  await openPerson(page, USER_IDS.sam);
+
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/api/v1/settings/dnd_allowances/*", async (route) => {
+    await held;
+    await route.continue();
+  });
+
+  const toggle = page.getByRole("button", { name: /during DND/ });
+  const before = await toggle.getAttribute("aria-pressed");
+
+  await toggle.click();
+  await page.getByRole("button", { name: "Your account" }).click();
+  await page.getByRole("menuitem", { name: "People", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/people$/);
+  await row(page, "Sam Whitfield").getByRole("link", { name: "Sam Whitfield" }).click();
+  await page.locator(".person").waitFor();
+  await expect(page.getByRole("button", { name: /during DND/ })).toHaveAttribute(
+    "aria-pressed",
+    before ?? "",
+  );
+
+  release();
+  await expect(page.getByRole("button", { name: /during DND/ })).not.toHaveAttribute(
+    "aria-pressed",
+    before ?? "",
+  );
+});
+
 test("Message on a person's page opens your DM with them", async ({ page }) => {
   await openPerson(page, USER_IDS.grace);
 

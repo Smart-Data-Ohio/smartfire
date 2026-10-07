@@ -36,6 +36,11 @@ export interface State {
   readonly connection: ConnectionStatus;
   readonly users: Readonly<Record<number, User>>;
   readonly presence: Readonly<Record<number, UserPresence>>;
+  /**
+   * Whether the viewer lets each person through Do Not Disturb (`dnd_allowed_users`), by user
+   * id, for the people the person pages have seen. Their own table, so not on `users`.
+   */
+  readonly dndAllowances: Readonly<Record<number, boolean>>;
   readonly sidebar: SidebarState;
   readonly rooms: Readonly<Record<number, RoomState>>;
   readonly messages: Readonly<Record<number, MessageDTO>>;
@@ -93,6 +98,7 @@ export const initialState: State = {
   connection: "connecting",
   users: {},
   presence: {},
+  dndAllowances: {},
   sidebar: {
     status: "idle",
     order: [],

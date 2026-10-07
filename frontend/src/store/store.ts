@@ -88,6 +88,12 @@ export const mutations = {
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
   setPresence: (list: readonly UserPresence[]) => apply((state) => reduce.setPresence(state, list)),
+  setDndAllowance: (userId: number, allowed: boolean) =>
+    apply((state) =>
+      state.dndAllowances[userId] === allowed
+        ? state
+        : { ...state, dndAllowances: { ...state.dndAllowances, [userId]: allowed } },
+    ),
   setSidebarLoading: () =>
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "loading" } })),
   setSidebarFailed: () =>

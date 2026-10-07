@@ -13,7 +13,7 @@ import type { Workspace } from "../../src/gen/Workspace.ts";
 import type { WorkspaceIcon } from "../../src/gen/WorkspaceIcon.ts";
 import { HttpError, notFound, ok, plainError } from "../http.ts";
 import { booleanField, type Json, stringField } from "../json.ts";
-import { timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 import type { Uploads } from "./uploads.ts";
 
@@ -269,7 +269,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         audit("user.role.change", user.name, "User", `role: ${target.role} → ${role}`);
       }
 
-      users.set(id, { ...user, role, updatedAt: new Date(ctx.now()).toISOString() });
+      users.set(id, { ...user, role, updatedAt: rowTimestamp(ctx.now()) });
     }
 
     return ok({ person: personOr404(id), notice: null });

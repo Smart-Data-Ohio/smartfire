@@ -9,7 +9,7 @@ import type { PeopleDirectory } from "../../src/gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../../src/gen/PersonProfile.ts";
 import type { User } from "../../src/gen/User.ts";
 import { forbidden, notFound, ok } from "../http.ts";
-import { VIEWER_ID } from "../seed.ts";
+import { rowTimestamp, VIEWER_ID } from "../seed.ts";
 import { MOCK_TRANSFER_QR_SVG } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
 
@@ -105,7 +105,7 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
     world.users.set(userId, {
       ...user,
       status: banned ? "banned" : "active",
-      updatedAt: new Date(ctx.now()).toISOString(),
+      updatedAt: rowTimestamp(ctx.now()),
     });
 
     return ok(profile(userId));
