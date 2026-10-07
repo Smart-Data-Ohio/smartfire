@@ -18,7 +18,7 @@ import {
   decidedLocally,
 } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
-import { withRead } from "./freshness.ts";
+import { reloadsSettled, withRead } from "./freshness.ts";
 
 /** The status to ask the server for: `null` for every one. */
 function statusOf(filter: ApprovalFilter) {
@@ -67,12 +67,18 @@ export const load = Effect.fn("approvals.load")(function* (
   );
 });
 
-/** Loads the next page, if there is one and none is on its way. */
+/**
+ * Loads the next page, if there is one and none is on its way. A reload of the list goes first:
+ * the page waits for it and then pages from the reloaded list's cursor.
+ */
 export const loadMore = Effect.fn("approvals.loadMore")(function* (
   agentId: number,
   filter: ApprovalFilter,
 ) {
   const key = approvalListKey(agentId, filter);
+
+  yield* reloadsSettled(`approvals:${key}`);
+
   const state = store.getState();
   const list = approvalListOf(state, key);
   const read = captureApprovalRead(state);
@@ -94,6 +100,7 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
         Effect.catch(failLoad(key, list.generation)),
       ),
     `approvals:${key}`,
+    false,
   );
 });
 

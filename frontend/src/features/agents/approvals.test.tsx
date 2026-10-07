@@ -150,7 +150,7 @@ describe("S4 client contracts", () => {
     });
 
     expect(load).toHaveBeenCalledTimes(2);
-    expect(Object.values(store.getState().freshness.reads)).toEqual([{ list: "approvals:9:all" }]);
+    expect(Object.values(store.getState().freshness.reads)).toEqual([{ list: "approvals:9:all", reload: true }]);
 
     view.unmount();
 
@@ -198,7 +198,7 @@ describe("S4 client contracts", () => {
     view.rerender({ filter: "pending" });
 
     expect(Object.values(store.getState().freshness.reads)).toEqual([
-      { list: "approvals:9:pending" },
+      { list: "approvals:9:pending", reload: true },
     ]);
     expect(store.getState().freshness.deltas).toEqual([]);
 

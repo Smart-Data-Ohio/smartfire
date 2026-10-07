@@ -1,7 +1,8 @@
 /** Client history only for list membership, which has no server revision. */
 export interface Freshness {
   readonly clock: number;
-  readonly reads: Readonly<Record<number, { readonly list: string }>>;
+  /** Outstanding reads by ticket; `reload` marks a first-page (re)load, not a next page. */
+  readonly reads: Readonly<Record<number, { readonly list: string; readonly reload: boolean }>>;
   readonly deltas: readonly MembershipDelta[];
 }
 
@@ -26,19 +27,27 @@ function pruneHistory(state: Freshness, reads: Freshness["reads"]): Freshness {
   };
 }
 
-/** A reload supersedes any earlier read of the same list. */
-export function startRead(state: Freshness, list: string) {
+/**
+ * A reload supersedes any earlier read of the same list. A next page supersedes nothing: it
+ * never starts while a reload of its list is out (see `reloading`).
+ */
+export function startRead(state: Freshness, list: string, reload = true) {
   const ticket = state.clock + 1;
-  const current = retireReads(state, list).freshness;
+  const current = reload ? retireReads(state, list).freshness : state;
 
   return {
     freshness: {
       ...current,
       clock: ticket,
-      reads: { ...current.reads, [ticket]: { list } },
+      reads: { ...current.reads, [ticket]: { list, reload } },
     },
     ticket,
   };
+}
+
+/** Whether a first-page (re)load of `list` is still on its way. */
+export function reloading(state: Freshness, list: string): boolean {
+  return Object.values(state.reads).some((read) => read.list === list && read.reload);
 }
 
 /** A view leaving retires its reads, even if their requests are still running. */

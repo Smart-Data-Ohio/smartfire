@@ -96,8 +96,8 @@ const apply = (change: (state: State) => State) =>
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
-  startRead: (list: string) => {
-    const read = freshness.startRead(store.getState().freshness, list);
+  startRead: (list: string, reload = true) => {
+    const read = freshness.startRead(store.getState().freshness, list, reload);
 
     apply((state) => ({ ...state, freshness: read.freshness }));
 

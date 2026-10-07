@@ -5,6 +5,7 @@ import {
   membership,
   observeMembership,
   placeId,
+  reloading,
   replay,
   retireReads,
   startRead,
@@ -37,6 +38,16 @@ describe("list membership history", () => {
       reads: { [other.ticket]: { list: "other" } },
       deltas: [],
     });
+  });
+
+  it("lets a next page leave an outstanding reload in place", () => {
+    const reload = startRead(emptyFreshness, "approved");
+    const more = startRead(reload.freshness, "approved", false);
+
+    expect(Object.keys(more.freshness.reads)).toEqual([String(reload.ticket), String(more.ticket)]);
+    expect(reloading(more.freshness, "approved")).toBe(true);
+    expect(reloading(finishRead(more.freshness, reload.ticket).freshness, "approved")).toBe(false);
+    expect(Object.keys(startRead(more.freshness, "approved").freshness.reads)).toHaveLength(1);
   });
 
   it("records membership changes independently of equal record echoes", () => {

@@ -53,6 +53,120 @@ function pendingIds(): readonly number[] {
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
+  describe("a next page and a reload of the same list", () => {
+    const row = (id: number): AgentApproval => ({ ...pending, id, summary: `Request ${id}` });
+    const allKey = approvalListKey(AGENT, "all");
+    const all = () => approvalListOf(store.getState(), allKey);
+
+    /** All holds 105 and 104 with more after 104; 106 arrived since. */
+    const held = Effect.gen(function* () {
+      const fake = yield* FakeApi;
+
+      mutations.setMe(meFixture);
+      yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
+        approvals: [row(105), row(104)],
+        users: [],
+        nextCursor: "c104",
+      });
+      yield* approvals.load(AGENT, "all");
+
+      const reloadStarted = yield* Deferred.make<void>();
+      const reloadGate = yield* Deferred.make<void>();
+      const moreStarted = yield* Deferred.make<void>();
+      const moreGate = yield* Deferred.make<void>();
+
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, (request) => {
+        const before = request.query?.before ?? null;
+
+        if (before === null) {
+          return Deferred.succeed(reloadStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(reloadGate)),
+            Effect.as({ approvals: [row(106), row(105)], users: [], nextCursor: "c105" }),
+          );
+        }
+
+        return Deferred.succeed(moreStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(moreGate)),
+          Effect.as({
+            approvals: before === "c105" ? [row(104), row(103)] : [row(103)],
+            users: [],
+            nextCursor: null,
+          }),
+        );
+      });
+
+      const befores = fake.requests.pipe(
+        Effect.map((requests) =>
+          requests.flatMap((request) =>
+            request.path === `/agents/${AGENT}/approvals` ? [request.query?.before ?? null] : [],
+          ),
+        ),
+      );
+
+      return { reloadStarted, reloadGate, moreStarted, moreGate, befores };
+    });
+
+    it.effect("a next page asked for during a reload waits for it and pages from its cursor", () =>
+      Effect.gen(function* () {
+        const { reloadStarted, reloadGate, moreStarted, moreGate, befores } = yield* held;
+
+        const reloading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+        yield* Deferred.await(reloadStarted);
+
+        const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+        yield* Effect.yieldNow;
+        expect(yield* befores).toEqual([null, null]);
+
+        yield* Deferred.succeed(reloadGate, undefined);
+        yield* Fiber.join(reloading);
+        yield* Deferred.await(moreStarted);
+
+        expect(all().ids).toEqual([106, 105]);
+        expect(yield* befores).toEqual([null, null, "c105"]);
+
+        yield* Deferred.succeed(moreGate, undefined);
+        yield* Fiber.join(paging);
+
+        expect(all()).toMatchObject({ ids: [106, 105, 104, 103], nextCursor: null });
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+
+    for (const first of ["next page", "reload"] as const) {
+      it.effect(`a reload started during a next page wins when the ${first} lands first`, () =>
+        Effect.gen(function* () {
+          const { reloadStarted, reloadGate, moreStarted, moreGate } = yield* held;
+
+          const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+          yield* Deferred.await(moreStarted);
+
+          const reloading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+          yield* Deferred.await(reloadStarted);
+
+          if (first === "next page") {
+            yield* Deferred.succeed(moreGate, undefined);
+            yield* Fiber.join(paging);
+            yield* Deferred.succeed(reloadGate, undefined);
+            yield* Fiber.join(reloading);
+          } else {
+            yield* Deferred.succeed(reloadGate, undefined);
+            yield* Fiber.join(reloading);
+            yield* Deferred.succeed(moreGate, undefined);
+            yield* Fiber.join(paging);
+          }
+
+          // The page from the replaced cursor (after 104) never lands under the reloaded rows.
+          expect(all()).toMatchObject({ ids: [106, 105], nextCursor: "c105", loadingMore: false });
+          expect(store.getState().approvals.items[103]).toBeDefined();
+          expect(store.getState().freshness.reads).toEqual({});
+        }).pipe(Effect.provide(FakeApi.layerClient)),
+      );
+    }
+  });
+
   it.effect("keeps an event's presentation fields after a delayed tied page", () =>
     Effect.gen(function* () {
       const fake = yield* withPending;
