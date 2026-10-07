@@ -73,11 +73,12 @@ describe("readProfileImage", () => {
     });
   });
 
-  it("refuses a GIF whose blocks are broken, and one with no frame", () => {
+  it("takes a GIF broken after its first frame as still, and refuses one with no frame", () => {
     const broken = gif(2);
 
-    expect(readProfileImage(broken.subarray(0, broken.length - 6))).toBeNull();
+    expect(readProfileImage(broken.subarray(0, broken.length - 6))?.animated).toBe(false);
     expect(readProfileImage(gif(0))).toBeNull();
+    expect(readProfileImage(gif(2).subarray(0, 25))).toBeNull();
   });
 
   it("takes an animated PNG as a still one, at its header's size", () => {

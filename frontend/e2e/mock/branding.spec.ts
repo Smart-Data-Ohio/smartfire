@@ -366,7 +366,7 @@ test("files that aren't real images, or are too big, are refused in place", asyn
     await expect(page.getByRole("alert").filter({ hasText: message })).toBeVisible();
   };
 
-  // Text with an image type, and a GIF whose blocks are broken.
+  // Text with an image type, and a GIF that stops before its first frame.
   await refusedWith(
     "icon",
     { name: "logo.png", mimeType: "image/png", buffer: Buffer.from("not really a png") },
@@ -398,6 +398,30 @@ test("files that aren't real images, or are too big, are refused in place", asyn
   await expect(page.getByRole("button", { name: "Upload banner" })).toBeVisible();
   await expect(railTile(page)).toHaveText("SD");
   await expect(sidebarHeader(page)).not.toHaveAttribute("data-banner");
+});
+
+test("a GIF broken after its first frame is kept as a still banner", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/app/admin");
+  await page.getByRole("heading", { level: 2, name: "Workspace profile" }).waitFor();
+  await upload(page, "banner", {
+    ...ANIMATED_BANNER,
+    buffer: ANIMATED_BANNER.buffer.subarray(0, ANIMATED_BANNER.buffer.length - 100),
+  });
+
+  await page.goto("/app/");
+
+  const header = sidebarHeader(page);
+  const image = header.locator(".sidebar-banner-image");
+
+  await expect(header).toHaveAttribute("data-banner", "");
+  await expect(image).toHaveAttribute("src", /\/blobs\//);
+  // No first frame was made for it: folded, it keeps the same (still) image.
+  await page.locator(".sidebar-scroll").evaluate((element) => {
+    element.scrollTop = 200;
+  });
+  await expect(header).toHaveAttribute("data-folded", "");
+  await expect(image).toHaveAttribute("src", /\/blobs\//);
 });
 
 test("a banner that fails to load leaves the plain header", async ({ page }) => {

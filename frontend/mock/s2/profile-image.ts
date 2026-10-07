@@ -32,9 +32,12 @@ function skipSubBlocks(bytes: Uint8Array, at: number): number | null {
   return null;
 }
 
-/** A GIF's frame count (stopping at 2), or `null` when its blocks don't parse. */
-function gifFrames(bytes: Uint8Array): number | null {
-  if (bytes.length < 13) return null;
+/**
+ * How many whole frames a GIF's blocks hold before they end or break, stopping at 2. A GIF broken
+ * after its first frame still reads, as the server's header read does, and counts as still.
+ */
+function gifFrames(bytes: Uint8Array): number {
+  if (bytes.length < 13) return 0;
 
   const packed = bytes[10] ?? 0;
   let offset = 13 + (packed & 0x80 ? 3 * 2 ** ((packed & 0x07) + 1) : 0);
@@ -48,7 +51,7 @@ function gifFrames(bytes: Uint8Array): number | null {
     if (block === 0x21) {
       const next = skipSubBlocks(bytes, offset + 2);
 
-      if (next === null) return null;
+      if (next === null) return frames;
 
       offset = next;
     } else if (block === 0x2c) {
@@ -56,7 +59,7 @@ function gifFrames(bytes: Uint8Array): number | null {
       const local = descriptor & 0x80 ? 3 * 2 ** ((descriptor & 0x07) + 1) : 0;
       const next = skipSubBlocks(bytes, offset + 10 + local + 1);
 
-      if (next === null) return null;
+      if (next === null) return frames;
 
       frames += 1;
 
@@ -64,11 +67,11 @@ function gifFrames(bytes: Uint8Array): number | null {
 
       offset = next;
     } else {
-      return null;
+      return frames;
     }
   }
 
-  return null;
+  return frames;
 }
 
 /** A WebP's size and whether it's animated, from its first chunk; `null` when unreadable. */
@@ -128,9 +131,7 @@ export function readProfileImage(bytes: Uint8Array): ProfileImageInfo | null {
 
   const frames = gifFrames(bytes);
 
-  return frames === null || frames === 0
-    ? null
-    : { format, width: size[0], height: size[1], animated: frames > 1 };
+  return frames === 0 ? null : { format, width: size[0], height: size[1], animated: frames > 1 };
 }
 
 /** The largest logo and banner the server takes, in pixels. */
