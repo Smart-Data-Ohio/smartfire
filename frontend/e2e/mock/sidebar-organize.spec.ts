@@ -183,6 +183,7 @@ test("categories are created, folded, reordered and deleted, and it all survives
   await expect(confirm).toContainText("Its 2 channels go back to Channels");
   await confirm.getByRole("button", { name: "Delete category" }).click();
   await expect(section(page, "category-1")).toHaveCount(0);
+  await expect(heading(page, "channels")).toBeFocused();
   expect(await names(page, "channels")).toEqual(
     expect.arrayContaining(["design", "launch-planning"]),
   );

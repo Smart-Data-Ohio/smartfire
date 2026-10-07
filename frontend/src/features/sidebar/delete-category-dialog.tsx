@@ -31,6 +31,12 @@ export function DeleteCategoryDialog({
           ? "The category is empty. Only you see your categories."
           : `${rooms} back to Channels; nothing is deleted but the category. Only you see your categories.`
       }
+      // The category's menu goes with it: land on Channels, where its rooms went.
+      returnFocus={() =>
+        document.querySelector<HTMLElement>(
+          '[data-drop-section="channels"] .sidebar-section-trigger',
+        )
+      }
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)} data-autofocus>
