@@ -224,26 +224,28 @@ export function removeCategory(state: State, categoryId: number): State {
  * stay.
  */
 export function mergeOrganization(state: State, replies: readonly SidebarRow[]): State {
-  return replies.reduce((current, reply) => {
-    const row = current.sidebar.rows[reply.room.id];
+  const rows = { ...state.sidebar.rows };
+  const merged: Membership[] = [];
 
-    if (row === undefined) {
-      return current;
+  for (const reply of replies) {
+    const row = rows[reply.room.id];
+
+    if (row !== undefined) {
+      const { favoritePosition, roomCategoryId, involvement } = reply.membership;
+      const membership = { ...row.membership, favoritePosition, roomCategoryId, involvement };
+
+      rows[reply.room.id] = { ...row, membership };
+      merged.push(membership);
     }
+  }
 
-    const { favoritePosition, roomCategoryId, involvement } = reply.membership;
-    const membership = { ...row.membership, favoritePosition, roomCategoryId, involvement };
+  let next: State = { ...state, sidebar: { ...state.sidebar, rows } };
 
-    const next: State = {
-      ...current,
-      sidebar: {
-        ...current.sidebar,
-        rows: { ...current.sidebar.rows, [reply.room.id]: { ...row, membership } },
-      },
-    };
+  for (const membership of merged) {
+    next = setDetailMembership(next, membership);
+  }
 
-    return setDetailMembership(next, membership);
-  }, state);
+  return next;
 }
 
 /** The room header's copy of the viewer's membership follows the sidebar's. */
