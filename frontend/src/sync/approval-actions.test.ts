@@ -115,8 +115,11 @@ describe("approval actions", () => {
         yield* Deferred.await(reloadStarted);
 
         const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+        // The pager asks again on every render meanwhile; one page waits.
+        const again = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
 
         yield* Effect.yieldNow;
+        yield* Fiber.join(again);
         expect(yield* befores).toEqual([null, null]);
 
         yield* Deferred.succeed(reloadGate, undefined);
@@ -130,6 +133,7 @@ describe("approval actions", () => {
         yield* Fiber.join(paging);
 
         expect(all()).toMatchObject({ ids: [106, 105, 104, 103], nextCursor: null });
+        expect(yield* befores).toEqual([null, null, "c105"]);
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
 

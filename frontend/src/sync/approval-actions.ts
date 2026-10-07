@@ -17,6 +17,7 @@ import {
   captureApprovalRead,
   decidedLocally,
 } from "../store/approvals.ts";
+import { reloading } from "../store/freshness.ts";
 import { mutations, store } from "../store/store.ts";
 import { reloadsSettled, withRead } from "./freshness.ts";
 
@@ -67,6 +68,9 @@ export const load = Effect.fn("approvals.load")(function* (
   );
 });
 
+/** Lists whose next page is waiting for a reload to land. */
+const waitingForReload = new Set<ApprovalListKey>();
+
 /**
  * Loads the next page, if there is one and none is on its way. A reload of the list goes first:
  * the page waits for it and then pages from the reloaded list's cursor.
@@ -77,7 +81,17 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
 ) {
   const key = approvalListKey(agentId, filter);
 
-  yield* reloadsSettled(`approvals:${key}`);
+  if (waitingForReload.has(key)) {
+    return;
+  }
+
+  if (reloading(store.getState().freshness, `approvals:${key}`)) {
+    // One waiter per list: the pager asks again on every render while the reload is out.
+    waitingForReload.add(key);
+    yield* reloadsSettled(`approvals:${key}`).pipe(
+      Effect.ensuring(Effect.sync(() => waitingForReload.delete(key))),
+    );
+  }
 
   const state = store.getState();
   const list = approvalListOf(state, key);
