@@ -224,6 +224,21 @@ impl Broadcasts {
         sync::scheduled_later(&self.server, &self.sync, change);
     }
 
+    /// `agent.status` for an agent's status, note, suspension or working presence change.
+    pub fn sync_agent_status(&self, agent_id: i64) {
+        sync::agent_status_later(&self.server, &self.sync, agent_id);
+    }
+
+    /// `agent.steps` for a parent whose steps changed.
+    pub fn sync_agent_steps(&self, message_id: Option<i64>, thread_id: Option<i64>) {
+        sync::agent_steps_later(&self.server, &self.sync, message_id, thread_id);
+    }
+
+    /// `approval.updated` for an approval request that was decided, cancelled or expired.
+    pub fn sync_approval(&self, approval_id: i64) {
+        sync::approval_updated_later(&self.server, &self.sync, approval_id);
+    }
+
     /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
     /// broadcast point outside this type replaced (its members or name changed).
     pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {

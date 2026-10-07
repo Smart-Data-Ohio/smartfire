@@ -60,6 +60,29 @@ pub trait SyncRenderer: Send + Sync + 'static {
         conn: &Connection,
         id: i64,
     ) -> campfire_db::Result<Option<campfire_api_types::ScheduledMessage>>;
+    /// The agent's `agent.status`, with its working presence (for the recipients who share a
+    /// room with it); `Ok(None)` when the agent is gone.
+    fn agent_status(
+        &self,
+        conn: &Connection,
+        agent_id: i64,
+    ) -> campfire_db::Result<Option<campfire_api_types::AgentStatusChanged>>;
+    /// A parent's steps (a message's, else a work thread's) as `agent.steps` carries them;
+    /// `Ok(None)` when the parent is gone.
+    fn agent_steps(
+        &self,
+        conn: &Connection,
+        message_id: Option<i64>,
+        thread_id: Option<i64>,
+    ) -> campfire_db::Result<Option<campfire_api_types::AgentStepsChanged>>;
+    /// The approval request as `user_id` sees it on its agent's approvals page; `Ok(None)` when
+    /// they can't read that page (any more).
+    fn approval_updated(
+        &self,
+        conn: &Connection,
+        approval_id: i64,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<campfire_api_types::ApprovalUpdated>>;
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
@@ -128,6 +151,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["scheduled.changed", "scheduled.removed"],
     ),
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
+    ("agent::AgentSyncChange", &["agent.status"]),
+    ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
@@ -172,6 +197,11 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["presence"],
     ),
     ("user::lifecycle::QuietStreamFinal", &["message.updated"]),
+    // The status badge and directory row replaces on `agents:all`. Their twin is
+    // `agent::AgentSyncChange`'s `agent.status`, which the same save emits (once, not per frame).
+    ("agent::AgentStatusChange", &["agent.status"]),
+    // The message replace, or the thread's `agent_steps_channel_thread_<id>` list.
+    ("agent_step::StepParentChange", &["agent.steps"]),
 ];
 
 /// Broadcast points with no sync event yet: the SPA slices after S1 port them.
@@ -186,8 +216,6 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "twitter::post::CardUpdate",
     "github::notifier::MessageCreated",
     "github::pull_requests::CardUpdated",
-    "agent::AgentStatusChange",
-    "agent_step::StepParentChange",
 ];
 
 /// Sync events the contract defines that no broadcast point publishes yet (the S3 and S4 events:
@@ -199,10 +227,6 @@ pub const NOT_YET_EMITTED: &[&str] = &[
     "poll.updated",
     "poll.ballot",
     "message.cards",
-    // S4: agents and approvals.
-    "agent.status",
-    "agent.steps",
-    "approval.updated",
 ];
 
 /// The conversation topic a message's events go to: its thread's, or its room's.
@@ -929,6 +953,168 @@ pub fn status_badge(server: &Cable, user_id: i64, presence_word: &str, status_te
             status_text,
         },
     );
+}
+
+/// `agent.status` on every active human's `user` topic (the classic `agents:all` stream, which
+/// any signed-in person may follow), read afresh later. Its working presence goes only to those
+/// who share a room with the agent. Only people with a sync socket open get it; the others get a
+/// gap on their `user` topic, so their next resume refetches.
+pub fn agent_status_later(server: &Cable, slot: &RendererSlot, agent_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        let read = (|| -> campfire_db::Result<_> {
+            let Some(changed) = renderer.agent_status(conn, agent_id)? else {
+                return Ok(None);
+            };
+            Ok(Some((changed, agent_audience(conn, agent_id)?)))
+        })();
+        let (changed, audience) = match read {
+            Ok(Some(found)) => found,
+            Ok(None) => return,
+            Err(error) => return tracing::warn!(%error, agent_id, "sync: agent status not read"),
+        };
+        let without_presence = campfire_api_types::AgentStatusChanged {
+            working_presence: None,
+            working_presence_expires_at: None,
+            ..changed.clone()
+        };
+        for (user_id, shares_room) in audience {
+            if !server.sync_connected(user_id) {
+                server.sync_skipped_for(user_id);
+                continue;
+            }
+            let payload = if shares_room {
+                &changed
+            } else {
+                &without_presence
+            };
+            send(
+                &server,
+                Audience::User(user_id),
+                &SyncPayload::AgentStatus(payload.clone()),
+                |publication| publication,
+            );
+        }
+    }));
+}
+
+/// Every active human, and whether they share a room with the agent's user.
+fn agent_audience(conn: &Connection, agent_id: i64) -> campfire_db::Result<Vec<(i64, bool)>> {
+    let mut statement = conn.prepare_cached(
+        "SELECT users.id, EXISTS (SELECT 1 FROM memberships AS theirs \
+           INNER JOIN memberships AS agents ON agents.room_id = theirs.room_id \
+           INNER JOIN agents AS agent ON agent.user_id = agents.user_id AND agent.id = ?1 \
+           WHERE theirs.user_id = users.id) \
+         FROM users WHERE users.status = 0 AND users.role != 2 ORDER BY users.id",
+    )?;
+    let rows = statement
+        .query_map([agent_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(rows)
+}
+
+/// `agent.steps` on the parent's conversation topic (a message's room or thread, or the work
+/// thread's), read afresh later.
+pub fn agent_steps_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    message_id: Option<i64>,
+    thread_id: Option<i64>,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        match renderer.agent_steps(conn, message_id, thread_id) {
+            Ok(Some(changed)) => {
+                let topic = changed
+                    .thread_id
+                    .map_or_else(|| room_topic(changed.room_id), thread_topic);
+                send(
+                    &server,
+                    Audience::Topic(topic),
+                    &SyncPayload::AgentSteps(changed),
+                    |publication| publication,
+                );
+            }
+            Ok(None) => {}
+            Err(error) => {
+                tracing::warn!(%error, ?message_id, ?thread_id, "sync: agent steps not read")
+            }
+        }
+    }));
+}
+
+/// `approval.updated` on the `user` topic of everyone who received the request's activity item
+/// and can still see it, each with the card as they see it; read afresh later.
+pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        let read = (|| -> campfire_db::Result<Vec<(i64, campfire_api_types::ApprovalUpdated)>> {
+            let items: Vec<(i64, i64)> = conn
+                .prepare_cached(
+                    "SELECT id, user_id FROM activity_items WHERE source_type = 'AgentApproval' \
+                     AND source_id = ? AND event_type = 'agent_approval_request' ORDER BY id",
+                )?
+                .query_map([approval_id], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?;
+            let mut updates = Vec::new();
+            let mut seen = std::collections::BTreeSet::new();
+            for (item_id, user_id) in items {
+                if !seen.insert(user_id) {
+                    continue;
+                }
+                let Some(user) = campfire_db::User::find_by_id(conn, user_id)? else {
+                    continue;
+                };
+                if campfire_db::ActivityItem::find_accessible(conn, &user, item_id)?.is_none() {
+                    continue;
+                }
+                if let Some(update) = renderer.approval_updated(conn, approval_id, user_id)? {
+                    updates.push((user_id, update));
+                }
+            }
+            Ok(updates)
+        })();
+        match read {
+            Ok(updates) => {
+                for (user_id, update) in updates {
+                    send(
+                        &server,
+                        Audience::User(user_id),
+                        &SyncPayload::ApprovalUpdated(update),
+                        |publication| publication,
+                    );
+                }
+            }
+            Err(error) => tracing::warn!(%error, approval_id, "sync: approval not read"),
+        }
+    }));
 }
 
 #[cfg(test)]

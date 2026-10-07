@@ -112,6 +112,22 @@ impl Job for FizzyAction {
     const CLASS: &'static str = "Fizzy::PerformAgentActionJob";
 }
 
+/// The request was approved, denied, cancelled or settled as expired. The classic app has no
+/// broadcast for it; the cable sink publishes the single-page app's `approval.updated` to the
+/// people who received its activity item.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApprovalChange {
+    pub approval_id: i64,
+}
+impl crate::events::Broadcast for ApprovalChange {
+    const KIND: &'static str = "AgentApproval#sync_change";
+}
+impl ApprovalChange {
+    pub fn emit(tx: &mut Tx<'_>, approval_id: i64) {
+        tx.emit_after_commit(Event::broadcast(&ApprovalChange { approval_id }));
+    }
+}
+
 impl AgentApproval {
     pub(crate) fn from_row(r: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
@@ -149,6 +165,23 @@ impl AgentApproval {
             conn,
             "SELECT * FROM agent_approvals WHERE agent_id=?1 AND (?2 IS NULL OR (?2='pending' AND status='pending' AND expires_at>?3) OR (?2='expired' AND (status='expired' OR (status='pending' AND expires_at<=?3))) OR (?2 NOT IN ('pending','expired') AND status=?2)) ORDER BY id DESC LIMIT 51 OFFSET ?4",
             params![agent_id, status, now, offset],
+            Self::from_row,
+        )
+    }
+
+    /// [`Self::history_page`] by keyset rather than offset: the 50+1 newest rows with an id
+    /// below `before` (the single-page app's opaque cursor), under the same `status` filter.
+    pub fn history_page_before(
+        conn: &Connection,
+        agent_id: i64,
+        status: Option<&str>,
+        now: Timestamp,
+        before: Option<i64>,
+    ) -> Result<Vec<Self>> {
+        query_all(
+            conn,
+            "SELECT * FROM agent_approvals WHERE agent_id=?1 AND (?4 IS NULL OR id<?4) AND (?2 IS NULL OR (?2='pending' AND status='pending' AND expires_at>?3) OR (?2='expired' AND (status='expired' OR (status='pending' AND expires_at<=?3))) OR (?2 NOT IN ('pending','expired') AND status=?2)) ORDER BY id DESC LIMIT 51",
+            params![agent_id, status, now, before],
             Self::from_row,
         )
     }
@@ -297,6 +330,7 @@ impl AgentApproval {
         self.status = "expired".into();
         self.updated_at = tx.now();
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
+        ApprovalChange::emit(tx, self.id);
         Ok(true)
     }
     fn pending_errors(&self, now: Timestamp) -> Errors {
@@ -343,6 +377,7 @@ impl AgentApproval {
         tx.conn().execute("UPDATE agent_approvals SET status=?,decided_by_id=?,decided_at=?,decision_note=?,updated_at=? WHERE id=?",params![decision,by.id,tx.now(),note,tx.now(),self.id])?;
         *self = Self::find(tx.conn(), self.id)?.expect("updated approval");
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
+        ApprovalChange::emit(tx, self.id);
         let event = create_delivered(
             tx,
             NewEvent {
@@ -410,6 +445,7 @@ impl AgentApproval {
         self.status = "cancelled".into();
         self.updated_at = tx.now();
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
+        ApprovalChange::emit(tx, self.id);
         Ok(Errors::default())
     }
     pub fn github_action(&self) -> bool {

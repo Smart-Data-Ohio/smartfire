@@ -101,6 +101,83 @@ impl SyncRenderer for Renderer {
         Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now())?.pop())
     }
 
+    fn agent_status(
+        &self,
+        conn: &Connection,
+        agent_id: i64,
+    ) -> campfire_db::Result<Option<api::AgentStatusChanged>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(agent) = campfire_db::Agent::find(conn, agent_id)? else {
+            return Ok(None);
+        };
+        let now = app.db.env().now();
+        let working_presence = agent.working_presence_text(now).map(str::to_string);
+        Ok(Some(api::AgentStatusChanged {
+            agent_id,
+            user_id: agent.user_id,
+            status: dto::agent_status(&agent.status),
+            status_note: agent.status_note.clone(),
+            status_changed_at: agent.status_changed_at.map(dto::time),
+            suspended: agent.suspended_at.is_some(),
+            working_presence_expires_at: working_presence
+                .as_ref()
+                .and(agent.working_presence_expires_at)
+                .map(dto::time),
+            working_presence,
+        }))
+    }
+
+    fn agent_steps(
+        &self,
+        conn: &Connection,
+        message_id: Option<i64>,
+        thread_id: Option<i64>,
+    ) -> campfire_db::Result<Option<api::AgentStepsChanged>> {
+        if let Some(id) = message_id {
+            let Some(message) = Message::find_by_id(conn, id)? else {
+                return Ok(None);
+            };
+            let steps = dto::message_steps(conn, &[id])?
+                .remove(&id)
+                .unwrap_or_default();
+            return Ok(Some(api::AgentStepsChanged {
+                room_id: message.room_id,
+                message_id: Some(id),
+                thread_id: message.thread_id,
+                steps,
+            }));
+        }
+        let Some(id) = thread_id else {
+            return Ok(None);
+        };
+        let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
+        Ok(Some(api::AgentStepsChanged {
+            room_id: thread.room_id,
+            message_id: None,
+            thread_id: Some(id),
+            steps: dto::thread_steps(conn, id)?,
+        }))
+    }
+
+    fn approval_updated(
+        &self,
+        conn: &Connection,
+        approval_id: i64,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<api::ApprovalUpdated>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(viewer) = campfire_db::User::find_by_id(conn, user_id)? else {
+            return Ok(None);
+        };
+        crate::agents::approval_update(conn, &app, approval_id, &viewer, app.db.env().now())
+    }
+
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>) {
         let Some(app) = self.app.upgrade() else {
             return;
