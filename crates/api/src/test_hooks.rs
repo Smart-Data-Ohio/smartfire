@@ -8,7 +8,7 @@ use tokio::sync::Barrier;
 
 static AFTER_DUPLICATE_CHECK: Mutex<Option<HashMap<String, Arc<Barrier>>>> = Mutex::new(None);
 
-/// Holds every `POST /api/v1/rooms/:id/messages` with this `clientMessageId` after its
+/// Holds every message or poll post with this `clientMessageId` after its
 /// pre-transaction duplicate lookup misses, until `posts` of them have got that far. Other posts
 /// aren't held.
 pub fn hold_after_duplicate_check(client_message_id: &str, posts: usize) {
@@ -41,6 +41,8 @@ type Holds = Mutex<Option<HashMap<i64, WriteHold>>>;
 
 static BEFORE_CATEGORY_WRITE: Holds = Mutex::new(None);
 static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
+static BEFORE_POLL_VOTE_WRITE: Holds = Mutex::new(None);
+static BEFORE_ATTENDANCE_WRITE: Holds = Mutex::new(None);
 
 fn hold(holds: &Holds, id: i64) -> WriteHold {
     let held = WriteHold {
@@ -90,4 +92,22 @@ pub fn hold_before_involvement_write(membership_id: i64) -> WriteHold {
 
 pub(crate) async fn before_involvement_write(membership_id: i64) {
     wait(&BEFORE_INVOLVEMENT_WRITE, membership_id).await;
+}
+
+/// Holds the next vote on this poll after its lookups, just before the write transaction.
+pub fn hold_before_poll_vote_write(poll_id: i64) -> WriteHold {
+    hold(&BEFORE_POLL_VOTE_WRITE, poll_id)
+}
+
+pub(crate) async fn before_poll_vote_write(poll_id: i64) {
+    wait(&BEFORE_POLL_VOTE_WRITE, poll_id).await;
+}
+
+/// Holds the next response to this event after its lookups, just before the write transaction.
+pub fn hold_before_attendance_write(event_id: i64) -> WriteHold {
+    hold(&BEFORE_ATTENDANCE_WRITE, event_id)
+}
+
+pub(crate) async fn before_attendance_write(event_id: i64) {
+    wait(&BEFORE_ATTENDANCE_WRITE, event_id).await;
 }

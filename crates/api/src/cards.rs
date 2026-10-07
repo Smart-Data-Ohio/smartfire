@@ -81,6 +81,27 @@ pub(crate) struct Fetches {
 }
 
 impl Fetches {
+    /// Classic also renders a discussion header when the starter has been deleted.
+    pub(crate) fn thread_header(
+        &mut self,
+        conn: &Connection,
+        thread: &campfire_db::ChannelThread,
+        now: Timestamp,
+    ) -> campfire_db::Result<()> {
+        use rusqlite::OptionalExtension;
+        let id = conn.query_row(
+            "SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",
+            rusqlite::params![thread.id, thread.room_id],
+            |row| row.get::<_, i64>(0),
+        ).optional()?;
+        if let Some(id) = id
+            && PullRequest::find(conn, id)?.stale(now)
+        {
+            self.pull_requests.insert(id);
+        }
+        Ok(())
+    }
+
     /// `enqueue_render_fetches` and `refresh_after_render`. A failure is logged: the page was
     /// read, and the next read asks again.
     pub(crate) async fn request(self, app: &App) {
@@ -647,6 +668,8 @@ async fn post_poll(c: &mut Ctx) -> Result {
     if let Some(message) = duplicate {
         return render_message(c, message, StatusCode::OK).await;
     }
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_duplicate_check(&client_message_id).await;
     let question = input.question;
     if question.trim().is_empty() {
         return Err(fail(c, validation("question", "can't be blank")));
@@ -778,6 +801,8 @@ async fn post_vote(c: &mut Ctx) -> Result {
     let api::VotePoll { option_ids } = body(c).await?;
     let origin = presenters::page::renderer_base_url(c);
     let room_id = room.id;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_poll_vote_write(poll_id).await;
     let outcome = c
         .app()
         .db
@@ -894,6 +919,8 @@ async fn put_attendance(c: &mut Ctx) -> Result {
     };
     debug_assert!(RESPONSES.contains(&response));
     let (event_id, room_id) = (event.id, event.room_id);
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_attendance_write(event_id).await;
     let outcome = c
         .app()
         .db

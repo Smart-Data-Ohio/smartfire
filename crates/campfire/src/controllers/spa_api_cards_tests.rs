@@ -957,3 +957,560 @@ async fn attendance_answers_and_takes_responses() {
         .await;
     assert_eq!(reply.status, StatusCode::NOT_FOUND);
 }
+
+/// Use the classic thread-page observation: stop workers, then inspect the durable PR job
+/// and its claim, rather than relying on a fetch completing over the network.
+async fn stale_pr(a: &TestApp) {
+    a.db().write(|tx| {
+        tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetched_at='2026-01-01 00:00:00', fetch_requested_at=NULL WHERE id=1")?;
+        Ok(())
+    }).await.unwrap();
+}
+
+async fn assert_pr_requested(a: &TestApp) {
+    let (requested, jobs) = a.db().read(|conn| {
+        let requested: bool = conn.query_row("SELECT fetch_requested_at IS NOT NULL FROM github_pull_requests WHERE id=1", [], |row| row.get(0))?;
+        let jobs: i64 = conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob' AND json_extract(arguments, '$.pull_request_id')=1", [], |row| row.get(0))?;
+        Ok((requested, jobs))
+    }).await.unwrap();
+    assert!(requested, "the render must claim the stale PR refresh");
+    assert_eq!(jobs, 1, "one durable refresh job for this PR");
+}
+
+#[tokio::test]
+async fn card_followup_thread_parent_requests_a_stale_pr_without_a_room_page() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    sql(
+        &a,
+        "UPDATE channel_threads SET parent_message_id=? WHERE id=8",
+        vec![PR_MESSAGE],
+    )
+    .await;
+    sql(
+        &a,
+        "UPDATE messages SET created_at='2020-01-01 00:00:00' WHERE id=?",
+        vec![PR_MESSAGE],
+    )
+    .await;
+    a.db().read(|conn| {
+        let replies: i64 = conn.query_row("SELECT COUNT(*) FROM github_pull_request_references r JOIN messages m ON m.id=r.message_id WHERE r.github_pull_request_id=1 AND m.id != ?", [PR_MESSAGE], |row| row.get(0))?;
+        assert_eq!(replies, 0, "the PR is referenced only by the old starter");
+        Ok(())
+    }).await.unwrap();
+    // Keep the discussion header fresh and distinct: only rendering the starter can request
+    // PR 1, so the header cannot mask dropped starter fetches.
+    a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO github_pull_requests (id,owner,repo,number,private,fetched_at,created_at,updated_at) VALUES (2,'smart-data-ohio','smartfire',43,0,?,?,?)", (tx.now(), tx.now(), tx.now()))?;
+        tx.conn().execute("UPDATE github_pull_request_threads SET github_pull_request_id=2 WHERE channel_thread_id=8", [])?;
+        Ok(())
+    }).await.unwrap();
+    stale_pr(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    for _ in 0..2 {
+        let detail: api::ThreadDetail = ok(&david.send(get("/api/v1/threads/8")).await);
+        assert_eq!(detail.parent_message.unwrap().id, PR_MESSAGE);
+        assert_pr_requested(&a).await;
+    }
+}
+
+#[tokio::test]
+async fn card_followup_thread_header_requests_a_stale_pr_without_a_parent() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    sql(
+        &a,
+        "UPDATE channel_threads SET parent_message_id=NULL WHERE id=8",
+        vec![],
+    )
+    .await;
+    stale_pr(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let detail: api::ThreadDetail = ok(&david.send(get("/api/v1/threads/8")).await);
+    assert!(detail.parent_message.is_none());
+    assert_pr_requested(&a).await;
+}
+
+#[tokio::test]
+async fn card_followup_message_read_requests_a_stale_pr() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    stale_pr(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(message(&mut david, PR_MESSAGE).await.id, PR_MESSAGE);
+    assert_pr_requested(&a).await;
+}
+
+#[tokio::test]
+async fn card_followup_search_requests_a_stale_pr() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    stale_pr(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let results: api::SearchResults = ok(&david.send(get("/api/v1/search?q=smartfire")).await);
+    assert!(results.messages.iter().any(|m| m.id == PR_MESSAGE));
+    assert_pr_requested(&a).await;
+}
+
+#[tokio::test]
+async fn card_followup_close_racing_a_vote_rechecks_in_the_writer() {
+    const POLL: i64 = 980000001;
+    let Some(a) = app(true).await else { return };
+    let option = a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO polls (id,message_id,created_at,updated_at) VALUES (?,?,?,?)", (POLL, PR_MESSAGE, tx.now(), tx.now()))?;
+        tx.conn().execute("INSERT INTO poll_options (poll_id,label,position,created_at,updated_at) VALUES (?,'Yes',0,?,?)", (POLL, tx.now(), tx.now()))?;
+        Ok(tx.conn().last_insert_rowid())
+    }).await.unwrap();
+    let hold = campfire_api::test_hooks::hold_before_poll_vote_write(POLL);
+    let mut kevin = a.sign_in(KEVIN).await;
+    let options = [option];
+    let (reply, ()) = tokio::join!(vote(&mut kevin, DESIGNERS, POLL, &options), async {
+        hold.reached.wait().await;
+        a.db()
+            .write(|tx| campfire_db::Poll::close_by_id(tx, POLL, tx.now()))
+            .await
+            .unwrap();
+        hold.release.wait().await;
+    });
+    assert_eq!(fields(&reply), ["poll"]);
+    let votes: i64 = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM poll_votes WHERE poll_id=? AND user_id=?",
+                [POLL, KEVIN],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(votes, 0);
+}
+
+#[tokio::test]
+async fn card_followup_cancellation_racing_an_rsvp_rechecks_in_the_writer() {
+    const EVENT: i64 = 980000002;
+    let Some(a) = app(true).await else { return };
+    sql(&a, "INSERT INTO events (id,created_at,updated_at,organizer_id,room_id,starts_at,time_zone,title) SELECT ?,created_at,updated_at,organizer_id,room_id,starts_at,time_zone,title FROM events WHERE id=?", vec![EVENT, LAUNCH_PARTY]).await;
+    let hold = campfire_api::test_hooks::hold_before_attendance_write(EVENT);
+    let mut kevin = a.sign_in(KEVIN).await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/events/{EVENT}/attendance");
+    let (reply, ()) = tokio::join!(
+        send(
+            &mut kevin,
+            Method::PUT,
+            &path,
+            json!({"response":"going", "applyToFuture":false})
+        ),
+        async {
+            hold.reached.wait().await;
+            sql(
+                &a,
+                "UPDATE events SET cancelled_at='2026-03-02 16:00:00' WHERE id=?",
+                vec![EVENT],
+            )
+            .await;
+            hold.release.wait().await;
+        }
+    );
+    assert_eq!(fields(&reply), ["response"]);
+    let rows: i64 = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM event_attendances WHERE event_id=? AND user_id=?",
+                [EVENT, KEVIN],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(rows, 0);
+}
+
+#[tokio::test]
+async fn card_followup_simultaneous_duplicate_polls_create_once() {
+    let Some(a) = app(true).await else { return };
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    let client_id = "card-followup-simultaneous-poll";
+    campfire_api::test_hooks::hold_after_duplicate_check(client_id, 2);
+    let path = format!("/api/v1/rooms/{HQ}/polls");
+    let (first, second) = tokio::join!(
+        send(
+            &mut first,
+            Method::POST,
+            &path,
+            poll_body(client_id, &["Yes", "No"])
+        ),
+        send(
+            &mut second,
+            Method::POST,
+            &path,
+            poll_body(client_id, &["Yes", "No"])
+        )
+    );
+    let mut statuses = [first.status, second.status];
+    statuses.sort();
+    assert_eq!(
+        statuses,
+        [StatusCode::OK, StatusCode::CREATED],
+        "{} / {}",
+        first.text(),
+        second.text()
+    );
+    let first: api::MessageDTO = parse(&first);
+    let second: api::MessageDTO = parse(&second);
+    assert_eq!(first.id, second.id);
+    a.db().read(move |conn| {
+        let messages: i64 = conn.query_row("SELECT COUNT(*) FROM messages WHERE room_id=? AND creator_id=? AND client_message_id=?", (HQ, DAVID, client_id), |row| row.get(0))?;
+        let polls: i64 = conn.query_row("SELECT COUNT(*) FROM polls WHERE message_id=?", [first.id], |row| row.get(0))?;
+        assert_eq!((messages, polls), (1, 1));
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn card_followup_private_github_previews_check_each_viewers_repository_access() {
+    use crate::integrations::github::accounts::{Account, AccountInput};
+    use crate::integrations::test_support::Route;
+    let (github, network) = crate::integrations::github::tests::fake(vec![
+        Route::new(
+            "GET",
+            "api.github.com",
+            "/repos/smart-data-ohio/smartfire",
+            200,
+        )
+        .body("{}"),
+    ])
+    .await;
+    let Some(a) = TestApp::boot_with_network_clock_and_env(
+        network,
+        crate::controllers::presenters::test_support::seed_clock(),
+        &[("SPA_ENABLED", "1")],
+    )
+    .await
+    else {
+        return;
+    };
+    let a = a.without_job_runner().await;
+    let crypto = rails_compat::ar_encryption::ArEncryption::new(&a.booted.app.secrets);
+    a.db().write(move |tx| {
+        tx.conn().execute("UPDATE github_pull_requests SET private=1,title='Private followup title' WHERE id=1", [])?;
+        for (user, login, token) in [(DAVID, "followup-david", "fixture-david-token"), (KEVIN, "followup-kevin", "fixture-kevin-token")] {
+            Account::create(tx, &crypto, &AccountInput {user_id:user, github_login:login, access_token:token, refresh_token:None, token_expires_at:None, token_source:"pat"})?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let path =
+        format!("/api/v1/rooms/{DESIGNERS}/github/pull_requests/1/card?messageId={PR_MESSAGE}");
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david.send(get(&path)).await;
+    let card: api::GithubPullRequestCard = ok(&reply);
+    let api::GithubPullRequestCard::Loaded(card) = card else {
+        panic!("{card:?}")
+    };
+    assert_eq!(card.title, "Private followup title");
+    github.replace_routes(vec![
+        Route::new(
+            "GET",
+            "api.github.com",
+            "/repos/smart-data-ohio/smartfire",
+            404,
+        )
+        .body("{}"),
+    ]);
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = kevin.send(get(&path)).await;
+    assert_eq!(
+        ok::<api::GithubPullRequestCard>(&reply),
+        api::GithubPullRequestCard::Hidden
+    );
+    assert!(!reply.text().contains("Private followup title"));
+    assert_eq!(
+        github.received.lock().unwrap().len(),
+        2,
+        "each connected viewer's own repository check"
+    );
+}
+
+#[tokio::test]
+async fn card_followup_connected_fizzy_previews_keep_the_viewers_payloads_separate() {
+    let Some(a) = app(true).await else { return };
+    let a = a.without_job_runner().await;
+    a.db().write(|tx| {
+        tx.conn().execute("INSERT INTO fizzy_connected_accounts (access_token,created_at,fizzy_account_id,updated_at,user_id) SELECT access_token,created_at,fizzy_account_id,updated_at,? FROM fizzy_connected_accounts WHERE user_id=?", [KEVIN, DAVID])?;
+        for (viewer, prefix) in [(DAVID, "DavidOnly"), (KEVIN, "KevinOnly")] {
+            let payload = json!({"title":format!("{prefix} title"), "url":format!("https://app.fizzy.do/{prefix}/cards/42"), "board":{"name":format!("{prefix} board")}, "column":{"name":format!("{prefix} column")}, "assignees":[{"name":format!("{prefix} assignee"), "avatar_url":format!("https://example.org/{prefix}.png")}], "tags":[format!("{prefix} tag")], "steps":[{"completed":true}, {"completed":false}]}).to_string();
+            tx.conn().execute("INSERT INTO fizzy_card_caches (created_at,updated_at,fizzy_card_id,user_id,payload,fetched_at) VALUES (?,?,1,?,?,?) ON CONFLICT(fizzy_card_id,user_id) DO UPDATE SET payload=excluded.payload,fetched_at=excluded.fetched_at", (tx.now(), tx.now(), viewer, payload, tx.now()))?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let path = format!("/api/v1/rooms/{DESIGNERS}/fizzy/cards/1/card?messageId={FIZZY_MESSAGE}");
+    for (viewer, own, other) in [
+        (DAVID, "DavidOnly", "KevinOnly"),
+        (KEVIN, "KevinOnly", "DavidOnly"),
+    ] {
+        let mut browser = a.sign_in(viewer).await;
+        let reply = browser.send(get(&path)).await;
+        let preview: api::FizzyCardPreview = ok(&reply);
+        let api::FizzyCardPreview::Loaded(card) = preview else {
+            panic!("{preview:?}")
+        };
+        assert_eq!(card.title, format!("{own} title"));
+        assert_eq!(card.board_name, Some(format!("{own} board")));
+        assert_eq!(card.column_name, Some(format!("{own} column")));
+        assert_eq!(card.assignees[0].name, format!("{own} assignee"));
+        assert_eq!(
+            card.assignees[0].avatar_url,
+            Some(format!("https://example.org/{own}.png"))
+        );
+        assert_eq!(card.tags, [format!("{own} tag")]);
+        assert_eq!((card.steps_total, card.steps_completed), (2, 1));
+        assert_eq!(card.url, format!("https://app.fizzy.do/{own}/cards/42"));
+        assert!(!reply.text().contains(other), "{}", reply.text());
+    }
+}
+
+async fn card_conversation(a: &TestApp, message_id: i64, threaded: bool) -> (String, Option<i64>) {
+    if !threaded {
+        return (format!("room:{DESIGNERS}"), None);
+    }
+    let thread_id = a
+        .db()
+        .write(move |tx| {
+            let thread = campfire_db::ChannelThread::create(
+                tx,
+                campfire_db::NewChannelThread {
+                    room_id: DESIGNERS,
+                    creator_id: DAVID,
+                    name: Some("Card followup".into()),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE messages SET thread_id=?,room_id=? WHERE id=?",
+                (thread.id, DESIGNERS, message_id),
+            )?;
+            Ok(thread.id)
+        })
+        .await
+        .unwrap();
+    (format!("thread:{thread_id}"), Some(thread_id))
+}
+
+async fn changed_cards(
+    sync: &mut Sync,
+    topic: &str,
+    message_id: i64,
+    thread_id: Option<i64>,
+) -> api::MessageCards {
+    let event = sync.until(move |event| matches!(&event.payload, api::SyncPayload::MessageCards(cards) if cards.message_id == message_id), |_| false).await;
+    assert_eq!(event.topic, topic);
+    let api::SyncPayload::MessageCards(cards) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(
+        (cards.message_id, cards.room_id, cards.thread_id),
+        (message_id, DESIGNERS, thread_id)
+    );
+    cards
+}
+
+#[tokio::test]
+async fn card_followup_github_updates_reach_room_and_thread_tabs() {
+    for threaded in [false, true] {
+        let Some(a) = app(true).await else { return };
+        let a = a.without_job_runner().await;
+        let (topic, thread_id) = card_conversation(&a, PR_MESSAGE, threaded).await;
+        let (addr, server) = serve(&a).await;
+        let david = a.sign_in(DAVID).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        a.db()
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE github_pull_requests SET owner='followup-org',number=73 WHERE id=1",
+                    [],
+                )?;
+                tx.emit_after_commit(campfire_db::Event::broadcast(
+                    &campfire_app::integrations::github::pull_requests::CardUpdated {
+                        pull_request_id: 1,
+                    },
+                ));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let cards = changed_cards(&mut sync, &topic, PR_MESSAGE, thread_id).await;
+        let [api::MessageCard::Github(pr)] = cards.cards.as_slice() else {
+            panic!("{cards:?}")
+        };
+        assert_eq!(
+            (pr.owner.as_str(), pr.number, pr.url.as_str()),
+            (
+                "followup-org",
+                73,
+                "https://github.com/followup-org/smartfire/pull/73"
+            )
+        );
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn card_followup_fizzy_refreshes_reach_room_and_thread_tabs() {
+    for threaded in [false, true] {
+        let Some(a) = app(true).await else { return };
+        let a = a.without_job_runner().await;
+        let (topic, thread_id) = card_conversation(&a, FIZZY_MESSAGE, threaded).await;
+        let (addr, server) = serve(&a).await;
+        let mut david = a.sign_in(DAVID).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        a.db()
+            .write(|tx| {
+                tx.conn().execute(
+                    "UPDATE fizzy_cards SET account_id='followup-workspace',number=73 WHERE id=1",
+                    [],
+                )?;
+                let card = campfire_app::integrations::fizzy::cards::Card::find(tx.conn(), 1)?;
+                let cache = campfire_app::integrations::fizzy::cards::Cache::for_viewer(tx, &card, DAVID)?;
+                cache.save(tx, Some(&json!({"title":"Fizzy refreshed privately","board":{"name":"Refreshed board"}})), Some(tx.now()), None)?;
+                card.broadcast_updates(tx);
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let cards = changed_cards(&mut sync, &topic, FIZZY_MESSAGE, thread_id).await;
+        let [api::MessageCard::Fizzy(card)] = cards.cards.as_slice() else {
+            panic!("{cards:?}")
+        };
+        assert_eq!(
+            (card.account_id.as_str(), card.number),
+            ("followup-workspace", 73)
+        );
+        assert!(card.url.ends_with("/followup-workspace/cards/73"));
+        // Shared twins carry references. The refreshed viewer payload stays in the private
+        // endpoint, just as the classic replacement points to a private lazy frame.
+        let preview: api::FizzyCardPreview = ok(&david
+            .send(get(&format!(
+                "/api/v1/rooms/{DESIGNERS}/fizzy/cards/1/card?messageId={FIZZY_MESSAGE}"
+            )))
+            .await);
+        let api::FizzyCardPreview::Loaded(preview) = preview else {
+            panic!("{preview:?}")
+        };
+        assert_eq!(preview.title, "Fizzy refreshed privately");
+        assert_eq!(preview.board_name.as_deref(), Some("Refreshed board"));
+        assert!(
+            !serde_json::to_string(&cards)
+                .unwrap()
+                .contains("Fizzy refreshed privately")
+        );
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn card_followup_x_updates_reach_room_and_thread_tabs() {
+    for threaded in [false, true] {
+        let Some(a) = app(true).await else { return };
+        let a = a.without_job_runner().await;
+        sql(
+            &a,
+            "UPDATE messages SET room_id=? WHERE id=?",
+            vec![DESIGNERS, X_MESSAGE],
+        )
+        .await;
+        let (topic, thread_id) = card_conversation(&a, X_MESSAGE, threaded).await;
+        let (addr, server) = serve(&a).await;
+        let david = a.sign_in(DAVID).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        a.db()
+            .write(|tx| {
+                let post_id: i64 = tx.conn().query_row(
+                    "SELECT twitter_post_id FROM twitter_post_references WHERE message_id=?",
+                    [X_MESSAGE],
+                    |row| row.get(0),
+                )?;
+                tx.conn().execute(
+                    "UPDATE twitter_posts SET text='Followup refreshed X post',likes=73 WHERE id=?",
+                    [post_id],
+                )?;
+                tx.emit_after_commit(campfire_db::Event::broadcast(
+                    &campfire_app::integrations::twitter::post::CardUpdate { post_id },
+                ));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let cards = changed_cards(&mut sync, &topic, X_MESSAGE, thread_id).await;
+        let [api::MessageCard::X(post)] = cards.cards.as_slice() else {
+            panic!("{cards:?}")
+        };
+        assert_eq!(post.text.as_deref(), Some("Followup refreshed X post"));
+        assert_eq!(post.likes, Some(73));
+        server.abort();
+    }
+}
+
+#[tokio::test]
+async fn card_followup_quote_updates_reach_room_and_thread_tabs() {
+    for threaded in [false, true] {
+        let Some(a) = app(true).await else { return };
+        let a = a.without_job_runner().await;
+        let (topic, thread_id) = card_conversation(&a, QUOTE_MESSAGE, threaded).await;
+        let source_id = a
+            .db()
+            .write(|tx| {
+                let source = campfire_db::Message::create(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id: DESIGNERS,
+                        creator_id: DAVID,
+                        markdown_source: Some("Quote before refresh".into()),
+                        ..Default::default()
+                    },
+                )?;
+                tx.conn().execute(
+                    "UPDATE message_references SET referenced_message_id=? WHERE message_id=?",
+                    [source.id, QUOTE_MESSAGE],
+                )?;
+                Ok(source.id)
+            })
+            .await
+            .unwrap();
+        let (addr, server) = serve(&a).await;
+        let david = a.sign_in(DAVID).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+        sync.welcome().await;
+        a.db()
+            .write(move |tx| {
+                let mut source = campfire_db::Message::find(tx.conn(), source_id)?;
+                source.update_body(tx, "Quote after refresh")?;
+                assert_eq!(
+                    campfire_db::models::message_reference::refresh_quote_cards(
+                        tx, source_id, 200, 100
+                    )?,
+                    1
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let cards = changed_cards(&mut sync, &topic, QUOTE_MESSAGE, thread_id).await;
+        let [api::MessageCard::Quote(quote)] = cards.cards.as_slice() else {
+            panic!("{cards:?}")
+        };
+        let preview = quote.preview.as_ref().unwrap();
+        assert_eq!(preview.message_id, source_id);
+        assert_eq!(preview.excerpt, "Quote after refresh");
+        server.abort();
+    }
+}

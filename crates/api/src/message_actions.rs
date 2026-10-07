@@ -187,12 +187,13 @@ async fn show_message(c: &mut Ctx) -> Result {
     let (message, _) = reachable(c).await?;
     let viewer = concerns::require_current_user(c)?.clone();
     let (app, now) = (c.app().clone(), now(c));
-    let read = c
+    let (read, fetches) = c
         .app()
         .db
         .read(move |conn| {
             let messages = std::slice::from_ref(&message);
-            let dto = dto::messages(conn, &app, messages)?.remove(0);
+            let (mut dtos, fetches) = dto::messages_and_fetches(conn, &app, messages)?;
+            let dto = dtos.remove(0);
             let repliers = dto
                 .thread
                 .iter()
@@ -204,15 +205,17 @@ async fn show_message(c: &mut Ctx) -> Result {
                 dto::conversation_names(conn, &viewer, [(message.room_id, message.thread_id)])?
                     .pop()
                     .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
-            Ok(api::MessageRead {
+            let read = api::MessageRead {
                 users: dto::users(conn, &app.secrets, people, now)?,
                 saved: dto::saved(conn, viewer.id, messages)?.pop(),
                 conversation,
                 message: dto,
-            })
+            };
+            Ok((read, fetches))
         })
         .await
         .map_err(db_error)?;
+    fetches.request(c.app()).await;
     c.json(StatusCode::OK, &read)
 }
 
@@ -640,11 +643,12 @@ async fn create_forwards(c: &mut Ctx) -> Result {
         forwards.push(record);
     }
     let app = c.app().clone();
-    let forwards = c
+    let (forwards, fetches) = c
         .app()
         .db
-        .read(move |conn| dto::messages(conn, &app, &forwards))
+        .read(move |conn| dto::messages_and_fetches(conn, &app, &forwards))
         .await
         .map_err(db_error)?;
+    fetches.request(c.app()).await;
     c.json(StatusCode::CREATED, &api::ForwardResult { forwards })
 }

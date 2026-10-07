@@ -1093,32 +1093,32 @@ pub fn thread_permissions(
 }
 
 /// `GET /api/v1/threads/:id`.
-pub fn thread_detail(
+pub(crate) fn thread_detail(
     conn: &Connection,
     app: &AppState,
     viewer: &User,
     thread: &campfire_db::ChannelThread,
     room: &Room,
     now: Timestamp,
-) -> Result<api::ThreadDetail> {
+) -> Result<(api::ThreadDetail, crate::cards::Fetches)> {
     let membership = thread.membership_for(conn, viewer.id)?;
     let parent = match thread.parent_message_id {
         Some(id) => Message::find_by_id(conn, id)?,
         None => None,
     };
-    let parent_message = parent
-        .as_ref()
-        .map(|parent| message(conn, app, parent))
-        .transpose()?;
+    let (mut parents, mut fetches) = messages_and_fetches(conn, app, parent.as_slice())?;
+    let parent_message = parents.pop();
+    fetches.thread_header(conn, thread, now)?;
     let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
-    Ok(api::ThreadDetail {
+    let detail = api::ThreadDetail {
         thread: self::thread(thread, room, now),
         permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
         membership: membership.as_ref().map(thread_membership),
         parent_message,
         work: None,
         users: users(conn, &app.secrets, people, now)?,
-    })
+    };
+    Ok((detail, fetches))
 }
 
 /// `GET /api/v1/rooms/:id/threads`: `channel_threads#index`'s filters, most recently active

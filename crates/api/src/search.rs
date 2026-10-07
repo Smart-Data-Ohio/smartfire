@@ -137,7 +137,7 @@ async fn index_search(c: &mut Ctx) -> Result {
     }
     let zone = features::user_zone(c).await?.tz().clone();
     let (app, now) = (c.app().clone(), now(c));
-    let results = c
+    let (results, fetches) = c
         .app()
         .db
         .read(move |conn| {
@@ -174,18 +174,21 @@ async fn index_search(c: &mut Ctx) -> Result {
                 page.messages.iter().map(|message| message.creator_id),
                 now,
             )?;
-            Ok(api::SearchResults {
+            let (messages, fetches) = dto::messages_and_fetches(conn, &app, &page.messages)?;
+            let results = api::SearchResults {
                 query: squish(&raw),
                 chips: query.chips.iter().cloned().filter_map(chip).collect(),
-                messages: dto::messages(conn, &app, &page.messages)?,
+                messages,
                 users,
                 conversations: dto::conversation_names(conn, &viewer, pairs)?,
                 next_cursor,
                 sections,
-            })
+            };
+            Ok((results, fetches))
         })
         .await
         .map_err(db_error)?;
+    fetches.request(c.app()).await;
     c.json(StatusCode::OK, &results)
 }
 
