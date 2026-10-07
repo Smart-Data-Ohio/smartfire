@@ -270,6 +270,25 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** The search page's query as the URL has it. */
+interface RawSearchPageSearch {
+  readonly q?: unknown;
+}
+
+/** The search page's query: what was searched for ("" or absent for none yet). */
+export interface SearchPageSearch {
+  readonly q?: string;
+}
+
+/** `/app/search?q=`: global search, its own chunk. */
+const searchRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "search",
+  validateSearch: (search: RawSearchPageSearch): SearchPageSearch =>
+    search.q === undefined || search.q === null || search.q === "" ? {} : { q: String(search.q) },
+  component: lazyRouteComponent(() => import("./features/search/search-page.tsx"), "SearchPage"),
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
@@ -277,6 +296,7 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    searchRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),

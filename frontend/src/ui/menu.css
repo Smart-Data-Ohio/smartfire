@@ -105,4 +105,33 @@
     font-weight: var(--weight-semibold);
     letter-spacing: 0.02em;
   }
+  /* A radio item's check, and its optional second line. */
+  .menu-item-check {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 16px;
+    height: 20px;
+    margin-left: var(--space-3);
+    color: var(--accent);
+  }
+
+  /* Two lines: the icon and check stay with the first one. */
+  .menu-item:has(.menu-item-description) {
+    align-items: flex-start;
+    height: auto;
+    padding-block: var(--space-1-5);
+  }
+
+  .menu-item-lead {
+    height: 20px;
+  }
+
+  .menu-item-description {
+    display: block;
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+  }
 }
