@@ -264,3 +264,64 @@ test("unsupported browsers load devices without a permission prompt", async ({ p
   });
   await expect(page.locator(".settings-list-row")).toHaveCount(2);
 });
+
+test("a delayed initial device read cannot overwrite successful enrollment", async ({ page }) => {
+  const state = parseJson(await (await page.request.get("/__mock/state")).text());
+  const csrfToken = stringField(state, "csrfToken");
+
+  if (csrfToken === null) throw new Error("The mock did not provide its CSRF token.");
+
+  for (const id of [4, 5]) {
+    const removed = await page.request.delete(`/api/v1/settings/push_subscriptions/${id}`, {
+      headers: { "X-CSRF-Token": csrfToken },
+    });
+
+    expect(removed.status()).toBe(200);
+  }
+
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+
+  await page.route("**/api/v1/settings/push_subscriptions", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+
+      return;
+    }
+
+    const response = await route.fetch();
+
+    expect(parseJson(await response.text())).toEqual({ pushSubscriptions: [] });
+    captured.resolve();
+    await release.promise;
+    await route.fulfill({ response });
+  });
+  await browserPush(page, "granted");
+  await page.goto("/app/settings/devices");
+  await page.waitForFunction(() => window.__smartfirePushEnrollment !== undefined);
+  await captured.promise;
+
+  expect(await page.evaluate(() => window.__smartfirePushEnrollment?.enable())).toMatchObject({
+    kind: "enabled",
+  });
+  await expect(page.locator(".settings-list-row")).toHaveCount(1);
+
+  const stale = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/v1/settings/push_subscriptions") &&
+      response.request().method() === "GET",
+  );
+
+  release.resolve();
+  await (await stale).finished();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(page.locator(".settings-list-row")).toHaveCount(1);
+  await expect(
+    page.getByText("https://fcm.googleapis.com/fcm/send/mock-enrollment", { exact: true }),
+  ).toBeVisible();
+});

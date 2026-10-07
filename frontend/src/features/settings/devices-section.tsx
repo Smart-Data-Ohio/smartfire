@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
 import { settings as settingsActions, unsubscribePushEndpoint } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
@@ -21,22 +21,34 @@ type Load =
 export function DevicesSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [busy, setBusy] = useState<number | null>(null);
+  const listRevision = useRef(0);
 
   const fetchList = useCallback(() => {
+    const revision = ++listRevision.current;
+
     settingsActions.pushSubscriptions().then(
-      (list) => setLoad({ status: "ready", list }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (list) => {
+        if (revision !== listRevision.current) return;
+
+        setLoad({ status: "ready", list });
+      },
+      (error: Error) => {
+        if (revision !== listRevision.current) return;
+
+        setLoad({ status: "error", message: error.message });
+      },
     );
   }, []);
 
   useEffect(fetchList, [fetchList]);
 
-  const enrolled = useCallback(
-    (list: PushSubscriptionList) => setLoad({ status: "ready", list }),
-    [],
-  );
+  const replaceList = useCallback((list: PushSubscriptionList) => {
+    listRevision.current += 1;
 
-  const enrollment = usePushEnrollment(enrolled);
+    setLoad({ status: "ready", list });
+  }, []);
+
+  const enrollment = usePushEnrollment(replaceList);
   // LEAD-UI: the future Enable control here calls enrollment.enable directly from its click;
   // permission, subscribed and busy are available without any automatic permission prompt.
 
@@ -78,7 +90,7 @@ export function DevicesSection() {
       .removePushSubscription(id)
       .then(
         (list) => {
-          setLoad({ status: "ready", list });
+          replaceList(list);
 
           if (
             endpoint !== undefined &&
