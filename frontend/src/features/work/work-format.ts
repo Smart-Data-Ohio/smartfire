@@ -50,11 +50,11 @@ export const FORMER_MEMBER = "Former member";
 
 /** The work page's tabs. */
 export const WORK_FILTER_LABEL: Readonly<Record<WorkFilter, string>> = {
-  open: "Open work",
+  open: "Open",
   done: "Completed",
-  all: "All work",
-  agents: "Owned by agents",
-  boards: "Boards only",
+  all: "All",
+  agents: "Agents",
+  boards: "Boards",
 };
 
 /** What an empty tab says. */

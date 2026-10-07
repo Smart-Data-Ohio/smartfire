@@ -18,14 +18,14 @@ import {
   linkDetail,
   linkIcon,
   UNASSIGNED,
-  UNKNOWN_STATUS,
   WORK_STATUS_LABEL,
   WORK_STATUSES,
   workStatusLabel,
 } from "./work-format.ts";
 import "./work.css";
 
-const STATUS_LABELS = [...WORK_STATUSES.map((status) => WORK_STATUS_LABEL[status]), UNKNOWN_STATUS];
+// The four real labels hold the pill's width; the rare unknown one simply widens it.
+const STATUS_LABELS = WORK_STATUSES.map((status) => WORK_STATUS_LABEL[status]);
 
 /**
  * A status pill: a dot that says the state at a glance, and the label. A status this client

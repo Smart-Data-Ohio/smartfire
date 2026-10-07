@@ -133,7 +133,8 @@ export function WorkResult({ threadId, work, updatedAt, canEdit, announce }: Wor
         <h3 id={`work-result-${threadId}`} className="work-section-title">
           Result
         </h3>
-        <SuccessCheck show={saved} size={14} className="work-saved" />
+        {/* Mounted only while shown: under reduced motion the recipe shows it whatever its state. */}
+        {saved ? <SuccessCheck size={14} className="work-saved" /> : null}
         {canEdit && !editing ? (
           <Button ref={editRef} variant="ghost" size="sm" icon="pencil" onClick={start}>
             {work.resultMarkdown === null ? "Add result" : "Edit result"}
