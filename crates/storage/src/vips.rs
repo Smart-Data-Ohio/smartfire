@@ -35,6 +35,10 @@ unsafe extern "C" {
     fn vips_operation_new(name: *const c_char) -> *mut c_void;
     fn vips_object_get_argument_flags(object: *mut c_void, name: *const c_char) -> c_int;
     fn vips_image_new_from_file(name: *const c_char, ...) -> *mut VipsImage;
+    fn vips_pngload(filename: *const c_char, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_jpegload(filename: *const c_char, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_gifload(filename: *const c_char, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_webpload(filename: *const c_char, out: *mut *mut VipsImage, ...) -> c_int;
     fn vips_image_new_matrix_from_array(width: c_int, height: c_int, array: *const c_double, size: c_int) -> *mut VipsImage;
     fn vips_image_set_double(image: *mut VipsImage, name: *const c_char, d: c_double);
     fn vips_image_get_width(image: *const VipsImage) -> c_int;
@@ -80,6 +84,37 @@ impl Drop for Image {
 }
 
 impl Image {
+    /// Header-only until evaluated, with sequential access, strict error handling and at
+    /// most one page. Use the loader matching the magic bytes, never a fallback loader.
+    pub fn open_branding(path: &Path, content_type: &str) -> Result<Image> {
+        init();
+        let path = cstring(path)?;
+        let mut out = std::ptr::null_mut();
+        const FAIL_ON_ERROR: c_int = 2;
+        macro_rules! load {
+            ($loader:ident $(, $option:expr, $value:expr)*) => {
+                unsafe {
+                    $loader(
+                        path.as_ptr(), &mut out,
+                        c"access".as_ptr(), VIPS_ACCESS_SEQUENTIAL,
+                        c"fail_on".as_ptr(), FAIL_ON_ERROR,
+                        c"revalidate".as_ptr(), 1 as c_int,
+                        $($option.as_ptr(), $value as c_int,)*
+                        std::ptr::null::<c_char>(),
+                    )
+                }
+            };
+        }
+        let status = match content_type {
+            "image/png" => load!(vips_pngload),
+            "image/jpeg" => load!(vips_jpegload),
+            "image/gif" => load!(vips_gifload, c"page", 0, c"n", 1),
+            "image/webp" => load!(vips_webpload, c"page", 0, c"n", 1),
+            _ => return Err(Error::Vips("unsupported branding format".into())),
+        };
+        Image::wrap_out(status, out)
+    }
+
     fn wrap(ptr: *mut VipsImage) -> Result<Image> {
         if ptr.is_null() { Err(Error::Vips(take_error())) } else { Ok(Image(ptr)) }
     }

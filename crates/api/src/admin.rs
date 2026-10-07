@@ -22,6 +22,7 @@ use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_people::controllers::accounts::audit_logs;
 use campfire_people::controllers::accounts::icons::image_facts;
+use campfire_storage::branding::{self, Kind, Prepared};
 use campfire_views::time::Zone;
 use campfire_web::concerns::{self, Authentication, Before, session_keys};
 use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
@@ -319,6 +320,7 @@ async fn save_workspace(c: &mut Ctx) -> Result {
         settings,
         Assignment::Unchanged,
         Assignment::Unchanged,
+        None,
     )
     .await?;
     reply_workspace(c).await
@@ -327,20 +329,22 @@ async fn save_workspace(c: &mut Ctx) -> Result {
 async fn attach_logo(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateLogo = body(c).await?;
-    let logo = branding_image(c, &update.signed_id).await?;
-    write_workspace(c, None, None, logo, Assignment::Unchanged).await?;
+    let prepared = branding_image(c, &update.signed_id, Kind::Logo).await?;
+    let logo = Assignment::Existing(prepared.blob.clone());
+    write_workspace(c, None, None, logo, Assignment::Unchanged, Some(prepared)).await?;
     reply_workspace(c).await
 }
 
 async fn attach_banner(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateBanner = body(c).await?;
-    let banner = branding_image(c, &update.signed_id).await?;
-    write_workspace(c, None, None, Assignment::Unchanged, banner).await?;
+    let prepared = branding_image(c, &update.signed_id, Kind::Banner).await?;
+    let banner = Assignment::Existing(prepared.blob.clone());
+    write_workspace(c, None, None, Assignment::Unchanged, banner, Some(prepared)).await?;
     reply_workspace(c).await
 }
 
-async fn branding_image(c: &mut Ctx, signed_id: &str) -> Result<Assignment> {
+async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prepared> {
     let id = campfire_storage::paths::verify_signed_blob_id(
         &*c.app().storage.verifier,
         signed_id,
@@ -365,10 +369,20 @@ async fn branding_image(c: &mut Ctx, signed_id: &str) -> Result<Assignment> {
             validation("signedId", "must be a PNG, JPEG, GIF or WebP image"),
         ));
     }
-    if blob.byte_size > 10 * 1024 * 1024 {
+    if blob.byte_size > branding::MAX_BYTES as i64 {
         return Err(fail(c, validation("signedId", "must be 10 MB or smaller")));
     }
-    Ok(Assignment::Signed(signed_id.to_owned()))
+    let storage = c.app().storage.clone();
+    let prepared = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        campfire_web::active_storage::process_media(move || {
+            Ok(branding::prepare(&storage, blob, kind))
+        }),
+    )
+    .await
+    .map_err(|_| fail(c, validation("signedId", "couldn't be read as an image")))?
+    .map_err(|_| fail(c, validation("signedId", "couldn't be read as an image")))?;
+    prepared.map_err(|invalid| fail(c, validation("signedId", invalid.message(kind))))
 }
 
 /// `accounts#update`: the account, its logo, then the audit of what changed.
@@ -378,15 +392,20 @@ async fn write_workspace(
     settings: Option<Vec<(String, String)>>,
     logo: Assignment,
     banner: Assignment,
+    prepared: Option<Prepared>,
 ) -> Result<()> {
     let mut account = account(c).await?;
     let logo = logo.stage(c.app()).await?;
     let banner = banner.stage(c.app()).await?;
     let audit = audit_context(c)?;
+    let storage = c.app().storage.clone();
     let (before, account, before_logo, after_logo, banner_change) = c
         .app()
         .db
         .write(move |tx| {
+            if let Some(prepared) = prepared {
+                save_branding(tx, &storage, prepared)?;
+            }
             let before = account.clone();
             let before_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
@@ -423,6 +442,46 @@ async fn write_workspace(
         .await
         .map_err(Error::internal)?;
     presenters::workspace_branding::publish(c.app()).await;
+    Ok(())
+}
+
+/// Save the probe and its still atomically with the attachment, retaining analyzer metadata.
+fn save_branding(
+    tx: &mut campfire_db::Tx<'_>,
+    storage: &campfire_storage::Storage,
+    prepared: Prepared,
+) -> campfire_db::Result<()> {
+    let mut blob = campfire_storage::Blob::find(tx.conn(), prepared.blob.id)
+        .map_err(attachments::storage_error)?
+        .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+    let mut animated = false;
+    if let Some((variation, image)) = prepared.still {
+        if storage
+            .record_variant(tx.conn(), &blob, &variation, &image, tx.now().jiff())
+            .map_err(attachments::storage_error)?
+            .is_some()
+        {
+            campfire_web::active_storage::keep_after_commit(tx, image);
+            animated = true;
+        } else {
+            // A competing upload may have recorded it, or a previous still may be missing.
+            animated = storage
+                .existing_variant_file(tx.conn(), &blob, &variation)
+                .ok()
+                .flatten()
+                .is_some();
+        }
+    }
+    blob.metadata.set(
+        branding::ANIMATED_KEY,
+        campfire_storage::Json::Bool(animated),
+    );
+    blob.metadata
+        .set("identified", campfire_storage::Json::Bool(true));
+    tx.conn().execute(
+        "UPDATE active_storage_blobs SET content_type = ?1, metadata = ?2 WHERE id = ?3",
+        rusqlite::params![prepared.blob.content_type, blob.metadata.encode(), blob.id],
+    )?;
     Ok(())
 }
 

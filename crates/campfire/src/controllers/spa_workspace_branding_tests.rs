@@ -11,16 +11,80 @@ use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, TestApp}
 
 /// Two 1x1 frames, black then white, looping forever.
 fn animated_gif() -> Vec<u8> {
-    let mut gif = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff".to_vec();
+    gif_with_canvas(1, 1, 2)
+}
+
+fn gif_with_canvas(width: u16, height: u16, frames: usize) -> Vec<u8> {
+    let mut gif = b"GIF89a".to_vec();
+    gif.extend_from_slice(&width.to_le_bytes());
+    gif.extend_from_slice(&height.to_le_bytes());
+    gif.extend_from_slice(b"\x80\x00\x00\x00\x00\x00\xff\xff\xff");
     gif.extend_from_slice(b"!\xff\x0bNETSCAPE2.0\x03\x01\x00\x00\x00");
-    for pixel in [0x44, 0x4c] {
+    for pixel in [0x44, 0x4c].into_iter().cycle().take(frames) {
         gif.extend_from_slice(
-            b"!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02",
+            b"!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00",
         );
+        gif.extend_from_slice(&width.to_le_bytes());
+        gif.extend_from_slice(&height.to_le_bytes());
+        gif.extend_from_slice(b"\x00\x02\x02");
         gif.extend_from_slice(&[pixel, 0x01, 0x00]);
     }
     gif.push(b';');
     gif
+}
+
+fn png_chunk(png: &mut Vec<u8>, name: &[u8; 4], data: &[u8]) {
+    png.extend_from_slice(&(data.len() as u32).to_be_bytes());
+    let mut crc = u32::MAX;
+    for &byte in name.iter().chain(data) {
+        crc ^= u32::from(byte);
+        for _ in 0..8 {
+            crc = (crc >> 1) ^ (0xedb88320 & 0u32.wrapping_sub(crc & 1));
+        }
+    }
+    png.extend_from_slice(name);
+    png.extend_from_slice(data);
+    png.extend_from_slice(&(!crc).to_be_bytes());
+}
+
+/// Real, compressible RGB PNGs, optionally with two APNG frames.
+fn png(width: u32, height: u32, apng: bool) -> Vec<u8> {
+    use std::io::Write;
+
+    let mut png = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut header = width.to_be_bytes().to_vec();
+    header.extend_from_slice(&height.to_be_bytes());
+    header.extend_from_slice(&[8, 2, 0, 0, 0]);
+    png_chunk(&mut png, b"IHDR", &header);
+    if apng {
+        png_chunk(&mut png, b"acTL", &[0, 0, 0, 2, 0, 0, 0, 0]);
+    }
+    for frame in 0u32..if apng { 2 } else { 1 } {
+        if apng {
+            let mut control = frame.to_be_bytes().to_vec();
+            control.extend_from_slice(&width.to_be_bytes());
+            control.extend_from_slice(&height.to_be_bytes());
+            control.extend_from_slice(&[0; 8]);
+            control.extend_from_slice(&[0, 1, 0, 10, 0, 0]);
+            png_chunk(&mut png, b"fcTL", &control);
+        }
+        let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::fast());
+        let row = vec![if frame == 0 { 0 } else { 255 }; width as usize * 3];
+        for _ in 0..height {
+            encoder.write_all(&[0]).unwrap();
+            encoder.write_all(&row).unwrap();
+        }
+        let compressed = encoder.finish().unwrap();
+        if frame == 0 {
+            png_chunk(&mut png, b"IDAT", &compressed);
+        } else {
+            let mut data = (frame * 2).to_be_bytes().to_vec();
+            data.extend_from_slice(&compressed);
+            png_chunk(&mut png, b"fdAT", &data);
+        }
+    }
+    png_chunk(&mut png, b"IEND", &[]);
+    png
 }
 
 async fn upload_bytes(
@@ -123,6 +187,250 @@ async fn spa_workspace_branding_permissions_and_validation() {
     assert!(!initial.logo_attached);
     assert_eq!(initial.banner_url, None);
     assert_eq!(banner_audits(&a).await, Vec::<Value>::new());
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_validates_bytes_dimensions_and_frame_budget() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let oversized = png(5000, 10, false);
+    let too_tall = png(10, 5000, false);
+    let banner_width = png(4097, 100, false);
+    let banner_height = png(100, 2305, false);
+    let excessive_frames = gif_with_canvas(4096, 2304, 11);
+    for kind in ["logo", "banner"] {
+        let dimension_message = if kind == "logo" {
+            "must be at most 4096 × 4096 pixels"
+        } else {
+            "must be at most 4096 × 2304 pixels"
+        };
+        let mut cases = vec![
+            (
+                b"this is text, not a PNG".as_slice(),
+                "image/png",
+                "must be a PNG, JPEG, GIF or WebP image",
+            ),
+            (
+                b"GIF89a\x01\x00\x01\x00\x80\x00\x00".as_slice(),
+                "image/gif",
+                "must be a PNG, JPEG, GIF or WebP image",
+            ),
+            (oversized.as_slice(), "image/png", dimension_message),
+            (too_tall.as_slice(), "image/png", dimension_message),
+            (
+                excessive_frames.as_slice(),
+                "image/gif",
+                "must contain at most 100 megapixels across all frames",
+            ),
+        ];
+        if kind == "banner" {
+            cases.push((&banner_width, "image/png", dimension_message));
+            cases.push((&banner_height, "image/png", dimension_message));
+        }
+        for (bytes, content_type, message) in cases {
+            let (signed, _) = upload_bytes(&a, bytes, "image.png", content_type).await;
+            let reply = write(
+                &mut admin,
+                Method::PUT,
+                &format!("/api/v1/admin/workspace/{kind}"),
+                json!({"signedId": signed}),
+            )
+            .await;
+            assert_eq!(
+                reply.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{}",
+                reply.text()
+            );
+            assert_eq!(error(&reply)["fields"]["signedId"], json!([message]));
+            for path in ["/api/v1/boot", "/api/v1/admin/workspace", "/app/"] {
+                assert_eq!(admin.get(path).await.status, StatusCode::OK, "{path}");
+            }
+            let workspace: api::Workspace =
+                parse(&admin.send(get("/api/v1/admin/workspace")).await);
+            assert!(!workspace.logo_attached);
+            assert_eq!(workspace.banner_url, None);
+        }
+    }
+    assert!(banner_audits(&a).await.is_empty());
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_corrupt_frames_degrade_to_static() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let mut bytes = animated_gif();
+    // The header and two frame records remain readable; the first frame's LZW data is invalid.
+    let at = bytes
+        .windows(5)
+        .position(|window| window == [2, 2, 0x44, 1, 0])
+        .unwrap();
+    bytes[at + 2..at + 4].copy_from_slice(&[0xff, 0xff]);
+    for kind in ["logo", "banner"] {
+        let (signed, id) = upload_bytes(&a, &bytes, "broken.gif", "image/gif").await;
+        let workspace: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            &format!("/api/v1/admin/workspace/{kind}"),
+            json!({"signedId": signed}),
+        )
+        .await;
+        let url = if kind == "logo" {
+            assert_eq!(workspace.logo_still_url, None);
+            workspace.logo_url
+        } else {
+            assert_eq!(workspace.banner_still_url, None);
+            workspace.banner_url.unwrap()
+        };
+        a.db()
+            .read(move |conn| {
+                let blob = campfire_storage::Blob::find(conn, id).unwrap().unwrap();
+                assert_eq!(
+                    blob.metadata.get(campfire_storage::branding::ANIMATED_KEY),
+                    Some(&campfire_storage::Json::Bool(false))
+                );
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = ?",
+                        [id],
+                        |row| row.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        for path in ["/api/v1/boot", "/api/v1/admin/workspace", "/app/"] {
+            assert_eq!(admin.get(path).await.status, StatusCode::OK, "{path}");
+        }
+        let boot: Value = parse(&admin.send(get("/api/v1/boot")).await);
+        assert_eq!(boot["account"][format!("{kind}StillUrl")], Value::Null);
+        assert_eq!(admin.get(&url).await.status, StatusCode::NOT_FOUND);
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_legacy_metadata_and_broken_sources_never_break_rendering() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    for kind in ["logo", "banner"] {
+        let (signed, id) = upload_bytes(&a, &animated_gif(), "animation.gif", "image/gif").await;
+        let workspace: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            &format!("/api/v1/admin/workspace/{kind}"),
+            json!({"signedId": signed}),
+        )
+        .await;
+        let still = if kind == "logo" {
+            workspace.logo_still_url.unwrap()
+        } else {
+            workspace.banner_still_url.unwrap()
+        };
+        let storage = a.booted.app.storage.clone();
+        let (source_key, still_key) = a
+            .db()
+            .read(move |conn| {
+                let blob = campfire_storage::Blob::find(conn, id).unwrap().unwrap();
+                let image_kind = if kind == "logo" {
+                    campfire_storage::branding::Kind::Logo
+                } else {
+                    campfire_storage::branding::Kind::Banner
+                };
+                let image = storage
+                    .existing_variant(conn, &blob, &image_kind.still_variation())
+                    .unwrap()
+                    .unwrap();
+                assert!(campfire_storage::branding::animated(&blob));
+                Ok((blob.key, image.key))
+            })
+            .await
+            .unwrap();
+        a.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE active_storage_blobs SET metadata = '{}' WHERE id = ?",
+                    [id],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let workspace: api::Workspace = parse(&admin.send(get("/api/v1/admin/workspace")).await);
+        let boot: Value = parse(&admin.send(get("/api/v1/boot")).await);
+        assert_eq!(boot["account"][format!("{kind}StillUrl")], Value::Null);
+        if kind == "logo" {
+            assert_eq!(workspace.logo_still_url, None);
+            assert!(!workspace.logo_url.contains("animated=1"));
+        } else {
+            assert_eq!(workspace.banner_still_url, None);
+        }
+        assert_eq!(admin.get("/app/").await.status, StatusCode::OK);
+        assert_eq!(admin.get(&still).await.status, StatusCode::NOT_FOUND);
+
+        // A stale animated flag and a damaged source must never be consulted by a presenter.
+        a.db().write(move |tx| {
+            tx.conn().execute(
+                "UPDATE active_storage_blobs SET metadata = '{\"branding_animated\":true}' WHERE id = ?", [id],
+            )?;
+            Ok(())
+        }).await.unwrap();
+        std::fs::write(
+            a.booted.app.storage.service.path_for(&source_key),
+            b"broken GIF",
+        )
+        .unwrap();
+        for path in ["/api/v1/boot", "/api/v1/admin/workspace", "/app/"] {
+            assert_eq!(admin.get(path).await.status, StatusCode::OK, "{path}");
+        }
+        let prepared = admin.get(&still).await;
+        assert_eq!(prepared.status, StatusCode::OK);
+        assert_eq!(prepared.content_type(), Some("image/png"));
+        std::fs::remove_file(a.booted.app.storage.service.path_for(&still_key)).unwrap();
+        assert_eq!(admin.get(&still).await.status, StatusCode::NOT_FOUND);
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_apng_is_static_and_served_as_png() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let bytes = png(2, 2, true);
+    for kind in ["logo", "banner"] {
+        let (signed, id) = upload_bytes(&a, &bytes, "animation.png", "image/png").await;
+        let workspace: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            &format!("/api/v1/admin/workspace/{kind}"),
+            json!({"signedId": signed}),
+        )
+        .await;
+        let url = if kind == "logo" {
+            assert_eq!(workspace.logo_still_url, None);
+            workspace.logo_url
+        } else {
+            assert_eq!(workspace.banner_still_url, None);
+            workspace.banner_url.unwrap()
+        };
+        let response = admin.get(&url).await;
+        assert_eq!(response.status, StatusCode::OK);
+        assert_eq!(response.content_type(), Some("image/png"));
+        assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n");
+        a.db()
+            .read(move |conn| {
+                let blob = campfire_storage::Blob::find(conn, id).unwrap().unwrap();
+                assert_eq!(
+                    blob.metadata.get(campfire_storage::branding::ANIMATED_KEY),
+                    Some(&campfire_storage::Json::Bool(false))
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let boot: Value = parse(&admin.send(get("/api/v1/boot")).await);
+        assert_eq!(boot["account"][format!("{kind}StillUrl")], Value::Null);
+    }
 }
 
 #[tokio::test]

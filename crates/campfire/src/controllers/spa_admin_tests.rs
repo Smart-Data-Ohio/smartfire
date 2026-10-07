@@ -675,33 +675,64 @@ async fn the_workspace_saves_as_the_classic_form_does() {
 #[tokio::test]
 async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     let prepare = async |a: &TestApp, _: &mut Browser<'_>| json!(upload(a, "logo.png").await);
-    assert_parity(
-        prepare,
-        async |b, signed| {
-            let signed = signed.as_str().unwrap().to_string();
-            classic(b, Method::PATCH, "/account", &[("account[logo]", &signed)]).await;
-            classic(b, Method::DELETE, "/account/logo", &[]).await;
-        },
-        async |b, signed| {
-            let attached: api::Workspace = spa(
-                b,
-                Method::PUT,
-                "/api/v1/admin/workspace/logo",
-                json!({"signedId": signed}),
-            )
-            .await;
-            assert!(attached.logo_attached);
-            let removed: api::Workspace = spa(
-                b,
-                Method::DELETE,
-                "/api/v1/admin/workspace/logo",
-                Value::Null,
-            )
-            .await;
-            assert!(!removed.logo_attached);
-        },
-    )
-    .await;
+    let Some(mut classic_side) = outcome_with_app(&app, &prepare, async |b, signed| {
+        let signed = signed.as_str().unwrap().to_string();
+        classic(b, Method::PATCH, "/account", &[("account[logo]", &signed)]).await;
+        classic(b, Method::DELETE, "/account/logo", &[]).await;
+    })
+    .await
+    else {
+        return;
+    };
+    let Some(spa_side) = outcome_with_app(&app, &prepare, async |b, signed| {
+        let attached: api::Workspace = spa(
+            b,
+            Method::PUT,
+            "/api/v1/admin/workspace/logo",
+            json!({"signedId": signed}),
+        )
+        .await;
+        assert!(attached.logo_attached);
+        let removed: api::Workspace = spa(
+            b,
+            Method::DELETE,
+            "/api/v1/admin/workspace/logo",
+            Value::Null,
+        )
+        .await;
+        assert!(!removed.logo_attached);
+    })
+    .await
+    else {
+        return;
+    };
+    // The API additionally validates the image and stores its animation decision. The
+    // attachment, audit, jobs and publications still match the classic lifecycle exactly.
+    let mut logos = 0;
+    for row in classic_side.rows["active_storage_blobs"]
+        .as_array_mut()
+        .unwrap()
+    {
+        let mut blob: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
+        if blob["filename"] == "logo.png" {
+            let mut metadata =
+                campfire_storage::Json::parse(blob["metadata"].as_str().unwrap()).unwrap();
+            assert_eq!(metadata.get(campfire_storage::branding::ANIMATED_KEY), None);
+            metadata.set(
+                campfire_storage::branding::ANIMATED_KEY,
+                campfire_storage::Json::Bool(false),
+            );
+            blob["metadata"] = json!(metadata.encode());
+            *row = json!(blob.to_string());
+            logos += 1;
+        }
+    }
+    assert_eq!(logos, 1);
+    assert_eq!(
+        spa_side.rows, classic_side.rows,
+        "rows including the stored static flag"
+    );
+    assert_eq!(spa_side.frames, classic_side.frames, "frames");
 
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;

@@ -196,7 +196,12 @@ impl Storage {
     }
 
     /// Stages a generated image with the metadata its analysis would save.
-    fn stage_analyzed(&self, path: &Path, filename: Filename, content_type: &str) -> Result<Staged> {
+    pub(crate) fn stage_analyzed(
+        &self,
+        path: &Path,
+        filename: Filename,
+        content_type: &str,
+    ) -> Result<Staged> {
         let mut staged = self.stage_file(path, filename, Some(content_type))?;
         let analyzer = Analyzer::for_content_type(staged.blob.content_type.as_deref().unwrap_or(""));
         staged.blob.metadata = analyzed(&staged.blob.metadata, analyzer.metadata(path)?);

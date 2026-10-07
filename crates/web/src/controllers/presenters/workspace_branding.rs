@@ -19,20 +19,12 @@ pub async fn for_account(app: &App, account: &Account) -> Result<WorkspaceBrandi
         })
         .await
         .map_err(Error::internal)?;
-    let storage = app.storage.clone();
-    let (logo, logo_animated, banner, banner_animated) = tokio::task::spawn_blocking(move || {
-        let animated = |blob: &Option<campfire_storage::Blob>| {
-            blob.as_ref()
-                .map(|blob| storage.is_animated(blob))
-                .transpose()
-                .map(|value| value.unwrap_or(false))
-        };
-        let (logo_animated, banner_animated) = (animated(&logo)?, animated(&banner)?);
-        Ok::<_, campfire_storage::Error>((logo, logo_animated, banner, banner_animated))
-    })
-    .await
-    .map_err(Error::internal)?
-    .map_err(Error::internal)?;
+    let logo_animated = logo
+        .as_ref()
+        .is_some_and(campfire_storage::branding::animated);
+    let banner_animated = banner
+        .as_ref()
+        .is_some_and(campfire_storage::branding::animated);
     Ok(WorkspaceBranding {
         name: account.name.clone(),
         logo_url: logo.as_ref().map(|blob| {

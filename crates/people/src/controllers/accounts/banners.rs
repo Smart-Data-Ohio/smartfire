@@ -2,6 +2,7 @@
 
 use campfire_kit::{Ctx, Error, ExpiresIn, Freshness, Result, SendOptions};
 use campfire_storage::Variation;
+use campfire_storage::branding::{self, Kind};
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
@@ -23,13 +24,16 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
         .await
         .map_err(Error::internal)?
         .ok_or(Error::NotFound)?;
-    let storage = c.app().storage.clone();
-    let source = blob.clone();
-    let animated = tokio::task::spawn_blocking(move || storage.is_animated(&source))
-        .await
-        .map_err(Error::internal)?
-        .map_err(Error::internal)?;
+    let animated = branding::animated(&blob);
     let still = c.param_str("still") == Some("1");
+    if still && !animated {
+        return Err(Error::NotFound);
+    }
+    let kind = if name == "logo" {
+        Kind::Logo
+    } else {
+        Kind::Banner
+    };
     let small = name == "logo" && c.param_str("size") == Some("small");
     let original = animated && !still;
     if let Some(response) = c.fresh_when(Freshness {
@@ -56,7 +60,21 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
             ..ExpiresIn::default()
         },
     );
-    let image = if original {
+    let image = if still {
+        // Uploads prepare this variant. A missing/corrupt source never triggers a decoder.
+        let storage = c.app().storage.clone();
+        let variation = kind.still_variation();
+        c.app()
+            .db
+            .read(move |conn| {
+                storage
+                    .existing_variant(conn, &blob, &variation)
+                    .map_err(attachments::storage_error)
+            })
+            .await
+            .map_err(|_| Error::NotFound)?
+            .ok_or(Error::NotFound)?
+    } else if original {
         blob
     } else {
         // Classic forms may have attached a BMP or another non-variable logo.
@@ -80,20 +98,29 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
         } else {
             (512, 512)
         };
-        let format = if still || name == "logo" {
+        let format = if name == "logo" {
             "png".to_string()
         } else {
             blob.default_variant_format()
         };
-        campfire_web::active_storage::processed_representation(
-            c.app(),
-            blob,
-            Variation::resize_to_limit(width, height, Some(&format)),
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            campfire_web::active_storage::processed_variant_with(
+                c.app(),
+                blob,
+                Variation::resize_to_limit(width, height, Some(&format)),
+                move |storage, blob, variation| {
+                    branding::transform_variant(storage, blob, kind, variation)
+                },
+            ),
         )
-        .await?
+        .await
+        .map_err(|_| Error::NotFound)?
+        .map_err(|_| Error::NotFound)?
     };
     c.send_file(
         c.app().storage.service.path_for(&image.key),
         SendOptions::inline(image.content_type()),
     )
+    .map_err(|_| Error::NotFound)
 }

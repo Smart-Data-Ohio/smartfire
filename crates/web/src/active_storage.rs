@@ -298,7 +298,7 @@ pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
 /// Runs libvips, ffmpeg or ffprobe work on the blocking pool, a few jobs at a time: each can take
 /// a lot of memory and CPU (libvips threads its own work), and uploads shouldn't queue behind
 /// more of them than the machine can run at once.
-async fn process_media<T: Send + 'static>(
+pub async fn process_media<T: Send + 'static>(
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> Result<T> {
     process_media_work(work).await.map_err(Error::internal)
