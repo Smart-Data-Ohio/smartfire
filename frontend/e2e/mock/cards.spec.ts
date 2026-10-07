@@ -230,6 +230,12 @@ test("an older page with cards while the chunk loads keeps the list and its plac
     markInjected = resolve;
   });
 
+  let releaseOlder: () => void = () => undefined;
+
+  const anchorCaptured = new Promise<void>((resolve) => {
+    releaseOlder = resolve;
+  });
+
   expect(poll).toBeTruthy();
   // The page before the first window carries a poll on its newest message.
   await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages?before=*`, async (route) => {
@@ -242,6 +248,7 @@ test("an older page with cards while the chunk loads keeps the list and its plac
       markInjected(newest.id);
     }
 
+    await anchorCaptured;
     await route.fulfill({ response, json: body });
   });
   await openApp(page, `r/${ROOM_IDS.engineering}`);
@@ -255,8 +262,11 @@ test("an older page with cards while the chunk loads keeps the list and its plac
     element.scrollTop = 0;
   });
 
+  await expect(page.locator("[data-message-row]").first()).toBeInViewport();
+
   const anchor = await page.locator("[data-message-row]").first().getAttribute("data-message-id");
 
+  releaseOlder();
   await older;
   // The older rows are in (the injected one mounted above), the row that was at the top stays in
   // view, and the list is still up.
