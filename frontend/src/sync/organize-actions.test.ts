@@ -246,7 +246,16 @@ describe("organize actions", () => {
         return Effect.succeed({ id: 9, name: "Ops", collapsed: false, position: 3 });
       });
 
-      yield* fake.reply("PUT /rooms/1/category", withMembership(general, { roomCategoryId: 9 }));
+      let whileAssigning: readonly number[] = [];
+      let placedWhileAssigning: number | null | undefined;
+
+      yield* fake.route("PUT /rooms/1/category", () => {
+        // One Ops, not the draft beside the real one, with the room already in it.
+        whileAssigning = view().categories.map((category) => category.id);
+        placedWhileAssigning = view().rows[1]?.membership.roomCategoryId;
+
+        return Effect.succeed(withMembership(general, { roomCategoryId: 9 }));
+      });
 
       const created = yield* organize.createCategory("  Ops ", 1);
       const requests = yield* fake.requests;
@@ -255,6 +264,8 @@ describe("organize actions", () => {
       expect(shown.at(-1)?.id).toBeLessThan(0);
       expect(placedIn).toBe(shown.at(-1)?.id);
       expect(created.id).toBe(9);
+      expect(whileAssigning).toEqual([1, 2, 9]);
+      expect(placedWhileAssigning).toBe(9);
       expect(requests.at(-1)?.body).toEqual({ roomCategoryId: 9 });
       expect(view().categories.map((category) => category.id)).toEqual([1, 2, 9]);
       expect(view().rows[1]?.membership.roomCategoryId).toBe(9);

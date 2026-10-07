@@ -222,12 +222,20 @@ export const createCategory = Effect.fn("organize.createCategory")(function* (
     entry,
     Effect.gen(function* () {
       const category = yield* api.createCategory({ name: draft.name });
+      const slot: RoomSlot = { kind: "category", categoryId: category.id };
+
+      // The real category replaces the draft at once; the room shows in it while it moves.
+      const settled = memberships(
+        row === undefined ? {} : placementPatches(view(), row.room.id, slot),
+      );
 
       createdIds.set(temporaryId, category.id);
-      mutations.upsertCategory(category);
+      mutations.landCreatedCategory(category, entry, settled);
 
       if (row !== undefined) {
-        yield* placeOnServer(row.room.id, { kind: "category", categoryId: category.id });
+        yield* placeOnServer(row.room.id, slot).pipe(
+          Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(settled))),
+        );
       }
 
       return category;

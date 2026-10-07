@@ -224,6 +224,11 @@ export const mutations = {
     apply((state) => organize.dropOverlay(state, entry)),
   upsertCategory: (category: RoomCategory) =>
     apply((state) => organize.upsertCategory(state, category)),
+  landCreatedCategory: (
+    category: RoomCategory,
+    draft: organize.SidebarOverlay,
+    settled: organize.SidebarOverlay,
+  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled)),
   setCategories: (categories: readonly RoomCategory[]) =>
     apply((state) => organize.setCategories(state, categories)),
   removeCategory: (categoryId: number) =>

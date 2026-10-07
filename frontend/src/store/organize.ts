@@ -181,6 +181,20 @@ export function upsertCategory(state: State, category: RoomCategory): State {
   return withCategories(state, [...others, category].sort(byPosition));
 }
 
+/**
+ * A new category the server has made takes over from its draft in one step, so the sidebar never
+ * shows both: the category lands, the draft's entry goes, and `settled` (the room being moved
+ * into it, placed under its real id) shows until that move settles too.
+ */
+export function landCreatedCategory(
+  state: State,
+  category: RoomCategory,
+  draft: SidebarOverlay,
+  settled: SidebarOverlay,
+): State {
+  return addOverlay(dropOverlay(upsertCategory(state, category), draft), settled);
+}
+
 /** Every category, after a reorder. */
 export function setCategories(state: State, categories: readonly RoomCategory[]): State {
   return withCategories(state, categories.toSorted(byPosition));
