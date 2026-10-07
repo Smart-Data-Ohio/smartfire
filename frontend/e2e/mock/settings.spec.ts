@@ -153,3 +153,32 @@ test("integrations link to the classic page, which stays classic", async ({ page
     "/users/me/profile?classic=1#fizzy-connection-title",
   );
 });
+
+test("a theme the server refuses is put back", async ({ page }) => {
+  await page.route("**/api/v1/settings/appearance", (route) =>
+    route.fulfill({ status: 500, body: "" }),
+  );
+  await openSettings(page, "appearance");
+
+  const html = page.locator("html");
+
+  await page.getByRole("radio", { name: "Dark" }).check();
+
+  await expect(page.getByText("Couldn't save your appearance")).toBeVisible();
+  await expect(html).not.toHaveAttribute("data-theme", "dark");
+  await expect(page.getByRole("radio", { name: "Dark" })).not.toBeChecked();
+});
+
+test("saving one status setting keeps what's typed in the others", async ({ page }) => {
+  await openSettings(page, "status");
+
+  await page.getByRole("textbox", { name: "Status text" }).fill("On the train");
+  await page.getByRole("textbox", { name: "Note" }).fill("Back Monday");
+  const presence = page.getByRole("combobox", { name: "Presence" });
+
+  await presence.selectOption({ index: 1 });
+  await expect(presence).toBeEnabled();
+
+  await expect(page.getByRole("textbox", { name: "Status text" })).toHaveValue("On the train");
+  await expect(page.getByRole("textbox", { name: "Note" })).toHaveValue("Back Monday");
+});

@@ -24,6 +24,7 @@ import {
   SettingsPage,
   SettingsSelect,
   toastFailure,
+  useBusy,
   useSettings,
 } from "./settings-parts.tsx";
 
@@ -73,39 +74,53 @@ export function StatusSection() {
   const [note, setNote] = useState(status.oooNote ?? "");
   const [fields, setFields] = useState<Fields>({});
   const [attempt, setAttempt] = useState(0);
-  const [busy, setBusy] = useState<string | null>(null);
+  const { busy, track } = useBusy();
   const ready = calendarReady(settings);
 
-  const save = (key: string, change: Partial<UpdateStatus>, done: string | null) => {
-    setBusy(key);
-    settingsActions
-      .updateStatus(change)
-      .then(
-        (next) => {
-          replace(next);
-          setFields({});
-          setEmoji(next.status.customStatusEmoji ?? "");
-          setText(next.status.customStatusText ?? "");
-          setNote(next.status.oooNote ?? "");
-          setPreset("");
-          setCustom("");
+  /** Puts the saved custom status back in its form. */
+  const resyncCustom = (saved: Settings["status"]) => {
+    setEmoji(saved.customStatusEmoji ?? "");
+    setText(saved.customStatusText ?? "");
+  };
 
-          if (done !== null) {
-            toast({ title: done, tone: "success" });
-          }
-        },
-        (error: Error) => {
-          const named = fieldsOf(error);
+  /** Puts the saved out-of-office back in its form. */
+  const resyncOoo = (saved: Settings["status"]) => {
+    setNote(saved.oooNote ?? "");
+    setPreset("");
+    setCustom("");
+  };
 
-          setFields(named);
-          setAttempt((count) => count + 1);
+  /**
+   * Saves `change`, then resyncs only the form it came from (`resync`), so text typed in the
+   * other forms stays put.
+   */
+  const save = (
+    key: string,
+    change: Partial<UpdateStatus>,
+    done: string | null,
+    resync?: (saved: Settings["status"]) => void,
+  ) => {
+    void track(key, settingsActions.updateStatus(change)).then(
+      (next) => {
+        replace(next);
+        setFields({});
+        resync?.(next.status);
 
-          if (Object.keys(named).length === 0) {
-            toastFailure("Couldn't update your status", error);
-          }
-        },
-      )
-      .finally(() => setBusy(null));
+        if (done !== null) {
+          toast({ title: done, tone: "success" });
+        }
+      },
+      (error: Error) => {
+        const named = fieldsOf(error);
+
+        setFields(named);
+        setAttempt((count) => count + 1);
+
+        if (Object.keys(named).length === 0) {
+          toastFailure("Couldn't update your status", error);
+        }
+      },
+    );
   };
 
   const saveCustom = (event: FormEvent) => {
@@ -114,6 +129,7 @@ export function StatusSection() {
       "custom",
       { customStatusEmoji: emoji, customStatusText: text, customStatusExpiresIn: expiry },
       "Status saved",
+      resyncCustom,
     );
   };
 
@@ -127,6 +143,7 @@ export function StatusSection() {
         oooNote: note,
       },
       "Out of office saved",
+      resyncOoo,
     );
   };
 
@@ -143,7 +160,7 @@ export function StatusSection() {
           label="Presence"
           value={status.presenceSetting}
           choices={PRESENCE_CHOICES}
-          disabled={busy === "presence"}
+          disabled={busy("presence")}
           onChange={(presenceSetting) => save("presence", { presenceSetting }, null)}
         />
         <FieldError message={fieldError(fields, "presenceSetting", "Presence")} />
@@ -182,17 +199,19 @@ export function StatusSection() {
             onChange={setExpiry}
           />
           <div className="settings-actions">
-            <Button type="submit" loading={busy === "custom"} disabled={busy !== null}>
+            <Button type="submit" loading={busy("custom")} disabled={busy("clear-custom")}>
               Save status
             </Button>
             <Button
               variant="secondary"
-              loading={busy === "clear-custom"}
+              loading={busy("clear-custom")}
               disabled={
-                busy !== null ||
+                busy("custom") ||
                 (status.customStatusEmoji === null && status.customStatusText === null)
               }
-              onClick={() => save("clear-custom", { clearCustomStatus: true }, "Status cleared")}
+              onClick={() =>
+                save("clear-custom", { clearCustomStatus: true }, "Status cleared", resyncCustom)
+              }
             >
               Clear status
             </Button>
@@ -208,7 +227,7 @@ export function StatusSection() {
           <>
             <Toggle
               checked={status.meetingStatusEnabled}
-              disabled={busy === "meeting"}
+              disabled={busy("meeting")}
               label="Show when I'm in a meeting"
               description={`Connected as ${settings.integrations.google.email ?? "your Google account"}.`}
               onCheckedChange={(meetingStatusEnabled) =>
@@ -263,14 +282,16 @@ export function StatusSection() {
             onChange={(event) => setNote(event.target.value)}
           />
           <div className="settings-actions">
-            <Button type="submit" loading={busy === "ooo"} disabled={busy !== null}>
+            <Button type="submit" loading={busy("ooo")} disabled={busy("clear-ooo")}>
               Save out of office
             </Button>
             <Button
               variant="secondary"
-              loading={busy === "clear-ooo"}
-              disabled={busy !== null || status.oooUntil === null}
-              onClick={() => save("clear-ooo", { clearOoo: true }, "Out of office cleared")}
+              loading={busy("clear-ooo")}
+              disabled={busy("ooo") || status.oooUntil === null}
+              onClick={() =>
+                save("clear-ooo", { clearOoo: true }, "Out of office cleared", resyncOoo)
+              }
             >
               Clear out of office
             </Button>
@@ -279,7 +300,7 @@ export function StatusSection() {
         {ready ? (
           <Toggle
             checked={status.oooCalendarEnabled}
-            disabled={busy === "ooo-calendar"}
+            disabled={busy("ooo-calendar")}
             label="Use my Google Calendar out-of-office"
             description="Out-of-office events mark you out for their span. Only the event type and times are read."
             onCheckedChange={(oooCalendarEnabled) =>

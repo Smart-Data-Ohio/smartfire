@@ -11,8 +11,11 @@ import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
 import "./app-shell.css";
 
-/** "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. */
-function useDocumentTitle(roomId: number | null): void {
+/**
+ * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings name
+ * themselves instead of a room.
+ */
+function useDocumentTitle(roomId: number | null, inSettings: boolean): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
   const room = useStore((state) => (roomId === null ? null : (state.sidebar.rows[roomId] ?? null)));
@@ -20,13 +23,14 @@ function useDocumentTitle(roomId: number | null): void {
   useEffect(() => {
     const prefix = mentions > 0 ? `(${mentions}) ` : unread ? "• " : "";
 
-    const name =
-      room === null
+    const name = inSettings
+      ? "Settings · Smartfire"
+      : room === null
         ? "Smartfire"
         : `${room.room.kind === "direct" ? "" : "#"}${room.displayName} · Smartfire`;
 
     document.title = `${prefix}${name}`;
-  }, [mentions, unread, room]);
+  }, [mentions, unread, room, inSettings]);
 }
 
 /**
@@ -46,7 +50,7 @@ export function AppShell() {
     void actions.start();
   }, []);
 
-  useDocumentTitle(roomId);
+  useDocumentTitle(roomId, inSettings);
   useClassicLinks();
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);

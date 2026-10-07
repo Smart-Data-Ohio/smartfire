@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, use, useId } from "react";
+import { createContext, type ReactNode, use, useCallback, useId, useState } from "react";
 import type { Settings } from "../../gen/Settings.ts";
 import { ActionError } from "../../sync/run.ts";
 import { toast } from "../../ui/toast-store.ts";
@@ -26,6 +26,38 @@ export function useSettings(): SettingsState {
 /** A failed write as a field map (empty unless the server named fields). */
 export function fieldsOf(error: Error): Readonly<Record<string, readonly string[]>> {
   return error instanceof ActionError ? error.fields : {};
+}
+
+/** A section's writes in flight, by control. */
+export interface Busy {
+  /** Whether any of `keys` is saving. */
+  readonly busy: (...keys: readonly string[]) => boolean;
+  /** Marks `key` saving until `work` settles, and hands `work` back. */
+  readonly track: <T>(key: string, work: Promise<T>) => Promise<T>;
+}
+
+/**
+ * Tracks each control's write on its own, so one settling never re-enables a control whose own
+ * write is still in flight.
+ */
+export function useBusy(): Busy {
+  const [saving, setSaving] = useState<ReadonlySet<string>>(() => new Set());
+
+  const track = useCallback(<T,>(key: string, work: Promise<T>): Promise<T> => {
+    setSaving((keys) => new Set(keys).add(key));
+
+    return work.finally(() =>
+      setSaving((keys) => {
+        const next = new Set(keys);
+
+        next.delete(key);
+
+        return next;
+      }),
+    );
+  }, []);
+
+  return { busy: (...keys) => keys.some((key) => saving.has(key)), track };
 }
 
 /** Tells the person a write failed, with the server's reason. */

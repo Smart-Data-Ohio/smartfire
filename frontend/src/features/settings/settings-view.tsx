@@ -39,15 +39,19 @@ function SettingsSkeleton() {
 export function SettingsView() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
 
-  const reload = useCallback(() => {
-    setLoad({ status: "loading" });
+  const fetchSettings = useCallback(() => {
     settingsActions.load().then(
       (settings) => setLoad({ status: "ready", settings }),
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
 
-  useEffect(reload, [reload]);
+  useEffect(fetchSettings, [fetchSettings]);
+
+  const reload = () => {
+    setLoad({ status: "loading" });
+    fetchSettings();
+  };
 
   const state = useMemo(
     () =>
@@ -59,10 +63,6 @@ export function SettingsView() {
         : null,
     [load],
   );
-
-  useEffect(() => {
-    document.title = "Settings · Smartfire";
-  }, []);
 
   return (
     <div className="settings">

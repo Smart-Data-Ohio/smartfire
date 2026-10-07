@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { SessionInfo } from "../../gen/SessionInfo.ts";
 import type { SessionList } from "../../gen/SessionList.ts";
+import { ActionError } from "../../sync/run.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -21,26 +22,30 @@ type Pending =
   | { readonly kind: "others" };
 
 /**
- * This browser's push subscription, dropped before it signs out (the classic sessions controller
- * does the same), so the device stops getting notifications. `null` when there is none.
+ * This browser's push subscription, if it has one. Its endpoint goes with the sign-out so the
+ * server drops the subscription too (the classic sessions controller does the same); the browser
+ * unsubscribes only once the server has signed it out.
  */
-async function unsubscribeFromPush(): Promise<string | null> {
+async function pushSubscription(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator)) {
     return null;
   }
 
   const registration = await navigator.serviceWorker.getRegistration(window.location.origin);
-  const subscription = await registration?.pushManager.getSubscription();
 
-  if (subscription === undefined || subscription === null) {
-    return null;
-  }
+  return (await registration?.pushManager.getSubscription()) ?? null;
+}
 
-  const { endpoint } = subscription;
+/** Whether a sign-out of this browser went through: the server answers it `Unauthorized`. */
+function signedOut(error: Error): boolean {
+  return error instanceof ActionError && error.tag === "Unauthorized";
+}
 
-  await subscription.unsubscribe();
+/** This browser is signed out: drop its push subscription and leave for the sign-in page. */
+function leave(subscription: PushSubscription | null): void {
+  const unsubscribed = subscription === null ? Promise.resolve(true) : subscription.unsubscribe();
 
-  return endpoint;
+  void unsubscribed.catch(() => false).then(() => window.location.assign("/session/new"));
 }
 
 /**
@@ -54,15 +59,19 @@ export function SessionsSection() {
   const [busy, setBusy] = useState(false);
   const now = useNow();
 
-  const reload = useCallback(() => {
-    setLoad({ status: "loading" });
+  const fetchList = useCallback(() => {
     settingsActions.sessions().then(
       (list) => setLoad({ status: "ready", list }),
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
 
-  useEffect(reload, [reload]);
+  useEffect(fetchList, [fetchList]);
+
+  const reload = () => {
+    setLoad({ status: "loading" });
+    fetchList();
+  };
 
   const landed = (list: SessionList) => {
     setLoad({ status: "ready", list });
@@ -83,14 +92,30 @@ export function SessionsSection() {
 
     setBusy(true);
 
+    if (action.kind === "one" && action.session.current) {
+      void pushSubscription()
+        .catch(() => null)
+        .then((subscription) =>
+          settingsActions.revokeSession(action.session.id, subscription?.endpoint ?? null).then(
+            () => leave(subscription),
+            (error: Error) => {
+              if (signedOut(error)) {
+                leave(subscription);
+              } else {
+                toastFailure("Couldn't sign that session out", error);
+                setBusy(false);
+              }
+            },
+          ),
+        );
+
+      return;
+    }
+
     const run =
       action.kind === "others"
         ? settingsActions.revokeOtherSessions()
-        : action.session.current
-          ? unsubscribeFromPush()
-              .catch(() => null)
-              .then((endpoint) => settingsActions.revokeSession(action.session.id, endpoint))
-          : settingsActions.revokeSession(action.session.id);
+        : settingsActions.revokeSession(action.session.id);
 
     run
       .then(landed, (error: Error) => toastFailure("Couldn't sign that session out", error))

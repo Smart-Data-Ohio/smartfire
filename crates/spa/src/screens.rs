@@ -7,7 +7,9 @@
 //!   [`json`]) to open classic links it has ported in place, and to send a destination it hasn't
 //!   ported yet to its classic page with a full page load ([`classic_url`] is the same mapping).
 //!
-//! A slice that ports a screen adds its SPA route and flips `ported` here in the same PR. Unported
+//! One classic page can hold several SPA screens (the profile page's sections): each has a row, all
+//! map back to it, and its redirect goes to the first. A slice that ports a screen adds its SPA
+//! route and flips `ported` here in the same PR. Unported
 //! rows name where a screen will live, so the SPA can link there already: the server never
 //! redirects to them, and the SPA forwards them to the classic page.
 //!
@@ -78,6 +80,32 @@ pub const SCREENS: &[Screen] = &[
         "users/profiles#show",
         "/users/me/profile",
         "/app/settings",
+        true,
+    ),
+    // Sections of the classic profile page: they map back to it ("Switch to classic"), and its
+    // redirect goes to the row above.
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/notifications",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/appearance",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/calls",
+        true,
+    ),
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings/integrations",
         true,
     ),
     screen(

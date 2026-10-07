@@ -16,15 +16,19 @@ export function DevicesSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [busy, setBusy] = useState<number | null>(null);
 
-  const reload = useCallback(() => {
-    setLoad({ status: "loading" });
+  const fetchList = useCallback(() => {
     settingsActions.pushSubscriptions().then(
       (list) => setLoad({ status: "ready", list }),
       (error: Error) => setLoad({ status: "error", message: error.message }),
     );
   }, []);
 
-  useEffect(reload, [reload]);
+  useEffect(fetchList, [fetchList]);
+
+  const reload = () => {
+    setLoad({ status: "loading" });
+    fetchList();
+  };
 
   const remove = (id: number) => {
     setBusy(id);

@@ -15,6 +15,7 @@ import {
   SettingsGroup,
   SettingsPage,
   toastFailure,
+  useBusy,
   useSettings,
 } from "./settings-parts.tsx";
 
@@ -25,7 +26,7 @@ function DndExceptions() {
   const { settings, replace } = useSettings();
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
-  const [busy, setBusy] = useState<number | null>(null);
+  const { busy, track } = useBusy();
   const searchId = useId();
   const users = useStore((state) => state.users);
   const viewerId = settings.profile.userId;
@@ -45,22 +46,18 @@ function DndExceptions() {
   }, [allowed, candidates, query, users, viewerId]);
 
   const change = (userId: number, name: string, allow: boolean) => {
-    setBusy(userId);
-    settingsActions
-      .setDndAllowance(userId, allow)
-      .then(
-        (next: Settings) => {
-          replace(next);
+    void track(`person-${userId}`, settingsActions.setDndAllowance(userId, allow)).then(
+      (next: Settings) => {
+        replace(next);
 
-          if (allow) {
-            setQuery("");
-            setAdding(false);
-          }
-        },
-        (error: Error) =>
-          toastFailure(allow ? `Couldn't add ${name}` : `Couldn't remove ${name}`, error),
-      )
-      .finally(() => setBusy(null));
+        if (allow) {
+          setQuery("");
+          setAdding(false);
+        }
+      },
+      (error: Error) =>
+        toastFailure(allow ? `Couldn't add ${name}` : `Couldn't remove ${name}`, error),
+    );
   };
 
   return (
@@ -77,7 +74,7 @@ function DndExceptions() {
               <Button
                 variant="ghost"
                 size="sm"
-                loading={busy === person.userId}
+                loading={busy(`person-${person.userId}`)}
                 aria-label={`Remove ${person.name} from DND exceptions`}
                 onClick={() => change(person.userId, person.name, false)}
               >
@@ -117,7 +114,7 @@ function DndExceptions() {
                   <button
                     type="button"
                     className="settings-pick"
-                    disabled={busy !== null}
+                    disabled={busy(`person-${person.userId}`)}
                     onClick={() => change(person.userId, person.name, true)}
                   >
                     <UserAvatar userId={person.userId} size={24} decorative />
@@ -148,34 +145,43 @@ function DndExceptions() {
 export function NotificationsSection() {
   const { settings, replace } = useSettings();
   const { notifications } = settings;
-  const [busy, setBusy] = useState<string | null>(null);
+  const { busy, track } = useBusy();
   const [keywords, setKeywords] = useState(notifications.keywordAlerts.join("\n"));
+  const [quietStart, setQuietStart] = useState(notifications.quietHoursStart ?? "");
+  const [quietEnd, setQuietEnd] = useState(notifications.quietHoursEnd ?? "");
   const [fields, setFields] = useState<Fields>({});
 
-  const save = (key: string, change: Partial<UpdateNotifications>, done: string | null = null) => {
-    setBusy(key);
-    settingsActions
-      .updateNotifications(change)
-      .then(
-        (next) => {
-          replace(next);
-          setFields({});
+  /**
+   * Saves `change`. `settled` gets the saved settings and `true`, or the unchanged ones and
+   * `false` after a failure, so a control can show what's stored.
+   */
+  const save = (
+    key: string,
+    change: Partial<UpdateNotifications>,
+    done: string | null = null,
+    settled?: (saved: Settings["notifications"], ok: boolean) => void,
+  ) => {
+    void track(key, settingsActions.updateNotifications(change)).then(
+      (next) => {
+        replace(next);
+        setFields({});
+        settled?.(next.notifications, true);
 
-          if (done !== null) {
-            toast({ title: done, tone: "success" });
-          }
-        },
-        (error: Error) => {
-          const named = fieldsOf(error);
+        if (done !== null) {
+          toast({ title: done, tone: "success" });
+        }
+      },
+      (error: Error) => {
+        const named = fieldsOf(error);
 
-          setFields(named);
+        setFields(named);
+        settled?.(notifications, false);
 
-          if (Object.keys(named).length === 0) {
-            toastFailure("Couldn't save your notification settings", error);
-          }
-        },
-      )
-      .finally(() => setBusy(null));
+        if (Object.keys(named).length === 0) {
+          toastFailure("Couldn't save your notification settings", error);
+        }
+      },
+    );
   };
 
   const saveKeywords = (event: FormEvent) => {
@@ -183,8 +189,13 @@ export function NotificationsSection() {
 
     const lines = keywordLines(keywords);
 
-    save("keywords", { keywordAlerts: lines }, "Keyword alerts saved");
     setKeywords(lines.join("\n"));
+    save("keywords", { keywordAlerts: lines }, "Keyword alerts saved", (saved, ok) => {
+      // A failure keeps the typed lines beside its error, to fix and save again.
+      if (ok) {
+        setKeywords(saved.keywordAlerts.join("\n"));
+      }
+    });
   };
 
   const keywordCount = keywordLines(keywords).length;
@@ -200,14 +211,14 @@ export function NotificationsSection() {
       >
         <Toggle
           checked={notifications.dndEnabled}
-          disabled={busy === "dnd"}
+          disabled={busy("dnd")}
           label="Do not disturb"
           description="Silence push and sounds until you turn this off."
           onCheckedChange={(dndEnabled) => save("dnd", { dndEnabled })}
         />
         <Toggle
           checked={notifications.quietHoursEnabled}
-          disabled={busy === "quiet"}
+          disabled={busy("quiet")}
           label="Quiet hours"
           description="Scheduled DND every day, in your time zone."
           onCheckedChange={(quietHoursEnabled) => save("quiet", { quietHoursEnabled })}
@@ -221,11 +232,14 @@ export function NotificationsSection() {
               id="settings-quiet-start"
               type="time"
               className="input settings-select"
-              defaultValue={notifications.quietHoursStart ?? ""}
-              disabled={busy === "quiet-start"}
-              onBlur={(event) => {
-                if (event.target.value !== (notifications.quietHoursStart ?? "")) {
-                  save("quiet-start", { quietHoursStart: event.target.value });
+              value={quietStart}
+              disabled={busy("quiet-start")}
+              onChange={(event) => setQuietStart(event.target.value)}
+              onBlur={() => {
+                if (quietStart !== (notifications.quietHoursStart ?? "")) {
+                  save("quiet-start", { quietHoursStart: quietStart }, null, (saved) =>
+                    setQuietStart(saved.quietHoursStart ?? ""),
+                  );
                 }
               }}
             />
@@ -238,11 +252,14 @@ export function NotificationsSection() {
               id="settings-quiet-end"
               type="time"
               className="input settings-select"
-              defaultValue={notifications.quietHoursEnd ?? ""}
-              disabled={busy === "quiet-end"}
-              onBlur={(event) => {
-                if (event.target.value !== (notifications.quietHoursEnd ?? "")) {
-                  save("quiet-end", { quietHoursEnd: event.target.value });
+              value={quietEnd}
+              disabled={busy("quiet-end")}
+              onChange={(event) => setQuietEnd(event.target.value)}
+              onBlur={() => {
+                if (quietEnd !== (notifications.quietHoursEnd ?? "")) {
+                  save("quiet-end", { quietHoursEnd: quietEnd }, null, (saved) =>
+                    setQuietEnd(saved.quietHoursEnd ?? ""),
+                  );
                 }
               }}
             />
@@ -256,14 +273,14 @@ export function NotificationsSection() {
         />
         <Toggle
           checked={notifications.meetingDndEnabled}
-          disabled={busy === "meeting"}
+          disabled={busy("meeting")}
           label="Do not disturb during meetings"
           description={`Silence push and sounds while you're in a meeting. Only works while "Show when I'm in a meeting" is on; starred people still get through.`}
           onCheckedChange={(meetingDndEnabled) => save("meeting", { meetingDndEnabled })}
         />
         <Toggle
           checked={notifications.oooNotifyEnabled}
-          disabled={busy === "ooo"}
+          disabled={busy("ooo")}
           label="Keep notifying me while I'm out of office"
           description="Off means push, sounds and huddle rings stay silent while you're out of office, like DND. Starred people still get through."
           onCheckedChange={(oooNotifyEnabled) => save("ooo", { oooNotifyEnabled })}
@@ -296,7 +313,7 @@ export function NotificationsSection() {
           </p>
           <FieldError message={fieldError(fields, "keywordAlerts", "Keyword alerts")} />
           <div className="settings-actions">
-            <Button type="submit" loading={busy === "keywords"} disabled={busy !== null}>
+            <Button type="submit" loading={busy("keywords")}>
               Save keywords
             </Button>
           </div>
@@ -311,7 +328,7 @@ export function NotificationsSection() {
           <Toggle
             key={entry.key}
             checked={entry.enabled}
-            disabled={busy === `inbox-${entry.key}`}
+            disabled={busy(`inbox-${entry.key}`)}
             label={entry.label}
             description={entry.description}
             onCheckedChange={(enabled) =>

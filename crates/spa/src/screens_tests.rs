@@ -51,15 +51,41 @@ fn each_row_maps_the_same_parameters_both_ways() {
     }
 }
 
+/// The row a classic page redirects to: the first for its endpoint and pattern.
+fn first_for(screen: &Screen) -> &'static Screen {
+    SCREENS
+        .iter()
+        .find(|row| row.endpoint == screen.endpoint && row.classic == screen.classic)
+        .unwrap()
+}
+
 #[test]
 fn no_two_rows_claim_the_same_url() {
-    let classic: BTreeSet<_> = SCREENS
-        .iter()
-        .map(|screen| (screen.endpoint, screen.classic))
-        .collect();
     let spa: BTreeSet<_> = SCREENS.iter().map(|screen| screen.spa).collect();
-    assert_eq!(classic.len(), SCREENS.len());
     assert_eq!(spa.len(), SCREENS.len());
+    // A classic page shared by several rows: only the profile page's sections, all ported.
+    for screen in SCREENS {
+        let first = first_for(screen);
+        if !std::ptr::eq(first, screen) {
+            assert_eq!(screen.endpoint, "users/profiles#show", "{screen:?}");
+            assert!(screen.ported && first.ported, "{screen:?}");
+        }
+    }
+}
+
+#[test]
+fn the_profile_sections_map_back_to_the_profile_page() {
+    for section in ["notifications", "appearance", "calls", "integrations"] {
+        assert_eq!(
+            classic_url(&format!("/app/settings/{section}"), None).as_deref(),
+            Some("/users/me/profile"),
+            "{section}"
+        );
+    }
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
+        Some("/app/settings")
+    );
 }
 
 #[test]
@@ -150,8 +176,11 @@ fn a_person_s_own_pages_match_only_as_me() {
         classic_url("/app/settings/devices", None).as_deref(),
         Some("/users/me/push_subscriptions")
     );
-    // Sections with no classic page of their own have no row.
-    assert_eq!(classic_url("/app/settings/appearance", None), None);
+    // Sections of the profile page map back to it.
+    assert_eq!(
+        classic_url("/app/settings/appearance", None).as_deref(),
+        Some("/users/me/profile")
+    );
 }
 
 #[test]
@@ -202,7 +231,7 @@ fn every_spa_url_maps_back_to_its_classic_page() {
         if screen.ported {
             assert_eq!(
                 spa_url(screen.endpoint, &classic, None).as_deref(),
-                Some(spa.as_str()),
+                Some(sample(first_for(screen).spa, &ids).as_str()),
                 "{screen:?}"
             );
         }
