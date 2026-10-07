@@ -1,0 +1,80 @@
+/* The create-poll dialog (S3): question, options, the two switches and when voting closes. */
+@layer app {
+  .create-poll {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .create-poll-options,
+  .create-poll-closes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .create-poll-legend {
+    margin-bottom: var(--space-1);
+    padding: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .create-poll-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  /* The legend names the group; each field keeps "Option N" as its accessible name only. */
+  .create-poll-option .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .create-poll-option .field-error:empty {
+    display: none;
+  }
+
+  .create-poll-option > .field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .create-poll-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .create-poll-close-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+  }
+
+  .create-poll-close-choices .button:not([aria-pressed="true"]) {
+    --button-ring: var(--border-strong);
+  }
+
+  .create-poll-error {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  .create-poll-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+}

@@ -19,6 +19,7 @@ import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
+import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -90,6 +91,18 @@ function threadIdOf(topic: string): number | null {
   const match = /^thread:(\d+)$/.exec(topic);
 
   return match === null ? null : Number(match[1]);
+}
+
+/**
+ * The loaded sidebar gained a room (joined, added, or access regained). The server sends no
+ * `activity.item` for what the viewer can see again there, so the inbox has to be read afresh.
+ */
+export function roomsAdded(previous: SidebarState, next: SidebarState): boolean {
+  if (previous.status !== "ready" || next.rows === previous.rows) {
+    return false;
+  }
+
+  return Object.keys(next.rows).some((roomId) => !Object.hasOwn(previous.rows, roomId));
 }
 
 /** Authors of new messages the store has no user record for. */
@@ -194,6 +207,17 @@ export class Engine extends Context.Service<
         }
       });
 
+      /** The badge from the server; a failure keeps the count shown. */
+      const refreshUnreadCount = activityUnreadCount().pipe(
+        Effect.tap(({ unreadCount }) =>
+          Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
+        ),
+        Effect.catch((error) =>
+          Effect.logWarning("sync: activity count refresh failed", error.message),
+        ),
+        Effect.provideContext(api),
+      );
+
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
         for (const topic of topicList) {
@@ -211,15 +235,7 @@ export class Engine extends Context.Service<
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
-            yield* activityUnreadCount().pipe(
-              Effect.tap(({ unreadCount }) =>
-                Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
-              ),
-              Effect.catch((error) =>
-                Effect.logWarning("sync: activity count resync failed", error.message),
-              ),
-              Effect.provideContext(api),
-            );
+            yield* refreshUnreadCount;
           } else if (roomId !== null) {
             yield* resyncRoom(roomId).pipe(
               Effect.catch((error) =>
@@ -480,11 +496,37 @@ export class Engine extends Context.Service<
         }
       });
 
+      /**
+       * Whenever the sidebar gains a room, every activity list reloads when next shown (at once
+       * if shown now) and the badge refreshes. Rooms landing close together refresh once.
+       */
+      const followRooms = Effect.gen(function* () {
+        const grew = yield* Queue.sliding<void>(1);
+
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            store.subscribe((state, previous) => {
+              if (roomsAdded(previous.sidebar, state.sidebar)) {
+                Queue.offerUnsafe(grew, undefined);
+              }
+            }),
+          ),
+          (unsubscribe) => Effect.sync(unsubscribe),
+        );
+
+        while (true) {
+          yield* Queue.take(grew);
+          mutations.markActivityStale();
+          yield* refreshUnreadCount;
+        }
+      });
+
       const run = Effect.scoped(
         Effect.gen(function* () {
           const scope = yield* Effect.scope;
 
           yield* Effect.forkIn(Effect.scoped(expire), scope);
+          yield* Effect.forkIn(Effect.scoped(followRooms), scope);
           yield* Effect.forkIn(presence.run, scope);
           yield* connectLoop(scope);
         }),
