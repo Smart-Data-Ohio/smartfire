@@ -263,7 +263,25 @@ describe("work actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("keep newer live facts after a delayed refresh and converge on another refresh", () =>
+  it.effect("merge list and detail responses into the same work key", () =>
+    Effect.gen(function* () {
+      seed(factsFixture({ status: "blocked" }));
+
+      const fake = yield* FakeApi;
+      const done = rowFixture(THREAD);
+
+      yield* fake.reply("GET /work", {
+        threads: [{ ...done, thread: { ...done.thread, work: factsFixture({ status: "done" }) } }],
+        users: [],
+      });
+      yield* work.loadList("done");
+
+      expect(factsOf()?.status).toBe("done");
+      expect(workListOf(store.getState(), "done").rows[0]?.thread.work?.status).toBe("done");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("send its own replacement after rejecting a delayed refresh", () =>
     Effect.gen(function* () {
       seed();
       liveStatus("blocked");
@@ -285,19 +303,56 @@ describe("work actions", () => {
 
       yield* Deferred.await(started);
       liveStatus("done");
-      yield* Deferred.succeed(gate, undefined);
-      yield* Fiber.join(loading);
-
-      expect(factsOf()?.status).toBe("done");
-      expect(workDetailStale(store.getState(), THREAD)).toBe(true);
-
       yield* fake.reply(
         `GET /threads/${THREAD}`,
         threadDetailFixture(THREAD, factsFixture({ status: "done" }), workDetailFixture()),
       );
-      yield* work.refresh(THREAD);
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
 
+      expect(factsOf()?.status).toBe("done");
       expect((yield* fake.requests).length).toBe(2);
+      expect(workDetailStale(store.getState(), THREAD)).toBe(false);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a successful write after its echo and a late older refresh", () =>
+    Effect.gen(function* () {
+      seed(factsFixture({ status: "blocked" }));
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      const done = threadDetailFixture(
+        THREAD,
+        factsFixture({ status: "done" }),
+        workDetailFixture(),
+      );
+
+      yield* fake.route(`GET /threads/${THREAD}`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as(
+            threadDetailFixture(THREAD, factsFixture({ status: "blocked" }), workDetailFixture()),
+          ),
+        ),
+      );
+
+      const loading = yield* Effect.forkChild(work.refresh(THREAD));
+
+      yield* Deferred.await(started);
+      yield* fake.route(`PATCH /threads/${THREAD}/work`, () => {
+        liveStatus("done");
+
+        return Effect.succeed(done);
+      });
+      yield* work.setStatus(THREAD, "done");
+      yield* fake.reply(`GET /threads/${THREAD}`, done);
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
+
+      expect(factsOf()?.status).toBe("done");
       expect(workDetailStale(store.getState(), THREAD)).toBe(false);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );

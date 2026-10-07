@@ -15,20 +15,27 @@ import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import { mutations, store } from "../store/store.ts";
-import { optimisticFacts, sameWorkFacts, workListOf, workVersion } from "../store/work.ts";
+import { optimisticFacts, sameWorkFacts, workKey, workListOf } from "../store/work.ts";
+import { readFresh, withRead } from "./freshness.ts";
 import { keyedSerial } from "./serial.ts";
 
 /** Loads (or reloads) a filter's list; a failure lands as the list's error. */
 export const loadList = Effect.fn("work.loadList")(function* (filter: WorkFilter) {
-  mutations.setWorkListLoading(filter);
+  yield* readFresh(`work-list:${filter}`, (ticket) =>
+    Effect.gen(function* () {
+      mutations.setWorkListLoading(filter);
 
-  const { generation } = workListOf(store.getState(), filter);
+      const { generation } = workListOf(store.getState(), filter);
 
-  yield* api.workList(filter).pipe(
-    Effect.tap((list) => Effect.sync(() => mutations.landWorkList(filter, list, generation))),
-    Effect.catch((error) =>
-      Effect.sync(() => mutations.setWorkListFailed(filter, error.message, generation)),
-    ),
+      yield* api.workList(filter).pipe(
+        Effect.tap((list) =>
+          Effect.sync(() => mutations.landWorkList(filter, list, generation, ticket)),
+        ),
+        Effect.catch((error) =>
+          Effect.sync(() => mutations.setWorkListFailed(filter, error.message, generation)),
+        ),
+      );
+    }),
   );
 });
 
@@ -46,13 +53,12 @@ export const refresh = Effect.fn("work.refresh")(function* (threadId: number) {
 
   refreshing.add(threadId);
 
-  const version = workVersion(store.getState(), threadId);
-
-  yield* fetchThread(threadId).pipe(
-    Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, version))),
-    Effect.ignore,
-    Effect.ensuring(Effect.sync(() => refreshing.delete(threadId))),
-  );
+  yield* readFresh(workKey(threadId), (ticket) =>
+    fetchThread(threadId).pipe(
+      Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
+      Effect.ignore,
+    ),
+  ).pipe(Effect.ensuring(Effect.sync(() => refreshing.delete(threadId))));
 });
 
 /** Writes to one thread's work go one at a time, so each rolls back to a copy none holds. */
@@ -68,37 +74,41 @@ const write = <E, R>(
   shown: ((before: WorkFacts | null) => WorkFacts | null) | null,
   request: (before: WorkFacts | null) => Effect.Effect<ThreadDetail, E, R>,
 ) =>
-  serial.run(
-    threadId,
-    Effect.gen(function* () {
-      const before = store.getState().threads[threadId]?.work ?? null;
-      const version = workVersion(store.getState(), threadId);
-      const optimistic = shown === null ? undefined : shown(before);
+  serial
+    .run(
+      threadId,
+      Effect.gen(function* () {
+        const before = store.getState().threads[threadId]?.work ?? null;
+        const optimistic = shown === null ? undefined : shown(before);
 
-      mutations.countWorkWrite(threadId, 1);
+        mutations.countWorkWrite(threadId, 1);
 
-      if (optimistic !== undefined) {
-        mutations.putWorkFacts(threadId, optimistic);
-      }
-
-      const rollBack = Effect.sync(() => {
-        const now = store.getState().threads[threadId]?.work ?? null;
-
-        if (optimistic !== undefined && sameWorkFacts(now, optimistic)) {
-          mutations.putWorkFacts(threadId, before);
+        if (optimistic !== undefined) {
+          mutations.putWorkFacts(threadId, optimistic);
         }
-      });
 
-      const detail = yield* request(before).pipe(
-        Effect.tapError(() => rollBack),
-        Effect.onInterrupt(() => rollBack),
-      );
+        const rollBack = Effect.sync(() => {
+          const now = store.getState().threads[threadId]?.work ?? null;
 
-      mutations.loadThreadDetail(detail, version);
+          if (optimistic !== undefined && sameWorkFacts(now, optimistic)) {
+            mutations.putWorkFacts(threadId, before);
+          }
+        });
 
-      return detail;
-    }).pipe(Effect.ensuring(Effect.sync(() => mutations.countWorkWrite(threadId, -1)))),
-  );
+        return yield* withRead((ticket) =>
+          request(before).pipe(
+            Effect.tapError(() => rollBack),
+            Effect.onInterrupt(() => rollBack),
+            Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
+          ),
+        );
+      }).pipe(Effect.ensuring(Effect.sync(() => mutations.countWorkWrite(threadId, -1)))),
+    )
+    .pipe(
+      Effect.flatMap(({ value, rejected }) =>
+        (rejected ? refresh(threadId) : Effect.void).pipe(Effect.as(value)),
+      ),
+    );
 
 /**
  * Moves the work to `status`, starts tracking an untracked thread, or stops tracking it

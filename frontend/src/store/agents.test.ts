@@ -23,6 +23,7 @@ import {
   setProfileFailed,
   workingPresenceAt,
 } from "./agents.ts";
+import { finishRead, startRead } from "./freshness.ts";
 import type { SyncEvent } from "./model.ts";
 import { applyEvents, applyPage, receiveMessage, updateMessage } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
@@ -174,7 +175,7 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(20) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.agents.live,
+      loading.freshness.clock,
     );
 
     const next = applyEvents(
@@ -239,7 +240,7 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(5) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.agents.live,
+      loading.freshness.clock,
     );
 
     expect(next.agents.rows[40]?.status).toBe("working");
@@ -427,6 +428,50 @@ describe("agent steps", () => {
     );
 
     expect(next).toBe(initialState);
+  });
+
+  it("keeps a step event over a late detail with an equal updatedAt", () => {
+    const before = landWorkDetail(
+      initialState,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({ steps: [step(1, 10, { status: "pending" })] }),
+      ),
+    );
+
+    const read = startRead(before.freshness);
+
+    const live = applyEvents(
+      { ...before, freshness: read.freshness },
+      [
+        {
+          seq: 1,
+          topic: "thread:7",
+          type: "agent.steps",
+          data: {
+            roomId: 3,
+            messageId: null,
+            threadId: 7,
+            steps: [step(1, 10, { status: "done" })],
+          },
+        },
+      ],
+      NOW,
+    );
+
+    const landed = landWorkDetail(
+      live,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({ steps: [step(1, 10, { status: "pending" })] }),
+      ),
+      read.ticket,
+    );
+
+    expect(landed.work.details[7]?.steps[0]?.status).toBe("done");
+    expect(finishRead(landed.freshness, read.ticket).rejected).toBe(true);
   });
 
   it("keeps live thread steps when a detail with older steps lands", () => {

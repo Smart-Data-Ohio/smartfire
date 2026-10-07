@@ -5,6 +5,7 @@ import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type AgentsSlice, emptyAgents } from "./agents.ts";
 import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
 import { type CardsState, emptyCards } from "./cards.ts";
+import { emptyFreshness, type Freshness } from "./freshness.ts";
 import { emptyLedger, type LedgerSlice } from "./ledger.ts";
 import type {
   Boot,
@@ -35,6 +36,7 @@ import { emptyWork, type WorkSlice } from "./work.ts";
  * components read slices through selectors.
  */
 export interface State {
+  readonly freshness: Freshness;
   readonly boot: Boot | null;
   readonly me: Me | null;
   readonly connection: ConnectionStatus;
@@ -100,6 +102,7 @@ export interface SidebarState {
 }
 
 export const initialState: State = {
+  freshness: emptyFreshness,
   boot: null,
   me: null,
   connection: "connecting",

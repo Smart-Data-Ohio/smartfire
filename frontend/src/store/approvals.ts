@@ -15,6 +15,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
+import { land, markLocal, membership, placeId, receive, replay, sameRecord } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
   eachPaged,
@@ -26,7 +27,6 @@ import {
   pagedLanded,
   pagedLoading,
   pagedLoadingMore,
-  pagedPlaced,
   pagedStale,
 } from "./paged-list.ts";
 import type { State } from "./state.ts";
@@ -42,13 +42,9 @@ export interface ApprovalsSlice {
   readonly items: Readonly<Record<number, AgentApproval>>;
   /** By `ApprovalListKey`. */
   readonly lists: Readonly<Record<string, PagedList>>;
-  /** Local decisions are not server timestamps; compare replies with the confirmed copy. */
-  readonly optimistic: Readonly<
-    Record<number, { readonly before: AgentApproval; readonly shown: AgentApproval }>
-  >;
 }
 
-export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {}, optimistic: {} };
+export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {} };
 
 /** The key of `agentId`'s list in `filter`. */
 export function approvalListKey(agentId: number, filter: ApprovalFilter): ApprovalListKey {
@@ -108,6 +104,7 @@ export function landApprovalPage(
   page: AgentApprovalPage,
   mode: "replace" | "more",
   generation?: number,
+  ticket?: number,
 ): State {
   if (!pagedCurrent(approvalListOf(state, key), generation)) {
     return state;
@@ -116,95 +113,130 @@ export function landApprovalPage(
   let next = state;
 
   for (const approval of page.approvals) {
-    next = applyApproval(next, approval);
+    next = applyApproval(next, approval, ticket, key);
   }
 
-  const lists = {
-    ...next.approvals.lists,
-    [key]: pagedLanded(
-      approvalListOf(next, key),
-      page.approvals
-        .filter((approval) => belongsTo(key, next.approvals.items[approval.id] ?? approval))
-        .map((approval) => approval.id),
-      page.nextCursor,
-      mode,
-    ),
-  };
+  const held = approvalListOf(next, key);
+
+  const ids = page.approvals.flatMap((approval) =>
+    belongsTo(key, next.approvals.items[approval.id] ?? approval) ? [approval.id] : [],
+  );
+
+  const loaded = pagedLanded(held, ids, page.nextCursor, mode);
+
+  const result = replay(
+    next.freshness,
+    `approvals:${key}`,
+    ticket ?? next.freshness.clock,
+    loaded.ids,
+    newestFirst,
+  );
 
   return {
     ...next,
+    freshness: membership(result.freshness, `approvals:${key}`, held.ids, result.ids),
     users: mergeUserList(next.users, page.users),
-    approvals: { ...next.approvals, lists },
+    approvals: {
+      ...next.approvals,
+      lists: { ...next.approvals.lists, [key]: { ...loaded, ids: result.ids } },
+    },
   };
 }
 
-function placeApproval(state: State, approval: AgentApproval): State {
-  const items = { ...state.approvals.items, [approval.id]: approval };
+const approvalKey = (id: number) => `approval:${id}`;
 
-  const lists = eachPaged(state.approvals.lists, (list, key) =>
-    pagedPlaced(list, approval.id, belongsTo(key, approval), newestFirst),
-  );
+function placeApproval(state: State, approval: AgentApproval, sourceList?: ApprovalListKey): State {
+  let freshness = state.freshness;
 
-  return { ...state, approvals: { ...state.approvals, items, lists } };
+  const lists = eachPaged(state.approvals.lists, (list, key) => {
+    if (key === sourceList) {
+      return list;
+    }
+
+    const last = list.ids.at(-1);
+    const belongs = belongsTo(key, approval);
+
+    const inWindow =
+      list.ids.includes(approval.id) ||
+      list.nextCursor === null ||
+      last === undefined ||
+      newestFirst(approval.id, last) <= 0;
+
+    const ids = placeId(
+      list.ids,
+      approval.id,
+      belongs && inWindow && (list.status === "ready" || list.status === "loading"),
+      newestFirst,
+    );
+
+    freshness = membership(freshness, `approvals:${key}`, list.ids, ids);
+
+    return ids === list.ids ? list : { ...list, ids };
+  });
+
+  return {
+    ...state,
+    freshness,
+    approvals: {
+      ...state.approvals,
+      items: { ...state.approvals.items, [approval.id]: approval },
+      lists,
+    },
+  };
 }
 
-function newerApproval(held: AgentApproval | undefined, incoming: AgentApproval): AgentApproval {
-  if (held === undefined) {
-    return incoming;
-  }
+/** Timestamp ordering and read tickets share the same rule as work and agent status. */
+export function applyApproval(
+  state: State,
+  approval: AgentApproval,
+  ticket?: number,
+  sourceList?: ApprovalListKey,
+): State {
+  const copies = {
+    held: state.approvals.items[approval.id],
+    incoming: approval,
+    same: sameRecord<AgentApproval>,
+    timestamp: (value: AgentApproval) => value.decidedAt,
+    keep: (held: AgentApproval, incoming: AgentApproval) =>
+      held.status !== "pending" && incoming.status === "pending",
+  };
 
-  if (held.status !== "pending" && incoming.status === "pending") {
-    return held;
-  }
+  const result =
+    ticket === undefined
+      ? receive(state.freshness, approvalKey(approval.id), copies)
+      : land(state.freshness, approvalKey(approval.id), ticket, copies);
 
-  return (held.decidedAt ?? "") > (incoming.decidedAt ?? "") ? held : incoming;
+  return result.value === undefined
+    ? state
+    : placeApproval({ ...state, freshness: result.freshness }, result.value, sourceList);
 }
 
-/** A server copy: keep the newer decision, then reconcile all loaded lists with that copy. */
-export function applyApproval(state: State, approval: AgentApproval): State {
-  const local = state.approvals.optimistic[approval.id];
-  const kept = newerApproval(local?.before ?? state.approvals.items[approval.id], approval);
-
-  if (local !== undefined && kept.status === "pending") {
-    return placeApproval(state, local.shown);
-  }
-
-  const { [approval.id]: _settled, ...optimistic } = state.approvals.optimistic;
-
-  return placeApproval({ ...state, approvals: { ...state.approvals, optimistic } }, kept);
-}
-
-/** Show a local decision without treating its clock as a confirmed server timestamp. */
+/** A local timestamp is for display; the shared mark identifies it as unconfirmed. */
 export function showApproval(state: State, shown: AgentApproval): State {
-  const before = state.approvals.items[shown.id];
+  return state.approvals.items[shown.id] === undefined
+    ? state
+    : placeApproval(
+        {
+          ...state,
+          freshness: markLocal(state.freshness, approvalKey(shown.id)),
+        },
+        shown,
+      );
+}
 
-  if (before === undefined) {
+/** A refusal restores only the local copy still shown, never a confirmed decision. */
+export function rollbackApproval(state: State, shown: AgentApproval, before: AgentApproval): State {
+  if (
+    state.approvals.items[shown.id] !== shown ||
+    !state.freshness.marks[approvalKey(shown.id)]?.local
+  ) {
     return state;
   }
 
   return placeApproval(
-    {
-      ...state,
-      approvals: {
-        ...state.approvals,
-        optimistic: { ...state.approvals.optimistic, [shown.id]: { before, shown } },
-      },
-    },
-    shown,
+    { ...state, freshness: markLocal(state.freshness, approvalKey(shown.id)) },
+    before,
   );
-}
-
-/** A refusal restores only the optimistic copy still shown, never a confirmed decision. */
-export function rollbackApproval(state: State, shown: AgentApproval): State {
-  const local = state.approvals.optimistic[shown.id];
-
-  if (local === undefined || state.approvals.items[shown.id] !== shown) {
-    return state;
-  }
-
-  const { [shown.id]: _rolledBack, ...optimistic } = state.approvals.optimistic;
-
-  return placeApproval({ ...state, approvals: { ...state.approvals, optimistic } }, local.before);
 }
 
 /** `approval.updated`: the request with its agent's and decider's users. */

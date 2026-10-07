@@ -16,6 +16,7 @@ import {
   decidedLocally,
 } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
+import { readFresh, withRead } from "./freshness.ts";
 
 /** The status to ask the server for: `null` for every one. */
 function statusOf(filter: ApprovalFilter) {
@@ -42,15 +43,19 @@ export const load = Effect.fn("approvals.load")(function* (
 ) {
   const key = approvalListKey(agentId, filter);
 
-  mutations.setApprovalListLoading(key, false);
+  yield* readFresh(`approvals:${key}`, (ticket) =>
+    Effect.gen(function* () {
+      mutations.setApprovalListLoading(key, false);
 
-  const { generation } = approvalListOf(store.getState(), key);
+      const { generation } = approvalListOf(store.getState(), key);
 
-  yield* api.agentApprovals(agentId, statusOf(filter), null).pipe(
-    Effect.tap((page) =>
-      Effect.sync(() => mutations.landApprovalPage(key, page, "replace", generation)),
-    ),
-    Effect.catch(failLoad(key, generation)),
+      yield* api.agentApprovals(agentId, statusOf(filter), null).pipe(
+        Effect.tap((page) =>
+          Effect.sync(() => mutations.landApprovalPage(key, page, "replace", generation, ticket)),
+        ),
+        Effect.catch(failLoad(key, generation)),
+      );
+    }),
   );
 });
 
@@ -68,12 +73,20 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
 
   mutations.setApprovalListLoading(key, true);
 
-  yield* api.agentApprovals(agentId, statusOf(filter), list.nextCursor).pipe(
-    Effect.tap((page) =>
-      Effect.sync(() => mutations.landApprovalPage(key, page, "more", list.generation)),
-    ),
-    Effect.catch(failLoad(key, list.generation)),
+  const result = yield* withRead(
+    (ticket) =>
+      api.agentApprovals(agentId, statusOf(filter), list.nextCursor).pipe(
+        Effect.tap((page) =>
+          Effect.sync(() => mutations.landApprovalPage(key, page, "more", list.generation, ticket)),
+        ),
+        Effect.catch(failLoad(key, list.generation)),
+      ),
+    `approvals:${key}`,
   );
+
+  if (result.rejected) {
+    yield* load(agentId, filter);
+  }
 });
 
 /**
@@ -100,14 +113,14 @@ export const decide = Effect.fn("approvals.decide")(function* (
 
   /** Back as it was, unless something newer replaced what this decision showed. */
   const rollBack = () => {
-    if (shown !== undefined) {
-      mutations.rollbackApproval(shown);
+    if (shown !== undefined && before !== undefined) {
+      mutations.rollbackApproval(shown, before);
     }
   };
 
-  const decided = yield* api
-    .decideApproval(approvalId, note === null ? { decision } : { decision, note })
-    .pipe(
+  const result = yield* withRead((ticket) =>
+    api.decideApproval(approvalId, note === null ? { decision } : { decision, note }).pipe(
+      Effect.tap((decided) => Effect.sync(() => mutations.applyApproval(decided, ticket))),
       Effect.tapError((error) =>
         Effect.gen(function* () {
           rollBack();
@@ -132,9 +145,12 @@ export const decide = Effect.fn("approvals.decide")(function* (
           mutations.markApprovalsStale();
         }),
       ),
-    );
+    ),
+  );
 
-  mutations.applyApproval(decided);
+  if (result.rejected && before !== undefined) {
+    yield* load(before.agentId, "all");
+  }
 
-  return decided;
+  return result.value;
 });
