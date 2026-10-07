@@ -32,9 +32,7 @@ export type ResolvedTheme = "light" | "dark";
 /** Inter is Smartfire's own; the rest are self-hosted presets (typography.css). */
 export type FontPreset = "inter" | "system" | "atkinson" | "serif" | "mono";
 
-export type { PalettePreset };
-
-export type { TextSize };
+export type { PalettePreset, TextSize };
 
 /** The appearance an account carries (boot, `/me`, the settings page). */
 export interface AccountAppearance {
@@ -184,14 +182,26 @@ function transition(change: () => void): void {
   change();
 }
 
+/**
+ * The text fields of the JSON object in `json`, as index.html's blocking script reads them: a
+ * corrupted `["dark"]` (which `String` would turn into "dark") is no choice in either place, and
+ * JSON that isn't an object has none. Throws on JSON that doesn't parse.
+ */
+function textFields(json: string): Map<string, string> {
+  const parsed: unknown = JSON.parse(json);
+
+  return parsed instanceof Object
+    ? new Map(
+        Object.entries(parsed).flatMap(([key, field]): [string, string][] =>
+          String(field) === field ? [[key, field]] : [],
+        ),
+      )
+    : new Map();
+}
+
 function readStored(): Map<string, string> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
-
-    // Each field as text: a stored `null` reads "null", which no choice matches.
-    return parsed instanceof Object
-      ? new Map<string, string>(Object.entries(parsed).map(([key, field]) => [key, String(field)]))
-      : new Map();
+    return textFields(localStorage.getItem(STORAGE_KEY) ?? "null");
   } catch {
     return new Map();
   }
@@ -206,15 +216,7 @@ function readInlineBoot(): Partial<AccountAppearance> {
   }
 
   try {
-    const parsed: unknown = JSON.parse(text);
-
-    if (!(parsed instanceof Object)) {
-      return {};
-    }
-
-    const fields = new Map<string, string>(
-      Object.entries(parsed).map(([key, field]) => [key, String(field)]),
-    );
+    const fields = textFields(text);
 
     return {
       theme: pick(THEMES, fields.get("theme")) ?? "system",

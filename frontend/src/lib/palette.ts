@@ -196,6 +196,7 @@ function derive(seed: PaletteSeed, theme: Theme): ReadonlyMap<string, Oklch> {
 
   const surfaces = TEXT_SURFACES.map((name) => tokens.get(name) ?? WHITE);
   const direction = theme === "light" ? "darker" : "lighter";
+
   const ink = (l: number) => ({
     l,
     c: Math.min(surfaceChroma * 2, 0.02),
@@ -204,8 +205,14 @@ function derive(seed: PaletteSeed, theme: Theme): ReadonlyMap<string, Oklch> {
   });
 
   tokens.set("--text", clampLightness(ink(lightOrDark(theme, 0.22, 0.94)), surfaces, direction));
-  tokens.set("--text-muted", clampLightness(ink(lightOrDark(theme, 0.46, 0.74)), surfaces, direction));
-  tokens.set("--text-faint", clampLightness(ink(lightOrDark(theme, 0.51, 0.69)), surfaces, direction));
+  tokens.set(
+    "--text-muted",
+    clampLightness(ink(lightOrDark(theme, 0.46, 0.74)), surfaces, direction),
+  );
+  tokens.set(
+    "--text-faint",
+    clampLightness(ink(lightOrDark(theme, 0.51, 0.69)), surfaces, direction),
+  );
   tokens.set(
     "--accent",
     clampLightness(
@@ -248,7 +255,10 @@ export function paletteTokens(preset: PalettePreset): ReadonlyMap<string, string
     const dark = derive(seed, "dark");
 
     for (const name of PALETTE_TOKEN_NAMES) {
-      tokens.set(name, `light-dark(${format(light.get(name) ?? WHITE)}, ${format(dark.get(name) ?? WHITE)})`);
+      tokens.set(
+        name,
+        `light-dark(${format(light.get(name) ?? WHITE)}, ${format(dark.get(name) ?? WHITE)})`,
+      );
     }
   }
 

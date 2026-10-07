@@ -164,6 +164,35 @@ jobs:
           CARGO_TERM_COLOR: always
         run: cargo test -p campfire_spa --locked -j 4
 
+      # The first paint (e2e/first-paint.spec.ts, playwright.config.ts): the shell crates/spa
+      # renders over this build (its render_shell example), served with the production policy, so
+      # the blocking appearance script runs only with the shell's nonce. The e2e job's browser.
+      - name: Resolve the Playwright version
+        id: playwright
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          version="$(pnpm exec playwright --version | awk '{ print $2 }')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Playwright browser
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
+
+      - name: Install the Playwright browser
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: First paint (the Rust shell, under the production policy)
+        if: steps.scope.outputs.run == 'true'
+        env:
+          SMARTFIRE_E2E_BUILT: "1"
+          CARGO_TERM_COLOR: always
+        run: pnpm exec playwright test e2e/first-paint.spec.ts --reporter=line
+
   # The mock Playwright suite (frontend/e2e/mock, playwright.mock.config.ts): the SPA on Vite's dev
   # server with the in-memory mock backend, in Chromium. The config runs one worker against one
   # mock server, so the suite is split across jobs, each with its own server, by test

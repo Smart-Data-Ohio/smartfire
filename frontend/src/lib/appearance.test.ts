@@ -117,6 +117,44 @@ describe("restoreAppearance", () => {
     expect(html().dataset.theme).toBeUndefined();
     expect(html().dataset.textSize).toBe("default");
   });
+
+  it("ignores corrupted values that only read as a choice once turned into text", async () => {
+    // Each would read as a real choice through String(): ["dark"] is "dark".
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        themeOverride: ["dark"],
+        density: ["compact"],
+        motion: ["reduce"],
+        palette: ["ocean"],
+        font: ["serif"],
+      }),
+    );
+    const boot = document.createElement("script");
+
+    boot.type = "application/json";
+    boot.id = "boot";
+    boot.textContent = JSON.stringify({ theme: ["light"], textSize: ["larger"] });
+    document.head.append(boot);
+    const { restoreAppearance, appearanceSnapshot } = await load();
+
+    restoreAppearance();
+
+    expect(appearanceSnapshot()).toMatchObject({
+      theme: "system",
+      themeOverride: null,
+      accountTheme: "system",
+      textSize: "default",
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
+    });
+    expect(html().dataset.theme).toBeUndefined();
+    expect(html().dataset.textSize).toBe("default");
+    expect(html().dataset.density).toBeUndefined();
+    expect(html().dataset.palette).toBeUndefined();
+  });
 });
 
 describe("applyAccountAppearance", () => {
@@ -237,7 +275,10 @@ describe("palette and font", () => {
   });
 
   it("ignores a palette or font it doesn't know", async () => {
-    localStorage.setItem(KEY, JSON.stringify({ accountTheme: "light", palette: "neon", font: "comic" }));
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ accountTheme: "light", palette: "neon", font: "comic" }),
+    );
     const { restoreAppearance, appearanceSnapshot } = await load();
 
     restoreAppearance();

@@ -22,7 +22,9 @@ describe("palettes", () => {
   });
 
   it("offers more than one hue, and none in the violet kept for agents", () => {
-    const hues = PALETTES.flatMap((palette) => (palette.seed === null ? [] : [palette.seed.accent.hue]));
+    const hues = PALETTES.flatMap((palette) =>
+      palette.seed === null ? [] : [palette.seed.accent.hue],
+    );
 
     expect(hues.length).toBeGreaterThanOrEqual(4);
 

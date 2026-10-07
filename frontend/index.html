@@ -40,12 +40,13 @@
           : "default";
         if (device.density === "compact") root.dataset.density = "compact";
         if (device.motion === "reduce" || device.motion === "full") root.dataset.motion = device.motion;
-        if (typeof device.font === "string" && device.font !== "inter") root.dataset.font = device.font;
+        // Exactly src/lib/appearance.ts's FONTS and PALETTES; anything else in storage is ignored there too.
+        if (["system", "atkinson", "serif", "mono"].includes(device.font)) root.dataset.font = device.font;
 
         // A colour palette: the tokens the SPA derived for it when it was chosen.
         const tokens = device.paletteTokens;
 
-        if (typeof device.palette === "string" && device.palette !== "smartfire" && tokens && typeof tokens === "object") {
+        if (["graphite", "ocean", "forest", "ember", "rose"].includes(device.palette) && tokens !== null && typeof tokens === "object" && !Array.isArray(tokens)) {
           root.dataset.palette = device.palette;
           for (const [name, value] of Object.entries(tokens)) {
             if (/^--[a-z-]+$/.test(name) && typeof value === "string") root.style.setProperty(name, value);

@@ -270,6 +270,31 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
     assert!(no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"), "{no_placeholder}");
 }
 
+/// Every `<script>` start tag in `page`, up to its `>`.
+fn script_tags(page: &str) -> Vec<&str> {
+    page.match_indices("<script").map(|(start, _)| &page[start..start + page[start..].find('>').unwrap() + 1]).collect()
+}
+
+/// `frontend/index.html`'s own scripts (the blocking appearance initializer before the stylesheet
+/// paints, and Vite's entry) run under the enforced policy only with the nonce; so does the built
+/// dist's, when one is embedded.
+#[test]
+fn every_script_in_the_spa_page_carries_the_nonce() {
+    let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/index.html")).unwrap();
+    let mut pages = vec![("frontend/index.html", render(&source, &boot(), "token", Some("n0nce")))];
+    if built() {
+        pages.push(("the embedded dist", render_shell(&boot(), "token", Some("n0nce"))));
+    }
+    for (name, page) in pages {
+        let tags = script_tags(&page);
+        assert!(page.contains("smartfire.appearance"), "{name} keeps the appearance initializer: {page}");
+        assert!(tags.len() >= 3, "{name}: the boot JSON, the initializer and the entry: {tags:?}");
+        for tag in tags {
+            assert!(tag.contains(" nonce=\"n0nce\""), "{name}: {tag} runs only with the nonce");
+        }
+    }
+}
+
 #[test]
 fn boot_json_cannot_end_its_script_element() {
     let mut boot = boot();

@@ -55,7 +55,11 @@ const TOKENS = readTokens(readFileSync(new URL("./tokens.css", import.meta.url),
  * Resolves var() and light-dark() chains down to one oklch() colour for the theme, reading
  * `tokens` (tokens.css, or tokens.css under a palette's overrides).
  */
-function resolve(value: string, theme: Theme, tokens: ReadonlyMap<string, string> = TOKENS): string {
+function resolve(
+  value: string,
+  theme: Theme,
+  tokens: ReadonlyMap<string, string> = TOKENS,
+): string {
   const variable = /^var\((--[\w-]+)\)$/.exec(value);
 
   if (variable !== null) {
@@ -183,7 +187,13 @@ const PALETTE_CASES = PALETTES.filter((palette) => palette.seed !== null).flatMa
 
   return (["light", "dark"] as const).flatMap((theme) =>
     [...PAIRS].flatMap(([text, backgrounds]) =>
-      backgrounds.map((background) => ({ palette: palette.label, tokens, theme, text, background })),
+      backgrounds.map((background) => ({
+        palette: palette.label,
+        tokens,
+        theme,
+        text,
+        background,
+      })),
     ),
   );
 });

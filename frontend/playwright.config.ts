@@ -13,7 +13,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port} --strictPort`,
+    // SMARTFIRE_E2E_BUILT: the dist is already built (the Frontend CI job's, which crates/spa
+    // embedded), so it is previewed as it is.
+    command: `${process.env.SMARTFIRE_E2E_BUILT ? "" : "pnpm build && "}pnpm preview --host 127.0.0.1 --port ${port} --strictPort`,
     url: `http://127.0.0.1:${port}/app/`,
     reuseExistingServer: !process.env.CI,
   },

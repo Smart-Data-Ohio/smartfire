@@ -35,19 +35,16 @@ function swatchStyle(palette: PalettePreset): CSSProperties {
 export function PalettePicker() {
   const { palette } = useAppearance();
   const name = useId();
-  const legend = useId();
 
   return (
-    <fieldset className="settings-radios" role="radiogroup" aria-labelledby={legend}>
-      <legend id={legend} className="settings-label">
-        Colour palette
-      </legend>
+    <fieldset className="settings-radios">
+      <legend className="settings-label">Colour palette</legend>
       <div className="palette-swatches">
         {PALETTES.map((choice) => (
           <label key={choice.value} className="palette-swatch">
             <input
               type="radio"
-              className="visually-hidden"
+              className="palette-swatch-input"
               name={name}
               value={choice.value}
               checked={palette === choice.value}
@@ -73,13 +70,10 @@ export function PalettePicker() {
 export function FontPicker() {
   const { font } = useAppearance();
   const name = useId();
-  const legend = useId();
 
   return (
-    <fieldset className="settings-radios" role="radiogroup" aria-labelledby={legend}>
-      <legend id={legend} className="settings-label">
-        Font
-      </legend>
+    <fieldset className="settings-radios">
+      <legend className="settings-label">Font</legend>
       <div className="settings-radio-row">
         {FONT_CHOICES.map((choice) => (
           <label key={choice.value} className="settings-radio">
@@ -111,8 +105,9 @@ export function AppearancePreview() {
           <span className="appearance-preview-time">10:42 AM</span>
         </p>
         <p className="appearance-preview-text">
-          The launch notes are up in <span className="appearance-preview-link">#launch-planning</span>
-          , thanks <span className="appearance-preview-mention">@Riel</span> for the review.
+          The launch notes are up in{" "}
+          <span className="appearance-preview-link">#launch-planning</span>, thanks{" "}
+          <span className="appearance-preview-mention">@Riel</span> for the review.
         </p>
       </div>
     </figure>
