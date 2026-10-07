@@ -794,6 +794,8 @@ jobs:
         with:
           name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
+      - name: Verify the correctness test harness
+        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Collect the application server
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -814,8 +816,6 @@ jobs:
         run: |
           python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
           zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-      - name: Verify the correctness test harness
-        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Run prerequisite-backed correctness suite
         env:
           CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
