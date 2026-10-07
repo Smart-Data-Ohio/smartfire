@@ -134,7 +134,8 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, &room_path).header("x-requested-with", "XMLHttpRequest"),
         Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
         // Unported pages, and paths a ported pattern doesn't cover.
-        Req::new(Method::GET, "/users/me/profile"),
+        Req::new(Method::GET, "/users/7/profile"),
+        Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
         Req::new(Method::GET, "/activity"),
         Req::new(Method::GET, &format!("{room_path}/messages")),
@@ -346,8 +347,12 @@ async fn the_profile_switch_opts_in_and_back_out() {
     assert_eq!(opted_in.location(), Some(to("/app/").as_str()));
     assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Next));
 
-    // The profile isn't ported, so it opens here, with the way back.
-    let profile = b.get("/users/me/profile").await;
+    // The profile is the SPA's settings now; `?classic=1` keeps it here, with the way back.
+    assert_eq!(
+        b.get("/users/me/profile").await.location(),
+        Some(to("/app/settings").as_str())
+    );
+    let profile = b.get("/users/me/profile?classic=1").await;
     assert_eq!(profile.status, StatusCode::OK);
     let profile = profile.text();
     assert!(

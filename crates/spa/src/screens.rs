@@ -13,7 +13,10 @@
 //!
 //! Patterns use the route table's syntax without `(.:format)`: a segment is a literal, or a
 //! literal prefix and a `:param` (`@:message_id`). Every parameter is a record id, so it matches
-//! only a positive integer: `/rooms/new` and `/rooms/5.json` aren't `/rooms/:id`.
+//! only a positive integer: `/rooms/new` and `/rooms/5.json` aren't `/rooms/:id`. The one
+//! exception is the route table's `:user_id` on a person's own pages, which the classic app links
+//! as `me` (`/users/me/profile`): a row spells it `me`, a literal, so other people's ids never
+//! match it.
 
 /// One classic page and its SPA URL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +73,31 @@ pub const SCREENS: &[Screen] = &[
     ),
     screen("searches#index", "/searches", "/app/search", false),
     screen("work_threads#index", "/work", "/app/work", false),
+    // S7: the signed-in person's own settings (`/users/me/...`).
+    screen(
+        "users/profiles#show",
+        "/users/me/profile",
+        "/app/settings",
+        true,
+    ),
+    screen(
+        "users/statuses#edit",
+        "/users/me/status/edit",
+        "/app/settings/status",
+        true,
+    ),
+    screen(
+        "users/sessions#index",
+        "/users/me/sessions",
+        "/app/settings/sessions",
+        true,
+    ),
+    screen(
+        "users/push_subscriptions#index",
+        "/users/me/push_subscriptions",
+        "/app/settings/devices",
+        true,
+    ),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.

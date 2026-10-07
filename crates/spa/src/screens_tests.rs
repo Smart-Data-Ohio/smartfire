@@ -15,6 +15,12 @@ fn sample(pattern: &str, ids: &[u64]) -> String {
     fill(pattern, &named)
 }
 
+/// A route table spec with its `/users/:user_id/` spelled `/users/me/`, as the screen map spells a
+/// person's own pages.
+fn own_pages(spec: &str) -> String {
+    spec.replacen("/users/:user_id/", "/users/me/", 1)
+}
+
 #[test]
 fn every_row_is_a_get_route_of_the_classic_table() {
     for screen in SCREENS {
@@ -28,7 +34,7 @@ fn every_row_is_a_get_route_of_the_classic_table() {
                 .iter()
                 .any(|route| route.verb == "GET"
                     && route.endpoint == screen.endpoint
-                    && route.spec == spec),
+                    && (route.spec == spec || own_pages(route.spec) == spec)),
             "{} {spec} isn't in the route table",
             screen.endpoint
         );
@@ -101,6 +107,51 @@ fn only_record_ids_match_a_parameter() {
         None,
         "the @ is part of the segment"
     );
+}
+
+#[test]
+fn a_person_s_own_pages_match_only_as_me() {
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
+        Some("/app/settings")
+    );
+    assert_eq!(
+        spa_url(
+            "users/sessions#index",
+            "/users/me/sessions",
+            Some("classic=0")
+        )
+        .as_deref(),
+        Some("/app/settings/sessions")
+    );
+    assert_eq!(
+        spa_url(
+            "users/push_subscriptions#index",
+            "/users/me/push_subscriptions",
+            None
+        )
+        .as_deref(),
+        Some("/app/settings/devices")
+    );
+    assert_eq!(
+        spa_url("users/statuses#edit", "/users/me/status/edit", None).as_deref(),
+        Some("/app/settings/status")
+    );
+    // Someone else's id stays on the classic page.
+    assert_eq!(
+        spa_url("users/profiles#show", "/users/7/profile", None),
+        None
+    );
+    assert_eq!(
+        classic_url("/app/settings", None).as_deref(),
+        Some("/users/me/profile")
+    );
+    assert_eq!(
+        classic_url("/app/settings/devices", None).as_deref(),
+        Some("/users/me/push_subscriptions")
+    );
+    // Sections with no classic page of their own have no row.
+    assert_eq!(classic_url("/app/settings/appearance", None), None);
 }
 
 #[test]

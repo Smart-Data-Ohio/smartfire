@@ -7,6 +7,15 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 import { RoomRoute } from "./features/room/room-route.tsx";
+import { AppearanceSection } from "./features/settings/appearance-section.tsx";
+import { CallsSection } from "./features/settings/calls-section.tsx";
+import { DevicesSection } from "./features/settings/devices-section.tsx";
+import { IntegrationsSection } from "./features/settings/integrations-section.tsx";
+import { NotificationsSection } from "./features/settings/notifications-section.tsx";
+import { ProfileSection } from "./features/settings/profile-section.tsx";
+import { SessionsSection } from "./features/settings/sessions-section.tsx";
+import { SettingsView } from "./features/settings/settings-view.tsx";
+import { StatusSection } from "./features/settings/status-section.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
@@ -116,11 +125,47 @@ const threadRoute = createRoute({
   component: () => null,
 });
 
+/** `/app/settings`: the classic profile page's sections, the profile first. */
+const settingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "settings",
+  component: SettingsView,
+});
+
+/** The settings sections, each at `/app/settings/<path>` (the profile at `/app/settings`). */
+const settingsSections = [
+  createRoute({ getParentRoute: () => settingsRoute, path: "/", component: ProfileSection }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "status", component: StatusSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "notifications",
+    component: NotificationsSection,
+  }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "appearance",
+    component: AppearanceSection,
+  }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "calls", component: CallsSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "sessions",
+    component: SessionsSection,
+  }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "devices", component: DevicesSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "integrations",
+    component: IntegrationsSection,
+  }),
+] as const;
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
     homeRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
+    settingsRoute.addChildren(settingsSections),
   ]),
 ]);
 

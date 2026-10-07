@@ -7,5 +7,9 @@
   { "endpoint": "saved_items#index", "classic": "/saved", "spa": "/app/saved", "ported": false },
   { "endpoint": "scheduled_messages#index", "classic": "/scheduled_messages", "spa": "/app/scheduled", "ported": false },
   { "endpoint": "searches#index", "classic": "/searches", "spa": "/app/search", "ported": false },
-  { "endpoint": "work_threads#index", "classic": "/work", "spa": "/app/work", "ported": false }
+  { "endpoint": "work_threads#index", "classic": "/work", "spa": "/app/work", "ported": false },
+  { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings", "ported": true },
+  { "endpoint": "users/statuses#edit", "classic": "/users/me/status/edit", "spa": "/app/settings/status", "ported": true },
+  { "endpoint": "users/sessions#index", "classic": "/users/me/sessions", "spa": "/app/settings/sessions", "ported": true },
+  { "endpoint": "users/push_subscriptions#index", "classic": "/users/me/push_subscriptions", "spa": "/app/settings/devices", "ported": true }
 ]

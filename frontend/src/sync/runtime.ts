@@ -18,7 +18,7 @@ import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { asAction } from "./run.ts";
+import { type ActionFailure, asAction } from "./run.ts";
 import * as session from "./session.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -52,7 +52,7 @@ let started: Promise<void> | null = null;
 type AppServices = ManagedRuntime.ManagedRuntime.Services<typeof runtime>;
 
 /** Runs an action; failures reject with an `ActionError` whose message is fit to show. */
-export const runAction = <A, E extends { readonly _tag: string; readonly message: string }>(
+export const runAction = <A, E extends ActionFailure>(
   effect: Effect.Effect<A, E, AppServices>,
 ): Promise<A> => runtime.runPromise(asAction(effect));
 

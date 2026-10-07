@@ -53,6 +53,7 @@ import {
 import { createPanes } from "./s2/panes.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
 import { buildWorld, MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
+import { createSettings } from "./s2/settings.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
@@ -666,6 +667,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...composer.routes,
     ...createDirects(ctx).routes,
     ...createPanes(ctx).routes,
+    ...createSettings(ctx, uploads).routes,
   ];
 
   composer.arm();

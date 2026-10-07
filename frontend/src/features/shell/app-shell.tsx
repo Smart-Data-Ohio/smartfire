@@ -1,4 +1,4 @@
-import { Outlet, useParams } from "@tanstack/react-router";
+import { Outlet, useMatches, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -31,11 +31,16 @@ function useDocumentTitle(roomId: number | null): void {
 
 /**
  * The signed-in app: rail, sidebar and the routed pane. Starts the sync engine once. On phones
- * only one column shows: the conversation list, or the open conversation (`data-view`).
+ * only one column shows: the conversation list, or the open conversation or settings (`data-view`).
  */
 export function AppShell() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? null;
+
+  // Settings fill the main column, so phones show them rather than the conversation list.
+  const inSettings = useMatches({
+    select: (matches) => matches.some((match) => match.routeId.startsWith("/shell/settings")),
+  });
 
   useEffect(() => {
     void actions.start();
@@ -47,7 +52,7 @@ export function AppShell() {
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
 
   return (
-    <div className="app-shell" data-view={roomId === null ? "list" : "room"}>
+    <div className="app-shell" data-view={roomId === null && !inSettings ? "list" : "room"}>
       <Rail />
       <Sidebar />
       {viewerId === null ? null : (

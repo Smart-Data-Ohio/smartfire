@@ -53,9 +53,10 @@
                       "!**/sync/composer-actions.ts",
                       "!**/sync/directs.ts",
                       "!**/sync/panes.ts",
+                      "!**/sync/settings.ts",
                       "!**/sync/run.ts"
                     ],
-                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts or panes.ts."
+                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts, panes.ts or settings.ts."
                   },
                   {
                     "group": ["**/sync/runtime.ts"],
