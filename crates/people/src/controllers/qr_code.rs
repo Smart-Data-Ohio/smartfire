@@ -12,6 +12,12 @@ pub fn two_factor_svg(uri: &str) -> Option<String> {
     rqrcode::svg_with_options(uri.as_bytes(), 6, 24)
 }
 
+/// The sign-in transfer link's QR code, drawn as the classic `/qr_code/:id` image draws it but in
+/// place, so the link never reaches a URL, request log or shared cache.
+pub fn transfer_svg(url: &str) -> Option<String> {
+    rqrcode::svg_bytes(url.as_bytes())
+}
+
 /// `allow_unauthenticated_access`
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
