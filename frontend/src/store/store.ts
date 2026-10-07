@@ -28,6 +28,7 @@ import type {
   RoomCategory,
   RoomDetail,
   Sidebar,
+  SidebarRow,
   SyncEvent,
   Thread,
   ThreadFilter,
@@ -224,6 +225,8 @@ export const mutations = {
     apply((state) => organize.dropOverlay(state, entry)),
   upsertCategory: (category: RoomCategory) =>
     apply((state) => organize.upsertCategory(state, category)),
+  mergeOrganization: (rows: readonly SidebarRow[]) =>
+    apply((state) => organize.mergeOrganization(state, rows)),
   landCreatedCategory: (
     category: RoomCategory,
     draft: organize.SidebarOverlay,

@@ -217,6 +217,35 @@ export function removeCategory(state: State, categoryId: number): State {
   return { ...state, sidebar: { ...state.sidebar, categories, rows } };
 }
 
+/**
+ * Lands an organising reply's rows the sidebar already has, taking only what organising changes:
+ * the category, the favourite position and the involvement (the room header's copy follows). The
+ * reply may be older than a sync event that has since brought newer read state or counts, which
+ * stay.
+ */
+export function mergeOrganization(state: State, replies: readonly SidebarRow[]): State {
+  return replies.reduce((current, reply) => {
+    const row = current.sidebar.rows[reply.room.id];
+
+    if (row === undefined) {
+      return current;
+    }
+
+    const { favoritePosition, roomCategoryId, involvement } = reply.membership;
+    const membership = { ...row.membership, favoritePosition, roomCategoryId, involvement };
+
+    const next: State = {
+      ...current,
+      sidebar: {
+        ...current.sidebar,
+        rows: { ...current.sidebar.rows, [reply.room.id]: { ...row, membership } },
+      },
+    };
+
+    return setDetailMembership(next, membership);
+  }, state);
+}
+
 /** The room header's copy of the viewer's membership follows the sidebar's. */
 export function setDetailMembership(state: State, membership: Membership): State {
   const room = state.rooms[membership.roomId];

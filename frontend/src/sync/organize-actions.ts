@@ -73,21 +73,27 @@ const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>)
     Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(entry))),
   );
 
-/** Lands rows through the same reducer the `sidebar.row.upserted` event uses. */
+/**
+ * Lands an organising reply's rows: for a row the sidebar has, only the organisation fields (the
+ * reply may be older than a sync event with newer counts); a row it lacks lands whole, through
+ * the reducer the `sidebar.row.upserted` event uses.
+ */
 const landRows = Effect.fn("organize.landRows")(function* (rows: readonly SidebarRow[]) {
   const state = store.getState();
   const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
 
   // Local events: `seq` only matters to the sync cursor, which never sees these.
-  mutations.applyEvents(
-    rows.map((row) => ({
-      seq: 0,
-      topic: `user:${viewerId}`,
-      type: "sidebar.row.upserted" as const,
-      data: row,
-    })),
-    yield* Clock.currentTimeMillis,
+  const fresh = rows.flatMap((row) =>
+    state.sidebar.rows[row.room.id] === undefined
+      ? [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted" as const, data: row }]
+      : [],
   );
+
+  mutations.mergeOrganization(rows);
+
+  if (fresh.length > 0) {
+    mutations.applyEvents(fresh, yield* Clock.currentTimeMillis);
+  }
 });
 
 /** The server's copy of a row, without pending changes: what the next call starts from. */

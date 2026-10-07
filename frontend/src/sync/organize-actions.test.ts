@@ -73,6 +73,42 @@ describe("organize actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("keep newer counts a sync event brought while the reply was on its way", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("POST /rooms/1/favorite", () => {
+        // A message arrives meanwhile; the reply was written before it.
+        mutations.applyEvents(
+          [
+            {
+              seq: 0,
+              topic: "user:7",
+              type: "sidebar.row.upserted",
+              data: {
+                ...withMembership(general, { unreadAt: "2026-10-05T00:00:00.000Z" }),
+                unreadCount: 5,
+              },
+            },
+          ],
+          0,
+        );
+
+        return Effect.succeed(withMembership(general, { favoritePosition: 4 }));
+      });
+
+      yield* organize.favorite(1);
+
+      const row = store.getState().sidebar.rows[1];
+
+      expect(row?.membership.favoritePosition).toBe(4);
+      expect(row?.unreadCount).toBe(5);
+      expect(row?.membership.unreadAt).toBe("2026-10-05T00:00:00.000Z");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("put a room back when the server refuses the move", () =>
     Effect.gen(function* () {
       seed();
