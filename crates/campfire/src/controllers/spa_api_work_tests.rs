@@ -36,6 +36,9 @@ const LOU: i64 = 773523958;
 const DESIGNERS_EVENT: i64 = 390339825;
 const PULL_REQUEST: i64 = 1;
 
+#[path = "spa_api_work_revision_tests.rs"]
+mod revisions;
+
 fn envelope(reply: &Reply) -> api::ApiError {
     parse::<api::ApiErrorResponse>(reply).error
 }
