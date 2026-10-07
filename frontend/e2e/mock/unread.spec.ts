@@ -91,8 +91,9 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
     expect(unread.color).toBe(
       await resolved(page, theme === "dark" ? "oklch(100% 0 0)" : "var(--text)"),
     );
-    // Plain unread: no count.
+    // Plain unread: no count, and a screen reader hears "unread" for it.
     await expect(badge).toHaveAttribute("data-open", "false");
+    await expect(engineering).toHaveAccessibleName(/^engineering\s*,\s*unread$/);
 
     await postMessage(request, {
       roomId: ROOM_IDS.engineering,
@@ -102,7 +103,9 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
 
     await expect(badge).toHaveAttribute("data-open", "true");
     await expect(badge).toHaveAttribute("data-tone", "danger");
-    await expect(engineering).toHaveAccessibleName("engineering 1 mentions");
+    await expect(engineering).toHaveAccessibleName(
+      /^engineering\s*,\s*unread\s*,\s*1 notification$/,
+    );
     await expect(engineering).toHaveAttribute("data-state", "unread");
     await shot(page, "unread-row", theme);
   });
@@ -142,6 +145,7 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
     });
 
     await expect(team).toHaveAttribute("data-unread", "true");
+    await expect(team.locator(".sidebar-section-trigger")).toHaveAccessibleDescription("Unread");
     await expect(teamBadge).toHaveAttribute("data-open", "false");
     await expect
       .poll(async () => (await looks(team.locator(".sidebar-section-trigger"))).nub)
@@ -158,11 +162,15 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
     await expect(launch).toHaveAttribute("data-unread", "true");
     await expect(launchBadge).toHaveAttribute("data-open", "true");
     await expect(launchBadge.locator(":scope > .visually-hidden")).toHaveText("1 notification");
+    await expect(launch.locator(".sidebar-section-trigger")).toHaveAccessibleDescription(
+      "Unread, 1 notification",
+    );
     await shot(page, "unread-folded", theme);
 
     // Open again, the heading goes back to plain and the rows carry their own state.
     await launch.locator(".sidebar-section-trigger").click();
     await expect(launch).not.toHaveAttribute("data-unread");
     await expect(launchBadge).toHaveAttribute("data-open", "false");
+    await expect(launch.locator(".sidebar-section-trigger")).toHaveAccessibleDescription("");
   });
 }

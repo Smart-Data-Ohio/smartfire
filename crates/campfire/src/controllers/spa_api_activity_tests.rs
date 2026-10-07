@@ -1325,3 +1325,81 @@ async fn deactivating_an_agent_takes_its_approvals_out_of_the_inbox() {
     );
     server.abort();
 }
+
+/// Sets David's involvement in Designers and marks the room read, so only inbox items count.
+async fn designers_as(a: &TestApp, involvement: &'static str) {
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE memberships SET involvement = ?, unread_at = NULL WHERE room_id = ? AND user_id = ?",
+                rusqlite::params![involvement, DESIGNERS, DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+async fn designers_row(david: &mut crate::controllers::presenters::test_support::Browser<'_>) -> api::SidebarRow {
+    let sidebar: api::Sidebar = parse(&david.send(get("/api/v1/sidebar")).await);
+    sidebar
+        .rows
+        .into_iter()
+        .find(|row| row.room.id == DESIGNERS)
+        .expect("Designers in David's sidebar")
+}
+
+fn designers_upserted(event: &api::SyncEvent) -> bool {
+    matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == DESIGNERS)
+}
+
+#[tokio::test]
+async fn the_red_count_is_what_would_have_notified_under_the_classic_policy() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    // Start from an empty inbox: the seed already holds unread items for David in Designers.
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM activity_items WHERE user_id = ?", [DAVID])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    // A thread @mention in a read room: no unread root messages, but it still pings.
+    designers_as(&a, "everything").await;
+    let mention = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 60).await;
+    let row = designers_row(&mut david).await;
+    assert_eq!((row.unread_count, row.mention_count, row.notification_count), (0, 1, 1));
+
+    // A reply on a root message counts once more; each message once, whatever its items.
+    item(&a, DAVID, ("Message", ROOT_MESSAGE), "reply", 30).await;
+    assert_eq!(designers_row(&mut david).await.notification_count, 2);
+    designers_as(&a, "mentions").await;
+    assert_eq!(designers_row(&mut david).await.notification_count, 2);
+
+    // Muted rooms still push mentions, and only mentions; `nothing` never pushes.
+    designers_as(&a, "muted").await;
+    assert_eq!(designers_row(&mut david).await.notification_count, 1);
+    designers_as(&a, "nothing").await;
+    let row = designers_row(&mut david).await;
+    assert_eq!((row.mention_count, row.notification_count), (1, 0));
+
+    // Reading the item in the inbox republishes the row with the count down.
+    designers_as(&a, "mentions").await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/activity/{mention}");
+    let response = david
+        .write(json_body(Method::PATCH, &path, &json!({"action": "read"})))
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let event = sync.until(designers_upserted, |_| false).await;
+    let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!((row.mention_count, row.notification_count), (0, 1));
+    server.abort();
+}

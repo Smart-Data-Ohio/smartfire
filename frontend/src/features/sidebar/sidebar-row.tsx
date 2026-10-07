@@ -19,7 +19,7 @@ import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { GroupAvatars } from "./group-avatars.tsx";
-import { rowPillCount, rowPillNoun, rowState } from "./sections.ts";
+import { notificationLabel, rowPillCount, rowState, rowUnread } from "./sections.ts";
 
 /** How long a finger rests on a row before its menu opens. */
 const LONG_PRESS_MS = 500;
@@ -292,9 +292,12 @@ export function SidebarRow({
       >
         <RowGlyph row={row} />
         <span className="sidebar-row-name">{row.displayName}</span>
+        {state === "unread" || (selected && rowUnread(row)) ? (
+          <span className="visually-hidden">, unread</span>
+        ) : null}
         {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
         <CallMark roomId={room.id} />
-        <Badge count={pill} tone="danger" label={`${pill} ${rowPillNoun(row)}`} />
+        <Badge count={pill} tone="danger" label={`, ${notificationLabel(pill)}`} />
       </Link>
       <IconButton
         icon="more"

@@ -8,7 +8,7 @@ import type { Assert, Pinned } from "./pin.ts";
 import { Membership, Room } from "./room.ts";
 import { User } from "./user.ts";
 
-/** A room as it appears in one person's sidebar, with its unread and mention counts. */
+/** A room as it appears in one person's sidebar, with its unread, mention and notification counts. */
 export const SidebarRow = Schema.Struct({
   room: Room,
   membership: Membership,
@@ -16,6 +16,7 @@ export const SidebarRow = Schema.Struct({
   directMemberIds: Schema.Array(UserId),
   unreadCount: Schema.Int,
   mentionCount: Schema.Int,
+  notificationCount: Schema.Int,
 });
 
 export type SidebarRow = typeof SidebarRow.Type;

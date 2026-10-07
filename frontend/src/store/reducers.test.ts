@@ -284,6 +284,7 @@ describe("sidebar counts", () => {
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
   };
 
   it("counts room.unread events and clears on read", () => {

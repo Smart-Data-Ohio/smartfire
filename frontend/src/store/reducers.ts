@@ -100,12 +100,16 @@ function updateRow(state: State, roomId: number, change: (row: SidebarRow) => Si
 /** The room was read here: counts clear and the membership stops being unread. */
 export function markRoomRead(state: State, roomId: number): State {
   return updateRow(state, roomId, (row) =>
-    row.unreadCount === 0 && row.mentionCount === 0 && row.membership.unreadAt === null
+    row.unreadCount === 0 &&
+    row.mentionCount === 0 &&
+    row.notificationCount === 0 &&
+    row.membership.unreadAt === null
       ? row
       : {
           ...row,
           unreadCount: 0,
           mentionCount: 0,
+          notificationCount: 0,
           membership: { ...row.membership, unreadAt: null },
         },
   );
@@ -715,6 +719,23 @@ function removeRow(state: State, roomId: number): State {
   };
 }
 
+/**
+ * Whether a new root message would notify under the classic policy, as the server's
+ * `notificationCount` counts it: every one in an `everything` room, a mention in a `mentions` or
+ * `muted` one. Replies and keyword alerts arrive with the row the server sends next.
+ */
+function notifies(row: SidebarRow, mentioned: boolean): boolean {
+  switch (row.membership.involvement) {
+    case "everything":
+      return true;
+    case "mentions":
+    case "muted":
+      return mentioned;
+    default:
+      return false;
+  }
+}
+
 function roomUnread(
   state: State,
   roomId: number,
@@ -726,6 +747,8 @@ function roomUnread(
     ...row,
     unreadCount: messageId === null ? Math.max(row.unreadCount, 1) : row.unreadCount + 1,
     mentionCount: row.mentionCount + (mentioned ? 1 : 0),
+    notificationCount:
+      row.notificationCount + (messageId !== null && notifies(row, mentioned) ? 1 : 0),
     membership: {
       ...row.membership,
       unreadAt: row.membership.unreadAt ?? new Date(now).toISOString(),

@@ -6,7 +6,7 @@
 import type { SwitcherRoomKind } from "../../gen/SwitcherRoomKind.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import type { SidebarState } from "../../store/state.ts";
-import { rowPillCount, sidebarSections } from "../sidebar/sections.ts";
+import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
 
 /** Something the switcher can open: a room, a person (their DM, made on demand) or a thread. */
@@ -77,8 +77,8 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
     label: row.displayName,
     roomId: room.id,
     roomKind: room.kind,
-    unread: membership.unreadAt !== null,
-    count: membership.involvement === "muted" ? 0 : rowPillCount(row),
+    unread: rowUnread(row),
+    count: rowPillCount(row),
     muted: membership.involvement === "muted",
     favorite: membership.favoritePosition !== null,
     updatedAt: room.updatedAt,

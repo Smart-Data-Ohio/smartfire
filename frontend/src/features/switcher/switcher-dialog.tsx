@@ -11,6 +11,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { GroupAvatars } from "../sidebar/group-avatars.tsx";
+import { notificationLabel } from "../sidebar/sections.ts";
 import { matchRange, normalizeQuery } from "./match.ts";
 import {
   flattenSections,
@@ -110,7 +111,7 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       <span className="switcher-meta">
         {busy ? <Spinner label="Opening" /> : null}
         {!busy && item.count > 0 ? (
-          <Badge count={item.count} label={`${item.count} unread`} />
+          <Badge count={item.count} label={notificationLabel(item.count)} />
         ) : null}
         {!busy && item.count === 0 && item.unread && !item.muted ? (
           <span className="switcher-unread-dot" aria-label="Unread" role="img" />

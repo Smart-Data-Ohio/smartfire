@@ -21,6 +21,7 @@ function unread(row: SidebarRow, mentions = 0): SidebarRow {
     ...row,
     unreadCount: 3,
     mentionCount: mentions,
+    notificationCount: mentions,
     membership: {
       ...row.membership,
       involvement: "mentions",

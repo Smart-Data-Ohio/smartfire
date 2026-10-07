@@ -44,7 +44,13 @@ import {
   slotForSection,
 } from "./organize-model.ts";
 import { RoomContextMenu, type RoomMenuRequest } from "./room-menu.tsx";
-import { type SidebarSection, sectionUnread, sidebarSections } from "./sections.ts";
+import {
+  notificationLabel,
+  type SidebarSection,
+  sectionStatus,
+  sectionUnread,
+  sidebarSections,
+} from "./sections.ts";
 import {
   type DropEdge,
   type RowActions,
@@ -209,6 +215,9 @@ function Section({
       );
 
   const folded = open ? { unread: false, count: 0 } : sectionUnread(section.rows);
+  // A folded category says what it hides when its trigger takes focus. The status is `hidden` so
+  // reading the page doesn't say it twice beside the badge; a description still reads it.
+  const status = sectionStatus(folded);
 
   const edgeFor = (row: Row) => (drop.line?.roomId === row.room.id ? drop.line.edge : undefined);
 
@@ -234,6 +243,7 @@ function Section({
               className="sidebar-section-trigger"
               aria-expanded={open}
               aria-controls={`${id}-panel`}
+              aria-describedby={status === null ? undefined : `${id}-status`}
               onClick={onToggle}
               onPointerDown={onHeadingPointerDown}
             >
@@ -246,11 +256,12 @@ function Section({
         )}
         {heading === undefined ? action : null}
         {heading === undefined ? (
-          <Badge
-            count={folded.count}
-            tone="danger"
-            label={folded.count === 1 ? "1 notification" : `${folded.count} notifications`}
-          />
+          <Badge count={folded.count} tone="danger" label={notificationLabel(folded.count)} />
+        ) : null}
+        {heading === undefined && status !== null ? (
+          <span id={`${id}-status`} hidden>
+            {status}
+          </span>
         ) : null}
       </div>
       <section

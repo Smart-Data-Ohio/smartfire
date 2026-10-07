@@ -85,6 +85,7 @@ const sidebarRowJson = {
   directMemberIds: [],
   unreadCount: 4,
   mentionCount: 1,
+  notificationCount: 1,
 } as const;
 
 /** Decoding then encoding gives back exactly the wire JSON. */

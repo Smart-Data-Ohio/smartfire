@@ -36,6 +36,7 @@ function row(id: number, name: string, kind: RoomKind = "open", favorite: number
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
   };
 
   return entry;

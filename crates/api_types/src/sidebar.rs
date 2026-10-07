@@ -55,9 +55,14 @@ pub struct SidebarRow {
     /// count); 0 when the room is read.
     pub unread_count: i64,
     /// The viewer's unread `mention` activity items for messages in this room
-    /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`); drives the numeric
-    /// pill.
+    /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`).
     pub mention_count: i64,
+    /// The red pill: the unread messages here that would have notified the viewer under the
+    /// classic rules (`Notifications::Policy`), one per message. In an `everything` room, every
+    /// unread root message plus the notifications (mentions, replies, thread activity, keyword
+    /// alerts) on messages outside that run; in a `mentions` room, those notifications; in a
+    /// `muted` room, its mentions; none for `nothing`.
+    pub notification_count: i64,
 }
 
 /// `room_categories`: a person's own sidebar section.

@@ -127,6 +127,7 @@ const SURFACES = [
 /** Text token → the backgrounds it is used on. */
 const PAIRS = new Map<string, readonly string[]>([
   ["--text", SURFACES],
+  ["--text-strong", SURFACES],
   ["--text-muted", SURFACES],
   ["--text-faint", SURFACES],
   ["--accent", [...SURFACES, "--accent-soft"]],

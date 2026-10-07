@@ -305,14 +305,36 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return first === undefined ? null : { firstUnreadMessageId: first.id, count: unread.length };
   };
 
-  const sidebarRow = (record: RoomRecord): SidebarRow => ({
-    room: record.room,
-    membership: record.membership,
-    displayName: displayName(record),
-    directMemberIds: directMemberIds(record),
-    unreadCount: unreadMessages(record).length,
-    mentionCount: record.mentionCount,
-  });
+  /**
+   * The server's `notificationCount` (crates/api/src/dto.rs `notification_count`), from what the
+   * mock tracks: every unread root message in an `everything` room, the mentions in a `mentions`
+   * or `muted` one, none in a `nothing` one.
+   */
+  const notificationCount = (record: RoomRecord, unreadCount: number): number => {
+    switch (record.membership.involvement) {
+      case "everything":
+        return unreadCount;
+      case "mentions":
+      case "muted":
+        return record.mentionCount;
+      default:
+        return 0;
+    }
+  };
+
+  const sidebarRow = (record: RoomRecord): SidebarRow => {
+    const unreadCount = unreadMessages(record).length;
+
+    return {
+      room: record.room,
+      membership: record.membership,
+      displayName: displayName(record),
+      directMemberIds: directMemberIds(record),
+      unreadCount,
+      mentionCount: record.mentionCount,
+      notificationCount: notificationCount(record, unreadCount),
+    };
+  };
 
   const visibleRooms = (): RoomRecord[] =>
     [...world.rooms.values()]

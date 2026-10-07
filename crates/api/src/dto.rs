@@ -804,14 +804,25 @@ fn direct_members(
     }
 }
 
-/// The viewer's unread `mention` activity items per room.
-fn mention_counts(
+/// One unread notification in the viewer's inbox: an `activity_items` row of a kind that pings
+/// (`mention`, `reply`, `thread_activity`, `keyword_alert`) for a message.
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) struct Notified {
+    pub(crate) message_id: i64,
+    /// On the room's root timeline (`thread_id IS NULL`), where `unread_count` counts it.
+    pub(crate) root: bool,
+    pub(crate) created_at: Timestamp,
+    pub(crate) mention: bool,
+}
+
+/// The viewer's unread notification items per room (`Notified`), oldest first.
+fn notified_by_room(
     conn: &Connection,
     user_id: i64,
     room_id: Option<i64>,
-) -> Result<HashMap<i64, i64>> {
+) -> Result<HashMap<i64, Vec<Notified>>> {
     let sql = format!(
-        r#"SELECT "messages"."room_id", COUNT(*) FROM "activity_items" INNER JOIN "messages" ON "messages"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ? AND "activity_items"."source_type" = 'Message' AND "activity_items"."event_type" = 'mention' AND "activity_items"."read_at" IS NULL{} GROUP BY "messages"."room_id""#,
+        r#"SELECT "messages"."room_id", "messages"."id", "messages"."thread_id" IS NULL, "messages"."created_at", "activity_items"."event_type" = 'mention' FROM "activity_items" INNER JOIN "messages" ON "messages"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ? AND "activity_items"."source_type" = 'Message' AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity', 'keyword_alert') AND "activity_items"."read_at" IS NULL{} ORDER BY "messages"."created_at", "messages"."id""#,
         if room_id.is_some() {
             r#" AND "messages"."room_id" = ?"#
         } else {
@@ -821,9 +832,60 @@ fn mention_counts(
     let mut statement = conn.prepare_cached(&sql)?;
     let values: Vec<i64> = std::iter::once(user_id).chain(room_id).collect();
     let rows = statement.query_map(rusqlite::params_from_iter(values), |row| {
-        Ok((row.get(0)?, row.get(1)?))
+        Ok((
+            row.get::<_, i64>(0)?,
+            Notified {
+                message_id: row.get(1)?,
+                root: row.get(2)?,
+                created_at: row.get(3)?,
+                mention: row.get(4)?,
+            },
+        ))
     })?;
-    Ok(rows.collect::<rusqlite::Result<_>>()?)
+    let mut by_room: HashMap<i64, Vec<Notified>> = HashMap::new();
+    for row in rows {
+        let (room_id, notified) = row?;
+        by_room.entry(room_id).or_default().push(notified);
+    }
+    Ok(by_room)
+}
+
+/// The row's red number: what would have notified the viewer under the classic rules
+/// (`Notifications::Policy`, `crates/db/src/models/notification_policy.rs`), one per message.
+///
+/// - `everything`: every unread root message (`unread_count`, from `first_unread`, whose
+///   `(created_at, id)` is given) plus the notifications on messages outside that run (thread
+///   replies, or an older root message still unanswered in the inbox), so a root mention is
+///   never counted twice.
+/// - `mentions`: the mentions, replies, thread activity and keyword alerts.
+/// - `muted`: mentions only (a muted room still pushes them; nothing else).
+/// - `nothing` and `invisible`: none (the policy never pushes them).
+pub(crate) fn notification_count(
+    involvement: Option<Involvement>,
+    unread_count: i64,
+    first_unread: Option<(Timestamp, i64)>,
+    notified: &[Notified],
+) -> i64 {
+    let distinct = |keep: &dyn Fn(&Notified) -> bool| {
+        notified
+            .iter()
+            .filter(|item| keep(item))
+            .map(|item| item.message_id)
+            .collect::<BTreeSet<_>>()
+            .len() as i64
+    };
+    match involvement {
+        Some(Involvement::Everything) => {
+            let in_unread_run = |item: &Notified| {
+                item.root
+                    && first_unread.is_some_and(|start| (item.created_at, item.message_id) >= start)
+            };
+            unread_count + distinct(&|item| !in_unread_run(item))
+        }
+        Some(Involvement::Mentions) => distinct(&|_| true),
+        Some(Involvement::Muted) => distinct(&|item| item.mention),
+        Some(Involvement::Nothing | Involvement::Invisible) | None => 0,
+    }
 }
 
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
@@ -840,7 +902,7 @@ fn sidebar_row_with(
     membership: &Membership,
     viewer_name: &str,
     members: Option<&[(i64, String)]>,
-    mention_count: i64,
+    notified: &[Notified],
 ) -> Result<api::SidebarRow> {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -853,14 +915,31 @@ fn sidebar_row_with(
         }
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
-    let unread_count = room_shell::first_unread(conn, membership)?.map_or(0, |(_, count)| count);
+    let first_unread = room_shell::first_unread(conn, membership)?;
+    let unread_count = first_unread.map_or(0, |(_, count)| count);
+    // Where the unread run starts, only when a notification might fall inside it.
+    let start = match first_unread {
+        Some((id, _))
+            if membership.involvement == Some(Involvement::Everything)
+                && notified.iter().any(|item| item.root) =>
+        {
+            Message::find_by_id(conn, id)?.map(|message| (message.created_at, message.id))
+        }
+        _ => None,
+    };
     Ok(api::SidebarRow {
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
         direct_member_ids,
         unread_count,
-        mention_count,
+        mention_count: notified.iter().filter(|item| item.mention).count() as i64,
+        notification_count: notification_count(
+            membership.involvement,
+            unread_count,
+            start,
+            notified,
+        ),
     })
 }
 
@@ -889,17 +968,16 @@ pub fn membership_row(
     } else {
         None
     };
-    let mentions = mention_counts(conn, membership.user_id, Some(room.id))?
-        .get(&room.id)
-        .copied()
-        .unwrap_or(0);
+    let notified = notified_by_room(conn, membership.user_id, Some(room.id))?
+        .remove(&room.id)
+        .unwrap_or_default();
     sidebar_row_with(
         conn,
         room,
         membership,
         &viewer.name,
         members.as_deref(),
-        mentions,
+        &notified,
     )
 }
 
@@ -911,7 +989,7 @@ pub fn sidebar(
     now: Timestamp,
 ) -> Result<api::Sidebar> {
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
-    let mentions = mention_counts(conn, viewer.id, None)?;
+    let notified = notified_by_room(conn, viewer.id, None)?;
     let mut user_ids = BTreeSet::new();
     let mut rows = Vec::with_capacity(all.len());
     for (membership, room) in &all {
@@ -926,7 +1004,7 @@ pub fn sidebar(
             membership,
             &viewer.name,
             members.as_deref(),
-            mentions.get(&room.id).copied().unwrap_or(0),
+            notified.get(&room.id).map_or(&[][..], Vec::as_slice),
         )?;
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
@@ -1449,7 +1527,93 @@ fn room_file_rows(
 
 #[cfg(test)]
 mod tests {
-    use super::inline_mentions;
+    use super::{Notified, inline_mentions, notification_count};
+    use campfire_db::{Involvement, Timestamp};
+
+    fn at(seconds: i64) -> Timestamp {
+        Timestamp::from_second(1_790_000_000 + seconds)
+    }
+
+    fn item(message_id: i64, root: bool, seconds: i64, mention: bool) -> Notified {
+        Notified {
+            message_id,
+            root,
+            created_at: at(seconds),
+            mention,
+        }
+    }
+
+    #[test]
+    fn an_everything_room_counts_its_unread_roots_and_its_thread_pings() {
+        // Three unread roots from message 10 on; a thread mention and a thread activity item.
+        let notified = [
+            item(12, true, 12, true),
+            item(40, false, 13, true),
+            item(41, false, 14, false),
+        ];
+        let start = Some((at(10), 10));
+        assert_eq!(
+            notification_count(Some(Involvement::Everything), 3, start, &notified),
+            5
+        );
+    }
+
+    #[test]
+    fn a_thread_mention_counts_with_no_unread_roots() {
+        // The regression: an unread thread @mention in a read `everything` room still pings.
+        let notified = [item(40, false, 13, true)];
+        assert_eq!(
+            notification_count(Some(Involvement::Everything), 0, None, &notified),
+            1
+        );
+    }
+
+    #[test]
+    fn an_older_root_ping_still_unanswered_counts_once() {
+        // A root mention before the unread run isn't among the unread roots: it counts too.
+        let notified = [item(5, true, 5, true), item(11, true, 11, true)];
+        let start = Some((at(10), 10));
+        assert_eq!(
+            notification_count(Some(Involvement::Everything), 2, start, &notified),
+            3
+        );
+    }
+
+    #[test]
+    fn a_mentions_room_counts_each_pinged_message_once() {
+        let notified = [
+            item(5, true, 5, true),
+            item(6, true, 6, false),
+            item(40, false, 13, false),
+            item(40, false, 13, true),
+        ];
+        assert_eq!(
+            notification_count(Some(Involvement::Mentions), 9, None, &notified),
+            3
+        );
+    }
+
+    #[test]
+    fn a_muted_room_counts_mentions_and_nothing_counts_none() {
+        let notified = [
+            item(5, true, 5, true),
+            item(6, true, 6, false),
+            item(40, false, 13, true),
+        ];
+        assert_eq!(
+            notification_count(Some(Involvement::Muted), 4, None, &notified),
+            2
+        );
+        assert_eq!(
+            notification_count(Some(Involvement::Nothing), 4, None, &notified),
+            0
+        );
+        assert_eq!(
+            notification_count(Some(Involvement::Invisible), 4, None, &notified),
+            0
+        );
+        assert_eq!(notification_count(None, 4, None, &notified), 0);
+    }
 
     #[test]
     fn a_mention_wrapper_becomes_a_span_with_its_own_close() {

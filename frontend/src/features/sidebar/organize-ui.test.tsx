@@ -83,6 +83,7 @@ function row(name: string, options: RowOptions = {}): SidebarRow {
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
   };
 }
 

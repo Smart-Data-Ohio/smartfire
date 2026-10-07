@@ -29,7 +29,14 @@ directMemberIds: Array<number>,
 unreadCount: number, 
 /**
  * The viewer's unread `mention` activity items for messages in this room
- * (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`); drives the numeric
- * pill.
+ * (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`).
  */
-mentionCount: number, };
+mentionCount: number, 
+/**
+ * The red pill: the unread messages here that would have notified the viewer under the
+ * classic rules (`Notifications::Policy`), one per message. In an `everything` room, every
+ * unread root message plus the notifications (mentions, replies, thread activity, keyword
+ * alerts) on messages outside that run; in a `mentions` room, those notifications; in a
+ * `muted` room, its mentions; none for `nothing`.
+ */
+notificationCount: number, };

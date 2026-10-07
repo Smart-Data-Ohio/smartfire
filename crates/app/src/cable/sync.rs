@@ -585,7 +585,29 @@ pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, it
             Ok(None) => {}
             Err(error) => tracing::warn!(%error, item_id, "sync: activity item not read"),
         }
+        // A message's item counts toward its room's red pill (`notificationCount`): a thread
+        // reply pings without making the room unread, and reading the item clears it.
+        match item_room(conn, item_id) {
+            Ok(Some(room)) => sidebar_rows(&server, &slot, conn, &room, Some(&[user_id])),
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, item_id, "sync: activity item's room not read"),
+        }
     }));
+}
+
+/// The room of the message an activity item is about, if it's about a message.
+fn item_room(conn: &Connection, item_id: i64) -> campfire_db::Result<Option<Room>> {
+    let room_id: Option<i64> = conn
+        .prepare_cached(
+            r#"SELECT "messages"."room_id" FROM "activity_items" INNER JOIN "messages" ON "messages"."id" = "activity_items"."source_id" WHERE "activity_items"."id" = ? AND "activity_items"."source_type" = 'Message'"#,
+        )?
+        .query_map([item_id], |row| row.get(0))?
+        .next()
+        .transpose()?;
+    match room_id {
+        Some(room_id) => Room::find_by_id(conn, room_id),
+        None => Ok(None),
+    }
 }
 
 /// `activity.removed` on each owner's `user` topic, with their unread count afterwards.

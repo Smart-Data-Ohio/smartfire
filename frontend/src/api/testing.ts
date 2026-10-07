@@ -128,6 +128,7 @@ export function sidebarRowFixture(
     directMemberIds: [...directMemberIds],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
   };
 }
 
