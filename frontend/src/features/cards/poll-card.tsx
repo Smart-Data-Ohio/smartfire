@@ -205,6 +205,38 @@ function ChoiceList({ poll, initial, onVote, onCancel }: ChoiceListProps) {
   );
 }
 
+interface LoadErrorProps {
+  readonly retrying: boolean;
+  readonly onRetry: () => void;
+}
+
+/**
+ * The viewer's results couldn't be fetched (an anonymous poll needs them to know the viewer's own
+ * vote): say so, and offer to try again. The button stays, busy, while the retry is on its way.
+ */
+function LoadError({ retrying, onRetry }: LoadErrorProps) {
+  return (
+    <div className="poll-load-error">
+      <div className="card-error">
+        <Icon name="circle-alert" size={14} />
+        <span>Couldn't load this poll's results.</span>
+      </div>
+      <div>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="refresh-cw"
+          loading={retrying}
+          loadingLabel="Loading"
+          onClick={onRetry}
+        >
+          Try again
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * A poll under its question: choose (or tick several), then the results as bars that grow into
  * place; change or take back a vote while it's open; final results once closed (the client
@@ -218,6 +250,7 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
   const pending = useStore((state) => state.cards.pendingVotes[poll.id]);
   const load = useStore((state) => state.cards.pollLoads[poll.id] ?? "idle");
   const [changing, setChanging] = useState(false);
+  const [retried, setRetried] = useState(false);
   const view = pollView(poll, ballot, pending, viewerId, now);
   const unknown = view.myOptionIds === null;
 
@@ -236,6 +269,11 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
     }
   }, [unknown, load, message.roomId, poll.id]);
 
+  const retry = () => {
+    setRetried(true);
+    actions.cards.loadPoll(message.roomId, poll.id).catch(() => undefined);
+  };
+
   const vote = (optionIds: readonly number[]) => {
     setChanging(false);
     actions.cards.vote(message.roomId, poll.id, optionIds).catch(voteError);
@@ -246,42 +284,49 @@ export function PollCard({ message, poll }: { readonly message: MessageDTO; read
   const choosing = !view.closed && (changing || !voted);
   const top = Math.max(0, ...view.poll.options.map((option) => option.votes));
   const total = view.poll.options.reduce((sum, option) => sum + option.votes, 0);
+  // A failed fetch stays failed (the effect above asks only from idle) until Try again; the
+  // error stays up, its button busy, while that retry is on its way.
+  const failed = unknown && !view.closed && (load === "error" || (retried && load === "loading"));
 
   return (
     <section className="card poll-card" data-closed={view.closed || undefined} aria-label="Poll">
       <PollMeta poll={view.poll} closed={view.closed} now={now} />
-      <SkeletonReveal
-        loading={unknown && !view.closed}
-        skeleton={
-          <div className="poll-skeleton">
-            {view.poll.options.map((option) => (
-              <Skeleton key={option.id} height={34} radius="md" />
-            ))}
-          </div>
-        }
-      >
-        {choosing ? (
-          <ChoiceList
-            poll={view.poll}
-            initial={mine}
-            onVote={vote}
-            onCancel={changing ? () => setChanging(false) : null}
-          />
-        ) : (
-          <ul className="poll-results">
-            {view.poll.options.map((option) => (
-              <ResultRow
-                key={option.id}
-                option={option}
-                total={total}
-                mine={mine.includes(option.id)}
-                leading={view.closed && top > 0 && option.votes === top}
-                anonymous={view.poll.anonymous}
-              />
-            ))}
-          </ul>
-        )}
-      </SkeletonReveal>
+      {failed ? (
+        <LoadError retrying={load === "loading"} onRetry={retry} />
+      ) : (
+        <SkeletonReveal
+          loading={unknown && !view.closed}
+          skeleton={
+            <div className="poll-skeleton">
+              {view.poll.options.map((option) => (
+                <Skeleton key={option.id} height={34} radius="md" />
+              ))}
+            </div>
+          }
+        >
+          {choosing ? (
+            <ChoiceList
+              poll={view.poll}
+              initial={mine}
+              onVote={vote}
+              onCancel={changing ? () => setChanging(false) : null}
+            />
+          ) : (
+            <ul className="poll-results">
+              {view.poll.options.map((option) => (
+                <ResultRow
+                  key={option.id}
+                  option={option}
+                  total={total}
+                  mine={mine.includes(option.id)}
+                  leading={view.closed && top > 0 && option.votes === top}
+                  anonymous={view.poll.anonymous}
+                />
+              ))}
+            </ul>
+          )}
+        </SkeletonReveal>
+      )}
       <footer className="poll-footer">
         <span className="poll-total tabular">
           <AnimatedNumber value={view.poll.totalVotes} />{" "}

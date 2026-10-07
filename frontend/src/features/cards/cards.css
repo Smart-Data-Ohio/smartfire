@@ -322,6 +322,13 @@
     gap: var(--space-1-5);
   }
 
+  .poll-load-error {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-2) 0;
+  }
+
   .poll-footer {
     display: flex;
     flex-wrap: wrap;

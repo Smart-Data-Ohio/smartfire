@@ -9,6 +9,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { forbidden } from "../../../mock/http.ts";
 import { CARD_IDS } from "../../../mock/s3/cards.ts";
 import { USER_IDS } from "../../../mock/seed.ts";
 import type { Me } from "../../gen/Me.ts";
@@ -101,6 +102,24 @@ async function renderCards(id: number, threadId: number | null = null) {
 /** The poll's vote count as read aloud (the animated digits are hidden from it). */
 function total(poll: HTMLElement): string {
   return `${poll.querySelector(".poll-total .visually-hidden")?.textContent ?? ""} votes`;
+}
+
+/**
+ * Makes the mock refuse the requests `matches` picks (403, `message`) until the returned function
+ * is called. Patches the server the stubbed fetch already talks to.
+ */
+function refuse(matches: (method: string, path: string) => boolean, message: string): () => void {
+  const { server } = network;
+  const handle = server.handle;
+
+  server.handle = (request) =>
+    matches(request.method, request.path)
+      ? Promise.resolve({ status: 403, json: { error: forbidden(message).error } })
+      : handle(request);
+
+  return () => {
+    server.handle = handle;
+  };
 }
 
 async function control(body: Readonly<Record<string, number | string | readonly number[]>>) {
@@ -221,6 +240,26 @@ describe("polls", () => {
       "Very",
     );
     expect(poll.querySelector(".poll-voters")).toBeNull();
+  });
+
+  it("offers Try again when the viewer's results couldn't be fetched, and loads them on it", async () => {
+    const user = userEvent.setup();
+
+    const allow = refuse(
+      (method, path) => method === "GET" && path.endsWith(`/polls/${polls.anonymous}`),
+      "Not now",
+    );
+
+    await renderCards(messages.pollAnonymous);
+
+    const poll = screen.getByRole("region", { name: "Poll" });
+    const again = await within(poll).findByRole("button", { name: "Try again" });
+
+    expect(within(poll).getByText("Couldn't load this poll's results.")).toBeTruthy();
+    allow();
+    await user.click(again);
+    await waitFor(() => expect(within(poll).getByText(/You voted/)).toBeTruthy());
+    expect(within(poll).queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
   it("follows another member's vote and the poll closing", async () => {
