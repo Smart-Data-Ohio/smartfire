@@ -1,8 +1,9 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
-import { THREAD_IDS } from "../../mock/s2/seed.ts";
+import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
 import { CARD_IDS } from "../../mock/s3/cards.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { Poll } from "../../src/gen/Poll.ts";
+import type { RoomDetail } from "../../src/gen/RoomDetail.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import {
   expect,
@@ -221,6 +222,125 @@ test("a permalinked row stays in view when the cards chunk arrives late", async 
   await expect(event.getByRole("region", { name: "Event: Weekly product sync" })).toBeVisible();
   await expect(event).toBeInViewport();
 });
+
+for (const placement of ["permalink", "unread divider"] as const) {
+  test(`a near-end ${placement} in a card-free window stays in view while the chunk loads`, async ({
+    page,
+  }) => {
+    await holdSync(page);
+
+    const chunk = await holdCardsChunk(page);
+    const messageId = MESSAGE_IDS.engineeringCode - 1;
+
+    // The estimated heights initially clamp placement to the end. Measuring the tall row
+    // below the target must let Virtua finish centring it (or placing the unread divider).
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages**`, async (route) => {
+      const response = await route.fetch();
+      const body: MessagePage = await response.json();
+
+      expect(
+        body.messages.every((message) => message.poll === null && message.cards.length === 0),
+      ).toBe(true);
+      body.messages = body.messages.map((message) =>
+        message.id === MESSAGE_IDS.engineeringCode
+          ? {
+              ...message,
+              bodyHtml: Array.from({ length: 40 }, () => "<p>A tall card-free message</p>").join(
+                "",
+              ),
+              attachment: null,
+            }
+          : message,
+      );
+      await route.fulfill({ response, json: body });
+    });
+
+    if (placement === "unread divider") {
+      await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}`, async (route) => {
+        const response = await route.fetch();
+        const body: RoomDetail = await response.json();
+
+        body.unread = { firstUnreadMessageId: messageId, count: 6 };
+        await route.fulfill({ response, json: body });
+      });
+    }
+
+    await openApp(
+      page,
+      `r/${ROOM_IDS.engineering}${placement === "permalink" ? `/m/${messageId}` : ""}`,
+    );
+    await chunk.requested;
+    await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
+
+    const list = page.locator("[data-message-list]");
+
+    const target =
+      placement === "permalink" ? row(page, messageId) : list.locator(".unread-divider");
+
+    const targetTop = () =>
+      target.evaluate(async (element) => {
+        const list = element.closest("[data-message-list]");
+
+        if (list === null) throw new Error("The placement target is outside the message list");
+
+        const measure = () =>
+          element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const before = measure();
+
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+        return {
+          before,
+          after: measure(),
+          settled: list.getAttribute("data-scroll-settled") === "true",
+        };
+      });
+
+    await expect(list).toHaveAttribute("data-scroll-settled", "true");
+    await expect(target).toBeInViewport();
+
+    let top = 0;
+
+    await expect
+      .poll(async () => {
+        const position = await targetTop();
+
+        top = position.after;
+
+        return position.settled ? Math.abs(position.after - position.before) : Infinity;
+      })
+      .toBeLessThanOrEqual(1);
+
+    const loaded = page.waitForResponse((response) =>
+      response.url().includes("/src/features/cards/message-cards.tsx"),
+    );
+
+    chunk.release();
+
+    const response = await loaded;
+
+    await response.finished();
+    await page.evaluate(async (path) => {
+      await import(path);
+    }, response.url());
+    await expect(target).toBeInViewport();
+    await expect
+      .poll(async () => {
+        const position = await targetTop();
+
+        return position.settled
+          ? Math.max(
+              Math.abs(position.before - top),
+              Math.abs(position.after - top),
+              Math.abs(position.after - position.before),
+            )
+          : Infinity;
+      })
+      .toBeLessThanOrEqual(3);
+  });
+}
 
 test("a card arriving live while the chunk loads keeps the list and its place", async ({
   page,

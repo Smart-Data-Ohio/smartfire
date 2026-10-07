@@ -23,6 +23,7 @@ export function useViewportAnchor({
   items,
   placement,
   placed,
+  placementAtEnd,
   cardsLoaded,
   parentId = null,
 }: {
@@ -31,12 +32,14 @@ export function useViewportAnchor({
   readonly items: readonly TimelineItem[];
   readonly placement: string;
   readonly placed: boolean;
+  readonly placementAtEnd: boolean;
   readonly cardsLoaded: boolean;
   readonly parentId?: number | null;
 }) {
   const anchorRef = useRef<Anchor | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
+  const settledPlacementRef = useRef<string | null>(null);
 
   const indices = useMemo(() => {
     const map = new Map<number, number>();
@@ -52,6 +55,8 @@ export function useViewportAnchor({
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
   const capture = (atBottom: boolean) => {
+    if (!placed || settledPlacementRef.current !== placement) return;
+
     const element = viewport();
     const corrected = correctedOffsetRef.current;
 
@@ -122,12 +127,32 @@ export function useViewportAnchor({
   };
 
   const seed = useEffectEvent(() => {
+    if (settledPlacementRef.current !== placement) {
+      // An end target is safe before placement settles, including a short list that never
+      // scrolls. Other targets must let Virtua finish before capturing their measured position.
+      if (placementAtEnd) anchorRef.current = { kind: "end", placement };
+
+      return;
+    }
+
     const list = listRef.current;
 
     if (list !== null && list.viewportSize > 0 && anchorRef.current?.placement !== placement) {
       capture(list.scrollSize - list.scrollOffset - list.viewportSize < 40);
     }
   });
+
+  const settle = () => {
+    if (!placed) return;
+
+    settledPlacementRef.current = placement;
+    correctedOffsetRef.current = null;
+    const list = listRef.current;
+
+    if (list !== null && list.viewportSize > 0) {
+      capture(list.scrollSize - list.scrollOffset - list.viewportSize < 40);
+    }
+  };
 
   const chunkLoaded = useEffectEvent(() => cardsLoaded);
 
@@ -167,6 +192,8 @@ export function useViewportAnchor({
 
   useLayoutEffect(() => {
     if (!placed || anchorRef.current?.placement !== placement) anchorRef.current = null;
+
+    if (!placed || settledPlacementRef.current !== placement) settledPlacementRef.current = null;
 
     correctedOffsetRef.current = null;
 
@@ -265,5 +292,5 @@ export function useViewportAnchor({
       stopRef.current?.();
   });
 
-  return capture;
+  return { capture, settle };
 }

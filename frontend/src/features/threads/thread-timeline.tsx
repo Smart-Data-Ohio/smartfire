@@ -150,12 +150,18 @@ export function ThreadTimeline({
   const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
   const cardsLoaded = useCardsChunkLoaded();
 
-  const captureAnchor = useViewportAnchor({
+  const focusIndex =
+    focusMessageId === null
+      ? -1
+      : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+
+  const { capture: captureAnchor, settle: settleAnchor } = useViewportAnchor({
     containerRef,
     listRef,
     items,
     placement,
     placed: loaded && placed === placement,
+    placementAtEnd: focusIndex < 0,
     cardsLoaded,
     parentId: parent?.id ?? null,
   });
@@ -172,11 +178,6 @@ export function ThreadTimeline({
     const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
     if (viewport) viewport.dataset.scrollSettled = "false";
-
-    const focusIndex =
-      focusMessageId === null
-        ? -1
-        : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
 
     if (focusIndex >= 0) {
       list.scrollToIndex(focusIndex, { align: "center" });
@@ -300,6 +301,8 @@ export function ThreadTimeline({
               const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
               if (viewport) viewport.dataset.scrollSettled = "true";
+
+              settleAnchor();
             }}
             data={items}
             data-scroll-settled="false"

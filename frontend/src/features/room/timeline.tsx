@@ -141,12 +141,20 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   // Older rows went in above the previous first row: keep the view anchored from the end.
   const shift = prepended(items, committedRef.current);
 
-  const captureAnchor = useViewportAnchor({
+  const focusIndex =
+    focusMessageId === null
+      ? -1
+      : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+
+  const unreadIndex = items.findIndex((item) => item.kind === "unread");
+
+  const { capture: captureAnchor, settle: settleAnchor } = useViewportAnchor({
     containerRef,
     listRef,
     items,
     placement,
     placed: ready && placed === placement,
+    placementAtEnd: focusIndex < 0 && unreadIndex < 0,
     cardsLoaded,
   });
 
@@ -163,13 +171,6 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const viewport = containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
 
     if (viewport) viewport.dataset.scrollSettled = "false";
-
-    const focusIndex =
-      focusMessageId === null
-        ? -1
-        : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
-
-    const unreadIndex = items.findIndex((item) => item.kind === "unread");
 
     if (focusIndex >= 0) {
       list.scrollToIndex(focusIndex, { align: "center" });
@@ -379,6 +380,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
                 containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
 
               if (viewport) viewport.dataset.scrollSettled = "true";
+
+              settleAnchor();
             }}
             data={items}
             aria-label="Messages"
