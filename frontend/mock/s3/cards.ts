@@ -651,7 +651,7 @@ export function seedCards(world: World, now: number): void {
           kind: "quote",
           data: {
             referenceId: CARD_IDS.references.inline,
-            preview: quoteOf(welcome, "#product-updates", welcome.markdownSource ?? ""),
+            preview: quoteOf(welcome, "product-updates", welcome.markdownSource ?? ""),
           },
         },
       ],
@@ -875,7 +875,7 @@ export function seedCards(world: World, now: number): void {
       ? { state: "hidden" }
       : {
           state: "loaded",
-          ...quoteOf(quotedGeneral, "#general", quotedGeneral.markdownSource ?? ""),
+          ...quoteOf(quotedGeneral, "general", quotedGeneral.markdownSource ?? ""),
         },
   );
 

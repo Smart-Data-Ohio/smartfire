@@ -358,7 +358,7 @@ describe("previews", () => {
 
     expect(await quote(cards.references.fetched)).toMatchObject({
       state: "loaded",
-      roomLabel: "#general",
+      roomLabel: "general",
     });
 
     expect(await quote(cards.references.hidden)).toEqual({ state: "hidden" });
