@@ -5,7 +5,6 @@ use crate::{
     integrations::google::sign_in::{self, Error as GoogleError},
 };
 use campfire_db::{
-    Status, User, UserChanges,
     models::{
         audit_log::{AuditLog, NewAuditLog, Target},
         google_identity,
@@ -367,15 +366,7 @@ async fn admin(c: &mut Ctx, allow: bool) -> Result {
         .ok_or(Error::Status(StatusCode::NOT_FOUND))?;
     let context = super::two_factor::audit_context(c)?;
     let user=c.app().db.write(move |tx| {
-        let mut user=User::find(tx.conn(),id)?;
-        if user.status!=Status::Active || user.is_bot() {return Err(campfire_db::Error::RecordNotFound("User"));}
-        let changed=if allow {
-            let changed=tx.conn().query_row("SELECT email_self_changed_at IS NOT NULL OR NOT google_email_link_allowed FROM users WHERE id=?",[id],|r|r.get::<_,bool>(0))?;
-            user.update(tx,UserChanges {allow_google_email_link:true,..Default::default()})?;
-            changed
-        } else {google_identity::GoogleIdentity::unlink(tx,id)?};
-        if changed {AuditLog::record(tx,NewAuditLog {action:if allow {"google.sign_in.link_allow"}else{"google.sign_in.unlink"}.into(),target:Some(Target::from(&user)),changes:allow.then(||json!({"email_address":user.email_address})),..Default::default()},&context)?;}
-        Ok(user)
+        google_identity::GoogleIdentity::admin_set_link(tx,id,allow,&context)
     }).await.map_err(|e|match e {campfire_db::Error::RecordNotFound(_)=>Error::Status(StatusCode::NOT_FOUND),_=>Error::internal(e)})?;
     let message = if allow {
         format!(

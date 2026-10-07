@@ -125,7 +125,8 @@ pub struct PersonRemoved {
 }
 
 /// `GET`/`PATCH /api/v1/admin/custom_styles`: the account's custom CSS for the classic pages
-/// (`null` when none). The write sends the whole text (blank clears it) and needs sudo.
+/// (`null` when none). The write sends the whole text (blank or `null` clears it; a body without
+/// `css` changes nothing) and needs sudo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

@@ -75,8 +75,14 @@ async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&st
 }
 
 /// Columns that differ between two runs by design: secrets drawn afresh (session tokens, storage
-/// keys, the join code) and the digest salted afresh.
-const VOLATILE: &[&str] = &["token", "key", "join_code", "password_digest"];
+/// keys, the join code), the digest salted afresh, and a system note's random client id.
+const VOLATILE: &[&str] = &[
+    "token",
+    "key",
+    "join_code",
+    "password_digest",
+    "client_message_id",
+];
 
 /// `text` with the random part of a deactivated address (`kevin-deactivated-<uuid>@...`) masked.
 fn unrandom(text: &str) -> String {
@@ -88,6 +94,31 @@ fn unrandom(text: &str) -> String {
         }
         _ => text.to_string(),
     }
+}
+
+/// `text` with every UUID (a system note's random client id in its DOM id) masked.
+fn uuids_masked(text: &str) -> String {
+    let shape = |window: &[u8]| {
+        window.len() == 36
+            && window.iter().enumerate().all(|(index, byte)| match index {
+                8 | 13 | 18 | 23 => *byte == b'-',
+                _ => byte.is_ascii_hexdigit(),
+            })
+    };
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+    while at < bytes.len() {
+        if at + 36 <= bytes.len() && shape(&bytes[at..at + 36]) {
+            out.push_str("<uuid>");
+            at += 36;
+        } else {
+            let character = text[at..].chars().next().unwrap();
+            out.push(character);
+            at += character.len_utf8();
+        }
+    }
+    out
 }
 
 /// Every row of every table, as JSON, each table's rows sorted.
@@ -192,7 +223,11 @@ where
     let context = prepare(&a, &mut b).await;
     let capture = a.booted.app.cable.capture_every_publication();
     exercise(&mut b, context).await;
-    let frames = settle(&capture).await;
+    let frames = settle(&capture)
+        .await
+        .into_iter()
+        .map(|(stream, frame)| (stream, uuids_masked(&frame)))
+        .collect();
     Some(Outcome {
         rows: dump(&a).await,
         frames,
@@ -318,10 +353,46 @@ async fn members_read_the_workspace_and_people_but_change_nothing() {
             "/api/v1/admin/custom_styles".to_string(),
             json!({"css": "body{}"}),
         ),
+        (
+            Method::POST,
+            format!("/api/v1/admin/people/{JASON}/two_factor_reset"),
+            Value::Null,
+        ),
+        (
+            Method::POST,
+            format!("/api/v1/admin/people/{JASON}/google_link"),
+            Value::Null,
+        ),
+        (
+            Method::DELETE,
+            format!("/api/v1/admin/people/{JASON}/google_link"),
+            Value::Null,
+        ),
+        (
+            Method::PUT,
+            "/api/v1/admin/workspace/logo".to_string(),
+            json!({"signedId": "anything"}),
+        ),
+        (
+            Method::DELETE,
+            "/api/v1/admin/workspace/logo".to_string(),
+            Value::Null,
+        ),
+        (
+            Method::POST,
+            "/api/v1/admin/icons".to_string(),
+            json!({"name": "mine", "title": "Mine", "signedId": null}),
+        ),
+        (
+            Method::DELETE,
+            "/api/v1/admin/icons/1".to_string(),
+            Value::Null,
+        ),
     ];
     for (method, path, body) in writes {
-        let reply = write(&mut kevin, method, &path, body).await;
-        assert_eq!(error(&reply)["_tag"], "Forbidden", "{path}");
+        let reply = write(&mut kevin, method.clone(), &path, body).await;
+        assert_eq!(reply.status, StatusCode::FORBIDDEN, "{method} {path}");
+        assert_eq!(error(&reply)["_tag"], "Forbidden", "{method} {path}");
     }
     assert_eq!(dump(&a).await, before);
 }
@@ -418,6 +489,61 @@ async fn sudo_comes_back_to_the_spa_page() {
         .write(Req::new(Method::POST, "/sudo").form(&[("password", PASSWORD)]))
         .await;
     assert_eq!(confirmed.location(), Some("http://campfire.test/app/"));
+
+    // So does a page of this host outside the SPA.
+    let mut classic_page = a.sign_in(DAVID).await;
+    let asked = classic_page
+        .write(
+            json_body(
+                Method::POST,
+                "/api/v1/admin/workspace/join_code",
+                &Value::Null,
+            )
+            .header("referer", "http://campfire.test/account/edit"),
+        )
+        .await;
+    assert_eq!(error(&asked)["_tag"], "SudoRequired");
+    let confirmed = classic_page
+        .write(Req::new(Method::POST, "/sudo").form(&[("password", PASSWORD)]))
+        .await;
+    assert_eq!(confirmed.location(), Some("http://campfire.test/app/"));
+}
+
+/// Without a fresh password confirmation, the writes the classic pages guard answer
+/// `SudoRequired` and change nothing.
+#[tokio::test]
+async fn guarded_writes_change_nothing_without_the_password() {
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let before = dump(&a).await;
+    let writes = [
+        (
+            Method::PATCH,
+            format!("/api/v1/admin/people/{KEVIN}"),
+            json!({"role": "administrator"}),
+        ),
+        (
+            Method::DELETE,
+            format!("/api/v1/admin/people/{KEVIN}"),
+            Value::Null,
+        ),
+        (
+            Method::PATCH,
+            "/api/v1/admin/custom_styles".to_string(),
+            json!({"css": "body { color: red }"}),
+        ),
+        (
+            Method::POST,
+            "/api/v1/admin/workspace/join_code".to_string(),
+            Value::Null,
+        ),
+    ];
+    for (method, path, body) in writes {
+        let reply = write(&mut b, method.clone(), &path, body).await;
+        assert_eq!(reply.status, StatusCode::FORBIDDEN, "{method} {path}");
+        assert_eq!(error(&reply)["_tag"], "SudoRequired", "{method} {path}");
+        assert_eq!(dump(&a).await, before, "{method} {path} changed something");
+    }
 }
 
 // --- Workspace ---------------------------------------------------------------------------------
@@ -662,6 +788,41 @@ async fn removing_someone_matches_the_classic_page() {
     }
 }
 
+/// The classic page doesn't stop an administrator demoting or removing themselves, or changing a
+/// bot's role or removing it (`User.active` includes bots); neither does the API.
+#[tokio::test]
+async fn yourself_and_bots_change_as_the_classic_page_allows() {
+    for target in [DAVID, BENDER] {
+        let path = format!("/account/users/{target}");
+        let api_path = format!("/api/v1/admin/people/{target}");
+        let (role, wire) = if target == DAVID {
+            ("member", "member")
+        } else {
+            ("administrator", "administrator")
+        };
+        assert_parity(
+            nothing,
+            async |b, _| classic(b, Method::PATCH, &path, &[("user[role]", role)]).await,
+            async |b, _| {
+                let change: api::PersonChange =
+                    spa(b, Method::PATCH, &api_path, json!({"role": wire})).await;
+                assert_eq!(change.person.id, target);
+            },
+        )
+        .await;
+        assert_parity(
+            nothing,
+            async |b, _| classic(b, Method::DELETE, &path, &[]).await,
+            async |b, _| {
+                let removed: api::PersonRemoved =
+                    spa(b, Method::DELETE, &api_path, Value::Null).await;
+                assert_eq!(removed.id, target);
+            },
+        )
+        .await;
+    }
+}
+
 #[tokio::test]
 async fn a_two_step_reset_matches_the_classic_page() {
     let Some(spa_side) = assert_parity(
@@ -837,6 +998,53 @@ async fn custom_styles_save_as_the_classic_form_does() {
         "{}",
         audits(&spa_side)
     );
+}
+
+/// A body without `css` leaves the styles alone, as a classic post without `custom_styles` does;
+/// `null` clears them.
+#[tokio::test]
+async fn custom_styles_change_only_when_given() {
+    let css = ".message { color: rebeccapurple }";
+    let prepare = async |a: &TestApp, _: &mut Browser<'_>| {
+        a.db()
+            .write(move |tx| {
+                let mut account = campfire_db::Account::first(tx.conn())?.unwrap();
+                account.update(tx, None, Some(Some(css)), None)
+            })
+            .await
+            .unwrap();
+        Value::Null
+    };
+    assert_parity(
+        prepare,
+        async |b, _| {
+            classic(
+                b,
+                Method::PATCH,
+                "/account/custom_styles",
+                &[("account[unrelated]", "1")],
+            )
+            .await
+        },
+        async |b, _| {
+            let kept: api::CustomStyles =
+                spa(b, Method::PATCH, "/api/v1/admin/custom_styles", json!({})).await;
+            assert_eq!(kept.css.as_deref(), Some(css));
+        },
+    )
+    .await;
+
+    let Some(a) = app().await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    b.grant_sudo().await;
+    let cleared: api::CustomStyles = spa(
+        &mut b,
+        Method::PATCH,
+        "/api/v1/admin/custom_styles",
+        json!({"css": null}),
+    )
+    .await;
+    assert_eq!(cleared.css, None);
 }
 
 #[tokio::test]

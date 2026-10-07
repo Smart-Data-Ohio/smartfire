@@ -184,6 +184,57 @@ impl GoogleIdentity {
             .execute("DELETE FROM google_identities WHERE user_id=?", [user_id])?
             == 1)
     }
+
+    /// `Accounts::Users::GoogleLinksController#create` (`allow`) and `#destroy`: an
+    /// administrator lets an active person link Google sign-in by email, or unlinks it. Audited
+    /// only when something changed. Anyone else (deactivated, banned, a bot) is not found.
+    pub fn admin_set_link(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        allow: bool,
+        context: &crate::models::audit_log::Context,
+    ) -> Result<User> {
+        use crate::models::audit_log::{AuditLog, NewAuditLog, Target};
+        let mut user = User::find(tx.conn(), user_id)?;
+        if user.status != Status::Active || user.is_bot() {
+            return Err(Error::RecordNotFound("User"));
+        }
+        let changed = if allow {
+            let changed = tx.conn().query_row(
+                "SELECT email_self_changed_at IS NOT NULL OR NOT google_email_link_allowed FROM users WHERE id=?",
+                [user_id],
+                |row| row.get::<_, bool>(0),
+            )?;
+            user.update(
+                tx,
+                crate::UserChanges {
+                    allow_google_email_link: true,
+                    ..Default::default()
+                },
+            )?;
+            changed
+        } else {
+            Self::unlink(tx, user_id)?
+        };
+        if changed {
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: if allow {
+                        "google.sign_in.link_allow"
+                    } else {
+                        "google.sign_in.unlink"
+                    }
+                    .into(),
+                    target: Some(Target::from(&user)),
+                    changes: allow.then(|| serde_json::json!({"email_address": user.email_address})),
+                    ..Default::default()
+                },
+                context,
+            )?;
+        }
+        Ok(user)
+    }
 }
 
 fn reject<T>(reason: &'static str) -> Result<T> {

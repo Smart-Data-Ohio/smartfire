@@ -15,10 +15,10 @@ use axum::routing::{delete, get, patch, post, put};
 use campfire_api_types as api;
 use campfire_app::account_security;
 use campfire_app::app::AppCtx;
-use campfire_db::models::audit_log::{self, Actor, AuditLog, Context, NewAuditLog, Target};
+use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::models::google_identity::GoogleIdentity;
 use campfire_db::models::workspace_icon::{NewIcon, WorkspaceIcon};
-use campfire_db::{Account, Role, Status, User, UserChanges};
+use campfire_db::{Account, Role, User};
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
 use campfire_people::controllers::accounts::audit_logs;
 use campfire_people::controllers::accounts::icons::image_facts;
@@ -199,7 +199,13 @@ fn require_sudo(c: &mut Ctx) -> Result<()> {
     if session_keys::sudo_verified(c.session(), now) {
         return Ok(());
     }
+    // Only a page of the SPA: anything else the referer names comes back to its root.
     let page = session_keys::sudo_origin_path(c.request.referer(), &c.request.host(), "/app/");
+    let page = if page.starts_with("/app/") {
+        page
+    } else {
+        "/app/".to_string()
+    };
     session_keys::store_sudo_pending_request(
         c.session(),
         session_keys::SudoPendingRequest {
@@ -233,11 +239,7 @@ async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
 
 /// `two_factor#audit_context`: who did it, from where.
 fn audit_context(c: &Ctx) -> Result<Context> {
-    Ok(Context {
-        actor: concerns::current_user(c).map(Actor::from),
-        ip_address: Some(c.request.remote_ip()?.to_string()),
-        user_agent: c.request.user_agent().map(str::to_string),
-    })
+    campfire_people::controllers::two_factor::audit_context(c)
 }
 
 /// The `:id` path parameter as a record id; anything else is not found.
@@ -631,47 +633,7 @@ async fn google_link(c: &mut Ctx, allow: bool) -> Result {
     let user = c
         .app()
         .db
-        .write(move |tx| {
-            let mut user = User::find(tx.conn(), id)?;
-            if user.status != Status::Active || user.is_bot() {
-                return Err(campfire_db::Error::RecordNotFound("User"));
-            }
-            let changed = if allow {
-                let changed = tx.conn().query_row(
-                    "SELECT email_self_changed_at IS NOT NULL OR NOT google_email_link_allowed FROM users WHERE id=?",
-                    [id],
-                    |row| row.get::<_, bool>(0),
-                )?;
-                user.update(
-                    tx,
-                    UserChanges {
-                        allow_google_email_link: true,
-                        ..Default::default()
-                    },
-                )?;
-                changed
-            } else {
-                GoogleIdentity::unlink(tx, id)?
-            };
-            if changed {
-                AuditLog::record(
-                    tx,
-                    NewAuditLog {
-                        action: if allow {
-                            "google.sign_in.link_allow"
-                        } else {
-                            "google.sign_in.unlink"
-                        }
-                        .into(),
-                        target: Some(Target::from(&user)),
-                        changes: allow.then(|| json!({"email_address": user.email_address})),
-                        ..Default::default()
-                    },
-                    &context,
-                )?;
-            }
-            Ok(user)
-        })
+        .write(move |tx| GoogleIdentity::admin_set_link(tx, id, allow, &context))
         .await
         .map_err(db_error)?;
     let notice = if allow {
@@ -711,15 +673,16 @@ async fn save_custom_styles(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let mut account = account(c).await?;
     require_sudo(c)?;
-    let update: api::CustomStyles = body(c).await?;
+    let update: StylesUpdate = body(c).await?;
     let audit = audit_context(c)?;
+    // An absent `css` changes nothing, as an absent `custom_styles` param doesn't classically.
     let css = update.css;
     let (before, account) = c
         .app()
         .db
         .write(move |tx| {
             let before = account.clone();
-            account.update(tx, None, Some(css.as_deref()), None)?;
+            account.update(tx, None, css.as_ref().map(Option::as_deref), None)?;
             Ok((before, account))
         })
         .await
@@ -731,6 +694,22 @@ async fn save_custom_styles(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     c.json(StatusCode::OK, &api::CustomStyles { css })
+}
+
+/// The body of `PATCH /api/v1/admin/custom_styles`: `css` absent, `null` (clears) or the text.
+#[derive(serde::Deserialize)]
+struct StylesUpdate {
+    #[serde(default, deserialize_with = "given")]
+    css: Option<Option<String>>,
+}
+
+/// A key that is present, `null` included: `Some(None)` for `null`, `None` when absent.
+fn given<'de, D, T>(deserializer: D) -> std::result::Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
 }
 
 // --- Icons -------------------------------------------------------------------------------------
