@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from "react";
+import { type KeyboardEvent, type MouseEvent, useId } from "react";
 import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
@@ -98,7 +98,7 @@ interface ActivityRowProps {
 /**
  * One inbox entry, Slack's activity row: who (their avatar, badged with the kind), what kind and
  * where, the excerpt, and how long ago. Unread rows carry a dot and a heavier title; handled ones
- * a check. The whole row opens it; hover (or focus) shows read and handled toggles and a menu.
+ * a check. The whole row opens it (named by a summary, described by the excerpt); hover (or focus) shows read and handled toggles and a menu.
  * Keys on a focused row: ↑/↓ move, ⏎ opens, U toggles read, E toggles handled, Shift+F10 the menu.
  */
 export function ActivityRow({
@@ -110,6 +110,7 @@ export function ActivityRow({
   onAction,
   onMenu,
 }: ActivityRowProps) {
+  const bodyId = useId();
   const source = item.source;
   const creator = useUser(source.creatorId ?? undefined);
   const unread = item.state === "unread";
@@ -146,6 +147,7 @@ export function ActivityRow({
     unread ? "Unread" : handled ? "Handled" : null,
     label,
     title,
+    chip?.label,
     creator?.name,
     timeAgo(occurredAt, now),
   ]
@@ -194,6 +196,7 @@ export function ActivityRow({
         type="button"
         className="list-row-open activity-row"
         aria-label={summary}
+        aria-describedby={bodyId}
         onClick={() => onOpen(item)}
       >
         <span className="activity-dot" aria-hidden="true" />
@@ -210,7 +213,7 @@ export function ActivityRow({
           </span>
           <span className="activity-body">
             {creator === undefined ? null : <span className="activity-author">{creator.name}</span>}
-            {source.body}
+            <span id={bodyId}>{source.body}</span>
           </span>
           {chip === null && !handled ? null : (
             <span className="activity-chips">

@@ -78,6 +78,17 @@ describe("an activity row", () => {
     expect(handlers.onOpen).toHaveBeenCalledWith(subject);
   });
 
+  it("names the row by its summary and describes it with the excerpt", () => {
+    renderRow("unread");
+
+    const open = screen.getByRole("button", { name: /Unread, Mention, general/ });
+
+    expect(open.getAttribute("aria-label")).not.toContain("launch plan");
+    expect(screen.getByRole("button", { description: "Can you review the launch plan?" })).toBe(
+      open,
+    );
+  });
+
   it("toggles read with U and handled with E", () => {
     const { handlers, subject, open } = renderRow("unread");
 
