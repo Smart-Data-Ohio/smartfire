@@ -123,8 +123,10 @@ export function rowPillCount(row: SidebarRow): number {
   // mentions (all a muted room notifies for), and "nothing" or hiding leaves none.
   switch (row.membership.involvement) {
     case "muted":
-      // The server's muted count is these same mentions (one item per message).
-      return row.mentionCount;
+      // Muted rooms notify for mentions only. When the server already counted it as muted, its
+      // count is those mentions; while the change is pending, the old count can't exceed it
+      // either way, so the smaller of the two is right or nearly so until the new row lands.
+      return Math.min(row.mentionCount, row.notificationCount);
     case "nothing":
     case "invisible":
       return 0;
@@ -140,6 +142,17 @@ export function rowPillCount(row: SidebarRow): number {
  */
 export function rowUnread(row: SidebarRow): boolean {
   return row.membership.unreadAt !== null || rowPillCount(row) > 0;
+}
+
+/**
+ * The rows a folded section still shows below its heading: the open room, and every row that
+ * reads as unread, a ping-only one included.
+ */
+export function peekingRows(
+  rows: readonly SidebarRow[],
+  selectedRoomId: number | null,
+): readonly SidebarRow[] {
+  return rows.filter((row) => row.room.id === selectedRoomId || rowUnread(row));
 }
 
 /**

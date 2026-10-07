@@ -17,6 +17,8 @@ export const SidebarRow = Schema.Struct({
   unreadCount: Schema.Int,
   mentionCount: Schema.Int,
   notificationCount: Schema.Int,
+  threadNotificationCount: Schema.Int,
+  revision: Schema.Int,
 });
 
 export type SidebarRow = typeof SidebarRow.Type;

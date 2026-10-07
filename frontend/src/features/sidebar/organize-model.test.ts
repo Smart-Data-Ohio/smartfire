@@ -37,6 +37,8 @@ function row(id: number, name: string, kind: RoomKind = "open", favorite: number
     unreadCount: 0,
     mentionCount: 0,
     notificationCount: 0,
+    threadNotificationCount: 0,
+    revision: 0,
   };
 
   return entry;

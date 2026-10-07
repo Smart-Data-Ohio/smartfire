@@ -152,11 +152,12 @@ async fn put_order(c: &mut Ctx) -> Result {
 
 /// The membership's row as it is now, hidden or not.
 async fn row(c: &Ctx, room: Room, membership_id: i64) -> Result<api::SidebarRow> {
+    let revision = c.app().db.env().now();
     c.app()
         .db
         .read(move |conn| {
             let membership = Membership::find(conn, membership_id)?;
-            dto::membership_row(conn, &room, &membership)
+            dto::membership_row(conn, &room, &membership, revision)
         })
         .await
         .map_err(db_error)
@@ -226,7 +227,8 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             membership.move_favorite_to(tx, position)?;
-            shown_favorites(tx.conn(), user_id)
+            let revision = tx.now();
+            shown_favorites(tx.conn(), user_id, revision)
         })
         .await
         .map_err(db_error)?;
@@ -237,11 +239,12 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
 fn shown_favorites(
     conn: &campfire_db::Connection,
     user_id: i64,
+    revision: campfire_db::Timestamp,
 ) -> campfire_db::Result<Vec<api::SidebarRow>> {
     let mut rows = Vec::new();
     for membership in Membership::favorites_for_user(conn, user_id)? {
         let room = membership.room(conn)?;
-        rows.extend(dto::sidebar_row(conn, &room, &membership)?);
+        rows.extend(dto::sidebar_row(conn, &room, &membership, revision)?);
     }
     Ok(rows)
 }

@@ -322,8 +322,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     }
   };
 
+  // The server stamps each row with the clock before reading it; the mock counts rows instead,
+  // which orders them the same way.
+  let rowRevision = 0;
+
   const sidebarRow = (record: RoomRecord): SidebarRow => {
     const unreadCount = unreadMessages(record).length;
+
+    rowRevision += 1;
 
     return {
       room: record.room,
@@ -333,6 +339,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       unreadCount,
       mentionCount: record.mentionCount,
       notificationCount: notificationCount(record, unreadCount),
+      threadNotificationCount: 0,
+      revision: rowRevision,
     };
   };
 

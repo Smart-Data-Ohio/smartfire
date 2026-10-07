@@ -18,6 +18,7 @@ import {
   localItems,
   mergeItems,
   rankItems,
+  readsUnread,
   remoteItems,
   type SwitcherItem,
 } from "./ranking.ts";
@@ -96,7 +97,7 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       aria-selected={active}
       className="switcher-option"
       data-active={active || undefined}
-      data-unread={(item.unread && !item.muted) || undefined}
+      data-unread={readsUnread(item) || undefined}
       data-muted={item.muted || undefined}
       onPointerMove={active ? undefined : onHover}
       onClick={onChoose}

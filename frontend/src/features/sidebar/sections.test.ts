@@ -4,6 +4,7 @@ import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
 import {
   notificationLabel,
+  peekingRows,
   rowPillCount,
   rowState,
   rowUnread,
@@ -74,6 +75,8 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
     unreadCount: unread,
     mentionCount: mentions,
     notificationCount: options.notifications ?? policyCount(involvement, unread, mentions),
+    threadNotificationCount: 0,
+    revision: 0,
   };
 }
 
@@ -236,6 +239,19 @@ describe("rowUnread", () => {
     // "nothing" never notifies, so a stale server count neither bolds nor counts.
     expect(rowUnread(row(6, "quiet", { involvement: "nothing", notifications: 2 }))).toBe(false);
     expect(rowUnread(row(1, "general"))).toBe(false);
+  });
+});
+
+describe("peekingRows", () => {
+  it("keeps a folded section's pinged rows on show, even with the room timeline read", () => {
+    const pinged = row(4, "alerts", { involvement: "everything", notifications: 1 });
+    const unreadRoom = row(5, "design", { unread: 2 });
+    const selected = row(6, "general");
+    const quiet = row(7, "random");
+
+    expect(
+      peekingRows([pinged, unreadRoom, selected, quiet], 6).map((entry) => entry.room.id),
+    ).toEqual([4, 5, 6]);
   });
 });
 

@@ -146,13 +146,14 @@ async fn post_direct(c: &mut Ctx) -> Result {
         .await?;
         directs::broadcast_create_room(c, &room).await?;
     }
+    let revision = crate::endpoints::now(c);
     let row = c
         .app()
         .db
         .read(move |conn| {
             let membership = Membership::find_by_room_and_user(conn, room.id, viewer)?
                 .ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
-            dto::sidebar_row(conn, &room, &membership)
+            dto::sidebar_row(conn, &room, &membership, revision)
         })
         .await
         .map_err(db_error)?

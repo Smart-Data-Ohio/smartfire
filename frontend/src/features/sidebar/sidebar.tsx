@@ -46,6 +46,7 @@ import {
 import { RoomContextMenu, type RoomMenuRequest } from "./room-menu.tsx";
 import {
   notificationLabel,
+  peekingRows,
   type SidebarSection,
   sectionStatus,
   sectionUnread,
@@ -208,11 +209,7 @@ function Section({
 }: SectionProps) {
   const id = useId();
 
-  const peeking = open
-    ? []
-    : section.rows.filter(
-        (row) => row.room.id === selectedRoomId || row.membership.unreadAt !== null,
-      );
+  const peeking = open ? [] : peekingRows(section.rows, selectedRoomId);
 
   const folded = open ? { unread: false, count: 0 } : sectionUnread(section.rows);
   // A folded category says what it hides when its trigger takes focus. The status is `hidden` so

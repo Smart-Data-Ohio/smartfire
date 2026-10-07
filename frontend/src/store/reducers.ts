@@ -62,11 +62,22 @@ function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly 
     .map((row) => row.room.id);
 }
 
+/**
+ * Whether a server row may replace the one held: rows carry the server's `revision` (the clock
+ * read before the row was read), so a slower response or a late event can't put an older row
+ * over a newer one. Equal revisions replace, so the later arrival of a tie wins.
+ */
+export function rowLandsOver(held: SidebarRow | undefined, incoming: SidebarRow): boolean {
+  return held === undefined || incoming.revision >= held.revision;
+}
+
 export function loadSidebar(state: State, sidebar: Sidebar): State {
   const rows: Record<number, SidebarRow> = {};
 
   for (const row of sidebar.rows) {
-    rows[row.room.id] = row;
+    const held = state.sidebar.rows[row.room.id];
+
+    rows[row.room.id] = held !== undefined && !rowLandsOver(held, row) ? held : row;
   }
 
   return {
@@ -97,19 +108,21 @@ function updateRow(state: State, roomId: number, change: (row: SidebarRow) => Si
   };
 }
 
-/** The room was read here: counts clear and the membership stops being unread. */
+/**
+ * The room was read here: its unread messages clear and the membership stops being unread, as
+ * the server's row (published on the read) will say. Thread pings stay until their thread is
+ * read, and the inbox keeps its own unread mentions.
+ */
 export function markRoomRead(state: State, roomId: number): State {
   return updateRow(state, roomId, (row) =>
     row.unreadCount === 0 &&
-    row.mentionCount === 0 &&
-    row.notificationCount === 0 &&
+    row.notificationCount === row.threadNotificationCount &&
     row.membership.unreadAt === null
       ? row
       : {
           ...row,
           unreadCount: 0,
-          mentionCount: 0,
-          notificationCount: 0,
+          notificationCount: row.threadNotificationCount,
           membership: { ...row.membership, unreadAt: null },
         },
   );
@@ -692,6 +705,10 @@ function setTyping(state: State, topic: string, userId: number, on: boolean, now
 }
 
 function upsertRow(state: State, row: SidebarRow): State {
+  if (!rowLandsOver(state.sidebar.rows[row.room.id], row)) {
+    return state;
+  }
+
   const rows = { ...state.sidebar.rows, [row.room.id]: row };
   const known = state.sidebar.rows[row.room.id] !== undefined;
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;

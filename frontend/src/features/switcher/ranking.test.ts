@@ -9,6 +9,7 @@ import {
   mergeItems,
   type RemoteCatalogue,
   rankItems,
+  readsUnread,
   remoteItems,
 } from "./ranking.ts";
 import { withRecent } from "./recents.ts";
@@ -22,6 +23,8 @@ function unread(row: SidebarRow, mentions = 0): SidebarRow {
     unreadCount: 3,
     mentionCount: mentions,
     notificationCount: mentions,
+    threadNotificationCount: 0,
+    revision: 0,
     membership: {
       ...row.membership,
       involvement: "mentions",
@@ -133,6 +136,36 @@ describe("localItems", () => {
     expect(items.find((item) => item.key === "person:2")?.roomId).toBe(9);
     expect(items.find((item) => item.key === "room:11")?.memberIds).toEqual([3, 4]);
     expect(items.find((item) => item.key === "room:2")?.count).toBe(2);
+  });
+});
+
+describe("readsUnread", () => {
+  const muted = (row: SidebarRow): SidebarRow => ({
+    ...row,
+    membership: { ...row.membership, involvement: "muted" },
+  });
+
+  it("bolds a muted room only for a ping, as the sidebar's muted row does", () => {
+    const items = localItems(
+      sidebarOf([
+        unread(sidebarRowFixture(2, "design"), 2),
+        muted(unread(sidebarRowFixture(4, "noise"), 1)),
+        muted(unread(sidebarRowFixture(5, "chatter"))),
+        sidebarRowFixture(1, "general"),
+      ]),
+      VIEWER,
+    );
+
+    const reads = (key: string) => {
+      const item = items.find((entry) => entry.key === key);
+
+      return item === undefined ? undefined : readsUnread(item);
+    };
+
+    expect(reads("room:2")).toBe(true);
+    expect(reads("room:4")).toBe(true);
+    expect(reads("room:5")).toBe(false);
+    expect(reads("room:1")).toBe(false);
   });
 });
 

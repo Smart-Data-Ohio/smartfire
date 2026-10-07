@@ -28,12 +28,21 @@ export interface SwitcherItem {
   readonly memberIds: readonly number[];
   readonly threadId: number | null;
   readonly unread: boolean;
-  /** The sidebar pill's number: mentions, or every unread message in a DM. */
+  /** The sidebar's red count (`rowPillCount`): what would have notified you. */
   readonly count: number;
   readonly muted: boolean;
   readonly favorite: boolean;
   /** The room's last activity, for the empty query's fallback order; `null` when unknown. */
   readonly updatedAt: string | null;
+}
+
+/**
+ * Whether an option draws bold, as an unread sidebar row does. A muted room reads as unread only
+ * for a ping, so a muted option goes bold beside its red count and stays dimmed, as the
+ * sidebar's muted row does; an unread muted room without one stays regular.
+ */
+export function readsUnread(item: SwitcherItem): boolean {
+  return item.unread && (!item.muted || item.count > 0);
 }
 
 /** The server's catalogue, as far as ranking needs it. */

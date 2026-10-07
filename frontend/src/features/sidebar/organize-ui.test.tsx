@@ -84,6 +84,8 @@ function row(name: string, options: RowOptions = {}): SidebarRow {
     unreadCount: 0,
     mentionCount: 0,
     notificationCount: 0,
+    threadNotificationCount: 0,
+    revision: 0,
   };
 }
 

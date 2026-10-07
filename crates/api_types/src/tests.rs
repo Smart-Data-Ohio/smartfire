@@ -516,6 +516,8 @@ pub(crate) fn row() -> SidebarRow {
         unread_count: 4,
         mention_count: 1,
         notification_count: 1,
+        thread_notification_count: 0,
+        revision: 1_790_000_000_000_000,
     }
 }
 
@@ -655,6 +657,8 @@ fn sidebar_round_trips() {
             "unreadCount": 4,
             "mentionCount": 1,
             "notificationCount": 1,
+            "threadNotificationCount": 0,
+            "revision": 1_790_000_000_000_000i64,
         })
     );
     assert_eq!(

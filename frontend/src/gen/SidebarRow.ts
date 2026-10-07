@@ -33,10 +33,23 @@ unreadCount: number,
  */
 mentionCount: number, 
 /**
- * The red pill: the unread messages here that would have notified the viewer under the
- * classic rules (`Notifications::Policy`), one per message. In an `everything` room, every
- * unread root message plus the notifications (mentions, replies, thread activity, keyword
- * alerts) on messages outside that run; in a `mentions` room, those notifications; in a
- * `muted` room, its mentions; none for `nothing`.
+ * The red pill: the messages here that would have notified the viewer under the classic
+ * rules (`Notifications::Policy`) and are still unread, one per message. Root messages count
+ * while they're in the room's unread range (every one but system notes in an `everything`
+ * room; those with a mention, reply, thread activity or keyword alert inbox item in a
+ * `mentions` room; mentions in a `muted` room), so reading the room clears them. Thread
+ * messages with such an item count while their thread is unread, since classic reads a
+ * thread apart from its room. A ping also stops counting once its inbox item is read.
+ * None for `nothing`.
  */
-notificationCount: number, };
+notificationCount: number, 
+/**
+ * The part of `notification_count` in threads: what's left of it once the room is read.
+ */
+threadNotificationCount: number, 
+/**
+ * When the server began reading this row (microseconds since the epoch, the clock read
+ * before the read snapshot opens). A row with a smaller revision than the one held is
+ * older and is ignored; equal ones replace it.
+ */
+revision: number, };

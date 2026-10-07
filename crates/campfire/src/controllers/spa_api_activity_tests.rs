@@ -1326,18 +1326,73 @@ async fn deactivating_an_agent_takes_its_approvals_out_of_the_inbox() {
     server.abort();
 }
 
-/// Sets David's involvement in Designers and marks the room read, so only inbox items count.
-async fn designers_as(a: &TestApp, involvement: &'static str) {
+/// A message in Designers by Jason, `seconds` after now: on the root timeline, or in `thread`.
+async fn designers_message(a: &TestApp, thread: Option<i64>, system_note: bool, seconds: i64) -> i64 {
+    let at = campfire_db::Timestamp::from_second(a.booted.app.db.env().now().as_second() + seconds);
     a.db()
         .write(move |tx| {
-            tx.conn().execute(
-                "UPDATE memberships SET involvement = ?, unread_at = NULL WHERE room_id = ? AND user_id = ?",
-                rusqlite::params![involvement, DESIGNERS, DAVID],
-            )?;
+            Ok(tx.conn().query_row(
+                "INSERT INTO messages (client_message_id, created_at, creator_id, room_id, thread_id, system_note, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+                rusqlite::params![format!("red-count-{seconds}"), at, JASON, DESIGNERS, thread, system_note, at],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap()
+}
+
+/// Runs SQL against the app's database.
+async fn exec(a: &TestApp, sql: &'static str, params: Vec<rusqlite::types::Value>) {
+    a.db()
+        .write(move |tx| {
+            tx.conn().execute(sql, rusqlite::params_from_iter(params))?;
             Ok(())
         })
         .await
         .unwrap();
+}
+
+/// David with an empty inbox, his Designers membership set to `involvement` and read through its
+/// newest root message, as `Membership#read` leaves it, and thread 1 read.
+async fn quiet_designers(a: &TestApp, involvement: &'static str) {
+    exec(a, "DELETE FROM activity_items WHERE user_id = ?", vec![DAVID.into()]).await;
+    exec(
+        a,
+        "UPDATE memberships SET involvement = ?, unread_at = NULL, last_read_message_id = (SELECT id FROM messages WHERE room_id = memberships.room_id AND thread_id IS NULL ORDER BY created_at DESC, id DESC LIMIT 1) WHERE room_id = ? AND user_id = ?",
+        vec![involvement.to_owned().into(), DESIGNERS.into(), DAVID.into()],
+    )
+    .await;
+    thread_unread(a, false).await;
+}
+
+/// Sets David's Designers involvement, leaving the read position alone.
+async fn designers_involvement(a: &TestApp, involvement: &'static str) {
+    exec(
+        a,
+        "UPDATE memberships SET involvement = ? WHERE room_id = ? AND user_id = ?",
+        vec![involvement.to_owned().into(), DESIGNERS.into(), DAVID.into()],
+    )
+    .await;
+}
+
+/// Makes Designers unread for David from `message_id` on, as `Room#unread_memberships` does.
+async fn unread_from(a: &TestApp, message_id: i64) {
+    exec(
+        a,
+        "UPDATE memberships SET unread_at = (SELECT created_at FROM messages WHERE id = ?) WHERE room_id = ? AND user_id = ?",
+        vec![message_id.into(), DESIGNERS.into(), DAVID.into()],
+    )
+    .await;
+}
+
+/// David follows thread 1, unread or read.
+async fn thread_unread(a: &TestApp, unread: bool) {
+    exec(
+        a,
+        "INSERT INTO thread_memberships (created_at, involvement, joined_at, thread_id, unread_at, updated_at, user_id) VALUES (datetime('now'), 'everything', datetime('now'), ?1, CASE WHEN ?2 THEN datetime('now') END, datetime('now'), ?3) ON CONFLICT (thread_id, user_id) DO UPDATE SET unread_at = excluded.unread_at",
+        vec![THREAD.into(), unread.into(), DAVID.into()],
+    )
+    .await;
 }
 
 async fn designers_row(david: &mut crate::controllers::presenters::test_support::Browser<'_>) -> api::SidebarRow {
@@ -1349,46 +1404,142 @@ async fn designers_row(david: &mut crate::controllers::presenters::test_support:
         .expect("Designers in David's sidebar")
 }
 
-fn designers_upserted(event: &api::SyncEvent) -> bool {
-    matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == DESIGNERS)
+/// `(unreadCount, notificationCount, threadNotificationCount)`.
+fn counts(row: &api::SidebarRow) -> (i64, i64, i64) {
+    (row.unread_count, row.notification_count, row.thread_notification_count)
+}
+
+/// The next Designers row published to the socket.
+async fn next_designers_row(sync: &mut Sync) -> api::SidebarRow {
+    let event = sync
+        .until(
+            |event| matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == DESIGNERS),
+            |_| false,
+        )
+        .await;
+    let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
+        unreachable!()
+    };
+    row
 }
 
 #[tokio::test]
-async fn the_red_count_is_what_would_have_notified_under_the_classic_policy() {
+async fn the_red_count_follows_the_classic_policy_for_each_involvement() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "everything").await;
+    // Three new root messages, pinged by a mention, nothing, and a keyword; a thread mention.
+    let mentioned = designers_message(&a, None, false, 10).await;
+    designers_message(&a, None, false, 20).await;
+    let keyword = designers_message(&a, None, false, 30).await;
+    item(&a, DAVID, ("Message", mentioned), "mention", 5).await;
+    item(&a, DAVID, ("Message", keyword), "keyword_alert", 5).await;
+    item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    unread_from(&a, mentioned).await;
+    thread_unread(&a, true).await;
+
+    // Every root message pushes in an `everything` room; the thread mention counts once more.
+    assert_eq!(counts(&designers_row(&mut david).await), (3, 4, 1));
+    // `mentions`: the pinged messages only.
+    designers_involvement(&a, "mentions").await;
+    assert_eq!(counts(&designers_row(&mut david).await), (3, 3, 1));
+    // `muted` still pushes mentions, and only mentions.
+    designers_involvement(&a, "muted").await;
+    assert_eq!(counts(&designers_row(&mut david).await), (3, 2, 1));
+    // `nothing` never pushes.
+    designers_involvement(&a, "nothing").await;
+    let row = designers_row(&mut david).await;
+    assert_eq!((counts(&row), row.mention_count), ((3, 0, 0), 2));
+}
+
+#[tokio::test]
+async fn a_system_note_never_notifies() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "everything").await;
+    // One unread message, then a pin note: both unread, only the message would have pushed.
+    let message = designers_message(&a, None, false, 10).await;
+    designers_message(&a, None, true, 20).await;
+    unread_from(&a, message).await;
+
+    assert_eq!(counts(&designers_row(&mut david).await), (2, 1, 0));
+}
+
+#[tokio::test]
+async fn reading_the_room_clears_its_count_on_the_server() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
-    // Start from an empty inbox: the seed already holds unread items for David in Designers.
-    a.db()
-        .write(|tx| {
-            tx.conn()
-                .execute("DELETE FROM activity_items WHERE user_id = ?", [DAVID])?;
-            Ok(())
-        })
-        .await
-        .unwrap();
+    quiet_designers(&a, "mentions").await;
+    let ping = designers_message(&a, None, false, 10).await;
+    item(&a, DAVID, ("Message", ping), "mention", 5).await;
+    unread_from(&a, ping).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (1, 1, 0));
 
-    // A thread @mention in a read room: no unread root messages, but it still pings.
-    designers_as(&a, "everything").await;
-    let mention = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 60).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/rooms/{DESIGNERS}/read");
+    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+
+    // The server publishes the read row, and a reload agrees: the badge doesn't come back,
+    // while the inbox keeps its own unread mention.
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     let row = designers_row(&mut david).await;
-    assert_eq!((row.unread_count, row.mention_count, row.notification_count), (0, 1, 1));
+    assert_eq!((counts(&row), row.mention_count), ((0, 0, 0), 1));
+    server.abort();
+}
 
-    // A reply on a root message counts once more; each message once, whatever its items.
-    item(&a, DAVID, ("Message", ROOT_MESSAGE), "reply", 30).await;
-    assert_eq!(designers_row(&mut david).await.notification_count, 2);
-    designers_as(&a, "mentions").await;
-    assert_eq!(designers_row(&mut david).await.notification_count, 2);
+#[tokio::test]
+async fn a_thread_ping_counts_until_the_thread_is_read() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "mentions").await;
+    item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    // A read thread's ping doesn't count; an unread thread's does, though the room is read.
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 0, 0));
+    thread_unread(&a, true).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
 
-    // Muted rooms still push mentions, and only mentions; `nothing` never pushes.
-    designers_as(&a, "muted").await;
-    assert_eq!(designers_row(&mut david).await.notification_count, 1);
-    designers_as(&a, "nothing").await;
-    let row = designers_row(&mut david).await;
-    assert_eq!((row.mention_count, row.notification_count), (1, 0));
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/threads/{THREAD}/read");
+    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+    server.abort();
+}
 
-    // Reading the item in the inbox republishes the row with the count down.
-    designers_as(&a, "mentions").await;
+#[tokio::test]
+async fn deleting_the_only_ping_republishes_the_row() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    quiet_designers(&a, "mentions").await;
+    item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    thread_unread(&a, true).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/messages/{JASONS_REPLY}");
+    let response = jason.write(json_body(Method::DELETE, &path, &json!({}))).await;
+    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+    server.abort();
+}
+
+#[tokio::test]
+async fn reading_an_inbox_ping_republishes_the_row() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "mentions").await;
+    let mention = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    thread_unread(&a, true).await;
+
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
     let path = format!("/api/v1/activity/{mention}");
@@ -1396,10 +1547,27 @@ async fn the_red_count_is_what_would_have_notified_under_the_classic_policy() {
         .write(json_body(Method::PATCH, &path, &json!({"action": "read"})))
         .await;
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
-    let event = sync.until(designers_upserted, |_| false).await;
-    let api::SyncPayload::SidebarRowUpserted(row) = event.payload else {
-        unreachable!()
-    };
-    assert_eq!((row.mention_count, row.notification_count), (0, 1));
+    let row = next_designers_row(&mut sync).await;
+    assert_eq!((counts(&row), row.mention_count), ((0, 0, 0), 0));
     server.abort();
+}
+
+#[tokio::test]
+async fn the_sidebar_reads_its_counts_in_one_snapshot() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let log = a.db().capture_read_queries();
+    let response = david.send(get("/api/v1/sidebar")).await;
+    a.db().stop_capturing_read_queries();
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let log = log.lock().unwrap().clone();
+    let position = |needle: &str| log.iter().position(|sql| sql.contains(needle));
+    let begin = position(r#"SAVEPOINT "sidebar_snapshot""#).expect("the sidebar opens a snapshot");
+    let end = position(r#"RELEASE "sidebar_snapshot""#).expect("and closes it");
+    // Every membership, message and inbox read falls inside it.
+    for (index, sql) in log.iter().enumerate() {
+        if ["memberships", "messages", "activity_items"].iter().any(|table| sql.contains(table)) {
+            assert!(begin < index && index < end, "outside the snapshot: {sql}");
+        }
+    }
 }
