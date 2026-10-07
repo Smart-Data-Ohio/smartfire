@@ -108,9 +108,10 @@ const messageRoute = createRoute({
     parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
     stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
   },
-  component: lazyRouteComponent(
-    () => import("./features/room/message-resolver.tsx"),
-    "MessageResolver",
+  component: lazy(() =>
+    import("./features/room/message-resolver.tsx").then((module) => ({
+      default: module.MessageResolver,
+    })),
   ),
 });
 
