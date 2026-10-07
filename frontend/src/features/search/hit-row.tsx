@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import type { ConversationName } from "../../gen/ConversationName.ts";
 import { inlineMentions } from "../../lib/body-html.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -127,6 +128,13 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   const message = live !== undefined && live.updatedAt >= hit.updatedAt ? live : hit;
   const author = useUser(message.creatorId);
   const name = author?.name ?? UNKNOWN_NAME;
+  const body = message.bodyHtml;
+
+  // Marking walks the body's DOM, so it runs again only when the body or the words change.
+  const html = useMemo(
+    () => (body === "" ? "" : highlightHtml(inlineMentions(body), terms)),
+    [body, terms],
+  );
 
   if (deleted) {
     return null;
@@ -135,9 +143,6 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
   const when = hitTime(message.createdAt, now);
   const place = conversation === undefined ? "" : ` in ${conversation.roomName}`;
   const label = `${name}${place}, ${when}`;
-
-  const html =
-    message.bodyHtml === "" ? "" : highlightHtml(inlineMentions(message.bodyHtml), terms);
 
   return (
     <article className="search-hit" data-search-hit>
