@@ -630,6 +630,14 @@ async fn save_grant(c: &mut Ctx) -> Result {
     require_sudo(c)?;
     let agent = classic::ensure_agent(c, &bot).await?;
     let create: api::CreateGrant = body(c).await?;
+    // The classic form offers only the rooms the bot is in; a room id from anywhere else
+    // (`0`, a room it isn't in) is refused here rather than saved as an inert grant.
+    if let Some(room_id) = create.room_id {
+        let offered = grant_list(c, &bot, agent.id).await?;
+        if !offered.rooms.iter().any(|room| room.id == room_id) {
+            return Err(fail(c, validation("room_id", "isn't one of the bot's rooms")));
+        }
+    }
     match grants::grant(c, &bot, agent.id, create.capability, create.room_id).await? {
         Ok(()) => (),
         Err(error) if error.is_record_not_unique() => (),

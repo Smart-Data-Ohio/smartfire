@@ -7,7 +7,7 @@ use campfire_api_types as api;
 use serde_json::{Value, json};
 
 use super::admin_tests::{
-    app, assert_parity, audits, classic, dump, error, get, nothing, parse, spa, write,
+    app, assert_parity, audits, classic, dump, error, get, json_body, nothing, parse, spa, write,
 };
 use crate::controllers::presenters::test_support::{Browser, DAVID, KEVIN, Req, TestApp};
 
@@ -835,4 +835,275 @@ async fn granting_and_revoking_match_the_classic_pages() {
         },
     )
     .await;
+}
+
+// --- Authentication and authorization -----------------------------------------------------------
+
+/// A request carrying a bot credential, as an agent sends it.
+fn bearer(method: Method, path: &str, secret: &str) -> Req {
+    Req::new(method, path)
+        .header("accept", "application/json")
+        .header("content-type", "application/json")
+        .header("authorization", &format!("Bearer {secret}"))
+}
+
+/// David issues Bender a credential and answers its secret.
+async fn issue_bender_credential(david: &mut Browser<'_>) -> (i64, String) {
+    let created: api::CredentialCreated = spa(
+        david,
+        Method::POST,
+        &format!("/api/v1/admin/bots/{BENDER}/credentials"),
+        json!({"name": "agent", "expiresAt": null}),
+    )
+    .await;
+    let id = created
+        .credentials
+        .credentials
+        .iter()
+        .map(|each| each.id)
+        .max()
+        .unwrap();
+    (id, created.secret)
+}
+
+#[tokio::test]
+async fn a_member_cannot_touch_a_bot_they_do_not_own() {
+    let Some(a) = app().await else { return };
+    kevin_owns_deploy(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let (credential, _) = issue_bender_credential(&mut david).await;
+    let grants: api::GrantList = spa(
+        &mut david,
+        Method::POST,
+        &format!("/api/v1/admin/bots/{BENDER}/grants"),
+        json!({"capability": "react", "roomId": null}),
+    )
+    .await;
+    let grant = grants.grants[0].id;
+
+    let mut kevin = a.sign_in(KEVIN).await;
+    kevin.grant_sudo().await;
+    let before = dump(&a).await;
+    for (method, path) in [
+        (
+            Method::POST,
+            format!("/api/v1/admin/bots/{BENDER}/kill_switch"),
+        ),
+        (
+            Method::POST,
+            format!("/api/v1/admin/bots/{BENDER}/webhook_secret"),
+        ),
+        (
+            Method::DELETE,
+            format!("/api/v1/admin/bots/{BENDER}/github_connection"),
+        ),
+        (
+            Method::DELETE,
+            format!("/api/v1/admin/bots/{BENDER}/credentials/{credential}"),
+        ),
+        (
+            Method::DELETE,
+            format!("/api/v1/admin/bots/{BENDER}/grants/{grant}"),
+        ),
+        (
+            Method::GET,
+            format!("/api/v1/admin/bots/{BENDER}/credentials"),
+        ),
+        (Method::GET, format!("/api/v1/admin/bots/{BENDER}/grants")),
+    ] {
+        let reply = if method == Method::GET {
+            kevin.send(get(&path)).await
+        } else {
+            write(&mut kevin, method.clone(), &path, Value::Null).await
+        };
+        assert_eq!(reply.status, StatusCode::FORBIDDEN, "{method} {path}");
+        assert_eq!(error(&reply)["_tag"], "Forbidden", "{method} {path}");
+    }
+    assert_eq!(dump(&a).await, before, "nothing changed");
+}
+
+#[tokio::test]
+async fn signed_out_requests_are_unauthorized() {
+    let Some(a) = app().await else { return };
+    let mut nobody = a.anonymous();
+    let before = dump(&a).await;
+    for path in [
+        "/api/v1/admin/bots".to_string(),
+        format!("/api/v1/admin/bots/{BENDER}"),
+        format!("/api/v1/admin/bots/{BENDER}/credentials"),
+        format!("/api/v1/admin/bots/{BENDER}/grants"),
+    ] {
+        let reply = nobody.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{path}");
+    }
+    let reply = nobody
+        .send(json_body(
+            Method::POST,
+            "/api/v1/admin/bots",
+            &json!({"name": "Robo"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{}", reply.text());
+    assert_eq!(dump(&a).await, before, "nothing changed");
+}
+
+#[tokio::test]
+async fn a_bots_credential_is_not_a_way_into_the_admin_api() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let (_, secret) = issue_bender_credential(&mut david).await;
+    // The credential works where agents use it ...
+    let events = a
+        .anonymous()
+        .send(bearer(Method::GET, "/agents/events", &secret))
+        .await;
+    assert_eq!(events.status, StatusCode::OK, "{}", events.text());
+
+    // ... and nowhere in the admin API, for reads or writes: it authenticates as the bot, and
+    // the shared `deny_agent_tokens` before-action refuses it (403, as on every classic page).
+    let before = dump(&a).await;
+    for (method, path) in [
+        (Method::GET, "/api/v1/admin/bots".to_string()),
+        (Method::GET, format!("/api/v1/admin/bots/{BENDER}")),
+        (
+            Method::GET,
+            format!("/api/v1/admin/bots/{BENDER}/credentials"),
+        ),
+        (Method::GET, "/api/v1/admin/people".to_string()),
+        (Method::GET, "/api/v1/admin/workspace".to_string()),
+        (
+            Method::POST,
+            format!("/api/v1/admin/bots/{BENDER}/kill_switch"),
+        ),
+        (Method::PUT, format!("/api/v1/admin/bots/{BENDER}/key")),
+    ] {
+        let reply = a
+            .anonymous()
+            .send(bearer(method.clone(), &path, &secret))
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::FORBIDDEN,
+            "{method} {path}: {}",
+            reply.text()
+        );
+        assert_eq!(error(&reply)["_tag"], "Forbidden", "{method} {path}");
+    }
+    assert_eq!(dump(&a).await, before, "nothing changed");
+}
+
+#[tokio::test]
+async fn a_revoked_credential_no_longer_authenticates() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let (id, secret) = issue_bender_credential(&mut david).await;
+    let events = a
+        .anonymous()
+        .send(bearer(Method::GET, "/agents/events", &secret))
+        .await;
+    assert_eq!(events.status, StatusCode::OK, "{}", events.text());
+
+    let _: api::CredentialList = spa(
+        &mut david,
+        Method::DELETE,
+        &format!("/api/v1/admin/bots/{BENDER}/credentials/{id}"),
+        Value::Null,
+    )
+    .await;
+    let events = a
+        .anonymous()
+        .send(bearer(Method::GET, "/agents/events", &secret))
+        .await;
+    assert_eq!(events.status, StatusCode::UNAUTHORIZED, "{}", events.text());
+}
+
+#[tokio::test]
+async fn reads_never_carry_a_key_or_a_credential_secret() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let key: api::BotKey = spa(
+        &mut david,
+        Method::PUT,
+        &format!("/api/v1/admin/bots/{BENDER}/key"),
+        Value::Null,
+    )
+    .await;
+    let (_, secret) = issue_bender_credential(&mut david).await;
+    let change: api::BotChange = spa(
+        &mut david,
+        Method::POST,
+        &format!("/api/v1/admin/bots/{BENDER}/webhook_secret"),
+        Value::Null,
+    )
+    .await;
+    let signing = change.bot.signing_secret.expect("a signing secret");
+    let digests: Vec<String> = a
+        .db()
+        .read(|conn| {
+            let mut digests: Vec<String> = conn
+                .prepare("SELECT token_digest FROM agent_credentials")?
+                .query_map([], |r| r.get(0))?
+                .collect::<rusqlite::Result<_>>()?;
+            digests.extend(
+                conn.prepare(
+                    "SELECT bot_token_digest FROM users WHERE bot_token_digest IS NOT NULL",
+                )?
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?,
+            );
+            Ok(digests)
+        })
+        .await
+        .unwrap();
+    assert!(!digests.is_empty());
+
+    let reads = [
+        "/api/v1/admin/bots".to_string(),
+        format!("/api/v1/admin/bots/{BENDER}"),
+        format!("/api/v1/admin/bots/{BENDER}/credentials"),
+        format!("/api/v1/admin/bots/{BENDER}/grants"),
+    ];
+    for path in &reads {
+        let reply = david.send(get(path)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{path}");
+        let raw = reply.text();
+        assert!(!raw.contains(&key.key), "{path} carries the bot key");
+        assert!(!raw.contains(&secret), "{path} carries a credential secret");
+        for digest in &digests {
+            assert!(!raw.contains(digest.as_str()), "{path} carries a digest");
+        }
+        // The edit page shows the signing secret, as the classic one does; nothing else may.
+        if !path.ends_with(&format!("/bots/{BENDER}")) {
+            assert!(!raw.contains(&signing), "{path} carries the signing secret");
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_grant_for_a_room_the_bot_is_not_in_is_refused() {
+    let Some(a) = app().await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    david.grant_sudo().await;
+    let before = dump(&a).await;
+    for room in [0, 999_999_999] {
+        let reply = write(
+            &mut david,
+            Method::POST,
+            &format!("/api/v1/admin/bots/{BENDER}/grants"),
+            json!({"capability": "react", "roomId": room}),
+        )
+        .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{room}: {}",
+            reply.text()
+        );
+        assert!(error(&reply)["fields"]["room_id"].is_array());
+    }
+    assert_eq!(dump(&a).await, before, "nothing changed");
 }

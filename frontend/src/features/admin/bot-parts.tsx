@@ -1,4 +1,5 @@
 import { Link, notFound, useParams } from "@tanstack/react-router";
+import { useRef } from "react";
 import type { BotIcon } from "../../gen/BotIcon.ts";
 import type { BotKey } from "../../gen/BotKey.ts";
 import { Avatar } from "../../ui/avatar.tsx";
@@ -63,10 +64,14 @@ export function BotPicture({
 
 /** A line of code with a Copy button, for a command or a secret. */
 export function CopyLine({ text, what }: { readonly text: string; readonly what: string }) {
+  const shown = useRef<HTMLElement>(null);
+
   return (
     <div className="admin-copy-line">
-      <code className="admin-code">{text}</code>
-      <Button variant="ghost" size="sm" icon="copy" onClick={() => copy(text, what)}>
+      <code ref={shown} className="admin-code">
+        {text}
+      </code>
+      <Button variant="ghost" size="sm" icon="copy" onClick={() => copy(text, what, shown.current)}>
         <span className="visually-hidden">Copy {what.toLowerCase()}</span>
       </Button>
     </div>

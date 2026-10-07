@@ -88,12 +88,37 @@ export function keepDraft(key: string, draft: string): void {
   }
 }
 
-/** Copies `text`, saying so (or that the clipboard refused). */
-export function copy(text: string, what: string): void {
-  void navigator.clipboard.writeText(text).then(
-    () => toast({ title: `${what} copied`, tone: "success" }),
-    () => toast({ title: "Couldn't copy to the clipboard", tone: "danger" }),
-  );
+/**
+ * Copies `text`, saying so. Where there is no clipboard (an origin that isn't secure) or it
+ * refuses, `shown` (the element showing the text) is selected for a manual copy instead.
+ */
+export function copy(text: string, what: string, shown?: HTMLElement | null): void {
+  const manual = () => {
+    selectContents(shown);
+    toast({ title: "Couldn't copy — select it manually", tone: "danger" });
+  };
+
+  try {
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => toast({ title: `${what} copied`, tone: "success" }), manual);
+  } catch {
+    manual();
+  }
+}
+
+/** Selects everything inside `element`, for the reader to copy themselves. */
+function selectContents(element: HTMLElement | null | undefined): void {
+  const selection = window.getSelection();
+
+  if (!element || !selection) {
+    return;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 /** A confirmation, as the classic pages' `turbo_confirm` asks it. */

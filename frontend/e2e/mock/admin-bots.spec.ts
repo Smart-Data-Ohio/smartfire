@@ -164,3 +164,44 @@ test("a new bot waits out the password confirmation", async ({ page, request }) 
   );
   await expect(page.getByText("Your new bot is back")).toBeVisible();
 });
+
+test("a credential waits out the password confirmation", async ({ page, request }) => {
+  await openBots(page);
+  await page.getByRole("link", { name: "Edit Ember" }).click();
+  await page.getByRole("link", { name: "Credentials" }).click();
+  await expect(page.getByText("No credentials yet.")).toBeVisible();
+
+  const credentials = page.url();
+
+  await lapseSudo(page, request);
+  await page.getByRole("textbox", { name: "Name" }).fill("deploys");
+  await page.getByLabel("Optional expiry").fill("2030-01-02T03:04");
+  await page.getByRole("button", { name: "Issue credential" }).click();
+  await expect(page).toHaveURL(/\/sudo\/new$/);
+
+  await page.goto(credentials);
+
+  await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue("deploys");
+  await expect(page.getByLabel("Optional expiry")).toHaveValue("2030-01-02T03:04");
+  await expect(page.getByText("Your credential is back")).toBeVisible();
+});
+
+test("without a clipboard, a secret is selected for copying by hand", async ({ page }) => {
+  // An origin that isn't secure has no `navigator.clipboard` at all.
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, "clipboard", { get: () => undefined });
+  });
+  await openBots(page);
+  await page.getByRole("link", { name: "Edit Ember" }).click();
+  await page.getByRole("link", { name: "Credentials" }).click();
+  await page.getByRole("textbox", { name: "Name" }).fill("ci");
+  await page.getByRole("button", { name: "Issue credential" }).click();
+
+  const dialog = page.getByRole("alertdialog", { name: "Copy this secret now" });
+  const secret = await dialog.getByText(/^cfa_/).textContent();
+
+  await dialog.getByRole("button", { name: /^Copy/ }).click();
+
+  await expect(page.getByText("Couldn't copy — select it manually")).toBeVisible();
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(secret);
+});

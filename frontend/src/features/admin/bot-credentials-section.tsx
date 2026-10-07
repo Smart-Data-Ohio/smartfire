@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { Credential } from "../../gen/Credential.ts";
 import type { CredentialList } from "../../gen/CredentialList.ts";
 import { bots } from "../../sync/admin.ts";
@@ -14,7 +14,7 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { auditTime } from "./admin-format.ts";
-import { adminFailure, useFocusAfter } from "./admin-parts.tsx";
+import { adminFailure, keepDraft, needsSudo, takeDraft, useFocusAfter } from "./admin-parts.tsx";
 import { CREDENTIAL_STATE, CREDENTIAL_USAGE, optional } from "./bot-format.ts";
 import { BotBack, SecretDialog, useBotId } from "./bot-parts.tsx";
 
@@ -24,6 +24,11 @@ type Load =
   | { readonly status: "ready"; readonly list: CredentialList };
 
 type Fields = Readonly<Record<string, readonly string[]>>;
+
+/** Where the issue form waits while the classic page confirms the password. */
+function draftKey(botId: number): string {
+  return `smartfire.draft.admin-credential-${botId}`;
+}
 
 /** The issue form: a name and an optional expiry in the viewer's time zone. */
 function NewCredential({
@@ -37,6 +42,28 @@ function NewCredential({
   const [expiresAt, setExpiresAt] = useState("");
   const [fields, setFields] = useState<Fields>({});
   const { busy, track } = useBusy();
+  // Whether the kept draft was taken: once, even when Strict Mode runs the effect twice.
+  const taken = useRef(false);
+
+  useEffect(() => {
+    if (taken.current) {
+      return;
+    }
+
+    taken.current = true;
+
+    const kept = takeDraft(draftKey(botId));
+
+    if (kept === null) {
+      return;
+    }
+
+    const draft = new URLSearchParams(kept);
+
+    setName(draft.get("name") ?? "");
+    setExpiresAt(draft.get("expiresAt") ?? "");
+    toast({ title: "Your credential is back", description: "Issue it to keep it." });
+  }, [botId]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -54,9 +81,15 @@ function NewCredential({
 
           if (Object.keys(named).length > 0) {
             setFields(named);
-          } else {
-            adminFailure("Couldn't issue the credential", error);
+
+            return;
           }
+
+          if (needsSudo(error)) {
+            keepDraft(draftKey(botId), new URLSearchParams({ name, expiresAt }).toString());
+          }
+
+          adminFailure("Couldn't issue the credential", error);
         },
       ),
     );
