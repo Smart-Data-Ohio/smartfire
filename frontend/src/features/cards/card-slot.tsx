@@ -11,6 +11,9 @@ let loaded: ComponentType<MessageCardsProps> | null = null;
 
 let fetching = false;
 
+/** The last fetch failed; nothing waits on the chunk until a slot asks for it again. */
+let failed = false;
+
 const listeners = new Set<() => void>();
 
 /** Fetches the chunk (unless it's here or on its way) and tells every waiting slot when it lands. */
@@ -24,21 +27,26 @@ function fetchChunk(): void {
     (module) => {
       loaded = module.default;
       fetching = false;
-
-      for (const notify of listeners) {
-        notify();
-      }
+      notifyAll();
     },
     () => {
       // Asked for again when the next slot that needs it mounts.
       fetching = false;
+      failed = true;
+      notifyAll();
     },
   );
 }
 
+function notifyAll(): void {
+  for (const notify of listeners) {
+    notify();
+  }
+}
+
 // Fetch the chunk as soon as the app starts (alongside the boot requests), so a room's first rows
 // render with their cards rather than growing a moment later, which would push a permalinked
-// row off centre.
+// row off centre. A timeline still waits for it (`useCardsChunkSettled`) in case it's slower.
 fetchChunk();
 
 function subscribe(listener: () => void): () => void {
@@ -51,6 +59,22 @@ function subscribe(listener: () => void): () => void {
 }
 
 const snapshot = () => loaded;
+
+const settledSnapshot = () => loaded !== null || failed;
+
+/** Whether a message shows anything from the cards chunk: a poll or a card. */
+export function hasCards(message: MessageDTO): boolean {
+  return message.poll !== null || message.cards.length > 0;
+}
+
+/**
+ * Whether the cards chunk has arrived (or failed to). A timeline waits on it before placing a
+ * window that holds cards: the chunk is fetched at boot, but a slow fetch can still land after
+ * the first rows, and the cards growing in then push a permalinked row out of view.
+ */
+export function useCardsChunkSettled(): boolean {
+  return useSyncExternalStore(subscribe, settledSnapshot, settledSnapshot);
+}
 
 /**
  * The cards once their chunk is here, nothing until then. The chunk is read through
@@ -69,7 +93,7 @@ function LoadedCards({ message, threadId }: MessageCardsProps) {
  * time a message has any if that failed). Most messages have none and render nothing here.
  */
 export function CardSlot({ message, threadId }: MessageCardsProps) {
-  if (message.poll === null && message.cards.length === 0) {
+  if (!hasCards(message)) {
     return null;
   }
 

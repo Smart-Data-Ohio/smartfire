@@ -93,6 +93,22 @@ export async function openApp(page: Page, path: string, theme: Theme = "light"):
     .waitFor();
 }
 
+/**
+ * Resolves once the page's sync socket is welcomed. Call it before the page opens; await it
+ * before a step that publishes an event the page must receive live. Until the welcome, a change
+ * made elsewhere arrives only through the catch-up reload, not as an event.
+ */
+export function syncWelcomed(page: Page): Promise<void> {
+  return page
+    .waitForEvent("websocket", (socket) => socket.url().includes("/api/v1/sync"))
+    .then((socket) =>
+      socket.waitForEvent("framereceived", (frame) =>
+        String(frame.payload).includes('"t":"welcome"'),
+      ),
+    )
+    .then(() => undefined);
+}
+
 const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
 
 const SHOTS_DIR = process.env.SMARTFIRE_SHOTS_DIR ?? join(homedir(), ".cache/frontend-s2/shots");
