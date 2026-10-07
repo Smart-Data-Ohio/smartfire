@@ -252,6 +252,16 @@ impl Room {
 
     // Creating
 
+    /// The room created by this viewer's API operation, including soft-deleted rooms.
+    pub fn find_by_creation_key(conn: &Connection, creator_id: i64, key: &str) -> Result<Option<Self>> {
+        query_one(
+            conn,
+            "SELECT rooms.* FROM rooms WHERE creator_id=? AND client_room_id=? LIMIT 1",
+            params![creator_id, key],
+            Self::from_row,
+        )
+    }
+
     /// `Rooms::<Type>.create!(name:, creator:)`. An open room grants itself to every active
     /// user after commit (`Rooms::Open#grant_access_to_all_users`).
     pub fn create(

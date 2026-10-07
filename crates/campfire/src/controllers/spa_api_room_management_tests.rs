@@ -15,6 +15,141 @@ use crate::controllers::presenters::test_support::{
 const RITA: i64 = 773523954;
 const LOU: i64 = 773523958;
 
+#[tokio::test]
+async fn spa_api_rooms_creation_replays_without_any_side_effects() {
+    let a = app().await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for name in ["open", "closed", "board", "voice", "stage"] {
+        let key = format!("room-replay-{name}");
+        let mut body = json!({"type":name,"clientRoomId":key,"name":"Once"});
+        if name != "open" {
+            body["userIds"] = json!([KEVIN]);
+        }
+        let first = write(&mut david, Method::POST, "/api/v1/rooms", body.clone()).await;
+        assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
+        let first: api::RoomMutation = parse(&first);
+        assert!(!super::admin_tests::settle(&capture).await.is_empty());
+        let before = dump(&a).await;
+        // Replays return the persisted room, even if the retry's form facts differ.
+        body["name"] = json!("Changed on retry");
+        body["iconName"] = json!("missing_icon_s8");
+        body["clientRoomId"] = json!(format!(" {key} "));
+        let replay = write(&mut david, Method::POST, "/api/v1/rooms", body).await;
+        assert_eq!(replay.status, StatusCode::OK, "{}", replay.text());
+        assert_eq!(parse::<api::RoomMutation>(&replay), first);
+        assert_eq!(
+            dump(&a).await,
+            before,
+            "rooms, memberships, audits and jobs"
+        );
+        assert!(super::admin_tests::settle(&capture).await.is_empty());
+    }
+}
+
+#[tokio::test]
+async fn spa_api_rooms_creation_keys_are_viewer_scoped() {
+    let a = app().await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let body = json!({"type":"closed","clientRoomId":"shared-room-key","name":"Once","userIds":[DAVID,KEVIN]});
+    let first = write(&mut david, Method::POST, "/api/v1/rooms", body.clone()).await;
+    let second = write(&mut kevin, Method::POST, "/api/v1/rooms", body.clone()).await;
+    assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
+    assert_eq!(second.status, StatusCode::CREATED, "{}", second.text());
+    let first: api::RoomMutation = parse(&first);
+    let second: api::RoomMutation = parse(&second);
+    assert_ne!(first.room.id, second.room.id);
+    assert_eq!(first.room.creator_id, DAVID);
+    assert_eq!(second.room.creator_id, KEVIN);
+    for (viewer, expected) in [(&mut david, first), (&mut kevin, second)] {
+        let replay = write(viewer, Method::POST, "/api/v1/rooms", body.clone()).await;
+        assert_eq!(replay.status, StatusCode::OK);
+        assert_eq!(parse::<api::RoomMutation>(&replay), expected);
+    }
+}
+
+#[tokio::test]
+async fn spa_api_rooms_concurrent_creation_retries_create_once() {
+    let a = app().await.expect("frozen seeds required");
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    first.authenticity_token().await;
+    second.authenticity_token().await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for name in ["open", "closed", "board", "voice", "stage"] {
+        let mut body =
+            json!({"type":name,"clientRoomId":format!("room-control-{name}"),"name":"Once"});
+        if name != "open" {
+            body["userIds"] = json!([DAVID, KEVIN]);
+        }
+        let before = dump(&a).await;
+        let control = write(&mut first, Method::POST, "/api/v1/rooms", body.clone()).await;
+        assert_eq!(control.status, StatusCode::CREATED, "{}", control.text());
+        let after = dump(&a).await;
+        let frames = super::admin_tests::settle(&capture).await;
+        let key = format!("room-race-{name}");
+        body["clientRoomId"] = json!(key);
+        campfire_api::test_hooks::hold_after_duplicate_check(&key, 2);
+        let (one, two) = tokio::join!(
+            write(&mut first, Method::POST, "/api/v1/rooms", body.clone()),
+            write(&mut second, Method::POST, "/api/v1/rooms", body),
+        );
+        let mut statuses = [one.status, two.status];
+        statuses.sort();
+        assert_eq!(
+            statuses,
+            [StatusCode::OK, StatusCode::CREATED],
+            "{} / {}",
+            one.text(),
+            two.text()
+        );
+        assert_eq!(
+            parse::<api::RoomMutation>(&one).room.id,
+            parse::<api::RoomMutation>(&two).room.id
+        );
+        let raced = dump(&a).await;
+        for table in ["rooms", "memberships", "audit_logs", "background_jobs"] {
+            let count = |rows: &Value| rows[table].as_array().unwrap().len();
+            assert_eq!(
+                count(&raced) - count(&after),
+                count(&after) - count(&before),
+                "{name}: {table}"
+            );
+        }
+        assert_eq!(
+            super::admin_tests::settle(&capture).await.len(),
+            frames.len(),
+            "{name}: broadcasts"
+        );
+    }
+}
+
+#[tokio::test]
+async fn spa_api_rooms_creation_requires_a_nonblank_key() {
+    let a = app().await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let before = dump(&a).await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for key in [None, Some(json!("")), Some(json!(" \t\n "))] {
+        let mut body = json!({"type":"open","name":"Never"});
+        if let Some(key) = key {
+            body["clientRoomId"] = key;
+        }
+        let reply = write(&mut david, Method::POST, "/api/v1/rooms", body).await;
+        assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(error(&reply)["_tag"], "Validation");
+        assert_eq!(
+            error(&reply)["fields"]["clientRoomId"],
+            json!(["can't be blank"])
+        );
+    }
+    assert_eq!(dump(&a).await, before);
+    assert!(super::admin_tests::settle(&capture).await.is_empty());
+}
+
 fn kind(name: &str) -> RoomType {
     match name {
         "open" => RoomType::Open,
@@ -49,6 +184,7 @@ async fn room(a: &TestApp, name: &str) -> Room {
 
 async fn created(b: &mut Browser<'_>, name: &str, ids: &[i64]) -> api::RoomMutation {
     let mut body = json!({"type":name,"name":"API room","iconName":"smile"});
+    body["clientRoomId"] = json!(uuid::Uuid::new_v4().to_string());
     if name != "open" {
         body["userIds"] = json!(ids);
     }
@@ -495,7 +631,11 @@ async fn spa_api_rooms_icon_errors_match_classic_without_writes() {
                     (Method::POST, "/api/v1/rooms".to_string()),
                     (Method::PATCH, format!("/api/v1/rooms/{id}")),
                 ] {
-                    let reply = write(b, method, &path, body.clone()).await;
+                    let mut request = body.clone();
+                    if method == Method::POST {
+                        request["clientRoomId"] = json!(uuid::Uuid::new_v4().to_string());
+                    }
+                    let reply = write(b, method, &path, request).await;
                     assert_eq!(
                         reply.status,
                         StatusCode::UNPROCESSABLE_ENTITY,
@@ -713,10 +853,10 @@ async fn spa_api_rooms_reject_non_session_auth_and_invalid_contract_inputs() {
     let mut david = a.sign_in(DAVID).await;
     let before = dump(&a).await;
     for body in [
-        json!({"type":"direct","userIds":[KEVIN]}),
-        json!({"type":"closed","userIds":["773523952"]}),
-        json!({"type":"open","userIds":[DAVID]}),
-        json!({"type":"stage","userIds":[],"stageRoles":[]}),
+        json!({"type":"direct","clientRoomId":"invalid-room","userIds":[KEVIN]}),
+        json!({"type":"closed","clientRoomId":"invalid-room","userIds":["773523952"]}),
+        json!({"type":"open","clientRoomId":"invalid-room","userIds":[DAVID]}),
+        json!({"type":"stage","clientRoomId":"invalid-room","userIds":[],"stageRoles":[]}),
     ] {
         let reply = write(&mut david, Method::POST, "/api/v1/rooms", body).await;
         assert_eq!(

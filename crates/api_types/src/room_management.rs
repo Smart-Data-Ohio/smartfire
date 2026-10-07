@@ -46,6 +46,7 @@ pub struct RoomFormStageRole {
 }
 
 /// `POST /api/v1/rooms`. Direct creation uses the existing `CreateDirect` endpoint.
+/// `clientRoomId` identifies one create attempt, scoped to the viewer. Replays return 200.
 /// No name presence/length rule is added beyond the classic domain's validations.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
 #[serde(
@@ -56,25 +57,30 @@ pub struct RoomFormStageRole {
 #[ts(export)]
 pub enum CreateRoom {
     Open {
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
     },
     Closed {
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Voice {
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Stage {
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Board {
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
@@ -90,25 +96,35 @@ pub enum CreateRoom {
 )]
 enum CreateRoomFields {
     Open {
+        #[serde(default)]
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
     },
     Closed {
+        #[serde(default)]
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Voice {
+        #[serde(default)]
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Stage {
+        #[serde(default)]
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
     },
     Board {
+        #[serde(default)]
+        client_room_id: String,
         name: Option<String>,
         icon_name: Option<String>,
         user_ids: Vec<i64>,
@@ -118,44 +134,73 @@ enum CreateRoomFields {
 impl<'de> Deserialize<'de> for CreateRoom {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Ok(match CreateRoomFields::deserialize(deserializer)? {
-            CreateRoomFields::Open { name, icon_name } => Self::Open { name, icon_name },
+            CreateRoomFields::Open {
+                client_room_id,
+                name,
+                icon_name,
+            } => Self::Open {
+                client_room_id,
+                name,
+                icon_name,
+            },
             CreateRoomFields::Closed {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             } => Self::Closed {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             },
             CreateRoomFields::Voice {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             } => Self::Voice {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             },
             CreateRoomFields::Stage {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             } => Self::Stage {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             },
             CreateRoomFields::Board {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             } => Self::Board {
+                client_room_id,
                 name,
                 icon_name,
                 user_ids,
             },
         })
+    }
+}
+
+impl CreateRoom {
+    /// Viewer-scoped operation key; the client reuses it when a response is lost.
+    pub fn client_room_id(&self) -> &str {
+        match self {
+            Self::Open { client_room_id, .. }
+            | Self::Closed { client_room_id, .. }
+            | Self::Voice { client_room_id, .. }
+            | Self::Stage { client_room_id, .. }
+            | Self::Board { client_room_id, .. } => client_room_id,
+        }
     }
 }
 
@@ -348,8 +393,10 @@ mod tests {
             if kind != "open" {
                 input["userIds"] = json!([]);
             }
-            let create: CreateRoom = serde_json::from_value(input.clone()).unwrap();
-            assert_eq!(serde_json::to_value(create).unwrap(), input);
+            let mut create_input = input.clone();
+            create_input["clientRoomId"] = json!("room-key");
+            let create: CreateRoom = serde_json::from_value(create_input.clone()).unwrap();
+            assert_eq!(serde_json::to_value(create).unwrap(), create_input);
             let update: UpdateRoom = serde_json::from_value(input.clone()).unwrap();
             assert_eq!(serde_json::to_value(update).unwrap(), input);
             input["creatorId"] = json!(4);

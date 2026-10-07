@@ -36,7 +36,13 @@ describe("S8 room management schemas", () => {
         method: "POST",
         path: "/api/v1/rooms",
         headers: { "X-CSRF-Token": mock.csrfToken() },
-        body: { type: "closed", name: null, iconName: null, userIds: [2] },
+        body: {
+          type: "closed",
+          clientRoomId: "mock-room",
+          name: null,
+          iconName: null,
+          userIds: [2],
+        },
       });
 
       expect(response.status).toBe(201);
@@ -71,12 +77,21 @@ describe("S8 room management schemas", () => {
   });
 
   it("round-trip every non-direct create and patch without conflating omitted/null", () => {
-    roundTrips(CreateRoom, { type: "open", name: null, iconName: null });
+    expect(() =>
+      Schema.decodeUnknownSync(CreateRoom)({ type: "open", name: null, iconName: null }),
+    ).toThrow();
+    roundTrips(CreateRoom, { type: "open", clientRoomId: "room-key", name: null, iconName: null });
     roundTrips(UpdateRoom, { type: "open" });
     roundTrips(UpdateRoom, { type: "open", name: null, iconName: "fire" });
 
     for (const type of ["closed", "voice", "stage", "board"] as const) {
-      roundTrips(CreateRoom, { type, name: "Room", iconName: null, userIds: [7] });
+      roundTrips(CreateRoom, {
+        type,
+        clientRoomId: "room-key",
+        name: "Room",
+        iconName: null,
+        userIds: [7],
+      });
       roundTrips(UpdateRoom, { type, userIds: [] });
       roundTrips(UpdateRoom, { type, name: null, iconName: null, userIds: [7] });
     }

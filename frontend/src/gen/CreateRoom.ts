@@ -2,6 +2,7 @@
 
 /**
  * `POST /api/v1/rooms`. Direct creation uses the existing `CreateDirect` endpoint.
+ * `clientRoomId` identifies one create attempt, scoped to the viewer. Replays return 200.
  * No name presence/length rule is added beyond the classic domain's validations.
  */
-export type CreateRoom = { "type": "open", name: string | null, iconName: string | null, } | { "type": "closed", name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "voice", name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "stage", name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "board", name: string | null, iconName: string | null, userIds: Array<number>, };
+export type CreateRoom = { "type": "open", clientRoomId: string, name: string | null, iconName: string | null, } | { "type": "closed", clientRoomId: string, name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "voice", clientRoomId: string, name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "stage", clientRoomId: string, name: string | null, iconName: string | null, userIds: Array<number>, } | { "type": "board", clientRoomId: string, name: string | null, iconName: string | null, userIds: Array<number>, };

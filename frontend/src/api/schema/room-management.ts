@@ -43,6 +43,7 @@ export const RoomForm = Schema.Struct({
 export type RoomFormPin = Assert<Pinned<typeof RoomForm, GeneratedRoomForm>>;
 
 const createFields = {
+  clientRoomId: Schema.String,
   name: Schema.NullOr(Schema.String),
   iconName: Schema.NullOr(Schema.String),
 };

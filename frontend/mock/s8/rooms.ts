@@ -61,6 +61,7 @@ export function createRoomManagement(
   admin: Pick<AdminModule, "roomCreationRestricted" | "hasIcon">,
   huddles: Pick<Huddles, "roomRoles" | "reviseRoom" | "removeRoom">,
 ): RoomManagement {
+  const creationKeys = new WeakMap<ReturnType<S2Context["world"]>, Map<string, RoomRecord>>();
   const viewer = () => ctx.world().users.get(VIEWER_ID);
   const isAdmin = () => viewer()?.role === "administrator";
   const canCreate = () => isAdmin() || !admin.roomCreationRestricted();
@@ -147,6 +148,8 @@ export function createRoomManagement(
     const keys =
       type === "open" ? ["type", "name", "iconName"] : ["type", "name", "iconName", "userIds"];
 
+    if (creating) keys.push("clientRoomId");
+
     if (Object.keys(body).some((key) => !keys.includes(key)))
       throw validation("base", "Unknown room field");
 
@@ -227,8 +230,19 @@ export function createRoomManagement(
   const create = (body: Json | undefined) => {
     if (!canCreate()) throw forbidden();
     const input = parse(body, true);
-    const iconName = icon(input.iconName, null);
+    const rawKey = field(body, "clientRoomId");
+
+    if (!isString(rawKey) || rawKey.trim() === "")
+      throw validation("clientRoomId", "can't be blank");
+
+    const key = `${VIEWER_ID}:${rawKey.trim()}`;
     const world = ctx.world();
+    const keys = creationKeys.get(world) ?? new Map<string, RoomRecord>();
+    const replay = keys.get(key);
+
+    if (replay !== undefined) return ok(result(replay));
+
+    const iconName = icon(input.iconName, null);
     const id = world.nextRoomId++;
     const createdAt = timestamp(ctx.now());
     const memberIds = input.type === "open" ? activeUsers().map((user) => user.id) : input.ids;
@@ -262,6 +276,8 @@ export function createRoomManagement(
     };
 
     world.rooms.set(id, record);
+    keys.set(key, record);
+    creationKeys.set(world, keys);
     huddles.reviseRoom(record, []);
     publish(record);
 

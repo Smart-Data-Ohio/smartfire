@@ -8,7 +8,7 @@ use tokio::sync::Barrier;
 
 static AFTER_DUPLICATE_CHECK: Mutex<Option<HashMap<String, Arc<Barrier>>>> = Mutex::new(None);
 
-/// Holds every message or poll post with this `clientMessageId` after its
+/// Holds every message, poll or room post with this `clientMessageId` / `clientRoomId` after its
 /// pre-transaction duplicate lookup misses, until `posts` of them have got that far. Other posts
 /// aren't held.
 pub fn hold_after_duplicate_check(client_message_id: &str, posts: usize) {

@@ -3,13 +3,15 @@ use std::collections::BTreeMap;
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_db::{Account, Membership, Room, RoomType, User};
+use campfire_db::models::audit_log::{AuditLog, Context, NewAuditLog};
+use campfire_db::{Account, CachedStatements, Membership, Room, RoomType, User};
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode};
 use campfire_rooms::controllers::rooms::{
     self, boards, call_channels, closeds, directs, opens, operations,
 };
+use campfire_views::helpers::IconSource;
 use campfire_web::concerns::require_current_user;
-use campfire_web::controllers::presenters::{accounts, page::db_error};
+use campfire_web::controllers::presenters::{Presenter, accounts, page::db_error};
 
 use crate::{
     dto,
@@ -246,28 +248,32 @@ fn create_fields(
     input: api::CreateRoom,
 ) -> (api::RoomKind, Option<String>, Option<String>, Vec<i64>) {
     match input {
-        api::CreateRoom::Open { name, icon_name } => {
-            (api::RoomKind::Open, name, icon_name, Vec::new())
-        }
+        api::CreateRoom::Open {
+            name, icon_name, ..
+        } => (api::RoomKind::Open, name, icon_name, Vec::new()),
         api::CreateRoom::Closed {
             name,
             icon_name,
             user_ids,
+            ..
         } => (api::RoomKind::Closed, name, icon_name, user_ids),
         api::CreateRoom::Voice {
             name,
             icon_name,
             user_ids,
+            ..
         } => (api::RoomKind::Voice, name, icon_name, user_ids),
         api::CreateRoom::Stage {
             name,
             icon_name,
             user_ids,
+            ..
         } => (api::RoomKind::Stage, name, icon_name, user_ids),
         api::CreateRoom::Board {
             name,
             icon_name,
             user_ids,
+            ..
         } => (api::RoomKind::Board, name, icon_name, user_ids),
     }
 }
@@ -343,41 +349,125 @@ fn call_invalid(c: &mut Ctx, messages: Vec<String>) -> Error {
 async fn create_room(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     rooms::ensure_permission_to_create_rooms(c).await?;
-    let input = body(c).await?;
-    let (kind, name, icon, ids) = create_fields(input);
-    let room = if matches!(kind, api::RoomKind::Voice | api::RoomKind::Stage) {
-        match call_channels::create_room(c, room_type(kind), name, call_icon(icon), ids).await? {
-            Ok(room) => room,
-            Err(_) => {
-                return Err(call_invalid(
-                    c,
-                    vec!["Icon name is not a known icon".into()],
-                ));
-            }
-        }
-    } else {
-        let room = operations::create(
-            c,
-            room_type(kind),
-            name,
-            icon,
-            require_current_user(c)?.id,
-            ids,
-        )
+    let input: api::CreateRoom = body(c).await?;
+    let key = input.client_room_id().trim().to_string();
+    if key.is_empty() {
+        return Err(fail(c, validation("clientRoomId", "can't be blank")));
+    }
+    let creator = require_current_user(c)?.id;
+    let lookup = key.clone();
+    let duplicate = c
+        .app()
+        .db
+        .read(move |conn| Room::find_by_creation_key(conn, creator, &lookup))
         .await
         .map_err(db_error)?;
-        rooms::audit_room(
-            c,
-            &room,
-            "room.create",
-            serde_json::json!({"name":room.name}),
-        )
-        .await?;
-        room
+    if let Some(room) = duplicate {
+        return c.json(StatusCode::OK, &mutation(c, room).await?);
+    }
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_duplicate_check(&key).await;
+    let (kind, name, icon, ids) = create_fields(input);
+    let app = c.app().clone();
+    let audit = Context {
+        actor: Some(require_current_user(c)?.into()),
+        ip_address: Some(c.request.remote_ip()?.to_string()),
+        user_agent: c.request.user_agent().map(str::to_string),
     };
-    broadcast(c, &room, false).await?;
+    let lookup = key.clone();
+    let created = c
+        .app()
+        .db
+        .write(move |tx| {
+            // The immediate write transaction repeats the lookup before any grants or callbacks.
+            if let Some(room) = Room::find_by_creation_key(tx.conn(), creator, &key)? {
+                return Ok((room, false));
+            }
+            let grantees = if kind == api::RoomKind::Open {
+                vec![creator]
+            } else {
+                User::where_ids(tx.conn(), &ids)?
+                    .into_iter()
+                    .map(|user| user.id)
+                    .collect()
+            };
+            let room = if matches!(kind, api::RoomKind::Voice | api::RoomKind::Stage) {
+                let icon = call_icon(icon);
+                if icon.as_deref().is_some_and(|name| {
+                    Presenter::new(tx.conn(), &app, None)
+                        .resolve_avatar_icon(name)
+                        .is_none()
+                }) {
+                    let mut errors = campfire_db::Errors::default();
+                    errors.add("icon_name", "is not a known icon");
+                    return Err(campfire_db::Error::RecordInvalid(errors));
+                }
+                let mut room =
+                    Room::create_for(tx, room_type(kind), name.as_deref(), creator, &grantees)?;
+                if icon.is_some() {
+                    tx.conn().execute_cached(
+                        "UPDATE rooms SET icon_name=? WHERE id=?",
+                        rusqlite::params![icon, room.id],
+                    )?;
+                    room.reload(tx.conn())?;
+                }
+                room
+            } else {
+                Room::create_for_with_icon(
+                    tx,
+                    room_type(kind),
+                    name.as_deref(),
+                    icon.as_deref(),
+                    creator,
+                    &grantees,
+                    campfire_web::rich_text::room_icon_resolves,
+                )?
+            };
+            tx.conn().execute_cached(
+                "UPDATE rooms SET client_room_id=? WHERE id=?",
+                rusqlite::params![key, room.id],
+            )?;
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: "room.create".into(),
+                    target: Some((&room).into()),
+                    changes: Some(serde_json::json!({"name":room.name})),
+                    ..Default::default()
+                },
+                &audit,
+            )?;
+            Ok((room, true))
+        })
+        .await;
+    let (room, created) = match created {
+        // A unique-index conflict rolls back the whole write, including grants and callbacks.
+        Err(error) if error.is_record_not_unique() => {
+            let duplicate = c
+                .app()
+                .db
+                .read(move |conn| Room::find_by_creation_key(conn, creator, &lookup))
+                .await
+                .map_err(db_error)?;
+            match duplicate {
+                Some(room) => (room, false),
+                None => return Err(db_error(error)),
+            }
+        }
+        result => result.map_err(db_error)?,
+    };
+    if created {
+        broadcast(c, &room, false).await?;
+    }
     let result = mutation(c, room).await?;
-    c.json(StatusCode::CREATED, &result)
+    c.json(
+        if created {
+            StatusCode::CREATED
+        } else {
+            StatusCode::OK
+        },
+        &result,
+    )
 }
 
 async fn update_room(c: &mut Ctx) -> Result {

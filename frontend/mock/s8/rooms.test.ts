@@ -12,6 +12,77 @@ import { createRoomManagement } from "./rooms.ts";
 const { rooms, users, viewer } = SEED_IDS;
 
 describe("room management mock", () => {
+  it("replays each room creation without allocating ids, granting members or publishing again", async () => {
+    const { server } = harness();
+    const events = collect(server);
+
+    for (const type of ["open", "closed", "voice", "stage", "board"] as const) {
+      const body =
+        type === "open"
+          ? { type, clientRoomId: `replay-${type}`, name: "Once", iconName: null }
+          : {
+              type,
+              clientRoomId: `replay-${type}`,
+              name: "Once",
+              iconName: null,
+              userIds: [users.maya],
+            };
+
+      const first = await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", body, 201);
+      const count = events.length;
+
+      const replay = await expectStatus<RoomMutation>(
+        server,
+        "POST",
+        "/api/v1/rooms",
+        {
+          ...body,
+          clientRoomId: ` ${body.clientRoomId} `,
+          name: "Changed",
+          iconName: "invalid_retry_icon",
+        },
+        200,
+      );
+
+      expect(replay).toEqual(first);
+      expect(events).toHaveLength(count);
+
+      const next = await expectStatus<RoomMutation>(
+        server,
+        "POST",
+        "/api/v1/rooms",
+        { ...body, clientRoomId: `next-${type}` },
+        201,
+      );
+
+      expect(next.room.id).toBe(first.room.id + 1);
+
+      if (next.detail !== null && first.detail !== null)
+        expect(next.detail.membership.id).toBe(first.detail.membership.id + 1);
+    }
+  });
+
+  it("rejects missing and blank creation keys in the structured validation shape", async () => {
+    const { server } = harness();
+    const events = collect(server);
+
+    for (const body of [
+      { type: "open", name: "Never" },
+      { type: "open", name: "Never", clientRoomId: "" },
+      { type: "open", name: "Never", clientRoomId: " \t\n " },
+    ]) {
+      const response = await send(server, "POST", "/api/v1/rooms", body);
+
+      expect(response.status).toBe(422);
+      expect(field(field(response.json, "error"), "_tag")).toBe("Validation");
+      expect(field(response.json, "error")).toMatchObject({
+        fields: { clientRoomId: ["can't be blank"] },
+      });
+    }
+
+    expect(events).toEqual([]);
+  });
+
   it("supplies defaults for every type and readable form capabilities", async () => {
     const { server } = harness();
 
@@ -46,8 +117,14 @@ describe("room management mock", () => {
     for (const type of ["open", "closed", "voice", "stage", "board"] as const) {
       const body =
         type === "open"
-          ? { type, name: null, iconName: " :FIRE: " }
-          : { type, name: null, iconName: " :FIRE: ", userIds: [users.maya, users.dana] };
+          ? { type, clientRoomId: `room-${type}`, name: null, iconName: " :FIRE: " }
+          : {
+              type,
+              clientRoomId: `room-${type}`,
+              name: null,
+              iconName: " :FIRE: ",
+              userIds: [users.maya, users.dana],
+            };
 
       const created = await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", body, 201);
 
@@ -166,6 +243,7 @@ describe("room management mock", () => {
       "/api/v1/rooms",
       {
         type: "stage",
+        clientRoomId: "new-stage",
         name: "Stage",
         iconName: null,
         userIds: [viewer, users.priya],
