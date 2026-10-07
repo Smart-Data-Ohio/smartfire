@@ -416,4 +416,52 @@ describe("S4 revisions through held network responses", () => {
       expect((yield* fake.requests).length).toBe(1);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
+
+  it.effect("keep a new tracking overlay when an earlier GET captured transient tracked work", () =>
+    Effect.gen(function* () {
+      mutations.loadThreadDetail(threadDetailFixture(THREAD, null, null));
+
+      const fake = yield* FakeApi;
+      const readStarted = yield* Deferred.make<void>();
+      const readGate = yield* Deferred.make<void>();
+      const writeStarted = yield* Deferred.make<void>();
+      const writeGate = yield* Deferred.make<void>();
+      const confirmed = facts(2, { status: "planned", owner: null, ownerActive: false });
+
+      yield* fake.reply(`GET /threads/${THREAD}/messages`, pageFixture([]));
+      yield* fake.route(`GET /threads/${THREAD}`, () =>
+        Deferred.succeed(readStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(readGate)),
+          Effect.as(detail(facts(1, { status: "blocked" }))),
+        ),
+      );
+      yield* fake.route(`PATCH /threads/${THREAD}/work`, () =>
+        Deferred.succeed(writeStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(writeGate)),
+          Effect.as(detail(confirmed)),
+        ),
+      );
+
+      const reading = yield* Effect.forkChild(threads.reload(THREAD));
+
+      yield* Deferred.await(readStarted);
+
+      const writing = yield* Effect.forkChild(work.setStatus(THREAD, "planned"));
+
+      yield* Deferred.await(writeStarted);
+      yield* Deferred.succeed(readGate, undefined);
+      yield* Fiber.join(reading);
+
+      expect(store.getState().threads[THREAD]?.work).toMatchObject({
+        status: "planned",
+        owner: null,
+      });
+
+      yield* Deferred.succeed(writeGate, undefined);
+      yield* Fiber.join(writing);
+
+      expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
+      expect(store.getState().work.writes[THREAD]).toBeUndefined();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });

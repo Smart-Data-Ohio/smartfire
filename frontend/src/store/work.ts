@@ -166,7 +166,8 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
     overlay !== undefined &&
     (incoming === null
       ? !event
-      : overlay.before !== null && incoming.updatedAt <= overlay.before.updatedAt);
+      : confirmed === null ||
+        (overlay.before !== null && incoming.updatedAt <= overlay.before.updatedAt));
 
   return {
     facts: pending ? overlayFacts(overlay, confirmed) : confirmed,
