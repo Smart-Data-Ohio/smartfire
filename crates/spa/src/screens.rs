@@ -8,7 +8,9 @@
 //!   ported yet to its classic page with a full page load ([`classic_url`] is the same mapping).
 //!
 //! One classic page can hold several SPA screens (the profile page's sections): each has a row, all
-//! map back to it, and its redirect goes to the first. A slice that ports a screen adds its SPA
+//! map back to it, and its redirect goes to the first. Several classic links can also share an SPA
+//! screen (a message's edit and boost links): its classic fallback is the first matching row.
+//! A slice that ports a screen adds its SPA
 //! route and flips `ported` here in the same PR. Unported
 //! rows name where a screen will live, so the SPA can link there already: the server never
 //! redirects to them, and the SPA forwards them to the classic page.
@@ -62,6 +64,58 @@ pub const SCREENS: &[Screen] = &[
         "channel_threads#show",
         "/rooms/:room_id/threads/:id",
         "/app/r/:room_id/t/:id",
+        true,
+    ),
+    // S8: message aliases share the permalink; the room's permalink above wins on opt-out.
+    screen(
+        "messages#show",
+        "/rooms/:room_id/messages/:id",
+        "/app/r/:room_id/m/:id",
+        true,
+    ),
+    screen(
+        "messages#edit",
+        "/rooms/:room_id/messages/:id/edit",
+        "/app/r/:room_id/m/:id",
+        true,
+    ),
+    // Bare links use the message resolver; edit and boost links fall back to its permalink.
+    screen("messages#show", "/messages/:id", "/app/m/:id", true),
+    screen("messages#edit", "/messages/:id/edit", "/app/m/:id", true),
+    screen(
+        "messages/boosts#index",
+        "/messages/:message_id/boosts",
+        "/app/m/:message_id",
+        true,
+    ),
+    screen(
+        "messages/boosts#new",
+        "/messages/:message_id/boosts/new",
+        "/app/m/:message_id",
+        true,
+    ),
+    screen(
+        "channel_threads#index",
+        "/rooms/:room_id/threads",
+        "/app/r/:room_id/threads",
+        true,
+    ),
+    screen(
+        "rooms/files#index",
+        "/rooms/:room_id/files",
+        "/app/r/:room_id/files",
+        true,
+    ),
+    screen(
+        "rooms/pins#index",
+        "/rooms/:room_id/pins",
+        "/app/r/:room_id/pins",
+        true,
+    ),
+    screen(
+        "rooms/involvements#show",
+        "/rooms/:room_id/involvement",
+        "/app/r/:room_id/notifications",
         true,
     ),
     // S3: workspace destinations (plan §4.7).

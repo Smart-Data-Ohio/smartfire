@@ -1,7 +1,7 @@
 //! The screen map: its rows against the route table, both directions of the mapping, and the
 //! copy the SPA reads.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use super::*;
@@ -59,10 +59,57 @@ fn first_for(screen: &Screen) -> &'static Screen {
         .unwrap()
 }
 
+/// The classic fallback for an SPA URL, including aliases with differently named parameters.
+fn first_for_spa(screen: &Screen) -> &'static Screen {
+    let path = sample(screen.spa, &[7, 8, 9]);
+    SCREENS
+        .iter()
+        .find(|row| captures(row.spa, &path).is_some())
+        .unwrap()
+}
+
 #[test]
-fn no_two_rows_claim_the_same_url() {
-    let spa: BTreeSet<_> = SCREENS.iter().map(|screen| screen.spa).collect();
-    assert_eq!(spa.len(), SCREENS.len());
+fn only_intentional_aliases_share_a_url() {
+    let rows: BTreeSet<_> = SCREENS
+        .iter()
+        .map(|screen| (screen.endpoint, screen.classic, screen.spa))
+        .collect();
+    assert_eq!(rows.len(), SCREENS.len(), "no duplicate rows");
+    let mut aliases = BTreeMap::<_, Vec<_>>::new();
+    for screen in SCREENS {
+        aliases
+            .entry(sample(screen.spa, &[7, 8, 9]))
+            .or_default()
+            .push((screen.endpoint, screen.classic));
+    }
+    aliases.retain(|_, rows| rows.len() > 1);
+    assert_eq!(
+        aliases,
+        BTreeMap::from([
+            (
+                "/app/r/7/m/8".to_string(),
+                vec![
+                    ("rooms#show", "/rooms/:room_id/@:message_id"),
+                    ("messages#show", "/rooms/:room_id/messages/:id"),
+                    ("messages#edit", "/rooms/:room_id/messages/:id/edit"),
+                ],
+            ),
+            (
+                "/app/m/7".to_string(),
+                vec![
+                    ("messages#show", "/messages/:id"),
+                    ("messages#edit", "/messages/:id/edit"),
+                    ("messages/boosts#index", "/messages/:message_id/boosts"),
+                    ("messages/boosts#new", "/messages/:message_id/boosts/new"),
+                ],
+            ),
+        ]),
+        "only the message permalink aliases may share SPA URLs, with show first"
+    );
+    assert!(SCREENS.iter().all(|screen| {
+        std::ptr::eq(first_for_spa(screen), screen)
+            || (screen.ported && first_for_spa(screen).ported)
+    }));
     // A classic page shared by several rows: only the profile page's sections and the account
     // page's people list, all ported.
     for screen in SCREENS {
@@ -143,6 +190,93 @@ fn ported_classic_pages_map_to_their_spa_urls() {
         spa_url("rooms#show", "//rooms/12/", None).as_deref(),
         Some("/app/r/12")
     );
+}
+
+#[test]
+fn message_aliases_and_room_tools_map_to_their_ported_screens() {
+    for (endpoint, classic, spa, fallback) in [
+        (
+            "messages#show",
+            "/rooms/12/messages/345",
+            "/app/r/12/m/345",
+            "/rooms/12/@345",
+        ),
+        (
+            "messages#edit",
+            "/rooms/12/messages/345/edit",
+            "/app/r/12/m/345",
+            "/rooms/12/@345",
+        ),
+        (
+            "messages#show",
+            "/messages/345",
+            "/app/m/345",
+            "/messages/345",
+        ),
+        (
+            "messages#edit",
+            "/messages/345/edit",
+            "/app/m/345",
+            "/messages/345",
+        ),
+        (
+            "messages/boosts#index",
+            "/messages/345/boosts",
+            "/app/m/345",
+            "/messages/345",
+        ),
+        (
+            "messages/boosts#new",
+            "/messages/345/boosts/new",
+            "/app/m/345",
+            "/messages/345",
+        ),
+        (
+            "channel_threads#index",
+            "/rooms/12/threads",
+            "/app/r/12/threads",
+            "/rooms/12/threads",
+        ),
+        (
+            "rooms/files#index",
+            "/rooms/12/files",
+            "/app/r/12/files",
+            "/rooms/12/files",
+        ),
+        (
+            "rooms/pins#index",
+            "/rooms/12/pins",
+            "/app/r/12/pins",
+            "/rooms/12/pins",
+        ),
+        (
+            "rooms/involvements#show",
+            "/rooms/12/involvement",
+            "/app/r/12/notifications",
+            "/rooms/12/involvement",
+        ),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(
+            classic_url(spa, None).as_deref(),
+            Some(fallback),
+            "{classic}"
+        );
+        assert_eq!(
+            spa_url(endpoint, classic, Some("a=1&classic=0")).as_deref(),
+            Some(format!("{spa}?a=1").as_str()),
+            "{classic}"
+        );
+        assert_eq!(
+            classic_url(spa, Some("a=1&classic=1")).as_deref(),
+            Some(format!("{fallback}?a=1").as_str()),
+            "{classic}"
+        );
+    }
 }
 
 #[test]
@@ -254,13 +388,13 @@ fn the_query_carries_over_without_classic() {
 }
 
 #[test]
-fn every_spa_url_maps_back_to_its_classic_page() {
+fn every_spa_url_maps_back_to_its_first_classic_page() {
     for screen in SCREENS {
         let ids = [7, 8, 9];
         let (classic, spa) = (sample(screen.classic, &ids), sample(screen.spa, &ids));
         assert_eq!(
             classic_url(&spa, None).as_deref(),
-            Some(classic.as_str()),
+            Some(sample(first_for_spa(screen).classic, &ids).as_str()),
             "{screen:?}"
         );
         if screen.ported {

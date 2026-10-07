@@ -1,6 +1,7 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
@@ -14,6 +15,7 @@ import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
@@ -80,6 +82,8 @@ export const runAction = <A, E extends ActionFailure>(
 
 /** Message actions (S2). Each lands the server's reply in the store; failures reject. */
 const messages = {
+  /** Reads one reachable message without opening or caching its conversation. */
+  read: (messageId: number): Promise<MessageRead> => runAction(readMessage(messageId)),
   edit: (messageId: number, markdown: string): Promise<MessageDTO> =>
     runAction(messageActions.edit(messageId, markdown)),
   source: (messageId: number): Promise<string> => runAction(messageActions.source(messageId)),
