@@ -298,8 +298,7 @@ export const mutations = {
     detail: ThreadDetail,
     shown: WorkFacts | null | undefined,
     read?: work.WorkRead,
-    assignment = false,
-  ) => apply((state) => work.landWorkReply(state, detail, shown, read, assignment)),
+  ) => apply((state) => work.landWorkReply(state, detail, shown, read)),
   countWorkWrite: (threadId: number, delta: 1 | -1) =>
     apply((state) => work.countWorkWrite(state, threadId, delta)),
   setWorkListLoading: (filter: WorkFilter) =>

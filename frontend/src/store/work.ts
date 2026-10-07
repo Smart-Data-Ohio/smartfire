@@ -3,8 +3,10 @@
  * (`state.threads[id].work`, kept by `thread.updated`); this slice holds each open pane's
  * `WorkDetail`, the facts that detail was loaded with, the writes in flight and their overlays,
  * and the work list per filter. List membership reloads when shown again; loaded rows follow
- * live work facts. Server revisions order the thread fields, while local observations order
- * untimestamped tracking absence, owner identity/eligibility, assignment choices and links.
+ * live work facts. Server revisions order the thread fields and the owner (at a tie, a cleared
+ * owner wins: user deletion is the only owner change that keeps the revision), while local
+ * observations order untimestamped tracking absence, owner eligibility, assignment choices and
+ * links.
  */
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { WorkDetail } from "../gen/WorkDetail.ts";
@@ -64,7 +66,7 @@ export interface WorkSlice {
 /** A read captures only fields outside WorkFacts.updatedAt, never record freshness. */
 export interface WorkRead {
   readonly at: number;
-  /** Per-thread overrides for a reply's own tracking or assignment intent. */
+  /** Per-thread overrides for a reply's own tracking intent. */
   readonly fields: WorkSlice["fields"];
 }
 
@@ -195,7 +197,18 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
   const at = read?.at ?? observationOf(incoming ?? thread) ?? nextObservation();
   const mark = (field: keyof WorkFields) => read?.fields[id]?.[field] ?? at;
   const trackingCurrent = mark("tracking") > fields.tracking;
-  const ownerCurrent = mark("owner") > fields.owner;
+  // Every owner write advances the thread revision, so the newer revision's owner wins. User
+  // deletion clears the owner without touching it, and it is the only change that can: at an
+  // equal revision a cleared owner is the later state, whichever read observed it first.
+  // Observations only order copies of the same owner. None of this needs unique revisions.
+  const ownerCurrent =
+    stored == null || incoming === null
+      ? mark("owner") > fields.owner
+      : incoming.updatedAt !== stored.updatedAt
+        ? incoming.updatedAt > stored.updatedAt
+        : incoming.owner === null || stored.owner === null
+          ? incoming.owner === null
+          : incoming.owner.id === stored.owner.id && mark("owner") > fields.owner;
   const eligibilityCurrent = mark("ownerActive") > fields.ownerActive;
   const linksCurrent = mark("links") > fields.links;
 
@@ -211,7 +224,6 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
   } else if (stored != null || trackingCurrent) {
     confirmed = mergeRevision(stored, incoming);
 
-    // User deletion clears the FK without touching the thread revision.
     observedOwner = ownerCurrent;
 
     const owner = ownerCurrent ? incoming.owner : (stored?.owner ?? null);
@@ -537,9 +549,8 @@ function workReplyRead(
   read: WorkRead | undefined,
   threadId: number,
   tracking: boolean,
-  assignment: boolean,
 ): WorkRead | undefined {
-  if (read === undefined || (!tracking && !assignment)) {
+  if (read === undefined || !tracking) {
     return read;
   }
 
@@ -551,8 +562,9 @@ function workReplyRead(
     fields: {
       ...read.fields,
       [threadId]: {
-        tracking: tracking ? replyAt : (captured?.tracking ?? read.at),
-        owner: assignment ? replyAt : (captured?.owner ?? read.at),
+        tracking: replyAt,
+        // The owner keeps the request's start: revisions order assignments, not arrival.
+        owner: captured?.owner ?? read.at,
         ownerActive: captured?.ownerActive ?? read.at,
         links: captured?.links ?? read.at,
         choices: captured?.choices ?? read.at,
@@ -567,7 +579,6 @@ export function landWorkReply(
   detail: ThreadDetail,
   shown: WorkFacts | null | undefined,
   read?: WorkRead,
-  assignment = false,
 ): State {
   const id = detail.thread.id;
   const overlay = state.work.overlays[id];
@@ -581,38 +592,15 @@ export function landWorkReply(
     const thread = state.threads[id];
 
     if (thread !== undefined) {
-      const ownOwnerObservation =
-        (state.work.fields[id] ?? emptyFields).owner === overlay.fields.owner;
-
       state = showFacts(withoutOverlay(state, id), { ...thread, work: overlay.confirmed });
 
-      // Only an assignment reply supersedes owner observations made during this write.
-      const assigned = assignment || overlay.before?.owner?.id !== overlay.shown?.owner?.id;
-
-      const newerAssignment =
-        incoming !== null &&
-        overlay.confirmed !== null &&
-        incoming.updatedAt > overlay.confirmed.updatedAt;
-
-      return loadWorkThreadDetail(
-        state,
-        detail,
-        workReplyRead(read, id, true, assigned && (ownOwnerObservation || newerAssignment)),
-      );
+      return loadWorkThreadDetail(state, detail, workReplyRead(read, id, true));
     }
   }
 
-  const confirmed = state.threads[id]?.work;
-
-  // Handoffs have no optimistic overlay; their newer assignment still supersedes a pre-write
-  // owner snapshot. A tied or newer snapshot can instead reflect deletion after assignment.
-  const newerAssignment =
-    assignment &&
-    incoming !== null &&
-    confirmed != null &&
-    incoming.updatedAt > confirmed.updatedAt;
-
-  return loadWorkThreadDetail(state, detail, workReplyRead(read, id, false, newerAssignment));
+  // Handoffs have no optimistic overlay. Their owner merges by revision like any copy: a newer
+  // assignment replaces a pre-write snapshot, and a tied snapshot that cleared the owner stays.
+  return loadWorkThreadDetail(state, detail, workReplyRead(read, id, false));
 }
 
 function updateList(

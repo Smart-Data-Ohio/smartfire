@@ -171,7 +171,11 @@ describe("work actions", () => {
         during = factsOf();
 
         return Effect.succeed(
-          threadDetailFixture(THREAD, factsFixture({ owner: userFixture(3) }), workDetailFixture()),
+          threadDetailFixture(
+            THREAD,
+            factsFixture({ owner: userFixture(3), updatedAt: "2026-10-06T09:01:00.000000Z" }),
+            workDetailFixture(),
+          ),
         );
       });
       yield* work.assign(THREAD, 3);
@@ -182,7 +186,11 @@ describe("work actions", () => {
         `PATCH /threads/${THREAD}/work`,
         threadDetailFixture(
           THREAD,
-          factsFixture({ resultUpdatedAt: "2026-10-06T10:00:00.000Z" }),
+          factsFixture({
+            owner: userFixture(3),
+            resultUpdatedAt: "2026-10-06T10:00:00.000Z",
+            updatedAt: "2026-10-06T09:02:00.000000Z",
+          }),
           workDetailFixture({ resultMarkdown: "Done", resultHtml: "<p>Done</p>" }),
         ),
       );
@@ -192,7 +200,11 @@ describe("work actions", () => {
 
       yield* fake.reply(
         `POST /threads/${THREAD}/work/handoff`,
-        threadDetailFixture(THREAD, factsFixture({ owner: agentFixture() }), workDetailFixture()),
+        threadDetailFixture(
+          THREAD,
+          factsFixture({ owner: agentFixture(), updatedAt: "2026-10-06T09:03:00.000000Z" }),
+          workDetailFixture(),
+        ),
       );
       yield* work.handOff(THREAD, {
         receiverAgentId: 9,
@@ -273,6 +285,76 @@ describe("work actions", () => {
           observed === "newer deletion" ? snapshot.updatedAt : assigned.updatedAt,
         );
         expect(store.getState().work.writes[THREAD]).toBeUndefined();
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
+  for (const write of ["assignment", "handoff"] as const) {
+    it.effect(`keeps an owner deletion a list GET saw when the ${write} reply lands first`, () =>
+      Effect.gen(function* () {
+        seed();
+
+        const fake = yield* FakeApi;
+        const writeStarted = yield* Deferred.make<void>();
+        const listStarted = yield* Deferred.make<void>();
+        const writeGate = yield* Deferred.make<void>();
+        const listGate = yield* Deferred.make<void>();
+        const owner = write === "assignment" ? userFixture(3) : agentFixture();
+        const committed = factsFixture({ owner, updatedAt: "2026-10-06T09:01:00.000000Z" });
+
+        // The write commits, then its owner is deleted (no new revision), then the list reads.
+        const deleted = { ...committed, owner: null, ownerActive: false };
+        const row = rowFixture(THREAD);
+
+        yield* fake.route(
+          write === "assignment"
+            ? `PATCH /threads/${THREAD}/work`
+            : `POST /threads/${THREAD}/work/handoff`,
+          () =>
+            Deferred.succeed(writeStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(writeGate)),
+              Effect.as(threadDetailFixture(THREAD, committed, workDetailFixture())),
+            ),
+        );
+        yield* fake.route("GET /work", () =>
+          Deferred.succeed(listStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(listGate)),
+            Effect.as({
+              threads: [{ ...row, thread: { ...row.thread, work: deleted } }],
+              users: [],
+            }),
+          ),
+        );
+
+        const writing = yield* Effect.forkChild(
+          write === "assignment"
+            ? work.assign(THREAD, 3)
+            : work.handOff(THREAD, {
+                receiverAgentId: 9,
+                summary: "Over to you",
+                links: [],
+                openQuestions: [],
+              }),
+        );
+
+        yield* Deferred.await(writeStarted);
+
+        const listing = yield* Effect.forkChild(work.loadList("open"));
+
+        yield* Deferred.await(listStarted);
+        yield* Deferred.succeed(writeGate, undefined);
+        yield* Fiber.join(writing);
+
+        expect(factsOf()?.owner?.id).toBe(owner.id);
+
+        yield* Deferred.succeed(listGate, undefined);
+        yield* Fiber.join(listing);
+
+        expect(factsOf()).toMatchObject({ owner: null, ownerActive: false });
+        expect(
+          workListOf(store.getState(), "open").rows.find((r) => r.thread.id === THREAD)?.thread.work
+            ?.owner,
+        ).toBeNull();
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
   }

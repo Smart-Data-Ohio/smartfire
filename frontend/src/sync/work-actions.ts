@@ -102,7 +102,6 @@ const write = <E, R>(
   threadId: number,
   shown: ((before: WorkFacts | null) => WorkFacts | null) | null,
   request: (before: WorkFacts | null) => Effect.Effect<ThreadDetail, E, R>,
-  assignment = false,
 ) =>
   serial.run(
     threadId,
@@ -128,7 +127,7 @@ const write = <E, R>(
         Effect.onInterrupt(() => rollBack),
       );
 
-      mutations.landWorkReply(detail, optimistic, read, assignment);
+      mutations.landWorkReply(detail, optimistic, read);
 
       if (store.getState().work.overlays[threadId] !== undefined) {
         // An outdated reply left no confirmed copy of this successful local change.
@@ -136,7 +135,7 @@ const write = <E, R>(
           const read = captureWorkRead(store.getState());
           const copy = yield* fetchThread(threadId);
 
-          mutations.landWorkReply(copy, optimistic, read, assignment);
+          mutations.landWorkReply(copy, optimistic, read);
         } while (store.getState().work.overlays[threadId] !== undefined);
       }
 
@@ -180,7 +179,6 @@ export const assign = Effect.fn("work.assign")(function* (
         : { ...before, owner, ownerActive: owner !== null };
     },
     () => api.updateWork(threadId, { ownerId }),
-    true,
   );
 });
 
@@ -197,5 +195,5 @@ export const handOff = Effect.fn("work.handOff")(function* (
   threadId: number,
   body: CreateWorkHandoff,
 ) {
-  return yield* write(threadId, null, () => api.handOffWork(threadId, body), true);
+  return yield* write(threadId, null, () => api.handOffWork(threadId, body));
 });

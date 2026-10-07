@@ -349,38 +349,61 @@ describe("work in the store", () => {
     expect(landed.threads[THREAD]?.work).toMatchObject({ status: "done", ownerActive: false });
   });
 
-  it.each(["equal", "newer"])(
-    "keeps a deleted owner when a delayed %s-revision GET lands",
-    (revision) => {
-      const facts = factsFixture();
-      const before = held(facts);
-      const read = captureWorkRead(before);
+  it("keeps a deleted owner when a delayed equal-revision GET lands", () => {
+    const facts = factsFixture();
+    const before = held(facts);
+    const read = captureWorkRead(before);
 
-      const cleared = loadWorkThreadDetail(
-        before,
-        threadDetailFixture(
-          THREAD,
-          { ...facts, owner: null, ownerActive: false },
-          workDetailFixture(),
-        ),
-        captureWorkRead(before),
-      );
+    const cleared = loadWorkThreadDetail(
+      before,
+      threadDetailFixture(
+        THREAD,
+        { ...facts, owner: null, ownerActive: false },
+        workDetailFixture(),
+      ),
+      captureWorkRead(before),
+    );
 
-      const stale = {
-        ...facts,
-        updatedAt: revision === "equal" ? facts.updatedAt : "2026-10-06T09:01:00.000000Z",
-      };
+    const landed = loadWorkThreadDetail(
+      cleared,
+      threadDetailFixture(THREAD, facts, workDetailFixture()),
+      read,
+    );
 
-      const landed = loadWorkThreadDetail(
-        cleared,
-        threadDetailFixture(THREAD, stale, workDetailFixture()),
-        read,
-      );
+    expect(landed.threads[THREAD]?.work?.owner).toBeNull();
+    expect(landed.threads[THREAD]?.work?.ownerActive).toBe(false);
+  });
 
-      expect(landed.threads[THREAD]?.work?.owner).toBeNull();
-      expect(landed.threads[THREAD]?.work?.ownerActive).toBe(false);
-    },
-  );
+  it("takes a newer revision's owner after a deletion, whichever read started first", () => {
+    const facts = factsFixture();
+    const before = held(facts);
+    const read = captureWorkRead(before);
+
+    const cleared = loadWorkThreadDetail(
+      before,
+      threadDetailFixture(
+        THREAD,
+        { ...facts, owner: null, ownerActive: false },
+        workDetailFixture(),
+      ),
+      captureWorkRead(before),
+    );
+
+    // Only an assignment moves the owner forward with the revision.
+    const reassigned = {
+      ...facts,
+      owner: userFixture(3),
+      updatedAt: "2026-10-06T09:01:00.000000Z",
+    };
+
+    const landed = loadWorkThreadDetail(
+      cleared,
+      threadDetailFixture(THREAD, reassigned, workDetailFixture()),
+      read,
+    );
+
+    expect(landed.threads[THREAD]?.work?.owner?.id).toBe(3);
+  });
 
   it("keeps an equal owner observation against a delayed tied ABA GET", () => {
     const facts = factsFixture();
@@ -423,18 +446,19 @@ describe("work in the store", () => {
     expect(landed.work.details[THREAD]?.handoffReceivers).toEqual([]);
   });
 
-  it("keeps a deleted owner when a delayed newer status reply settles its overlay", () => {
+  it("keeps a deleted owner when a delayed status reply at the same revision settles", () => {
     const facts = factsFixture();
     const before = held(facts);
     const read = captureWorkRead(before);
     const shown = { ...facts, status: "done" as const };
     const pending = putWorkFacts(before, THREAD, shown);
 
+    // The status write committed, then the owner was deleted, then this GET read the row.
     const observed = loadWorkThreadDetail(
       pending,
       threadDetailFixture(
         THREAD,
-        { ...facts, owner: null, ownerActive: false },
+        { ...shown, owner: null, ownerActive: false, updatedAt: "2026-10-06T09:01:00.000000Z" },
         workDetailFixture(),
       ),
       captureWorkRead(pending),
@@ -485,7 +509,6 @@ describe("work in the store", () => {
       ),
       shown,
       read,
-      true,
     );
 
     expect(landed.threads[THREAD]?.work).toMatchObject({ owner: null, ownerActive: false });
