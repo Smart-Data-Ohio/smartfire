@@ -5,6 +5,7 @@ use rusqlite::types::Value as SqlValue;
 use std::collections::HashMap;
 
 pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
+    let now = tx.now();
     let mut stmt = tx.conn().prepare("SELECT * FROM users WHERE id=?")?;
     let columns = stmt
         .column_names()
@@ -65,7 +66,7 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     if attrs["ooo_until"] != original["ooo_until"]
         && text("ooo_until")
             .and_then(Timestamp::parse_db)
-            .is_some_and(|t| t <= tx.now())
+            .is_some_and(|t| t <= now)
     {
         errors.add("ooo_until", "must be in the future");
     }
@@ -160,7 +161,8 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         .iter()
         .map(|key| attrs[*key].clone())
         .collect::<Vec<_>>();
-    values.push(SqlValue::Text(tx.now().to_db()));
+    let revision = crate::User::revision_for_touch(tx, user, now)?;
+    values.push(SqlValue::Text(revision.to_db()));
     values.push(SqlValue::Integer(user));
     let assignments = changed
         .iter()

@@ -1049,3 +1049,81 @@ async fn durable_analysis_other_callers_roll_back() {
         }
     }
 }
+
+#[tokio::test]
+async fn avatar_attachment_and_analysis_touches_preserve_later_user_core_revisions() {
+    let app = TestApp::boot_with_test_clock(std::sync::Arc::new(
+        campfire_kit::clock::FrozenClock::new(SEED_NOW.parse().unwrap()),
+    ))
+    .await
+    .unwrap();
+    let core = app
+        .db()
+        .write(|tx| {
+            let mut user = campfire_db::User::find(tx.conn(), DAVID)?;
+            for name in ["First core change", "Latest core change"] {
+                user.update(
+                    tx,
+                    campfire_db::UserChanges {
+                        name: Some(name.into()),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            assert!(user.updated_at > tx.now());
+            Ok(user)
+        })
+        .await
+        .unwrap();
+    let staged = app
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            b"Avatar touch regression",
+            Filename::new("avatar.txt"),
+            Some("text/plain"),
+        )
+        .unwrap();
+    app.db()
+        .write(move |tx| {
+            assign(
+                tx,
+                Record::user(DAVID),
+                "avatar",
+                Assignment::Create(staged),
+            )
+        })
+        .await
+        .unwrap();
+    let (attached, analyzed) = app
+        .db()
+        .read(|conn| {
+            Ok((
+                campfire_db::User::find(conn, DAVID)?,
+                attached_blob(conn, "User", DAVID, "avatar")?
+                    .unwrap()
+                    .is_analyzed(),
+            ))
+        })
+        .await
+        .unwrap();
+    assert!(
+        analyzed,
+        "the synchronous analyzer also touched the user row"
+    );
+    assert_eq!(attached, core);
+    app.db()
+        .write(|tx| {
+            assert!(destroy(tx, Record::user(DAVID), "avatar")?);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let detached = app
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    assert_eq!(detached, core);
+}

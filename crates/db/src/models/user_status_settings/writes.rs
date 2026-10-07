@@ -196,14 +196,14 @@ impl UserStatusSettings {
             .into_iter()
             .map(|(_, value)| value)
             .collect::<Vec<_>>();
-        values.push(Value::Text(now.to_db()));
+        let revision = crate::User::revision_for_touch(tx, self.user.id, now)?;
+        values.push(Value::Text(revision.to_db()));
         values.push(Value::Integer(self.user.id));
         tx.conn().execute(
             &format!("UPDATE users SET {} WHERE id=?", columns.join(",")),
             rusqlite::params_from_iter(values),
         )?;
-        self.user.updated_at = now;
-        self.original_attributes = self.attributes();
+        *self = Self::find(tx.conn(), self.user.id)?;
         Ok(())
     }
 

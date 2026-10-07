@@ -289,6 +289,120 @@ fn changed_settings_touch_updated_at_and_an_unchanged_save_does_not() {
     assert_eq!(settings(&t).user.updated_at, updated);
 }
 
+fn later_core_revision(t: &TestDb) -> crate::User {
+    let user = t.write(|tx| {
+        let mut user = crate::User::find(tx.conn(), id("david"))?;
+        for name in ["First core change", "Latest core change"] {
+            user.update(
+                tx,
+                crate::UserChanges {
+                    name: Some(name.into()),
+                    ..Default::default()
+                },
+            )?;
+        }
+        Ok(user)
+    });
+    assert!(user.updated_at > t.now());
+    user
+}
+
+#[test]
+fn slash_settings_and_ooo_touches_preserve_later_core_revisions() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let core = later_core_revision(&t);
+    let updated = t.write(|tx| {
+        crate::slash_commands::user_settings::update(
+            tx,
+            id("david"),
+            json!({"custom_status_text":"Slash status"}),
+        )?;
+        crate::slash_commands::dispatch(
+            tx,
+            &crate::slash_commands::Context {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                thread_id: None,
+                huddles_configured: false,
+            },
+            "/ooo 1h",
+        )?;
+        Settings::find(tx.conn(), id("david"))
+    });
+    assert_eq!(updated.user.updated_at, core.updated_at);
+    assert_eq!(updated.user.name, core.name);
+    assert_eq!(updated.custom_status_text.as_deref(), Some("Slash status"));
+    assert_eq!(updated.ooo_broadcast, Some(true));
+    assert!(updated.ooo_until.is_some_and(|until| until > t.now()));
+}
+
+#[test]
+fn settings_touches_preserve_core_revisions_and_refresh_stale_snapshots() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let mut first = settings(&t);
+    let mut stale = first.clone();
+    let core = later_core_revision(&t);
+    first.custom_status_text = Some("Current text".into());
+    let first = t.write(move |tx| {
+        first.save(tx)?;
+        Ok(first)
+    });
+    stale.custom_status_emoji = Some("🚀".into());
+    let second = t.write(move |tx| {
+        stale.save(tx)?;
+        Ok(stale)
+    });
+    assert_eq!(first.user.updated_at, core.updated_at);
+    assert_eq!(second.user.updated_at, core.updated_at);
+    assert_eq!(second.user.name, core.name);
+    assert_eq!(second.custom_status_text.as_deref(), Some("Current text"));
+    assert_eq!(second.custom_status_emoji.as_deref(), Some("🚀"));
+    let persisted = settings(&t);
+    assert_eq!(second.user, persisted.user);
+    assert_eq!(second.custom_status_text, persisted.custom_status_text);
+    assert_eq!(second.custom_status_emoji, persisted.custom_status_emoji);
+    let revision = second.user.updated_at;
+    t.write(move |tx| {
+        let mut second = second;
+        second.save(tx)
+    });
+    assert_eq!(settings(&t).user.updated_at, revision);
+}
+
+#[test]
+fn ooo_claims_preserve_core_revisions_from_the_persisted_row() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let now = t.now();
+    let mut first = settings(&t);
+    let stale_claimant = first.clone();
+    let core = later_core_revision(&t);
+    first.custom_status_text = Some("Current status".into());
+    let saved = t.write(move |tx| {
+        first.save(tx)?;
+        Ok(first)
+    });
+    let claimed = t.write(move |tx| {
+        assert!(stale_claimant.claim_ooo_broadcast(tx, true, now)?);
+        Settings::find(tx.conn(), id("david"))
+    });
+    assert_eq!(saved.user.updated_at, core.updated_at);
+    assert_eq!(claimed.user.updated_at, core.updated_at);
+    let claimed_revision = claimed.user.updated_at;
+    let cleared = t.write(move |tx| {
+        assert!(claimed.claim_ooo_broadcast(tx, false, now)?);
+        Settings::find(tx.conn(), id("david"))
+    });
+    assert_eq!(cleared.user.updated_at, claimed_revision);
+    assert_eq!(cleared.ooo_broadcast, Some(false));
+    assert_eq!(
+        cleared.custom_status_text.as_deref(),
+        Some("Current status")
+    );
+}
+
 #[test]
 fn concurrent_settings_instances_only_write_the_fields_each_changed() {
     let t = TestDb::new();
