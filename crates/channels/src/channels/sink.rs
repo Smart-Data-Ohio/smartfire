@@ -60,6 +60,11 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 }
             })
         }
+        campfire_db::models::poll::PollChanged::KIND => decode(request).map(|change| {
+            if let Some(app) = app {
+                app.broadcasts.sync_poll(change);
+            }
+        }),
         campfire_db::models::activity_item::ActivityItemTouched::KIND => decode::<
             campfire_db::models::activity_item::ActivityItemTouched,
         >(request)

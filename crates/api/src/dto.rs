@@ -202,16 +202,31 @@ pub fn membership(membership: &Membership) -> api::Membership {
 /// Messages with their bodies rendered by one presenter, and what the timeline shows with them:
 /// the attachment (`Presenter#attachment` and its blob row), reactions and boosts
 /// (`message.boosts.ordered`, grouped as `MessageView#reaction_groups` does), the pin, the
-/// forward and the thread indicator.
+/// forward, the thread indicator, the poll and the cards.
 pub fn messages(
     conn: &Connection,
     app: &AppState,
     messages: &[Message],
 ) -> Result<Vec<api::MessageDTO>> {
-    // When the read began: orders these cards against `message.cards` (`MessageDTO::cards_as_of`).
-    let as_of = time(app.db.env().now());
+    Ok(messages_and_fetches(conn, app, messages)?.0)
+}
+
+/// [`messages`], with the card fetches the read asks for: a page of messages requests them, as
+/// the classic timeline does.
+pub(crate) fn messages_and_fetches(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
+    // When the read began: orders the polls and cards against `poll.updated` and
+    // `message.cards` (`Poll::as_of`, `MessageDTO::cards_as_of`).
+    let now = app.db.env().now();
+    let as_of = time(now);
     let presenter = Presenter::new(conn, app, None);
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
+    let mut polls = crate::cards::polls(conn, &ids, now)?;
+    let mut fetches = crate::cards::Fetches::default();
+    let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
     let pinned: BTreeSet<i64> = ids_query(
         conn,
         r#"SELECT "message_pins"."message_id" FROM "message_pins" WHERE "message_pins"."message_id" IN ({})"#,
@@ -261,9 +276,8 @@ pub fn messages(
                 boosts,
                 pinned: pinned.contains(&message.id),
                 thread: threads.get(&message.id).cloned(),
-                // Polls and cards still render in the HTML only; the S3 backend fills them.
-                poll: None,
-                cards: Vec::new(),
+                poll: polls.remove(&message.id),
+                cards: cards.remove(&message.id).unwrap_or_default(),
                 cards_as_of: as_of.clone(),
                 // Agent steps still render in the HTML only; the S4 backend fills them.
                 steps: Vec::new(),
@@ -271,11 +285,12 @@ pub fn messages(
                 updated_at: time(message.updated_at),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()
+        .map(|dtos| (dtos, fetches))
 }
 
 /// Runs `sql`, whose one `IN ({})` takes `ids`; nothing for no ids.
-fn ids_query<T>(
+pub(crate) fn ids_query<T>(
     conn: &Connection,
     sql: &str,
     ids: &[i64],

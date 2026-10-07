@@ -39,3 +39,6 @@ mod api_search_tests;
 #[cfg(test)]
 #[path = "spa_api_organize_tests.rs"]
 mod api_organize_tests;
+#[cfg(test)]
+#[path = "spa_api_cards_tests.rs"]
+mod api_cards_tests;

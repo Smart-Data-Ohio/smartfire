@@ -23,6 +23,8 @@ const PRIMITIVES: &[&str] = &[
     "sync_organized",
     "sync_activity_removed",
     "sync_scheduled",
+    "sync_poll",
+    "sync_message_cards",
     "turbo",
     "append",
     "prepend",

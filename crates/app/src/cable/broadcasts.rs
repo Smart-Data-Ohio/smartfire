@@ -235,6 +235,17 @@ impl Broadcasts {
         sync::organized_later(&self.server, &self.sync, change);
     }
 
+    /// `poll.updated` and the voter's `poll.ballot` for a vote or a close.
+    pub fn sync_poll(&self, change: campfire_db::models::poll::PollChanged) {
+        sync::poll_later(&self.server, &self.sync, change);
+    }
+
+    /// `message.cards` for each of `messages`, for a card slot's replace a broadcast point
+    /// outside this type sent.
+    pub fn sync_message_cards(&self, conn: &Connection, messages: &[campfire_db::Message]) {
+        sync::message_cards(&self.server, &self.sync, conn, messages);
+    }
+
     /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
     /// broadcast point outside this type replaced (its members or name changed).
     pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {

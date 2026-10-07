@@ -14,9 +14,10 @@
 use std::sync::{Arc, OnceLock};
 
 use campfire_api_types::{
-    MessageDTO, MessageReactions, MessageRemoved, PinState, Presence, RoomRead, RoomUnread,
-    SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator,
-    ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, Typing, UserPresence,
+    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload,
+    Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
+    Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room};
@@ -60,6 +61,20 @@ pub trait SyncRenderer: Send + Sync + 'static {
         conn: &Connection,
         id: i64,
     ) -> campfire_db::Result<Option<campfire_api_types::ScheduledMessage>>;
+    /// The poll's `poll.updated`, and `voter_id`'s `poll.ballot` when given: `Ok(None)` when the
+    /// poll is gone.
+    fn poll(
+        &self,
+        conn: &Connection,
+        poll_id: i64,
+        voter_id: Option<i64>,
+    ) -> campfire_db::Result<Option<(PollUpdated, Option<PollBallot>)>>;
+    /// The messages' cards as `MessageDTO::cards` carries them, one `message.cards` each.
+    fn message_cards(
+        &self,
+        conn: &Connection,
+        messages: &[Message],
+    ) -> campfire_db::Result<Vec<MessageCards>>;
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
@@ -137,6 +152,13 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "sidebar.category.removed",
         ],
     ),
+    ("poll::PollChanged", &["poll.updated", "poll.ballot"]),
+    // The card slots' replaces after a fetch, a refresh or an event's change.
+    ("calendar_event::CardUpdate", &["message.cards"]),
+    ("link_embed::store::CardUpdate", &["message.cards"]),
+    ("fizzy::cards::CardUpdate", &["message.cards"]),
+    ("twitter::post::CardUpdate", &["message.cards"]),
+    ("github::pull_requests::CardUpdated", &["message.cards"]),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
@@ -161,6 +183,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "sidebar.row.upserted",
             "huddle.notice",
             "huddle.ring",
+            "message.cards",
         ],
     ),
     // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
@@ -189,23 +212,15 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "Broadcasts::boost_remove",
     "board_automations::DigestNotes",
     "user_status_settings::updates::OooNoticeBroadcast",
-    "calendar_event::CardUpdate",
-    "link_embed::store::CardUpdate",
-    "fizzy::cards::CardUpdate",
-    "twitter::post::CardUpdate",
     "github::notifier::MessageCreated",
-    "github::pull_requests::CardUpdated",
     "agent::AgentStatusChange",
     "agent_step::StepParentChange",
 ];
 
-/// Sync events the contract defines that no broadcast point publishes yet (the S3 and S4 events:
-/// their endpoints and twins come with the S3 and S4 server work). The coverage test fails when an
+/// Sync events the contract defines that no broadcast point publishes yet (the S4 events: their
+/// endpoints and twins come with the S4 server work). The coverage test fails when an
 /// event is in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
-    "poll.updated",
-    "poll.ballot",
-    "message.cards",
     // S4: agents and approvals.
     "agent.status",
     "agent.steps",
@@ -631,6 +646,83 @@ pub fn scheduled_later(
             }
         }
     }));
+}
+
+/// A vote or a close, read afresh later: `poll.updated` on the poll message's conversation, and
+/// the voter's `poll.ballot` on their `user` topic. Without a connection the voter gets a gap
+/// marker instead, and their next resume refetches.
+pub fn poll_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    change: campfire_db::models::poll::PollChanged,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let voter_id = change.voter_id.filter(|&voter_id| {
+        let connected = server.sync_connected(voter_id);
+        if !connected {
+            server.sync_skipped_for(voter_id);
+        }
+        connected
+    });
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        let (updated, ballot) = match renderer.poll(conn, change.poll_id, voter_id) {
+            Ok(Some(found)) => found,
+            Ok(None) => return,
+            Err(error) => {
+                return tracing::warn!(%error, poll_id = change.poll_id, "sync: poll not read");
+            }
+        };
+        let topic = match updated.thread_id {
+            Some(thread_id) => thread_topic(thread_id),
+            None => room_topic(updated.room_id),
+        };
+        send(
+            &server,
+            Audience::Topic(topic),
+            &SyncPayload::PollUpdated(updated),
+            |publication| publication,
+        );
+        if let (Some(voter_id), Some(ballot)) = (voter_id, ballot) {
+            send(
+                &server,
+                Audience::User(voter_id),
+                &SyncPayload::PollBallot(ballot),
+                |publication| publication,
+            );
+        }
+    }));
+}
+
+/// `message.cards` on each message's conversation: the twin of a card slot's replace.
+pub fn message_cards(server: &Cable, slot: &RendererSlot, conn: &Connection, messages: &[Message]) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let cards = match renderer.message_cards(conn, messages) {
+        Ok(cards) => cards,
+        Err(error) => return tracing::warn!(%error, "sync: message cards not rendered"),
+    };
+    for cards in cards {
+        let topic = match cards.thread_id {
+            Some(thread_id) => thread_topic(thread_id),
+            None => room_topic(cards.room_id),
+        };
+        send(
+            server,
+            Audience::Topic(topic),
+            &SyncPayload::MessageCards(cards),
+            |publication| publication,
+        );
+    }
 }
 
 /// `thread.unread` on the member's `user` topic: the twin of `user_<id>_unread_threads`.

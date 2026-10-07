@@ -18,6 +18,7 @@ macro_rules! endpoint {
 }
 
 pub mod activity;
+pub mod cards;
 pub mod composer;
 mod cursor;
 pub mod directory;
@@ -140,6 +141,34 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route(
             "/api/v1/rooms/{room_id}/involvement",
             put(unparsed_action(organize::involvement)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls",
+            post(unparsed_action(cards::create_poll)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls/{poll_id}",
+            get(action(cards::poll)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/polls/{poll_id}/vote",
+            post(unparsed_action(cards::vote)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/{event_id}/attendance",
+            get(action(cards::attendance)).put(unparsed_action(cards::respond)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/github/pull_requests/{id}/card",
+            get(action(cards::github_card)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/fizzy/cards/{id}/card",
+            get(action(cards::fizzy_card)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/message_links/{reference_id}/card",
+            get(action(cards::quote_card)),
         )
         .route("/api/v1/search", get(action(search::index)))
         .route(

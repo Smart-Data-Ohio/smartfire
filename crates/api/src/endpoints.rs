@@ -195,7 +195,7 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
     };
     let (app, now) = (c.app().clone(), now(c));
     let viewer_id = concerns::require_current_user(c)?.id;
-    let page = c
+    let (page, fetches) = c
         .app()
         .db
         .read(move |conn| {
@@ -237,23 +237,26 @@ pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
                 Some(newest) if Message::exists_after(conn, timeline, newest)? => Some(newest.id),
                 _ => None,
             };
-            let dtos = dto::messages(conn, &app, &messages)?;
+            let (dtos, fetches) = dto::messages_and_fetches(conn, &app, &messages)?;
             // The authors, and the repliers the thread indicators name, so their avatars need
             // no `GET /users`.
             let people = dtos.iter().flat_map(|message| {
                 let repliers = message.thread.iter().flat_map(|thread| thread.replier_ids.iter());
                 std::iter::once(message.creator_id).chain(repliers.copied())
             });
-            Ok(api::MessagePage {
+            let page = api::MessagePage {
                 users: dto::users(conn, &app.secrets, people.collect::<Vec<_>>(), now)?,
                 messages: dtos,
                 saved: dto::saved(conn, viewer_id, &messages)?,
                 before,
                 after,
-            })
+            };
+            Ok((page, fetches))
         })
         .await
         .map_err(db_error)?;
+    // The card fetches the page asked for, as the classic timeline requests them.
+    fetches.request(c.app()).await;
     c.json(StatusCode::OK, &page)
 }
 
