@@ -90,6 +90,83 @@ test.describe("creating rooms", () => {
     await expect(page.getByRole("heading", { level: 1, name: "watercooler" })).toBeVisible();
   });
 
+  test("nothing is created until the form loads; a failed load can be retried", async ({
+    page,
+  }) => {
+    // Every read fails until the test lets them through (development mode may read twice).
+    let failing = true;
+
+    await page.route("**/api/v1/rooms/new?*", async (route) => {
+      if (failing) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "server_error", message: "Try again later" } }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+    await openApp(page, "rooms/new/open");
+
+    const dialog = page.getByRole("dialog", { name: "Create a channel" });
+    const create = dialog.getByRole("button", { name: "Create channel" });
+
+    await expect(dialog.getByRole("alert")).toContainText("Couldn't load the form");
+    await expect(create).toBeDisabled();
+    await dialog.getByLabel("Name", { exact: true }).press("Enter");
+    await expect(dialog).toBeVisible();
+
+    failing = false;
+    await dialog.getByRole("button", { name: "Try again" }).click();
+    await expect(create).toBeEnabled();
+    await expect(dialog.getByRole("alert")).toHaveCount(0);
+    await expect(dialog.getByLabel("Name", { exact: true })).not.toHaveAttribute("placeholder", "");
+  });
+
+  test("trying again after a lost reply opens the room it made instead of making another", async ({
+    page,
+  }) => {
+    const keys: string[] = [];
+    let lost = 1;
+
+    await page.route("**/api/v1/rooms", async (route) => {
+      if (route.request().method() !== "POST") {
+        return route.continue();
+      }
+
+      keys.push(route.request().postDataJSON().clientRoomId);
+
+      if (lost > 0) {
+        lost -= 1;
+        // The server makes the room; its reply never arrives.
+        await route.fetch();
+
+        return route.abort("connectionreset");
+      }
+
+      return route.continue();
+    });
+    await openApp(page, "rooms/new/open");
+
+    const dialog = page.getByRole("dialog", { name: "Create a channel" });
+    const name = dialog.getByLabel("Name", { exact: true });
+    const create = dialog.getByRole("button", { name: "Create channel" });
+
+    await expect(create).toBeEnabled();
+    await name.fill("only-once");
+    await create.click();
+    await expect(dialog).toBeVisible();
+    await expect(create).toBeEnabled();
+
+    await create.click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("heading", { level: 1, name: "only-once" })).toBeVisible();
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+    await expect(page.locator(".sidebar").getByText("only-once", { exact: true })).toHaveCount(1);
+  });
+
   test("the classic new page and the app shortcut open the dialog on their kind", async ({
     page,
   }) => {
@@ -182,6 +259,64 @@ test.describe("room settings", () => {
     await expect(dialog).toBeHidden();
     await expect(page).not.toHaveURL(new RegExp(`/r/${ROOM_IDS.quiet}`));
     await expect(sidebarRow(page, "quiet")).toBeHidden();
+  });
+
+  test("settings take focus at the name once loaded; going private keeps focus on the switch", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.quiet}`);
+    // A slow form: the dialog's first focus lands before the fields exist.
+    await page.route("**/api/v1/rooms/*/edit", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await route.continue();
+    });
+    await page.getByRole("link", { name: /room settings$/ }).focus();
+    await page.keyboard.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    const toggle = dialog.getByRole("switch", { name: /Private channel/ });
+
+    await expect(dialog.getByLabel("Name", { exact: true })).toBeFocused();
+
+    await toggle.focus();
+    await page.keyboard.press("Space");
+    await expect(dialog.getByRole("tab", { name: /Members/ })).toBeVisible();
+    await expect(toggle).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(dialog.getByRole("tab", { name: /Members/ })).toBeHidden();
+    await expect(toggle).toBeFocused();
+  });
+
+  test("closing settings steps back, so Back doesn't reopen them", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await rowFor(page, "general").click();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}$`));
+    await page.getByRole("link", { name: /room settings$/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}$`));
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("settings opened as the first page close onto the room in place", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await page.goto(`/app/r/${ROOM_IDS.quiet}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.quiet}$`));
+
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
   });
 
   test("a direct message's settings URL opens the conversation", async ({ page }) => {

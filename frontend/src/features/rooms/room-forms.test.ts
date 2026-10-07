@@ -71,14 +71,18 @@ describe("createBody", () => {
   it("takes the kind's default for a blank name and sends members except for open rooms", () => {
     const draft = { name: "  ", iconName: null, userIds: [1, 4, 1] };
 
-    expect(createBody("open", draft, "New room")).toEqual({
+    expect(createBody("open", draft, "New room", "key-1")).toEqual({
       type: "open",
+      clientRoomId: "key-1",
       name: "New room",
       iconName: null,
     });
 
-    expect(createBody("voice", { ...draft, name: " Standup " }, "New voice channel")).toEqual({
+    expect(
+      createBody("voice", { ...draft, name: " Standup " }, "New voice channel", "key-2"),
+    ).toEqual({
       type: "voice",
+      clientRoomId: "key-2",
       name: "Standup",
       iconName: null,
       userIds: [1, 4],

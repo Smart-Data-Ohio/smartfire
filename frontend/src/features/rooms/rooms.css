@@ -551,6 +551,14 @@
     opacity: 1;
   }
 
+  /* The form didn't load: the reason and a retry on one line. */
+  .room-form-load-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+  }
+
   @media (hover: none) {
     .member-row-remove {
       opacity: 1;

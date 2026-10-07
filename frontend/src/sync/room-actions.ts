@@ -1,4 +1,5 @@
-import { Clock, Effect } from "effect";
+import { Clock, Effect, Predicate, Result } from "effect";
+import { room } from "../api/endpoints.ts";
 import * as api from "../api/room-endpoints.ts";
 import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
@@ -6,7 +7,7 @@ import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import { mutations, store } from "../store/store.ts";
-import { invalidateRoom } from "./room-refresh.ts";
+import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
 
 const landForm = (form: RoomForm): RoomForm => {
   mutations.mergeUsers(form.users);
@@ -14,7 +15,57 @@ const landForm = (form: RoomForm): RoomForm => {
   return form;
 };
 
-const landMutation = Effect.fn("rooms.landMutation")(function* (result: RoomMutation) {
+/**
+ * A room the store learned about after a write began: the write's reply is older than the store, so
+ * it doesn't land. The room is read again instead: its detail (with the newer sidebar row's facts),
+ * or unavailable if the viewer lost it (say another admin removed them meanwhile).
+ */
+const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId: number) {
+  const revision = invalidateRoom(roomId);
+  const fetched = yield* Effect.result(room(roomId));
+
+  if (roomRevision(roomId) !== revision) {
+    return;
+  }
+
+  if (Result.isFailure(fetched)) {
+    if (Predicate.isTagged(fetched.failure, "NotFound")) {
+      mutations.setRoomUnavailable(roomId);
+    }
+
+    return;
+  }
+
+  const row = store.getState().sidebar.rows[roomId];
+
+  mutations.setRoomDetail(
+    row === undefined
+      ? fetched.success
+      : {
+          ...fetched.success,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+  );
+});
+
+/**
+ * Lands a create/update reply, unless a management change to the room reached the store after the
+ * write began (`since`, a `managementEpoch()`): then the reply could bring back what that change
+ * took away, so the room is read again instead.
+ */
+const landMutation = Effect.fn("rooms.landMutation")(function* (
+  result: RoomMutation,
+  since: number,
+) {
+  if (changedSince(result.room.id, since)) {
+    yield* refetchSuperseded(result.room.id);
+
+    return result;
+  }
+
   if (result.detail === null) {
     mutations.setRoomUnavailable(result.room.id);
   } else {
@@ -49,12 +100,17 @@ export const editForm = Effect.fn("rooms.editForm")(function* (roomId: number) {
   return landForm(yield* api.editRoom(roomId));
 });
 
+/** `body.clientRoomId` names the attempt: sending it again returns the room it already made. */
 export const create = Effect.fn("rooms.create")(function* (body: CreateRoom) {
-  return yield* landMutation(yield* api.createRoom(body));
+  const since = managementEpoch();
+
+  return yield* landMutation(yield* api.createRoom(body), since);
 });
 
 export const update = Effect.fn("rooms.update")(function* (roomId: number, body: UpdateRoom) {
-  return yield* landMutation(yield* api.updateRoom(roomId, body));
+  const since = managementEpoch();
+
+  return yield* landMutation(yield* api.updateRoom(roomId, body), since);
 });
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {

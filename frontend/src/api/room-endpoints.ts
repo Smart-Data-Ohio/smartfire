@@ -23,6 +23,7 @@ export const editRoom = Effect.fn("api.editRoom")(function* (roomId: number) {
   return yield* call(get(`/rooms/${roomId}/edit`), wire<RoomForm>(RoomFormSchema));
 });
 
+/** A retry must reuse this request's clientRoomId. */
 export const createRoom = Effect.fn("api.createRoom")(function* (body: CreateRoom) {
   return yield* call(
     { method: "POST", path: "/rooms", body },

@@ -8,7 +8,7 @@ import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
-import { preloadRoomSettings } from "../rooms/room-settings-host.tsx";
+import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
 import { HeaderSearch } from "../search/header-search.tsx";
 import { NotificationsButton } from "../sidebar/notifications-button.tsx";
 
@@ -73,6 +73,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
             <Link
               to="/r/$roomId/settings"
               params={{ roomId }}
+              state={settingsOverState(roomId)}
               className="room-title-button"
               aria-label={`${name}, room settings`}
               onPointerEnter={preloadRoomSettings}

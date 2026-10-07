@@ -104,21 +104,23 @@ export function createBody(
   kind: ManagedKind,
   draft: RoomDraft,
   defaultName: string | null,
+  clientRoomId: string,
 ): CreateRoom {
   const name = nameOrDefault(draft.name, defaultName);
   const userIds = [...new Set(draft.userIds)];
+  const { iconName } = draft;
 
   switch (kind) {
     case "open":
-      return { type: "open", name, iconName: draft.iconName };
+      return { type: "open", clientRoomId, name, iconName };
     case "closed":
-      return { type: "closed", name, iconName: draft.iconName, userIds };
+      return { type: "closed", clientRoomId, name, iconName, userIds };
     case "voice":
-      return { type: "voice", name, iconName: draft.iconName, userIds };
+      return { type: "voice", clientRoomId, name, iconName, userIds };
     case "stage":
-      return { type: "stage", name, iconName: draft.iconName, userIds };
+      return { type: "stage", clientRoomId, name, iconName, userIds };
     case "board":
-      return { type: "board", name, iconName: draft.iconName, userIds };
+      return { type: "board", clientRoomId, name, iconName, userIds };
   }
 }
 

@@ -62,12 +62,17 @@ const MEMBERS_HINT = {
 function useNewForms(open: boolean, kind: ManagedKind) {
   const [forms, setForms] = useState<Partial<Record<ManagedKind, RoomForm>>>({});
   const [error, setError] = useState<string | null>(null);
+  const [tries, setTries] = useState(0);
   const loaded = forms[kind] !== undefined;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a retry (`tries`) loads the form again
   useEffect(() => {
     if (!open || loaded) {
       return;
     }
+
+    // A new kind or a retry starts clean; the error shows again only if this load fails too.
+    setError(null);
 
     let live = true;
 
@@ -86,12 +91,17 @@ function useNewForms(open: boolean, kind: ManagedKind) {
     return () => {
       live = false;
     };
-  }, [open, kind, loaded]);
+  }, [open, kind, loaded, tries]);
 
   // The first form that arrives says which types the workspace lets the viewer create.
   const any = forms.open ?? forms.closed ?? forms.voice ?? forms.stage ?? forms.board ?? null;
 
-  return { form: forms[kind] ?? null, allowed: any?.allowedTypes ?? null, error };
+  return {
+    form: forms[kind] ?? null,
+    allowed: any?.allowedTypes ?? null,
+    error,
+    retry: () => setTries((count) => count + 1),
+  };
 }
 
 function candidatesOf(form: RoomForm | null, viewerId: number): readonly DirectCandidate[] | null {
@@ -125,6 +135,8 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const [step, setStep] = useState<Step>("details");
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [busy, setBusy] = useState(false);
+  // One key per opening: retrying a create whose reply was lost gets the room it made, not another.
+  const [clientRoomId, setClientRoomId] = useState(() => crypto.randomUUID());
 
   const [problem, setProblem] = useState<{ field: "iconName" | "other"; message: string } | null>(
     null,
@@ -146,6 +158,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
       setDirection("forward");
       setBusy(false);
       setProblem(null);
+      setClientRoomId(crypto.randomUUID());
     }
   }
 
@@ -160,7 +173,9 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const kind = kindOf(channel, effectivePrivate);
   const { form } = choice;
   const needsMembers = hasMemberList(kind);
-  const placeholder = form?.name ?? (channel === "text" ? "New room" : "");
+  // Nothing is created from a form that hasn't loaded: its default name is the server's.
+  const ready = form !== null;
+  const placeholder = form?.name ?? "";
   const candidates = candidatesOf(form, viewerId);
 
   // A step that comes in takes focus at its first field, as the dialog does when it opens.
@@ -194,18 +209,15 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   };
 
   const create = () => {
-    if (busy) {
+    if (busy || form === null) {
       return;
     }
 
     setBusy(true);
     setProblem(null);
 
-    const body = createBody(
-      kind,
-      { name, iconName, userIds: [viewerId, ...members] },
-      form?.name ?? null,
-    );
+    const draft = { name, iconName, userIds: [viewerId, ...members] };
+    const body = createBody(kind, draft, form.name, clientRoomId);
 
     actions.rooms.create(body).then((result) => {
       setBusy(false);
@@ -215,6 +227,10 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   };
 
   const next = () => {
+    if (!ready) {
+      return;
+    }
+
     if (needsMembers) {
       setDirection("forward");
       setStep("members");
@@ -243,6 +259,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
           variant="primary"
           loading={busy}
           loadingLabel="Creating…"
+          disabled={!ready}
           {...(needsMembers ? { trailingIcon: "chevron-right" as const } : {})}
         >
           {needsMembers ? "Next" : `Create ${roomWord}`}
@@ -253,7 +270,13 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
         <Button variant="ghost" icon="chevron-left" className="room-form-back" onClick={back}>
           Back
         </Button>
-        <Button variant="primary" loading={busy} loadingLabel="Creating…" onClick={create}>
+        <Button
+          variant="primary"
+          loading={busy}
+          loadingLabel="Creating…"
+          disabled={!ready}
+          onClick={create}
+        >
           {members.length === 0 ? `Create with just you` : `Create ${roomWord}`}
         </Button>
       </>
@@ -335,8 +358,11 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
               </div>
             ) : null}
             {choice.error === null ? null : (
-              <p className="picker-note picker-error" role="alert">
-                Couldn't load the form: {choice.error}
+              <p className="picker-note picker-error room-form-load-error" role="alert">
+                <span>Couldn't load the form: {choice.error}</span>
+                <Button variant="link" size="sm" onClick={choice.retry}>
+                  Try again
+                </Button>
               </p>
             )}
             {problem?.field === "other" ? (

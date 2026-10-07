@@ -20,6 +20,7 @@ import {
   type MenuTriggerProps,
   SubMenu,
 } from "../../ui/menu.tsx";
+import { settingsOverState } from "../rooms/room-settings-host.tsx";
 import { markRead, moveRoom, setInvolvement, toggleFavorite } from "./organize-commands.ts";
 import { involvementChoice, involvementChoices } from "./organize-model.ts";
 
@@ -114,7 +115,12 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
       // Boards live on their classic pages until they're ported.
       window.location.assign(`/rooms/boards/${row.room.id}/edit`);
     } else {
-      void navigate({ to: "/r/$roomId/settings", params: { roomId: row.room.id } });
+      // Closing settings steps back to whatever page this menu was opened on.
+      void navigate({
+        to: "/r/$roomId/settings",
+        params: { roomId: row.room.id },
+        state: settingsOverState(row.room.id),
+      });
     }
   };
 

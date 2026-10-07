@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { RoomForm } from "../../gen/RoomForm.ts";
 import { useStore } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
@@ -7,7 +7,7 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
-import { Tabs } from "../../ui/tabs.tsx";
+import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
@@ -89,6 +89,9 @@ export default function RoomSettingsDialog({
 }: RoomSettingsDialogProps) {
   const navigate = useNavigate();
   const formId = useId();
+  const tabsId = useId();
+  const panelId = useId();
+  const nameRef = useRef<HTMLInputElement | null>(null);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [kind, setKind] = useState<ManagedKind>("open");
@@ -136,12 +139,61 @@ export default function RoomSettingsDialog({
   const dirty = form !== null && isDirty(form, kind, draft);
   const noun = NOUN[kind];
   const members = hasMemberList(kind);
+  const shownTab: Tab = members ? tab : "general";
 
   const canConvert =
     form !== null &&
     !readOnly &&
     (kind === "open" || kind === "closed") &&
     form.conversionTypes.includes(kind === "open" ? "closed" : "open");
+
+  const loading = form === null;
+  const touched = useRef(false);
+
+  // Whether the viewer clicked or typed while the form was loading.
+  useEffect(() => {
+    if (!loading) {
+      return;
+    }
+
+    touched.current = false;
+
+    const mark = () => {
+      touched.current = true;
+    };
+
+    document.addEventListener("pointerdown", mark, true);
+    document.addEventListener("keydown", mark, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", mark, true);
+      document.removeEventListener("keydown", mark, true);
+    };
+  }, [loading]);
+
+  // The dialog took initial focus while the form was loading (its Close button: the fields
+  // weren't there yet). Once the form is in, the name field gets it, unless the viewer has
+  // already moved on to something that's still there.
+  useLayoutEffect(() => {
+    const input = nameRef.current;
+
+    if (loading || readOnly || input === null) {
+      return;
+    }
+
+    const dialog = input.closest("dialog");
+    const active = document.activeElement;
+
+    const lost =
+      active === null ||
+      active === document.body ||
+      active === dialog ||
+      (dialog !== null && !dialog.contains(active));
+
+    if (lost || !touched.current) {
+      input.focus();
+    }
+  }, [loading, readOnly]);
 
   const agentIds = new Set(
     form?.users.filter((user) => user.agent !== null).map((user) => user.id),
@@ -179,13 +231,14 @@ export default function RoomSettingsDialog({
     setBusy(true);
     actions.rooms.update(roomId, updateBody(form, kind, draft)).then((result) => {
       setBusy(false);
-      onOpenChange(false);
 
       if (result.detail === null) {
-        // They took themselves out: the room is gone from their sidebar.
+        // They took themselves out: the room is gone from their sidebar. Leaving the settings URL
+        // closes the dialog; replacing it keeps Back from stepping into the room they left.
         toast({ title: `You left ${roomLabel(result.room.kind, result.room.name ?? "the room")}` });
-        void navigate({ to: "/" });
+        void navigate({ to: "/", replace: true });
       } else {
+        onOpenChange(false);
         toast({ title: "Changes saved", tone: "success" });
       }
     }, fail("Couldn't save the changes"));
@@ -199,9 +252,9 @@ export default function RoomSettingsDialog({
       () => {
         setDeleting(false);
         setConfirming(false);
-        onOpenChange(false);
         toast({ title: `Deleted ${roomLabel(kind, form.name ?? form.displayName)}` });
-        void navigate({ to: "/" });
+        // Leaving the settings URL closes the dialog (stepping back would land on the deleted room).
+        void navigate({ to: "/", replace: true });
       },
       fail(`Couldn't delete the ${noun}`),
     );
@@ -261,6 +314,7 @@ export default function RoomSettingsDialog({
             spellCheck={false}
             maxLength={100}
             disabled={readOnly}
+            ref={nameRef}
             data-autofocus={readOnly ? undefined : true}
             error={iconError}
             attempt={attempt}
@@ -318,36 +372,47 @@ export default function RoomSettingsDialog({
           save();
         }}
       >
+        {/* The strip comes and goes with privacy; the panel stays put, so the focused toggle
+            in it isn't remounted (and doesn't lose focus) when the Members tab appears. */}
         {members ? (
           <Tabs
+            id={tabsId}
+            panelId={panelId}
             items={[
               { value: "general", label: "General", icon: "settings" },
               { value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" },
             ]}
-            value={tab}
+            value={shownTab}
             onValueChange={(value) => setTab(value === "members" ? "members" : "general")}
             label="Settings sections"
-          >
-            <div key={tab} className="room-tab-panel enter-fade">
-              {tab === "general" ? (
-                general
-              ) : (
-                <MemberList
-                  candidateIds={form.candidateIds}
-                  memberIds={draft.userIds}
-                  savedIds={form.userIds}
-                  onChange={(userIds) => edit({ userIds })}
-                  viewerId={viewerId}
-                  stageRoles={form.stageRoles}
-                  agentIds={agentIds}
-                  readOnly={readOnly}
-                />
-              )}
-            </div>
-          </Tabs>
-        ) : (
-          general
-        )}
+          />
+        ) : null}
+        <div
+          key={shownTab}
+          className="room-tab-panel enter-fade"
+          {...(members
+            ? {
+                id: panelId,
+                role: "tabpanel",
+                "aria-labelledby": tabId(tabsId, shownTab),
+              }
+            : {})}
+        >
+          {shownTab === "general" ? (
+            general
+          ) : (
+            <MemberList
+              candidateIds={form.candidateIds}
+              memberIds={draft.userIds}
+              savedIds={form.userIds}
+              onChange={(userIds) => edit({ userIds })}
+              viewerId={viewerId}
+              stageRoles={form.stageRoles}
+              agentIds={agentIds}
+              readOnly={readOnly}
+            />
+          )}
+        </div>
         {problem === null ? null : (
           <p className="picker-note picker-error" role="alert">
             {problem}
