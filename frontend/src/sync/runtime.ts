@@ -1,4 +1,5 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
+import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import { readMessage } from "../api/message-endpoints.ts";
@@ -6,9 +7,11 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
+import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
@@ -22,14 +25,20 @@ import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
+import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
+import type { UpdateWork } from "../gen/UpdateWork.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkList } from "../gen/WorkList.ts";
 import type { ActivityAction } from "../store/activity.ts";
+import type { BoardQuery } from "../store/boards.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
+import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
@@ -289,6 +298,21 @@ const cards = {
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
+  boards: {
+    open: (roomId: number, query: BoardQuery): Promise<void> =>
+      runAction(boardActions.open(roomId, query)),
+    loadMore: (roomId: number): Promise<void> => runAction(boardActions.loadMore(roomId)),
+    postForm: (roomId: number): Promise<BoardPostForm> => runAction(boardActions.postForm(roomId)),
+    createPost: (roomId: number, input: boardActions.BoardPostInput): Promise<ThreadDetail> =>
+      runAction(boardActions.createPost(roomId, input)),
+  },
+  work: {
+    update: (threadId: number, body: UpdateWork): Promise<void> =>
+      runAction(boardActions.update(threadId, body)),
+    handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
+      runAction(boardActions.handoff(threadId, body)),
+    list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
+  },
   messages,
   threads,
   activity,
@@ -380,3 +404,5 @@ export const actions = {
     runtime.runFork(Presence.use((presence) => presence.noteActivity));
   },
 };
+
+export type { BoardPostInput } from "./board-actions.ts";

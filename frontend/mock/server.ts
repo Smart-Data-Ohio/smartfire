@@ -76,6 +76,8 @@ import {
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createBoards } from "./s6/boards.ts";
+import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -127,6 +129,7 @@ export const SEED_IDS = {
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
   cards: CARD_IDS,
+  boards: { roomId: BOARD_ROOM_ID, posts: BOARD_POST_IDS },
 } as const;
 
 export interface MockServerOptions {
@@ -688,6 +691,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
   const threads = createThreads(ctx, uploads, whenReleased);
+  const boards = createBoards(ctx, threads, uploads);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
   const messageActions = createMessages(ctx, threads, saved.savedChanged);
@@ -709,6 +713,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...cards.routes,
     ...uploads.routes,
     ...threads.routes,
+    ...boards.routes,
     ...messageActions.routes,
     ...composer.routes,
     ...createDirects(ctx).routes,
@@ -975,6 +980,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         return ok;
       default: {
+        const boardControl = boards.control(action, body);
+
+        if (boardControl !== null) return boardControl;
+
         const handled = huddles.control(action, {
           int,
           text,

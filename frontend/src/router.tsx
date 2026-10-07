@@ -44,6 +44,9 @@ import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
+import { parseBoardSearch } from "./lib/board-search.ts";
+
+export type { BoardSearch } from "./lib/board-search.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
 function parseId(segment: string): number {
@@ -82,6 +85,7 @@ const homeRoute = createRoute({
 const roomRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "r/$roomId",
+  validateSearch: parseBoardSearch,
   params: {
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
@@ -121,6 +125,13 @@ const roomControlRoutes = [
   createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
 ];
+
+/** The board owns its new-post dialog; this route opens no right pane. */
+const newBoardPostRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "posts/new",
+  component: () => null,
+});
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -351,7 +362,13 @@ const routeTree = rootRoute.addChildren([
     peopleRoute,
     personRoute,
     messageRoute,
-    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute, ...roomControlRoutes]),
+    roomRoute.addChildren([
+      permalinkRoute,
+      newThreadRoute,
+      newBoardPostRoute,
+      threadRoute,
+      ...roomControlRoutes,
+    ]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),

@@ -2,6 +2,7 @@
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadIndicatorChanged } from "../gen/ThreadIndicatorChanged.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import { boardThreadChanged, removeBoardPost } from "./boards.ts";
 import { reconcileMessage } from "./cards.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
@@ -31,6 +32,7 @@ function byActivity(threads: State["threads"]) {
 
 /** A thread record (from `thread.created`, `thread.updated` or a reply): into the map and lists. */
 export function upsertThread(state: State, thread: Thread): State {
+  state = boardThreadChanged(state, thread);
   const threads = { ...state.threads, [thread.id]: thread };
   const list = state.roomThreads[thread.roomId];
 
@@ -60,11 +62,17 @@ export function removeThread(state: State, threadId: number, roomId: number): St
   const parent = parentId === null ? undefined : state.messages[parentId];
 
   return {
-    ...state,
+    ...removeBoardPost(state, roomId, threadId),
     threads,
     threadPanes: {
       ...state.threadPanes,
-      [threadId]: { status: "error", error: "This thread was deleted.", permissions: null },
+      [threadId]: {
+        status: "error",
+        error: "This thread was deleted.",
+        permissions: null,
+        work: null,
+        workFacts: null,
+      },
     },
     roomThreads:
       list === undefined
@@ -127,7 +135,13 @@ export function setThreadPaneLoading(state: State, threadId: number): State {
     ...state,
     threadPanes: {
       ...state.threadPanes,
-      [threadId]: { status: "loading", error: null, permissions: pane?.permissions ?? null },
+      [threadId]: {
+        status: "loading",
+        error: null,
+        permissions: pane?.permissions ?? null,
+        work: pane?.work ?? null,
+        workFacts: pane?.workFacts ?? null,
+      },
     },
   };
 }
@@ -139,7 +153,13 @@ export function setThreadPaneError(state: State, threadId: number, error: string
     ...state,
     threadPanes: {
       ...state.threadPanes,
-      [threadId]: { status: "error", error, permissions: pane?.permissions ?? null },
+      [threadId]: {
+        status: "error",
+        error,
+        permissions: pane?.permissions ?? null,
+        work: pane?.work ?? null,
+        workFacts: pane?.workFacts ?? null,
+      },
     },
   };
 }
@@ -160,7 +180,13 @@ export function loadThreadDetail(state: State, detail: ThreadDetail): State {
     threadMemberships: { ...next.threadMemberships, [threadId]: detail.membership },
     threadPanes: {
       ...next.threadPanes,
-      [threadId]: { status: "ready", error: null, permissions: detail.permissions },
+      [threadId]: {
+        status: "ready",
+        error: null,
+        permissions: detail.permissions,
+        work: detail.work,
+        workFacts: detail.thread.work,
+      },
     },
   };
 }

@@ -15,6 +15,8 @@ import type { ThreadIndicator } from "../../src/gen/ThreadIndicator.ts";
 import type { ThreadMembership } from "../../src/gen/ThreadMembership.ts";
 import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
 import type { User } from "../../src/gen/User.ts";
+import type { WorkDetail } from "../../src/gen/WorkDetail.ts";
+import type { WorkFacts } from "../../src/gen/WorkFacts.ts";
 import { notFound, validation } from "../http.ts";
 import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
 import type { RoomRecord, World } from "../seed.ts";
@@ -38,6 +40,10 @@ export const DEFAULT_AUTO_ARCHIVE_MINUTES = 1440;
 export interface ThreadRecord {
   readonly id: number;
   readonly roomId: number;
+  isBoard?: boolean;
+  work?: WorkFacts | null;
+  workDetail?: WorkDetail | null;
+  updatedAt?: string;
   /** `null` once the parent message is deleted. */
   parentMessageId: number | null;
   readonly creatorId: number;
@@ -243,7 +249,7 @@ export function threadStatus(thread: ThreadRecord, now: number): ThreadStatus {
 
   const archiveAt = Date.parse(thread.lastActivityAt) + thread.autoArchiveAfterMinutes * 60_000;
 
-  return thread.closed || archiveAt <= now ? "closed" : "active";
+  return thread.closed || (!thread.isBoard && archiveAt <= now) ? "closed" : "active";
 }
 
 /** Replies that count: not system notes, not still streaming. */
@@ -264,8 +270,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
-    // Work tracking comes with the S4 work mock.
-    work: null,
+    work: thread.work ?? null,
   };
 }
 
