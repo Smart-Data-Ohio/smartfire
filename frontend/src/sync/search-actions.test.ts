@@ -171,6 +171,25 @@ describe("search actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("keep a newer server list when a refused change ends", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const held = [{ id: 1, query: "deploy", searchedAt: "2026-10-05T09:00:00.000Z" }];
+      const newer = [{ id: 3, query: "budget", searchedAt: "2026-10-06T16:00:00.000Z" }, ...held];
+
+      searchMutations.setRecents(held);
+      yield* fake.route("DELETE /search/recents", () => {
+        // A search in another pane brought the server's list meanwhile.
+        searchMutations.setRecents(newer);
+
+        return Effect.fail(refused);
+      });
+      yield* Effect.flip(search.clearRecents());
+
+      expect(searchStore.getState().recents.searches).toEqual(newer);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("clear the recents at once and restore them if the server refuses", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;

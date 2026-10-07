@@ -3,7 +3,7 @@
  * through older matches, and keep the viewer's recent searches. Loads never fail: their outcome
  * lands in the search store. Writes to recents fail with the API error.
  */
-import { Effect, Result } from "effect";
+import { Effect, Result, Semaphore } from "effect";
 import * as api from "../api/search-endpoints.ts";
 import type { RecentSearch } from "../gen/RecentSearch.ts";
 import { searchKey, searchMutations, searchStore } from "../store/search.ts";
@@ -70,6 +70,38 @@ export const loadRecents = Effect.fn("search.loadRecents")(function* () {
   searchMutations.setRecents(reply.success.searches);
 });
 
+/** Changes to the recents go one at a time, so each rolls back to a list no other is holding. */
+const recentsLock = Semaphore.makeUnsafe(1);
+
+/**
+ * Shows `guess` at once, then runs `write`. A failure (or an interruption, whose outcome is
+ * unknown) puts back the list it started from, but only while `guess` is still what's shown:
+ * a newer list from the server stays.
+ */
+const changeRecents = <A, E, R>(
+  guessFrom: (held: readonly RecentSearch[]) => readonly RecentSearch[],
+  write: Effect.Effect<A, E, R>,
+) =>
+  Semaphore.withPermit(
+    recentsLock,
+    Effect.suspend(() => {
+      const held = searchStore.getState().recents.searches;
+      const guess = guessFrom(held);
+
+      searchMutations.setRecents(guess);
+
+      return write.pipe(
+        Effect.onError(() =>
+          Effect.sync(() => {
+            if (searchStore.getState().recents.searches === guess) {
+              searchMutations.setRecents(held);
+            }
+          }),
+        ),
+      );
+    }),
+  );
+
 /**
  * Remembers a submitted query: it moves to the top of the recents at once, then the server's
  * list replaces the guess. A blank query records nothing.
@@ -81,33 +113,22 @@ export const record = Effect.fn("search.record")(function* (query: string) {
     return;
   }
 
-  const held = searchStore.getState().recents.searches;
-  const existing = held.find((search) => search.query === key);
+  const searchedAt = new Date().toISOString();
 
-  const guess: RecentSearch = {
-    id: existing?.id ?? -1,
-    query: key,
-    searchedAt: new Date().toISOString(),
-  };
+  const reply = yield* changeRecents((held) => {
+    const guess: RecentSearch = {
+      id: held.find((search) => search.query === key)?.id ?? -1,
+      query: key,
+      searchedAt,
+    };
 
-  searchMutations.setRecents(
-    [guess, ...held.filter((search) => search.query !== key)].slice(0, 10),
-  );
-
-  const reply = yield* api
-    .recordSearch(key)
-    .pipe(Effect.tapError(() => Effect.sync(() => searchMutations.setRecents(held))));
+    return [guess, ...held.filter((search) => search.query !== key)].slice(0, 10);
+  }, api.recordSearch(key));
 
   searchMutations.setRecents(reply.searches);
 });
 
 /** Forgets every recent search: the list empties at once and comes back if the server refuses. */
 export const clearRecents = Effect.fn("search.clearRecents")(function* () {
-  const held = searchStore.getState().recents.searches;
-
-  searchMutations.setRecents([]);
-
-  yield* api
-    .clearRecentSearches()
-    .pipe(Effect.tapError(() => Effect.sync(() => searchMutations.setRecents(held))));
+  yield* changeRecents(() => [], api.clearRecentSearches());
 });
