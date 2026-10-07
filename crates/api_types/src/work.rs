@@ -55,6 +55,12 @@ pub struct WorkFacts {
     pub result_updated_at: Option<Timestamp>,
     /// Linked pull requests, calendar events and Drive files, oldest first.
     pub links: Vec<WorkLink>,
+    /// The server's revision of these facts (status, owner, run, result time and links): when
+    /// they last changed on the server.
+    /// A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+    /// every path (reads, write replies, events and refetches), so a late or replayed copy never
+    /// undoes a newer one.
+    pub updated_at: Timestamp,
 }
 
 /// `work_thread_links.kind`.

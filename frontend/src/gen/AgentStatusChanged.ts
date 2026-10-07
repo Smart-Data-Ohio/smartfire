@@ -28,4 +28,12 @@ workingPresence: string | null,
  * No event marks the lapse: the client hides the text at this time. `null` when
  * `workingPresence` is.
  */
-workingPresenceExpiresAt: string | null, };
+workingPresenceExpiresAt: string | null, 
+/**
+ * The server's revision of the agent's status facts (status, note, suspension and working
+ * presence), as on [`AgentDirectoryRow::updated_at`].
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

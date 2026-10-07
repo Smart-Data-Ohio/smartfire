@@ -41,4 +41,12 @@ resultUpdatedAt: string | null,
 /**
  * Linked pull requests, calendar events and Drive files, oldest first.
  */
-links: Array<WorkLink>, };
+links: Array<WorkLink>, 
+/**
+ * The server's revision of these facts (status, owner, run, result time and links): when
+ * they last changed on the server.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };
