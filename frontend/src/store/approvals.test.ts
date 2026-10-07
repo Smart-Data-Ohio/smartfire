@@ -6,12 +6,15 @@ import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { AgentLedgerEvent } from "../gen/AgentLedgerEvent.ts";
 import {
   applyApproval,
+  applyApprovalUpdated,
   approvalListKey,
   approvalListOf,
   decidedLocally,
   landApprovalPage,
   markApprovalsStale,
+  rollbackApproval,
   setApprovalListLoading,
+  showApproval,
 } from "./approvals.ts";
 import {
   isLedgerForbidden,
@@ -113,6 +116,144 @@ function requestItem(approvalStatus: AgentApprovalStatus): ActivityItem {
 }
 
 describe("approval requests in the store", () => {
+  it("removes an item from a decided-status list when a newer copy changes its status", () => {
+    const key = approvalListKey(AGENT, "approved");
+    const loading = setApprovalListLoading(loaded(), key, false);
+
+    const state = landApprovalPage(
+      loading,
+      key,
+      {
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1) }],
+        users: [],
+        nextCursor: null,
+      },
+      "replace",
+    );
+
+    const newer = applyApprovalUpdated(state, {
+      approval: { ...approval(2, "denied"), decidedAt: at(2) },
+      users: [],
+    });
+
+    expect(ids(newer, "approved")).toEqual([]);
+    expect(ids(newer, "pending")).toEqual([3]);
+    expect(ids(newer, "all")).toEqual([3, 2, 1]);
+  });
+
+  it("keeps a local decision through a pending page and still rolls it back on refusal", () => {
+    const shown = decidedLocally(approval(2), "approved", 1, "Ok", NOW);
+    const optimistic = showApproval(loaded(), shown);
+
+    const landed = landApprovalPage(
+      optimistic,
+      approvalListKey(AGENT, "pending"),
+      { approvals: [approval(2)], users: [], nextCursor: null },
+      "replace",
+    );
+
+    expect(landed.approvals.items[2]).toBe(shown);
+    expect(ids(landed, "pending")).toEqual([]);
+    expect(rollbackApproval(landed, shown).approvals.items[2]).toEqual(approval(2));
+  });
+
+  it("keeps a confirmed decision when an earlier Pending GET lands", () => {
+    const key = approvalListKey(AGENT, "pending");
+    const loading = setApprovalListLoading(loaded(), key, false);
+    const generation = approvalListOf(loading, key).generation;
+    const confirmed = applyApproval(loading, decidedLocally(approval(2), "approved", 1, "Ok", NOW));
+
+    const landed = landApprovalPage(
+      confirmed,
+      key,
+      { approvals: [approval(2)], users: [], nextCursor: null },
+      "replace",
+      generation,
+    );
+
+    expect(landed.approvals.items[2]?.status).toBe("approved");
+    expect(ids(landed, "pending")).toEqual([]);
+    expect(ids(landed, "all")).toEqual([3, 2, 1]);
+  });
+
+  it("keeps an approval.updated decision when an earlier Pending GET lands", () => {
+    const key = approvalListKey(AGENT, "pending");
+    const loading = setApprovalListLoading(loaded(), key, false);
+
+    const updated = applyApprovalUpdated(loading, {
+      approval: { ...approval(2, "denied"), decidedAt: at(1) },
+      users: [],
+    });
+
+    const landed = landApprovalPage(
+      updated,
+      key,
+      { approvals: [approval(2)], users: [], nextCursor: null },
+      "replace",
+      approvalListOf(loading, key).generation,
+    );
+
+    expect(landed.approvals.items[2]?.status).toBe("denied");
+    expect(ids(landed, "pending")).toEqual([]);
+  });
+
+  it("keeps a newer event when an older event follows", () => {
+    const newer = { ...approval(2, "denied"), decidedAt: at(2), decisionNote: "Newer" };
+    const updated = applyApprovalUpdated(loaded(), { approval: newer, users: [] });
+
+    const landed = applyApprovalUpdated(updated, {
+      approval: { ...approval(2, "approved"), decidedAt: at(1) },
+      users: [],
+    });
+
+    expect(landed.approvals.items[2]).toEqual(newer);
+    expect(ids(landed, "pending")).toEqual([3]);
+  });
+
+  it("reconciles shared records across All, Pending and Approved pages", () => {
+    const approved = approvalListKey(AGENT, "approved");
+    let state = setApprovalListLoading(loaded(), approved, false);
+
+    state = landApprovalPage(
+      state,
+      approved,
+      {
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1) }],
+        users: [],
+        nextCursor: null,
+      },
+      "replace",
+    );
+    state = landApprovalPage(
+      state,
+      approvalListKey(AGENT, "all"),
+      { approvals: [approval(2)], users: [], nextCursor: null },
+      "replace",
+    );
+    state = landApprovalPage(
+      state,
+      approvalListKey(AGENT, "pending"),
+      { approvals: [approval(2)], users: [], nextCursor: null },
+      "replace",
+    );
+
+    expect(state.approvals.items[2]?.status).toBe("approved");
+    expect(ids(state, "all")).toEqual([2]);
+    expect(ids(state, "pending")).toEqual([]);
+    expect(ids(state, "approved")).toEqual([2]);
+  });
+
+  it.each(["approved", "denied", "cancelled", "expired"] as const)(
+    "never downgrades %s to pending even without decidedAt",
+    (status) => {
+      const decided = applyApproval(loaded(), approval(2, status));
+      const landed = applyApprovalUpdated(decided, { approval: approval(2), users: [] });
+
+      expect(landed.approvals.items[2]?.status).toBe(status);
+      expect(ids(landed, "pending")).toEqual([3]);
+    },
+  );
+
   it("land a page's requests and users in their list", () => {
     const state = loaded();
 
@@ -132,7 +273,8 @@ describe("approval requests in the store", () => {
       "replace",
     );
 
-    const decided = applyApproval(state, decidedLocally(approval(2), "approved", 1, "Ok", NOW));
+    const optimistic = decidedLocally(approval(2), "approved", 1, "Ok", NOW);
+    const decided = showApproval(state, optimistic);
 
     expect(ids(decided, "pending")).toEqual([3]);
     expect(ids(decided, "approved")).toEqual([2, 1]);
@@ -145,7 +287,7 @@ describe("approval requests in the store", () => {
     });
 
     // Rolled back: pending again, in its place.
-    const back = applyApproval(decided, approval(2));
+    const back = rollbackApproval(decided, optimistic);
 
     expect(ids(back, "pending")).toEqual([3, 2]);
     expect(ids(back, "approved")).toEqual([1]);

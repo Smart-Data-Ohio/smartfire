@@ -291,6 +291,10 @@ export const mutations = {
   ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation)),
   applyApproval: (approval: AgentApproval) =>
     apply((state) => approvals.applyApproval(state, approval)),
+  showApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.showApproval(state, approval)),
+  rollbackApproval: (shown: AgentApproval) =>
+    apply((state) => approvals.rollbackApproval(state, shown)),
   /** Every approvals list reloads when next shown. */
   markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
   setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>

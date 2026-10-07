@@ -87,17 +87,13 @@ export const decide = Effect.fn("approvals.decide")(function* (
       : decidedLocally(before, decision, deciderId, note, Date.now());
 
   if (shown !== undefined) {
-    mutations.applyApproval(shown);
+    mutations.showApproval(shown);
   }
 
   /** Back as it was, unless something newer replaced what this decision showed. */
   const rollBack = () => {
-    if (
-      before !== undefined &&
-      shown !== undefined &&
-      store.getState().approvals.items[approvalId] === shown
-    ) {
-      mutations.applyApproval(before);
+    if (shown !== undefined) {
+      mutations.rollbackApproval(shown);
     }
   };
 

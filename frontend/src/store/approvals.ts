@@ -42,9 +42,13 @@ export interface ApprovalsSlice {
   readonly items: Readonly<Record<number, AgentApproval>>;
   /** By `ApprovalListKey`. */
   readonly lists: Readonly<Record<string, PagedList>>;
+  /** Local decisions are not server timestamps; compare replies with the confirmed copy. */
+  readonly optimistic: Readonly<
+    Record<number, { readonly before: AgentApproval; readonly shown: AgentApproval }>
+  >;
 }
 
-export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {} };
+export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {}, optimistic: {} };
 
 /** The key of `agentId`'s list in `filter`. */
 export function approvalListKey(agentId: number, filter: ApprovalFilter): ApprovalListKey {
@@ -109,37 +113,98 @@ export function landApprovalPage(
     return state;
   }
 
-  const items = { ...state.approvals.items };
+  let next = state;
 
   for (const approval of page.approvals) {
-    items[approval.id] = approval;
+    next = applyApproval(next, approval);
   }
 
   const lists = {
-    ...state.approvals.lists,
+    ...next.approvals.lists,
     [key]: pagedLanded(
-      approvalListOf(state, key),
-      page.approvals.map((approval) => approval.id),
+      approvalListOf(next, key),
+      page.approvals
+        .filter((approval) => belongsTo(key, next.approvals.items[approval.id] ?? approval))
+        .map((approval) => approval.id),
       page.nextCursor,
       mode,
     ),
   };
 
-  return { ...state, users: mergeUserList(state.users, page.users), approvals: { items, lists } };
+  return {
+    ...next,
+    users: mergeUserList(next.users, page.users),
+    approvals: { ...next.approvals, lists },
+  };
 }
 
-/**
- * A request as it is now (a decision's reply, `approval.updated`, an optimistic decision or its
- * rollback): stored, and moved into or out of every loaded list of its agent.
- */
-export function applyApproval(state: State, approval: AgentApproval): State {
+function placeApproval(state: State, approval: AgentApproval): State {
   const items = { ...state.approvals.items, [approval.id]: approval };
 
   const lists = eachPaged(state.approvals.lists, (list, key) =>
     pagedPlaced(list, approval.id, belongsTo(key, approval), newestFirst),
   );
 
-  return { ...state, approvals: { items, lists } };
+  return { ...state, approvals: { ...state.approvals, items, lists } };
+}
+
+function newerApproval(held: AgentApproval | undefined, incoming: AgentApproval): AgentApproval {
+  if (held === undefined) {
+    return incoming;
+  }
+
+  if (held.status !== "pending" && incoming.status === "pending") {
+    return held;
+  }
+
+  return (held.decidedAt ?? "") > (incoming.decidedAt ?? "") ? held : incoming;
+}
+
+/** A server copy: keep the newer decision, then reconcile all loaded lists with that copy. */
+export function applyApproval(state: State, approval: AgentApproval): State {
+  const local = state.approvals.optimistic[approval.id];
+  const kept = newerApproval(local?.before ?? state.approvals.items[approval.id], approval);
+
+  if (local !== undefined && kept.status === "pending") {
+    return placeApproval(state, local.shown);
+  }
+
+  const { [approval.id]: _settled, ...optimistic } = state.approvals.optimistic;
+
+  return placeApproval({ ...state, approvals: { ...state.approvals, optimistic } }, kept);
+}
+
+/** Show a local decision without treating its clock as a confirmed server timestamp. */
+export function showApproval(state: State, shown: AgentApproval): State {
+  const before = state.approvals.items[shown.id];
+
+  if (before === undefined) {
+    return state;
+  }
+
+  return placeApproval(
+    {
+      ...state,
+      approvals: {
+        ...state.approvals,
+        optimistic: { ...state.approvals.optimistic, [shown.id]: { before, shown } },
+      },
+    },
+    shown,
+  );
+}
+
+/** A refusal restores only the optimistic copy still shown, never a confirmed decision. */
+export function rollbackApproval(state: State, shown: AgentApproval): State {
+  const local = state.approvals.optimistic[shown.id];
+
+  if (local === undefined || state.approvals.items[shown.id] !== shown) {
+    return state;
+  }
+
+  const { [shown.id]: _rolledBack, ...optimistic } = state.approvals.optimistic;
+
+  return placeApproval({ ...state, approvals: { ...state.approvals, optimistic } }, local.before);
 }
 
 /** `approval.updated`: the request with its agent's and decider's users. */
