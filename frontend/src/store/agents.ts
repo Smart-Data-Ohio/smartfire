@@ -17,7 +17,7 @@ import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { AgentStepsChanged } from "../gen/AgentStepsChanged.ts";
-import { land, receive } from "./freshness.ts";
+import { land, receive, sameRecord } from "./freshness.ts";
 import type { LoadStatus, MessageDTO, User } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
@@ -48,6 +48,11 @@ export interface AgentProfileEntry {
   readonly generation: number;
 }
 
+type AgentStatusFacts = Pick<
+  AgentDirectoryRow,
+  "status" | "statusNote" | "statusChangedAt" | "suspended"
+>;
+
 export interface AgentsSlice {
   readonly directory: AgentDirectoryList;
   /** Every directory row seen (the directory's and the profiles'), by agent id. */
@@ -55,10 +60,8 @@ export interface AgentsSlice {
   readonly profiles: Readonly<Record<number, AgentProfileEntry>>;
   /** Working presence by agent id; absent when unset. Check `expiresAt` when reading. */
   readonly working: Readonly<Record<number, WorkingPresence>>;
-  /** Retained even before the first GET, since status timestamps do not cover presence changes. */
-  readonly live: Readonly<
-    Record<number, { readonly version: number; readonly change: AgentStatusChanged }>
-  >;
+  /** Canonical status facts, including agents whose first row has not loaded yet. */
+  readonly statuses: Readonly<Record<number, AgentStatusFacts>>;
 }
 
 export const emptyAgents: AgentsSlice = {
@@ -66,7 +69,7 @@ export const emptyAgents: AgentsSlice = {
   rows: {},
   profiles: {},
   working: {},
-  live: {},
+  statuses: {},
 };
 
 const emptyProfile: AgentProfileEntry = {
@@ -135,25 +138,27 @@ export function landDirectory(
   state: State,
   page: AgentDirectory,
   generation: number,
-  sentLive: AgentsSlice["live"] = state.agents.live,
+  ticket?: number,
 ): State {
   if (generation !== state.agents.directory.generation) {
     return state;
   }
 
-  const rows = { ...state.agents.rows };
+  let next = state;
 
   for (const row of page.agents) {
-    rows[row.agentId] = keepLiveStatus(state, row, sentLive);
+    next = mergeAgentRow(next, row, ticket);
   }
 
-  const users = mergeUserList(state.users, withAgentBadges(page.users, rows));
+  const { rows } = next.agents;
+
+  const users = mergeUserList(next.users, withAgentBadges(page.users, rows));
 
   return {
-    ...state,
+    ...next,
     users,
     agents: {
-      ...state.agents,
+      ...next.agents,
       rows,
       directory: {
         ids: directoryOrder(
@@ -213,7 +218,7 @@ export function landProfile(
   state: State,
   profile: AgentProfile,
   generation: number,
-  sentLive: AgentsSlice["live"] = state.agents.live,
+  ticket?: number,
 ): State {
   const agentId = profile.agent.agentId;
 
@@ -221,18 +226,19 @@ export function landProfile(
     return state;
   }
 
-  const agent = keepLiveStatus(state, profile.agent, sentLive);
-  const rows = { ...state.agents.rows, [agentId]: agent };
+  const next = mergeAgentRow(state, profile.agent, ticket);
+  const agent = next.agents.rows[agentId] ?? profile.agent;
+  const { rows } = next.agents;
   const users = withAgentBadges(profile.users, rows);
 
   return {
-    ...state,
-    users: mergeUserList(state.users, users),
+    ...next,
+    users: mergeUserList(next.users, users),
     agents: {
-      ...state.agents,
+      ...next.agents,
       rows,
       profiles: {
-        ...state.agents.profiles,
+        ...next.agents.profiles,
         [agentId]: {
           status: "ready",
           profile: { ...profile, agent, users },
@@ -270,28 +276,62 @@ export function setProfileFailed(
 
 // --- agent.status ---
 
-function withStatus(row: AgentDirectoryRow, change: AgentStatusChanged): AgentDirectoryRow {
+const statusKey = (agentId: number) => `agent-status:${agentId}`;
+
+function statusFacts(row: AgentDirectoryRow | AgentStatusChanged): AgentStatusFacts {
   return {
-    ...row,
-    status: change.status,
-    statusNote: change.statusNote,
-    statusChangedAt: change.statusChangedAt,
-    suspended: change.suspended,
+    status: row.status,
+    statusNote: row.statusNote,
+    statusChangedAt: row.statusChangedAt,
+    suspended: row.suspended,
   };
 }
 
-function keepLiveStatus(
-  state: State,
-  row: AgentDirectoryRow,
-  sentLive: AgentsSlice["live"],
-): AgentDirectoryRow {
-  const live = state.agents.live[row.agentId];
+function statusCopies(state: State, agentId: number, incoming: AgentStatusFacts) {
+  const row = state.agents.rows[agentId];
 
-  return live !== undefined &&
-    (live.version !== sentLive[row.agentId]?.version ||
-      (live.change.statusChangedAt ?? "") > (row.statusChangedAt ?? ""))
-    ? withStatus(row, live.change)
-    : row;
+  return {
+    held: state.agents.statuses[agentId] ?? (row === undefined ? undefined : statusFacts(row)),
+    incoming,
+    same: sameRecord<AgentStatusFacts>,
+    timestamp: (value: AgentStatusFacts) => value.statusChangedAt,
+  };
+}
+
+/** Both GET sources merge the same status entity, then update its row and held profile. */
+function mergeAgentRow(state: State, row: AgentDirectoryRow, ticket?: number): State {
+  const copies = statusCopies(state, row.agentId, statusFacts(row));
+
+  const result =
+    ticket === undefined
+      ? receive(state.freshness, statusKey(row.agentId), copies)
+      : land(state.freshness, statusKey(row.agentId), ticket, copies);
+
+  const facts = result.value ?? copies.incoming;
+  const agent = { ...row, ...facts };
+  const entry = state.agents.profiles[row.agentId];
+
+  const profiles =
+    entry?.profile == null
+      ? state.agents.profiles
+      : {
+          ...state.agents.profiles,
+          [row.agentId]: {
+            ...entry,
+            profile: { ...entry.profile, agent: { ...entry.profile.agent, ...facts } },
+          },
+        };
+
+  return {
+    ...state,
+    freshness: result.freshness,
+    agents: {
+      ...state.agents,
+      rows: { ...state.agents.rows, [row.agentId]: agent },
+      statuses: { ...state.agents.statuses, [row.agentId]: facts },
+      profiles,
+    },
+  };
 }
 
 function withAgentBadges(users: readonly User[], rows: AgentsSlice["rows"]): User[] {
@@ -310,14 +350,32 @@ function withAgentBadges(users: readonly User[], rows: AgentsSlice["rows"]): Use
  */
 export function applyAgentStatus(state: State, change: AgentStatusChanged): State {
   const { agentId, userId } = change;
-  const previous = state.agents.live[agentId];
 
-  const incomingAt = change.statusChangedAt ?? "";
+  const result = receive(
+    state.freshness,
+    statusKey(agentId),
+    statusCopies(state, agentId, statusFacts(change)),
+  );
 
-  if (
-    (previous?.change.statusChangedAt ?? "") > incomingAt ||
-    (state.agents.rows[agentId]?.statusChangedAt ?? "") > incomingAt
-  ) {
+  if (!result.accepted || result.value === undefined) {
+    return state;
+  }
+
+  const heldPresence = state.agents.working[agentId] ?? null;
+
+  const incomingPresence =
+    change.workingPresence === null || change.workingPresenceExpiresAt === null
+      ? null
+      : { text: change.workingPresence, expiresAt: change.workingPresenceExpiresAt };
+
+  const presence = receive(result.freshness, `agent-presence:${agentId}`, {
+    held: heldPresence,
+    incoming: incomingPresence,
+    same: (left, right) =>
+      left === null || right === null ? left === right : sameRecord(left, right),
+  });
+
+  if (result.freshness === state.freshness && presence.freshness === state.freshness) {
     return state;
   }
 
@@ -339,7 +397,7 @@ export function applyAgentStatus(state: State, change: AgentStatusChanged): Stat
   const rows =
     row === undefined
       ? state.agents.rows
-      : { ...state.agents.rows, [agentId]: withStatus(row, change) };
+      : { ...state.agents.rows, [agentId]: { ...row, ...result.value } };
 
   const entry = state.agents.profiles[agentId];
 
@@ -350,32 +408,27 @@ export function applyAgentStatus(state: State, change: AgentStatusChanged): Stat
           ...state.agents.profiles,
           [agentId]: {
             ...entry,
-            profile: { ...entry.profile, agent: withStatus(entry.profile.agent, change) },
+            profile: { ...entry.profile, agent: { ...entry.profile.agent, ...result.value } },
           },
         };
 
   const { [agentId]: _lapsed, ...others } = state.agents.working;
 
-  const working =
-    change.workingPresence === null || change.workingPresenceExpiresAt === null
-      ? others
-      : {
-          ...others,
-          [agentId]: { text: change.workingPresence, expiresAt: change.workingPresenceExpiresAt },
-        };
+  const working = presence.value == null ? others : { ...others, [agentId]: presence.value };
 
   const directory = state.agents.directory;
   const ids = directoryOrder(directory.ids, rows, users);
 
   return {
     ...state,
+    freshness: presence.freshness,
     users,
     agents: {
       ...state.agents,
       rows,
       profiles,
       working,
-      live: { ...state.agents.live, [agentId]: { version: (previous?.version ?? 0) + 1, change } },
+      statuses: { ...state.agents.statuses, [agentId]: result.value },
       directory: ids === directory.ids ? directory : { ...directory, ids },
     },
   };

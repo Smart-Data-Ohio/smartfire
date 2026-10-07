@@ -291,20 +291,14 @@ export const mutations = {
     apply((state) => work.landWorkList(state, filter, list, generation, ticket)),
   // --- S4: agents ---
   setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
-  landAgentDirectory: (
-    page: AgentDirectory,
-    generation: number,
-    sentLive: agents.AgentsSlice["live"],
-  ) => apply((state) => agents.landDirectory(state, page, generation, sentLive)),
+  landAgentDirectory: (page: AgentDirectory, generation: number, ticket?: number) =>
+    apply((state) => agents.landDirectory(state, page, generation, ticket)),
   setAgentDirectoryFailed: (error: string, generation: number) =>
     apply((state) => agents.setDirectoryFailed(state, error, generation)),
   setAgentProfileLoading: (agentId: number) =>
     apply((state) => agents.setProfileLoading(state, agentId)),
-  landAgentProfile: (
-    profile: AgentProfile,
-    generation: number,
-    sentLive: agents.AgentsSlice["live"],
-  ) => apply((state) => agents.landProfile(state, profile, generation, sentLive)),
+  landAgentProfile: (profile: AgentProfile, generation: number, ticket?: number) =>
+    apply((state) => agents.landProfile(state, profile, generation, ticket)),
   setAgentProfileFailed: (agentId: number, error: string, missing: boolean, generation: number) =>
     apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
   setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>

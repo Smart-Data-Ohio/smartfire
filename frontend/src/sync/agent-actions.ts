@@ -7,44 +7,51 @@ import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
 import { directoryGeneration, profileOf } from "../store/agents.ts";
 import { mutations, store } from "../store/store.ts";
+import { readFresh } from "./freshness.ts";
 
 /** Loads (or reloads) the directory; the rows shown stay while it reloads. */
 export const loadDirectory = Effect.fn("agents.loadDirectory")(function* () {
-  mutations.setAgentDirectoryLoading();
+  yield* readFresh("agent-directory", (ticket) =>
+    Effect.gen(function* () {
+      mutations.setAgentDirectoryLoading();
 
-  const generation = directoryGeneration(store.getState());
-  const sentLive = store.getState().agents.live;
+      const generation = directoryGeneration(store.getState());
 
-  yield* api.agentDirectory().pipe(
-    Effect.tap((page) =>
-      Effect.sync(() => mutations.landAgentDirectory(page, generation, sentLive)),
-    ),
-    Effect.catch((error) =>
-      Effect.sync(() => mutations.setAgentDirectoryFailed(error.message, generation)),
-    ),
+      yield* api.agentDirectory().pipe(
+        Effect.tap((page) =>
+          Effect.sync(() => mutations.landAgentDirectory(page, generation, ticket)),
+        ),
+        Effect.catch((error) =>
+          Effect.sync(() => mutations.setAgentDirectoryFailed(error.message, generation)),
+        ),
+      );
+    }),
   );
 });
 
 /** Loads (or reloads) an agent's profile; a 404 marks it missing. */
 export const loadProfile = Effect.fn("agents.loadProfile")(function* (agentId: number) {
-  mutations.setAgentProfileLoading(agentId);
+  yield* readFresh(`agent-profile:${agentId}`, (ticket) =>
+    Effect.gen(function* () {
+      mutations.setAgentProfileLoading(agentId);
 
-  const generation = profileOf(store.getState(), agentId).generation;
-  const sentLive = store.getState().agents.live;
+      const generation = profileOf(store.getState(), agentId).generation;
 
-  yield* api.agentProfile(agentId).pipe(
-    Effect.tap((profile) =>
-      Effect.sync(() => mutations.landAgentProfile(profile, generation, sentLive)),
-    ),
-    Effect.catch((error) =>
-      Effect.sync(() =>
-        mutations.setAgentProfileFailed(
-          agentId,
-          error.message,
-          Predicate.isTagged(error, "NotFound"),
-          generation,
+      yield* api.agentProfile(agentId).pipe(
+        Effect.tap((profile) =>
+          Effect.sync(() => mutations.landAgentProfile(profile, generation, ticket)),
         ),
-      ),
-    ),
+        Effect.catch((error) =>
+          Effect.sync(() =>
+            mutations.setAgentProfileFailed(
+              agentId,
+              error.message,
+              Predicate.isTagged(error, "NotFound"),
+              generation,
+            ),
+          ),
+        ),
+      );
+    }),
   );
 });

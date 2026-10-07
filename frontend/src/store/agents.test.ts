@@ -23,9 +23,9 @@ import {
   setProfileFailed,
   workingPresenceAt,
 } from "./agents.ts";
+import { finishRead, startRead } from "./freshness.ts";
 import type { SyncEvent } from "./model.ts";
 import { applyEvents, applyPage, receiveMessage, updateMessage } from "./reducers.ts";
-import { finishRead, startRead } from "./freshness.ts";
 import { initialState, type State } from "./state.ts";
 import { landWorkDetail } from "./work.ts";
 
@@ -175,7 +175,7 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(20) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.agents.live,
+      loading.freshness.clock,
     );
 
     const next = applyEvents(
@@ -240,7 +240,7 @@ describe("agent.status", () => {
       loading,
       { agents: [row(40, { statusChangedAt: at(5) })], users: [bot(40, "Bea")] },
       directoryGeneration(loading),
-      loading.agents.live,
+      loading.freshness.clock,
     );
 
     expect(next.agents.rows[40]?.status).toBe("working");
