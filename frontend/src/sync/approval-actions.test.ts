@@ -53,14 +53,19 @@ describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
   for (const refusal of [
-    new Validation({ message: "This request was already decided", fields: {} }),
-    new Validation({ message: "This request has expired", fields: {} }),
-    new Validation({
-      message: "Validation failed",
-      fields: { base: ["This request was already decided"] },
+    ...["approved", "denied", "cancelled"].map((status) => {
+      const message = `Request is already ${status}`;
+
+      return new Validation({ message, fields: { base: [message] } });
     }),
+    new Validation({ message: "Request has expired", fields: { base: ["Request has expired"] } }),
+    new Validation({
+      message: "Decision note is too long (maximum is 200 characters)",
+      fields: { base: ["Decision note is too long (maximum is 200 characters)"] },
+    }),
+    new Validation({ message: "A different validation refusal", fields: {} }),
     new Conflict({ message: "This request changed" }),
-    new NotFound({ message: "Approval not found" }),
+    new NotFound({ message: "Not found" }),
   ]) {
     it.effect(`refetch the decided copy after ${refusal._tag}: ${refusal.message}`, () =>
       Effect.gen(function* () {
@@ -88,8 +93,10 @@ describe("approval actions", () => {
         expect(store.getState().approvals.items[100]).toEqual(decided);
         expect(pendingIds()).toEqual([]);
         expect(
-          (yield* fake.requests).filter((request) => request.method === "GET").length,
-        ).toBeGreaterThan(1);
+          (yield* fake.requests)
+            .filter((request) => request.method === "GET")
+            .map((request) => request.query?.status ?? null),
+        ).toEqual(["pending", null, "pending"]);
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
   }
@@ -137,7 +144,9 @@ describe("approval actions", () => {
       const fake = yield* withPending;
 
       yield* fake.route("PATCH /agent_approvals/100", () =>
-        Effect.fail(new Forbidden({ message: "Only an administrator can approve GitHub" })),
+        Effect.fail(
+          new Forbidden({ message: "Only an administrator can approve GitHub write actions" }),
+        ),
       );
 
       const exit = yield* Effect.exit(approvals.decide(100, "approved", null));
@@ -146,14 +155,6 @@ describe("approval actions", () => {
       expect(store.getState().approvals.items[100]).toEqual(pending);
       expect(pendingIds()).toEqual([100]);
 
-      yield* fake.route("PATCH /agent_approvals/100", () =>
-        Effect.fail(
-          new Validation({ message: "Note is too long", fields: { note: ["Too long"] } }),
-        ),
-      );
-      yield* Effect.exit(approvals.decide(100, "denied", null));
-
-      expect(store.getState().approvals.items[100]).toEqual(pending);
       expect((yield* fake.requests).filter((request) => request.method === "GET").length).toBe(1);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -166,7 +167,7 @@ describe("approval actions", () => {
 
       yield* fake.route("PATCH /agent_approvals/100", () =>
         Deferred.await(gate).pipe(
-          Effect.andThen(Effect.fail(new NotFound({ message: "Approval not found" }))),
+          Effect.andThen(Effect.fail(new NotFound({ message: "Not found" }))),
         ),
       );
 

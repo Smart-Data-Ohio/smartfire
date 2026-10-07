@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +13,14 @@ import { userFixture } from "../../api/testing.ts";
 import type { AgentApproval } from "../../gen/AgentApproval.ts";
 import type { AgentLedgerEvent } from "../../gen/AgentLedgerEvent.ts";
 import type { AgentLedgerEventType } from "../../gen/AgentLedgerEventType.ts";
+import { approvalListKey } from "../../store/approvals.ts";
+import { ledgerListKey } from "../../store/ledger.ts";
 import { initialState } from "../../store/state.ts";
-import { store } from "../../store/store.ts";
+import { mutations, store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
+import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
+import { AgentApprovals } from "./agent-approvals-tab.tsx";
+import { useAgentLedger } from "./agent-hooks.ts";
 import { ApprovalCard } from "./approval-card.tsx";
 import {
   actsAsText,
@@ -121,7 +127,102 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => store.setState(initialState, true));
+afterEach(() => {
+  store.setState(initialState, true);
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+
+  for (const toast of toastSnapshot()) removeToast(toast.id);
+});
+
+describe("S4 client contracts", () => {
+  it("shows a base decision-note refusal through the existing toast", async () => {
+    const message = "Decision note is too long (maximum is 200 characters)";
+
+    // Give the virtual list a viewport, since jsdom has no layout or ResizeObserver.
+    vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.parentElement;
+    });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class implements ResizeObserver {
+        private readonly callback: ResizeObserverCallback;
+
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+
+        observe(target: Element) {
+          queueMicrotask(() =>
+            this.callback(
+              [
+                {
+                  target,
+                  contentRect: new DOMRect(0, 0, 800, 600),
+                  borderBoxSize: [],
+                  contentBoxSize: [],
+                  devicePixelContentBoxSize: [],
+                },
+              ],
+              this,
+            ),
+          );
+        }
+
+        readonly unobserve = vi.fn();
+        readonly disconnect = vi.fn();
+      },
+    );
+    vi.spyOn(actions.approvals, "load").mockResolvedValue(undefined);
+    vi.spyOn(actions.approvals, "decide").mockRejectedValue(
+      Object.assign(new Error(message), { fields: { base: [message] } }),
+    );
+    mutations.landApprovalPage(
+      approvalListKey(9, "all"),
+      { approvals: [approval()], users: [], nextCursor: null },
+      "replace",
+    );
+
+    await inRouter(<AgentApprovals agentId={9} filter="all" onFilterChange={() => undefined} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Approve" }));
+
+    await waitFor(() =>
+      expect(toastSnapshot()).toEqual([
+        expect.objectContaining({ title: "Couldn't approve it", description: message }),
+      ]),
+    );
+  });
+
+  it("offers more ledger entries after a short page only when it has a cursor", () => {
+    vi.spyOn(actions.ledger, "load").mockResolvedValue(undefined);
+
+    const more = vi.spyOn(actions.ledger, "loadMore").mockResolvedValue(undefined);
+    const key = ledgerListKey(9, "all");
+
+    mutations.landLedgerPage(
+      key,
+      9,
+      { events: [entry()], users: [], nextCursor: "next-page" },
+      "replace",
+    );
+
+    const view = renderHook(() => useAgentLedger(9, "all"));
+
+    expect(view.result.current.rows).toHaveLength(1);
+    expect(view.result.current.hasMore).toBe(true);
+    act(() => view.result.current.loadMore());
+    expect(more).toHaveBeenCalledWith(9, "all");
+
+    act(() =>
+      mutations.landLedgerPage(key, 9, { events: [], users: [], nextCursor: null }, "more"),
+    );
+
+    expect(view.result.current.rows).toHaveLength(1);
+    expect(view.result.current.hasMore).toBe(false);
+  });
+});
 
 describe("approval wording", () => {
   it("says who decided and when, and 'someone' for a gone account", () => {
