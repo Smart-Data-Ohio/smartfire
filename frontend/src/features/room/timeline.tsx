@@ -8,6 +8,7 @@ import { store, useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { hasCards, useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
@@ -116,7 +117,15 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const items = timelineItems({ timeline, messages, pending, now });
 
   useListEdges(containerRef, listRef, items);
-  const ready = timeline.status === "ready";
+
+  // A window with cards waits for their chunk: placed before it lands, the cards growing in
+  // above a permalinked row would push it out of view.
+  const cardsSettled = useCardsChunkSettled();
+
+  const waitsForCards =
+    !cardsSettled && items.some((item) => item.kind === "message" && hasCards(item.message));
+
+  const ready = timeline.status === "ready" && !waitsForCards;
   const firstKey = items[0]?.key ?? null;
   const lastKey = items.at(-1)?.key ?? null;
 

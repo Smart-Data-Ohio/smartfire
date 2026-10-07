@@ -118,6 +118,21 @@ matrix("posts on X, Drive files and events", async ({ page, theme }) => {
   await shot(page, "cards-events", theme);
 });
 
+test("a permalinked row stays in view when the cards chunk arrives late", async ({ page }) => {
+  // Hold the chunk back until the room's first page is in, as a slow dev server sometimes does.
+  await page.route("**/src/features/cards/message-cards.tsx*", async (route) => {
+    await page.waitForResponse((response) => response.url().includes("messages?around="));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.continue();
+  });
+  await openAt(page, messages.eventRecurring, "light");
+
+  const event = row(page, messages.eventRecurring);
+
+  await expect(event.getByRole("region", { name: "Event: Weekly product sync" })).toBeVisible();
+  await expect(event).toBeInViewport();
+});
+
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {
   await openAt(page, messages.eventRecurring, theme);
 
