@@ -55,10 +55,23 @@ export function workVersion(state: State, threadId: number): number {
   return state.work.liveVersions[threadId] ?? 0;
 }
 
+/**
+ * A live copy of a thread (`thread.created`/`thread.updated`, a list row). Only one that moves
+ * its work facts advances the version: replies and a write's own echo (facts equal to what it
+ * showed) leave it, so they neither drop that write's reply nor make the held detail stale.
+ */
 export function receiveWorkThread(state: State, thread: Thread): State {
-  return withWork(upsertThread(state, thread), {
-    liveVersions: { ...state.work.liveVersions, [thread.id]: workVersion(state, thread.id) + 1 },
-  });
+  const moved = !sameWorkFacts(state.threads[thread.id]?.work ?? null, thread.work ?? null);
+  const next = upsertThread(state, thread);
+
+  return moved
+    ? withWork(next, {
+        liveVersions: {
+          ...state.work.liveVersions,
+          [thread.id]: workVersion(state, thread.id) + 1,
+        },
+      })
+    : next;
 }
 
 /** The filters, in the work page's tab order. */

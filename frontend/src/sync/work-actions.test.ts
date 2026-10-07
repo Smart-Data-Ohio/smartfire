@@ -331,4 +331,43 @@ describe("work actions", () => {
       expect(store.getState().work.writes[THREAD]).toBeUndefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
+
+  it.effect("land a write's reply when only its own echo and a new reply arrive meanwhile", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+      const blocked = factsFixture({ status: "blocked" });
+
+      yield* fake.route(`PATCH /threads/${THREAD}/work`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as(threadDetailFixture(THREAD, blocked, workDetailFixture())),
+        ),
+      );
+
+      const writing = yield* Effect.forkChild(work.setStatus(THREAD, "blocked"));
+
+      yield* Deferred.await(started);
+
+      mutations.applyEvents(
+        [1, 2].map((seq) => ({
+          seq,
+          topic: `thread:${THREAD}`,
+          type: "thread.updated" as const,
+          data: threadFixture(THREAD, { work: blocked, replyCount: seq }),
+        })),
+        Date.now(),
+      );
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(writing);
+
+      expect(factsOf()?.status).toBe("blocked");
+      expect(workDetailStale(store.getState(), THREAD)).toBe(false);
+      expect((yield* fake.requests).length).toBe(1);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });
