@@ -28,6 +28,7 @@ pub mod endpoints;
 mod error;
 pub mod admin;
 pub mod bots;
+pub mod boards;
 pub mod huddles;
 pub mod message_actions;
 pub mod organize;
@@ -201,6 +202,9 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/threads",
             get(action(threads::threads)).post(unparsed_action(threads::create)),
         )
+        .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)))
+        .route("/api/v1/rooms/{room_id}/posts/new", get(action(boards::new)))
+        .route("/api/v1/rooms/{room_id}/posts", post(unparsed_action(boards::create)))
         .route(
             "/api/v1/threads/{thread_id}",
             get(action(threads::thread))

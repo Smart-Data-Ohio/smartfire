@@ -9,15 +9,15 @@ use std::collections::{BTreeSet, HashMap};
 
 use campfire_api_types as api;
 use campfire_app::app::{AppCtx, AppState};
+use campfire_app::integrations::github::pull_requests::PullRequest;
 use campfire_db::models::audit_log::{Actor, Context};
 use campfire_db::models::channel_thread::{WORK_UPDATE_FORBIDDEN, WorkChanges};
 use campfire_db::{
-    Agent, ChannelThread, Connection, HandoffPackage, Room, Timestamp, User, WorkHandoff,
-    WorkThreadEvent, WorkThreadLink,
+    Agent, CalendarEvent, ChannelThread, Connection, HandoffPackage, Room, Timestamp, User,
+    WorkHandoff, WorkThreadEvent, WorkThreadLink,
 };
 use campfire_kit::{Ctx, Result, StatusCode};
 use campfire_web::controllers::presenters::Presenter;
-use campfire_web::controllers::presenters::board_posts::LinkSources;
 use campfire_web::controllers::presenters::page::db_error;
 use rails_compat::Secrets;
 
@@ -60,7 +60,7 @@ fn status(value: Option<&str>) -> Option<api::WorkStatus> {
     })
 }
 
-fn stored_status(status: api::WorkStatus) -> &'static str {
+pub(crate) fn stored_status(status: api::WorkStatus) -> &'static str {
     match status {
         api::WorkStatus::Planned => "planned",
         api::WorkStatus::InProgress => "in_progress",
@@ -80,35 +80,115 @@ fn safe_link(url: &str) -> bool {
     https(url) || (url.starts_with('/') && !url.starts_with("//") && !url.starts_with("/\\"))
 }
 
-fn link(link: campfire_views::channel_threads::board::Link) -> Option<api::WorkLink> {
-    if !safe_link(&link.url) {
-        return None;
+/// `board_posts::LinkSources`' source preload and link projection, without view types.
+struct WorkLinkSources {
+    pull_requests: HashMap<i64, PullRequest>,
+    events: HashMap<i64, CalendarEvent>,
+}
+
+impl WorkLinkSources {
+    fn load(conn: &Connection, rows: &[WorkThreadLink]) -> campfire_db::Result<Self> {
+        let pull_request_ids = rows
+            .iter()
+            .filter(|link| link.kind == "pull_request")
+            .filter_map(|link| link.github_pull_request_id)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        let event_ids = rows
+            .iter()
+            .filter(|link| link.kind == "event")
+            .filter_map(|link| link.event_id)
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect::<Vec<_>>();
+        Ok(Self {
+            pull_requests: PullRequest::for_ids(conn, &pull_request_ids)?
+                .into_iter()
+                .map(|pull_request| (pull_request.id, pull_request))
+                .collect(),
+            events: CalendarEvent::for_ids(conn, &event_ids)?
+                .into_iter()
+                .map(|event| (event.id, event))
+                .collect(),
+        })
     }
-    let kind = match link.kind.as_str() {
-        "pull_request" => api::WorkLinkKind::PullRequest,
-        "event" => api::WorkLinkKind::Event,
-        "drive_file" => api::WorkLinkKind::DriveFile,
-        _ => return None,
-    };
-    let pull_request_state = link.state.as_deref().map(|state| match state {
-        "Merged" => api::WorkPullRequestState::Merged,
-        "Closed" => api::WorkPullRequestState::Closed,
-        "Draft" => api::WorkPullRequestState::Draft,
-        _ => api::WorkPullRequestState::Open,
-    });
-    Some(api::WorkLink {
-        id: link.id,
-        kind,
-        label: link.label,
-        url: link.url,
-        pull_request_state,
-        title: link.title,
-        event_starts_at: link
-            .event_time
-            .map(|time| dto::time(Timestamp::from_jiff(time))),
-        event_time_zone: link.event_zone,
-        event_cancelled: link.cancelled,
-    })
+
+    fn items(
+        &self,
+        room_id: i64,
+        rows: Vec<WorkThreadLink>,
+    ) -> campfire_db::Result<Vec<api::WorkLink>> {
+        let mut links = Vec::with_capacity(rows.len());
+        for record in rows {
+            let kind = match record.kind.as_str() {
+                "pull_request" => api::WorkLinkKind::PullRequest,
+                "event" => api::WorkLinkKind::Event,
+                "drive_file" => api::WorkLinkKind::DriveFile,
+                _ => return Err(campfire_db::Error::Other("Invalid work link kind".into())),
+            };
+            let mut link = api::WorkLink {
+                id: record.id,
+                kind,
+                label: String::new(),
+                url: String::new(),
+                pull_request_state: None,
+                title: None,
+                event_starts_at: None,
+                event_time_zone: None,
+                event_cancelled: false,
+            };
+            match kind {
+                api::WorkLinkKind::PullRequest => {
+                    let pull_request = record
+                        .github_pull_request_id
+                        .and_then(|id| self.pull_requests.get(&id))
+                        .ok_or(campfire_db::Error::RecordNotFound("Github::PullRequest"))?;
+                    link.label = format!(
+                        "{}#{}",
+                        pull_request.display_full_name()?,
+                        pull_request.number
+                    );
+                    link.url = present(pull_request.html_url.as_deref()).unwrap_or_else(|| {
+                        format!(
+                            "https://github.com/{}/pull/{}",
+                            pull_request.full_name(),
+                            pull_request.number
+                        )
+                    });
+                    link.pull_request_state = Some(match pull_request.state.as_deref() {
+                        Some("merged") => api::WorkPullRequestState::Merged,
+                        Some("closed") => api::WorkPullRequestState::Closed,
+                        Some("draft") => api::WorkPullRequestState::Draft,
+                        _ => api::WorkPullRequestState::Open,
+                    });
+                    if pull_request.private == Some(false) {
+                        link.title = present(pull_request.title.as_deref());
+                    }
+                }
+                api::WorkLinkKind::Event => {
+                    let event = record
+                        .event_id
+                        .and_then(|id| self.events.get(&id))
+                        .ok_or(campfire_db::Error::RecordNotFound("Event"))?;
+                    link.label = event.title.clone();
+                    link.url = format!("/rooms/{room_id}/events/{}", event.id);
+                    link.event_starts_at = Some(dto::time(event.starts_at));
+                    link.event_time_zone = Some(event.time_zone.clone());
+                    link.event_cancelled = event.cancelled();
+                }
+                api::WorkLinkKind::DriveFile => {
+                    link.url = record.url.unwrap_or_default();
+                    link.label =
+                        present(record.title.as_deref()).unwrap_or_else(|| link.url.clone());
+                }
+            }
+            if safe_link(&link.url) {
+                links.push(link);
+            }
+        }
+        Ok(links)
+    }
 }
 
 /// The work facts of each tracked thread among `threads`, by thread id (`thread_with_facts`'
@@ -138,22 +218,35 @@ pub fn facts(
     .map(|user| (user.id, user))
     .collect();
     let ids: Vec<i64> = tracked.iter().map(|thread| thread.id).collect();
+    // Ordinary threads can store tags through the classic metadata writer, but only boards
+    // expose them as work facts. Load the board tags with one query for the whole page.
+    let mut statement = conn.prepare_cached(
+        "SELECT thread_tags.channel_thread_id, thread_tags.name FROM thread_tags
+         JOIN channel_threads ON channel_threads.id=thread_tags.channel_thread_id
+         JOIN rooms ON rooms.id=channel_threads.room_id
+         WHERE rooms.type='Rooms::Board' AND thread_tags.channel_thread_id IN (SELECT value FROM json_each(?))
+         ORDER BY thread_tags.name",
+    )?;
+    let tags = statement.query_map([serde_json::json!(ids).to_string()], |row| {
+        Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?))
+    })?;
+    let mut grouped_tags: HashMap<i64, Vec<String>> = HashMap::new();
+    for tag in tags {
+        let (id, name) = tag?;
+        grouped_tags.entry(id).or_default().push(name);
+    }
     let rows = WorkThreadLink::for_threads(conn, &ids)?;
-    let sources = LinkSources::load(conn, &rows)?;
+    let sources = WorkLinkSources::load(conn, &rows)?;
     let mut grouped: HashMap<i64, Vec<WorkThreadLink>> = HashMap::new();
     for row in rows {
         grouped.entry(row.channel_thread_id).or_default().push(row);
     }
     let mut out = HashMap::with_capacity(tracked.len());
     for thread in &tracked {
-        let links = sources
-            .items(
-                thread.room_id,
-                grouped.remove(&thread.id).unwrap_or_default(),
-            )?
-            .into_iter()
-            .filter_map(link)
-            .collect();
+        let links = sources.items(
+            thread.room_id,
+            grouped.remove(&thread.id).unwrap_or_default(),
+        )?;
         let Some(status) = status(thread.work_status.as_deref()) else {
             continue;
         };
@@ -166,6 +259,7 @@ pub fn facts(
                 run_url: thread.run_url.clone().filter(|url| https(url)),
                 result_updated_at: thread.result_updated_at.map(dto::time),
                 links,
+                tags: grouped_tags.remove(&thread.id).unwrap_or_default(),
             },
         );
     }
@@ -212,7 +306,7 @@ fn history_entry(record: WorkThreadEvent) -> Option<api::WorkHistoryEntry> {
         })
     };
     let handoff = (kind == api::WorkHistoryKind::Handoff).then(|| api::WorkHistoryHandoff {
-        summary: campfire_views::helpers::application::truncate(
+        summary: campfire_richtext::ruby::truncate(
             &text("handoff_summary").unwrap_or_default(),
             HANDOFF_SUMMARY,
             "...",
@@ -274,24 +368,7 @@ pub fn detail(
         .filter_map(history_entry)
         .collect();
     let owner_candidates = if permissions.can_assign_work {
-        let (humans, agents) = ChannelThread::work_owner_candidates_for(conn, room.id)?;
-        let profiles: HashMap<i64, Agent> =
-            Agent::for_users(conn, &agents.iter().map(|user| user.id).collect::<Vec<_>>())?
-                .into_iter()
-                .map(|agent| (agent.user_id, agent))
-                .collect();
-        humans
-            .iter()
-            .chain(&agents)
-            .map(|user| {
-                let agent = profiles.get(&user.id);
-                api::WorkOwnerCandidate {
-                    user_id: user.id,
-                    provider: agent.and_then(|agent| present(agent.provider.as_deref())),
-                    description: agent.and_then(|agent| present(agent.description.as_deref())),
-                }
-            })
-            .collect()
+        owner_candidates(conn, room.id)?
     } else {
         Vec::new()
     };
@@ -328,6 +405,31 @@ pub fn detail(
         },
         people,
     ))
+}
+
+/// The classic new-post and work-assignment pickers share the same ordered candidates.
+pub(crate) fn owner_candidates(
+    conn: &Connection,
+    room_id: i64,
+) -> campfire_db::Result<Vec<api::WorkOwnerCandidate>> {
+    let (humans, agents) = ChannelThread::work_owner_candidates_for(conn, room_id)?;
+    let profiles: HashMap<i64, Agent> =
+        Agent::for_users(conn, &agents.iter().map(|user| user.id).collect::<Vec<_>>())?
+            .into_iter()
+            .map(|agent| (agent.user_id, agent))
+            .collect();
+    Ok(humans
+        .iter()
+        .chain(&agents)
+        .map(|user| {
+            let agent = profiles.get(&user.id);
+            api::WorkOwnerCandidate {
+                user_id: user.id,
+                provider: agent.and_then(|agent| present(agent.provider.as_deref())),
+                description: agent.and_then(|agent| present(agent.description.as_deref())),
+            }
+        })
+        .collect())
 }
 
 async fn list_work(c: &mut Ctx) -> Result {
@@ -424,7 +526,13 @@ async fn update_work(c: &mut Ctx) -> Result {
             // `channel_threads#update`'s work checks, read in its write.
             let manager = thread.work_manageable_by(tx.conn(), &actor)?;
             let assignment = thread.work_assignment_manageable_by(tx.conn(), &actor)?;
+            let tags_allowed = if thread.board_post(tx.conn())? {
+                manager
+            } else {
+                assignment
+            };
             let allowed = (input.result_markdown.is_none() || manager)
+                && (input.tags.is_none() || tags_allowed)
                 && ((input.status.is_none() && input.owner_id.is_none()) || manager)
                 && (input.owner_id.is_none() || assignment)
                 && (input
@@ -434,6 +542,13 @@ async fn update_work(c: &mut Ctx) -> Result {
                     || assignment);
             if !allowed {
                 return Err(campfire_db::Error::Other(FORBIDDEN_UPDATE.into()));
+            }
+            if let Some(tags) = input.tags {
+                let before = thread.tag_names(tx.conn())?;
+                thread.update_metadata(tx, None, None, Some(&tags))?;
+                if before != thread.tag_names(tx.conn())? {
+                    campfire_db::models::channel_thread::ThreadWorkChange::emit(tx, thread_id);
+                }
             }
             if let Some(markdown) = input.result_markdown {
                 thread.update_result(tx, &actor, markdown)?;

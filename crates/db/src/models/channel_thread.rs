@@ -37,8 +37,8 @@ pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_pa
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
-/// A tracked thread's work facts changed: its status, owner, result or run URL, or a link was
-/// added or removed. The classic app has no broadcast for it (only the board rows, which
+/// A tracked thread's work facts changed, a link changed, or a board post's row changed.
+/// The classic app has no broadcast for it (only the board rows, which
 /// `register_board_update` emits as before); the cable sink publishes the single-page app's
 /// `thread.updated` with the new facts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +53,19 @@ impl ThreadWorkChange {
         // Include tag auto-assignment's after-commit write before publishing the final facts.
         tx.broadcast_after_commit_settled_once(&ThreadWorkChange { thread_id });
     }
+
+    pub fn pending(tx: &Tx<'_>, thread_id: i64) -> bool {
+        tx.has_settled_broadcast(&Self { thread_id })
+    }
+}
+
+/// The JSON twin of a board post's list and column prepends, including all committed facts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadBoardCreation {
+    pub thread_id: i64,
+}
+impl crate::events::Broadcast for ThreadBoardCreation {
+    const KIND: &'static str = "ChannelThread#sync_board_creation";
 }
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
@@ -896,6 +909,11 @@ impl ChannelThread {
     pub(crate) fn broadcast_thread_indicators(tx: &mut Tx<'_>, thread_ids: &[i64]) -> Result<()> {
         for &thread_id in thread_ids {
             if let Some(thread) = Self::find_by_id(tx.conn(), thread_id)? {
+                if thread.board_post(tx.conn())?
+                    && !tx.has_settled_broadcast(&ThreadBoardCreation { thread_id })
+                {
+                    ThreadWorkChange::emit(tx, thread_id);
+                }
                 Self::broadcast_thread_indicator_change(
                     tx,
                     thread.parent_message_id,

@@ -180,6 +180,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
     ("agent::AgentSyncChange", &["agent.status"]),
     ("agent_approval::ApprovalChange", &["approval.updated"]),
+    ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("activity_item::ActivityItemTouched", &["activity.item"]),
     (
@@ -203,8 +204,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
     // carries the thread's new count and activity), a direct room's sidebar row
     // (`Partial::DirectSidebar`, with the member's row), and the huddle notices and invitations on
-    // `user_<id>_huddle_notices`/`user_<id>_activity`. Its other frames (message features, room
-    // headers, polls, board rows and the other directory partials) have no twin yet. Its
+    // `user_<id>_huddle_notices`/`user_<id>_activity`. Board-row prepends and replaces have
+    // `ThreadBoardCreation`/`ThreadWorkChange` companions, coalesced after the commit's callbacks;
+    // row removal has `Broadcasts::thread_removed`. Its other frames (message features, room
+    // headers, polls and the other directory partials) have no twin yet. Its
     // `ActivityChannel` frames (`user_<id>_activity`) have `activity.item`.
     (
         "broadcasts::Broadcast",
@@ -217,7 +220,9 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "message.pinned",
             "thread.unread",
             "thread.indicator",
+            "thread.created",
             "thread.updated",
+            "thread.removed",
             "sidebar.row.upserted",
             "huddle.notice",
             "huddle.ring",
@@ -1343,5 +1348,21 @@ mod tests {
             assert!(!NOT_YET_TWINNED.contains(kind), "{kind} is in both lists");
             assert!(!events.is_empty(), "{kind} has no events");
         }
+    }
+
+    #[test]
+    fn board_row_frames_have_creation_update_and_removal_twins() {
+        let events = TWINS
+            .iter()
+            .find(|(kind, _)| *kind == "broadcasts::Broadcast")
+            .unwrap()
+            .1;
+        for event in ["thread.created", "thread.updated", "thread.removed"] {
+            assert!(events.contains(&event), "board rows need {event}");
+        }
+        assert!(TWINS.contains(&(
+            "channel_thread::ThreadBoardCreation",
+            &["thread.created"] as &[&str],
+        )));
     }
 }

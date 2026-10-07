@@ -34,6 +34,9 @@ mod api_agents_tests;
 #[path = "spa_api_work_tests.rs"]
 mod api_work_tests;
 #[cfg(test)]
+#[path = "spa_api_board_tests.rs"]
+mod spa_api_board_tests;
+#[cfg(test)]
 #[path = "spa_settings_tests.rs"]
 mod settings_tests;
 

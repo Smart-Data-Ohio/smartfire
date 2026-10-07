@@ -54,8 +54,9 @@ pub struct BoardTagCount {
     pub count: i64,
 }
 
-/// The latest stale-work digest the board posted (`board_stale_digests`, newest `digest_on`
-/// with a message): "Stale-work digest · October 7, 2026" over its plain text.
+/// The latest stale-work digest claim (`board_stale_digests`, newest `digest_on`), shown only
+/// if that claim has an existing message: "Stale-work digest · October 7, 2026" over its plain
+/// text. A newer unposted claim hides the previous digest, as on the classic board page.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

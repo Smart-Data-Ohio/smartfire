@@ -44,6 +44,6 @@ resultUpdatedAt: string | null,
 links: Array<WorkLink>, 
 /**
  * A board post's tags (`thread_tags`), by name: lower-case, at most 5. Empty for a thread
- * outside a board, which has none.
+ * outside a board, even if it has stored tags.
  */
 tags: Array<string>, };

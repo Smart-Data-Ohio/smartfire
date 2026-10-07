@@ -1344,19 +1344,35 @@ pub fn thread_list(
             })
             .collect(),
     };
-    let mut facts = crate::work::facts(conn, secrets, &threads, now)?;
-    let mut summaries = Vec::with_capacity(threads.len());
-    for thread in &threads {
-        let membership = thread.membership_for(conn, viewer_id)?;
-        summaries.push(api::ThreadSummary {
-            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
-            membership: membership.as_ref().map(thread_membership),
-        });
-    }
     Ok(api::ThreadList {
         users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
-        threads: summaries,
+        threads: thread_summaries(conn, secrets, viewer_id, room, &threads, now)?,
     })
+}
+
+/// Thread rows for a room page, with work facts and viewer memberships loaded in batches.
+pub(crate) fn thread_summaries(
+    conn: &Connection,
+    secrets: &Secrets,
+    viewer_id: i64,
+    room: &Room,
+    threads: &[campfire_db::ChannelThread],
+    now: Timestamp,
+) -> Result<Vec<api::ThreadSummary>> {
+    let mut facts = crate::work::facts(conn, secrets, threads, now)?;
+    let ids: Vec<i64> = threads.iter().map(|thread| thread.id).collect();
+    let memberships: HashMap<i64, campfire_db::ThreadMembership> =
+        campfire_db::ThreadMembership::for_user_threads(conn, viewer_id, &ids)?
+            .into_iter()
+            .map(|membership| (membership.thread_id, membership))
+            .collect();
+    Ok(threads
+        .iter()
+        .map(|thread| api::ThreadSummary {
+            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
+            membership: memberships.get(&thread.id).map(thread_membership),
+        })
+        .collect())
 }
 
 /// Files a page of `GET /api/v1/rooms/:id/files` holds.

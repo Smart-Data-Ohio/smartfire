@@ -8,16 +8,15 @@
 //! work fields of `channel_threads#update` (`ChannelThread#update_work`, `#update_result`) and
 //! the human handoff (`work_threads#create_handoff`, `ChannelThread#hand_off`).
 //!
-//! Any thread can be tracked as work, and every board post is (board posts arrive with S6; their
-//! work facts are these). Work is for active humans in the thread's room
+//! Any thread can be tracked as work, and every board post is. Work is for active humans in the
+//! thread's room
 //! (`ChannelThread#work_viewable_by`); bots and agent tokens never use this API.
 //!
 //! Deferred, so not in this contract: managing links (classic `work_threads/links.rs` index,
-//! create and destroy, and its event candidates), which arrives with boards in S6, and tags,
-//! also S6. The links a thread has are on [`WorkFacts::links`].
+//! create and destroy, and its event candidates). The links a thread has are on [`WorkFacts::links`].
 //!
 //! Every work change publishes `thread.updated` with the new [`WorkFacts`]: a status, owner,
-//! result, run URL or link change, and a handoff. **New**: the classic app broadcasts none of
+//! result, run URL or link change, tags, and a handoff. **New**: the classic app broadcasts none of
 //! these (only board rows). A client holding the thread's [`WorkDetail`] refetches
 //! `GET /api/v1/threads/:id` when `thread.updated` brings a `work` that differs from the one it
 //! holds; any change to the detail changes the facts.
@@ -56,7 +55,7 @@ pub struct WorkFacts {
     /// Linked pull requests, calendar events and Drive files, oldest first.
     pub links: Vec<WorkLink>,
     /// A board post's tags (`thread_tags`), by name: lower-case, at most 5. Empty for a thread
-    /// outside a board, which has none.
+    /// outside a board, even if it has stored tags.
     pub tags: Vec<String>,
 }
 
@@ -276,12 +275,13 @@ pub struct WorkList {
 /// client showed; any refusal is a 403 and changes nothing:
 /// - a status on an untracked thread starts tracking it: `canConvertWork`;
 /// - `status: null` stops tracking it: `canAssignWork` (the client offers it per
-///   `canRemoveWork`, which is `false` for a board post; the server doesn't refuse it there, as
-///   in the classic app);
+///   `canRemoveWork`, which is `false` for a board post; boards require a status and reject
+///   stopping tracking with `Validation` on `status`, as in the classic app);
 /// - another status on a tracked thread: `canUpdateWorkStatus`;
 /// - `ownerId`: `canAssignWork`;
 /// - `resultMarkdown`: `canManageWork`;
-/// - `tags` (board posts only): `canManageWork`.
+/// - `tags`: `canManageWork` on a board post; settings authority (`canRename`) on an ordinary
+///   thread, as for classic `thread[tags]`. Ordinary tags are stored but not shown in work facts.
 ///
 /// Errors:
 /// - 404 unless the viewer is an active human member of the thread's room;
@@ -306,8 +306,9 @@ pub struct UpdateWork {
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result_markdown: Option<Option<String>>,
-    /// A board post's tags, replacing the set: omit to leave alone, `[]` clears them. Normalised
-    /// as on [`crate::CreateBoardPost::tags`]; `canManageWork`. `Validation` on `tags` as there.
+    /// Tags, replacing the set: omit to leave alone, `[]` clears them. Normalised as on
+    /// [`crate::CreateBoardPost::tags`]; `canManageWork` on boards, settings authority on ordinary
+    /// threads. `Validation` on `tags` as there. Only boards expose them in [`WorkFacts::tags`].
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,

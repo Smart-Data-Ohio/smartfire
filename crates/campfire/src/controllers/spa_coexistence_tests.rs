@@ -178,6 +178,64 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
 }
 
 #[tokio::test]
+async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
+    const BOARD: i64 = 699448332;
+    const POST: i64 = 4;
+    for env in [
+        &[("SPA_ENABLED", "1")][..],
+        &[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")][..],
+    ] {
+        let a = app(env).await.expect("the default frozen seed is required");
+        if env.len() == 1 {
+            choose(&a, DAVID, UiPreference::Next).await;
+        }
+        let mut david = a.sign_in(DAVID).await;
+        for (classic, spa) in [
+            (format!("/rooms/{BOARD}"), format!("/app/r/{BOARD}")),
+            (
+                format!("/rooms/{BOARD}/threads/{POST}"),
+                format!("/app/r/{BOARD}/t/{POST}"),
+            ),
+            (
+                format!("/rooms/{BOARD}/threads/new"),
+                format!("/app/r/{BOARD}/posts/new"),
+            ),
+        ] {
+            let reply = david.get(&classic).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{env:?} {classic}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+            let bypass = david.get(&format!("{classic}?classic=1")).await;
+            assert_eq!(
+                bypass.status,
+                StatusCode::OK,
+                "{classic}: {}",
+                bypass.text()
+            );
+            assert!(!redirected_to_spa(&bypass), "{classic}");
+        }
+        let filter = "status=blocked&owner=me&tag=Release&page=2";
+        let reply = david.get(&format!("/rooms/{BOARD}?{filter}")).await;
+        assert_eq!(
+            reply.location(),
+            Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
+        );
+        assert!(!redirected_to_spa(&david.get("/work").await));
+        let opted_out = post_ui(
+            &mut david,
+            &[
+                ("ui", "classic"),
+                ("return_to", &format!("/app/r/{BOARD}/posts/new")),
+            ],
+        )
+        .await;
+        assert_eq!(
+            opted_out.location(),
+            Some(to(&format!("/rooms/{BOARD}/threads/new")).as_str())
+        );
+    }
+}
+
+#[tokio::test]
 async fn message_aliases_and_room_tools_redirect_to_the_new_ui() {
     let a = enabled()
         .await

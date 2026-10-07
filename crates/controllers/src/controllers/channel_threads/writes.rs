@@ -538,12 +538,15 @@ pub async fn update(c: &mut Ctx) -> Result {
                 (thread.clone(), pending_name, pending_tags, history);
             outcome.map(|()| {
                 let work_changed = thread.work_changed_from(&before);
+                let model_published = campfire_db::models::channel_thread::ThreadWorkChange::pending(
+                    tx, thread_id,
+                );
                 // Tag assignment can change work in an earlier after-commit callback. Check
                 // after those callbacks, on the writer, before another queued write can run.
                 tx.after_commit(move |tx| {
                     let current = ChannelThread::find(tx.conn(), thread_id)?;
                     publication.store(
-                        work_changed || current.work_changed_from(&before),
+                        model_published || work_changed || current.work_changed_from(&before),
                         std::sync::atomic::Ordering::Relaxed,
                     );
                     Ok(())

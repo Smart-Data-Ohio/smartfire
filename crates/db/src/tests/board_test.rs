@@ -44,6 +44,161 @@ fn rows(t: &TestDb, from: usize) -> Vec<(TurboAction, String)> {
         .collect()
 }
 
+fn sync_events(t: &TestDb, from: usize) -> Vec<(&'static str, i64)> {
+    use crate::models::channel_thread::{ThreadBoardCreation, ThreadWorkChange};
+    t.events()[from..]
+        .iter()
+        .filter_map(|event| {
+            let crate::Event::Broadcast(request) = event else {
+                return None;
+            };
+            if let Some(event) = request.decode::<ThreadBoardCreation>() {
+                Some(("created", event.unwrap().thread_id))
+            } else {
+                request
+                    .decode::<ThreadWorkChange>()
+                    .map(|event| ("updated", event.unwrap().thread_id))
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn creation_publishes_one_sync_snapshot_with_tags_and_an_opening_message() {
+    let t = channel_thread_test::frozen();
+    let room = board(&t);
+    let from = t.events().len();
+    let thread = t.write(move |tx| {
+        let thread = ChannelThread::create(
+            tx,
+            NewChannelThread {
+                room_id: room.id,
+                creator_id: id("jz"),
+                name: Some("Post with brief".into()),
+                work_status: Some("planned".into()),
+                tag_names: Some(vec!["api".into(), "bug".into()]),
+                ..Default::default()
+            },
+        )?;
+        crate::Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: room.id,
+                thread_id: Some(thread.id),
+                creator_id: id("jz"),
+                board_post_opener: true,
+                markdown_source: Some("The brief".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok(thread)
+    });
+    assert_eq!(sync_events(&t, from), [("created", thread.id)]);
+    assert_eq!(
+        t.read(|conn| ChannelThread::find(conn, thread.id)).messages_count,
+        1
+    );
+}
+
+#[test]
+fn tag_and_row_changes_publish_one_sync_update_and_rollback_publishes_none() {
+    let t = channel_thread_test::frozen();
+    let room = board(&t);
+    let thread = post(&t, room.id);
+    let from = t.events().len();
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.update_metadata(
+            tx,
+            Some("Renamed"),
+            None,
+            Some(&["api".into(), "bug".into()]),
+        )
+    });
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+    let from = t.events().len();
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.update_metadata(
+            tx,
+            Some("Renamed"),
+            None,
+            Some(&["api".into(), "bug".into()]),
+        )?;
+        let result: crate::Result<()> = tx.savepoint(|tx| {
+            ThreadTag::create(tx, thread.id, "rolled-back")?;
+            Err(crate::Error::Other("rollback the tag".into()))
+        });
+        assert!(result.is_err());
+        Ok(())
+    });
+    assert!(sync_events(&t, from).is_empty());
+    let from = t.events().len();
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.update_metadata(tx, None, None, Some(&[]))
+    });
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+}
+
+#[test]
+fn board_replies_publish_once_even_at_the_same_clock_and_on_direct_message_writes() {
+    let t = channel_thread_test::frozen();
+    let room = board(&t);
+    let thread = post(&t, room.id);
+    let from = t.events().len();
+    let reply = t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.post_message(
+            tx,
+            id("jz"),
+            crate::NewMessage {
+                markdown_source: Some("First reply".into()),
+                ..Default::default()
+            },
+        )
+    });
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+    assert_eq!(
+        t.read(|conn| ChannelThread::find(conn, thread.id)).messages_count,
+        1
+    );
+    t.travel(60);
+    let from = t.events().len();
+    t.write(move |tx| {
+        ChannelThread::find(tx.conn(), thread.id)?.post_message(
+            tx,
+            id("jz"),
+            crate::NewMessage {
+                markdown_source: Some("Later reply".into()),
+                ..Default::default()
+            },
+        )
+    });
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+    let from = t.events().len();
+    t.write(move |tx| reply.destroy(tx));
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+    assert_eq!(
+        t.read(|conn| ChannelThread::find(conn, thread.id)).messages_count,
+        1
+    );
+    let from = t.events().len();
+    t.write(move |tx| {
+        crate::Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: room.id,
+                thread_id: Some(thread.id),
+                creator_id: id("jz"),
+                markdown_source: Some("Direct reply".into()),
+                ..Default::default()
+            },
+        )
+    });
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
+    assert_eq!(
+        t.read(|conn| ChannelThread::find(conn, thread.id)).messages_count,
+        2
+    );
+}
+
 #[test]
 fn board_room_type_predicates_are_exclusive() {
     let t = channel_thread_test::frozen();
@@ -209,6 +364,7 @@ fn direct_tag_create_and_destroy_replace_both_rows_without_touching_the_thread()
     let from = t.events().len();
     t.travel(60);
     let tag = t.write(move |tx| ThreadTag::create(tx, thread.id, "bug"));
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
     assert_eq!(
         rows(&t, from),
         [
@@ -229,6 +385,7 @@ fn direct_tag_create_and_destroy_replace_both_rows_without_touching_the_thread()
     );
     let from = t.events().len();
     t.write(move |tx| tag.destroy(tx));
+    assert_eq!(sync_events(&t, from), [("updated", thread.id)]);
     assert_eq!(rows(&t, from).len(), 2);
 }
 
