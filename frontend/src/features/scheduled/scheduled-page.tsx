@@ -213,7 +213,7 @@ export function ScheduledPage() {
         state={state}
         label="Scheduled messages"
         errorText="Your scheduled messages couldn't be loaded."
-        isEmpty={children.length === 0 && !state.hasMore}
+        isEmpty={children.length === 0}
         empty={
           <PaneEmpty
             icon="clock"

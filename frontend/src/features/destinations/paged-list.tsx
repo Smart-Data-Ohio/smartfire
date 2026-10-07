@@ -45,14 +45,21 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
   const listRef = useRef<VListHandle | null>(null);
   const { status, loadingMore, hasMore, error, loadMore } = state;
   const canLoad = status === "ready" && hasMore && !loadingMore && error === null;
+  // Rows handled or removed here can empty the loaded window while more wait on the server: that
+  // is still loading, not "all caught up".
+  const starved = isEmpty && hasMore;
 
   useKeepRowFocus(rootRef);
 
-  // A short first page leaves nothing to scroll: keep loading until the view fills.
+  // A short first page (or an emptied one) leaves nothing to scroll: keep loading until the view
+  // fills.
   useEffect(() => {
     const list = listRef.current;
 
-    if (canLoad && list !== null && list.scrollSize <= list.viewportSize + PAGE_AHEAD) {
+    if (
+      canLoad &&
+      (starved || (list !== null && list.scrollSize <= list.viewportSize + PAGE_AHEAD))
+    ) {
       loadMore();
     }
   });
@@ -88,14 +95,18 @@ export function PagedList({ state, label, errorText, empty, isEmpty, children }:
   return (
     <div ref={rootRef} className="page-list">
       <SkeletonReveal
-        loading={status !== "ready"}
+        loading={status !== "ready" || (starved && error === null)}
         skeleton={
           <div className="page-skeleton">
             <PaneListSkeleton rows={7} square={36} />
           </div>
         }
       >
-        {isEmpty ? (
+        {starved ? (
+          error === null ? null : (
+            footer
+          )
+        ) : isEmpty ? (
           empty
         ) : (
           <VList
