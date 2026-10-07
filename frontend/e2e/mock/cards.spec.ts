@@ -230,6 +230,16 @@ test("an older page with cards while the chunk loads keeps the list and its plac
     markInjected = resolve;
   });
 
+  const firstPage = page.waitForResponse((response) =>
+    response.url().endsWith(`/api/v1/rooms/${ROOM_IDS.engineering}/messages`),
+  );
+
+  let releaseOlder: () => void = () => undefined;
+
+  const releasedOlder = new Promise<void>((resolve) => {
+    releaseOlder = resolve;
+  });
+
   expect(poll).toBeTruthy();
   // The page before the first window carries a poll on its newest message.
   await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages?before=*`, async (route) => {
@@ -242,29 +252,34 @@ test("an older page with cards while the chunk loads keeps the list and its plac
       markInjected(newest.id);
     }
 
+    await releasedOlder;
     await route.fulfill({ response, json: body });
   });
   await openApp(page, `r/${ROOM_IDS.engineering}`);
   await chunk.requested;
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
 
+  const body: MessagePage = await (await firstPage).json();
+  // The first mounted row changes as the virtual list scrolls; anchor the loaded window's start.
+  const anchor = body.before;
+
+  expect(anchor).not.toBeNull();
+
   const list = page.locator("[data-message-list]");
-  const older = page.waitForResponse((response) => response.url().includes("before="));
 
   await list.evaluate((element) => {
     element.scrollTop = 0;
   });
 
-  const anchor = await page.locator("[data-message-row]").first().getAttribute("data-message-id");
-
-  await older;
+  await expect(row(page, Number(anchor))).toBeInViewport();
+  releaseOlder();
   // The older rows are in (the injected one mounted above), the row that was at the top stays in
   // view, and the list is still up.
   await expect(row(page, await injected)).toBeAttached();
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
   await expect(row(page, Number(anchor))).toBeInViewport();
   chunk.release();
-  await expect(page.getByRole("region", { name: "Poll" }).first()).toBeAttached();
+  await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
   await expect(row(page, Number(anchor))).toBeInViewport();
 });
 
