@@ -210,7 +210,12 @@ export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
 }
 
-/** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
+/**
+ * Whether a work URL from the server (a link, the run) is safe in an `href`: `https://` or
+ * site-relative. The decoder drops the rest already; components check again.
+ */
+export { isSafeWorkHref } from "../api/schema/work.ts";
+
 /** Work tracking (S4). Loads and refreshes never reject; writes reject on failure. */
 const work = {
   /** Loads (or reloads) a filter of the work list. */
@@ -231,6 +236,7 @@ const work = {
     runAction(workActions.handOff(threadId, body)),
 };
 
+/** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
   threads,

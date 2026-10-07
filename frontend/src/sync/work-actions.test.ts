@@ -4,6 +4,7 @@ import { Forbidden, ServerError } from "../api/errors.ts";
 import { FakeApi, userFixture } from "../api/testing.ts";
 import { threadFixture } from "../features/threads/test-fixtures.ts";
 import {
+  agentFixture,
   factsFixture,
   rowFixture,
   threadDetailFixture,
@@ -112,7 +113,7 @@ describe("work actions", () => {
         return Effect.succeed(
           threadDetailFixture(
             THREAD,
-            factsFixture({ status: "planned", ownerId: null }),
+            factsFixture({ status: "planned", owner: null }),
             workDetailFixture(),
           ),
         );
@@ -125,7 +126,7 @@ describe("work actions", () => {
         { status: null, ownerId: null },
         { status: "planned" },
       ]);
-      expect(during).toMatchObject({ status: "planned", ownerId: null, links: [] });
+      expect(during).toMatchObject({ status: "planned", owner: null, links: [] });
       expect(store.getState().work.details[THREAD]).toBeDefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -141,12 +142,12 @@ describe("work actions", () => {
         during = factsOf();
 
         return Effect.succeed(
-          threadDetailFixture(THREAD, factsFixture({ ownerId: 3 }), workDetailFixture()),
+          threadDetailFixture(THREAD, factsFixture({ owner: userFixture(3) }), workDetailFixture()),
         );
       });
       yield* work.assign(THREAD, 3);
 
-      expect(during?.ownerId).toBe(3);
+      expect(during?.owner?.id).toBe(3);
 
       yield* fake.reply(
         `PATCH /threads/${THREAD}/work`,
@@ -162,7 +163,7 @@ describe("work actions", () => {
 
       yield* fake.reply(
         `POST /threads/${THREAD}/work/handoff`,
-        threadDetailFixture(THREAD, factsFixture({ ownerId: 9 }), workDetailFixture()),
+        threadDetailFixture(THREAD, factsFixture({ owner: agentFixture() }), workDetailFixture()),
       );
       yield* work.handOff(THREAD, {
         receiverAgentId: 9,
@@ -171,7 +172,7 @@ describe("work actions", () => {
         openQuestions: [],
       });
 
-      expect(factsOf()?.ownerId).toBe(9);
+      expect(factsOf()?.owner?.id).toBe(9);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

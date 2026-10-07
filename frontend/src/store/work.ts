@@ -77,7 +77,7 @@ export function sameWorkFacts(a: WorkFacts | null, b: WorkFacts | null): boolean
 
   return (
     a.status === b.status &&
-    a.ownerId === b.ownerId &&
+    (a.owner?.id ?? null) === (b.owner?.id ?? null) &&
     a.ownerActive === b.ownerActive &&
     a.runUrl === b.runUrl &&
     a.resultUpdatedAt === b.resultUpdatedAt &&
@@ -143,7 +143,7 @@ export function optimisticFacts(
   if (current === null) {
     return {
       status,
-      ownerId: null,
+      owner: null,
       ownerActive: false,
       runUrl: null,
       resultUpdatedAt: null,

@@ -13,7 +13,7 @@ import { DEFAULT_AUTO_ARCHIVE_MINUTES, iso, type ThreadRecord } from "../s2/mode
 import { THREAD_IDS } from "../s2/seed.ts";
 import { S3_THREAD_IDS } from "../s3/seed.ts";
 import { ROOM_IDS, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
-import { emptyWork, ownerActive, ownerSnapshot, type WorkRecord } from "./work-model.ts";
+import { emptyWork, ownerActive, ownerSnapshot, setOwner, type WorkRecord } from "./work-model.ts";
 
 const MINUTE = 60_000;
 
@@ -434,7 +434,7 @@ function buildWork(
   const work = emptyWork(iso(now - seed.updatedAgo));
 
   work.status = seed.status;
-  work.ownerId = seed.ownerId;
+  setOwner(world, work, seed.ownerId);
   // A board's members aren't modelled, so its owners count as active.
   work.ownerActive = world.rooms.has(roomId) ? ownerActive(world, roomId, seed.ownerId) : true;
   work.runUrl = seed.runUrl ?? null;

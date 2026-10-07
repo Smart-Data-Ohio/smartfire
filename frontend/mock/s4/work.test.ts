@@ -44,10 +44,6 @@ describe("the work list", () => {
 
     for (const row of list.threads) {
       expect(userIds).toContain(row.thread.creatorId);
-
-      const ownerId = row.thread.work?.ownerId ?? null;
-
-      if (ownerId !== null) expect(userIds).toContain(ownerId);
     }
   });
 
@@ -77,7 +73,8 @@ describe("work facts and detail", () => {
     const work = detail.thread.work;
 
     expect(work?.status).toBe("in_progress");
-    expect(work?.ownerId).toBe(users.ember);
+    expect(work?.owner?.id).toBe(users.ember);
+    expect(work?.owner?.agent?.agentId).toBeDefined();
     expect(work?.ownerActive).toBe(true);
     expect(work?.runUrl).toMatch(/^https:/);
     expect(work?.links.map((link) => link.kind)).toEqual(["pull_request", "drive_file"]);
@@ -137,6 +134,7 @@ describe("work facts and detail", () => {
       work: {
         status: "planned" as const,
         ownerId,
+        owner: null,
         ownerActive: true,
         runUrl: null,
         links: [],
@@ -207,7 +205,7 @@ describe("PATCH /threads/:id/work", () => {
       200,
     );
 
-    expect(moved.thread.work).toMatchObject({ status: "in_progress", ownerId: users.maya });
+    expect(moved.thread.work).toMatchObject({ status: "in_progress", owner: { id: users.maya } });
     expect(moved.work?.history[0]?.toOwner?.name).toBe("Maya Okafor");
 
     const assigned = await expectStatus<ThreadDetail>(
@@ -327,7 +325,7 @@ describe("POST /threads/:id/work/handoff", () => {
       201,
     );
 
-    expect(detail.thread.work?.ownerId).toBe(users.ember);
+    expect(detail.thread.work?.owner?.id).toBe(users.ember);
     expect(detail.work?.handoffReceivers).toEqual([]);
     expect(detail.work?.history[0]?.kind).toBe("handoff");
     expect(detail.work?.history[0]?.handoff).toEqual({

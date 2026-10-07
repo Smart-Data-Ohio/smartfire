@@ -110,7 +110,7 @@ export const setStatus = Effect.fn("work.setStatus")(function* (
     (before) => optimisticFacts(before, status),
     (before) => {
       const body: UpdateWork =
-        status === null && before?.ownerId != null ? { status, ownerId: null } : { status };
+        status === null && before?.owner != null ? { status, ownerId: null } : { status };
 
       return api.updateWork(threadId, body);
     },
@@ -124,7 +124,14 @@ export const assign = Effect.fn("work.assign")(function* (
 ) {
   return yield* write(
     threadId,
-    (before) => (before === null ? null : { ...before, ownerId, ownerActive: ownerId !== null }),
+    (before) => {
+      const owner = ownerId === null ? null : (store.getState().users[ownerId] ?? undefined);
+
+      // An owner the store doesn't know yet shows once the server answers.
+      return before === null || owner === undefined
+        ? before
+        : { ...before, owner, ownerActive: owner !== null };
+    },
     () => api.updateWork(threadId, { ownerId }),
   );
 });

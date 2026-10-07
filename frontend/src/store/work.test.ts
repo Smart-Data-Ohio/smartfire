@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { userFixture } from "../api/testing.ts";
 import { threadFixture } from "../features/threads/test-fixtures.ts";
 import {
   factsFixture,
@@ -108,15 +109,15 @@ describe("work in the store", () => {
   it("builds optimistic facts for a start, a move and a stop", () => {
     expect(optimisticFacts(null, "planned")).toEqual({
       status: "planned",
-      ownerId: null,
+      owner: null,
       ownerActive: false,
       runUrl: null,
       resultUpdatedAt: null,
       links: [],
     });
-    expect(optimisticFacts(factsFixture({ ownerId: 3 }), "done")).toMatchObject({
+    expect(optimisticFacts(factsFixture({ owner: userFixture(3) }), "done")).toMatchObject({
       status: "done",
-      ownerId: 3,
+      owner: { id: 3 },
     });
     expect(optimisticFacts(factsFixture(), null)).toBeNull();
   });

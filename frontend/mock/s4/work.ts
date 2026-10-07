@@ -33,6 +33,7 @@ import {
   ownerActive,
   ownerSnapshot,
   RESULT_LIMIT,
+  setOwner,
   truncate,
   WORK_STATUSES,
   type WorkRecord,
@@ -119,10 +120,6 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
         updatedAt: updatedAt(thread),
       });
       userIds.push(thread.creatorId);
-
-      const ownerId = thread.work?.ownerId ?? null;
-
-      if (ownerId !== null) userIds.push(ownerId);
     };
 
     for (const thread of world.threads.values()) {
@@ -222,7 +219,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
         at,
       );
       work.status = status;
-      work.ownerId = ownerId;
+      setOwner(world, work, ownerId);
       work.ownerActive = ownerActive(world, thread.roomId, ownerId);
     }
 
@@ -418,7 +415,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       },
       at,
     );
-    work.ownerId = receiver.userId;
+    setOwner(world, work, receiver.userId);
     work.ownerActive = true;
     work.updatedAt = touched(ctx.now(), work.updatedAt);
     ctx.publish(threads.updated(thread));

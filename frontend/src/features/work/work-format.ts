@@ -21,9 +21,25 @@ export const WORK_STATUS_LABEL: Readonly<Record<WorkStatus, string>> = {
   done: "Done",
 };
 
+/** What a status this client doesn't know says (statuses are read tolerantly). */
+export const UNKNOWN_STATUS = "Unknown status";
+
+/** Whether `status` is one of the four this client can show and set. */
+export function isKnownStatus(status: string): status is WorkStatus {
+  return WORK_STATUSES.some((known) => known === status);
+}
+
+/**
+ * A status's label. The generated type lists four, but statuses decode tolerantly, so one added
+ * later arrives as `"unknown"` and reads "Unknown status".
+ */
+export function workStatusLabel(status: string): string {
+  return isKnownStatus(status) ? WORK_STATUS_LABEL[status] : UNKNOWN_STATUS;
+}
+
 /** A history snapshot's status: `null` is a thread that wasn't tracked. */
-export function historyStatusLabel(status: WorkStatus | null): string {
-  return status === null ? "Ordinary thread" : WORK_STATUS_LABEL[status];
+export function historyStatusLabel(status: string | null): string {
+  return status === null ? "Ordinary thread" : workStatusLabel(status);
 }
 
 /** A null owner. */
@@ -138,9 +154,9 @@ export function linkAccessibleName(link: WorkLink): string {
     .join(", ");
 }
 
-/** A snapshot's name; `null` is unassigned. */
+/** A snapshot's name; no snapshot, or one with no name recorded, reads "Unassigned". */
 export function snapshotName(snapshot: WorkOwnerSnapshot | null): string {
-  return snapshot === null ? UNASSIGNED : snapshot.name;
+  return snapshot?.name ?? UNASSIGNED;
 }
 
 const sameOwner = (a: WorkOwnerSnapshot | null, b: WorkOwnerSnapshot | null): boolean =>

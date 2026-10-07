@@ -42,6 +42,8 @@ export const WORK_STATUSES: readonly WorkStatus[] = ["planned", "in_progress", "
 export interface WorkRecord {
   status: WorkStatus | null;
   ownerId: number | null;
+  /** The owner's user as last written, whole, as `WorkFacts.owner` carries it. */
+  owner: User | null;
   /** `work_owner_active`, decided when the owner was last written (not republished later). */
   ownerActive: boolean;
   runUrl: string | null;
@@ -64,6 +66,7 @@ export function emptyWork(at: string): WorkRecord {
   return {
     status: null,
     ownerId: null,
+    owner: null,
     ownerActive: false,
     runUrl: null,
     links: [],
@@ -83,12 +86,18 @@ export function workFacts(work: WorkRecord | undefined): WorkFacts | null {
 
   return {
     status: work.status,
-    ownerId: work.ownerId,
-    ownerActive: work.ownerId !== null && work.ownerActive,
+    owner: work.owner,
+    ownerActive: work.owner !== null && work.ownerActive,
     runUrl: work.runUrl,
     resultUpdatedAt: work.resultUpdatedAt,
     links: work.links,
   };
+}
+
+/** Points the work at `ownerId` (or nobody), with the owner's user as it is now. */
+export function setOwner(world: World, work: WorkRecord, ownerId: number | null): void {
+  work.ownerId = ownerId;
+  work.owner = ownerId === null ? null : (world.users.get(ownerId) ?? null);
 }
 
 /** Whether the thread is tracked as work. */
@@ -136,7 +145,7 @@ export function ownerActive(world: World, roomId: number, ownerId: number | null
 export function ownerSnapshot(world: World, ownerId: number | null): WorkOwnerSnapshot | null {
   if (ownerId === null) return null;
 
-  return { userId: ownerId, name: world.users.get(ownerId)?.name ?? "Someone" };
+  return { userId: ownerId, name: world.users.get(ownerId)?.name ?? null };
 }
 
 /** The five work flags (`ThreadPermissions`), for a viewer who `manages` the thread's settings. */
@@ -235,15 +244,13 @@ export function workDetail(
   };
 }
 
-/** Everyone a work detail refers to: the owner, the result's editor, actors, candidates. */
+/** Everyone a work detail refers to: the result's editor, actors, candidates (the owner rides whole on the facts). */
 export function workUserIds(thread: ThreadRecord, detail: WorkDetail | null): number[] {
   const work = thread.work;
 
   if (work === undefined || detail === null) return [];
 
   const ids: number[] = [];
-
-  if (work.ownerId !== null) ids.push(work.ownerId);
 
   if (detail.resultUpdatedById !== null) ids.push(detail.resultUpdatedById);
 

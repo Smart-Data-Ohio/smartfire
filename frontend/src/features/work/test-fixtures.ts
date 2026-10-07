@@ -1,7 +1,9 @@
 /** Work facts, details, permissions and list fixtures for the work tests. */
 
+import { userFixture } from "../../api/testing.ts";
 import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
 import type { ThreadPermissions } from "../../gen/ThreadPermissions.ts";
+import type { User } from "../../gen/User.ts";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkFacts } from "../../gen/WorkFacts.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
@@ -9,10 +11,21 @@ import type { WorkLink } from "../../gen/WorkLink.ts";
 import type { WorkListRow } from "../../gen/WorkListRow.ts";
 import { threadFixture } from "../threads/test-fixtures.ts";
 
+/** Agent 9, "Ember", a workspace agent. */
+export function agentFixture(id = 9, name = "Ember"): User {
+  return {
+    ...userFixture(id, name),
+    agent: { agentId: id, kind: "workspace", status: "idle", suspended: false },
+  };
+}
+
+/** The people and agent the work fixtures name: users 2 and 3, and agent 9. */
+export const WORK_USERS: readonly User[] = [userFixture(2), userFixture(3), agentFixture()];
+
 export function factsFixture(extra: Partial<WorkFacts> = {}): WorkFacts {
   return {
     status: "in_progress",
-    ownerId: 2,
+    owner: userFixture(2),
     ownerActive: true,
     runUrl: null,
     resultUpdatedAt: null,
@@ -103,7 +116,7 @@ export function threadDetailFixture(
     parentMessage: null,
     permissions,
     work,
-    users: [],
+    users: work === null ? [] : [...WORK_USERS],
   };
 }
 
