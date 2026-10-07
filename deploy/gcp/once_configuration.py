@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+"""Merge allowlisted ONCE settings while preserving the pinned image and data."""
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import time
+import urllib.request
+
+def run(args, *, data=None):
+    result = subprocess.run(args, input=data, capture_output=True, text=True)
+    if result.returncode:
+        raise RuntimeError("Command failed: " + args[0])
+    return result.stdout
+
+def environment(values):
+    if not isinstance(values, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in values.items()):
+        raise RuntimeError("Invalid ONCE environment; expected a string-to-string map")
+    return values
+
+def current(host):
+    ids = run(["docker", "ps", "-q", "--filter", "label=once"]).split()
+    containers = json.loads(run(["docker", "inspect", *ids])) if ids else []
+    found = []
+    for container in containers:
+        settings = json.loads(container["Config"]["Labels"].get("once", "{}"))
+        if not isinstance(settings, dict):
+            raise RuntimeError("Invalid ONCE settings; expected an object")
+        environment(settings.get("env", {}))
+        if settings.get("host") == host:
+            found.append((container, settings))
+    if len(found) != 1:
+        raise RuntimeError("Expected one running Smartfire application")
+    return found[0]
+
+def env(container):
+    return dict(item.split("=", 1) for item in container["Config"].get("Env", []) if "=" in item)
+
+def storage(container):
+    return sorted((m["Type"], m["Source"], m["Destination"], m["RW"]) for m in container["Mounts"])
+
+def protected_write(path, value):
+    with path.open("x") as stream:
+        stream.write(value)
+
+
+def configure(allowed, validate, backup_prefix, *, configuration_name, include_plan_values=False):
+    os.umask(0o077)
+    backup = None
+    try:
+        request = json.load(sys.stdin)
+        host = request["host"]
+        with open("/var/lock/campfire-release.lock", "a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if not re.fullmatch(r"[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?", host):
+                raise RuntimeError("Invalid application host")
+            before, settings = current(host)
+            before_env = env(before)
+            if request["mode"] == "plan":
+                result = {"host": host, "image": settings["image"], "revision": before_env.get("GIT_REVISION"), "configured_environment_keys": sorted(settings.get("env", {})), "override_keys": sorted(allowed), "will_preserve_existing_settings": True}
+                if include_plan_values:
+                    changes = environment(request["environment"])
+                    if set(changes) != allowed:
+                        raise RuntimeError("Unexpected or missing " + configuration_name)
+                    validate(changes, host, settings)
+                    result["environment"] = changes
+                print(json.dumps(result))
+                return
+            if request["mode"] != "apply":
+                raise RuntimeError("Unsupported mode")
+            if before_env.get("GIT_REVISION") != request["expected_revision"]:
+                raise RuntimeError("Production revision changed; refusing configuration update")
+            image = settings["image"]
+            if image != request["expected_image"]:
+                raise RuntimeError("Production image changed; refusing configuration update")
+            if not re.fullmatch(r"[a-z0-9.-]+/[a-zA-Z0-9._/-]+@sha256:[0-9a-f]{64}", image):
+                raise RuntimeError("Current image must be the pinned production image")
+            changes = environment(request["environment"])
+            if set(changes) != allowed:
+                raise RuntimeError("Unexpected or missing " + configuration_name)
+            validate(changes, host, settings)
+            merged = dict(settings.get("env", {}))
+            merged.update(changes)
+            backup_directory = Path("/var/backups") / time.strftime(backup_prefix + "-%Y%m%dT%H%M%SZ", time.gmtime())
+            backup_directory.mkdir(mode=0o700)
+            backup = backup_directory
+            protected_write(backup / "before-inspect.json", json.dumps(before))
+            protected_write(backup / "before-settings.json", json.dumps(settings))
+            args = ["once", "update", host, "--image", image, "--auto-update=false"]
+            for key, value in sorted(merged.items()):
+                args.extend(["--env", key + "=" + value])
+            result = subprocess.run(args, capture_output=True, text=True)
+            protected_write(backup / "update-output.log", result.stdout + result.stderr)
+            if result.returncode:
+                raise RuntimeError("ONCE configuration update failed")
+            deadline = time.monotonic() + 120
+            while True:
+                try:
+                    with urllib.request.urlopen("https://" + host + "/up", timeout=5) as response:
+                        if response.status == 200:
+                            break
+                except Exception:
+                    pass
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Application did not become healthy after configuration update")
+                time.sleep(2)
+            after, after_settings = current(host)
+            expected_env = dict(before_env)
+            expected_env.update(changes)
+            if env(after) != expected_env:
+                raise RuntimeError("Runtime environment verification failed")
+            if after_settings.get("autoUpdate") is not False:
+                raise RuntimeError("Automatic image updates must remain disabled")
+            if after_settings.get("env") != merged:
+                raise RuntimeError("Persistent environment verification failed")
+            if storage(after) != storage(before) or after["Image"] != before["Image"]:
+                raise RuntimeError("Image or storage changed unexpectedly")
+            for key in settings:
+                if key not in {"env", "autoUpdate"} and (key not in after_settings or after_settings[key] != settings[key]):
+                    raise RuntimeError("An existing ONCE setting changed unexpectedly")
+            if after_settings.keys() - settings.keys() - {"env", "autoUpdate"}:
+                raise RuntimeError("An unexpected ONCE setting appeared")
+            protected_write(backup / "after-settings.json", json.dumps(after_settings))
+            print(json.dumps({"host": host, "revision": env(after)["GIT_REVISION"], "configured_keys": sorted(changes), "existing_environment_preserved": True, "existing_settings_preserved": True, "image_and_storage_preserved": True, "healthy": True, "protected_backup": str(backup)}))
+    except Exception as error:
+        if isinstance(error, RuntimeError):
+            message = str(error)
+        else:
+            message = "Configuration operation failed: " + type(error).__name__
+        if backup is not None:
+            message += "; protected diagnostics: " + str(backup)
+        print(message, file=sys.stderr)
+        sys.exit(1)

@@ -190,12 +190,16 @@ A backup with migrations the image doesn't know is refused and the hook fails.
 
 Supported variables pass directly to the Rust config or front server:
 
+For production UI changes, use the deploy workflow's audited `spa_mode` input.
+See [Switch the new UI mode](../deploy/gcp/README.md#switch-the-new-ui-mode) for opt-in, default-next, and rollback.
+
 | Variables | Meaning |
 | --- | --- |
 | `SECRET_KEY_BASE`, `SECRET_KEY_BASE_DUMMY` | Rails-compatible keys; dummy only for tests/offline operations |
 | `RAILS_ENV` | database basename |
 | `DISABLE_SSL`, `RAILS_LOG_LEVEL` | SSL middleware and log level |
 | `APP_VERSION`, `GIT_REVISION` | version headers and UI |
+| `SPA_ENABLED`, `SPA_DEFAULT` | serve the React UI at `/app/`; `SPA_DEFAULT=next` makes it the default when enabled |
 | `RAILS_MAX_THREADS`, `JOB_CONCURRENCY` | reader pool and in-process job concurrency |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push; Rust also accepts `VAPID_SUBJECT` |
 | `ADMIN_SESSION_IDLE_TIMEOUT_DAYS` | administrator session lifetime |

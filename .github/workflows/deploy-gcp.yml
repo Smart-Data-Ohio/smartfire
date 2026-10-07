@@ -56,6 +56,16 @@ on:
         type: boolean
         required: false
         default: false
+      spa_mode:
+        description: Set the new UI after cutover (use the deployed SHA to change settings only)
+        type: choice
+        required: false
+        default: unchanged
+        options:
+          - unchanged
+          - 'off'
+          - opt-in
+          - default-next
       configure_google:
         description: Apply the production Google OAuth and Picker settings after cutover
         type: boolean
@@ -345,7 +355,7 @@ jobs:
             --zone "$GCP_ZONE" --tunnel-through-iap \
             deploy/gcp "${GCP_INSTANCE}:${REMOTE_DIR}"
           gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
-            --command "set -eu; sudo install -d -o root -g root -m 0755 /opt/campfire-deploy; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/campfire-release.sh\" /opt/campfire-deploy/campfire-release.sh; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-google.py\" /opt/campfire-deploy/configure-google.py; sudo test -x /opt/campfire-deploy/campfire-release.sh"
+            --command "set -eu; sudo install -d -o root -g root -m 0755 /opt/campfire-deploy; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/campfire-release.sh\" /opt/campfire-deploy/campfire-release.sh; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-google.py\" /opt/campfire-deploy/configure-google.py; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-spa.py\" /opt/campfire-deploy/configure-spa.py; sudo install -o root -g root -m 0644 \"\$HOME/${REMOTE_DIR}/once_configuration.py\" /opt/campfire-deploy/once_configuration.py; sudo test -x /opt/campfire-deploy/campfire-release.sh"
 
       - name: Validate optional Google configuration
         if: inputs.configure_google
@@ -355,6 +365,12 @@ jobs:
           GOOGLE_SIGN_IN_DOMAINS: ${{ vars.GOOGLE_SIGN_IN_DOMAINS }}
           GOOGLE_CLOUD_PROJECT_NUMBER: ${{ vars.GOOGLE_CLOUD_PROJECT_NUMBER }}
         run: python3 deploy/gcp/google-configuration.py --validate
+
+      - name: Validate the SPA mode
+        env:
+          SPA_MODE: ${{ inputs.spa_mode }}
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+        run: python3 deploy/gcp/spa-configuration.py --validate
 
       - name: Prepare the host (swap)
         id: prepare_host
@@ -582,6 +598,24 @@ jobs:
           python3 deploy/gcp/google-configuration.py \
             | gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
                 --command 'sudo python3 /opt/campfire-deploy/configure-google.py'
+
+      - name: Configure the SPA on the deployed image (or print the dry-run plan)
+        id: spa_configuration
+        if: inputs.spa_mode != 'unchanged' && (steps.plan.outputs.dry_run == 'true' || steps.cutover.conclusion == 'success')
+        timeout-minutes: 15
+        shell: bash
+        env:
+          SPA_MODE: ${{ inputs.spa_mode }}
+          DRY_RUN: ${{ steps.plan.outputs.dry_run }}
+          EXPECTED_REVISION: ${{ steps.plan.outputs.sha }}
+          EXPECTED_IMAGE: ${{ steps.image.outputs.reference }}
+        run: |
+          set -euo pipefail
+          # The allowlisted payload contains only the two non-secret SPA values.
+          # An apply keeps the cutover's pinned image; a plan never calls ONCE.
+          python3 deploy/gcp/spa-configuration.py \
+            | gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
+                --command 'sudo python3 /opt/campfire-deploy/configure-spa.py'
 
       # Runs on failure, cancellation and timeout alike: anything that leaves the
       # write freeze without a successful cutover needs the host dealt with.
