@@ -2,11 +2,11 @@
 
 This audit sorts every classic GET route into one of three buckets: it has a row in `crates/spa/src/screens.rs` (the pairs the coexistence redirects and the service worker's push-click mapping use), it stays classic for a stated reason, or it is a **gap** with neither. Each gap needs a screen or a decision before the default flips to the SPA and before the `/app` prefix goes. Update this file when a gap gets one.
 
-Audited against main at `0f38c6a4d` (the route table and screen map are unchanged since `5eb8e0956`, where the audit was taken).
+Audited against main at `b2a465c8c` (#329 added the people rows; the route table is unchanged since `5eb8e0956`, where the audit was taken).
 
 The classic route declarations are `crates/routes/routes.json` (`table`), compiled into `campfire_routes::TABLE` by `crates/routes/build.rs`. `crates/campfire/src/controllers.rs:210` constructs its ordered dispatch table; `dispatch` at line 628 installs `MatchedRoute.endpoint`, and `recognize` at line 643 treats HEAD as GET and selects the first matching declaration. The audit enumerates all **195 GET declarations** once, in declaration order. Optional `(.:format)` suffixes are suppressed below.
 
-There are **83 page / explicitly retained OAuth routes**: **29 routes with screen-map rows**, **12 stays-classic routes**, and **42 gaps**. The `/users/:id` gap is conditional: human profiles are a gap, while bot/agent profiles are an additional **one stays-classic decision** pending PR #320. The QR transfer image is an explicitly retained classic auth endpoint in the image group, not a page. The remaining **112 non-page declarations** appear in **13 grouped rows**. Thus the two tables contain **96 data rows**, covering all 195 declarations. Gaps are recorded for a later decision; this work does not assign new SPA URLs to them.
+There are **83 page / explicitly retained OAuth routes**: **31 routes with screen-map rows**, **12 stays-classic routes**, and **40 gaps**. `/users/:id` is split: human profiles map to `/app/people/:id`, while bot/agent profiles are an additional **one stays-classic decision** pending PR #320. The QR transfer image is an explicitly retained classic auth endpoint in the image group, not a page. The remaining **112 non-page declarations** appear in **13 grouped rows**. Thus the two tables contain **96 data rows**, covering all 195 declarations. Gaps are recorded for a later decision; this work does not assign new SPA URLs to them.
 
 A direct HTML document counts as a page even if Turbo can also request its content as a frame. The grouped frame row contains endpoints whose purpose is a fragment/pagination read (for example message history, sidebar, rich cards, and Slack status), not the page that embeds it. JSON variants of an otherwise real HTML page do not remove its page row. OAuth starts/callbacks are retained as individual rows because the requested coexistence decisions expressly name them, although some return redirects rather than a document.
 
@@ -41,8 +41,8 @@ A direct HTML document counts as a page even if Turbo can also request its conte
 | `/users/:user_id/sessions` | `users/sessions#index` | `/app/settings/sessions` (ported); only the `me` spelling maps; numeric user ids keep existing authorization/classic behavior |
 | `/users/:user_id/status/edit` | `users/statuses#edit` | `/app/settings/status` (ported); only the `me` spelling maps; numeric user ids keep existing authorization/classic behavior |
 | `/users/:user_id/push_subscriptions` | `users/push_subscriptions#index` | `/app/settings/devices` (ported); only the `me` spelling maps; numeric user ids keep existing authorization/classic behavior |
-| `/users` | `users#index` | **gap** — human people directory has no SPA page route or screen-map row |
-| `/users/:id` | `users#show` | **gap** — human profile has no SPA page route or row; bot/agent profile stays classic pending PR #320 (/app/agents/:id) |
+| `/users` | `users#index` | `/app/people` (ported, #329) |
+| `/users/:id` | `users#show` | `/app/people/:id` (ported, #329); bot/agent profiles stay classic pending PR #320 (/app/agents/:id) |
 | `/agents` | `agents/directory#index` | **gap** — agent directory has no SPA route or row |
 | `/agents/:id/events` | `agents/events#ledger` | **gap** — human agent event ledger has no SPA route or row |
 | `/agents/:id/approvals` | `agents/approvals#for_agent` | **gap** — human agent approvals history has no SPA route or row |
@@ -126,15 +126,13 @@ Each group lists every declaration it covers, paired with its endpoint. These ar
 
 - All currently built classic-backed SPA routes in `frontend/src/router.tsx` already have `screens.rs` rows. The two intentional SPA-only exceptions are the design gallery and `/app/r/:roomId/t/new?parent=...`; that draft is not the classic board-only `channel_threads#new` form. A new reverse-direction router test now checks this completeness in addition to the existing screen-to-router check.
 - No screen-map row was added and no existing row or ported flag changed. Existing `/work` remains unported; conditional board-room fallback remains in the room route.
-- `/users` and human `/users/:id` have no standalone SPA page. People data, avatars and pickers are components rather than a profile/directory route. `/users/:id` push clicks therefore retain the classic path. Bot/agent profiles retain the requested classic decision until PR #320 lands.
+- `/users` and `/users/:id` map to `/app/people` and `/app/people/:id` since #329, so `/users/:id` push clicks open the person page. Bot/agent profiles retain the requested classic decision until PR #320 lands.
 - Slack issues are **already ported here**: the classic administrator run page `/account/slack_import/runs/:id?page=N` is the `accounts/slack_import_runs#show` row, routed to `/app/admin/slack/runs/:id?page=N`. `frontend/src/features/slack/slack-run.tsx:326` implements issues with “Older issues” pagination, and the run router validates `page`. There is no separate classic issue-page GET declaration. The administrator and personal `/status` endpoints remain classic polling fragments and are grouped above; they do not need screen rows. No Slack behavior was changed by this audit.
 - `classicToSpaUrl(path, origin)` reads the same generated screen map through `spaUrlFor`; it maps only ported same-origin paths and appends the original parsed query and fragment without URLSearchParams rewriting. It returns null for unported/unknown/foreign/malformed paths, so the worker can keep them as given. Existing regular classic-link mapping still removes the `classic` parameter as before.
 
 ## Gaps (undecided)
 
 - `/first_run` — `first_runs#show`
-- `/users` — `users#index`
-- `/users/:id` — `users#show`
 - `/agents` — `agents/directory#index`
 - `/agents/:id/events` — `agents/events#ledger`
 - `/agents/:id/approvals` — `agents/approvals#for_agent`

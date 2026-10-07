@@ -44,10 +44,13 @@ describe("the screen map", () => {
     ).toBe("/app/r/12/t/9?m=4&label=a%20b&classic=1&label=c+d#reply");
   });
 
-  it("leaves people profiles, unported rows and unknown notification paths to classic", () => {
+  it("opens a person's notification path on their SPA page", () => {
+    expect(classicToSpaUrl("/users/7", "https://smartfire.example")).toBe("/app/people/7");
+  });
+
+  it("leaves unported rows and unknown notification paths to classic", () => {
     const origin = "https://smartfire.example";
 
-    expect(classicToSpaUrl("/users/7", origin)).toBeNull();
     expect(classicToSpaUrl("/work?status=open", origin)).toBeNull();
     expect(classicToSpaUrl("/nowhere", origin)).toBeNull();
   });

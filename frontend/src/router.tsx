@@ -288,7 +288,9 @@ const scheduledRoute = createRoute({
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "people",
-  component: lazyRouteComponent(() => import("./features/people/people-page.tsx"), "PeoplePage"),
+  component: lazy(() =>
+    import("./features/people/people-page.tsx").then((module) => ({ default: module.PeoplePage })),
+  ),
 });
 
 /** `/app/people/$userId`: someone's page (a bot's opens its agent or classic page). */
@@ -299,7 +301,11 @@ const personRoute = createRoute({
     parse: ({ userId }) => ({ userId: parseId(userId) }),
     stringify: ({ userId }) => ({ userId: `${userId}` }),
   },
-  component: lazyRouteComponent(() => import("./features/people/person-page.tsx"), "PersonRoute"),
+  component: lazy(() =>
+    import("./features/people/person-page.tsx").then((module) => ({
+      default: module.PersonRoute,
+    })),
+  ),
 });
 
 /** The search page's query as the URL has it. */
