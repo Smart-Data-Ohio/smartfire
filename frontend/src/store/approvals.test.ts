@@ -14,6 +14,7 @@ import {
   markApprovalsStale,
   rollbackApproval,
   setApprovalListLoading,
+  settleApproval,
   showApproval,
 } from "./approvals.ts";
 import {
@@ -166,6 +167,23 @@ describe("approval requests in the store", () => {
 
     expect(rollbackApproval(echoed, shown, before)).toBe(echoed);
     expect(echoed.approvals.items[2]?.status).toBe("approved");
+  });
+
+  it("confirms a tied write reply after a same-base GET changes the shown copy", () => {
+    const before = approval(2);
+    const shown = decidedLocally(before, "approved", 1, "Ok", NOW);
+    const optimistic = showApproval(loaded(), shown);
+    const refreshed = applyApproval(optimistic, { ...before, roomName: null });
+
+    expect(refreshed.approvals.items[2]).not.toBe(shown);
+    expect(refreshed.approvals.items[2]?.status).toBe("approved");
+    expect(refreshed.approvals.overlays[2]).toBeDefined();
+
+    const reply = { ...shown, roomName: null };
+    const confirmed = settleApproval(refreshed, reply);
+
+    expect(confirmed.approvals.overlays[2]).toBeUndefined();
+    expect(confirmed.approvals.items[2]).toEqual(reply);
   });
 
   it("keeps a confirmed decision when an earlier Pending GET lands", () => {

@@ -3,10 +3,11 @@
  * list's error) and never fail. A decision shows at once and lands the server's reply; if the
  * server refuses, it comes back as it was, unless an `approval.updated` brought a newer copy
  * meanwhile. A 422, 404 or 409 reloads All and any held Pending list to pick up missed decisions.
+ * An older successful reply leaves its overlay visible and reloads All once in the background.
  */
 import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
-import { type ApiFailure, Conflict } from "../api/errors.ts";
+import type { ApiFailure } from "../api/errors.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import {
   type ApprovalFilter,
@@ -119,7 +120,7 @@ export const decide = Effect.fn("approvals.decide")(function* (
   const decided = yield* api
     .decideApproval(approvalId, note === null ? { decision } : { decision, note })
     .pipe(
-      Effect.tap((decided) => Effect.sync(() => mutations.settleApproval(decided, shown))),
+      Effect.tap((decided) => Effect.sync(() => mutations.settleApproval(decided))),
       Effect.tapError((error) =>
         Effect.gen(function* () {
           rollBack();
@@ -146,17 +147,8 @@ export const decide = Effect.fn("approvals.decide")(function* (
       ),
     );
 
-  while (store.getState().approvals.overlays[approvalId] !== undefined && before !== undefined) {
-    const page = yield* api.agentApprovals(before.agentId, null, null);
-    const copy = page.approvals.find((item) => item.id === approvalId);
-
-    if (copy === undefined) {
-      return yield* Effect.fail(
-        new Conflict({ message: "The approval could not be confirmed after the decision" }),
-      );
-    }
-
-    mutations.settleApproval(copy, shown);
+  if (store.getState().approvals.overlays[approvalId] !== undefined) {
+    yield* Effect.forkDetach(load(decided.agentId, "all"));
   }
 
   return decided;

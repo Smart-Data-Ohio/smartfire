@@ -320,8 +320,8 @@ export const mutations = {
   ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket)),
   applyApproval: (approval: AgentApproval) =>
     apply((state) => approvals.applyApproval(state, approval)),
-  settleApproval: (approval: AgentApproval, shown?: AgentApproval) =>
-    apply((state) => approvals.settleApproval(state, approval, shown)),
+  settleApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.settleApproval(state, approval)),
   showApproval: (approval: AgentApproval) =>
     apply((state) => approvals.showApproval(state, approval)),
   rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>

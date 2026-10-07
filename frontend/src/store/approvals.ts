@@ -265,7 +265,10 @@ export function applyApproval(
   return placeApproval(dropOverlay(state, approval.id), approval, sourceList);
 }
 
-/** Only decision fields overlay the confirmed request while the write is pending. */
+/**
+ * Only decision fields overlay the confirmed request while the write is pending. The local
+ * decision time is for display; updatedAt stays at the confirmed revision the write started from.
+ */
 export function showApproval(state: State, shown: AgentApproval): State {
   const before = state.approvals.items[shown.id];
 
@@ -286,6 +289,7 @@ export function showApproval(state: State, shown: AgentApproval): State {
       );
 }
 
+/** A refusal restores only the local copy still shown, never a confirmed decision. */
 export function rollbackApproval(
   state: State,
   shown: AgentApproval,
@@ -299,14 +303,10 @@ export function rollbackApproval(
 }
 
 /** The write reply confirms ties too; an outdated reply leaves the unresolved overlay. */
-export function settleApproval(
-  state: State,
-  approval: AgentApproval,
-  shown?: AgentApproval,
-): State {
+export function settleApproval(state: State, approval: AgentApproval): State {
   const overlay = state.approvals.overlays[approval.id];
 
-  if (overlay !== undefined && overlay.shown === shown && landsOver(overlay.before, approval)) {
+  if (overlay !== undefined && landsOver(overlay.before, approval)) {
     state = placeApproval(dropOverlay(state, approval.id), overlay.confirmed);
   }
 
