@@ -668,3 +668,183 @@ async fn the_agent_frames_are_the_same_with_the_sync_engine_on() {
         assert_eq!(off, on, "frame {index}");
     }
 }
+
+/// Inserts a ledger entry for Bender's agent, `age_seconds` old, answering its id.
+async fn ledger_entry(
+    a: &TestApp,
+    event_type: &'static str,
+    room_id: Option<i64>,
+    message_id: Option<i64>,
+    metadata: serde_json::Value,
+    age_seconds: i64,
+) -> i64 {
+    a.db()
+        .write(move |tx| {
+            let at = campfire_db::Timestamp::from_second(tx.now().as_second() - age_seconds);
+            Ok(tx.conn().query_row(
+                "INSERT INTO agent_events (agent_id, room_id, message_id, actor_id, event_type, outcome, metadata, detail, created_at, webhook_status, webhook_attempts) VALUES (?, ?, ?, ?, ?, 'delivered', ?, 'Room detail', ?, 'failed', 2) RETURNING id",
+                rusqlite::params![AGENT, room_id, message_id, DAVID, event_type, metadata.to_string(), at],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn the_ledger_is_for_managers_and_gates_what_a_room_outsider_reads() {
+    let Some(a) = app(true).await else { return };
+    let path = format!("/api/v1/agents/{AGENT}/events");
+    let mut kevin = a.sign_in(KEVIN).await;
+    let response = kevin.send(get(&path)).await;
+    assert_eq!(
+        response.status,
+        StatusCode::FORBIDDEN,
+        "{}",
+        response.text()
+    );
+    assert_eq!(tag(&response), "Forbidden");
+    let response = kevin.send(get("/api/v1/agents/999999/events")).await;
+    assert_eq!(response.status, StatusCode::NOT_FOUND);
+
+    let summary = "x".repeat(200);
+    let outside = ledger_entry(
+        &a,
+        "work_handed_off",
+        Some(ALL_TALK),
+        Some(BENDERS_MESSAGE),
+        json!({"handoff": {"summary": summary}}),
+        1,
+    )
+    .await;
+    let inside = ledger_entry(
+        &a,
+        "github_action_completed",
+        Some(ARCHIVE),
+        None,
+        json!({"action": "comment", "status": "failed", "message": "Rate limited"}),
+        2,
+    )
+    .await;
+    let roomless = ledger_entry(&a, "slash_command", None, None, json!({}), 3).await;
+
+    // David owns it and is in every room: nothing is gated for him.
+    let mut david = a.sign_in(DAVID).await;
+    let response = david.send(get(&path)).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    let page: api::AgentLedgerPage = parse(&response);
+    let find = |page: &api::AgentLedgerPage, id: i64| {
+        page.events
+            .iter()
+            .find(|event| event.id == id)
+            .cloned()
+            .unwrap_or_else(|| panic!("entry {id}"))
+    };
+    let entry = find(&page, outside);
+    assert_eq!(entry.event_type, api::AgentLedgerEventType::WorkHandedOff);
+    assert_eq!(entry.room_name.as_deref(), Some("All Talk"));
+    assert_eq!(entry.detail.as_deref(), Some("Room detail"));
+    let handoff = entry.handoff_summary.expect("the summary");
+    assert_eq!(handoff.chars().count(), 140);
+    assert!(handoff.ends_with("..."), "{handoff}");
+    assert_eq!(
+        (entry.webhook_status, entry.webhook_attempts),
+        (api::AgentWebhookStatus::Failed, 2)
+    );
+    assert_eq!(entry.outcome, Some(api::AgentDeliveryOutcome::Delivered));
+    assert!(page.users.iter().any(|user| user.id == BENDER));
+    assert!(page.users.iter().any(|user| user.id == DAVID));
+
+    // Make Kevin the owner: he isn't in All Talk, so that entry's room text is withheld.
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET owner_id = ? WHERE id = ?",
+                [KEVIN, AGENT],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let page: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
+    let entry = find(&page, outside);
+    assert_eq!(entry.room_id, Some(ALL_TALK));
+    assert_eq!(
+        (
+            entry.room_name,
+            entry.detail,
+            entry.handoff_summary,
+            entry.content
+        ),
+        (None, None, None, None)
+    );
+    let entry = find(&page, inside);
+    assert_eq!(entry.room_name.as_deref(), Some("Archive"));
+    assert_eq!(entry.detail.as_deref(), Some("Room detail"));
+    let external = entry.external.expect("a GitHub result");
+    assert_eq!(
+        (
+            external.action.as_deref(),
+            external.status.as_deref(),
+            external.message.as_deref()
+        ),
+        (Some("comment"), Some("failed"), Some("Rate limited"))
+    );
+    let entry = find(&page, roomless);
+    assert_eq!(
+        (entry.room_name, entry.detail.as_deref()),
+        (None, Some("Room detail"))
+    );
+
+    // Newest first, 50 a page, and the cursor picks up after the last.
+    for age in 10..70 {
+        ledger_entry(&a, "mention", Some(ARCHIVE), None, json!({}), age).await;
+    }
+    let first: api::AgentLedgerPage = parse(&kevin.send(get(&path)).await);
+    assert_eq!(first.events.len(), 50);
+    assert!(
+        first
+            .events
+            .windows(2)
+            .all(|pair| (&pair[0].created_at, pair[0].id) > (&pair[1].created_at, pair[1].id)),
+        "newest first"
+    );
+    let cursor = first.next_cursor.clone().expect("a second page");
+    let mut ids = first
+        .events
+        .iter()
+        .map(|event| event.id)
+        .collect::<Vec<_>>();
+    let mut next = Some(cursor);
+    while let Some(cursor) = next {
+        let page: api::AgentLedgerPage =
+            parse(&kevin.send(get(&format!("{path}?before={cursor}"))).await);
+        ids.extend(page.events.iter().map(|event| event.id));
+        next = page.next_cursor;
+    }
+    let total = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM agent_events WHERE agent_id = ?",
+                [AGENT],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let unique = ids.iter().collect::<std::collections::BTreeSet<_>>();
+    assert_eq!((ids.len() as i64, unique.len() as i64), (total, total));
+
+    // The outcome filter, and a cursor that doesn't decode.
+    let pending: api::AgentLedgerPage =
+        parse(&kevin.send(get(&format!("{path}?outcome=pending"))).await);
+    assert!(
+        pending
+            .events
+            .iter()
+            .all(|event| event.outcome == Some(api::AgentDeliveryOutcome::Pending))
+    );
+    let response = kevin.send(get(&format!("{path}?before=garbage"))).await;
+    assert_eq!(validation_fields(&response), vec!["before".to_string()]);
+}

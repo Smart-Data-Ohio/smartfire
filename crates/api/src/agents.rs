@@ -37,6 +37,10 @@ endpoint!(
     /// `PATCH /api/v1/agent_approvals/:id`
     decide => decide_approval
 );
+endpoint!(
+    /// `GET /api/v1/agents/:agent_id/events`
+    events => list_events
+);
 
 /// `agents/approvals#for_agent`' page size.
 const PAGE: usize = 50;
@@ -551,4 +555,240 @@ async fn decide_approval(c: &mut Ctx) -> Result {
             c.json(StatusCode::OK, &updated.approval)
         }
     }
+}
+
+/// The ledger's outcome filter (`agents/history#ledger`).
+const OUTCOMES: [&str; 4] = ["pending", "delivered", "acknowledged", "suppressed"];
+
+/// `history`'s 140-character cut, ending "..." when cut.
+fn cut(text: &str) -> String {
+    campfire_views::helpers::application::truncate(text, 140, "...")
+}
+
+fn metadata_text(value: &serde_json::Value) -> String {
+    match value {
+        serde_json::Value::String(text) => text.clone(),
+        serde_json::Value::Null => String::new(),
+        other => other.to_string(),
+    }
+}
+
+/// What one viewer may read of an agent's ledger entries, per room.
+struct LedgerGates<'a> {
+    conn: &'a Connection,
+    agent: &'a Agent,
+    viewer: &'a User,
+    rooms: HashMap<i64, Option<Room>>,
+    member: HashMap<i64, bool>,
+    readable: HashMap<i64, bool>,
+}
+
+impl LedgerGates<'_> {
+    fn room(&mut self, room_id: i64) -> campfire_db::Result<Option<Room>> {
+        if let Some(room) = self.rooms.get(&room_id) {
+            return Ok(room.clone());
+        }
+        let room = Room::find_by_id(self.conn, room_id)?;
+        self.rooms.insert(room_id, room.clone());
+        Ok(room)
+    }
+
+    /// An administrator, or a member of the room: the contract's gate on the room-scoped text.
+    fn sees_room(&mut self, room_id: i64) -> campfire_db::Result<bool> {
+        if self.viewer.is_administrator() {
+            return Ok(true);
+        }
+        if let Some(member) = self.member.get(&room_id) {
+            return Ok(*member);
+        }
+        let member =
+            Membership::find_by_room_and_user(self.conn, room_id, self.viewer.id)?.is_some();
+        self.member.insert(room_id, member);
+        Ok(member)
+    }
+
+    /// The classic content gate: the agent is in the message's room with `read_messages` there,
+    /// and the viewer sees the room.
+    fn reads_content(&mut self, room_id: i64) -> campfire_db::Result<bool> {
+        if let Some(allowed) = self.readable.get(&room_id) {
+            return Ok(*allowed);
+        }
+        let allowed = Membership::find_by_room_and_user(self.conn, room_id, self.agent.user_id)?
+            .is_some()
+            && self.agent.can(self.conn, "read_messages", Some(room_id))?
+            && self.sees_room(room_id)?;
+        self.readable.insert(room_id, allowed);
+        Ok(allowed)
+    }
+}
+
+fn ledger_event(
+    gates: &mut LedgerGates<'_>,
+    event: campfire_db::models::agent_delivery::AgentEvent,
+    rich_text: &dyn campfire_db::RichText,
+) -> campfire_db::Result<Option<api::AgentLedgerEvent>> {
+    let Ok(event_type) = wire::<api::AgentLedgerEventType>(&event.event_type) else {
+        tracing::warn!(id = event.id, event_type = %event.event_type, "ledger: unknown event type");
+        return Ok(None);
+    };
+    let outcome = event
+        .outcome
+        .as_deref()
+        .and_then(|outcome| wire::<api::AgentDeliveryOutcome>(outcome).ok());
+    let webhook_status = wire::<api::AgentWebhookStatus>(&event.webhook_status)
+        .unwrap_or(api::AgentWebhookStatus::None);
+    // Entries with no room are never gated.
+    let (room_name, open) = match event.room_id {
+        None => (None, true),
+        Some(room_id) => {
+            let open = gates.sees_room(room_id)?;
+            let name = match gates.room(room_id)? {
+                Some(room) if open => Some(accounts::room_display_name(
+                    gates.conn,
+                    &room,
+                    gates.viewer,
+                )?),
+                _ => None,
+            };
+            (name, open)
+        }
+    };
+    let content = match event
+        .message_id
+        .map(|id| campfire_db::Message::find_by_id(gates.conn, id))
+        .transpose()?
+        .flatten()
+    {
+        Some(message) if gates.reads_content(message.room_id)? => {
+            Some(cut(&message.plain_text_body(gates.conn, rich_text)?))
+        }
+        _ => None,
+    };
+    let text = |key: &str| {
+        event
+            .metadata
+            .get(key)
+            .filter(|value| !value.is_null())
+            .map(metadata_text)
+    };
+    let external = (matches!(
+        event_type,
+        api::AgentLedgerEventType::GithubActionCompleted
+            | api::AgentLedgerEventType::FizzyActionCompleted
+    ) && event.metadata.is_object())
+    .then(|| api::AgentExternalResult {
+        action: text("action"),
+        status: text("status"),
+        message: present(text("message").as_deref()).filter(|_| open),
+    });
+    let handoff_summary = (event_type == api::AgentLedgerEventType::WorkHandedOff && open)
+        .then(|| {
+            event
+                .metadata
+                .get("handoff")
+                .filter(|handoff| handoff.is_object())
+                .map(|handoff| {
+                    cut(&handoff
+                        .get("summary")
+                        .map(metadata_text)
+                        .unwrap_or_default())
+                })
+        })
+        .flatten();
+    Ok(Some(api::AgentLedgerEvent {
+        id: event.id,
+        event_type,
+        outcome,
+        created_at: dto::time(event.created_at),
+        room_id: event.room_id,
+        room_name,
+        actor_id: event.actor_id,
+        message_id: event.message_id,
+        hop: event.hop(),
+        detail: present(event.detail.as_deref()).filter(|_| open),
+        webhook_status,
+        webhook_attempts: event.webhook_attempts,
+        webhook_last_error: present(event.webhook_last_error.as_deref()),
+        external,
+        handoff_summary,
+        content,
+    }))
+}
+
+async fn list_events(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let Some(viewer) = human(c)? else {
+        return Err(Error::NotFound);
+    };
+    let id = agent_id(c, "agent_id")?;
+    let agent = c
+        .app()
+        .db
+        .read(move |conn| Agent::find(conn, id))
+        .await
+        .map_err(db_error)?
+        .ok_or(Error::NotFound)?;
+    if !viewer.is_administrator() && agent.owner_id != Some(viewer.id) {
+        return Err(fail(
+            c,
+            api::ApiError::Forbidden {
+                message: "Forbidden".into(),
+            },
+        ));
+    }
+    let outcome = c
+        .param_str("outcome")
+        .filter(|outcome| OUTCOMES.contains(outcome))
+        .map(str::to_owned);
+    let before = match c.param_str("before").filter(|raw| !raw.is_empty()) {
+        None => None,
+        Some(raw) => match crate::cursor::decode(raw) {
+            Some(key) => Some(key),
+            None => return Err(fail(c, validation("before", "is invalid"))),
+        },
+    };
+    let (secrets, now) = (c.app().secrets.clone(), now(c));
+    let rich_text = c.app().db.env().rich_text.clone();
+    let page = c
+        .app()
+        .db
+        .read(move |conn| {
+            let mut rows = campfire_db::models::agent_delivery::AgentEvent::history_page_before(
+                conn,
+                agent.id,
+                outcome.as_deref(),
+                before,
+            )?;
+            let more = rows.len() > PAGE;
+            rows.truncate(PAGE);
+            let next_cursor = rows
+                .last()
+                .filter(|_| more)
+                .map(|row| crate::cursor::encode(row.created_at, row.id));
+            let people = std::iter::once(agent.user_id)
+                .chain(rows.iter().filter_map(|row| row.actor_id))
+                .collect::<BTreeSet<_>>();
+            let mut gates = LedgerGates {
+                conn,
+                agent: &agent,
+                viewer: &viewer,
+                rooms: HashMap::new(),
+                member: HashMap::new(),
+                readable: HashMap::new(),
+            };
+            let mut events = Vec::with_capacity(rows.len());
+            for row in rows {
+                if let Some(event) = ledger_event(&mut gates, row, &*rich_text)? {
+                    events.push(event);
+                }
+            }
+            Ok(api::AgentLedgerPage {
+                events,
+                users: dto::users(conn, &secrets, people, now)?,
+                next_cursor,
+            })
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &page)
 }

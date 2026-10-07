@@ -247,6 +247,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             get(action(agents::approvals)),
         )
         .route(
+            "/api/v1/agents/{agent_id}/events",
+            get(action(agents::events)),
+        )
+        .route(
             "/api/v1/agent_approvals/{id}",
             patch(unparsed_action(agents::decide)),
         )
