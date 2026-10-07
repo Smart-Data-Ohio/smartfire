@@ -70,6 +70,16 @@ function body(page: Page, index = 0) {
   return rows(page).nth(index).locator(".activity-body");
 }
 
+/** The page's live region, which says what a row action did. */
+function said(page: Page) {
+  return page.locator(".page [role='status'][aria-live='polite']");
+}
+
+/** The open button of the `index`th row still in the list. */
+function openButton(page: Page, index = 0) {
+  return rows(page).nth(index).locator(".list-row-open");
+}
+
 test("marking an item handled moves it from Unread to Handled", async ({ page }) => {
   await openApp(page, "activity");
   await ready(page, "Activity");
@@ -81,6 +91,9 @@ test("marking an item handled moves it from Unread to Handled", async ({ page })
   await page.keyboard.press("e");
   await expect(page.locator(".page-count [aria-hidden='true']")).toHaveText(`${before - 1}`);
   await expect(body(page)).not.toHaveText(text);
+  // Focus moves on to the row that took its place, and the change is announced.
+  await expect(openButton(page)).toBeFocused();
+  await expect(said(page)).toHaveText("Marked handled");
 
   await page.getByRole("tab", { name: "Handled" }).click();
   await expect(page).toHaveURL(/status=handled/);
@@ -97,9 +110,27 @@ test("marking an item read from its context menu", async ({ page }) => {
   await rows(page).first().click({ button: "right" });
   await page.getByRole("menuitem", { name: "Mark as read" }).click();
   await expect(body(page)).not.toHaveText(text);
+  // Once the menu has gone, focus is on the next row rather than lost.
+  await expect(openButton(page)).toBeFocused();
 
   await page.getByRole("tab", { name: "Read", exact: true }).click();
   await expect(body(page)).toHaveText(text);
+});
+
+test("Home and End reach the first and last loaded rows", async ({ page }) => {
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+
+  const first = (await body(page).textContent()) ?? "";
+
+  await openButton(page).focus();
+  await page.keyboard.press("End");
+  await expect(page.locator(".page .list-row-open:focus")).toHaveCount(1);
+  await expect(page.locator(".page .list-row-open:focus .activity-body")).not.toHaveText(first);
+
+  await page.keyboard.press("Home");
+  await expect(openButton(page)).toBeFocused();
+  await expect(body(page)).toHaveText(first);
 });
 
 test("opening a mention goes to the message", async ({ page }) => {
@@ -169,6 +200,8 @@ test("removing a saved message offers Undo", async ({ page }) => {
   await rows(page).first().locator(".list-row-open").focus();
   await page.keyboard.press("Delete");
   await expect(rows(page).first().locator(".saved-body")).not.toHaveText(text);
+  await expect(openButton(page)).toBeFocused();
+  await expect(said(page)).toHaveText("Removed");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
 });
@@ -251,6 +284,9 @@ test("cancelling asks first, then removes the message", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: "Cancel message" }).click();
   await expect(rows(page).first().locator(".scheduled-body")).not.toHaveText(text);
+  // The dialog came from a row that's gone: focus lands on the row that took its place.
+  await expect(openButton(page)).toBeFocused();
+  await expect(said(page)).toHaveText("Cancelled");
 });
 
 test("editing a scheduled message saves its new text", async ({ page }) => {
