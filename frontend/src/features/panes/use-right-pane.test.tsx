@@ -4,15 +4,30 @@ import {
   createRoute,
   createRouter,
   RouterProvider,
+  useParams,
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { openPane } from "./pane-store.ts";
-import { usePaneNavigation } from "./use-right-pane.ts";
+import { usePaneNavigation, useRoomPaneLifecycle } from "./use-right-pane.ts";
+
+function ThreadListProbe({ roomId }: { readonly roomId: number }) {
+  const navigation = usePaneNavigation(roomId);
+
+  return (
+    <button type="button" onClick={() => navigation.openThread(7)}>
+      Listed thread
+    </button>
+  );
+}
 
 function Probe() {
-  const navigation = usePaneNavigation(4);
+  const { roomId } = useParams({ strict: false });
+
+  useRoomPaneLifecycle(roomId ?? 0);
+
+  const navigation = usePaneNavigation(roomId ?? 0);
 
   return (
     <>
@@ -32,16 +47,29 @@ function Probe() {
       <button type="button" onClick={() => navigation.openThread(7)}>
         Thread
       </button>
+      {navigation.view?.kind === "pane" && navigation.view.pane === "threads" ? (
+        <ThreadListProbe roomId={roomId ?? 0} />
+      ) : null}
     </>
   );
 }
 
 async function mount(path: string) {
   const root = createRootRoute({ component: Probe });
-  const room = createRoute({ getParentRoute: () => root, path: "/r/$roomId" });
+
+  const room = createRoute({
+    getParentRoute: () => root,
+    path: "/r/$roomId",
+    params: {
+      parse: ({ roomId }) => ({ roomId: Number(roomId) }),
+      stringify: ({ roomId }) => ({ roomId: String(roomId) }),
+    },
+  });
+
   const controls = ["threads", "files", "pins"].map((pane) =>
     createRoute({ getParentRoute: () => room, path: pane }),
   );
+
   const thread = createRoute({
     getParentRoute: () => room,
     path: "t/$threadId",
@@ -50,7 +78,9 @@ async function mount(path: string) {
       stringify: ({ threadId }) => ({ threadId: String(threadId) }),
     },
   });
+
   const draft = createRoute({ getParentRoute: () => room, path: "t/new" });
+
   const router = createRouter({
     routeTree: root.addChildren([room.addChildren([...controls, thread, draft])]),
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -99,6 +129,18 @@ describe("URL pane navigation", () => {
     expect(screen.getByRole("status").textContent).toBe("null");
   });
 
+  it("keeps a routed return list after its nested navigation caller unmounts", async () => {
+    const router = await mount("/r/4/threads");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Listed thread" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4/t/7"));
+    expect(screen.queryByRole("button", { name: "Listed thread" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4/threads"));
+    expect(screen.getByRole("button", { name: "Listed thread" })).toBeTruthy();
+  });
+
   it("retains the existing local pane behavior on a base room URL", async () => {
     const router = await mount("/r/4");
     const user = userEvent.setup();
@@ -110,5 +152,28 @@ describe("URL pane navigation", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"files"}');
+  });
+
+  it("clears a routed list on browser Back to the base room", async () => {
+    const router = await mount("/r/4");
+
+    await act(() => router.navigate({ href: "/r/4/files" }));
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"files"}');
+    await act(async () => router.history.back());
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
+    expect(screen.getByRole("status").textContent).toBe("null");
+  });
+
+  it("forgets a thread's routed return list after visiting another room", async () => {
+    const router = await mount("/r/4/threads");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Thread" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4/t/7"));
+    await act(() => router.navigate({ href: "/r/5/t/8" }));
+    await act(() => router.navigate({ href: "/r/4/t/7" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
+    expect(screen.getByRole("status").textContent).toBe("null");
   });
 });

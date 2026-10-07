@@ -1,9 +1,10 @@
-import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { useLocation, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { actions } from "../../sync/runtime.ts";
 import { PageNotFound } from "../shell/not-found.tsx";
 import { PageLoading } from "../shell/page-loading.tsx";
 import { messageDestination } from "./message-destination.ts";
+import { messageLinkSnapshot } from "./message-link.ts";
 
 type Resolution =
   | { readonly kind: "loading"; readonly messageId: number }
@@ -13,18 +14,27 @@ type Resolution =
 export function MessageResolver() {
   const params = useParams({ strict: false });
   const messageId = params.messageId ?? 0;
-  const { searchStr, hash } = useLocation();
-  const navigate = useNavigate();
+  const router = useRouter();
+  const location = useLocation({ select: () => router.history.location });
+  const bare = messageLinkSnapshot(location.href);
+  const incoming = location.state.smartfireMessageLink;
+  const link = incoming?.messageId === bare?.messageId ? incoming : bare;
+  const search = link?.search ?? null;
+  const hash = link?.hash ?? "";
   const [resolution, setResolution] = useState<Resolution>({ kind: "loading", messageId });
 
   useEffect(() => {
+    if (search === null) {
+      return;
+    }
+
     let current = true;
 
     setResolution({ kind: "loading", messageId });
     void actions.messages.read(messageId).then(
       ({ message }) => {
         if (current) {
-          void navigate({ href: messageDestination(message, searchStr, hash), replace: true });
+          router.history.replace(messageDestination(message, search, hash));
         }
       },
       () => {
@@ -37,7 +47,7 @@ export function MessageResolver() {
     return () => {
       current = false;
     };
-  }, [messageId, searchStr, hash, navigate]);
+  }, [messageId, search, hash, router]);
 
   return resolution.messageId === messageId && resolution.kind === "not-found" ? (
     <PageNotFound />

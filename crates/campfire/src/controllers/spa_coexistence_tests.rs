@@ -227,6 +227,9 @@ async fn message_aliases_and_room_tools_keep_the_classic_behavior_on_opt_out() {
 
 #[tokio::test]
 async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
+    use campfire_api_types as api;
+
+    use super::api_tests::{get, parse};
     use crate::controllers::presenters::test_support::{DIRECT_KEVIN_BENDER, KEVIN};
 
     const SECRET: &str = "private coexistence gap message";
@@ -234,6 +237,19 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
         .await
         .expect("the default frozen seed is required");
     let message = message(&a, DIRECT_KEVIN_BENDER, KEVIN, SECRET).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let member_read = kevin
+        .send(get(&format!("/api/v1/messages/{}", message.id)))
+        .await;
+    assert_eq!(member_read.status, StatusCode::OK, "{}", member_read.text());
+    let read: api::MessageRead = parse(&member_read);
+    assert_eq!(read.message.id, message.id);
+    assert_eq!(
+        (read.conversation.room_id, read.conversation.thread_id),
+        (DIRECT_KEVIN_BENDER, None)
+    );
+    assert!(read.message.body_html.contains(SECRET));
+
     let mut david = a.sign_in(DAVID).await;
     for preference in [UiPreference::Classic, UiPreference::Next] {
         choose(&a, DAVID, preference).await;
@@ -254,15 +270,19 @@ async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
     // After redirecting, the resolver and room tools still authorize their data reads.
     for path in [
         format!("/api/v1/messages/{}", message.id),
+        "/api/v1/messages/999999999".to_string(),
         format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}"),
         format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/threads"),
         format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/files"),
         format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/pins"),
     ] {
-        let reply = david
-            .send(Req::new(Method::GET, &path).header("accept", "application/json"))
-            .await;
+        let reply = david.send(get(&path)).await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}");
+        let envelope: api::ApiErrorResponse = parse(&reply);
+        assert!(
+            matches!(envelope.error, api::ApiError::NotFound { .. }),
+            "{path}"
+        );
         assert!(!reply.text().contains(SECRET), "{path}");
     }
     let mut anonymous = a.anonymous();

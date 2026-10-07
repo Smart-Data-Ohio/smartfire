@@ -62,12 +62,9 @@ export interface PaneNavigation {
   readonly toggle: (pane: PaneKind) => void;
 }
 
-/** The right pane's navigation for one room. */
-export function usePaneNavigation(roomId: number): PaneNavigation {
-  const navigate = useNavigate();
-  const view = useRightPaneView();
+/** The persistent room owns URL pane memory; nested pane bodies only navigate. */
+export function useRoomPaneLifecycle(roomId: number): void {
   const routePane = useRoutePane();
-  const returnPane = useRoutePaneReturn(roomId);
   const params = useParams({ strict: false });
   const matchRoute = useMatchRoute();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
@@ -80,6 +77,16 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       clearRoutePane();
     }
   }, [params.threadId, drafting, routePane, roomId]);
+
+  useEffect(() => () => clearRoutePane(roomId), [roomId]);
+}
+
+/** The right pane's navigation for one room. */
+export function usePaneNavigation(roomId: number): PaneNavigation {
+  const navigate = useNavigate();
+  const view = useRightPaneView();
+  const routePane = useRoutePane();
+  const returnPane = useRoutePaneReturn(roomId);
 
   const leaveThread = () => {
     void navigate({ to: "/r/$roomId", params: { roomId } });

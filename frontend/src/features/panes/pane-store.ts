@@ -17,7 +17,7 @@ interface PaneState {
 
 const paneStore = createStore<PaneState>()(() => ({ open: null }));
 
-/** Which side pane is open beside the conversation; per tab, not worth a URL. */
+/** The local side pane, or a routed list remembered below a thread in this room. */
 export function useOpenPane(roomId: number): PaneKind | null {
   return useZustand(paneStore, (state) => {
     const open = state.open;
@@ -41,9 +41,11 @@ export function useRoutePaneReturn(roomId: number): RoutePaneKind | null {
   );
 }
 
-/** A routed list stops being the return destination after leaving its thread or room. */
-export function clearRoutePane(): void {
-  if (paneStore.getState().open?.kind === "route") {
+/** Forgets a routed return destination; room cleanup only forgets its own list. */
+export function clearRoutePane(roomId?: number): void {
+  const open = paneStore.getState().open;
+
+  if (open?.kind === "route" && (roomId === undefined || open.roomId === roomId)) {
     paneStore.setState({ open: null });
   }
 }

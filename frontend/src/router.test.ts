@@ -21,7 +21,7 @@ function routed(path: string): boolean {
 }
 
 /** Parameter names and an index route's trailing slash do not distinguish screen patterns. */
-function shape(pattern: string): string {
+function routePattern(pattern: string): string {
   return pattern.replace(/[$:][A-Za-z_][A-Za-z_0-9]*/g, ":id").replace(/\/$/, "");
 }
 
@@ -34,8 +34,9 @@ describe("the screen map and the router", () => {
 
   it("maps every public router route back to a ported classic page", () => {
     const mapped = new Set(
-      SCREENS.filter((screen) => screen.ported).map((screen) => shape(screen.spa)),
+      SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
+
     // These are SPA-only tools, without a classic page of their own.
     const internal = new Set(["/app/_kitchen-sink", "/app/r/:id/t/new"]);
 
@@ -44,7 +45,7 @@ describe("the screen map and the router", () => {
         continue;
       }
 
-      const path = shape(`/app${route.fullPath}`);
+      const path = routePattern(`/app${route.fullPath}`);
 
       expect(mapped.has(path) || internal.has(path), path).toBe(true);
     }

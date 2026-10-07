@@ -39,6 +39,29 @@ function focusedName(): string {
 }
 
 describe("Menu", () => {
+  it("follows controlled state changes without reporting them as user actions", async () => {
+    const changes: boolean[] = [];
+
+    const controlled = (open: boolean) => (
+      <Menu
+        trigger={(props) => <Button {...props}>Controlled actions</Button>}
+        open={open}
+        onOpenChange={(next) => changes.push(next)}
+      >
+        <MenuItem>Choose</MenuItem>
+      </Menu>
+    );
+
+    const view = render(controlled(false));
+
+    expect(screen.queryByRole("menu")).toBeNull();
+    view.rerender(controlled(true));
+    expect(screen.getByRole("menu")).toBeTruthy();
+    view.rerender(controlled(false));
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    expect(changes).toEqual([]);
+  });
+
   it("uses controlled open state and reports selection and trigger changes", async () => {
     const changes: boolean[] = [];
 

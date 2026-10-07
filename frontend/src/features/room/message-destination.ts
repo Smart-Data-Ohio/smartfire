@@ -7,6 +7,7 @@ export function messageDestination(
   hash = "",
 ): string {
   const params = new URLSearchParams(search);
+
   const path =
     message.threadId === null
       ? `/app/r/${message.roomId}/m/${message.id}`

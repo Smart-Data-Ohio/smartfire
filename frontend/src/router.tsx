@@ -19,7 +19,7 @@ import { IntegrationsSection as AdminIntegrationsSection } from "./features/admi
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
-import { MessageResolver } from "./features/room/message-resolver.tsx";
+import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
@@ -108,7 +108,10 @@ const messageRoute = createRoute({
     parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
     stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
   },
-  component: MessageResolver,
+  component: lazyRouteComponent(
+    () => import("./features/room/message-resolver.tsx"),
+    "MessageResolver",
+  ),
 });
 
 /** Existing room controls, opened by their classic page's URL. */
@@ -362,6 +365,8 @@ export const router = createRouter({
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
 });
+
+captureInitialMessageLink(router.history);
 
 declare module "@tanstack/react-router" {
   interface Register {

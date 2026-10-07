@@ -35,7 +35,7 @@ export function NotificationsButton({ roomId }: { readonly roomId: number }) {
       placement="bottom-end"
       open={routeOpen || localOpen}
       onOpenChange={(open) => {
-        setLocalOpen(open);
+        setLocalOpen(open && !routeOpen);
 
         if (!open && routeOpen) {
           void navigate({ to: "/r/$roomId", params: { roomId } });

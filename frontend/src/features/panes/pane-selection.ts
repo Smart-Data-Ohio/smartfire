@@ -1,7 +1,7 @@
 /**
  * What the right pane shows. A thread lives in the URL (`/r/$roomId/t/$threadId`, or
- * `/r/$roomId/t/new?parent=` while drafting one); the side panes (members, pins, files, threads)
- * live in the per-tab pane store. The URL wins, so a thread opened from the Threads pane sits on
+ * `/r/$roomId/t/new?parent=` while drafting one); a side pane can live in the URL or the per-tab
+ * pane store. The URL wins, so a thread opened from the Threads pane sits on
  * top of it and closing the thread goes back to the list.
  */
 import type { PaneKind, RoutePaneKind } from "./pane-store.ts";

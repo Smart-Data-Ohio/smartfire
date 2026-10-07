@@ -15,6 +15,11 @@ function sample(pattern: string): string {
   return pattern.replace(/:[a-z_]+/g, () => String(next++));
 }
 
+/** Parameter names do not distinguish paths that map to the same SPA screen. */
+function screenPattern(pattern: string): string {
+  return pattern.replace(/:[a-z_]+/g, ":id");
+}
+
 describe("the screen map", () => {
   it("maps ported classic pages to their SPA URLs", () => {
     expect(spaUrlFor("/")).toBe("/app/");
@@ -22,6 +27,21 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12/@345")).toBe("/app/r/12/m/345");
     expect(spaUrlFor("/rooms/12/threads/9")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("//rooms/12/")).toBe("/app/r/12");
+  });
+
+  it.each([
+    ["/rooms/12/messages/345", "/app/r/12/m/345"],
+    ["/rooms/12/messages/345/edit", "/app/r/12/m/345"],
+    ["/messages/345", "/app/m/345"],
+    ["/messages/345/edit", "/app/m/345"],
+    ["/messages/345/boosts", "/app/m/345"],
+    ["/messages/345/boosts/new", "/app/m/345"],
+    ["/rooms/12/threads", "/app/r/12/threads"],
+    ["/rooms/12/files", "/app/r/12/files"],
+    ["/rooms/12/pins", "/app/r/12/pins"],
+    ["/rooms/12/involvement", "/app/r/12/notifications"],
+  ])("maps the existing-screen classic link %s to %s", (classic, spa) => {
+    expect(spaUrlFor(classic, "?source=classic")).toBe(`${spa}?source=classic`);
   });
 
   it("opens every ported classic path, including aliases of an existing destination", () => {
@@ -56,7 +76,7 @@ describe("the screen map", () => {
 
   it("maps every SPA URL back to its first classic page, including shared destination aliases", () => {
     for (const screen of SCREENS) {
-      const canonical = SCREENS.find((row) => row.spa === screen.spa);
+      const canonical = SCREENS.find((row) => screenPattern(row.spa) === screenPattern(screen.spa));
 
       expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(
         canonical === undefined ? null : sample(canonical.classic),
