@@ -98,6 +98,12 @@
     white-space: nowrap;
   }
 
+  /* The agent's name wins the header's width; its status line gives way first. */
+  .room-title:has(.room-header-agent) .room-title-name {
+    flex-shrink: 0;
+    max-width: 60%;
+  }
+
   .room-header-agent {
     color: var(--agent-text);
     font-weight: var(--weight-medium);

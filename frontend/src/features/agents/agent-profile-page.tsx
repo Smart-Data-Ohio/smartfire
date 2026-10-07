@@ -166,9 +166,9 @@ function Budget({ usage }: { readonly usage: AgentBudgetUsage }) {
   return (
     <li className="agent-budget" data-tone={tone}>
       <span className="agent-budget-text tabular">{budgetText(usage)}</span>
-      {fraction === null || usage.limit === null ? (
-        <span className="agent-budget-uncapped">No daily cap</span>
-      ) : (
+      {usage.limit === null ? <span className="agent-budget-uncapped">No daily cap</span> : null}
+      {usage.limit === 0 ? <span className="agent-budget-uncapped">None allowed</span> : null}
+      {fraction === null || usage.limit === null ? null : (
         <meter
           className="agent-budget-meter"
           min={0}
@@ -243,6 +243,22 @@ function Overview({ profile }: { readonly profile: AgentProfile }) {
   );
 }
 
+/** The profile once loaded: the header, then the overview. */
+export function AgentProfileContent({
+  profile,
+  now,
+}: {
+  readonly profile: AgentProfile;
+  readonly now: number;
+}) {
+  return (
+    <div className="agent-profile">
+      <Hero profile={profile} now={now} />
+      <Overview profile={profile} />
+    </div>
+  );
+}
+
 function ProfileSkeleton() {
   return (
     <div className="agent-profile-skeleton" aria-hidden="true">
@@ -292,10 +308,7 @@ export function AgentProfilePage({ agentId }: { readonly agentId: number }) {
         ) : (
           <SkeletonReveal loading={entry.profile === null} skeleton={<ProfileSkeleton />}>
             {entry.profile === null ? null : (
-              <div className="agent-profile">
-                <Hero profile={entry.profile} now={now} />
-                <Overview profile={entry.profile} />
-              </div>
+              <AgentProfileContent profile={entry.profile} now={now} />
             )}
           </SkeletonReveal>
         )}

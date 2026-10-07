@@ -205,6 +205,7 @@
 
   .agents-scroll {
     flex: 1;
+    min-width: 0;
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -230,6 +231,7 @@
   .agent-row-open {
     display: flex;
     align-items: flex-start;
+    min-width: 0;
     gap: var(--space-3);
     padding: var(--space-2);
     border-radius: var(--radius-md);
@@ -571,6 +573,12 @@
 
     .agent-list {
       padding-inline: var(--space-2);
+    }
+
+    /* A phone has no width to spare: the lines wrap rather than lose "Last seen". */
+    .agent-row-meta,
+    .agent-row-status {
+      white-space: normal;
     }
 
     .agents-toolbar .pane-search {
