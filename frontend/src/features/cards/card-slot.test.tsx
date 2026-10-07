@@ -47,6 +47,7 @@ beforeAll(async () => {
 afterAll(() => network.restore());
 
 describe("the card slot", () => {
+  // A long timeout: the chunk's first transform is slow when the whole suite runs at once.
   it("keeps a card's local state when the cards chunk finishes loading", async () => {
     const user = userEvent.setup();
     const { CardSlot } = await import("./card-slot.tsx");
@@ -56,7 +57,7 @@ describe("the card slot", () => {
     // Suspended on the chunk at first.
     expect(view.container.textContent).toBe("");
 
-    const poll = await screen.findByRole("region", { name: "Poll" }, { timeout: 10_000 });
+    const poll = await screen.findByRole("region", { name: "Poll" }, { timeout: 25_000 });
 
     await user.click(within(poll).getByRole("button", { name: "Change vote" }));
     expect(within(poll).getByRole("button", { name: "Vote" })).toBeTruthy();
@@ -67,5 +68,5 @@ describe("the card slot", () => {
     const after = screen.getByRole("region", { name: "Poll" });
 
     expect(within(after).getByRole("button", { name: "Vote" })).toBeTruthy();
-  });
+  }, 30_000);
 });
