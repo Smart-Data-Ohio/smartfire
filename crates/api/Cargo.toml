@@ -11,7 +11,7 @@ edition.workspace = true
 [features]
 # Test hooks the crates above drive in their own tests (`test_hooks`). Production builds don't
 # compile them.
-test-support = []
+test-support = ["campfire_app/test-support"]
 
 [dependencies]
 campfire_api_types.workspace = true

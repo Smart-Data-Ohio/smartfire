@@ -523,9 +523,12 @@ pub struct AgentLedgerEvent {
     pub room_id: Option<i64>,
     /// The viewer-relative room name; `null` when `roomId` is, when the room is gone, and when
     /// the viewer is neither an administrator nor a member of the room ("a room you're not in").
-    /// This membership gate also covers `detail`, `external.message` and `handoffSummary`, and
-    /// is **new**: the classic page shows them to the owner whatever the room. An entry with no
-    /// room is never gated.
+    /// This membership gate also covers `detail`, `external.message`, `handoffSummary` and
+    /// `content`, and is **new**: the classic page shows the first three to the owner whatever
+    /// the room. Deleting a room clears `roomId` but keeps this gate: only administrators see
+    /// that text. A missing room also gates types created both with and without rooms
+    /// (`approval_decided`, `github_action_completed`), since deletion is indistinguishable.
+    /// Only `fizzy_action_completed`, whose writer never sets a room, is ungated without one.
     pub room_name: Option<String>,
     /// "from {actor}"; `null` for none. No `users` entry when the account is gone.
     pub actor_id: Option<i64>,
@@ -548,8 +551,9 @@ pub struct AgentLedgerEvent {
     /// `null` otherwise, and when gated (see `roomName`).
     pub handoff_summary: Option<String>,
     /// The message's plain text, cut as `handoffSummary` is, only when the agent is a member of
-    /// its room with `read_messages` there and the viewer is an administrator or a member of
-    /// that room. `null` otherwise: "Content unavailable" (or no message at all).
+    /// its room with `read_messages` there, the viewer is an administrator or a member of
+    /// that room, and the entry's room gate permits it. `null` otherwise: "Content unavailable"
+    /// (or no message at all).
     pub content: Option<String>,
 }
 
@@ -561,8 +565,11 @@ pub struct AgentLedgerEvent {
 /// - `outcome`: an [`AgentDeliveryOutcome`] filter; omitted (or unknown) lists every entry.
 /// - `before`: the previous page's `nextCursor`. A cursor that doesn't decode is a 422
 ///   (`ApiError::Validation` on `before`).
+/// - Room-scoped text follows [`AgentLedgerEvent::room_name`]'s membership gate even after
+///   room deletion. NULL-room text is only ungated for types never created with a room.
 ///
-/// At most 50 a page, newest first (`created_at DESC, id DESC`). No live updates, as in the
+/// At most 50 a page, newest first (`created_at DESC, id DESC`). Unknown event types are
+/// skipped, so a short or empty page can still have a `nextCursor`. No live updates, as in the
 /// classic app: the ledger refetches its first page when it's shown again.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -572,8 +579,9 @@ pub struct AgentLedgerPage {
     /// The agent's bot user and every `actorId`, once each.
     pub users: Vec<User>,
     /// Pass as `before` for the next page; `null` when this is the last. Opaque to clients, as on
-    /// [`AgentApprovalPage`]: it encodes the page's last entry's `(created_at, id)`, and the next
-    /// page holds the entries strictly before it in that order, so entries added meanwhile never
+    /// [`AgentApprovalPage`]: it encodes the last scanned row's `(created_at, id)`, including an
+    /// unknown type skipped from `events`. The next page holds the entries strictly before it
+    /// in that order, so entries added meanwhile never
     /// shift a page. **New**: the classic page uses `?page=` offsets.
     pub next_cursor: Option<String>,
 }

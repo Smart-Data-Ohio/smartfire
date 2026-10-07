@@ -5,6 +5,8 @@
 
 use std::collections::BTreeSet;
 use std::sync::{Arc, Weak};
+#[cfg(feature = "test-support")]
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use campfire_api_types as api;
 use campfire_app::app::AppState;
@@ -21,6 +23,48 @@ use crate::dto;
 pub struct Renderer {
     app: Weak<AppState>,
     runtime: tokio::runtime::Handle,
+    #[cfg(feature = "test-support")]
+    deferred: Arc<DeferredJobs>,
+}
+
+#[cfg(feature = "test-support")]
+#[derive(Default)]
+struct DeferredJobs {
+    outstanding: AtomicUsize,
+    finished: tokio::sync::Notify,
+}
+
+#[cfg(feature = "test-support")]
+impl DeferredJobs {
+    fn start(self: &Arc<Self>) -> DeferredJob {
+        self.outstanding.fetch_add(1, Ordering::AcqRel);
+        DeferredJob(self.clone())
+    }
+
+    async fn settle(&self) {
+        loop {
+            let notified = self.finished.notified();
+            tokio::pin!(notified);
+            // Register before checking: the last job can finish between the check and await.
+            notified.as_mut().enable();
+            if self.outstanding.load(Ordering::Acquire) == 0 {
+                return;
+            }
+            notified.await;
+        }
+    }
+}
+
+#[cfg(feature = "test-support")]
+struct DeferredJob(Arc<DeferredJobs>);
+
+#[cfg(feature = "test-support")]
+impl Drop for DeferredJob {
+    fn drop(&mut self) {
+        if self.0.outstanding.fetch_sub(1, Ordering::AcqRel) == 1 {
+            self.0.finished.notify_waiters();
+        }
+    }
 }
 
 impl Renderer {
@@ -28,6 +72,8 @@ impl Renderer {
         Self {
             app: Arc::downgrade(app),
             runtime,
+            #[cfg(feature = "test-support")]
+            deferred: Arc::default(),
         }
     }
 }
@@ -58,8 +104,14 @@ impl SyncRenderer for Renderer {
 
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
         let app = self.app.upgrade()?;
+        let now = app.db.env().now();
         Room::find(conn, thread.room_id)
-            .map(|room| dto::thread(thread, &room, app.db.env().now()))
+            .and_then(|room| {
+                let work =
+                    crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
+                        .remove(&thread.id);
+                Ok(dto::thread(thread, &room, now, work))
+            })
             .inspect_err(|error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"))
             .ok()
     }
@@ -101,6 +153,83 @@ impl SyncRenderer for Renderer {
         Ok(crate::composer::scheduled_rows(conn, &[row], app.db.env().now())?.pop())
     }
 
+    fn agent_status(
+        &self,
+        conn: &Connection,
+        agent_id: i64,
+    ) -> campfire_db::Result<Option<api::AgentStatusChanged>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(agent) = campfire_db::Agent::find(conn, agent_id)? else {
+            return Ok(None);
+        };
+        let now = app.db.env().now();
+        let working_presence = agent.working_presence_text(now).map(str::to_string);
+        Ok(Some(api::AgentStatusChanged {
+            agent_id,
+            user_id: agent.user_id,
+            status: dto::agent_status(&agent.status),
+            status_note: agent.status_note.clone(),
+            status_changed_at: agent.status_changed_at.map(dto::time),
+            suspended: agent.suspended_at.is_some(),
+            working_presence_expires_at: working_presence
+                .as_ref()
+                .and(agent.working_presence_expires_at)
+                .map(dto::time),
+            working_presence,
+        }))
+    }
+
+    fn agent_steps(
+        &self,
+        conn: &Connection,
+        message_id: Option<i64>,
+        thread_id: Option<i64>,
+    ) -> campfire_db::Result<Option<api::AgentStepsChanged>> {
+        if let Some(id) = message_id {
+            let Some(message) = Message::find_by_id(conn, id)? else {
+                return Ok(None);
+            };
+            let steps = dto::message_steps(conn, &[id])?
+                .remove(&id)
+                .unwrap_or_default();
+            return Ok(Some(api::AgentStepsChanged {
+                room_id: message.room_id,
+                message_id: Some(id),
+                thread_id: message.thread_id,
+                steps,
+            }));
+        }
+        let Some(id) = thread_id else {
+            return Ok(None);
+        };
+        let Some(thread) = campfire_db::ChannelThread::find_by_id(conn, id)? else {
+            return Ok(None);
+        };
+        Ok(Some(api::AgentStepsChanged {
+            room_id: thread.room_id,
+            message_id: None,
+            thread_id: Some(id),
+            steps: dto::thread_steps(conn, id)?,
+        }))
+    }
+
+    fn approval_updated(
+        &self,
+        conn: &Connection,
+        approval_id: i64,
+        user_id: i64,
+    ) -> campfire_db::Result<Option<api::ApprovalUpdated>> {
+        let Some(app) = self.app.upgrade() else {
+            return Ok(None);
+        };
+        let Some(viewer) = campfire_db::User::find_by_id(conn, user_id)? else {
+            return Ok(None);
+        };
+        crate::agents::approval_update(conn, &app, approval_id, &viewer, app.db.env().now())
+    }
+
     fn poll(
         &self,
         conn: &Connection,
@@ -128,10 +257,16 @@ impl SyncRenderer for Renderer {
         let Some(app) = self.app.upgrade() else {
             return;
         };
+        #[cfg(feature = "test-support")]
+        let deferred = self.deferred.start();
         self.runtime.spawn(async move {
             let result = app
                 .db
                 .read(move |conn| {
+                    // A cancelled async read may leave its blocking reader running. Keep the
+                    // guard with that reader until its job has really finished publishing.
+                    #[cfg(feature = "test-support")]
+                    let _deferred = deferred;
                     job(conn);
                     Ok(())
                 })
@@ -140,6 +275,11 @@ impl SyncRenderer for Renderer {
                 tracing::warn!(%error, "sync: deferred twin not read");
             }
         });
+    }
+
+    #[cfg(feature = "test-support")]
+    fn settle(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
+        Box::pin(self.deferred.settle())
     }
 }
 

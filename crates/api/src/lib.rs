@@ -18,6 +18,7 @@ macro_rules! endpoint {
 }
 
 pub mod activity;
+pub mod agents;
 pub mod cards;
 pub mod composer;
 mod cursor;
@@ -36,6 +37,7 @@ pub mod slack;
 pub mod stage;
 pub mod sync;
 pub mod threads;
+pub mod work;
 #[cfg(feature = "test-support")]
 pub mod test_hooks;
 
@@ -216,6 +218,15 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/threads/{thread_id}/read",
             post(action(threads::read)),
         )
+        .route(
+            "/api/v1/threads/{thread_id}/work",
+            patch(unparsed_action(work::update)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/work/handoff",
+            post(unparsed_action(work::handoff)),
+        )
+        .route("/api/v1/work", get(action(work::index)))
         .route("/api/v1/uploads", post(unparsed_action(composer::upload)))
         .route(
             "/api/v1/autocomplete/users",
@@ -307,6 +318,20 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/rooms/{room_id}/stage/stream",
             axum::routing::post(unparsed_action(stage::start_stream))
                 .delete(unparsed_action(stage::stop_stream)),
+        )
+        .route("/api/v1/agents", get(action(agents::index)))
+        .route("/api/v1/agents/{agent_id}", get(action(agents::show)))
+        .route(
+            "/api/v1/agents/{agent_id}/approvals",
+            get(action(agents::approvals)),
+        )
+        .route(
+            "/api/v1/agents/{agent_id}/events",
+            get(action(agents::events)),
+        )
+        .route(
+            "/api/v1/agent_approvals/{id}",
+            patch(unparsed_action(agents::decide)),
         )
         .merge(settings::routes())
         .merge(admin::routes())

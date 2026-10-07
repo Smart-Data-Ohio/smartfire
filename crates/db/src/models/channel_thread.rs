@@ -37,6 +37,24 @@ pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_pa
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
+/// A tracked thread's work facts changed: its status, owner, result or run URL, or a link was
+/// added or removed. The classic app has no broadcast for it (only the board rows, which
+/// `register_board_update` emits as before); the cable sink publishes the single-page app's
+/// `thread.updated` with the new facts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadWorkChange {
+    pub thread_id: i64,
+}
+impl crate::events::Broadcast for ThreadWorkChange {
+    const KIND: &'static str = "ChannelThread#sync_work";
+}
+impl ThreadWorkChange {
+    pub fn emit(tx: &mut Tx<'_>, thread_id: i64) {
+        // Include tag auto-assignment's after-commit write before publishing the final facts.
+        tx.broadcast_after_commit_settled_once(&ThreadWorkChange { thread_id });
+    }
+}
+
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
 pub const AUTO_ARCHIVE_OPTIONS: [i64; 4] = [60, 1_440, 4_320, 10_080];
 pub const DEFAULT_AUTO_ARCHIVE_AFTER_MINUTES: i64 = 4_320;
@@ -544,9 +562,22 @@ impl ChannelThread {
             || changed.name != self.name
             || changed.work_owner_id != self.work_owner_id
             || changed.last_activity_at != self.last_activity_at;
+        if changed.work_changed_from(self) {
+            ThreadWorkChange::emit(tx, self.id);
+        }
         *self = changed;
         self.register_board_update(tx, room, row_changed, status_changed)?;
         Ok(())
+    }
+
+    /// Whether a work column differs from `before`'s: the change [`ThreadWorkChange`] publishes
+    /// as `thread.updated`.
+    pub fn work_changed_from(&self, before: &ChannelThread) -> bool {
+        self.work_status != before.work_status
+            || self.work_owner_id != before.work_owner_id
+            || self.run_url != before.run_url
+            || self.result_markdown != before.result_markdown
+            || self.result_updated_at != before.result_updated_at
     }
 
     /// `update!(name:, auto_archive_after_minutes:)`: the thread settings form.

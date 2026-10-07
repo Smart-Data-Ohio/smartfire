@@ -186,6 +186,12 @@ impl Broadcasts {
         self.sync.install(renderer);
     }
 
+    /// Drains this app's deferred twins before test assertions count socket publications.
+    #[cfg(feature = "test-support")]
+    pub async fn settle_sync(&self) {
+        self.sync.settle().await;
+    }
+
     /// `message.created` (or `message.updated`) for a message a broadcast point outside this
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {
@@ -227,6 +233,21 @@ impl Broadcasts {
         change: campfire_db::models::scheduled_message::ScheduledMessageChange,
     ) {
         sync::scheduled_later(&self.server, &self.sync, change);
+    }
+
+    /// `agent.status` for an agent's status, note, suspension or working presence change.
+    pub fn sync_agent_status(&self, agent_id: i64) {
+        sync::agent_status_later(&self.server, &self.sync, agent_id);
+    }
+
+    /// `agent.steps` for a parent whose steps changed.
+    pub fn sync_agent_steps(&self, message_id: Option<i64>, thread_id: Option<i64>) {
+        sync::agent_steps_later(&self.server, &self.sync, message_id, thread_id);
+    }
+
+    /// `approval.updated` for an approval request that was decided, cancelled or expired.
+    pub fn sync_approval(&self, approval_id: i64) {
+        sync::approval_updated_later(&self.server, &self.sync, approval_id);
     }
 
     /// `sidebar.row.upserted`, `sidebar.category.upserted` and `sidebar.category.removed` for a

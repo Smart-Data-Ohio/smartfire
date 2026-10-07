@@ -71,7 +71,7 @@ impl ChannelThread {
                 if let Some(rule) = rule {
                     // A failed callback leaves the original tag write committed. Its owner,
                     // audit, ledger and durable jobs succeed or roll back together.
-                    crate::database::run_write(tx.conn(), tx.env(), |tx| {
+                    tx.write_after_commit(|tx| {
                         let Some(mut fresh) = Self::find_by_id(tx.conn(), id)? else {
                             return Ok(());
                         };

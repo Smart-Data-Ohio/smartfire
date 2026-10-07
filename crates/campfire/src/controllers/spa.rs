@@ -28,6 +28,12 @@ mod api_directory_tests;
 #[path = "spa_api_activity_tests.rs"]
 mod api_activity_tests;
 #[cfg(test)]
+#[path = "spa_api_agents_tests.rs"]
+mod api_agents_tests;
+#[cfg(test)]
+#[path = "spa_api_work_tests.rs"]
+mod api_work_tests;
+#[cfg(test)]
 #[path = "spa_settings_tests.rs"]
 mod settings_tests;
 
