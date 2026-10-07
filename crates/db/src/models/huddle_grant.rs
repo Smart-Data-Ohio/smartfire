@@ -65,6 +65,19 @@ impl HuddleGrant {
             updated_at: r.get("updated_at")?,
         })
     }
+    /// Rows by id, for batch preloads (missing ids are skipped).
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM huddle_grants WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
+    }
+
     pub fn find_by_id(conn: &Connection, id: i64) -> Result<Option<Self>> {
         Ok(conn
             .query_row_cached(

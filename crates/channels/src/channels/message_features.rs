@@ -168,7 +168,8 @@ pub(crate) fn deliver(
     );
     cable.broadcast_stream_to(&[&broadcast.stream_name()], &html);
     // The JSON twins: a quiet note or scheduled/slash post consumed here is `message.created`
-    // (or `message.updated`) as in `messaging`, and a pin badge is `message.pinned`.
+    // (or `message.updated`) as in `messaging`, a pin badge is `message.pinned`, and the quote
+    // cards are `message.cards`.
     if cable.sync_wanted() {
         let twinned = app.db.read_blocking(|conn| {
             match partial {
@@ -178,6 +179,12 @@ pub(crate) fn deliver(
                     }
                 }
                 Partial::PinBadge { message_id } => crate::cable::sync::message_pinned(cable, conn, *message_id),
+                Partial::QuoteCards { message_id } => {
+                    if let Some(message) = campfire_db::Message::find_by_id(conn, *message_id)? {
+                        app.broadcasts
+                            .sync_message_cards(conn, std::slice::from_ref(&message));
+                    }
+                }
                 _ => {}
             }
             Ok(())

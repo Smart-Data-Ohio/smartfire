@@ -190,3 +190,61 @@ fn room_directory_scopes_exclude_deleted_rooms() {
         g["readers"]["original"].as_i64().unwrap()
     );
 }
+
+/// A Slack import's undo destroys a room as imported (`Room::destroy_imported`): its messages,
+/// their saved items and their inbox items go without a broadcast, where `Room::destroy` tells the
+/// owners' tabs (`activity.removed`).
+#[test]
+fn an_imported_room_is_destroyed_without_a_broadcast() {
+    for imported in [false, true] {
+        let t = TestDb::new();
+        let room: i64 = t.read(|c| {
+            Ok(c.query_row(
+                "SELECT room_id FROM messages ORDER BY id LIMIT 1",
+                [],
+                |r| r.get(0),
+            )?)
+        });
+        let david = id("david");
+        t.write(move |tx| {
+            let now = tx.now();
+            let message: i64 = tx.conn().query_row(
+                "SELECT id FROM messages WHERE room_id = ? ORDER BY id LIMIT 1",
+                [room],
+                |r| r.get(0),
+            )?;
+            let saved: i64 = tx.conn().query_row(
+                "INSERT INTO saved_items (message_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?) RETURNING id",
+                rusqlite::params![message, david, now, now],
+                |r| r.get(0),
+            )?;
+            for (source_type, source_id, event_type) in [
+                ("Message", message, "mention"),
+                ("SavedItem", saved, "message_reminder"),
+            ] {
+                tx.conn().execute(
+                    "INSERT INTO activity_items (user_id, source_type, source_id, event_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    rusqlite::params![david, source_type, source_id, event_type, now, now],
+                )?;
+            }
+            Ok(())
+        });
+        t.sink.take();
+        t.write(move |tx| {
+            let room = Room::find(tx.conn(), room)?;
+            if imported {
+                room.destroy_imported(tx)
+            } else {
+                room.destroy(tx)
+            }
+        });
+        let broadcasts = t
+            .sink
+            .take()
+            .into_iter()
+            .filter(|event| matches!(event, Event::Broadcast(_)))
+            .collect::<Vec<_>>();
+        assert_eq!(broadcasts.is_empty(), imported, "{broadcasts:?}");
+        assert!(t.read(move |c| Ok(Room::find_by_id(c, room)?.is_none())));
+    }
+}

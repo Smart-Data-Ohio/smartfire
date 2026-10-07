@@ -639,7 +639,12 @@ impl Sync {
     }
 
     /// Connects and says hello, resuming from `resume` (`{epoch, seq}` or null).
-    async fn open(addr: SocketAddr, cookie: &str, topics: &[String], resume: Value) -> Self {
+    pub(super) async fn open(
+        addr: SocketAddr,
+        cookie: &str,
+        topics: &[String],
+        resume: Value,
+    ) -> Self {
         let mut request = format!("ws://{addr}/api/v1/sync")
             .into_client_request()
             .unwrap();
@@ -670,7 +675,7 @@ impl Sync {
     }
 
     /// The next server frame, `None` once the socket closes.
-    async fn next(&mut self) -> Option<api::ServerFrame> {
+    pub(super) async fn next(&mut self) -> Option<api::ServerFrame> {
         loop {
             let message = tokio::time::timeout(Duration::from_secs(10), self.socket.next())
                 .await

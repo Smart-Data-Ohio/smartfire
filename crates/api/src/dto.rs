@@ -202,16 +202,31 @@ pub fn membership(membership: &Membership) -> api::Membership {
 /// Messages with their bodies rendered by one presenter, and what the timeline shows with them:
 /// the attachment (`Presenter#attachment` and its blob row), reactions and boosts
 /// (`message.boosts.ordered`, grouped as `MessageView#reaction_groups` does), the pin, the
-/// forward and the thread indicator.
+/// forward, the thread indicator, the poll and the cards.
 pub fn messages(
     conn: &Connection,
     app: &AppState,
     messages: &[Message],
 ) -> Result<Vec<api::MessageDTO>> {
-    // When the read began: orders these cards against `message.cards` (`MessageDTO::cards_as_of`).
-    let as_of = time(app.db.env().now());
+    Ok(messages_and_fetches(conn, app, messages)?.0)
+}
+
+/// [`messages`], with the card fetches the read asks for: a page of messages requests them, as
+/// the classic timeline does.
+pub(crate) fn messages_and_fetches(
+    conn: &Connection,
+    app: &AppState,
+    messages: &[Message],
+) -> Result<(Vec<api::MessageDTO>, crate::cards::Fetches)> {
+    // When the read began: orders the polls and cards against `poll.updated` and
+    // `message.cards` (`Poll::as_of`, `MessageDTO::cards_as_of`).
+    let now = app.db.env().now();
+    let as_of = time(now);
     let presenter = Presenter::new(conn, app, None);
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
+    let mut polls = crate::cards::polls(conn, &ids, now)?;
+    let mut fetches = crate::cards::Fetches::default();
+    let mut cards = crate::cards::cards(&presenter, conn, messages, now, &mut fetches)?;
     let pinned: BTreeSet<i64> = ids_query(
         conn,
         r#"SELECT "message_pins"."message_id" FROM "message_pins" WHERE "message_pins"."message_id" IN ({})"#,
@@ -261,9 +276,8 @@ pub fn messages(
                 boosts,
                 pinned: pinned.contains(&message.id),
                 thread: threads.get(&message.id).cloned(),
-                // Polls and cards still render in the HTML only; the S3 backend fills them.
-                poll: None,
-                cards: Vec::new(),
+                poll: polls.remove(&message.id),
+                cards: cards.remove(&message.id).unwrap_or_default(),
                 cards_as_of: as_of.clone(),
                 // Agent steps still render in the HTML only; the S4 backend fills them.
                 steps: Vec::new(),
@@ -271,11 +285,12 @@ pub fn messages(
                 updated_at: time(message.updated_at),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>>>()
+        .map(|dtos| (dtos, fetches))
 }
 
 /// Runs `sql`, whose one `IN ({})` takes `ids`; nothing for no ids.
-fn ids_query<T>(
+pub(crate) fn ids_query<T>(
     conn: &Connection,
     sql: &str,
     ids: &[i64],
@@ -685,6 +700,16 @@ pub fn sidebar_row(
     if !visible(room, membership) {
         return Ok(None);
     }
+    membership_row(conn, room, membership).map(Some)
+}
+
+/// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
+/// answer to an organising call on a hidden room.
+pub fn membership_row(
+    conn: &Connection,
+    room: &Room,
+    membership: &Membership,
+) -> Result<api::SidebarRow> {
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
         Some(members(conn, room.id)?)
@@ -703,7 +728,6 @@ pub fn sidebar_row(
         members.as_deref(),
         mentions,
     )
-    .map(Some)
 }
 
 pub fn sidebar(
@@ -741,12 +765,7 @@ pub fn sidebar(
     user_ids.extend(placeholders.iter().copied());
     let categories = campfire_db::RoomCategory::ordered_for_user(conn, viewer.id)?
         .into_iter()
-        .map(|category| api::RoomCategory {
-            id: category.id,
-            name: category.name,
-            collapsed: category.collapsed,
-            position: category.position,
-        })
+        .map(room_category)
         .collect();
     Ok(api::Sidebar {
         rows,
@@ -755,6 +774,15 @@ pub fn sidebar(
         direct_placeholder_user_ids: placeholders,
         can_create_rooms,
     })
+}
+
+pub fn room_category(category: campfire_db::RoomCategory) -> api::RoomCategory {
+    api::RoomCategory {
+        id: category.id,
+        name: category.name,
+        collapsed: category.collapsed,
+        position: category.position,
+    }
 }
 
 pub fn room_detail(
@@ -1065,32 +1093,32 @@ pub fn thread_permissions(
 }
 
 /// `GET /api/v1/threads/:id`.
-pub fn thread_detail(
+pub(crate) fn thread_detail(
     conn: &Connection,
     app: &AppState,
     viewer: &User,
     thread: &campfire_db::ChannelThread,
     room: &Room,
     now: Timestamp,
-) -> Result<api::ThreadDetail> {
+) -> Result<(api::ThreadDetail, crate::cards::Fetches)> {
     let membership = thread.membership_for(conn, viewer.id)?;
     let parent = match thread.parent_message_id {
         Some(id) => Message::find_by_id(conn, id)?,
         None => None,
     };
-    let parent_message = parent
-        .as_ref()
-        .map(|parent| message(conn, app, parent))
-        .transpose()?;
+    let (mut parents, mut fetches) = messages_and_fetches(conn, app, parent.as_slice())?;
+    let parent_message = parents.pop();
+    fetches.thread_header(conn, thread, now)?;
     let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
-    Ok(api::ThreadDetail {
+    let detail = api::ThreadDetail {
         thread: self::thread(thread, room, now),
         permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
         membership: membership.as_ref().map(thread_membership),
         parent_message,
         work: None,
         users: users(conn, &app.secrets, people, now)?,
-    })
+    };
+    Ok((detail, fetches))
 }
 
 /// `GET /api/v1/rooms/:id/threads`: `channel_threads#index`'s filters, most recently active

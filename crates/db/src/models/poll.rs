@@ -53,6 +53,18 @@ pub struct PollVote {
     pub updated_at: Timestamp,
 }
 
+/// Sync-only (the classic app has no broadcast for it): the poll's counts changed, from a vote
+/// or a close. `voter_id` is who voted, for their own `poll.ballot`; `None` when it closed.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PollChanged {
+    pub poll_id: i64,
+    pub voter_id: Option<i64>,
+}
+
+impl crate::events::Broadcast for PollChanged {
+    const KIND: &'static str = "Poll#sync_changed";
+}
+
 /// `create_for_message!`'s options.
 #[derive(Debug, Clone, Default)]
 pub struct NewPoll {
@@ -221,7 +233,7 @@ impl Poll {
             return Ok(false);
         }
         *self = Self::find(tx.conn(), self.id)?;
-        self.broadcast_card_replace(tx)?;
+        self.broadcast_card_replace(tx, None)?;
         Ok(true)
     }
 
@@ -257,11 +269,13 @@ impl Poll {
         let now = tx.now();
         tx.conn().execute_cached(r#"UPDATE "polls" SET "updated_at" = ? WHERE "polls"."id" = ?"#, params![now, self.id])?;
         self.updated_at = now;
-        self.broadcast_card_replace(tx)
+        self.broadcast_card_replace(tx, Some(voter_id))
     }
 
-    /// `broadcast_card_replace`: the card, replaced in the message's conversation.
-    fn broadcast_card_replace(&self, tx: &mut Tx<'_>) -> Result<()> {
+    /// `broadcast_card_replace`: the card, replaced in the message's conversation. Then the
+    /// sync-only [`PollChanged`], for the single-page app's `poll.updated` and the voter's
+    /// `poll.ballot`.
+    fn broadcast_card_replace(&self, tx: &mut Tx<'_>, voter_id: Option<i64>) -> Result<()> {
         let message = Message::find(tx.conn(), self.message_id)?;
         let streamables = conversation_messages(tx.conn(), &message)?;
         tx.emit_after_commit(Event::broadcast(&Broadcast::replace_keeping_scroll(
@@ -269,6 +283,10 @@ impl Poll {
             dom_id("poll", self.id, Some("card")),
             Partial::Poll { poll_id: self.id },
         )));
+        tx.emit_after_commit(Event::broadcast(&PollChanged {
+            poll_id: self.id,
+            voter_id,
+        }));
         Ok(())
     }
 
