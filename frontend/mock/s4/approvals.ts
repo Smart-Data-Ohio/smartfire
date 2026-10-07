@@ -19,7 +19,7 @@ import { forbidden, notFound, ok } from "../http.ts";
 import { field, type Json, stringField } from "../json.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso } from "../s2/model.ts";
+import { iso, touched } from "../s2/model.ts";
 import type { Activity, ActivityDraft } from "../s3/activity.ts";
 import { conversationTitle } from "../s3/conversations.ts";
 import { beforeOf, oneOf } from "../s3/model.ts";
@@ -71,6 +71,7 @@ interface ApprovalRecord {
   decidedById: number | null;
   decidedAt: number | null;
   decisionNote: string | null;
+  updatedAt: string;
 }
 
 /** The action each of S3's seven inbox requests asks for, with who decided it and the note. */
@@ -208,6 +209,7 @@ export function createApprovals(
       decidedById: record.decidedById,
       decidedAt: record.decidedAt === null ? null : iso(record.decidedAt),
       decisionNote: record.decisionNote,
+      updatedAt: record.updatedAt,
       githubLogin: record.action.startsWith("github.") ? "ember-bot" : null,
       fizzyUserName: record.action.startsWith("fizzy.") ? "Ember (bot)" : null,
       adminOnly: adminOnly(record.action),
@@ -227,6 +229,8 @@ export function createApprovals(
     );
 
   const publishUpdated = (record: ApprovalRecord) => {
+    record.updatedAt = touched(ctx.now(), record.updatedAt);
+
     const data: ApprovalUpdated = { approval: present(record), users: usersOf([record]) };
 
     ctx.publish([{ topic: "user", type: "approval.updated", data }]);
@@ -241,8 +245,17 @@ export function createApprovals(
 
   // --- seed ---
 
-  const add = (record: ApprovalRecord) => {
+  const add = (seed: Omit<ApprovalRecord, "updatedAt">): ApprovalRecord => {
+    const record = {
+      ...seed,
+      updatedAt: iso(
+        seed.decidedAt ?? (seed.status === "expired" ? seed.expiresAt : seed.createdAt),
+      ),
+    };
+
     records.set(record.id, record);
+
+    return record;
   };
 
   const seed = () => {
@@ -307,7 +320,7 @@ export function createApprovals(
       });
     }
 
-    const others: readonly ApprovalRecord[] = [
+    const others: readonly Omit<ApprovalRecord, "updatedAt">[] = [
       {
         id: 201,
         agentId: AGENT_IDS.atlas,
@@ -490,7 +503,7 @@ export function createApprovals(
     const row = agentOr404(agentId);
     const now = ctx.now();
 
-    const record: ApprovalRecord = {
+    const record = add({
       id: nextId++,
       agentId,
       roomId,
@@ -502,9 +515,7 @@ export function createApprovals(
       decidedById: null,
       decidedAt: null,
       decisionNote: null,
-    };
-
-    add(record);
+    });
 
     const name = ctx.world().users.get(row.userId)?.name ?? "Agent";
 

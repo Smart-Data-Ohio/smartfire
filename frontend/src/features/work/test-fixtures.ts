@@ -25,6 +25,7 @@ export const WORK_USERS: readonly User[] = [userFixture(2), userFixture(3), agen
 export function factsFixture(extra: Partial<WorkFacts> = {}): WorkFacts {
   return {
     status: "in_progress",
+    updatedAt: "2026-10-06T09:00:00.000Z",
     owner: userFixture(2),
     ownerActive: true,
     runUrl: null,

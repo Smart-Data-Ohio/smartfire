@@ -70,6 +70,7 @@ function row(agentId: number, change: Partial<AgentDirectoryRow> = {}): AgentDir
     createdAt: new Date(NOW - 86_400_000).toISOString(),
     statusChangedAt: null,
     lastSeenAt: null,
+    updatedAt: "2026-10-06T09:00:00.000Z",
     ...change,
   };
 }

@@ -28,6 +28,7 @@ const directoryRowJson = {
   createdAt: "2026-09-01T10:00:00.000Z",
   statusChangedAt: "2026-10-06T09:00:00.000Z",
   lastSeenAt: null,
+  updatedAt: "2026-10-06T09:00:00.000Z",
 } as const;
 
 const agentUserJson = {
@@ -83,6 +84,7 @@ const approvalJson = {
   adminOnly: true,
   approvable: false,
   deniable: true,
+  updatedAt: "2026-10-06T09:00:00.000Z",
 } as const;
 
 const messageJson = {
@@ -240,6 +242,7 @@ describe("S4 contract A sync events", () => {
           statusChangedAt: "2026-10-06T09:00:00.000Z",
           suspended: false,
           workingPresence: "Reviewing #42",
+          updatedAt: "2026-10-06T09:00:00.000Z",
           workingPresenceExpiresAt: "2026-10-06T09:20:00.000Z",
         },
       },

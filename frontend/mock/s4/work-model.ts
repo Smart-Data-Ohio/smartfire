@@ -94,6 +94,7 @@ export function workFacts(work: WorkRecord | undefined): WorkFacts | null {
     runUrl: work.runUrl,
     resultUpdatedAt: work.resultUpdatedAt,
     links: work.links,
+    updatedAt: work.updatedAt,
   };
 }
 
