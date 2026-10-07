@@ -23,6 +23,18 @@ export const SHORTCUTS = [
   { id: "switcher", group: "Navigation", keys: [MOD, "K"], label: "Jump to a conversation" },
   { id: "shortcuts", group: "Navigation", keys: [MOD, "/"], label: "Show keyboard shortcuts" },
   { id: "new-direct", group: "Navigation", keys: [MOD, "⇧", "K"], label: "New direct message" },
+  {
+    id: "sidebar-menu",
+    group: "Navigation",
+    keys: ["⇧", "F10"],
+    label: "Open a sidebar conversation's menu",
+  },
+  {
+    id: "sidebar-move",
+    group: "Navigation",
+    keys: ["Space"],
+    label: "Pick up a sidebar conversation or category to move it",
+  },
   { id: "previous-room", group: "Navigation", keys: [ALT, "↑"], label: "Previous conversation" },
   { id: "next-room", group: "Navigation", keys: [ALT, "↓"], label: "Next conversation" },
   {
