@@ -1,5 +1,8 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import { type AgentsSlice, emptyAgents } from "./agents.ts";
+import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
+import { emptyLedger, type LedgerSlice } from "./ledger.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -66,6 +69,12 @@ export interface State {
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
   /** Work detail for open thread panes and the work lists (S4); facts live on threads. */
   readonly work: WorkSlice;
+  /** Agents: the directory, profiles and working presence (S4). */
+  readonly agents: AgentsSlice;
+  /** Agents' approval requests and their per-agent lists (S4). */
+  readonly approvals: ApprovalsSlice;
+  /** Agents' event ledgers: entries and per-agent lists (S4). */
+  readonly ledger: LedgerSlice;
 }
 
 export interface SidebarState {
@@ -111,6 +120,9 @@ export const initialState: State = {
   scheduled: emptyScheduled,
   conversationNames: {},
   work: emptyWork,
+  agents: emptyAgents,
+  approvals: emptyApprovals,
+  ledger: emptyLedger,
 };
 
 export const emptyTimeline: Timeline = {

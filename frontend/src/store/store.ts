@@ -5,6 +5,11 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
+import type { AgentDirectory } from "../gen/AgentDirectory.ts";
+import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
+import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
@@ -19,6 +24,9 @@ import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import * as activity from "./activity.ts";
+import * as agents from "./agents.ts";
+import * as approvals from "./approvals.ts";
+import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
@@ -216,10 +224,15 @@ export const mutations = {
   markSavedStale: () => apply((state) => savedList.markSavedStale(state)),
   /** Every scheduled list reloads when next shown (a send that dropped it instead). */
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
-  /** Missed events the server can't replay: every S3 list reloads when next shown. */
+  /**
+   * Missed events the server can't replay: every S3 list, and every agent's approvals, reload when
+   * next shown.
+   */
   markInboxStale: () =>
     apply((state) =>
-      scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
+      approvals.markApprovalsStale(
+        scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
+      ),
     ),
   // --- S4: work tracking ---
   /** Shows work facts on a thread at once: an optimistic change or its rollback. */
@@ -233,6 +246,48 @@ export const mutations = {
     apply((state) => work.setWorkListFailed(state, filter, error, generation)),
   landWorkList: (filter: WorkFilter, list: WorkList, generation: number) =>
     apply((state) => work.landWorkList(state, filter, list, generation)),
+  // --- S4: agents ---
+  setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
+  landAgentDirectory: (page: AgentDirectory, generation: number) =>
+    apply((state) => agents.landDirectory(state, page, generation)),
+  setAgentDirectoryFailed: (error: string, generation: number) =>
+    apply((state) => agents.setDirectoryFailed(state, error, generation)),
+  setAgentProfileLoading: (agentId: number) =>
+    apply((state) => agents.setProfileLoading(state, agentId)),
+  landAgentProfile: (profile: AgentProfile) => apply((state) => agents.landProfile(state, profile)),
+  setAgentProfileFailed: (agentId: number, error: string, missing: boolean) =>
+    apply((state) => agents.setProfileFailed(state, agentId, error, missing)),
+  setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
+    apply((state) => approvals.setApprovalListLoading(state, key, more)),
+  setApprovalListFailed: (key: approvals.ApprovalListKey, error: string, generation?: number) =>
+    apply((state) => approvals.setApprovalListFailed(state, key, error, generation)),
+  landApprovalPage: (
+    key: approvals.ApprovalListKey,
+    page: AgentApprovalPage,
+    mode: "replace" | "more",
+    generation?: number,
+  ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation)),
+  applyApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.applyApproval(state, approval)),
+  /** Every approvals list reloads when next shown. */
+  markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
+  setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>
+    apply((state) => ledger.setLedgerListLoading(state, key, more)),
+  setLedgerListFailed: (
+    key: ledger.LedgerListKey,
+    agentId: number,
+    error: string,
+    forbidden: boolean,
+    generation?: number,
+  ) =>
+    apply((state) => ledger.setLedgerListFailed(state, key, agentId, error, forbidden, generation)),
+  landLedgerPage: (
+    key: ledger.LedgerListKey,
+    agentId: number,
+    page: AgentLedgerPage,
+    mode: "replace" | "more",
+    generation?: number,
+  ) => apply((state) => ledger.landLedgerPage(state, key, agentId, page, mode, generation)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };

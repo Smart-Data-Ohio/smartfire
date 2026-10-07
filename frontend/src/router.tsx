@@ -7,6 +7,7 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 import { parseActivitySearch } from "./features/activity/activity-search.ts";
+import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppShell } from "./features/shell/app-shell.tsx";
@@ -156,6 +157,62 @@ const workRoute = createRoute({
   component: lazyRouteComponent(() => import("./features/work/work-route.tsx"), "WorkRoute"),
 });
 
+/** `/app/agents`: every agent in the workspace, with live status (S4). */
+const agentsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents",
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-directory-page.tsx"),
+    "AgentDirectoryPage",
+  ),
+});
+
+/** `/app/agents/$agentId`: an agent's profile (S4). */
+const agentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents/$agentId",
+  params: {
+    parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
+    stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
+  },
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-profile-route.tsx"),
+    "AgentProfileRoute",
+  ),
+});
+
+/** `/app/agents/$agentId`: the profile's overview section. */
+const agentOverviewRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "/",
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-profile-page.tsx"),
+    "AgentOverviewRoute",
+  ),
+});
+
+/** `/app/agents/$agentId/approvals?status=`: an agent's approval requests (S4). */
+const agentApprovalsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "approvals",
+  validateSearch: parseApprovalsSearch,
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-approvals-tab.tsx"),
+    "AgentApprovalsRoute",
+  ),
+});
+
+/** `/app/agents/$agentId/events?outcome=`: an agent's activity ledger (S4). */
+const agentEventsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "events",
+  validateSearch: parseLedgerSearch,
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-ledger-tab.tsx"),
+    "AgentLedgerRoute",
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
@@ -164,6 +221,8 @@ const routeTree = rootRoute.addChildren([
     savedRoute,
     scheduledRoute,
     workRoute,
+    agentsRoute,
+    agentRoute.addChildren([agentOverviewRoute, agentApprovalsRoute, agentEventsRoute]),
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
   ]),
 ]);

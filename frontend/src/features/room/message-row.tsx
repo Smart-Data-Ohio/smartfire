@@ -5,11 +5,14 @@ import { actions } from "../../sync/runtime.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { AgentProfileLink } from "../agents/agent-link.tsx";
+import { MessageSteps } from "../agents/message-steps.tsx";
 import { PendingAttachmentView } from "../messages/attachments.tsx";
 import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-content.tsx";
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
+import { AgentBadge } from "../people/agent-badge.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
@@ -27,14 +30,16 @@ interface HeaderProps {
   readonly edited: boolean;
 }
 
-/** Name, agent tag and time: the first row of a group. */
+/** Name (an agent's opens its profile), agent badge and time: the first row of a group. */
 function MessageHeader({ creatorId, createdAt, edited }: HeaderProps) {
   const user = useUser(creatorId);
 
   return (
     <header className="message-header">
-      <span className="message-author">{user?.name ?? UNKNOWN_NAME}</span>
-      {isAgent(user) ? <span className="message-agent-tag">Agent</span> : null}
+      <AgentProfileLink userId={creatorId}>
+        <span className="message-author">{user?.name ?? UNKNOWN_NAME}</span>
+      </AgentProfileLink>
+      <AgentBadge userId={creatorId} />
       <Tooltip content={formatFull(createdAt)} describe={false}>
         <time className="message-time tabular" dateTime={createdAt} tabIndex={-1}>
           {formatTime(createdAt)}
@@ -57,7 +62,9 @@ function Gutter({
   return (
     <div className="message-gutter">
       {groupStart ? (
-        <UserAvatar userId={creatorId} size={36} decorative />
+        <AgentProfileLink userId={creatorId} duplicate>
+          <UserAvatar userId={creatorId} size={36} decorative />
+        </AgentProfileLink>
       ) : (
         <time className="message-hover-time tabular" dateTime={createdAt}>
           {formatTime(createdAt)}
@@ -155,6 +162,7 @@ export function MessageRow({
             trailing={!header && edited ? <span className="message-edited">(edited)</span> : null}
           />
         )}
+        <MessageSteps steps={message.steps} />
         <ReactionsRow
           message={message}
           viewerId={viewerId}

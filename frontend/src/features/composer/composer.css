@@ -186,6 +186,21 @@
     font-weight: var(--weight-semibold);
   }
 
+  /* "Ember is working · …": the presence text gives way first when the line runs out of room. */
+  .typing-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .typing-line[data-working] strong {
+    color: var(--agent-text);
+  }
+
+  .typing-presence {
+    color: var(--text-faint);
+  }
+
   .typing-dots {
     display: inline-flex;
     gap: 3px;

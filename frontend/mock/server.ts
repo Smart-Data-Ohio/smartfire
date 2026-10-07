@@ -66,6 +66,9 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
+import { createApprovals } from "./s4/approvals.ts";
+import { createLedger, UNKNOWN_LEDGER_TYPE } from "./s4/ledger.ts";
 import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts";
 import { createWork } from "./s4/work.ts";
 import { WORK_STATUSES } from "./s4/work-model.ts";
@@ -119,7 +122,14 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
-  s4: { work: S4_WORK_IDS, board: S4_BOARD, boardPosts: S4_BOARD_POST_IDS },
+  s4: {
+    work: S4_WORK_IDS,
+    board: S4_BOARD,
+    boardPosts: S4_BOARD_POST_IDS,
+    agents: AGENT_IDS,
+    hiddenRoom: HIDDEN_ROOM,
+    unknownLedgerType: UNKNOWN_LEDGER_TYPE,
+  },
 } as const;
 
 export interface MockServerOptions {
@@ -689,7 +699,26 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());
+
+  const approvals = createApprovals(
+    ctx,
+    agents,
+    activity,
+    createRandom(seed * 67_867_967 + 11),
+    () => simulation.paused(),
+  );
+
+  const ledger = createLedger(ctx, agents);
+
+  agents.seed();
+  approvals.seed();
+  ledger.seed();
+
   const routes = [
+    ...agents.routes,
+    ...approvals.routes,
+    ...ledger.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -759,7 +788,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const inboxAmbient = createServerInboxAmbient(
     ctx,
-    activity,
+    // The inbox's approval requests are real requests (S4), so deciding one updates its item.
+    {
+      ...activity,
+      record: (draft) =>
+        draft.eventType === "agent_approval_request"
+          ? approvals.requestFromInbox(draft)
+          : activity.record(draft),
+    },
     () => simulation.paused(),
     createRandom(seed * 32_452_843 + 5),
   );
@@ -767,6 +803,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   if (simulate) {
     ambient.start();
     inboxAmbient.start();
+    agents.start();
+    approvals.start();
   }
 
   // --- routing ---
@@ -951,6 +989,69 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         };
       }
 
+      case "agent-status":
+        return {
+          status: 200,
+          json: agents.setStatus(
+            int("agentId"),
+            statusControl(
+              query.get("status") ?? stringField(body, "status"),
+              booleanField(body, "suspended"),
+              stringField(body, "presence") ?? query.get("presence"),
+            ),
+          ),
+        };
+
+      case "agent-steps": {
+        const messageId =
+          intField(body, "messageId") ??
+          agents.latestBy(int("roomId"), intField(body, "userId") ?? BOT_ID)?.id ??
+          0;
+
+        return { status: 200, json: { steps: [...agents.setSteps(messageId, int("stage"))] } };
+      }
+
+      case "viewer-role": {
+        const role = text("role");
+        const viewer = world.users.get(VIEWER_ID);
+
+        if (role !== "member" && role !== "administrator") {
+          throw validation("role", "role must be member or administrator");
+        }
+
+        if (viewer !== undefined) world.users.set(VIEWER_ID, { ...viewer, role });
+
+        return ok;
+      }
+
+      case "approval-request":
+        return {
+          status: 201,
+          json: approvals.request(
+            intField(body, "agentId") ?? AGENT_IDS.ember,
+            stringField(body, "action") ?? "messages.post",
+            text("summary"),
+            intField(body, "roomId") ?? ROOM_IDS.engineering,
+          ),
+        };
+
+      case "approval-settle": {
+        const status = text("status");
+
+        const known = (["pending", "approved", "denied", "cancelled", "expired"] as const).find(
+          (candidate) => candidate === status,
+        );
+
+        if (known === undefined) {
+          throw validation("status", "status must be an approval status");
+        }
+
+        return {
+          status: 200,
+          json: approvals.settle(int("id"), known, intField(body, "deciderId") ?? USER_IDS.priya),
+        };
+      }
+
       case "reset":
         server.reset();
 
@@ -1024,7 +1125,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       simulation.stop();
       ambient.stop();
       inboxAmbient.stop();
+      agents.stop();
+      approvals.stop();
       world = seedWork(buildWorld(now(), seed), now());
+      agents.seed();
+      approvals.seed();
+      ledger.seed();
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
       restarts += 1;
@@ -1037,9 +1143,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         simulation.start();
         ambient.start();
         inboxAmbient.start();
+        agents.start();
+        approvals.start();
       }
     },
     dispose() {
+      agents.stop();
+      approvals.stop();
       release();
       uploads.reset();
       composer.stop();

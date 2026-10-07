@@ -4,6 +4,8 @@
  */
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
+import { applyAgentStatus, applyAgentSteps, mergeMessageCopies } from "./agents.ts";
+import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
   Me,
@@ -268,10 +270,9 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
       continue;
     }
 
-    // A stale page must not undo a newer live edit.
-    if (held === undefined || held.updatedAt <= message.updatedAt) {
-      messages[message.id] = message;
-    }
+    // A stale page must not undo a newer live edit (its steps still merge in, step by step).
+    messages[message.id] =
+      held === undefined ? message : mergeMessageCopies(held, message, "incoming");
   }
 
   const pageIds = page.messages
@@ -524,10 +525,18 @@ export function receiveMessage(state: State, message: MessageDTO): State {
   const held = reconciled.messages[message.id];
 
   if (held !== undefined && held.updatedAt >= message.updatedAt) {
-    return reconciled;
+    const merged = mergeMessageCopies(held, message, "held");
+
+    return merged === held
+      ? reconciled
+      : { ...reconciled, messages: { ...reconciled.messages, [message.id]: merged } };
   }
 
-  const messages = { ...reconciled.messages, [message.id]: message };
+  const messages = {
+    ...reconciled.messages,
+    [message.id]: held === undefined ? message : mergeMessageCopies(held, message, "held"),
+  };
+
   const threadId = message.threadId;
 
   const timeline =
@@ -568,11 +577,16 @@ export function receiveMessage(state: State, message: MessageDTO): State {
 export function updateMessage(state: State, message: MessageDTO): State {
   const held = state.messages[message.id];
 
-  if (held === undefined || held.updatedAt >= message.updatedAt) {
+  if (held === undefined) {
     return state;
   }
 
-  return { ...state, messages: { ...state.messages, [message.id]: message } };
+  // An older copy changes nothing but may still carry newer steps.
+  const merged = mergeMessageCopies(held, message, "held");
+
+  return merged === held
+    ? state
+    : { ...state, messages: { ...state.messages, [message.id]: merged } };
 }
 
 export function removeMessage(
@@ -749,7 +763,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        next = approvalRequested(
+          applyActivityItem(next, event.data.item, event.data.unreadCount),
+          event.data.item,
+        );
         break;
       case "activity.removed":
         next = removeActivityItem(next, event.data.id, event.data.unreadCount);
@@ -798,6 +815,15 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "presence":
         next = setPresence(next, [event.data]);
+        break;
+      case "agent.status":
+        next = applyAgentStatus(next, event.data);
+        break;
+      case "agent.steps":
+        next = applyAgentSteps(next, event.data);
+        break;
+      case "approval.updated":
+        next = applyApprovalUpdated(next, event.data);
         break;
     }
   }
