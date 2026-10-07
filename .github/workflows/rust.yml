@@ -63,13 +63,90 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
+  # Resolve a requested ref once. Re-runs reuse this run's first-attempt artifact,
+  # so even a full re-run cannot follow a branch or tag that has moved meanwhile.
+  source:
+    name: Rust source
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.pin.outputs.sha }}
+    steps:
+      - name: Restore the first attempt's commit pin
+        if: github.run_attempt > 1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: rust-source-${{ github.run_id }}
+          path: ${{ runner.temp }}/source
+          # Use the run-wide API rather than the current attempt's runtime token.
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ github.run_id }}
+      - name: Resolve the requested ref on the first attempt
+        if: github.run_attempt == 1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - name: Pin the tested commit
+        id: pin
+        env:
+          REQUESTED_REF: ${{ inputs.ref || github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "source/source.json"
+          context = {key: os.environ[value] for key, value in (
+              ("run_id", "GITHUB_RUN_ID"), ("event_sha", "GITHUB_SHA"),
+              ("workflow_sha", "GITHUB_WORKFLOW_SHA"), ("ref", "REQUESTED_REF"),
+          )}
+          first = os.environ["GITHUB_RUN_ATTEMPT"] == "1"
+          if first:
+              head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+              pin = dict(context, version=1, head=head)
+          else:
+              if not path.is_file():
+                  raise SystemExit("The first attempt's source pin is missing; start a new workflow run.")
+              pin = json.loads(path.read_text())
+          if not isinstance(pin, dict) or pin.get("version") != 1 or any(pin.get(k) != v for k, v in context.items()):
+              raise SystemExit("Source pin does not belong to this workflow run.")
+          head = pin.get("head", "")
+          if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
+              raise SystemExit("Source pin must contain a full commit SHA.")
+          if first:
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(json.dumps(pin, indent=2) + "\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"sha={head}\n")
+          print(f"{'Pinned' if first else 'Reusing pinned'} commit {head}")
+          PY
+      - name: Retain the first attempt's commit pin
+        if: github.run_attempt == 1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-source-${{ github.run_id }}
+          path: ${{ runner.temp }}/source/source.json
+          if-no-files-found: error
+          retention-days: 90
+
   # Skip ordinary Rust checks for docs, deploy scripts and SPA-only sources; frontend auth
   # assets and generated types are Rust inputs. Page suites additionally cover changes to the
   # classic app, its build inputs and browser harness. Both required gates report intentional
   # skips. Pushes, nightly/manual runs, empty diffs and unavailable history keep full coverage.
   changes:
     name: Rust changes
+    needs: source
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     outputs:
@@ -82,6 +159,7 @@ jobs:
         continue-on-error: true
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.source.outputs.sha }}
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
@@ -164,9 +242,11 @@ jobs:
   # checker rejects changed, missing or out-of-date seeds. Every job restores them the same way.
   seeds:
     name: Rust seeds
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 10
@@ -174,7 +254,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prove the seed check rejects changed or missing seeds
@@ -187,9 +267,11 @@ jobs:
   # by nextest into twelve slices.
   test:
     name: Rust tests (${{ matrix.shard }})
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -201,7 +283,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -253,7 +335,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-tests-${{ strategy.job-index }}
+          name: rust-tests-${{ strategy.job-index }}-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
 
@@ -278,9 +360,11 @@ jobs:
 
   clippy:
     name: Rust clippy, binaries and doctests
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -288,7 +372,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Check ignored-test coverage
@@ -344,7 +428,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-doctests
+          name: rust-doctests-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
 
@@ -370,9 +454,11 @@ jobs:
   # The panic-recovery tests the shards leave out, with campfire built by LLVM.
   llvm:
     name: Rust tests (campfire panic recovery, LLVM)
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -380,7 +466,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -417,7 +503,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-tests-llvm
+          name: rust-tests-llvm-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
 
@@ -441,9 +527,11 @@ jobs:
   # dependencies have their own `stable` Cargo cache.
   stable:
     name: Rust production toolchain check
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 30
@@ -451,7 +539,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -489,13 +577,20 @@ jobs:
   rust:
     # Required by name in the branch ruleset, and deploy-gcp.yml looks this job up by name too.
     name: Rust port
-    needs: [changes, seeds, test, clippy, llvm, stable]
+    needs: [source, changes, seeds, test, clippy, llvm, stable]
     if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 15
     steps:
+      - name: Require successful source resolution
+        env:
+          SOURCE_RESULT: ${{ needs.source.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Require successful change detection
         env:
           CHANGE_RESULT: ${{ needs.changes.result }}
@@ -504,7 +599,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
           sparse-checkout: |
             ci
@@ -517,7 +612,7 @@ jobs:
         if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped' || needs.llvm.result != 'skipped') }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: rust-{tests-*,doctests}
+          pattern: rust-{tests-*,doctests}-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/results
           merge-multiple: true
 
@@ -556,7 +651,7 @@ jobs:
           expected = "success" if os.environ["RUST"] == "true" else "skipped"
           if os.environ["RUST"] != "true":
               print("No Rust inputs changed: the Rust gates were intentionally skipped.")
-          sys.exit(results.pop("changes") != "success"
+          sys.exit(results.pop("source") != "success" or results.pop("changes") != "success"
                    or any(result != expected for result in results.values()))
           PY
 
@@ -564,9 +659,11 @@ jobs:
   # nextest archives preserve test metadata and executables without carrying Cargo fingerprints.
   correctness-tests:
     name: Rust correctness test build
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -574,7 +671,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
         id: setup
@@ -582,18 +679,25 @@ jobs:
         with:
           parity: none
           cargo-cache: correctness
+      - name: Prove the nextest archive round-trip
+        env:
+          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+        run: bash ci/exec.sh env CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1 python3 -m unittest discover -s ci -p test_correctness_archive.py -v
       - name: Archive the stable correctness test harness
         env:
           RUST_CORRECTNESS_IMAGE: campfire-toolchain
         run: |
           bash ci/exec.sh cargo nextest archive --locked -p campfire --profile ci \
             --archive-file target/correctness-tests.tar.zst
+          python3 ci/artifact_provenance.py record target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Retain the test harness
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-browser-test-build
-          path: target/correctness-tests.tar.zst
+          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
+          path: |
+            target/correctness-tests.tar.zst
+            target/correctness-tests.tar.zst.json
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
@@ -611,9 +715,11 @@ jobs:
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 90
@@ -625,7 +731,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -647,15 +753,17 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-${{ matrix.suite }}
+          name: rust-correctness-${{ matrix.suite }}-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-browsers:
     name: Rust correctness (browsers ${{ matrix.shard }})
-    needs: [changes, correctness-app, correctness-tests]
+    needs: [source, changes, correctness-app, correctness-image, correctness-tests]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 90
@@ -668,7 +776,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
@@ -678,22 +786,28 @@ jobs:
       - name: Collect the correctness test harness
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-browser-test-build
+          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect the application server
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-messaging-host-app
+          name: rust-messaging-host-app-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/server
       - name: Install the application server
-        run: tar -C target -xf "$RUNNER_TEMP/server/messaging-host.tar"
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/server/messaging-host.tar" --head "$CI_SOURCE_SHA"
+          tar -C target -xf "$RUNNER_TEMP/server/messaging-host.tar"
       - name: Collect pinned correctness prerequisites
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-messaging-prerequisites-image
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/prerequisites
       - name: Load pinned correctness prerequisites
-        run: zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
+          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+      - name: Verify the correctness test harness
+        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Run prerequisite-backed correctness suite
         env:
           CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
@@ -705,15 +819,17 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-browsers-${{ strategy.job-index }}
+          name: rust-correctness-browsers-${{ strategy.job-index }}-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-app:
     name: Rust messaging host (app)
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -721,7 +837,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -736,39 +852,69 @@ jobs:
         run: |
           bash ci/exec.sh cargo build --locked -j4 -p campfire --bin campfire
           tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
+          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/messaging-host.tar" --head "$CI_SOURCE_SHA"
 
       - name: Retain the host
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-messaging-host-app
-          path: ${{ runner.temp }}/messaging-host.tar
+          name: rust-messaging-host-app-${{ needs.source.outputs.sha }}
+          path: |
+            ${{ runner.temp }}/messaging-host.tar
+            ${{ runner.temp }}/messaging-host.tar.json
           if-no-files-found: error
           retention-days: 1
 
-      # The sixteen behaviour shards load this image rather than each building it (and
-      # fetching its pinned packages) again.
+
+  correctness-image:
+    name: Rust correctness image build
+    needs: [source, changes]
+    if: needs.changes.outputs.pages == 'true'
+    runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+          persist-credentials: false
+
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: none
+
+      # All shared-harness and messaging consumers reuse this image independently of the app.
       - name: Build and export pinned correctness prerequisites
         shell: bash
         run: |
           docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
           docker save campfire-correctness | zstd -T0 -3 -q -o "$RUNNER_TEMP/correctness-image.tar.zst"
+          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
 
       - name: Retain the prerequisite image
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-messaging-prerequisites-image
-          path: ${{ runner.temp }}/correctness-image.tar.zst
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
+          path: |
+            ${{ runner.temp }}/correctness-image.tar.zst
+            ${{ runner.temp }}/correctness-image.tar.zst.json
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
 
   messaging-hosts:
     name: Rust messaging host (${{ matrix.host }})
-    needs: changes
+    needs: [source, changes]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -780,7 +926,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
@@ -806,20 +952,23 @@ jobs:
           echo "$relative" > target/ws8bm-browser-host/executable
           tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" "$relative" \
             ws8bm-browser-host/executable ws8bm-browser-host/include-audit.json
+          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/messaging-host.tar" --head "$CI_SOURCE_SHA"
 
       - name: Retain the host
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-messaging-host-${{ matrix.host }}
-          path: ${{ runner.temp }}/messaging-host.tar
+          name: rust-messaging-host-${{ matrix.host }}-${{ needs.source.outputs.sha }}
+          path: |
+            ${{ runner.temp }}/messaging-host.tar
+            ${{ runner.temp }}/messaging-host.tar.json
           if-no-files-found: error
           retention-days: 1
 
 
   correctness-messaging:
     name: Rust correctness (messaging behaviour ${{ matrix.shard }})
-    needs: [changes, correctness-app, messaging-hosts]
+    needs: [source, changes, correctness-app, correctness-image, messaging-hosts]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -831,38 +980,45 @@ jobs:
         suite: [messaging]
         shard: ["1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"]
     env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
       WS8BM_PREBUILT_APP: "1"
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: seeds
-          # The prerequisite image comes from the application host job.
+          # The prerequisite image comes from its own producer.
           toolchain: 'false'
       - name: Collect the Rust hosts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: rust-messaging-host-*
+          pattern: rust-messaging-host-*-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/hosts
       - name: Install the Rust hosts
         shell: bash
         run: |
           mkdir -p target
-          for host in app test; do tar -C target -xf "$RUNNER_TEMP/hosts/rust-messaging-host-$host/messaging-host.tar"; done
+          for host in app test; do
+            archive="$RUNNER_TEMP/hosts/rust-messaging-host-$host-$CI_SOURCE_SHA/messaging-host.tar"
+            python3 ci/artifact_provenance.py verify "$archive" --head "$CI_SOURCE_SHA"
+            tar -C target -xf "$archive"
+          done
           echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/target/$(cat target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
       - name: Collect pinned correctness prerequisites
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-messaging-prerequisites-image
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/prerequisites
       - name: Load pinned correctness prerequisites
         shell: bash
-        run: zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
+          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
       - name: Permit native browser namespaces
         run: |
           if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
@@ -879,7 +1035,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-messaging-behavior-${{ strategy.job-index }}
+          name: rust-correctness-messaging-behavior-${{ strategy.job-index }}-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
 
@@ -887,9 +1043,11 @@ jobs:
   # on its own app with pinned Chromium.
   correctness-drive:
     name: Rust correctness (drive browsers)
-    needs: [changes, correctness-app, correctness-tests]
+    needs: [source, changes, correctness-image, correctness-tests]
     if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 60
@@ -901,7 +1059,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
@@ -911,15 +1069,19 @@ jobs:
       - name: Collect the correctness test harness
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-browser-test-build
+          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect pinned correctness prerequisites
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-messaging-prerequisites-image
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/prerequisites
       - name: Load pinned correctness prerequisites
-        run: zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
+          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+      - name: Verify the correctness test harness
+        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Run prerequisite-backed correctness suite
         env:
           CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
@@ -930,15 +1092,17 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-drive
+          name: rust-correctness-drive-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-livekit:
     name: Rust correctness (${{ matrix.suite }})
-    needs: [changes, correctness-app, correctness-tests]
+    needs: [source, changes, correctness-image, correctness-tests]
     if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 90
@@ -950,7 +1114,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
@@ -960,15 +1124,19 @@ jobs:
       - name: Collect the correctness test harness
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-browser-test-build
+          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
           path: target
       - name: Collect pinned correctness prerequisites
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: rust-messaging-prerequisites-image
+          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/prerequisites
       - name: Load pinned correctness prerequisites
-        run: zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+        run: |
+          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
+          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
+      - name: Verify the correctness test harness
+        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
       - name: Run prerequisite-backed correctness suite
         env:
           CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
@@ -979,19 +1147,26 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-livekit
+          name: rust-correctness-livekit-${{ needs.source.outputs.sha }}
           path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-gate:
     name: Rust correctness
-    needs: [changes, seeds, correctness, correctness-app, correctness-tests, correctness-browsers, correctness-drive, correctness-livekit, messaging-hosts, correctness-messaging]
+    needs: [source, changes, seeds, correctness, correctness-app, correctness-image, correctness-tests, correctness-browsers, correctness-drive, correctness-livekit, messaging-hosts, correctness-messaging]
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    env:
+      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
     timeout-minutes: 15
     steps:
+      - name: Require successful source resolution
+        env:
+          SOURCE_RESULT: ${{ needs.source.result }}
+        run: test "$SOURCE_RESULT" = success
+
       - name: Require successful change detection
         env:
           CHANGE_RESULT: ${{ needs.changes.result }}
@@ -1000,7 +1175,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
       - name: Require every job to be gated
@@ -1019,7 +1194,7 @@ jobs:
           import json, os, sys
           results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
           print("\n".join(f"{job}: {result}" for job, result in results.items()))
-          if results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES")):
+          if results.pop("source") != "success" or results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES")):
               sys.exit(1)
           seed_result = "success" if os.environ["RUST"] == "true" else "skipped"
           passed = results.pop("seeds") == seed_result
@@ -1037,11 +1212,11 @@ jobs:
         if: needs.changes.outputs.pages == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: rust-correctness-*
+          pattern: rust-correctness-*-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/receipts
 
       - name: Check that the shards cover every suite
         if: needs.changes.outputs.pages == 'true'
         env:
           SCOPE: ${{ inputs.scope || 'full' }}
-        run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$(git rev-parse HEAD)"
+        run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$CI_SOURCE_SHA"

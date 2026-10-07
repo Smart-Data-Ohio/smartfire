@@ -22,6 +22,7 @@ class CorrectnessJobGateTest(unittest.TestCase):
 
     def gate(self, *, rust=True, pages=True, partial=False, changed=None):
         statuses = dict.fromkeys(self.required, 'success' if pages else 'skipped')
+        statuses['source'] = 'success'
         statuses['changes'] = 'success'
         statuses['seeds'] = 'success' if rust else 'skipped'
         if pages and partial:
@@ -52,7 +53,7 @@ class CorrectnessJobGateTest(unittest.TestCase):
         for rust in (False, True):
             result = self.gate(rust=rust, pages=False)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            for job in set(self.required) - {'changes', 'seeds'}:
+            for job in set(self.required) - {'source', 'changes', 'seeds'}:
                 for status in ('success', 'failure', 'cancelled'):
                     with self.subTest(rust=rust, job=job, status=status):
                         result = self.gate(rust=rust, pages=False, changed={job: status})

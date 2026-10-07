@@ -13,6 +13,12 @@ any job in `rust.yml` is missing from their `needs`. It reports on every pull re
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
 nightly and manual runs, empty diffs and unavailable history always run everything.
 
+`Rust source` resolves the requested ref once before these jobs start. Every checkout,
+artifact name and receipt uses that full commit SHA. Its first-attempt pin is retained
+for 90 days; full reruns restore it instead of resolving a branch or tag again. A missing
+or mismatched pin fails the run and requires a new workflow dispatch. Both gates require
+source resolution to succeed even when all source-dependent suites intentionally skip.
+
 The frontend auth inputs are exceptions: `frontend/src/{auth,styles,motion}/` (including
 fonts) and `frontend/src/ui/{button,text-field,checkbox}.css` feed
 `crates/assets/build/auth.rs`; keep the scope list in `rust.yml` in sync with that script
@@ -33,8 +39,8 @@ and restore their
 own `correctness` Cargo cache (saved on main by `Rust correctness test build`); the test shards' cache
 holds nightly artifacts. Cargo caches hold only registry dependencies, so their keys are the
 toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves one only when
-no entry with that key exists. Every artifact upload overwrites its earlier attempt's, so a
-failed job can be re-run on its own.
+no entry with that key exists. Build and result uploads overwrite their earlier attempt's,
+so a failed job can be re-run on its own. The source pin is written only on the first attempt.
 
 Test and correctness jobs restore the committed seeds (`frozen-seeds restore`, through the
 setup action's `parity: seeds`); nothing in the workflow runs Ruby, Rails or a reference
@@ -53,7 +59,8 @@ action, `rust.yml`, Cargo manifests/lockfile, the Rust toolchain, Dockerfile/`.d
 and the frontend auth/dist inputs above. Shared app, session, rendering and harness inputs
 use broad directories to avoid missing indirect dependencies. Page jobs start alongside
 ordinary Rust jobs. Browsers, Drive and LiveKit wait for their shared test build and the
-application server's prerequisite image; messaging also waits for its paused-jobs test host. PRs without
+independent `Rust correctness image build`. Browsers also need the application server;
+messaging needs both its application server and paused-jobs test host. PRs without
 page inputs skip these jobs and receipt collection; the correctness gate requires those
 skips and checks the seed job against the ordinary Rust scope. Branch protection is managed
 separately by the release lead.
@@ -63,7 +70,7 @@ ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behav
 splits whole case batches, and the Drive job runs its 45 declarations on four nextest
 threads (each holds two: an app and a pinned Chromium container). The behaviour
 shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
-behavior-check.py's own commands, and load the prerequisite image the `app` job exports
+behavior-check.py's own commands, and load the prerequisite image its own build job exports
 instead of building it sixteen times. Browsers, Drive and LiveKit load the same image.
 `Rust correctness test build` compiles campfire's stable/LLVM harness into a nextest archive
 once. Those suites download it and run its executables with the current workspace remapped,
@@ -72,6 +79,16 @@ Producers and consumers use the same default checkout path. The harness embeds c
 fixture paths, so changing that layout requires rebuilding it at the consumer's path.
 Missing archives or executables fail the job; there is no rebuild fallback. Local suite runs
 without `CORRECTNESS_ARCHIVE` still build their own harnesses and server.
+
+Every shared archive, server, test host and image has a JSON sidecar with its producer SHA
+and payload SHA256. Consumers verify both against their pinned checkout and downloaded bytes
+before extraction or execution. `CI_SOURCE_SHA` also binds each suite's receipt to that checkout.
+
+`test_correctness_archive.py` builds a tiny dependency-free nextest archive, deletes its
+original target, and runs it through the same `nextest_archive.py` helper as the suites.
+It checks the extracted executable path, compile-time fixture path and real JUnit receipt.
+Local discovery skips that test when nextest is absent. The shared harness build requires
+it under the pinned toolchain with `CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1`.
 
 | Job suffix | Execution |
 | --- | --- |

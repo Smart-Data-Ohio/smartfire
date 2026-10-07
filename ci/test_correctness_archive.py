@@ -6,7 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
-from ignored_tests import ROOT
+from ignored_tests import ROOT, expression, verify_junit
+from nextest_archive import run as run_archive
 
 
 class CorrectnessArchive(unittest.TestCase):
@@ -17,7 +18,7 @@ class CorrectnessArchive(unittest.TestCase):
         for directory in ("ci", ".github/workflows", "parity", "bin", "target/debug",
                           "web/bin", "web/.bundle/livekit"):
             (self.root / directory).mkdir(parents=True)
-        for name in ("correctness.sh", "ignored_tests.py"):
+        for name in ("correctness.sh", "ignored_tests.py", "nextest_archive.py"):
             shutil.copyfile(ROOT / "ci" / name, self.root / "ci" / name)
         records = {suite: [{"path": "tests.rs", "package": "campfire", "binary": "campfire",
                             "test": f"{suite}_case"}]
@@ -57,7 +58,10 @@ else:
     assert {"--locked", "-p", "--build-jobs"}.issubset(args)
 assert args[args.index("--profile") + 1] == "ci"
 assert args[args.index("-j") + 1] == "4"
+assert "--no-fail-fast" in args
+assert args[args.index("--success-output") + 1] == "final"
 assert args[args.index("--run-ignored") + 1] == "only"
+assert args[args.index("--no-tests") + 1] == "fail"
 name = os.environ["PROBE_SUITE"] + "_case"
 assert "test(=" + name + ")" in args[args.index("-E") + 1]
 receipt = root / "target/nextest/ci/junit.xml"
@@ -81,6 +85,7 @@ receipt.write_text(f'<testsuites><testsuite><testcase name="{name}">{body}</test
                    PROBE_SUITE=suite, TMPDIR=str(self.root))
         env.pop("CORRECTNESS_ARCHIVE", None)
         env.pop("CORRECTNESS_SHARD", None)
+        env.pop("CI_SOURCE_SHA", None)
         if archive:
             env["CORRECTNESS_ARCHIVE"] = str(self.archive)
         if skip:
@@ -127,3 +132,91 @@ receipt.write_text(f'<testsuites><testsuite><testcase name="{name}">{body}</test
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(commands[0][0], build_command)
                 self.assertEqual(commands[1][:2], ["nextest", "run"])
+
+
+class RealNextestArchive(unittest.TestCase):
+    def test_round_trip_runs_relocated_binary_and_reads_compile_time_fixture(self):
+        missing = [tool for tool in ("cargo", "cargo-nextest") if shutil.which(tool) is None]
+        if missing:
+            message = f"Real nextest archive test requires {', '.join(missing)}"
+            self.assertNotEqual(os.environ.get("CI_REQUIRE_NEXTEST_ARCHIVE_TEST"), "1", message)
+            self.skipTest(message)
+        with tempfile.TemporaryDirectory(prefix="nextest-archive-") as scratch:
+            scratch = Path(scratch)
+            repo = scratch / "workspace"
+            for directory in ("src", ".config", "fixtures"):
+                (repo / directory).mkdir(parents=True)
+            (repo / "Cargo.toml").write_text('''[package]
+name = "archive_smoke"
+version = "0.1.0"
+edition = "2021"
+[workspace]
+''')
+            (repo / ".config/nextest.toml").write_text('''[profile.ci]
+fail-fast = false
+retries = 0
+[profile.ci.junit]
+path = "junit.xml"
+report-skipped = "ignored"
+''')
+            fixture = repo / "fixtures/same-checkout.txt"
+            fixture.write_text("fixture from the compiled checkout\n")
+            (repo / "src/lib.rs").write_text('''#[test]
+#[ignore = "utility: nextest archive round trip"]
+fn archive_fixture_smoke() {
+    let fixture = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/same-checkout.txt"));
+    let contents = std::fs::read_to_string(fixture).expect("compile-time fixture path must survive extraction");
+    assert_eq!(contents, "fixture from the compiled checkout\\n");
+    let executable = std::env::current_exe().unwrap();
+    let marker = std::env::var("NEXTEST_ARCHIVE_SMOKE_MARKER").unwrap();
+    std::fs::write(marker, format!("{}\\n{}\\n{}", executable.display(), fixture.display(), contents)).unwrap();
+}
+
+#[test]
+fn ordinary_test_is_not_selected() {
+    panic!("archive runner must select only ignored tests");
+}
+
+#[test]
+#[ignore = "utility: nextest archive filter decoy"]
+fn archive_fixture_smoke_decoy() {
+    panic!("archive runner must select the exact test name");
+}
+''')
+            original_target = repo / "target"
+            marker = scratch / "executed.txt"
+            archive = scratch / "tests.tar.zst"
+            env = dict(os.environ, CARGO_TARGET_DIR=str(original_target),
+                       NEXTEST_ARCHIVE_SMOKE_MARKER=str(marker))
+            # CI supplies the producer's stable toolchain; local runs avoid the
+            # repository's nightly selection without changing the checkout.
+            env.setdefault("RUSTUP_TOOLCHAIN", "stable")
+            manifest = str(repo / "Cargo.toml")
+            for command in (
+                ["cargo", "generate-lockfile", "--offline", "--manifest-path", manifest],
+                ["cargo", "nextest", "archive", "--locked", "--profile", "ci",
+                 "--build-jobs", "4", "--manifest-path", manifest, "--archive-file", str(archive)],
+            ):
+                # Cargo discovers config from its working directory, even with
+                # --manifest-path. Keep a TMPDIR inside this checkout from
+                # inheriting its developer-only nightly/Cranelift settings.
+                result = subprocess.run(command, cwd=repo.anchor, env=env, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertGreater(archive.stat().st_size, 0)
+            self.assertTrue(any((original_target / "debug/deps").glob("archive_smoke-*")))
+            shutil.rmtree(original_target)
+            self.assertFalse(original_target.exists())
+
+            records = [{"package": "archive_smoke", "binary": "archive_smoke",
+                        "test": "archive_fixture_smoke"}]
+            run_archive(archive, repo, expression(records), env=env)
+            executable_path, fixture_path, contents = marker.read_text().splitlines()
+            executable = Path(executable_path)
+            self.assertTrue(executable.is_relative_to(repo / "target/correctness-archive"), executable)
+            self.assertTrue(executable.is_file())
+            self.assertFalse((original_target / "debug").exists(), "archive consumer rebuilt the original target")
+            self.assertEqual(fixture_path, str(fixture))
+            self.assertEqual(contents, "fixture from the compiled checkout")
+            receipt = repo / "target/nextest/ci/junit.xml"
+            verify_junit(records, receipt)
+            print(f"Real nextest archive round trip: relocated executable={executable}; fixture={fixture}; receipt={receipt}")

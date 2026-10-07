@@ -3,6 +3,20 @@ set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo"
 suite=${1:?Expected acme, browsers, drive, livekit, messaging, or agents-ui}
+head=
+if [[ -n "${CI_SOURCE_SHA:-}" ]]; then
+  if [[ ! "$CI_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "CI_SOURCE_SHA must be a full 40-character Git SHA" >&2
+    exit 1
+  fi
+  head=$(git rev-parse --verify HEAD)
+  if [[ "$head" != "$CI_SOURCE_SHA" ]]; then
+    echo "CI_SOURCE_SHA does not match checkout HEAD: expected $CI_SOURCE_SHA, got $head" >&2
+    exit 1
+  fi
+elif [[ "${2:-}" != --execute ]]; then
+  head=$(git rev-parse --verify HEAD)
+fi
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
 # deterministic slice; ci/correctness_gate.py then requires the slices' receipts to
 # cover every selected test exactly once.
@@ -19,18 +33,16 @@ mkdir -p "$receipts"
 started=$(date +%s)
 
 ignored() {
-  local filter package selection=() build=()
+  local filter package selection=()
   [[ -z "$shard" ]] || selection=(--shard "$shard")
   filter=$(python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}")
   if [[ -n "${CORRECTNESS_ARCHIVE:-}" ]]; then
-    mkdir -p "$repo/target/correctness-archive"
-    build=(--archive-file "$CORRECTNESS_ARCHIVE" --workspace-remap "$repo" --extract-to "$repo/target/correctness-archive")
+    python3 ci/nextest_archive.py --archive "$CORRECTNESS_ARCHIVE" --repo "$repo" --filter "$filter"
   else
     package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
-    build=(--locked -p "$package" --build-jobs 4)
+    cargo nextest run --locked -p "$package" --build-jobs 4 \
+      --profile ci -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
   fi
-  cargo nextest run "${build[@]}" \
-    --profile ci -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
   cp target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
   python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
 }
@@ -153,11 +165,11 @@ if [[ "${2:-}" == --execute ]]; then
 fi
 status=0
 bash "$0" "$suite" --execute 2>&1 | tee "$receipts/$tag.log" || status=$?
-python3 - "$suite" "$started" "$status" "$receipts/$tag.json" "$shard" <<'PY'
-import json, subprocess, sys, time
+python3 - "$suite" "$started" "$status" "$receipts/$tag.json" "$shard" "$head" <<'PY'
+import json, sys, time
 from pathlib import Path
-suite, started, status, output, shard = sys.argv[1:]
-Path(output).write_text(json.dumps(dict(suite=suite, shard=shard or None, head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+suite, started, status, output, shard, head = sys.argv[1:]
+Path(output).write_text(json.dumps(dict(suite=suite, shard=shard or None, head=head,
                                       duration_seconds=int(time.time())-int(started), exit_code=int(status)), indent=2)+'\n')
 PY
 exit "$status"

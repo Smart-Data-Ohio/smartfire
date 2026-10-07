@@ -45,5 +45,5 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --env WS8BM_BROWSER_SCRATCH="$scratch/ws8bm" \
   --env WS8BM_PINNED_BROWSER=1 \
   --env CORRECTNESS_SHARD --env CORRECTNESS_ARCHIVE --env WS8BM_PREBUILT_APP --env WS8BM_PREBUILT_TEST_HOST \
-  --env WS8BM_HOST_BUILD_JOBS \
+  --env WS8BM_HOST_BUILD_JOBS --env CI_SOURCE_SHA \
   "${RUST_CORRECTNESS_IMAGE:-campfire-correctness}" "$@"
