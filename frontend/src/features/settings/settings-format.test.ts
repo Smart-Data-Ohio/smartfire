@@ -10,12 +10,12 @@ import {
   fieldError,
   keywordLines,
   oooSummary,
-  qrCodePath,
   reauthLabel,
   rememberedMeta,
   SECTIONS,
   sessionMeta,
   statusExpiry,
+  svgDataUrl,
   twoFactorSince,
   withConnection,
   withDependents,
@@ -184,12 +184,12 @@ describe("settings words", () => {
     expect(reauthLabel(false)).toBe("Authenticator code");
   });
 
-  it("points the QR code at the classic image, URL-safe base64 with padding", () => {
-    // Ruby: Base64.urlsafe_encode64("https://a.example/s?x=1>") == "aHR0cHM6Ly9hLmV4YW1wbGUvcz94PTE-"
-    expect(qrCodePath("https://a.example/s?x=1>")).toBe(
-      "/qr_code/aHR0cHM6Ly9hLmV4YW1wbGUvcz94PTE-",
-    );
-    expect(qrCodePath("ab?")).toBe("/qr_code/YWI_");
-    expect(qrCodePath("a")).toBe("/qr_code/YQ==");
+  it("draws the QR code from a data URL, so the link never reaches a request", () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>';
+    const src = svgDataUrl(svg);
+
+    expect(src.startsWith("data:image/svg+xml;charset=utf-8,")).toBe(true);
+    expect(src).not.toContain("<");
+    expect(decodeURIComponent(src.slice(src.indexOf(",") + 1))).toBe(svg);
   });
 });

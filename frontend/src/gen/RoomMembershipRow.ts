@@ -10,6 +10,7 @@ export type RoomMembershipRow = { roomId: number,
  */
 name: string, 
 /**
- * The same involvement the room's existing involvement API changes.
+ * The same involvement the room's existing involvement API changes. `None` for a membership
+ * with none stored: the classic row labels it with nothing, and no mention reaches it.
  */
-involvement: Involvement, direct: boolean, };
+involvement: Involvement | null, direct: boolean, };

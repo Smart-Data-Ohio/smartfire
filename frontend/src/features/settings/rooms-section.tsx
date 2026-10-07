@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccountSettings } from "../../gen/AccountSettings.ts";
 import type { Involvement } from "../../gen/Involvement.ts";
 import type { RoomMembershipRow } from "../../gen/RoomMembershipRow.ts";
@@ -16,8 +16,17 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly account: AccountSettings };
 
+/**
+ * A room's level: `null` for a membership with none stored, which the classic page labels with
+ * nothing and which no mention reaches.
+ */
+type Level = Involvement | null;
+
 /** Each room's level as it now stands, by room id (a change shows before the server answers). */
-type Levels = Readonly<Record<number, Involvement>>;
+type Levels = Readonly<Record<number, Level>>;
+
+/** The trigger for a room with no level stored: no choice is selected. */
+const UNSET = { label: "Not set", icon: "bell" } as const;
 
 /**
  * Rooms: every room and direct message you're in, in the classic profile's order, each with its
@@ -26,10 +35,16 @@ type Levels = Readonly<Record<number, Involvement>>;
 export function RoomsSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [levels, setLevels] = useState<Levels>({});
+  // Per room: the newest change's ticket, and the level the server last accepted. Only the newest
+  // change may undo itself, and it goes back to what the server holds, not to what it replaced.
+  const latest = useRef(new Map<number, number>());
+  const accepted = useRef(new Map<number, Level>());
 
   const fetchAccount = useCallback(() => {
     settingsActions.account().then(
       (account) => {
+        latest.current.clear();
+        accepted.current.clear();
         setLevels({});
         setLoad({ status: "ready", account });
       },
@@ -44,13 +59,29 @@ export function RoomsSection() {
     fetchAccount();
   };
 
-  const change = (row: RoomMembershipRow, level: Involvement, previous: Involvement) => {
+  const change = (row: RoomMembershipRow, level: Involvement, previous: Level) => {
+    const ticket = (latest.current.get(row.roomId) ?? 0) + 1;
+
+    latest.current.set(row.roomId, ticket);
+
+    if (!accepted.current.has(row.roomId)) {
+      accepted.current.set(row.roomId, previous);
+    }
+
     setLevels((current) => ({ ...current, [row.roomId]: level }));
 
-    actions.organize.setInvolvement(row.roomId, level).catch((error: Error) => {
-      setLevels((current) => ({ ...current, [row.roomId]: previous }));
-      toastFailure(`Couldn't change notifications for ${row.name}`, error);
-    });
+    actions.organize.setInvolvement(row.roomId, level).then(
+      () => accepted.current.set(row.roomId, level),
+      (error: Error) => {
+        if (latest.current.get(row.roomId) === ticket) {
+          const restored = accepted.current.get(row.roomId) ?? previous;
+
+          setLevels((current) => ({ ...current, [row.roomId]: restored }));
+        }
+
+        toastFailure(`Couldn't change notifications for ${row.name}`, error);
+      },
+    );
   };
 
   const rows = (list: readonly RoomMembershipRow[]) => (
@@ -59,7 +90,7 @@ export function RoomsSection() {
         <RoomRow
           key={row.roomId}
           row={row}
-          level={levels[row.roomId] ?? row.involvement}
+          level={row.roomId in levels ? (levels[row.roomId] ?? null) : row.involvement}
           onChange={change}
         />
       ))}
@@ -93,13 +124,13 @@ export function RoomsSection() {
 
 interface RoomRowProps {
   readonly row: RoomMembershipRow;
-  readonly level: Involvement;
-  readonly onChange: (row: RoomMembershipRow, level: Involvement, previous: Involvement) => void;
+  readonly level: Level;
+  readonly onChange: (row: RoomMembershipRow, level: Involvement, previous: Level) => void;
 }
 
 /** One room: its name (a link into it) and a menu of the levels it offers. */
 function RoomRow({ row, level, onChange }: RoomRowProps) {
-  const current = involvementChoice(level);
+  const current = level === null ? UNSET : involvementChoice(level);
 
   return (
     <li className="settings-list-row">
@@ -116,7 +147,7 @@ function RoomRow({ row, level, onChange }: RoomRowProps) {
             {...props}
             type="button"
             className="settings-level"
-            data-level={level}
+            data-level={level ?? "unset"}
             aria-label={`Notifications for ${row.name}: ${current.label}`}
           >
             <Icon name={current.icon} size={16} />

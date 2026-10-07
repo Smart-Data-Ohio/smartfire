@@ -23,6 +23,8 @@ interface DialogProps {
   readonly children?: ReactNode;
   /** Where focus goes on close when whatever opened the dialog has gone (a deleted item's menu). */
   readonly returnFocus?: () => HTMLElement | null;
+  /** Called once the dialog has finished closing (its exit animation done): drop what it showed. */
+  readonly onExited?: () => void;
 }
 
 const FOCUSABLE = [
@@ -69,15 +71,18 @@ export function Dialog({
   footer,
   children,
   returnFocus,
+  onExited,
 }: DialogProps) {
   const id = useId();
   const returnFocusRef = useRef(returnFocus);
+  const onExitedRef = useRef(onExited);
   const presence = usePresence<HTMLDialogElement>(open);
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
 
   useLayoutEffect(() => {
     returnFocusRef.current = returnFocus;
+    onExitedRef.current = onExited;
   });
 
   useLayoutEffect(() => {
@@ -107,6 +112,8 @@ export function Dialog({
       } else {
         returnFocusRef.current?.()?.focus({ preventScroll: true });
       }
+
+      onExitedRef.current?.();
     };
   }, [presence.mounted, presence.ref]);
 
