@@ -23,6 +23,9 @@ pub(super) struct Fresh {
 }
 impl Fresh {
     async fn new(role: i64, routes: Vec<Route>) -> Self {
+        Self::with_spa(role, routes, false).await
+    }
+    async fn with_spa(role: i64, routes: Vec<Route>, spa_enabled: bool) -> Self {
         let (server, network): (FakeServer, Network) = fake(routes).await;
         let scratch =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws16-http");
@@ -36,6 +39,7 @@ impl Fresh {
         let config = Config::from_lookup(|key| match key {
             "CAMPFIRE_STORAGE_PATH" => Some(dir.path().to_string_lossy().into_owned()),
             "DISABLE_SSL" => Some("1".into()),
+            "SPA_ENABLED" => Some(if spa_enabled { "1" } else { "0" }.into()),
             _ => environment.lines().find_map(|line| {
                 line.split_once('=')
                     .filter(|(name, _)| *name == key)
@@ -444,3 +448,5 @@ async fn slack_oauth_replay_unique_constraint_and_setup_csrf_are_rejected() {
 }
 #[path = "run_tests.rs"]
 mod run_tests;
+
+mod ui_return;

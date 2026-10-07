@@ -9,6 +9,7 @@ import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
+import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
@@ -87,6 +88,7 @@ export function AppShell() {
 
   useDocumentTitle(roomId, page);
   useClassicLinks();
+  useBootFlash();
 
   const view = usePhoneView(roomId);
 

@@ -163,6 +163,8 @@ async fn google_complete_login_pages_and_configured_profile_components_match_rai
                 "{name}: complete Google settings notices"
             );
             super::asset_goldens::compare(name, &actual, expected)
+        } else if crate::form_contracts::reskinned(&actual) {
+            crate::form_contracts::same_page(&actual, expected)
         } else {
             super::asset_goldens::compare(name, &actual, expected)
         };

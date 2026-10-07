@@ -161,7 +161,11 @@ pub async fn connect(c: &mut Ctx) -> Result {
 pub async fn callback(c: &mut Ctx) -> Result {
     app_before(c).await?;
     let stored = c.session().remove("github_app_oauth_state");
-    let path = campfire_routes::user_profile();
+    let path = if concerns::next_ui(c, concerns::require_current_user(c)?).await? {
+        "/app/settings/integrations".to_owned()
+    } else {
+        campfire_routes::user_profile()
+    };
     if !oauth::valid_state(
         &c.app().secrets,
         &param(c, "state"),

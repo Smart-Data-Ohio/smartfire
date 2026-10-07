@@ -166,7 +166,7 @@ fn classic_codes(reply: &Reply) -> Vec<String> {
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
     assert_eq!(reply.header("cache-control"), Some("no-store"));
     assert_eq!(reply.header("pragma"), Some("no-cache"));
-    regex::Regex::new(r#"<li><code class="txt-large">([^<]+)</code></li>"#)
+    regex::Regex::new(r#"<li><code>([^<]+)</code></li>"#)
         .unwrap()
         .captures_iter(&reply.text())
         .map(|capture| capture[1].to_owned())

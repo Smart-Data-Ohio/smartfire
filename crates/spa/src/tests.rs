@@ -19,6 +19,7 @@ fn boot() -> Boot {
         text_size: text_size(None),
         cable_url: "/cable".into(),
         version: "1.2.3".into(),
+        flash: None,
         revision: Some("0123abc".into()),
     }
 }
@@ -315,4 +316,17 @@ fn the_image_build_embeds_its_own_dist_and_tracks_it_by_content() {
     let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
     let digest = build_step.find("export SPA_DIST_DIGEST=").expect("the cargo build step exports SPA_DIST_DIGEST");
     assert!(Some(digest) < build_step.find("cargo build"));
+}
+
+#[test]
+fn optional_boot_flash_uses_camel_case_and_is_safe_in_the_shell() {
+    let mut boot = boot();
+    let value = serde_json::to_value(&boot).unwrap();
+    assert!(value.get("flash").is_none());
+    for (kind, wire) in [(FlashKind::Notice, "notice"), (FlashKind::Alert, "alert")] {
+        boot.flash = Some(BootFlash { kind, message: "Connected <&> </script>.".into() });
+        let html = render_shell(&boot, "TOKEN", Some("NONCE"));
+        assert_eq!(boot_json(&html)["flash"], serde_json::json!({"kind":wire,"message":"Connected <&> </script>."}));
+        assert!(!html.contains("Connected <&> </script>."));
+    }
 }

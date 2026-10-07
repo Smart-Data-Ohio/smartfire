@@ -25,7 +25,7 @@ mod embedded {
     include!(concat!(env!("OUT_DIR"), "/spa.rs"));
 }
 
-pub use boot::{Boot, BootAccount, BootResponse, BootUser, script_json, text_size, theme};
+pub use boot::{Boot, BootAccount, BootFlash, BootResponse, BootUser, FlashKind, script_json, text_size, theme};
 pub use serve::{File, Served, file};
 pub use shell::render_shell;
 

@@ -261,20 +261,30 @@ pub async fn before_actions_with_authentication(
 
 // --- The new UI ----------------------------------------------------------------------------------
 
+/// Whether this person uses the new UI, including the deployment default.
+pub async fn next_ui(c: &Ctx, user: &User) -> Result<bool> {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+    let config = &c.app().config;
+    if !config.spa_enabled {
+        return Ok(false);
+    }
+    let user_id = user.id;
+    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
+    Ok(UiPreference::effective(stored, config.spa_default_next) == UiPreference::Next)
+}
+
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
 /// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
 /// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page
 /// ([`navigates`]): not a Turbo frame's, a script's, a JSON request or a bare `fetch()`, and not
 /// with `?classic=1`, which keeps them on the classic page, nor while a flash waits for the page
-/// (the SPA has no way to show it). It runs last in the chain, so signing
+/// (classic actions still show their flash there). It runs last in the chain, so signing
 /// in, two-step enforcement and the rest come first, and a page's own checks (room access) are the
 /// SPA's to make.
 pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
-    use campfire_db::models::user::ui_preference::{self, UiPreference};
     use campfire_kit::format;
 
     let config = &c.app().config;
-    let default_next = config.spa_default_next;
     if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
         return Ok(());
     }
@@ -299,9 +309,7 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if !c.peek_flash().is_empty() {
         return Ok(());
     }
-    let user_id = require_current_user(c)?.id;
-    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
-    if UiPreference::effective(stored, default_next) != UiPreference::Next {
+    if !next_ui(c, require_current_user(c)?).await? {
         return Ok(());
     }
     let location = c.url_for(&location);
@@ -889,13 +897,36 @@ pub async fn terminate_current_session(c: &mut Ctx) -> Result<()> {
 }
 
 /// `post_authenticating_url`: `session.delete(:return_to_after_authenticating) || root_url`.
-pub fn post_authenticating_url(c: &mut Ctx) -> String {
+pub async fn post_authenticating_url(c: &mut Ctx) -> Result<String> {
     let stored = c.session().remove(session_keys::RETURN_TO_KEY);
-    match stored {
+    let url = match stored {
         Some(serde_json::Value::String(url)) => url,
         Some(serde_json::Value::Null) | None => c.url_for(&campfire_routes::root()),
         Some(other) => other.to_string(),
+    };
+    post_authentication_destination(c, url).await
+}
+
+/// Map a saved local destination after the final factor, preserving an existing SPA return.
+pub async fn post_authentication_destination(c: &Ctx, url: String) -> Result<String> {
+    let Some(user) = current_user(c) else { return Ok(url) };
+    if !next_ui(c, user).await? {
+        return Ok(url);
     }
+    let Some(local) = campfire_app::integrations::google::sign_in::safe_return_path(Some(&url), &c.request.host()) else {
+        return Ok(url);
+    };
+    let (path, query) = local.split_once('?').map_or((local.as_str(), None), |(path, query)| (path, Some(query)));
+    // `?classic=1` stays on the classic page, as it does when routing any request to the SPA.
+    if campfire_spa::screens::bypassed(query) {
+        return Ok(url);
+    }
+    for screen in campfire_spa::screens::SCREENS {
+        if let Some(spa) = campfire_spa::screens::spa_url(screen.endpoint, path, query) {
+            return Ok(c.url_for(&spa));
+        }
+    }
+    Ok(url)
 }
 
 // --- Sudo mode (app/controllers/concerns/sudo_mode.rb) ---------------------------------------------

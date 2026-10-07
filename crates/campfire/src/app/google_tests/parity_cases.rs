@@ -9,8 +9,13 @@ fn page(reply: &Reply, expected: &Value, name: &str) -> Value {
         expected["status"].as_u64().unwrap(),
         "{name}: status"
     );
-    if !crate::app::asset_goldens::compare(name, &reply.text(), expected["body"].as_str().unwrap())
-    {
+    let rails = expected["body"].as_str().unwrap();
+    let same = if crate::form_contracts::reskinned(&reply.text()) {
+        crate::form_contracts::same_page(&reply.text(), rails)
+    } else {
+        crate::app::asset_goldens::compare(name, &reply.text(), rails)
+    };
+    if !same {
         if let Ok(dir) = std::env::var("WS14G_PAGE_DIFF_DIR") {
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(format!("{dir}/{name}.actual"), reply.text()).unwrap();

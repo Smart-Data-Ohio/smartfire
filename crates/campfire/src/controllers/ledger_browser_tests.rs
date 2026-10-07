@@ -52,7 +52,7 @@ pub(crate) async fn original_test_session(c: &mut campfire_kit::Ctx) -> campfire
     };
     if let Some(user) = user {
         concerns::start_new_verified_session_for(c, user).await?;
-        let location = concerns::post_authenticating_url(c);
+        let location = concerns::post_authenticating_url(c).await?;
         c.redirect_to(&location)
     } else {
         Ok(Response::with_body(StatusCode::UNAUTHORIZED, "text/plain; charset=utf-8", "Unauthorized"))
