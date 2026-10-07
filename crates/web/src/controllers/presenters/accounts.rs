@@ -133,6 +133,44 @@ pub fn profile_memberships(conn: &Connection, user: &User) -> campfire_db::Resul
     Ok((direct, shared))
 }
 
+/// Whether the classic profile offers password confirmation.
+pub fn profile_has_password(user: &User) -> bool {
+    user
+        .password_digest
+        .as_deref()
+        .is_some_and(|s| !campfire_richtext::ruby::is_blank(s))
+}
+
+/// The classic profile's credential and unexpired remembered devices.
+pub fn profile_two_factor(
+    conn: &Connection,
+    id: i64,
+    now: jiff::Timestamp,
+    google_reauthentication: bool,
+) -> campfire_db::Result<campfire_views::two_factor::ProfileData> {
+    let credential = campfire_db::TwoFactorCredential::for_user(conn, id)?;
+    let devices = campfire_db::TwoFactorRememberedDevice::for_user(conn, id)?
+        .into_iter()
+        .filter(|d| d.expires_at.jiff() > now)
+        .map(|d| campfire_views::two_factor::Device {
+            id: d.id,
+            user_agent: d.user_agent,
+            ip_address: d.ip_address,
+            last_used_at: d.last_used_at.map(|t| t.jiff()),
+        })
+        .collect();
+    Ok(campfire_views::two_factor::ProfileData {
+        confirmed_at: credential.and_then(|c| c.confirmed_at).map(|t| t.jiff()),
+        devices,
+        google: google_reauthentication
+            && conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM google_identities WHERE user_id=?)",
+                [id],
+                |r| r.get::<_, bool>(0),
+            )?,
+    })
+}
+
 // --- Sidebar ---------------------------------------------------------------------------------------
 
 /// `Users::SidebarsController::DIRECT_PLACEHOLDERS`

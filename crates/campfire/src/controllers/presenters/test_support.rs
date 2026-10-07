@@ -681,6 +681,11 @@ pub fn encode(value: &str) -> String {
 pub use super::render_secrets::with_fixed_render_secrets;
 
 impl Browser<'_> {
+    /// The seeded app for parity assertions after a request.
+    pub(crate) fn app(&self) -> &TestApp {
+        self.app
+    }
+
     /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
     pub(crate) async fn grant_sudo(&mut self) {
         use campfire_kit::Crypto;

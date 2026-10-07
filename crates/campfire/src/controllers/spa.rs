@@ -51,3 +51,7 @@ mod slack_tests;
 #[cfg(test)]
 #[path = "spa_integrations_tests.rs"]
 mod integrations_tests;
+
+#[cfg(test)]
+#[path = "spa_account_tests.rs"]
+mod account_tests;

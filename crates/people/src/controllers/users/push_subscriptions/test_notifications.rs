@@ -16,6 +16,12 @@ pub async fn create(c: &mut Ctx) -> Result {
         .param_str("push_subscription_id")
         .and_then(cast_integer)
         .ok_or(Error::NotFound)?;
+    let location = enqueue(c, user_id, id).await?;
+    c.redirect_to(&location)
+}
+
+/// Find an owned subscription and enqueue the classic durable test push. Returns its destination.
+pub async fn enqueue(c: &mut Ctx, user_id: i64, id: i64) -> Result<String> {
     let subscription = c
         .app()
         .db
@@ -43,5 +49,5 @@ pub async fn create(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(Error::internal)?;
-    c.redirect_to(&location)
+    Ok(location)
 }
