@@ -341,6 +341,20 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(self.host.json("deploy-result.json")["migrations"], versions.split(","))
         self.assertTrue(self.host.json("live-migration-result.json")["matches_rehearsal"])
 
+    def test_releasing_the_current_image_keeps_the_full_release_safety_path(self):
+        before = self.host.db.read_bytes()
+        results = self.host.release(IMAGE_REF=PREVIOUS, CANDIDATE=PREVIOUS)
+        self.assertEqual(list(results), ["preflight", "freeze", "cutover"])
+        for result, _ in results.values():
+            self.assertOk(result)
+        preflight = self.host.json("preflight-result.json")
+        self.assertEqual(preflight["current_image"], preflight["target_image"])
+        self.assertTrue(self.host.json("freeze-result.json")["rehearsal"]["verified"])
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+        self.assertEqual(self.host.db.read_bytes(), before)
+        self.assertEqual((self.host.volume / "files/upload").read_text(), "kept")
+        self.assertOk(self.host.run("finish", IMAGE_REF=PREVIOUS, CANDIDATE=PREVIOUS)[0])
+
     def test_preflight_refuses_anything_but_rust_to_rust(self):
         for env in [{"RUNTIME": "rails"}, {"RUNTIME": ""}, {"RUNTIME": "<no value>"}, {"PREVIOUS_RUNTIME": "rails"},
                     {"PREVIOUS_RUNTIME": ""}]:
