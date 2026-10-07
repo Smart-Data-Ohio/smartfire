@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    ActivityItemChanged, ActivityItemRemoved, MessageCards, MessageDTO, MessageReactions,
-    MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory, RoomCategoryRemoved, RoomRead,
-    RoomUnread, SavedChanged, ScheduledMessage, ScheduledMessageRemoved, SidebarRow,
-    SidebarRowRemoved, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
-    UserPresence,
+    ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
+    ApprovalUpdated, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
+    PollBallot, PollUpdated, RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged,
+    ScheduledMessage, ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, Thread,
+    ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
 };
 
 /// A frame the client sends.
@@ -201,6 +201,18 @@ pub enum SyncPayload {
     /// On the message's conversation topic: its cards changed (see [`MessageCards`]).
     #[serde(rename = "message.cards")]
     MessageCards(MessageCards),
+    /// On every active human's `user` topic: an agent's status, note, suspension or working
+    /// presence changed (see [`AgentStatusChanged`]).
+    #[serde(rename = "agent.status")]
+    AgentStatus(AgentStatusChanged),
+    /// On the parent's conversation topic: an agent added or updated a step (see
+    /// [`AgentStepsChanged`]).
+    #[serde(rename = "agent.steps")]
+    AgentSteps(AgentStepsChanged),
+    /// On each decider's `user` topic: an approval request was decided, cancelled or expired
+    /// (see [`ApprovalUpdated`]). New.
+    #[serde(rename = "approval.updated")]
+    ApprovalUpdated(ApprovalUpdated),
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

@@ -25,7 +25,9 @@
 //! [`crate::MessageDTO`]): the server time at the start of the read that built it. The client
 //! keeps, per message, the poll and the cards with the latest `asOf`, and on a tie the one that
 //! arrived last, so a late reply or a stale event never overwrites newer data. A message
-//! payload's other fields follow `updatedAt` as before.
+//! payload's other fields follow `updatedAt` as before. A `poll: null` has no `asOf`, so it
+//! never orders anything: a later `message.updated` (or page) whose `poll` is `null` must not
+//! clear a poll the client already holds. Only a [`Poll`] with a later `asOf` replaces it.
 //!
 //! Everything on [`crate::MessageDTO`] is the same for every viewer, because the message is
 //! broadcast. GitHub and Fizzy previews depend on the viewer's own account access, so the

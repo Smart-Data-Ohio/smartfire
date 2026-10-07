@@ -1,7 +1,5 @@
 import { Schema } from "effect";
 import type { CreateScheduledMessage as GeneratedCreateScheduledMessage } from "../../gen/CreateScheduledMessage.ts";
-import type { Icon as GeneratedIcon } from "../../gen/Icon.ts";
-import type { IconKind as GeneratedIconKind } from "../../gen/IconKind.ts";
 import type { IconList as GeneratedIconList } from "../../gen/IconList.ts";
 import type { MessagePreview as GeneratedMessagePreview } from "../../gen/MessagePreview.ts";
 import type { PreviewMessage as GeneratedPreviewMessage } from "../../gen/PreviewMessage.ts";
@@ -18,6 +16,7 @@ import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "
 import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
 import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
 import { ConversationName } from "./conversation.ts";
+import { Icon } from "./icon.ts";
 import { MessageId, RoomId, ScheduledMessageId, ThreadId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
@@ -42,24 +41,7 @@ export type UserSuggestionListPin = Assert<
   Pinned<typeof UserSuggestionList, GeneratedUserSuggestionList>
 >;
 
-export const IconKind = Schema.Literals(["brand", "custom", "emoji"]);
-
-export type IconKind = typeof IconKind.Type;
-
-export type IconKindPin = Assert<Pinned<typeof IconKind, GeneratedIconKind>>;
-
-/** What `:name:` expands to: an emoji `character`, or a brand/custom `imageUrl`. */
-export const Icon = Schema.Struct({
-  name: Schema.String,
-  title: Schema.String,
-  kind: IconKind,
-  character: Schema.NullOr(Schema.String),
-  imageUrl: Schema.NullOr(Schema.String),
-});
-
-export type Icon = typeof Icon.Type;
-
-export type IconPin = Assert<Pinned<typeof Icon, GeneratedIcon>>;
+export { Icon, IconKind } from "./icon.ts";
 
 /** `GET /api/v1/autocomplete/icons?query=` (at most 8) and `GET /api/v1/icons` (all non-emoji). */
 export const IconList = Schema.Struct({ icons: Schema.Array(Icon) });

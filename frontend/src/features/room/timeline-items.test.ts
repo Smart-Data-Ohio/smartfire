@@ -29,6 +29,7 @@ function message(id: number, creatorId: number, createdAt: string, systemNote = 
     poll: null,
     cards: [],
     cardsAsOf: createdAt,
+    steps: [],
     createdAt,
     updatedAt: createdAt,
   };

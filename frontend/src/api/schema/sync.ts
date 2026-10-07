@@ -7,6 +7,7 @@ import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
 import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
+import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { RoomId, UserId } from "./ids.ts";
@@ -87,6 +88,9 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({ type: Schema.Literal("agent.status"), data: AgentStatusChanged }),
+  Schema.Struct({ type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
+  Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -163,6 +167,17 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("agent.status"),
+    data: AgentStatusChanged,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("approval.updated"),
+    data: ApprovalUpdated,
+  }),
 ]);
 
 export type SyncEvent = typeof SyncEvent.Type;
