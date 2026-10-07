@@ -12,6 +12,7 @@ import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
+import { useNow } from "../threads/use-now.ts";
 import {
   flattenTypeahead,
   type TypeaheadItem,
@@ -184,7 +185,7 @@ export function SearchBox({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [now] = useState(() => Date.now());
+  const now = useNow();
   const recents = useRecentSearches();
   const items = useSuggestible(open);
   const wrapRef = useRef<HTMLDivElement | null>(null);

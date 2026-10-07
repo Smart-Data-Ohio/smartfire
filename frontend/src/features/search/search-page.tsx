@@ -10,6 +10,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useNow } from "../threads/use-now.ts";
 import { chipLabel } from "./format.ts";
 import { appendToken, textWords } from "./query.ts";
 import { SearchBox } from "./search-box.tsx";
@@ -239,7 +240,7 @@ export function SearchPage() {
   const query = searchKey(q);
   const [draft, setDraft] = useState(query);
   const [shown, setShown] = useState(query);
-  const [now] = useState(() => Date.now());
+  const now = useNow();
   const results = useSearchResults(query);
 
   if (shown !== query) {
