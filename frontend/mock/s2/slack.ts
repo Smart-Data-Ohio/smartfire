@@ -8,6 +8,7 @@
 import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { SlackConnectionState } from "../../src/gen/SlackConnectionState.ts";
 import type { SlackConversation } from "../../src/gen/SlackConversation.ts";
+import type { SlackIssue } from "../../src/gen/SlackIssue.ts";
 import type { SlackRun } from "../../src/gen/SlackRun.ts";
 import type { SlackRunKind } from "../../src/gen/SlackRunKind.ts";
 import type { SlackRunMode } from "../../src/gen/SlackRunMode.ts";
@@ -107,6 +108,8 @@ interface RunRecord {
   conversations: readonly SlackConversation[];
   /** A test import's oldest day, which rules out a catch-up. */
   oldest: string | null;
+  /** How many issues it recorded. */
+  issues: number;
 }
 
 interface State {
@@ -120,6 +123,40 @@ interface State {
 }
 
 const VALIDATION: ApiError["_tag"] = "Validation";
+
+/** Issues a run page shows at a time, as the classic page pages them. */
+const ISSUES_PER_PAGE = 50;
+
+/** The issues a finished workspace dry run recorded: two pages' worth. */
+const DRY_RUN_ISSUES = 60;
+
+/**
+ * The issues a live workspace dry run has recorded at each step: they pile up while it runs, so
+ * the pages grow under the person reading them (queued, running, completed).
+ */
+const LIVE_DRY_RUN_ISSUES = { queued: 60, running: 110, completed: 160 } as const;
+
+/**
+ * A page of a run's issues in the order they were recorded (`ORDER BY id`), as the classic page's
+ * `?page=N` shows them: new issues land on the last page.
+ */
+function issuesPage(record: RunRecord, raw: string | null) {
+  const asked = Number(raw ?? "1");
+  const page = Number.isSafeInteger(asked) && asked > 0 ? asked : 1;
+  const from = (page - 1) * ISSUES_PER_PAGE + 1;
+  const to = Math.min(page * ISSUES_PER_PAGE, record.issues);
+  const issues: SlackIssue[] = [];
+
+  for (let n = from; n <= to; n += 1) {
+    issues.push({
+      level: n % 10 === 0 ? "error" : "warning",
+      slackRef: `F${1000 + n}`,
+      message: `File ${n} wasn't imported (files stay in Slack).`,
+    });
+  }
+
+  return { issues, nextPage: page * ISSUES_PER_PAGE < record.issues ? page + 1 : null };
+}
 
 /** The classic page's alert, a 422 naming no field. */
 const refusal = (message: string): HttpError =>
@@ -151,6 +188,7 @@ function initialState(now: number): State {
           finishedAt: at,
           conversations: WORKSPACE_CONVERSATIONS,
           oldest: null,
+          issues: DRY_RUN_ISSUES,
         },
       ],
     ]),
@@ -275,7 +313,7 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
             }
           : null,
       apiCalls: record.status === "queued" ? null : 57,
-      issuesCount: 0,
+      issuesCount: record.issues,
       error: null,
       active: isActive(record),
       cancellable: record.status === "queued" || record.status === "running",
@@ -304,16 +342,19 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
     createdAt: record.createdAt,
   });
 
-  /** An active run moves one step on each time it's read. */
+  /** An active run moves one step on each time it's read; a dry run's issues pile up as it goes. */
   const advance = (record: RunRecord) => {
     const at = timestamp(ctx.now());
+    const live = record.kind === "workspace" && record.mode === "dry_run";
 
     if (record.status === "queued") {
       record.status = "running";
       record.startedAt = at;
+      record.issues = live ? LIVE_DRY_RUN_ISSUES.running : record.issues;
     } else if (record.status === "running") {
       record.status = "completed";
       record.finishedAt = at;
+      record.issues = live ? LIVE_DRY_RUN_ISSUES.completed : record.issues;
     } else if (record.status === "undoing") {
       record.status = "undone";
       record.finishedAt = at;
@@ -346,6 +387,8 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
       finishedAt: null,
       conversations,
       oldest,
+      // A workspace dry run finds files it won't import; the other runs record none.
+      issues: kind === "workspace" && mode === "dry_run" ? LIVE_DRY_RUN_ISSUES.queued : 0,
     };
 
     s.nextId += 1;
@@ -461,9 +504,11 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
           "Dry run started.",
         );
       }),
-      route("GET", /^\/admin\/slack\/runs\/(\d+)$/, (request) =>
-        ok({ run: wire(runOr404(firstId(request), true)), issues: [], nextPage: null }),
-      ),
+      route("GET", /^\/admin\/slack\/runs\/(\d+)$/, (request) => {
+        const record = runOr404(firstId(request), true);
+
+        return ok({ run: wire(record), ...issuesPage(record, request.query.get("page")) });
+      }),
       route("GET", /^\/admin\/slack\/runs\/(\d+)\/status$/, (request) => {
         const record = runOr404(firstId(request), true);
 

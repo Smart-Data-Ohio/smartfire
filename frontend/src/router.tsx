@@ -38,6 +38,7 @@ import {
   PersonalSlackRunSection,
   PersonalSlackSection,
 } from "./features/slack/personal-slack-section.tsx";
+import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
@@ -234,6 +235,7 @@ const adminSections = [
   createRoute({
     getParentRoute: () => adminRoute,
     path: "slack/runs/$runId",
+    validateSearch: parseRunSearch,
     component: SlackRunSection,
   }),
   createRoute({
