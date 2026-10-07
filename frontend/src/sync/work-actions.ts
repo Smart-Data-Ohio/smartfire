@@ -1,9 +1,9 @@
 /**
- * Work tracking's actions as Effect programs (S4). The work list loads per filter (a reply from
- * an older load cannot replace its list membership). A status or owner change shows on the thread at once and
- * rolls back if the server refuses, unless something changed the facts meanwhile; changes to
- * one thread go one at a time. Every write lands the `ThreadDetail` the server answers, and
- * while one is on its way the pane doesn't refetch on the `thread.updated` it causes.
+ * Work tracking's actions as Effect programs (S4). The work list loads per filter; a reply from
+ * an older load cannot replace its list membership. A status or owner change shows on the
+ * thread at once and rolls back if the server refuses, unless something changed the facts
+ * meanwhile. Changes to one thread go one at a time. Every write lands the `ThreadDetail` the
+ * server answers, and while one is on its way the pane doesn't refetch on its `thread.updated`.
  */
 import { Effect } from "effect";
 import { thread as fetchThread } from "../api/thread-endpoints.ts";
@@ -38,8 +38,9 @@ export const loadList = Effect.fn("work.loadList")(function* (filter: WorkFilter
 const refreshing = new Set<number>();
 
 /**
- * Refetches the thread's detail because live facts moved past the held ones. A failure keeps
- * what the pane shows; the next change tries again.
+ * Refetches the thread's detail because live facts moved past the held ones. Another attempt
+ * needs a newer confirmed revision or a tracking change during the read. No progress or a
+ * failure keeps what the pane shows and sets its error; the next change can try again.
  */
 export const refresh = Effect.fn("work.refresh")(function* (threadId: number) {
   if (refreshing.has(threadId)) {
@@ -49,12 +50,38 @@ export const refresh = Effect.fn("work.refresh")(function* (threadId: number) {
   refreshing.add(threadId);
 
   yield* Effect.gen(function* () {
-    do {
-      const read = captureWorkRead(store.getState());
+    while (true) {
+      const before = store.getState();
+      const overlay = before.work.overlays[threadId];
+      const held = overlay === undefined ? before.threads[threadId]?.work : overlay.confirmed;
+      const read = captureWorkRead(before);
+
       const detail = yield* fetchThread(threadId);
 
       mutations.loadThreadDetail(detail, read);
-    } while (workDetailStale(store.getState(), threadId));
+
+      const after = store.getState();
+
+      if (!workDetailStale(after, threadId)) {
+        return;
+      }
+
+      const revision = after.threads[threadId]?.work?.updatedAt;
+      const previous = held?.updatedAt;
+
+      const progressed =
+        revision !== previous &&
+        (revision === undefined || previous === undefined || revision > previous);
+
+      if (!progressed) {
+        mutations.setThreadPaneError(
+          threadId,
+          "The work detail could not catch up to its latest revision",
+        );
+
+        return;
+      }
+    }
   }).pipe(
     Effect.catch((error) =>
       Effect.sync(() => mutations.setThreadPaneError(threadId, error.message)),

@@ -6,6 +6,7 @@ import { threadFixture } from "../features/threads/test-fixtures.ts";
 import {
   agentFixture,
   factsFixture,
+  linkFixture,
   rowFixture,
   threadDetailFixture,
   workDetailFixture,
@@ -239,6 +240,88 @@ describe("work actions", () => {
       expect((yield* fake.requests).length).toBe(1);
       expect(workDetailStale(store.getState(), THREAD)).toBe(false);
     }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "stop a stale detail refresh with an error when its held revision does not advance",
+    () =>
+      Effect.gen(function* () {
+        seed();
+        liveStatus("blocked");
+
+        const fake = yield* FakeApi;
+        let requests = 0;
+
+        yield* fake.route(`GET /threads/${THREAD}`, () => {
+          requests += 1;
+
+          return requests === 1
+            ? Effect.succeed(threadDetailFixture(THREAD, factsFixture(), workDetailFixture()))
+            : Effect.fail(new ServerError({ status: 503, message: "Unexpected repeated request" }));
+        });
+        yield* work.refresh(THREAD);
+
+        expect(requests).toBe(1);
+        expect(store.getState().threadPanes[THREAD]?.error).toBe(
+          "The work detail could not catch up to its latest revision",
+        );
+        expect(factsOf()).toMatchObject({
+          status: "blocked",
+          updatedAt: "2026-10-06T09:10:00.000Z",
+        });
+        expect(workDetailStale(store.getState(), THREAD)).toBe(true);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "keep newer links without rejecting complete detail from a held equal-revision GET",
+    () =>
+      Effect.gen(function* () {
+        const original = factsFixture({ links: [linkFixture(1)] });
+        const latest = factsFixture({ links: [linkFixture(1, { pullRequestState: "merged" })] });
+
+        seed(original);
+
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const gate = yield* Deferred.make<void>();
+
+        yield* fake.route(`GET /threads/${THREAD}`, () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(gate)),
+            Effect.as(
+              threadDetailFixture(
+                THREAD,
+                original,
+                workDetailFixture({ resultMarkdown: "Fetched result" }),
+              ),
+            ),
+          ),
+        );
+
+        const loading = yield* Effect.forkChild(work.refresh(THREAD));
+
+        yield* Deferred.await(started);
+        mutations.applyEvents(
+          [
+            {
+              seq: 1,
+              topic: `thread:${THREAD}`,
+              type: "thread.updated",
+              data: threadFixture(THREAD, { work: latest }),
+            },
+          ],
+          Date.now(),
+        );
+        yield* Deferred.succeed(gate, undefined);
+        yield* Fiber.join(loading);
+
+        expect(factsOf()?.links).toEqual(latest.links);
+        expect(store.getState().work.details[THREAD]?.resultMarkdown).toBe("Fetched result");
+        expect(store.getState().threadPanes[THREAD]?.error ?? null).toBeNull();
+        expect(workDetailStale(store.getState(), THREAD)).toBe(false);
+        expect((yield* fake.requests).length).toBe(1);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
   it.effect("load a filter's list, keep it on a failed reload, and drop an older reply", () =>

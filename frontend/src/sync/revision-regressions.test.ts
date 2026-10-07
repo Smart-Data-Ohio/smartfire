@@ -257,26 +257,36 @@ describe("S4 revisions through held network responses", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("keep retrying an incomplete work detail until a matching server revision lands", () =>
-    Effect.gen(function* () {
-      seed();
+  it.effect(
+    "keep retrying incomplete detail while confirmed revisions advance during each read",
+    () =>
+      Effect.gen(function* () {
+        seed();
 
-      const fake = yield* FakeApi;
-      const confirmed = facts(2, { status: "done" });
-      let calls = 0;
+        const fake = yield* FakeApi;
+        const confirmed = facts(8, { status: "done" });
+        let calls = 0;
 
-      mutations.upsertThread(threadFixture(THREAD, { work: confirmed }));
-      yield* fake.route(`GET /threads/${THREAD}`, () => {
-        calls += 1;
+        mutations.upsertThread(threadFixture(THREAD, { work: facts(2, { status: "done" }) }));
+        yield* fake.route(`GET /threads/${THREAD}`, () => {
+          calls += 1;
 
-        return Effect.succeed(detail(calls <= 6 ? facts(0, { status: "planned" }) : confirmed));
-      });
-      yield* work.refresh(THREAD);
+          if (calls <= 6) {
+            mutations.upsertThread(
+              threadFixture(THREAD, { work: facts(calls + 2, { status: "done" }) }),
+            );
+          }
 
-      expect(calls).toBe(7);
-      expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
-      expect(workDetailStale(store.getState(), THREAD)).toBe(false);
-    }).pipe(Effect.provide(FakeApi.layerClient)),
+          return Effect.succeed(
+            detail(calls <= 6 ? facts(calls + 1, { status: "planned" }) : confirmed),
+          );
+        });
+        yield* work.refresh(THREAD);
+
+        expect(calls).toBe(7);
+        expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
+        expect(workDetailStale(store.getState(), THREAD)).toBe(false);
+      }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
   it.effect("surface a detail refresh error while keeping the newer server work", () =>
