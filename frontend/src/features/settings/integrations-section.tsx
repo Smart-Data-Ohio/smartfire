@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { GoogleIntegration } from "../../gen/GoogleIntegration.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { classicPage, connectionSummary } from "./settings-format.ts";
@@ -41,7 +42,8 @@ function calendarSummary(google: GoogleIntegration): string {
 /**
  * Integrations: where Google, GitHub and Fizzy stand, and the Slack import. Connecting and
  * disconnecting go through OAuth or a pasted token, so they stay on the classic page for now;
- * each card links there (with `?classic=1`, so the new UI doesn't send the person back).
+ * each card links there (with `?classic=1`, so the new UI doesn't send the person back). The
+ * Slack import has its own page here.
  */
 export function IntegrationsSection() {
   const { settings } = useSettings();
@@ -98,7 +100,10 @@ export function IntegrationsSection() {
 
       <SettingsGroup title="Slack import">
         <p>Bring your Slack direct messages, group DMs and private channels into Smartfire.</p>
-        <ClassicLink href={integrations.slackImportPath}>Import from Slack</ClassicLink>
+        <Link to="/settings/slack" className="settings-classic-link">
+          Import from Slack
+          <Icon name="chevron-right" size={14} />
+        </Link>
       </SettingsGroup>
     </SettingsPage>
   );

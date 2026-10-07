@@ -21,6 +21,7 @@ campfire_people.workspace = true
 campfire_routes.workspace = true
 campfire_cable.workspace = true
 campfire_channels.workspace = true
+campfire_controllers.workspace = true
 campfire_db.workspace = true
 campfire_kit.workspace = true
 campfire_messages.workspace = true

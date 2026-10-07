@@ -33,3 +33,6 @@ mod admin_tests;
 #[cfg(test)]
 #[path = "spa_bots_tests.rs"]
 mod bots_tests;
+#[cfg(test)]
+#[path = "spa_slack_tests.rs"]
+mod slack_tests;
