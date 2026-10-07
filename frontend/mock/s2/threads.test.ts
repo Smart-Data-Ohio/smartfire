@@ -41,7 +41,7 @@ describe("listing and opening threads", () => {
       canLock: false,
       canUnlock: true,
       canDelete: true,
-      canConvertWork: false,
+      canConvertWork: true,
       canManageWork: false,
       canUpdateWorkStatus: false,
       canAssignWork: false,

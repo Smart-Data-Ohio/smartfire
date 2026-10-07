@@ -11,6 +11,7 @@ import {
   Stream,
 } from "effect";
 import { activityUnreadCount } from "../api/activity-endpoints.ts";
+import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
@@ -28,6 +29,7 @@ import { Presence } from "./presence.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
+import { changedWorkPanes, refreshWorkPane } from "./work-refresh.ts";
 
 /**
  * A loaded window that stops short of the present: a permalink, a jump back, or a window the
@@ -112,7 +114,10 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   const missing = new Set<number>();
 
   for (const event of events) {
-    if (event.type === "message.created" && known[event.data.creatorId] === undefined) {
+    if (
+      (event.type === "message.created" || event.type === "thread.created") &&
+      known[event.data.creatorId] === undefined
+    ) {
       missing.add(event.data.creatorId);
     }
 
@@ -161,6 +166,36 @@ export class Engine extends Context.Service<
        * window away from the present, the page around its middle re-read in place.
        */
       const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
+        const state = store.getState();
+        const held = state.boards[roomId];
+
+        const kind =
+          state.rooms[roomId]?.detail?.room.kind ?? state.sidebar.rows[roomId]?.room.kind;
+
+        if (kind === "board") {
+          if (held !== undefined) {
+            mutations.setBoardLoading(roomId, held.query);
+            const generation = store.getState().boards[roomId]?.generation;
+            yield* board(roomId, { ...held.query, page: held.page }).pipe(
+              Effect.tap((listing) =>
+                Effect.sync(() => {
+                  if (generation !== undefined) mutations.loadBoardListing(listing, generation);
+                }),
+              ),
+              Effect.catch((error) =>
+                Effect.sync(() => {
+                  if (generation !== undefined)
+                    mutations.setBoardError(roomId, generation, error.message);
+                }).pipe(
+                  Effect.andThen(Effect.logWarning("sync: board resync failed", error.message)),
+                ),
+              ),
+            );
+          }
+
+          return;
+        }
+
         mutations.setPageReplacing(roomId);
 
         const newest = yield* messages(roomId, null);
@@ -266,6 +301,8 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
+      const refreshingWork = new Set<number>();
+
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (
         events: readonly SyncEvent[],
@@ -301,6 +338,22 @@ export class Engine extends Context.Service<
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh);
+        const workIds = changedWorkPanes(store.getState(), fresh, yield* topics.subscribed);
+
+        for (const threadId of workIds) {
+          if (refreshingWork.has(threadId)) continue;
+          refreshingWork.add(threadId);
+          yield* Effect.forkIn(
+            refreshWorkPane(threadId).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning("sync: work refresh failed", error.message),
+              ),
+              Effect.ensuring(Effect.sync(() => refreshingWork.delete(threadId))),
+              Effect.provideContext(api),
+            ),
+            scope,
+          );
+        }
 
         yield* cursor.set({ epoch: point?.epoch ?? "", seq });
 

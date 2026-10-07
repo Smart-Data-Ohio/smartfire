@@ -5,6 +5,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { BoardListing } from "../gen/BoardListing.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -20,6 +21,7 @@ import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import * as activity from "./activity.ts";
+import * as boards from "./boards.ts";
 import * as huddles from "./huddles.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -82,6 +84,13 @@ const apply = (change: (state: State) => State) => store.setState(change, true);
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
+  setBoardLoading: (roomId: number, query: boards.BoardQuery, more = false) =>
+    apply((state) => boards.setBoardLoading(state, roomId, query, more)),
+  setBoardError: (roomId: number, generation: number, error: string) =>
+    apply((state) => boards.setBoardError(state, roomId, generation, error)),
+  loadBoardListing: (listing: BoardListing, generation: number) =>
+    apply((state) => boards.loadBoardListing(state, listing, generation)),
+  addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>

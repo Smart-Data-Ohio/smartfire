@@ -2,6 +2,7 @@ import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import type { BoardState } from "./boards.ts";
 import { type CardsState, emptyCards } from "./cards.ts";
 import type {
   Boot,
@@ -59,6 +60,7 @@ export interface State {
   readonly threadPanes: Readonly<Record<number, ThreadPaneState>>;
   /** Each open thread's loaded window of replies (the unread fields stay unused). */
   readonly threadTimelines: Readonly<Record<number, Timeline>>;
+  readonly boards: Readonly<Record<number, BoardState>>;
   readonly roomThreads: Readonly<Record<number, RoomThreadList>>;
   /** Typists per topic (`room:12`): user id to the time (ms) their entry expires. */
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
@@ -119,6 +121,7 @@ export const initialState: State = {
   threadMemberships: {},
   threadPanes: {},
   threadTimelines: {},
+  boards: {},
   roomThreads: {},
   typing: {},
   tombstones: {},

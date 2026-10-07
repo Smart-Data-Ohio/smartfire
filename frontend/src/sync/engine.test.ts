@@ -20,6 +20,8 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
+import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
+import * as boardActions from "./board-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
@@ -1156,6 +1158,67 @@ describe("decoding", () => {
 
         expect(unreadCount(12)).toBe(1);
         expect(yield* socket.isOpen).toBe(true);
+      }),
+    ),
+  );
+});
+
+describe("boards and open work panes", () => {
+  it.effect("refetches changed work detail through sync without fetching a board timeline", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const detail = roomDetailFixture(BOARD);
+        detail.room.kind = "board";
+        yield* api.reply(
+          "GET /sidebar",
+          sidebarFixture([sidebarRowFixture(BOARD, "Roadmap", "board")]),
+        );
+        yield* api.reply(`GET /rooms/${BOARD}`, detail);
+        yield* api.reply(`GET /rooms/${BOARD}/board`, boardListing());
+        yield* api.reply("GET /threads/1", boardDetail());
+        yield* api.reply("GET /threads/1/messages", pageFixture([]));
+        yield* session.openRoom(BOARD, null);
+        yield* boardActions.open(BOARD, { status: "all", owner: "anyone", tag: "" });
+        yield* threadActions.open(1);
+        yield* startEngine;
+        yield* welcome(0, true);
+        const beforeRequests = yield* api.requests;
+
+        const detailLoads = beforeRequests.filter(
+          (request) => request.path === "/threads/1",
+        ).length;
+
+        const boardLoads = beforeRequests.filter(
+          (request) => request.path === "/rooms/900/board",
+        ).length;
+
+        const changed = boardDetail(boardThread(1, "done", 7, ["api"]));
+
+        if (changed.work !== null) changed.work.resultMarkdown = "Finished";
+        yield* api.reply("GET /threads/1", changed);
+        yield* pushEvents({
+          seq: 1,
+          topic: "room:900",
+          type: "thread.updated",
+          data: changed.thread,
+        });
+        expect(store.getState().threadPanes[1]?.work?.resultMarkdown).toBe("Finished");
+        expect(store.getState().threadPanes[1]?.workFacts?.tags).toEqual(["api"]);
+        const requests = yield* api.requests;
+        expect(requests.filter((request) => request.path === "/threads/1")).toHaveLength(
+          detailLoads + 1,
+        );
+        expect(requests.some((request) => request.path === "/rooms/900/messages")).toBe(false);
+        yield* socket.push({ t: "resync", topics: ["room:900"], reason: "missed" });
+        yield* settle;
+        expect(
+          (yield* api.requests).filter((request) => request.path === "/rooms/900/board"),
+        ).toHaveLength(boardLoads + 1);
+        expect(
+          (yield* api.requests).some((request) => request.path === "/rooms/900/messages"),
+        ).toBe(false);
       }),
     ),
   );

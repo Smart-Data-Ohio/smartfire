@@ -150,6 +150,11 @@ export const update = Effect.fn("threads.update")(function* (threadId: number, b
   mutations.loadThreadDetail(yield* api.updateThread(threadId, body));
 });
 
+/** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */
+export const remove = Effect.fn("threads.remove")(function* (threadId: number) {
+  yield* api.deleteThread(threadId);
+});
+
 /** Follows (`everything`), mentions-only, or leaves (`null`). */
 export const follow = Effect.fn("threads.follow")(function* (
   threadId: number,

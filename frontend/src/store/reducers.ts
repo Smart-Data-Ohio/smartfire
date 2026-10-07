@@ -1,3 +1,4 @@
+import { addBoardPost } from "./boards.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
@@ -777,6 +778,8 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = setThreadIndicator(next, event.data);
         break;
       case "thread.created":
+        next = addBoardPost(upsertThread(next, event.data), event.data);
+        break;
       case "thread.updated":
         next = upsertThread(next, event.data);
         break;

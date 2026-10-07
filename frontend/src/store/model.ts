@@ -9,6 +9,9 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
 
+import type { WorkDetail } from "../gen/WorkDetail.ts";
+import type { WorkFacts } from "../gen/WorkFacts.ts";
+
 export type { Me } from "../gen/Me.ts";
 
 export type { Membership } from "../gen/Membership.ts";
@@ -132,6 +135,9 @@ export interface ThreadPaneState {
   readonly status: LoadStatus;
   readonly error: string | null;
   readonly permissions: ThreadPermissions | null;
+  readonly work: WorkDetail | null;
+  /** Facts at the last detail load, for detecting work changes through sync. */
+  readonly workFacts: WorkFacts | null;
 }
 
 /** One room's thread list (the Threads pane), for one filter. */

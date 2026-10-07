@@ -36,6 +36,7 @@ import {
   seededReplyId,
   THREAD_IDS,
 } from "../s2/seed.ts";
+import { seedBoards } from "../s6/seed.ts";
 import {
   BOT_ID,
   ROOM_IDS,
@@ -277,6 +278,7 @@ export function buildWorld(now: number, seed: number): World {
   const world = buildS2World(now, seed);
 
   seedS3(world, now, createRandom(seed * 92_821 + 13));
+  seedBoards(world, now, seed);
 
   return world;
 }
