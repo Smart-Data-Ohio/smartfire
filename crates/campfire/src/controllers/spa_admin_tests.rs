@@ -76,7 +76,7 @@ pub(super) async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fie
 
 /// Columns that differ between two runs by design: secrets drawn afresh (session tokens, storage
 /// keys, the join code, bot keys, signing secrets, credentials and the ciphertext of stored
-/// tokens), the digests salted afresh, and a system note's random client id.
+/// tokens and secrets), the digests salted afresh, and a system note's random client id.
 const VOLATILE: &[&str] = &[
     "token",
     "key",
@@ -91,6 +91,7 @@ const VOLATILE: &[&str] = &[
     "token_last_four",
     "access_token",
     "refresh_token",
+    "client_secret",
 ];
 
 /// `text` with the random part of a deactivated address (`kevin-deactivated-<uuid>@...`) and a

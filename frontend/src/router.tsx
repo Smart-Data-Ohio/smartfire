@@ -34,6 +34,13 @@ import { StatusSection } from "./features/settings/status-section.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
+import {
+  PersonalSlackRunSection,
+  PersonalSlackSection,
+} from "./features/slack/personal-slack-section.tsx";
+import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
+import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
+import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
@@ -174,6 +181,16 @@ const settingsSections = [
     path: "integrations",
     component: IntegrationsSection,
   }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "slack",
+    component: PersonalSlackSection,
+  }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "slack/$runId",
+    component: PersonalSlackRunSection,
+  }),
 ] as const;
 
 /** `/app/admin`: the classic account pages, the workspace first. */
@@ -207,6 +224,22 @@ const adminSections = [
     getParentRoute: () => adminRoute,
     path: "bots/$botId/grants",
     component: BotGrantsSection,
+  }),
+  createRoute({ getParentRoute: () => adminRoute, path: "slack", component: SlackSetupSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "slack/runs",
+    component: SlackRunsSection,
+  }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "slack/runs/$runId",
+    component: SlackRunSection,
+  }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "slack/runs/$runId/plan",
+    component: SlackPlanSection,
   }),
 ] as const;
 

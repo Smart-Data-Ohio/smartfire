@@ -199,6 +199,38 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/bots/:bot_id/grants",
         true,
     ),
+    // S7: the Slack importer, the administrator's pages and everyone's own.
+    screen(
+        "accounts/slack_imports#show",
+        "/account/slack_import",
+        "/app/admin/slack",
+        true,
+    ),
+    screen(
+        "accounts/slack_import_runs#index",
+        "/account/slack_import/runs",
+        "/app/admin/slack/runs",
+        true,
+    ),
+    screen(
+        "accounts/slack_import_runs#show",
+        "/account/slack_import/runs/:id",
+        "/app/admin/slack/runs/:id",
+        true,
+    ),
+    screen(
+        "accounts/slack_import_runs#plan",
+        "/account/slack_import/runs/:id/plan",
+        "/app/admin/slack/runs/:id/plan",
+        true,
+    ),
+    screen("slack/imports#index", "/slack/imports", "/app/settings/slack", true),
+    screen(
+        "slack/imports#show",
+        "/slack/imports/:id",
+        "/app/settings/slack/:id",
+        true,
+    ),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.

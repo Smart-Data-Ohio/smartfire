@@ -40,6 +40,23 @@ import {
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
+import {
+  cancelSlackRun,
+  disconnectSlack,
+  personalSlack,
+  removeSlackCredentials,
+  saveSlackCredentials,
+  slackPlan,
+  slackRunPage,
+  slackRunStatus,
+  slackRuns,
+  slackSetup,
+  startPersonalSlack,
+  startSlackCatchUp,
+  startSlackDryRun,
+  startSlackImport,
+  undoSlackRun,
+} from "../api/slack-endpoints.ts";
 import type { AuditLogFilters } from "../gen/AuditLogFilters.ts";
 import type { AuditLogPage } from "../gen/AuditLogPage.ts";
 import type { Bot } from "../gen/Bot.ts";
@@ -60,6 +77,19 @@ import type { PeoplePage } from "../gen/PeoplePage.ts";
 import type { PersonChange } from "../gen/PersonChange.ts";
 import type { PersonRemoved } from "../gen/PersonRemoved.ts";
 import type { PersonRole } from "../gen/PersonRole.ts";
+import type { SaveSlackCredentials } from "../gen/SaveSlackCredentials.ts";
+import type { SlackDisconnected } from "../gen/SlackDisconnected.ts";
+import type { SlackPersonal } from "../gen/SlackPersonal.ts";
+import type { SlackPlan } from "../gen/SlackPlan.ts";
+import type { SlackRun } from "../gen/SlackRun.ts";
+import type { SlackRunChange } from "../gen/SlackRunChange.ts";
+import type { SlackRunList } from "../gen/SlackRunList.ts";
+import type { SlackRunPage } from "../gen/SlackRunPage.ts";
+import type { SlackSetup } from "../gen/SlackSetup.ts";
+import type { SlackSetupChange } from "../gen/SlackSetupChange.ts";
+import type { StartPersonalSlackImport } from "../gen/StartPersonalSlackImport.ts";
+import type { StartSlackDryRun } from "../gen/StartSlackDryRun.ts";
+import type { StartSlackImport } from "../gen/StartSlackImport.ts";
 import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
@@ -158,4 +188,47 @@ export const bots = {
 
   revokeGrant: (botId: number, grantId: number): Promise<GrantList> =>
     runAction(revokeGrant(botId, grantId)),
+};
+
+/**
+ * The Slack importer: plain promises over the S7 Slack endpoints, failing as `admin`'s do. `admin`
+ * picks the administrator's workspace pages or the person's own, where both exist.
+ */
+export const slack = {
+  setup: (): Promise<SlackSetup> => runAction(slackSetup()),
+
+  saveCredentials: (body: SaveSlackCredentials): Promise<SlackSetupChange> =>
+    runAction(saveSlackCredentials(body)),
+
+  removeCredentials: (): Promise<SlackSetupChange> => runAction(removeSlackCredentials()),
+
+  runs: (): Promise<SlackRunList> => runAction(slackRuns()),
+
+  dryRun: (body: StartSlackDryRun): Promise<SlackRunChange> => runAction(startSlackDryRun(body)),
+
+  runPage: (runId: number, page: number | null = null): Promise<SlackRunPage> =>
+    runAction(slackRunPage(runId, page)),
+
+  status: (admin: boolean, runId: number): Promise<SlackRun> =>
+    runAction(slackRunStatus(admin, runId)),
+
+  plan: (runId: number): Promise<SlackPlan> => runAction(slackPlan(runId)),
+
+  startImport: (runId: number, body: StartSlackImport): Promise<SlackRunChange> =>
+    runAction(startSlackImport(runId, body)),
+
+  catchUp: (runId: number): Promise<SlackRunChange> => runAction(startSlackCatchUp(runId)),
+
+  cancel: (admin: boolean, runId: number): Promise<SlackRunChange> =>
+    runAction(cancelSlackRun(admin, runId)),
+
+  undo: (admin: boolean, runId: number): Promise<SlackRunChange> =>
+    runAction(undoSlackRun(admin, runId)),
+
+  personal: (): Promise<SlackPersonal> => runAction(personalSlack()),
+
+  startPersonal: (body: StartPersonalSlackImport): Promise<SlackRunChange> =>
+    runAction(startPersonalSlack(body)),
+
+  disconnect: (): Promise<SlackDisconnected> => runAction(disconnectSlack()),
 };
