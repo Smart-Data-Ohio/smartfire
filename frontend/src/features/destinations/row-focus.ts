@@ -16,6 +16,17 @@ export interface RowParts {
   readonly open: string;
   /** A row on its way out (it stays in place while its exit plays). */
   readonly leaving: string;
+  /**
+   * The attribute naming a row (e.g. `data-row`), for lists whose rows remount or move when they
+   * change: focus follows the row to its new element, and a row whose focused control went
+   * disabled or away gets focus back once it can take it, instead of losing it to the page.
+   */
+  readonly id?: string;
+  /**
+   * The attribute naming a row's controls (e.g. `data-row-control`): focus lands on the control
+   * of the same name as the one it was in, when the landing row has it, before the open button.
+   */
+  readonly control?: string;
 }
 
 /** The destinations' lists (features/destinations/list-row.tsx and paged-list.tsx). */
@@ -40,6 +51,8 @@ export interface RowPlace {
   readonly row: Element;
   readonly before: readonly Element[];
   readonly after: readonly Element[];
+  /** The name (`RowParts.control`) of the control focus was in, if any. */
+  readonly control?: string | null;
 }
 
 /** Whether `row` is still a row focus can stay on: in the document, not leaving, not inert. */
@@ -54,16 +67,37 @@ function openOf(row: Element, parts: RowParts): HTMLElement | null {
   return open === null || open.matches(":disabled") ? null : open;
 }
 
+/** The control named `name` in `row`, when the list names its controls; `null` if it has none. */
+function namedControl(row: Element, parts: RowParts, name: string | null | undefined) {
+  if (parts.control === undefined || name === null || name === undefined) {
+    return null;
+  }
+
+  return row.querySelector<HTMLElement>(`[${parts.control}="${CSS.escape(name)}"]`);
+}
+
+/** Where focus goes in `row`: the control it was in, by name, else the open button. */
+function targetIn(row: Element, parts: RowParts, name: string | null | undefined) {
+  const named = namedControl(row, parts, name);
+
+  return named !== null && !named.matches(":disabled") ? named : openOf(row, parts);
+}
+
 /** `row` with its neighbours inside `root`, nearest first. */
-export function placeOf(root: Element, row: Element, parts: RowParts = LIST_ROW_PARTS): RowPlace {
+export function placeOf(
+  root: Element,
+  row: Element,
+  parts: RowParts = LIST_ROW_PARTS,
+  control: string | null = null,
+): RowPlace {
   const rows = [...root.querySelectorAll(parts.row)];
   const index = rows.indexOf(row);
 
   if (index === -1) {
-    return { row, before: [], after: [] };
+    return { row, before: [], after: [], control };
   }
 
-  return { row, before: rows.slice(0, index).reverse(), after: rows.slice(index + 1) };
+  return { row, before: rows.slice(0, index).reverse(), after: rows.slice(index + 1), control };
 }
 
 /**
@@ -76,7 +110,8 @@ export function landingFor(
   parts: RowParts = LIST_ROW_PARTS,
 ): HTMLElement | null {
   for (const row of [...place.after, ...place.before]) {
-    const open = isLive(row, parts) && root.contains(row) ? openOf(row, parts) : null;
+    const open =
+      isLive(row, parts) && root.contains(row) ? targetIn(row, parts, place.control) : null;
 
     if (open !== null) {
       return open;
@@ -113,6 +148,39 @@ export function edgeRowOpen(
   }
 
   return null;
+}
+
+/** The live row in `root` with `row`'s name (`RowParts.id`), when it remounted or moved. */
+function sameRow(root: Element, row: Element, parts: RowParts): Element | null {
+  const name = parts.id === undefined ? null : row.getAttribute(parts.id);
+
+  if (parts.id === undefined || name === null) {
+    return null;
+  }
+
+  const found = root.querySelector(`[${parts.id}="${CSS.escape(name)}"]`);
+
+  return found?.matches(parts.row) && isLive(found, parts) ? found : null;
+}
+
+/**
+ * Where focus goes back to in a live `row` it fell out of: the control it was in (`null`, to wait,
+ * while that is disabled), else the open button, else the row itself when it can take focus.
+ */
+function backInto(row: Element, parts: RowParts, name: string | null | undefined) {
+  const named = namedControl(row, parts, name);
+
+  if (named !== null) {
+    return named.matches(":disabled") ? null : named;
+  }
+
+  const open = openOf(row, parts);
+
+  if (open !== null) {
+    return open;
+  }
+
+  return row instanceof HTMLElement && row.hasAttribute("tabindex") ? row : null;
 }
 
 /** Focus fell on <body> (or is stuck inside something inert, before the browser moves it). */
@@ -157,8 +225,25 @@ export function useKeepRowFocus(
   };
 
   const land = (root: HTMLElement, from: RowPlace) => {
+    const moved = sameRow(root, from.row, parts);
+
+    // The row remounted or moved: focus follows it (and waits there while its control is busy).
+    if (moved !== null) {
+      const target = backInto(moved, parts, from.control);
+
+      place.current = placeOf(root, moved, parts, from.control ?? null);
+
+      if (target !== null) {
+        focusQuietly(target);
+      }
+
+      return;
+    }
+
     const fresh =
-      from.row.isConnected && root.contains(from.row) ? placeOf(root, from.row, parts) : from;
+      from.row.isConnected && root.contains(from.row)
+        ? placeOf(root, from.row, parts, from.control ?? null)
+        : from;
 
     const target = landingFor(root, fresh, parts);
 
@@ -202,7 +287,16 @@ export function useKeepRowFocus(
     }
 
     if (isLive(current.row, parts) && root.contains(current.row)) {
-      place.current = placeOf(root, current.row, parts);
+      place.current = placeOf(root, current.row, parts, current.control ?? null);
+
+      // A list that names its rows gets focus back when the row's control went disabled or away.
+      if (parts.id !== undefined && focusDropped()) {
+        const target = backInto(current.row, parts, current.control);
+
+        if (target !== null) {
+          focusQuietly(target);
+        }
+      }
 
       return;
     }
@@ -239,8 +333,13 @@ export function useKeepRowFocus(
       if (root.contains(target)) {
         const row = target.closest(parts.row);
 
+        const control =
+          parts.control === undefined
+            ? null
+            : (target.closest(`[${parts.control}]`)?.getAttribute(parts.control) ?? null);
+
         // A row that is already leaving counts too: the next render moves focus off it.
-        place.current = row === null ? null : placeOf(root, row, parts);
+        place.current = row === null ? null : placeOf(root, row, parts, control);
 
         if (row !== null) {
           held.current = null;
