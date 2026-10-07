@@ -76,6 +76,7 @@ import {
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createRoomManagement } from "./s8/rooms.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -245,7 +246,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const roomOr404 = (roomId: number): RoomRecord => {
     const record = world.rooms.get(roomId);
 
-    if (record === undefined || record.membership.involvement === "invisible") {
+    if (record === undefined || !record.memberIds.includes(VIEWER_ID)) {
       throw notFound("Room not found");
     }
 
@@ -306,7 +307,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const sidebarRow = (record: RoomRecord): SidebarRow => ({
-    room: record.room,
+    room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
     membership: record.membership,
     displayName: displayName(record),
     directMemberIds: directMemberIds(record),
@@ -316,7 +317,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const visibleRooms = (): RoomRecord[] =>
     [...world.rooms.values()]
-      .filter((record) => record.membership.involvement !== "invisible")
+      .filter(
+        (record) =>
+          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
+      )
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
@@ -397,7 +401,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const preview = record.memberIds.slice(0, 5);
 
     return {
-      room: record.room,
+      room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
       memberCount: record.memberIds.length,
@@ -705,6 +709,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const cards = createCards(ctx);
 
   const routes = [
+    ...createRoomManagement(ctx, admin, huddles).routes,
     ...huddles.routes,
     ...cards.routes,
     ...uploads.routes,
