@@ -43,8 +43,10 @@ resultUpdatedAt: string | null,
  */
 links: Array<WorkLink>, 
 /**
- * The server's revision of these facts (status, owner, run, result time and links): when
- * they last changed on the server.
+ * The server's revision of these facts: the thread's `updated_at`, which every change to
+ * the status, owner, run URL, result or tracking moves (and other thread changes too).
+ * Links, the owner's own profile and `ownerActive` can change without moving it, so a
+ * client merges those fields on their own rather than by this revision.
  * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
  * every path (reads, write replies, events and refetches), so a late or replayed copy never
  * undoes a newer one.
