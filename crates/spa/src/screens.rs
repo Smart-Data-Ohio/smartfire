@@ -126,6 +126,29 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings/devices",
         true,
     ),
+    // S7: the workspace's account pages. The people list is the account page's lower half: it
+    // maps back to the page, whose redirect goes to the workspace row above it.
+    screen("accounts#edit", "/account/edit", "/app/admin", true),
+    screen("accounts#edit", "/account/edit", "/app/admin/people", true),
+    screen("accounts/icons#index", "/account/icons", "/app/admin/icons", true),
+    screen(
+        "accounts/custom_styles#edit",
+        "/account/custom_styles/edit",
+        "/app/admin/styles",
+        true,
+    ),
+    screen(
+        "accounts/audit_logs#show",
+        "/account/audit_log",
+        "/app/admin/audit-log",
+        true,
+    ),
+    screen(
+        "accounts/integrations_health#show",
+        "/account/integrations_health",
+        "/app/admin/integrations",
+        true,
+    ),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.

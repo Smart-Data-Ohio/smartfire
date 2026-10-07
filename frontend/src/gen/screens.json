@@ -15,5 +15,11 @@
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/integrations", "ported": true },
   { "endpoint": "users/statuses#edit", "classic": "/users/me/status/edit", "spa": "/app/settings/status", "ported": true },
   { "endpoint": "users/sessions#index", "classic": "/users/me/sessions", "spa": "/app/settings/sessions", "ported": true },
-  { "endpoint": "users/push_subscriptions#index", "classic": "/users/me/push_subscriptions", "spa": "/app/settings/devices", "ported": true }
+  { "endpoint": "users/push_subscriptions#index", "classic": "/users/me/push_subscriptions", "spa": "/app/settings/devices", "ported": true },
+  { "endpoint": "accounts#edit", "classic": "/account/edit", "spa": "/app/admin", "ported": true },
+  { "endpoint": "accounts#edit", "classic": "/account/edit", "spa": "/app/admin/people", "ported": true },
+  { "endpoint": "accounts/icons#index", "classic": "/account/icons", "spa": "/app/admin/icons", "ported": true },
+  { "endpoint": "accounts/custom_styles#edit", "classic": "/account/custom_styles/edit", "spa": "/app/admin/styles", "ported": true },
+  { "endpoint": "accounts/audit_logs#show", "classic": "/account/audit_log", "spa": "/app/admin/audit-log", "ported": true },
+  { "endpoint": "accounts/integrations_health#show", "classic": "/account/integrations_health", "spa": "/app/admin/integrations", "ported": true }
 ]

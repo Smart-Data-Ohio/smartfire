@@ -63,11 +63,15 @@ fn first_for(screen: &Screen) -> &'static Screen {
 fn no_two_rows_claim_the_same_url() {
     let spa: BTreeSet<_> = SCREENS.iter().map(|screen| screen.spa).collect();
     assert_eq!(spa.len(), SCREENS.len());
-    // A classic page shared by several rows: only the profile page's sections, all ported.
+    // A classic page shared by several rows: only the profile page's sections and the account
+    // page's people list, all ported.
     for screen in SCREENS {
         let first = first_for(screen);
         if !std::ptr::eq(first, screen) {
-            assert_eq!(screen.endpoint, "users/profiles#show", "{screen:?}");
+            assert!(
+                ["users/profiles#show", "accounts#edit"].contains(&screen.endpoint),
+                "{screen:?}"
+            );
             assert!(screen.ported && first.ported, "{screen:?}");
         }
     }
@@ -85,6 +89,37 @@ fn the_profile_sections_map_back_to_the_profile_page() {
     assert_eq!(
         spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
         Some("/app/settings")
+    );
+}
+
+#[test]
+fn the_account_pages_map_to_the_admin_sections() {
+    for (endpoint, classic, spa) in [
+        ("accounts#edit", "/account/edit", "/app/admin"),
+        ("accounts/icons#index", "/account/icons", "/app/admin/icons"),
+        (
+            "accounts/custom_styles#edit",
+            "/account/custom_styles/edit",
+            "/app/admin/styles",
+        ),
+        (
+            "accounts/audit_logs#show",
+            "/account/audit_log",
+            "/app/admin/audit-log",
+        ),
+        (
+            "accounts/integrations_health#show",
+            "/account/integrations_health",
+            "/app/admin/integrations",
+        ),
+    ] {
+        assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
+    }
+    // The people list is the account page's lower half.
+    assert_eq!(
+        classic_url("/app/admin/people", None).as_deref(),
+        Some("/account/edit")
     );
 }
 

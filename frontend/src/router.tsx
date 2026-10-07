@@ -6,6 +6,13 @@ import {
   notFound,
   Outlet,
 } from "@tanstack/react-router";
+import { AdminView } from "./features/admin/admin-view.tsx";
+import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
+import { IconsSection } from "./features/admin/icons-section.tsx";
+import { IntegrationsSection as AdminIntegrationsSection } from "./features/admin/integrations-section.tsx";
+import { PeopleSection } from "./features/admin/people-section.tsx";
+import { StylesSection } from "./features/admin/styles-section.tsx";
+import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
@@ -160,12 +167,34 @@ const settingsSections = [
   }),
 ] as const;
 
+/** `/app/admin`: the classic account pages, the workspace first. */
+const adminRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "admin",
+  component: AdminView,
+});
+
+/** The admin sections, each at `/app/admin/<path>` (the workspace at `/app/admin`). */
+const adminSections = [
+  createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "audit-log", component: AuditLogSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "integrations",
+    component: AdminIntegrationsSection,
+  }),
+] as const;
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
     homeRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
     settingsRoute.addChildren(settingsSections),
+    adminRoute.addChildren(adminSections),
   ]),
 ]);
 

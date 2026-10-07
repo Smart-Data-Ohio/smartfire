@@ -36,6 +36,7 @@ import {
 import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
+import { createAdmin } from "./s2/admin.ts";
 import { createAmbient } from "./s2/ambient.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
@@ -653,6 +654,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const uploads = createUploads(ctx);
+  const admin = createAdmin(ctx, uploads);
   const threads = createThreads(ctx, uploads, whenReleased);
   const messageActions = createMessages(ctx, threads);
 
@@ -668,6 +670,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createDirects(ctx).routes,
     ...createPanes(ctx).routes,
     ...createSettings(ctx, uploads).routes,
+    ...admin.routes,
   ];
 
   composer.arm();
@@ -853,6 +856,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         release();
 
         return ok;
+      case "lapse-sudo":
+        admin.lapseSudo(flag("on", true));
+
+        return ok;
       case "hold-uploads":
         uploads.hold(flag("on", true));
 
@@ -956,6 +963,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     reset() {
       release();
       uploads.reset();
+      admin.lapseSudo(false);
       composer.stop();
       simulation.stop();
       ambient.stop();

@@ -1,0 +1,113 @@
+/* Admin: what the settings layout doesn't already cover (people rows, icons, the audit table). */
+@layer app {
+  .admin-logo,
+  .admin-icon-image {
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+    background: var(--bg-hover);
+  }
+
+  .admin-icon-image {
+    border-radius: var(--radius-sm);
+  }
+
+  .admin-person[data-banned] {
+    opacity: 0.6;
+  }
+
+  .admin-person-actions {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-1);
+  }
+
+  .admin-icon-names > * {
+    flex: 1;
+  }
+
+  .admin-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-meta);
+  }
+
+  .admin-audit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .admin-export {
+    margin-left: auto;
+  }
+
+  .admin-audit-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .admin-audit-wrap:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .admin-audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-meta);
+  }
+
+  .admin-audit-table th,
+  .admin-audit-table td {
+    padding: var(--space-2) var(--space-3);
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+  }
+
+  .admin-audit-table thead th {
+    color: var(--text-muted);
+    font-weight: 600;
+    box-shadow: inset 0 -1px 0 var(--border);
+  }
+
+  .admin-audit-table tbody tr + tr td {
+    box-shadow: inset 0 1px 0 var(--border);
+  }
+
+  .admin-audit-changes {
+    min-width: 16ch;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-facts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+  }
+
+  .admin-fact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .admin-fact dt {
+    min-width: 14rem;
+    color: var(--text-muted);
+  }
+
+  .admin-fact dd {
+    margin: 0;
+  }
+
+  .admin-issues {
+    margin-top: var(--space-3);
+  }
+}

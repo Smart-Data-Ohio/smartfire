@@ -11,11 +11,14 @@ import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
 import "./app-shell.css";
 
+/** A full-column page that isn't a conversation: its tab title, or `null` for a room. */
+type Page = "Settings" | "Workspace" | null;
+
 /**
- * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings name
- * themselves instead of a room.
+ * "(3) #general · Smartfire": unread mentions first, as Slack's tab title does. Settings and the
+ * workspace pages name themselves instead of a room.
  */
-function useDocumentTitle(roomId: number | null, inSettings: boolean): void {
+function useDocumentTitle(roomId: number | null, page: Page): void {
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const unread = useStore((state) => sidebarTotals(state.sidebar).unreadRooms > 0);
   const room = useStore((state) => (roomId === null ? null : (state.sidebar.rows[roomId] ?? null)));
@@ -23,14 +26,15 @@ function useDocumentTitle(roomId: number | null, inSettings: boolean): void {
   useEffect(() => {
     const prefix = mentions > 0 ? `(${mentions}) ` : unread ? "• " : "";
 
-    const name = inSettings
-      ? "Settings · Smartfire"
-      : room === null
-        ? "Smartfire"
-        : `${room.room.kind === "direct" ? "" : "#"}${room.displayName} · Smartfire`;
+    const name =
+      page !== null
+        ? `${page} · Smartfire`
+        : room === null
+          ? "Smartfire"
+          : `${room.room.kind === "direct" ? "" : "#"}${room.displayName} · Smartfire`;
 
     document.title = `${prefix}${name}`;
-  }, [mentions, unread, room, inSettings]);
+  }, [mentions, unread, room, page]);
 }
 
 /**
@@ -41,22 +45,28 @@ export function AppShell() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? null;
 
-  // Settings fill the main column, so phones show them rather than the conversation list.
-  const inSettings = useMatches({
-    select: (matches) => matches.some((match) => match.routeId.startsWith("/shell/settings")),
+  // Settings and the workspace pages fill the main column, so phones show them rather than the
+  // conversation list.
+  const page = useMatches({
+    select: (matches): Page =>
+      matches.some((match) => match.routeId.startsWith("/shell/settings"))
+        ? "Settings"
+        : matches.some((match) => match.routeId.startsWith("/shell/admin"))
+          ? "Workspace"
+          : null,
   });
 
   useEffect(() => {
     void actions.start();
   }, []);
 
-  useDocumentTitle(roomId, inSettings);
+  useDocumentTitle(roomId, page);
   useClassicLinks();
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
 
   return (
-    <div className="app-shell" data-view={roomId === null && !inSettings ? "list" : "room"}>
+    <div className="app-shell" data-view={roomId === null && page === null ? "list" : "room"}>
       <Rail />
       <Sidebar />
       {viewerId === null ? null : (
