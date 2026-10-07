@@ -8,7 +8,9 @@ import { actions } from "../../sync/runtime.ts";
 import { Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
+import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider } from "../room/dividers.tsx";
 import { useFollowPosted } from "../room/follow-posted.ts";
 import { MessageRow, PendingRow } from "../room/message-row.tsx";
@@ -145,11 +147,22 @@ export function ThreadTimeline({
   const firstKey = items[0]?.key ?? null;
   const lastKey = items.at(-1)?.key ?? null;
   const shift = prepended(items, committedRef.current);
+  const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
+  const cardsSettled = useCardsChunkSettled();
+
+  const captureAnchor = useViewportAnchor({
+    containerRef,
+    listRef,
+    items,
+    placement,
+    placed: placedRef.current === placement,
+    shift,
+    cardsSettled,
+  });
 
   // Place the view once per loaded window: on the permalinked reply, else at the newest.
   useLayoutEffect(() => {
     const list = listRef.current;
-    const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
 
     if (!loaded || list === null || items.length === 0 || placedRef.current === placement) {
       return;
@@ -215,6 +228,7 @@ export function ThreadTimeline({
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
+    captureAnchor(atBottomRef.current);
 
     if (offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
       void actions.threads.loadOlder(threadId);

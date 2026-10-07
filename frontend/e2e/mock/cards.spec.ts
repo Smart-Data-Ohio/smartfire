@@ -4,6 +4,7 @@ import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import type { Poll } from "../../src/gen/Poll.ts";
 import {
   expect,
+  holdSync,
   matrix,
   openApp,
   ROOM_IDS,
@@ -221,6 +222,9 @@ test("a card arriving live while the chunk loads keeps the list and its place", 
 test("an older page with cards while the chunk loads keeps the list and its place", async ({
   page,
 }) => {
+  // Keep the welcome's refetch out of this pagination scenario.
+  await holdSync(page);
+
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
 
@@ -266,21 +270,36 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   expect(anchor).not.toBeNull();
 
   const list = page.locator("[data-message-list]");
+  const anchorRow = row(page, Number(anchor));
+
+  const anchorTop = () =>
+    anchorRow.evaluate((element) => {
+      const list = element.closest("[data-message-list]");
+
+      if (list === null) throw new Error("The anchor is outside the message list");
+
+      return element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    });
 
   await list.evaluate((element) => {
     element.scrollTop = 0;
   });
 
-  await expect(row(page, Number(anchor))).toBeInViewport();
+  await expect(anchorRow).toBeInViewport();
+
+  const top = await anchorTop();
+
   releaseOlder();
   // The older rows are in (the injected one mounted above), the row that was at the top stays in
   // view, and the list is still up.
   await expect(row(page, await injected)).toBeAttached();
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
-  await expect(row(page, Number(anchor))).toBeInViewport();
+  await expect(anchorRow).toBeInViewport();
+  await expect.poll(async () => Math.abs((await anchorTop()) - top)).toBeLessThanOrEqual(3);
   chunk.release();
   await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
-  await expect(row(page, Number(anchor))).toBeInViewport();
+  await expect(anchorRow).toBeInViewport();
+  await expect.poll(async () => Math.abs((await anchorTop()) - top)).toBeLessThanOrEqual(3);
 });
 
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {

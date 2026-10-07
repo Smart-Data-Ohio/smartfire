@@ -12,6 +12,7 @@ import { hasCards, useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
+import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { useFollowPosted } from "./follow-posted.ts";
 import { MessageRow, PendingRow } from "./message-row.tsx";
@@ -138,6 +139,16 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   // Older rows went in above the previous first row: keep the view anchored from the end.
   const shift = prepended(items, committedRef.current);
+
+  const captureAnchor = useViewportAnchor({
+    containerRef,
+    listRef,
+    items,
+    placement,
+    placed: placed === placement,
+    shift,
+    cardsSettled,
+  });
 
   // Place the view once per loaded window: on the permalinked message, on the unread divider
   // (clamped, so a short unread run just lands at the bottom), or at the bottom.
@@ -276,6 +287,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
+    captureAnchor(atBottomRef.current);
 
     if (atBottomRef.current) {
       setNewBelow(0);
