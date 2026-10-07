@@ -63,11 +63,10 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
-  # Rust-relevant inputs: everything but docs/, deploy/, frontend/ (the SPA, checked by
-  # frontend.yml), the other workflows and the root's prose files; the setup action, this
-  # workflow and frontend/src/gen (generated from crates/api_types, checked by clippy) count. A PR
-  # touching only those skips the build, and "Rust port" passes on that intentional skip. Pushes,
-  # the nightly run, manual runs, empty diffs and unavailable history all keep the full run.
+  # Skip ordinary Rust checks for docs, deploy scripts and SPA-only sources; frontend auth
+  # assets and generated types are Rust inputs. Page suites additionally cover changes to the
+  # classic app, its build inputs and browser harness. Both required gates report intentional
+  # skips. Pushes, nightly/manual runs, empty diffs and unavailable history keep full coverage.
   changes:
     name: Rust changes
     runs-on: ubuntu-latest
@@ -75,6 +74,7 @@ jobs:
       contents: read
     outputs:
       rust: ${{ steps.scope.outputs.rust }}
+      pages: ${{ steps.scope.outputs.pages }}
     steps:
       - name: Checkout PR history
         id: history
@@ -86,7 +86,7 @@ jobs:
           filter: blob:none
           persist-credentials: false
 
-      - name: Decide whether Rust gates are needed
+      - name: Decide whether Rust and page gates are needed
         id: scope
         env:
           HISTORY_OUTCOME: ${{ steps.history.outcome }}
@@ -96,25 +96,43 @@ jobs:
           import os
           import subprocess
 
-          # The workspace is the repository root, and the app reads only its own tree: docs,
-          # deploy scripts, the SPA's sources (frontend/: crates/spa embeds only a built dist,
-          # which CI never has, and frontend.yml tests it against one), other workflows and the
-          # root's prose files can't affect it. Any other path, including a new top-level one,
-          # runs the gates. frontend/src/gen is the TypeScript crates/api_types generates; the
-          # clippy job fails if it differs from a fresh export.
+          # Any path outside the exclusions, including a new top-level one, runs ordinary Rust
+          # checks. frontend/src/gen is exported by crates/api_types and checked by clippy.
           OUTSIDE = (b"docs/", b"deploy/", b"frontend/", b".github/")
           PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
                    b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")
           SETUP = (b".github/actions/rust-setup/",)
           GENERATED = (b"frontend/src/gen/",)
           FILES = (b".github/workflows/rust.yml",)
+          # Keep the auth inputs in sync with crates/assets/build/auth.rs and the copy list in
+          # ci/with-release-inputs.sh (also Dockerfile). styles/ includes the bundled fonts.
+          AUTH_DIRS = (b"frontend/src/auth/", b"frontend/src/styles/", b"frontend/src/motion/")
+          AUTH_FILES = (b"frontend/src/ui/button.css", b"frontend/src/ui/text-field.css",
+                        b"frontend/src/ui/checkbox.css")
+          # crates/spa/build.rs also reads frontend/dist when present (normally a stub in CI).
+          DIST = (b"frontend/dist/",)
+          # The correctness suites boot the classic app: views/assets, web/controllers, shared
+          # auth/session/data/jobs and server wiring all affect it. Include whole crates and
+          # harness trees rather than guessing which helper, fixture or seed a browser reads.
+          PAGE_DIRS = (b"crates/", b"web/", b"reference-tools/", b"parity/", b"fixtures/",
+                       b"test-support/", b"vectors/", b"ci/", b".cargo/", b".config/")
+          PAGE_FILES = FILES + (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml",
+                                b"Dockerfile", b".dockerignore")
 
           def rust_input(path):
-              if path.startswith(SETUP + GENERATED) or path in FILES:
+              if path.startswith(SETUP + GENERATED + AUTH_DIRS + DIST) or path in FILES + AUTH_FILES:
                   return True
               return not (path.startswith(OUTSIDE) or path in PROSE)
 
+          def page_input(path):
+              # /api/v1 and its sync renderer are mounted only with SPA_ENABLED; these suites
+              # exercise classic pages. API-only changes still run ordinary Rust/Frontend checks.
+              if path.startswith(b"crates/api/"):
+                  return False
+              return path.startswith(PAGE_DIRS + SETUP + AUTH_DIRS + DIST) or path in PAGE_FILES + AUTH_FILES
+
           rust = True
+          pages = True
           try:
               if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
                   if os.environ["HISTORY_OUTCOME"] != "success":
@@ -129,12 +147,16 @@ jobs:
                       ])
                       paths = [path for path in diff.split(b"\0") if path]
                       rust = not paths or any(rust_input(path) for path in paths)
+                      pages = not paths or any(page_input(path) for path in paths)
           except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
               rust = True
+              pages = True
               print(f"::warning::PR diff unavailable ({type(error).__name__}); running the full Rust gates.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"rust={str(rust).lower()}\n")
+              output.write(f"pages={str(pages).lower()}\n")
           print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
+          print("Run the page suites" if pages else "No page inputs changed: skip the page suites")
           PY
 
   # The committed default/first_run/agents_ui/ledger_originals seeds (parity/seeds/frozen), built
@@ -534,7 +556,8 @@ jobs:
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
-    if: github.event_name != 'pull_request' && inputs.scope != 'messaging-and-browsers'
+    needs: changes
+    if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -575,7 +598,8 @@ jobs:
 
   correctness-browsers:
     name: Rust correctness (browsers ${{ matrix.shard }})
-    if: github.event_name != 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -642,7 +666,8 @@ jobs:
   # commands behavior-check.py would run, then shared by every behaviour shard.
   messaging-hosts:
     name: Rust messaging host (${{ matrix.host }})
-    if: github.event_name != 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -721,8 +746,8 @@ jobs:
 
   correctness-messaging:
     name: Rust correctness (messaging behaviour ${{ matrix.shard }})
-    needs: messaging-hosts
-    if: github.event_name != 'pull_request'
+    needs: [changes, messaging-hosts]
+    if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -789,7 +814,8 @@ jobs:
   # on its own app with pinned Chromium.
   correctness-drive:
     name: Rust correctness (drive browsers)
-    if: github.event_name != 'pull_request'
+    needs: changes
+    if: needs.changes.outputs.pages == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -826,13 +852,18 @@ jobs:
 
   correctness-gate:
     name: Rust correctness
-    needs: [seeds, correctness, correctness-browsers, correctness-drive, messaging-hosts, correctness-messaging]
-    if: ${{ always() && github.event_name != 'pull_request' }}
+    needs: [changes, seeds, correctness, correctness-browsers, correctness-drive, messaging-hosts, correctness-messaging]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 15
     steps:
+      - name: Require successful change detection
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+        run: test "$CHANGE_RESULT" = success
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -842,27 +873,42 @@ jobs:
       - name: Require every job to be gated
         run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
 
-      # The correctness matrix is skipped, not failed, for a messaging-and-browsers check.
+      # No page inputs: every page job must be skipped; seeds follow the ordinary Rust scope.
+      # The correctness matrix is also skipped for a manual messaging-and-browsers check.
       - name: Gate on every correctness job
         env:
           NEEDS: ${{ toJSON(needs) }}
+          RUST: ${{ needs.changes.outputs.rust }}
+          PAGES: ${{ needs.changes.outputs.pages }}
           PARTIAL: ${{ inputs.scope == 'messaging-and-browsers' }}
         run: |
           python3 - <<'PY'
           import json, os, sys
           results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
           print("\n".join(f"{job}: {result}" for job, result in results.items()))
-          allowed = lambda job, result: result == "success" or (os.environ["PARTIAL"] == "true" and job == "correctness" and result == "skipped")
-          sys.exit(not all(allowed(job, result) for job, result in results.items()))
+          if results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES")):
+              sys.exit(1)
+          seed_result = "success" if os.environ["RUST"] == "true" else "skipped"
+          passed = results.pop("seeds") == seed_result
+          for job, result in results.items():
+              expected = "success" if os.environ["PAGES"] == "true" else "skipped"
+              if job == "correctness" and os.environ["PARTIAL"] == "true":
+                  expected = "skipped"
+              passed = passed and result == expected
+          if os.environ["PAGES"] == "false":
+              print("No page inputs changed: the page suites were intentionally skipped.")
+          sys.exit(not passed)
           PY
 
       - name: Collect correctness receipts
+        if: needs.changes.outputs.pages == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-correctness-*
           path: ${{ runner.temp }}/receipts
 
       - name: Check that the shards cover every suite
+        if: needs.changes.outputs.pages == 'true'
         env:
           SCOPE: ${{ inputs.scope || 'full' }}
         run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$(git rev-parse HEAD)"
