@@ -13,11 +13,11 @@
  * 422 when the question is blank, there are fewer than 2 or more than 10 non-blank options,
  * a label is over 200 characters, or `closesAt` isn't in the future.
  */
-export type CreatePoll = { 
+export type CreatePoll = {
 /**
  * The sender's id for the question message: a UUID, as for [`crate::CreateMessage`].
  */
-clientMessageId: string, 
+clientMessageId: string,
 /**
  * Markdown, posted as the message.
  */

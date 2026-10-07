@@ -5,11 +5,11 @@ import type { FizzyCardStatus } from "./FizzyCardStatus";
 /**
  * The fields the classic card reads from Fizzy's card JSON (`campfire_views::fizzy_cards`).
  */
-export type FizzyCard = { title: string, url: string, boardName: string | null, status: FizzyCardStatus, 
+export type FizzyCard = { title: string, url: string, boardName: string | null, status: FizzyCardStatus,
 /**
  * The column's name when `status` is `column`; `null` otherwise.
  */
-columnName: string | null, assignees: Array<FizzyAssignee>, 
+columnName: string | null, assignees: Array<FizzyAssignee>,
 /**
  * Fizzy left some assignees out ("+ more").
  */

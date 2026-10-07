@@ -4,7 +4,7 @@ import type { HealthIssue } from "./HealthIssue";
 /**
  * GitHub: workspace token, App, webhook secret, accounts and recent failures.
  */
-export type GithubHealth = { workspaceToken: boolean, appConfigured: boolean, webhookSecret: boolean, connected: number, 
+export type GithubHealth = { workspaceToken: boolean, appConfigured: boolean, webhookSecret: boolean, connected: number,
 /**
  * Of `connected`, those through the GitHub App (the rest use a personal token).
  */

@@ -36,30 +36,30 @@ import type { User } from "./User";
  * first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
  * `before`).
  */
-export type SearchResults = { 
+export type SearchResults = {
 /**
  * The query as understood: `q` with runs of whitespace collapsed (`display_query`), the
  * form recent searches store.
  */
-query: string, 
+query: string,
 /**
  * One per operator that parsed, in the order written: the filter chips.
  */
-chips: Array<SearchChip>, 
+chips: Array<SearchChip>,
 /**
  * The matching messages on this page, oldest first (the page is the newest 40 older than
  * the cursor). Root messages and thread replies alike; a reply's `threadId` says which
  * thread.
  */
-messages: Array<MessageDTO>, 
+messages: Array<MessageDTO>,
 /**
  * The messages' creators, once each.
  */
-users: Array<User>, 
+users: Array<User>,
 /**
  * The rooms and threads the messages and section rows are in.
  */
-conversations: Array<ConversationName>, 
+conversations: Array<ConversationName>,
 /**
  * Pass as `before` for the next (older) page; `null` when no older match exists.
  *
@@ -68,7 +68,7 @@ conversations: Array<ConversationName>,
  * is deleted or leaves the viewer's reach. New: the classic cursor is the message id, and
  * a vanished one is a 404.
  */
-nextCursor: string | null, 
+nextCursor: string | null,
 /**
  * First page only, and only when `q` has words: up to 10 of each kind whose name (title or
  * description, for events) contains every word. Narrowed by `in:` but not by the other

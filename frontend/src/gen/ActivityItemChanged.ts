@@ -18,7 +18,7 @@ import type { ActivityItem } from "./ActivityItem";
  * invitation frames on the same channel instead; those ring the huddle UI and belong to the
  * huddle slice's `huddle.*` events, which don't replace this one.
  */
-export type ActivityItemChanged = { item: ActivityItem, 
+export type ActivityItemChanged = { item: ActivityItem,
 /**
  * The owner's unread count afterwards.
  */

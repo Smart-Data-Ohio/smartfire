@@ -6,7 +6,7 @@
  * in a locked thread is a 403. Answers the updated [`MessageDTO`] and publishes
  * `message.updated`. `editedAt` changes only when the text does.
  */
-export type UpdateMessage = { 
+export type UpdateMessage = {
 /**
  * The new Markdown, up to 50 000 characters; blank only when the message has an
  * attachment. Always sent: the classic update without it turns the message into rich text.

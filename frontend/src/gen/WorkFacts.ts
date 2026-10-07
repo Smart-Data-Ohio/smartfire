@@ -7,41 +7,41 @@ import type { WorkStatus } from "./WorkStatus";
  * A thread's work facts, the same for every room member: on [`Thread::work`], so on the thread
  * list, `thread.created` and `thread.updated`.
  */
-export type WorkFacts = { 
+export type WorkFacts = {
 /**
  * Clients read a status added later as unknown, since it rides on every thread list and
  * thread event; [`UpdateWork::status`] only takes these four.
  */
-status: WorkStatus, 
+status: WorkStatus,
 /**
  * The person or agent who owns it, whole, so a client can show them from a `thread.created`
  * or `thread.updated`, which carry no `users`, and when they've left the room (an agent's
  * `agent` badge included). `null` reads "Unassigned". Send [`UpdateWork::owner_id`] to
  * change it.
  */
-owner: User | null, 
+owner: User | null,
 /**
  * The owner can act on it: active, still a member of the room, and for an agent allowed to
  * post there (`work_owner_active`). `false` when unassigned. Not republished when only the
  * owner's membership or an agent's grants change, as in the classic app.
  */
-ownerActive: boolean, 
+ownerActive: boolean,
 /**
  * The agent's run (a CI job, a session), set through the agent API. Only an `https://` URL:
  * `null` for none and for any other stored value, as the classic page shows `run_url` only
  * when it starts with `https://` (`board_posts.rs`). The server filters it; clients check
  * again before putting it in an `href`.
  */
-runUrl: string | null, 
+runUrl: string | null,
 /**
  * When the result was last edited; `null` while there's none. The result itself is on
  * [`WorkDetail`].
  */
-resultUpdatedAt: string | null, 
+resultUpdatedAt: string | null,
 /**
  * Linked pull requests, calendar events and Drive files, oldest first.
  */
-links: Array<WorkLink>, 
+links: Array<WorkLink>,
 /**
  * The server's revision of these facts: the thread's `updated_at`, which every change to
  * the status, owner, run URL, result or tracking moves (and other thread changes too).

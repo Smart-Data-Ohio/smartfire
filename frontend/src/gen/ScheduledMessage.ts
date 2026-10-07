@@ -11,31 +11,31 @@ import type { ScheduledMessageState } from "./ScheduledMessageState";
  * Times are UTC like every other timestamp here; the classic JSON renders them in the viewer's
  * zone with an offset.
  */
-export type ScheduledMessage = { id: number, roomId: number, threadId: number | null, replyToMessageId: number | null, markdownSource: string, sendAt: string, 
+export type ScheduledMessage = { id: number, roomId: number, threadId: number | null, replyToMessageId: number | null, markdownSource: string, sendAt: string,
 /**
  * Derived from the timestamps, as the model does: there's no status column.
  */
-state: ScheduledMessageState, 
+state: ScheduledMessageState,
 /**
  * Pending ones only: whether it can still be posted (`ScheduledMessage::sendable_ids`: the
  * author is an active human and a member of the room, which isn't deleted, and the thread
  * is in the room). A pending one that isn't sendable is "stranded": it will be dropped when
  * due unless access comes back. `false` once sent or dropped.
  */
-sendable: boolean, 
+sendable: boolean,
 /**
  * Set once posted; `null` otherwise.
  */
-sentAt: string | null, 
+sentAt: string | null,
 /**
  * The message it became, for "View message"; `null` until sent, or once that message is
  * deleted.
  */
-sentMessageId: number | null, 
+sentMessageId: number | null,
 /**
  * Set when it was dropped; `null` otherwise.
  */
-droppedAt: string | null, 
+droppedAt: string | null,
 /**
  * Why it was dropped (`scheduled_messages.drop_reason`): `"its room was deleted"`,
  * `"its thread was deleted"`, or the message's validation errors joined. `null` when it

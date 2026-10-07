@@ -3,7 +3,7 @@
 /**
  * The body of `DELETE /api/v1/rooms/:id/read`.
  */
-export type MarkUnread = { 
+export type MarkUnread = {
 /**
  * A message on the room's root timeline; it and everything after it become unread.
  */
