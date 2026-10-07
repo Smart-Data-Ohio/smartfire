@@ -328,6 +328,10 @@ export class Engine extends Context.Service<
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
+        if (point?.epoch !== frame.epoch) {
+          mutations.beginActivityGeneration();
+        }
+
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
 

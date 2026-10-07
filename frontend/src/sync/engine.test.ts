@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
-import { Clock, Deferred, Effect, Layer, Random, Ref, Schema } from "effect";
+import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { NetworkError, ServerError, Validation } from "../api/errors.ts";
 import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
@@ -21,6 +21,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
+import * as activity from "./activity-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
@@ -478,6 +479,51 @@ describe("resuming", () => {
 
   for (const refreshFails of [false, true]) {
     it.effect(
+      `accepts a LOWER activity revision after a restore when refresh ${refreshFails ? "fails" : "succeeds"}`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            const api = yield* FakeApi;
+            const socket = yield* MemorySocket;
+
+            yield* serve([]);
+            yield* api.reply("GET /activity/unread_count", { unreadCount: 8, unreadRevision: 100 });
+            yield* startEngine;
+            yield* welcome(10, false);
+            expect(store.getState().activity.unreadCount).toBe(8);
+
+            yield* socket.drop;
+            yield* TestClock.adjust(250);
+
+            if (refreshFails) {
+              yield* api.route("GET /activity/unread_count", () =>
+                Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+              );
+            } else {
+              yield* api.reply("GET /activity/unread_count", {
+                unreadCount: 2,
+                unreadRevision: 50,
+              });
+            }
+
+            yield* welcome(0, false, "restored");
+            expect(store.getState().activity.unreadCount).toBe(refreshFails ? 8 : 2);
+            yield* pushEvents({
+              seq: 1,
+              topic: "user",
+              type: "activity.item",
+              data: { item: activityItem, unreadCount: 3, unreadRevision: 51 },
+            });
+
+            expect(store.getState().activity.serverUnread).toEqual({
+              unreadCount: 3,
+              unreadRevision: 51,
+            });
+          }),
+        ),
+    );
+
+    it.effect(
       `accepts activity events after an epoch restart when refresh ${refreshFails ? "fails" : "succeeds"}`,
       () =>
         Effect.gen(function* () {
@@ -518,6 +564,123 @@ describe("resuming", () => {
           );
         }),
     );
+  }
+
+  for (const kind of ["count GET", "page", "mutation"] as const) {
+    for (const beforeSnapshot of [true, false]) {
+      it.effect(
+        `fences an old ${kind} ${beforeSnapshot ? "before" : "after"} the restored count snapshot`,
+        () =>
+          withSync(
+            Effect.gen(function* () {
+              const api = yield* FakeApi;
+              const socket = yield* MemorySocket;
+              const oldStarted = yield* Deferred.make<void>();
+              const oldRelease = yield* Deferred.make<void>();
+              const freshStarted = yield* Deferred.make<void>();
+              const freshRelease = yield* Deferred.make<void>();
+
+              yield* serve([]);
+              yield* api.reply("GET /activity/unread_count", {
+                unreadCount: 8,
+                unreadRevision: 100,
+              });
+              yield* startEngine;
+              yield* welcome(10, false);
+              mutations.landActivityPage(
+                "all",
+                "unread",
+                {
+                  items: [activityItem],
+                  users: [],
+                  unreadCount: 8,
+                  unreadRevision: 100,
+                  nextCursor: null,
+                },
+                "replace",
+              );
+
+              const oldCount = { unreadCount: 9, unreadRevision: 101 };
+
+              const oldItem: ActivityItem = {
+                ...activityItem,
+                state: "read",
+                readAt: "2026-10-06T10:00:00Z",
+                updatedAt: "2026-10-06T10:00:00Z",
+              };
+
+              const hold = Deferred.succeed(oldStarted, undefined).pipe(
+                Effect.andThen(Deferred.await(oldRelease)),
+              );
+
+              if (kind === "count GET") {
+                yield* api.route("GET /activity/unread_count", () =>
+                  hold.pipe(Effect.as(oldCount)),
+                );
+              } else if (kind === "page") {
+                yield* api.route("GET /activity", () =>
+                  hold.pipe(
+                    Effect.as({ ...oldCount, items: [oldItem], users: [], nextCursor: null }),
+                  ),
+                );
+              } else {
+                yield* api.route("PATCH /activity/40", () =>
+                  hold.pipe(Effect.as({ ...oldCount, item: oldItem })),
+                );
+              }
+
+              const requests = {
+                "count GET": activity.loadUnreadCount().pipe(Effect.asVoid),
+                page: activity.load("all", "unread"),
+                mutation: activity.setState(40, "read").pipe(Effect.asVoid),
+              };
+
+              const oldRequest = yield* Effect.forkChild(requests[kind]);
+
+              yield* Deferred.await(oldStarted);
+              yield* api.route("GET /activity/unread_count", () =>
+                Deferred.succeed(freshStarted, undefined).pipe(
+                  Effect.andThen(Deferred.await(freshRelease)),
+                  Effect.as({ unreadCount: 2, unreadRevision: 50 }),
+                ),
+              );
+              yield* socket.drop;
+              yield* TestClock.adjust(250);
+              yield* welcome(0, false, "restored");
+              yield* Deferred.await(freshStarted);
+
+              if (beforeSnapshot) {
+                yield* Deferred.succeed(oldRelease, undefined);
+                yield* Fiber.join(oldRequest);
+                expect(store.getState().activity.unreadCount).toBe(8);
+              }
+
+              yield* Deferred.succeed(freshRelease, undefined);
+              yield* settle;
+              expect(store.getState().activity.unreadCount).toBe(2);
+              yield* api.reply("GET /activity", {
+                items: [activityItem],
+                users: [],
+                unreadCount: 2,
+                unreadRevision: 50,
+                nextCursor: null,
+              });
+              yield* activity.load("all", "unread");
+
+              if (!beforeSnapshot) {
+                yield* Deferred.succeed(oldRelease, undefined);
+                yield* Fiber.join(oldRequest);
+              }
+
+              expect(store.getState().activity.items[40]?.state).toBe("unread");
+              expect(store.getState().activity.serverUnread).toEqual({
+                unreadCount: 2,
+                unreadRevision: 50,
+              });
+            }),
+          ),
+      );
+    }
   }
 
   it.effect("applies replays normally on a later reconnect", () =>

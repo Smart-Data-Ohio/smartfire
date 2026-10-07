@@ -176,6 +176,7 @@ export const mutations = {
   loadStageDetail: (detail: StageDetail) =>
     apply((state) => huddles.loadStageDetail(state, detail)),
   // --- S3: the activity inbox, saved items and scheduled messages ---
+  beginActivityGeneration: () => apply(activity.beginActivityGeneration),
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),
   setActivityListFailed: (
@@ -183,7 +184,11 @@ export const mutations = {
     status: ActivityState,
     error: string,
     generation?: number,
-  ) => apply((state) => activity.setActivityListFailed(state, tab, status, error, generation)),
+    activityGeneration?: number,
+  ) =>
+    apply((state) =>
+      activity.setActivityListFailed(state, tab, status, error, generation, activityGeneration),
+    ),
   landActivityPage: (
     tab: ActivityTab,
     status: ActivityState,
@@ -200,8 +205,8 @@ export const mutations = {
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  setActivityUnreadCount: (unread: ActivityUnreadCount) =>
-    apply((state) => activity.setActivityUnreadCount(state, unread)),
+  setActivityUnreadCount: (unread: ActivityUnreadCount, generation?: number) =>
+    apply((state) => activity.setActivityUnreadCount(state, unread, generation)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

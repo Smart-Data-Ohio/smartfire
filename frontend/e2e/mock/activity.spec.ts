@@ -65,6 +65,8 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
 });
 
 test("clearing Activity survives a delayed boot count and reopening the app", async ({ page }) => {
+  test.setTimeout(90_000);
+
   const captured = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
 

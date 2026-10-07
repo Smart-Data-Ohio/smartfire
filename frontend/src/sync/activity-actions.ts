@@ -31,7 +31,13 @@ export const load = Effect.fn("activity.load")(function* (tab: ActivityTab, stat
     ),
     Effect.catch((error) =>
       Effect.sync(() =>
-        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+        mutations.setActivityListFailed(
+          tab,
+          status,
+          error.message,
+          start.generation,
+          start.activityGeneration,
+        ),
       ),
     ),
   );
@@ -58,7 +64,13 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
     ),
     Effect.catch((error) =>
       Effect.sync(() =>
-        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+        mutations.setActivityListFailed(
+          tab,
+          status,
+          error.message,
+          start.generation,
+          start.activityGeneration,
+        ),
       ),
     ),
   );
@@ -66,9 +78,10 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
 
 /** Refreshes the badge. Server revisions order overlapping replies. */
 export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
+  const generation = store.getState().activity.generation;
   const unread = yield* api.activityUnreadCount();
 
-  mutations.setActivityUnreadCount(unread);
+  mutations.setActivityUnreadCount(unread, generation);
 
   return unread.unreadCount;
 });
@@ -92,6 +105,7 @@ const change = (
   serial.run(
     activityItemId,
     Effect.gen(function* () {
+      const generation = store.getState().activity.generation;
       const before = store.getState().activity.items[activityItemId];
       const token = nextToken++;
       let optimistic: ActivityItem | null = null;
@@ -112,6 +126,7 @@ const change = (
         Effect.onError(() =>
           Effect.sync(() =>
             mutations.endActivityChange({
+              generation,
               token,
               optimistic,
               settled: before ?? null,
@@ -122,6 +137,7 @@ const change = (
       );
 
       mutations.endActivityChange({
+        generation,
         token,
         optimistic,
         settled: reply.item,
