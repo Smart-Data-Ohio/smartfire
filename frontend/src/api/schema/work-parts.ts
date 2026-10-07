@@ -116,6 +116,7 @@ export const WorkFacts = Schema.Struct({
   runUrl: RunUrl,
   resultUpdatedAt: Schema.NullOr(Timestamp),
   links: WorkLinks,
+  updatedAt: Timestamp,
 });
 
 export type WorkFacts = typeof WorkFacts.Type;

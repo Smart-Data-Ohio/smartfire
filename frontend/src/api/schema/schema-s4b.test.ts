@@ -98,6 +98,7 @@ const workFactsJson = {
   ownerActive: true,
   runUrl: "https://ci.example.com/runs/7",
   resultUpdatedAt: null,
+  updatedAt: "2026-10-06T09:00:00.000Z",
   links: [
     {
       id: 31,

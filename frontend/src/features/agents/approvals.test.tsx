@@ -68,6 +68,7 @@ function approval(change: Partial<AgentApproval> = {}): AgentApproval {
     adminOnly: false,
     approvable: true,
     deniable: true,
+    updatedAt: "2026-10-06T09:00:00.000Z",
     ...change,
   };
 }

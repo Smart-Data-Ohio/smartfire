@@ -33,7 +33,7 @@ import {
   respond,
   validation,
 } from "./http.ts";
-import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
+import { booleanField, field, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
 import { createAccount } from "./s2/account.ts";
@@ -1026,14 +1026,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       case "agent-status":
         return {
           status: 200,
-          json: agents.setStatus(
-            int("agentId"),
-            statusControl(
+          json: agents.setStatus(int("agentId"), {
+            ...statusControl(
               query.get("status") ?? stringField(body, "status"),
               booleanField(body, "suspended"),
               stringField(body, "presence") ?? query.get("presence"),
             ),
-          ),
+            statusNote:
+              field(body, "statusNote") === undefined ? undefined : stringField(body, "statusNote"),
+          }),
         };
 
       case "agent-steps": {

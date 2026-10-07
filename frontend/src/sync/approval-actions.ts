@@ -3,6 +3,7 @@
  * list's error) and never fail. A decision shows at once and lands the server's reply; if the
  * server refuses, it comes back as it was, unless an `approval.updated` brought a newer copy
  * meanwhile. A 422, 404 or 409 reloads All and any held Pending list to pick up missed decisions.
+ * An older successful reply leaves its overlay visible and reloads All once in the background.
  */
 import { Effect, Predicate } from "effect";
 import * as api from "../api/agent-endpoints.ts";
@@ -16,7 +17,7 @@ import {
   decidedLocally,
 } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
-import { readFresh, withRead } from "./freshness.ts";
+import { withRead } from "./freshness.ts";
 
 /** The status to ask the server for: `null` for every one. */
 function statusOf(filter: ApprovalFilter) {
@@ -43,19 +44,21 @@ export const load = Effect.fn("approvals.load")(function* (
 ) {
   const key = approvalListKey(agentId, filter);
 
-  yield* readFresh(`approvals:${key}`, (ticket) =>
-    Effect.gen(function* () {
-      mutations.setApprovalListLoading(key, false);
+  yield* withRead(
+    (ticket) =>
+      Effect.gen(function* () {
+        mutations.setApprovalListLoading(key, false);
 
-      const { generation } = approvalListOf(store.getState(), key);
+        const { generation } = approvalListOf(store.getState(), key);
 
-      yield* api.agentApprovals(agentId, statusOf(filter), null).pipe(
-        Effect.tap((page) =>
-          Effect.sync(() => mutations.landApprovalPage(key, page, "replace", generation, ticket)),
-        ),
-        Effect.catch(failLoad(key, generation)),
-      );
-    }),
+        yield* api.agentApprovals(agentId, statusOf(filter), null).pipe(
+          Effect.tap((page) =>
+            Effect.sync(() => mutations.landApprovalPage(key, page, "replace", generation, ticket)),
+          ),
+          Effect.catch(failLoad(key, generation)),
+        );
+      }),
+    `approvals:${key}`,
   );
 });
 
@@ -73,7 +76,7 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
 
   mutations.setApprovalListLoading(key, true);
 
-  const result = yield* withRead(
+  yield* withRead(
     (ticket) =>
       api.agentApprovals(agentId, statusOf(filter), list.nextCursor).pipe(
         Effect.tap((page) =>
@@ -83,10 +86,6 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
       ),
     `approvals:${key}`,
   );
-
-  if (result.rejected) {
-    yield* load(agentId, filter);
-  }
 });
 
 /**
@@ -118,9 +117,10 @@ export const decide = Effect.fn("approvals.decide")(function* (
     }
   };
 
-  const result = yield* withRead((ticket) =>
-    api.decideApproval(approvalId, note === null ? { decision } : { decision, note }).pipe(
-      Effect.tap((decided) => Effect.sync(() => mutations.applyApproval(decided, ticket))),
+  const decided = yield* api
+    .decideApproval(approvalId, note === null ? { decision } : { decision, note })
+    .pipe(
+      Effect.tap((decided) => Effect.sync(() => mutations.settleApproval(decided))),
       Effect.tapError((error) =>
         Effect.gen(function* () {
           rollBack();
@@ -145,12 +145,11 @@ export const decide = Effect.fn("approvals.decide")(function* (
           mutations.markApprovalsStale();
         }),
       ),
-    ),
-  );
+    );
 
-  if (result.rejected && before !== undefined) {
-    yield* load(before.agentId, "all");
+  if (store.getState().approvals.overlays[approvalId] !== undefined) {
+    yield* Effect.forkDetach(load(decided.agentId, "all"));
   }
 
-  return result.value;
+  return decided;
 });

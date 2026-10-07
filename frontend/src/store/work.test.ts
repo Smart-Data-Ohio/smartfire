@@ -12,11 +12,15 @@ import { applyEvents } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
 import { loadThreadDetail } from "./threads.ts";
 import {
+  captureWorkRead,
   countWorkWrite,
   landWorkDetail,
   landWorkList,
+  landWorkReply,
+  loadWorkThreadDetail,
   optimisticFacts,
   putWorkFacts,
+  rollbackWork,
   sameWorkFacts,
   setWorkListFailed,
   setWorkListLoading,
@@ -108,6 +112,7 @@ describe("work in the store", () => {
 
   it("builds optimistic facts for a start, a move and a stop", () => {
     expect(optimisticFacts(null, "planned")).toEqual({
+      updatedAt: "0001-01-01T00:00:00.000Z",
       status: "planned",
       owner: null,
       ownerActive: false,
@@ -135,6 +140,146 @@ describe("work in the store", () => {
     expect(sameWorkFacts(facts, factsFixture())).toBe(false);
     expect(sameWorkFacts(null, null)).toBe(true);
     expect(sameWorkFacts(facts, null)).toBe(false);
+  });
+
+  it.each([
+    { name: "older", updatedAt: "2026-10-06T09:15:00.001Z", runUrl: null },
+    {
+      name: "equal",
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      runUrl: "https://ci.example/filled",
+    },
+  ])("keeps newer links when a held $name-revision GET lands", ({ updatedAt, runUrl }) => {
+    const facts = factsFixture({
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      links: [linkFixture(1, { title: "Captured" })],
+    });
+
+    const state = held(facts);
+    const read = captureWorkRead(state);
+    const newerLinks = [linkFixture(1, { title: "Updated" })];
+    const observed = updated(state, { ...facts, links: newerLinks });
+
+    const captured = threadDetailFixture(
+      THREAD,
+      { ...facts, updatedAt, runUrl: "https://ci.example/filled" },
+      workDetailFixture(),
+    );
+
+    const landed = loadWorkThreadDetail(observed, captured, read);
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({
+      updatedAt: facts.updatedAt,
+      links: newerLinks,
+      runUrl,
+    });
+  });
+
+  it("keeps links after an equal observation and a late ABA GET at the same revision", () => {
+    const facts = factsFixture({
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      links: [linkFixture(1, { pullRequestState: "open" })],
+    });
+
+    const state = held(facts);
+    const read = captureWorkRead(state);
+
+    const captured = threadDetailFixture(
+      THREAD,
+      { ...facts, links: [linkFixture(1, { pullRequestState: "merged" })] },
+      workDetailFixture(),
+    );
+
+    const echoed = updated(state, { ...facts, links: [linkFixture(1)] });
+    const landed = loadWorkThreadDetail(echoed, captured, read);
+
+    expect(landed.threads[THREAD]?.work?.links).toEqual(facts.links);
+  });
+
+  it("merges freshly observed links from an older work revision without replacing its status", () => {
+    const facts = factsFixture({
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      status: "done",
+      links: [linkFixture(1, { title: "Before" })],
+    });
+
+    const state = held(facts);
+    const read = captureWorkRead(state);
+    const newerLinks = [linkFixture(1, { title: "Updated" })];
+
+    const captured = threadDetailFixture(
+      THREAD,
+      {
+        ...facts,
+        updatedAt: "2026-10-06T09:15:00.001Z",
+        status: "planned",
+        links: newerLinks,
+      },
+      workDetailFixture(),
+    );
+
+    const landed = loadWorkThreadDetail(state, captured, read);
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({
+      updatedAt: facts.updatedAt,
+      status: "done",
+      links: newerLinks,
+    });
+  });
+
+  it("keeps observed links in an optimistic status overlay and its rollback", () => {
+    const facts = factsFixture({
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      links: [linkFixture(1, { title: "Captured" })],
+    });
+
+    const state = held(facts);
+    const read = captureWorkRead(state);
+    const shown = { ...facts, status: "done" as const };
+    const pending = putWorkFacts(state, THREAD, shown);
+    const newerLinks = [linkFixture(1, { title: "Updated" })];
+    const observed = updated(pending, { ...facts, links: newerLinks });
+
+    const landed = loadWorkThreadDetail(
+      observed,
+      threadDetailFixture(THREAD, facts, workDetailFixture()),
+      read,
+    );
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({ status: "done", links: newerLinks });
+    expect(rollbackWork(landed, THREAD, shown).threads[THREAD]?.work).toMatchObject({
+      status: facts.status,
+      links: newerLinks,
+    });
+  });
+
+  it("keeps observed links when a held status write reply settles the overlay", () => {
+    const facts = factsFixture({
+      updatedAt: "2026-10-06T09:15:00.002Z",
+      links: [linkFixture(1, { title: "Captured" })],
+    });
+
+    const state = held(facts);
+    const read = captureWorkRead(state);
+    const shown = { ...facts, status: "done" as const };
+    const pending = putWorkFacts(state, THREAD, shown);
+    const newerLinks = [linkFixture(1, { title: "Updated" })];
+    const observed = updated(pending, { ...facts, links: newerLinks });
+
+    const reply = threadDetailFixture(
+      THREAD,
+      { ...shown, updatedAt: "2026-10-06T09:15:00.003Z" },
+      workDetailFixture(),
+    );
+
+    const landed = landWorkReply(observed, reply, shown, read);
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({
+      status: "done",
+      updatedAt: reply.thread.work?.updatedAt,
+      links: newerLinks,
+    });
+    expect(landed.work.overlays[THREAD]).toBeUndefined();
   });
 
   it("loads lists per filter, keeping rows through a reload and ignoring older replies", () => {

@@ -30,6 +30,7 @@ const pending: AgentApproval = {
   adminOnly: true,
   approvable: true,
   deniable: true,
+  updatedAt: "2026-10-06T16:30:00.000Z",
 };
 
 /** The viewer (Ada, user 7) with the agent's pending list loaded. */
@@ -52,7 +53,7 @@ function pendingIds(): readonly number[] {
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
-  it.effect("keep a live Approved member after a late empty reload and refetch itself", () =>
+  it.effect("keep a live Approved member after a late empty reload without another GET", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
       const started = yield* Deferred.make<void>();
@@ -62,6 +63,7 @@ describe("approval actions", () => {
         ...pending,
         status: "approved",
         decidedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000Z",
       };
 
       yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
@@ -104,7 +106,7 @@ describe("approval actions", () => {
       expect(approvalListOf(store.getState(), approvalListKey(AGENT, "approved")).ids).toEqual([
         100,
       ]);
-      expect((yield* fake.requests).length).toBe(3);
+      expect((yield* fake.requests).length).toBe(2);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -170,6 +172,7 @@ describe("approval actions", () => {
           ...pending,
           status: refusal.message.includes("expired") ? "expired" : "denied",
           decidedById: refusal.message.includes("expired") ? null : 4,
+          updatedAt: "2026-10-06T16:31:00.000Z",
           decidedAt: refusal.message.includes("expired") ? null : "2026-10-06T16:31:00.000Z",
         };
 
@@ -206,6 +209,7 @@ describe("approval actions", () => {
         status: "approved",
         decidedById: 7,
         decidedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000Z",
         decisionNote: "Ship it",
       };
 
@@ -254,11 +258,104 @@ describe("approval actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("returns a successful decision while its one fallback page load is held", () =>
+    Effect.gen(function* () {
+      const fake = yield* withPending;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+      const returned = yield* Deferred.make<AgentApproval>();
+
+      const reply: AgentApproval = {
+        ...pending,
+        status: "approved",
+        updatedAt: "2026-10-06T16:29:00.000Z",
+      };
+
+      yield* fake.reply("PATCH /agent_approvals/100", reply);
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ approvals: [{ ...pending, id: 200 }], users: [], nextCursor: "older" }),
+        ),
+      );
+
+      const deciding = yield* Effect.forkChild(
+        approvals
+          .decide(100, "approved", null)
+          .pipe(Effect.tap((decided) => Deferred.succeed(returned, decided))),
+      );
+
+      yield* Deferred.await(started);
+
+      const returnedBeforeLoad = yield* Deferred.isDone(returned);
+
+      yield* Deferred.succeed(gate, undefined);
+
+      const result = yield* Effect.exit(Fiber.join(deciding));
+
+      yield* Effect.yieldNow;
+
+      expect(returnedBeforeLoad).toBe(true);
+      expect(Exit.isSuccess(result)).toBe(true);
+      expect(store.getState().approvals.items[100]?.status).toBe("approved");
+      expect(store.getState().approvals.overlays[100]).toBeDefined();
+      expect(approvalListOf(store.getState(), approvalListKey(AGENT, "all"))).toMatchObject({
+        status: "ready",
+        ids: [200],
+        nextCursor: "older",
+      });
+      expect(
+        (yield* fake.requests)
+          .filter((request) => request.method === "GET")
+          .map((request) => request.query?.status ?? null),
+      ).toEqual(["pending", null]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keeps a successful decision when its one background fallback load fails", () =>
+    Effect.gen(function* () {
+      const fake = yield* withPending;
+      const loaded = yield* Deferred.make<void>();
+
+      const reply: AgentApproval = {
+        ...pending,
+        status: "approved",
+        updatedAt: "2026-10-06T16:29:00.000Z",
+      };
+
+      yield* fake.reply("PATCH /agent_approvals/100", reply);
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(loaded, undefined).pipe(
+          Effect.andThen(Effect.fail(new Forbidden({ message: "Approvals are unavailable" }))),
+        ),
+      );
+
+      const decided = yield* approvals.decide(100, "approved", null);
+
+      yield* Deferred.await(loaded);
+      yield* Effect.yieldNow;
+
+      expect(decided).toEqual(reply);
+      expect(store.getState().approvals.items[100]?.status).toBe("approved");
+      expect(approvalListOf(store.getState(), approvalListKey(AGENT, "all"))).toMatchObject({
+        status: "error",
+        error: "Approvals are unavailable",
+      });
+      expect((yield* fake.requests).filter((request) => request.method === "GET")).toHaveLength(2);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("keep a newer copy that arrived meanwhile, and reload after a 404", () =>
     Effect.gen(function* () {
       const fake = yield* withPending;
       const gate = yield* Deferred.make<void>();
-      const elsewhere: AgentApproval = { ...pending, status: "denied", decidedById: 4 };
+
+      const elsewhere: AgentApproval = {
+        ...pending,
+        status: "denied",
+        decidedById: 4,
+        updatedAt: "2026-10-06T16:31:00.000Z",
+      };
 
       yield* fake.route("PATCH /agent_approvals/100", () =>
         Deferred.await(gate).pipe(

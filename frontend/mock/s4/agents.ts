@@ -23,7 +23,7 @@ import type { User } from "../../src/gen/User.ts";
 import { notFound, ok } from "../http.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso } from "../s2/model.ts";
+import { iso, touched } from "../s2/model.ts";
 import { BOT_ID, ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
 import { validation } from "./http.ts";
 import { workStateOf } from "./work-state.ts";
@@ -527,6 +527,10 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
           createdAt: iso(now - each.createdDaysAgo * DAY),
           statusChangedAt: minutesAgo(each.statusChangedMinutesAgo),
           lastSeenAt: minutesAgo(each.lastSeenMinutesAgo),
+          updatedAt:
+            each.presence !== null
+              ? iso(now)
+              : iso(now - (each.statusChangedMinutesAgo ?? each.createdDaysAgo * 24 * 60) * MINUTE),
         },
         presence:
           each.presence === null
@@ -619,22 +623,31 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
     const status = change.status ?? record.row.status;
     const statusNote = change.statusNote === undefined ? record.row.statusNote : change.statusNote;
     const statusMoved = status !== record.row.status || statusNote !== record.row.statusNote;
+    const suspended = change.suspended ?? record.row.suspended;
+
+    const presence =
+      change.presence === undefined
+        ? record.presence
+        : change.presence === null
+          ? null
+          : { text: change.presence, expiresAt: iso(now + WORKING_PRESENCE_MS) };
+
+    const presenceMoved =
+      presence?.text !== record.presence?.text ||
+      presence?.expiresAt !== record.presence?.expiresAt;
+
+    const changed = statusMoved || suspended !== record.row.suspended || presenceMoved;
 
     record.row = {
       ...record.row,
       status,
       statusNote,
-      suspended: change.suspended ?? record.row.suspended,
+      suspended,
       statusChangedAt: statusMoved ? iso(now) : record.row.statusChangedAt,
       lastSeenAt: iso(now),
+      updatedAt: changed ? touched(now, record.row.updatedAt) : record.row.updatedAt,
     };
-
-    if (change.presence !== undefined) {
-      record.presence =
-        change.presence === null
-          ? null
-          : { text: change.presence, expiresAt: iso(now + WORKING_PRESENCE_MS) };
-    }
+    record.presence = presence;
 
     const user = ctx.world().users.get(record.row.userId);
 
@@ -661,6 +674,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       suspended: record.row.suspended,
       workingPresence: live ? (record.presence?.text ?? null) : null,
       workingPresenceExpiresAt: live ? (record.presence?.expiresAt ?? null) : null,
+      updatedAt: record.row.updatedAt,
     };
 
     ctx.publish([{ topic: "user", type: "agent.status", data: event }]);
@@ -714,9 +728,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
         durationMs: status === "done" ? 900 + position * 650 : null,
         position,
         createdAt: previous?.createdAt ?? iso(now),
-        updatedAt: iso(
-          Math.max(now, previous === undefined ? 0 : Date.parse(previous.updatedAt) + 1),
-        ),
+        updatedAt: previous === undefined ? iso(now) : touched(now, previous.updatedAt),
       };
     });
 

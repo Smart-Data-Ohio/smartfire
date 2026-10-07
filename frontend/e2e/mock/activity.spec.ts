@@ -213,6 +213,9 @@ test("undoing a done message's removal brings it back done", async ({ page }) =>
   await ready(page, "Saved");
 
   const text = (await rows(page).first().locator(".saved-body").textContent()) ?? "";
+  const openLabel = (await openButton(page).getAttribute("aria-label")) ?? "";
+
+  expect(openLabel).not.toBe("");
 
   await rows(page).first().locator(".list-row-open").focus();
   await page.keyboard.press("Delete");
@@ -224,7 +227,11 @@ test("undoing a done message's removal brings it back done", async ({ page }) =>
 
   await page.getByRole("tab", { name: "In progress" }).click();
   await expect(rows(page).first()).toBeVisible();
-  await expect(page.locator(".page .saved-body", { hasText: text })).toHaveCount(0);
+  await expect(
+    rows(page)
+      .filter({ has: page.getByRole("button", { name: openLabel, exact: true }) })
+      .filter({ has: page.locator(".saved-body", { hasText: text }) }),
+  ).toHaveCount(0);
 });
 
 test("the sidebar leads to Saved and Scheduled", async ({ page }) => {

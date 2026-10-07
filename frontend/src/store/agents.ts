@@ -17,9 +17,9 @@ import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
 import type { AgentStepsChanged } from "../gen/AgentStepsChanged.ts";
-import { land, receive, sameRecord } from "./freshness.ts";
 import type { LoadStatus, MessageDTO, User } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
+import { landsOver, mergeRevision } from "./revision.ts";
 import type { State } from "./state.ts";
 
 /** What an agent says it's doing now, until `expiresAt`. */
@@ -50,7 +50,7 @@ export interface AgentProfileEntry {
 
 type AgentStatusFacts = Pick<
   AgentDirectoryRow,
-  "status" | "statusNote" | "statusChangedAt" | "suspended"
+  "status" | "statusNote" | "statusChangedAt" | "suspended" | "updatedAt"
 >;
 
 export interface AgentsSlice {
@@ -134,25 +134,20 @@ export function directoryGeneration(state: State): number {
 }
 
 /** The directory landed, unless a newer load started since. */
-export function landDirectory(
-  state: State,
-  page: AgentDirectory,
-  generation: number,
-  ticket?: number,
-): State {
-  if (generation !== state.agents.directory.generation) {
-    return state;
-  }
-
+export function landDirectory(state: State, page: AgentDirectory, generation: number): State {
   let next = state;
 
   for (const row of page.agents) {
-    next = mergeAgentRow(next, row, ticket);
+    next = mergeAgentRow(next, row);
   }
 
   const { rows } = next.agents;
 
-  const users = mergeUserList(next.users, withAgentBadges(page.users, rows));
+  const users = mergeUserList(next.users, withAgentBadges(page.users, next.agents.statuses));
+
+  if (generation !== state.agents.directory.generation) {
+    return { ...next, users };
+  }
 
   return {
     ...next,
@@ -214,22 +209,17 @@ export function setProfileLoading(state: State, agentId: number): State {
 }
 
 /** The profile landed: its row and users join the store too. */
-export function landProfile(
-  state: State,
-  profile: AgentProfile,
-  generation: number,
-  ticket?: number,
-): State {
+export function landProfile(state: State, profile: AgentProfile, generation: number): State {
   const agentId = profile.agent.agentId;
 
-  if (generation !== profileOf(state, agentId).generation) {
-    return state;
-  }
-
-  const next = mergeAgentRow(state, profile.agent, ticket);
+  const next = mergeAgentRow(state, profile.agent);
   const agent = next.agents.rows[agentId] ?? profile.agent;
   const { rows } = next.agents;
-  const users = withAgentBadges(profile.users, rows);
+  const users = withAgentBadges(profile.users, next.agents.statuses);
+
+  if (generation !== profileOf(state, agentId).generation) {
+    return { ...next, users: mergeUserList(next.users, users) };
+  }
 
   return {
     ...next,
@@ -276,38 +266,19 @@ export function setProfileFailed(
 
 // --- agent.status ---
 
-const statusKey = (agentId: number) => `agent-status:${agentId}`;
-
 function statusFacts(row: AgentDirectoryRow | AgentStatusChanged): AgentStatusFacts {
   return {
     status: row.status,
     statusNote: row.statusNote,
     statusChangedAt: row.statusChangedAt,
     suspended: row.suspended,
-  };
-}
-
-function statusCopies(state: State, agentId: number, incoming: AgentStatusFacts) {
-  const row = state.agents.rows[agentId];
-
-  return {
-    held: state.agents.statuses[agentId] ?? (row === undefined ? undefined : statusFacts(row)),
-    incoming,
-    same: sameRecord<AgentStatusFacts>,
-    timestamp: (value: AgentStatusFacts) => value.statusChangedAt,
+    updatedAt: row.updatedAt,
   };
 }
 
 /** Both GET sources merge the same status entity, then update its row and held profile. */
-function mergeAgentRow(state: State, row: AgentDirectoryRow, ticket?: number): State {
-  const copies = statusCopies(state, row.agentId, statusFacts(row));
-
-  const result =
-    ticket === undefined
-      ? receive(state.freshness, statusKey(row.agentId), copies)
-      : land(state.freshness, statusKey(row.agentId), ticket, copies);
-
-  const facts = result.value ?? copies.incoming;
+function mergeAgentRow(state: State, row: AgentDirectoryRow): State {
+  const facts = mergeRevision(state.agents.statuses[row.agentId], statusFacts(row));
   const agent = { ...row, ...facts };
   const entry = state.agents.profiles[row.agentId];
 
@@ -324,7 +295,6 @@ function mergeAgentRow(state: State, row: AgentDirectoryRow, ticket?: number): S
 
   return {
     ...state,
-    freshness: result.freshness,
     agents: {
       ...state.agents,
       rows: { ...state.agents.rows, [row.agentId]: agent },
@@ -334,101 +304,94 @@ function mergeAgentRow(state: State, row: AgentDirectoryRow, ticket?: number): S
   };
 }
 
-function withAgentBadges(users: readonly User[], rows: AgentsSlice["rows"]): User[] {
+/** User badges have no revision of their own; derive them from canonical agent status. */
+export function withAgentBadges(users: readonly User[], statuses: AgentsSlice["statuses"]): User[] {
   return users.map((user) => {
-    const row = user.agent === null ? undefined : rows[user.agent.agentId];
+    const facts = user.agent === null ? undefined : statuses[user.agent.agentId];
 
-    return row === undefined || user.agent === null
+    return facts === undefined || user.agent === null
       ? user
-      : { ...user, agent: { ...user.agent, status: row.status, suspended: row.suspended } };
+      : {
+          ...user,
+          agent: { ...user.agent, status: facts.status, suspended: facts.suspended },
+        };
   });
 }
 
-/**
- * `agent.status`: the badge on the agent's user, its directory row (which may move, when a
- * suspension changes its rank), its profile and its working presence.
- */
-export function applyAgentStatus(state: State, change: AgentStatusChanged): State {
-  const { agentId, userId } = change;
+export function reconcileAgentBadges(state: State): State {
+  const users = withAgentBadges(Object.values(state.users), state.agents.statuses);
 
-  const result = receive(
-    state.freshness,
-    statusKey(agentId),
-    statusCopies(state, agentId, statusFacts(change)),
-  );
+  const changed = users.some((user) => {
+    const held = state.users[user.id];
 
-  if (!result.accepted || result.value === undefined) {
-    return state;
-  }
-
-  const heldPresence = state.agents.working[agentId] ?? null;
-
-  const incomingPresence =
-    change.workingPresence === null || change.workingPresenceExpiresAt === null
-      ? null
-      : { text: change.workingPresence, expiresAt: change.workingPresenceExpiresAt };
-
-  const presence = receive(result.freshness, `agent-presence:${agentId}`, {
-    held: heldPresence,
-    incoming: incomingPresence,
-    same: (left, right) =>
-      left === null || right === null ? left === right : sameRecord(left, right),
+    return (
+      user.agent?.status !== held?.agent?.status || user.agent?.suspended !== held?.agent?.suspended
+    );
   });
 
-  if (result.freshness === state.freshness && presence.freshness === state.freshness) {
+  return changed ? { ...state, users: mergeUserList(state.users, users) } : state;
+}
+
+/**
+ * `agent.status`: the badge on the agent's user, its directory row (which may move when a
+ * suspension changes its rank), its profile and its working presence. Status, suspension and
+ * working presence share one server revision.
+ */
+export function applyAgentStatus(state: State, change: AgentStatusChanged): State {
+  const { agentId } = change;
+  const facts = statusFacts(change);
+
+  if (!landsOver(state.agents.statuses[agentId], facts)) {
     return state;
   }
-
-  const user = state.users[userId];
-
-  const users =
-    user === undefined || user.agent === null
-      ? state.users
-      : {
-          ...state.users,
-          [userId]: {
-            ...user,
-            agent: { ...user.agent, status: change.status, suspended: change.suspended },
-          },
-        };
 
   const row = state.agents.rows[agentId];
 
   const rows =
     row === undefined
       ? state.agents.rows
-      : { ...state.agents.rows, [agentId]: { ...row, ...result.value } };
+      : {
+          ...state.agents.rows,
+          [agentId]: { ...row, ...facts },
+        };
 
   const entry = state.agents.profiles[agentId];
 
   const profiles =
-    entry?.profile === undefined || entry.profile === null
+    entry?.profile == null
       ? state.agents.profiles
       : {
           ...state.agents.profiles,
           [agentId]: {
             ...entry,
-            profile: { ...entry.profile, agent: { ...entry.profile.agent, ...result.value } },
+            profile: { ...entry.profile, agent: { ...entry.profile.agent, ...facts } },
           },
         };
 
   const { [agentId]: _lapsed, ...others } = state.agents.working;
 
-  const working = presence.value == null ? others : { ...others, [agentId]: presence.value };
+  const working =
+    change.workingPresence === null || change.workingPresenceExpiresAt === null
+      ? others
+      : {
+          ...others,
+          [agentId]: { text: change.workingPresence, expiresAt: change.workingPresenceExpiresAt },
+        };
 
-  const directory = state.agents.directory;
+  const statuses = { ...state.agents.statuses, [agentId]: facts };
+  const users = mergeUserList(state.users, withAgentBadges(Object.values(state.users), statuses));
+  const { directory } = state.agents;
   const ids = directoryOrder(directory.ids, rows, users);
 
   return {
     ...state,
-    freshness: presence.freshness,
     users,
     agents: {
       ...state.agents,
       rows,
       profiles,
       working,
-      statuses: { ...state.agents.statuses, [agentId]: result.value },
+      statuses,
       directory: ids === directory.ids ? directory : { ...directory, ids },
     },
   };
@@ -518,55 +481,13 @@ export function mergeSteps(
   for (const step of incoming) {
     const kept = byId.get(step.id);
 
-    if (kept === undefined || kept.updatedAt <= step.updatedAt) {
+    if (landsOver(kept, step)) {
       changed ||= kept === undefined || !sameStep(kept, step);
       byId.set(step.id, step);
     }
   }
 
   return changed ? [...byId.values()].sort(compareSteps) : held;
-}
-
-/** Work step reads use tickets for equal timestamps; events share the same per-step keys. */
-export function mergeFreshSteps(
-  state: State,
-  held: readonly AgentStep[],
-  incoming: readonly AgentStep[],
-  ticket?: number,
-) {
-  let freshness = state.freshness;
-  const byId = new Map(held.map((step) => [step.id, step]));
-
-  for (const step of incoming) {
-    const copies = {
-      held: byId.get(step.id),
-      incoming: step,
-      same: sameStep,
-      timestamp: (value: AgentStep) => value.updatedAt,
-    };
-
-    const result =
-      ticket === undefined
-        ? receive(freshness, `agent-step:${step.id}`, copies)
-        : land(freshness, `agent-step:${step.id}`, ticket, copies);
-
-    freshness = result.freshness;
-
-    if (result.value !== undefined) {
-      byId.set(step.id, result.value);
-    }
-  }
-
-  const steps = [...byId.values()].sort(compareSteps);
-
-  return {
-    freshness,
-    steps:
-      steps.length === held.length &&
-      steps.every((step, index) => sameStep(step, held[index] ?? step))
-        ? held
-        : steps,
-  };
 }
 
 function sameStep(left: AgentStep, right: AgentStep): boolean {
@@ -633,13 +554,12 @@ export function applyAgentSteps(state: State, change: AgentStepsChanged): State 
       return state;
     }
 
-    const { steps, freshness } = mergeFreshSteps(state, detail.steps, change.steps);
+    const steps = mergeSteps(detail.steps, change.steps);
 
     return steps === detail.steps
       ? state
       : {
           ...state,
-          freshness,
           work: {
             ...state.work,
             details: { ...state.work.details, [threadId]: { ...detail, steps: [...steps] } },

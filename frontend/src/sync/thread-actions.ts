@@ -11,8 +11,7 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
-import { workKey } from "../store/work.ts";
-import { readFresh, withRead } from "./freshness.ts";
+import { captureWorkRead } from "../store/work.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -27,16 +26,16 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
+  const read = captureWorkRead(store.getState());
+
   const [detail, page] = yield* Effect.all(
     [
       Effect.result(
-        withRead((ticket) =>
-          api
-            .thread(threadId)
-            .pipe(
-              Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
-            ),
-        ),
+        api
+          .thread(threadId)
+          .pipe(
+            Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, read))),
+          ),
       ),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
@@ -50,15 +49,6 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     mutations.setThreadPageFailed(threadId);
 
     return;
-  }
-
-  if (detail.success.rejected) {
-    yield* readFresh(workKey(threadId), (ticket) =>
-      api.thread(threadId).pipe(
-        Effect.tap((reply) => Effect.sync(() => mutations.loadThreadDetail(reply, ticket))),
-        Effect.ignore,
-      ),
-    );
   }
 
   if (Result.isFailure(page)) {
@@ -145,6 +135,8 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
+  const read = captureWorkRead(store.getState());
+
   const created = yield* api.createThread(roomId, {
     parentMessageId,
     name: options.name ?? null,
@@ -157,28 +149,17 @@ export const create = Effect.fn("threads.create")(function* (
     },
   });
 
-  mutations.threadCreated(created);
+  mutations.threadCreated(created, read);
 
   return created.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  const result = yield* withRead((ticket) =>
-    api
-      .updateThread(threadId, body)
-      .pipe(Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket)))),
-  );
+  const read = captureWorkRead(store.getState());
+  const detail = yield* api.updateThread(threadId, body);
 
-  // The update succeeded; a failed replacement read keeps what is shown rather than failing it.
-  if (result.rejected) {
-    yield* readFresh(workKey(threadId), (ticket) =>
-      api.thread(threadId).pipe(
-        Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, ticket))),
-        Effect.ignore,
-      ),
-    );
-  }
+  mutations.loadThreadDetail(detail, read);
 });
 
 /** Follows (`everything`), mentions-only, or leaves (`null`). */
@@ -211,16 +192,14 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
-  yield* readFresh(`thread-list:${roomId}:${filter}`, (ticket) =>
-    Effect.gen(function* () {
-      mutations.setThreadListLoading(roomId, filter);
+  mutations.setThreadListLoading(roomId, filter);
 
-      yield* api.threads(roomId, filter).pipe(
-        Effect.tap((threads) =>
-          Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, ticket)),
-        ),
-        Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
-      );
-    }),
+  const read = captureWorkRead(store.getState());
+
+  yield* api.threads(roomId, filter).pipe(
+    Effect.tap((threads) =>
+      Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, read)),
+    ),
+    Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
 });

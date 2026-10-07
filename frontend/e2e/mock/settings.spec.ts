@@ -718,6 +718,9 @@ test("two failed changes from no level go back to none, not to the first choice"
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
   await level.click();
   await page.getByRole("menuitemradio", { name: /Muted/ }).click();
+  await expect(
+    page.getByRole("menu", { name: `Notifications for ${room}`, exact: true, includeHidden: true }),
+  ).toHaveCount(0);
   await level.click();
   await page.getByRole("menuitemradio", { name: "All messages" }).click();
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: All messages`);
