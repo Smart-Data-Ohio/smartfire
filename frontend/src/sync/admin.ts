@@ -40,6 +40,7 @@ import {
   suspendBot,
   updateBot,
 } from "../api/bot-endpoints.ts";
+import { peopleDirectory, personProfile, setBanned } from "../api/people-endpoints.ts";
 import {
   cancelSlackRun,
   disconnectSlack,
@@ -71,10 +72,12 @@ import type { CreateIcon } from "../gen/CreateIcon.ts";
 import type { CredentialCreated } from "../gen/CredentialCreated.ts";
 import type { CredentialList } from "../gen/CredentialList.ts";
 import type { CustomStyles } from "../gen/CustomStyles.ts";
+import type { DirectoryPerson } from "../gen/DirectoryPerson.ts";
 import type { GrantList } from "../gen/GrantList.ts";
 import type { IntegrationsHealth } from "../gen/IntegrationsHealth.ts";
 import type { PeoplePage } from "../gen/PeoplePage.ts";
 import type { PersonChange } from "../gen/PersonChange.ts";
+import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { PersonRemoved } from "../gen/PersonRemoved.ts";
 import type { PersonRole } from "../gen/PersonRole.ts";
 import type { SaveSlackCredentials } from "../gen/SaveSlackCredentials.ts";
@@ -94,6 +97,7 @@ import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
+import { mutations } from "../store/store.ts";
 import { runAction } from "./runtime.ts";
 
 export const admin = {
@@ -231,4 +235,31 @@ export const slack = {
     runAction(startPersonalSlack(body)),
 
   disconnect: (): Promise<SlackDisconnected> => runAction(disconnectSlack()),
+};
+
+/** A person page's reply, with their profile landed in the store so the page's avatar resolves. */
+function landProfile(profile: PersonProfile): PersonProfile {
+  mutations.mergeUsers([profile.user]);
+
+  return profile;
+}
+
+/**
+ * The people directory and a person's page: plain promises over the S7 people endpoints, each
+ * reply's profiles landed in the store first. Banning fails as `admin`'s writes do.
+ */
+export const peoplePages = {
+  directory: (): Promise<readonly DirectoryPerson[]> =>
+    runAction(peopleDirectory()).then((list) => {
+      mutations.mergeUsers(list.users);
+
+      return list.people;
+    }),
+
+  profile: (userId: number): Promise<PersonProfile> =>
+    runAction(personProfile(userId)).then(landProfile),
+
+  /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
+  setBanned: (userId: number, banned: boolean): Promise<PersonProfile> =>
+    runAction(setBanned(userId, banned)).then(landProfile),
 };
