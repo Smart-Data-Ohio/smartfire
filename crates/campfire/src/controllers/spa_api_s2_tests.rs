@@ -298,13 +298,23 @@ async fn pins_answer_list_and_publish() {
         (state.message_id, state.room_id, state.pinned),
         (DAVIDS, ALL_TALK, true)
     );
-    let event = sync.until(pinned_event(true), |_| false).await;
-    assert_eq!(event.payload, api::SyncPayload::MessagePinned(state));
-    // The pin note is a new message, as on the classic page.
-    let event = sync.until(created_in(ALL_TALK), |_| false).await;
-    let api::SyncPayload::MessageCreated(note) = event.payload else {
-        unreachable!()
-    };
+    // The pin note is a new message, as on the classic page. The two twins come from separate
+    // broadcasts, so either may come first.
+    let (mut pinned, mut note) = (None, None);
+    while pinned.is_none() || note.is_none() {
+        let event = sync
+            .until(
+                |event| pinned_event(true)(event) || created_in(ALL_TALK)(event),
+                |_| false,
+            )
+            .await;
+        match event.payload {
+            api::SyncPayload::MessageCreated(created) => note = Some(created),
+            other => pinned = Some(other),
+        }
+    }
+    assert_eq!(pinned, Some(api::SyncPayload::MessagePinned(state)));
+    let note = note.unwrap();
     assert!(note.system_note, "{note:?}");
     let note_id = note.id;
     // Pinning again changes nothing.

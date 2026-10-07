@@ -598,20 +598,19 @@ async fn scheduled_messages_tell_the_other_tabs() {
         panic!("{}", reply.text())
     };
     assert_eq!((message.as_str(), fields.len()), ("channel access lost", 0));
-    sync.until(
-        scheduled_changed(row.id, api::ScheduledMessageState::Dropped),
-        |_| false,
-    )
-    .await;
-    let event = sync
-        .until(
-            |event| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.event_type == api::ActivityEventType::ScheduledMessageDropped),
-            |_| false,
-        )
-        .await;
-    let api::SyncPayload::ActivityItem(dropped) = event.payload else {
-        unreachable!()
-    };
-    assert_eq!(dropped.item.source.source_id, row.id);
+    // The two twins are read afresh by separate deferred jobs, so either may come first.
+    let dropped_row = scheduled_changed(row.id, api::ScheduledMessageState::Dropped);
+    let dropped_item = |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::ActivityItem(changed) if changed.item.event_type == api::ActivityEventType::ScheduledMessageDropped);
+    let (mut row_seen, mut item) = (false, None);
+    while !row_seen || item.is_none() {
+        let event = sync
+            .until(|event| dropped_row(event) || dropped_item(event), |_| false)
+            .await;
+        match event.payload {
+            api::SyncPayload::ActivityItem(changed) => item = Some(changed),
+            _ => row_seen = true,
+        }
+    }
+    assert_eq!(item.unwrap().item.source.source_id, row.id);
     server.abort();
 }
