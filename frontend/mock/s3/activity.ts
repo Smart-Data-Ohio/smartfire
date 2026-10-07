@@ -100,7 +100,7 @@ export function applyAction(item: ActivityItem, action: ActivityAction, now: str
       handledAt ??= now;
       break;
     case "unhandled":
-      readAt ??= now;
+      // Keeps `readAt` as it is: an unread item stays unread.
       handledAt = null;
       break;
   }

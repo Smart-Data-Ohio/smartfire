@@ -802,13 +802,9 @@ export function createComposer(
     const after = send(current);
 
     if (after.droppedAt !== null) {
-      // The server's words (`scheduled_messages#send_now`).
-      throw validation(
-        "base",
-        after.dropReason === null
-          ? "You no longer have access to that room, so the message was not sent."
-          : `The scheduled message was not sent (${after.dropReason}).`,
-      );
+      // The contract's `message` is the drop reason itself; a drop for lost access has none, and
+      // reads as the classic page's "Not sent (channel access lost)".
+      throw validation("base", after.dropReason ?? "channel access lost");
     }
 
     if (after.sentAt === null) {
