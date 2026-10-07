@@ -68,10 +68,17 @@ export function pollProblems(question: string, options: readonly string[]): Poll
   };
 }
 
+/** The last draft posted and the client id it went under. */
+interface Sent {
+  readonly draft: string;
+  readonly clientMessageId: string;
+}
+
 /**
  * "Create a poll", from the composer's + menu or `/poll`: the question, 2 to 10 options, single
- * or multiple choice, anonymous or not, and when voting stops. Each opening posts under one
- * client id, so a retry after a dropped reply can't post the poll twice.
+ * or multiple choice, anonymous or not, and when voting stops. Posting the same draft again
+ * after a failure reuses its client id, so a retry after a dropped reply can't post the poll
+ * twice; a draft edited since gets a new id, since it's a different poll.
  */
 export function CreatePollDialog(props: CreatePollDialogProps) {
   // A fresh form (and client id) for each opening.
@@ -100,7 +107,7 @@ export function CreatePollDialog(props: CreatePollDialogProps) {
 }
 
 function CreatePollForm({ roomId, onOpenChange, initialQuestion = "" }: CreatePollDialogProps) {
-  const [clientMessageId] = useState(() => uuid7(Date.now()));
+  const [sent, setSent] = useState<Sent | null>(null);
   const [question, setQuestion] = useState(initialQuestion);
   const [options, setOptions] = useState<readonly string[]>(["", ""]);
   const [multiple, setMultiple] = useState(false);
@@ -134,16 +141,26 @@ function CreatePollForm({ roomId, onOpenChange, initialQuestion = "" }: CreatePo
 
     const span = CLOSES.find((choice) => choice.id === closes)?.ms ?? null;
 
+    const poll = {
+      question: question.trim(),
+      options: filledOptions(options),
+      multiple,
+      anonymous,
+    };
+
+    const draft = JSON.stringify({ ...poll, closes });
+
+    const clientMessageId =
+      sent !== null && sent.draft === draft ? sent.clientMessageId : uuid7(Date.now());
+
+    setSent({ draft, clientMessageId });
     setBusy(true);
     setFailure(undefined);
 
     actions.cards
       .createPoll(roomId, {
         clientMessageId,
-        question: question.trim(),
-        options: filledOptions(options),
-        multiple,
-        anonymous,
+        ...poll,
         closesAt: span === null ? null : new Date(Date.now() + span).toISOString(),
       })
       .then(

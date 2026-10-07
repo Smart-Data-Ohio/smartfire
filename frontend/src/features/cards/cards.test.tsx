@@ -656,4 +656,52 @@ describe("creating a poll", () => {
     ]);
     expect(created[0]?.poll?.closesAt).not.toBeNull();
   });
+
+  it("retries an unchanged draft under the same client id, and an edited one under a new id", async () => {
+    const user = userEvent.setup();
+    const ids: string[] = [];
+    const { server } = network;
+    const handle = server.handle;
+
+    server.handle = (request) => {
+      if (request.method !== "POST" || !request.path.endsWith(`/rooms/${ROOM}/polls`)) {
+        return handle(request);
+      }
+
+      ids.push(/"clientMessageId":"([^"]+)"/.exec(JSON.stringify(request.body))?.[1] ?? "");
+
+      return ids.length < 3
+        ? Promise.resolve({ status: 403, json: { error: forbidden("Try later").error } })
+        : handle(request);
+    };
+
+    try {
+      render(
+        <CreatePollDialog
+          roomId={ROOM}
+          open
+          onOpenChange={() => undefined}
+          initialQuestion="Pizza or tacos?"
+        />,
+      );
+
+      const dialog = screen.getByRole("dialog", { name: "Create a poll" });
+      const post = within(dialog).getByRole("button", { name: "Post poll" });
+
+      await user.type(within(dialog).getByRole("textbox", { name: "Option 1" }), "Pizza");
+      await user.type(within(dialog).getByRole("textbox", { name: "Option 2" }), "Tacos");
+      await user.click(post);
+      await within(dialog).findByText("Try later");
+      await user.click(post);
+      await waitFor(() => expect(ids).toHaveLength(2));
+      await user.type(within(dialog).getByRole("textbox", { name: "Option 2" }), " al pastor");
+      await user.click(post);
+      await waitFor(() => expect(ids).toHaveLength(3));
+
+      expect(ids[1]).toBe(ids[0]);
+      expect(ids[2]).not.toBe(ids[0]);
+    } finally {
+      server.handle = handle;
+    }
+  });
 });
