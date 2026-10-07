@@ -280,6 +280,11 @@ function seedUsers(now: number): Map<number, User> {
               text: person.customStatus.text,
               expiresAt: timestamp(now + 3 * DAY),
             },
+      avatarIcon: null,
+      agent:
+        person.role === "bot"
+          ? { agentId: 1, kind: "workspace", status: "idle", suspended: false }
+          : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
     });
   }
@@ -733,6 +738,7 @@ export function seedWorld(now: number, random: Random): World {
       poll: null,
       cards: [],
       cardsAsOf: createdAt,
+      steps: [],
       createdAt,
       updatedAt: editedAt ?? createdAt,
     });

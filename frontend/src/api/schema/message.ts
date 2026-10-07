@@ -6,6 +6,7 @@ import type { MessageRemoved as GeneratedMessageRemoved } from "../../gen/Messag
 import type { MessageSource as GeneratedMessageSource } from "../../gen/MessageSource.ts";
 import type { SavedMark as GeneratedSavedMark } from "../../gen/SavedMark.ts";
 import type { UpdateMessage as GeneratedUpdateMessage } from "../../gen/UpdateMessage.ts";
+import { AgentStep } from "./agents.ts";
 import { Attachment } from "./attachment.ts";
 import { MessageCard, Poll } from "./cards.ts";
 import { MessageId, RoomId, SavedItemId, ThreadId, UserId } from "./ids.ts";
@@ -45,6 +46,8 @@ export const MessageDTO = Schema.Struct({
   poll: Schema.NullOr(Poll),
   cards: Schema.Array(MessageCard),
   cardsAsOf: Timestamp,
+  /** An agent's steps; merged per step by its own `updatedAt` (see `AgentStep`). */
+  steps: Schema.Array(AgentStep),
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });
