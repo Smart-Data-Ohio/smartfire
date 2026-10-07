@@ -15,7 +15,7 @@ import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import { mutations, store } from "../store/store.ts";
-import { optimisticFacts, sameWorkFacts, workListOf } from "../store/work.ts";
+import { optimisticFacts, sameWorkFacts, workListOf, workVersion } from "../store/work.ts";
 import { keyedSerial } from "./serial.ts";
 
 /** Loads (or reloads) a filter's list; a failure lands as the list's error. */
@@ -46,8 +46,10 @@ export const refresh = Effect.fn("work.refresh")(function* (threadId: number) {
 
   refreshing.add(threadId);
 
+  const version = workVersion(store.getState(), threadId);
+
   yield* fetchThread(threadId).pipe(
-    Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail))),
+    Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, version))),
     Effect.ignore,
     Effect.ensuring(Effect.sync(() => refreshing.delete(threadId))),
   );
@@ -70,6 +72,7 @@ const write = <E, R>(
     threadId,
     Effect.gen(function* () {
       const before = store.getState().threads[threadId]?.work ?? null;
+      const version = workVersion(store.getState(), threadId);
       const optimistic = shown === null ? undefined : shown(before);
 
       mutations.countWorkWrite(threadId, 1);
@@ -91,7 +94,7 @@ const write = <E, R>(
         Effect.onInterrupt(() => rollBack),
       );
 
-      mutations.loadThreadDetail(detail);
+      mutations.loadThreadDetail(detail, version);
 
       return detail;
     }).pipe(Effect.ensuring(Effect.sync(() => mutations.countWorkWrite(threadId, -1)))),

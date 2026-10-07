@@ -157,8 +157,12 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail) =>
-    apply((state) => work.landWorkDetail(threads.loadThreadDetail(state, detail), detail)),
+  loadThreadDetail: (detail: ThreadDetail, liveVersion?: number) =>
+    apply((state) =>
+      liveVersion !== undefined && liveVersion !== work.workVersion(state, detail.thread.id)
+        ? state
+        : work.landWorkDetail(threads.loadThreadDetail(state, detail), detail),
+    ),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
   threadCreated: (created: ThreadCreated) =>
     apply((state) =>
@@ -167,7 +171,7 @@ export const mutations = {
         created.message,
       ),
     ),
-  upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
+  upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>

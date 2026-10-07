@@ -13,7 +13,7 @@ import type { WorkLink } from "../gen/WorkLink.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkListRow } from "../gen/WorkListRow.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
-import type { LoadStatus } from "./model.ts";
+import type { LoadStatus, Thread } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
 import { upsertThread } from "./threads.ts";
@@ -33,12 +33,32 @@ export interface WorkSlice {
   readonly details: Readonly<Record<number, WorkDetail>>;
   /** By thread id: the facts the held detail goes with (`null`: loaded untracked). */
   readonly heldFacts: Readonly<Record<number, WorkFacts | null>>;
+  readonly liveVersions: Readonly<Record<number, number>>;
+  readonly heldVersions: Readonly<Record<number, number>>;
   /** By thread id: work writes on their way (no refetch while any is). */
   readonly writes: Readonly<Record<number, number>>;
   readonly lists: Readonly<Partial<Record<WorkFilter, WorkListState>>>;
 }
 
-export const emptyWork: WorkSlice = { details: {}, heldFacts: {}, writes: {}, lists: {} };
+export const emptyWork: WorkSlice = {
+  details: {},
+  heldFacts: {},
+  liveVersions: {},
+  heldVersions: {},
+  writes: {},
+  lists: {},
+};
+
+/** Only live thread copies advance this version, never optimistic changes or responses. */
+export function workVersion(state: State, threadId: number): number {
+  return state.work.liveVersions[threadId] ?? 0;
+}
+
+export function receiveWorkThread(state: State, thread: Thread): State {
+  return withWork(upsertThread(state, thread), {
+    liveVersions: { ...state.work.liveVersions, [thread.id]: workVersion(state, thread.id) + 1 },
+  });
+}
 
 /** The filters, in the work page's tab order. */
 export const WORK_FILTERS: readonly WorkFilter[] = ["open", "done", "all", "agents", "boards"];
@@ -102,7 +122,9 @@ export function workDetailStale(state: State, threadId: number): boolean {
     return false;
   }
 
-  return !sameWorkFacts(held, live);
+  return (
+    state.work.heldVersions[threadId] !== workVersion(state, threadId) || !sameWorkFacts(held, live)
+  );
 }
 
 function withWork(state: State, change: Partial<WorkSlice>): State {
@@ -117,6 +139,7 @@ export function landWorkDetail(state: State, detail: ThreadDetail): State {
   return withWork(state, {
     details: detail.work === null ? others : { ...others, [threadId]: detail.work },
     heldFacts: { ...state.work.heldFacts, [threadId]: detail.thread.work },
+    heldVersions: { ...state.work.heldVersions, [threadId]: workVersion(state, threadId) },
   });
 }
 
