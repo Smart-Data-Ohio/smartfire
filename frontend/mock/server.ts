@@ -66,6 +66,9 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts";
+import { createWork } from "./s4/work.ts";
+import { WORK_STATUSES } from "./s4/work-model.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -116,6 +119,7 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
+  s4: { work: S4_WORK_IDS, board: S4_BOARD, boardPosts: S4_BOARD_POST_IDS },
 } as const;
 
 export interface MockServerOptions {
@@ -210,7 +214,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const scheduler = options.scheduler ?? realScheduler();
   const simulate = options.simulate ?? false;
 
-  let world: World = buildWorld(now(), seed);
+  let world: World = seedWork(buildWorld(now(), seed), now());
   let random = createRandom(seed * 7919 + 17);
   let csrf = token(random);
   let restarts = 0;
@@ -674,6 +678,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
   const messageActions = createMessages(ctx, threads, saved.savedChanged);
+  const work = createWork(ctx, threads);
 
   const composer = createComposer(
     ctx,
@@ -693,6 +698,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
+    ...work.routes,
   ];
 
   composer.arm();
@@ -932,6 +938,19 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "work-status": {
+        const status = text("status");
+
+        return {
+          status: 200,
+          json: work.setStatusAs(
+            int("threadId"),
+            WORK_STATUSES.find((candidate) => candidate === status) ?? null,
+            intField(body, "actorId") ?? USER_IDS.maya,
+          ),
+        };
+      }
+
       case "reset":
         server.reset();
 
@@ -1005,7 +1024,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       simulation.stop();
       ambient.stop();
       inboxAmbient.stop();
-      world = buildWorld(now(), seed);
+      world = seedWork(buildWorld(now(), seed), now());
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
       restarts += 1;
