@@ -433,6 +433,8 @@ export function SearchBox({
         onHover={(item) => setActiveIndex(flat.indexOf(item))}
         onChoose={choose}
         onClearRecents={() => {
+          // The button leaves with the recents; keep focus in the field rather than on the body.
+          ownInput.current?.focus({ preventScroll: true });
           actions.search.clearRecents().catch((error: Error) =>
             toast({
               title: "Couldn't clear your recent searches",
