@@ -158,6 +158,10 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
             format!("/rooms/{room}?message_id=9"),
             format!("/app/r/{room}?message_id=9"),
         ),
+        (
+            format!("/rooms/{room}/events"),
+            format!("/app/r/{room}/events"),
+        ),
     ] {
         let reply = david.get(&classic).await;
         assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
@@ -327,11 +331,11 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, &room_path).header("turbo-frame", "messages"),
         Req::new(Method::GET, &room_path).header("x-requested-with", "XMLHttpRequest"),
         Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
+        Req::new(Method::GET, &format!("{room_path}/events")).header("accept", "application/json"),
         // Unported pages, and paths a ported pattern doesn't cover.
         Req::new(Method::GET, "/users/7/profile"),
         Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
-        Req::new(Method::GET, &format!("{room_path}/events")),
         Req::new(Method::GET, &format!("{room_path}/messages")),
     ];
     for request in requests {
