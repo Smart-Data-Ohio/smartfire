@@ -8,6 +8,56 @@ use crate::helpers as h;
 /// `pwa/service_worker.js`, served verbatim.
 pub const SERVICE_WORKER_JS: &str = include_str!("../templates/pwa/service_worker.js");
 
+/// The one deliberate difference from Rails' worker, as `(rails, smartfire)` replacements: on
+/// activation it keeps the SPA worker's build caches, and it serves `/app/assets/` from them, so
+/// an SPA tab still open on an older build keeps loading its chunks after another tab switches
+/// to the classic UI. Parity tests apply exactly these to the frozen Rails body.
+pub const SERVICE_WORKER_SPA_PATCH: [(&str, &str); 4] = [
+    (
+        "const OFFLINE_URL = \"/offline.html\"\n",
+        "const OFFLINE_URL = \"/offline.html\"\n\
+         // The SPA worker's build caches outlive a switch to this worker: SPA tabs still open on an\n\
+         // older build keep loading its chunks from them. They are read here, never written.\n\
+         const SPA_CACHE_PREFIX = \"smartfire-spa-\"\n\
+         const SPA_ASSETS = \"/app/assets/\"\n",
+    ),
+    (
+        "keys.filter((key) => key !== STATIC_CACHE)",
+        "keys.filter((key) => key !== STATIC_CACHE && !key.startsWith(SPA_CACHE_PREFIX))",
+    ),
+    (
+        "    event.respondWith(cacheFirst(request))\n    return\n  }\n",
+        "    event.respondWith(cacheFirst(request))\n    return\n  }\n\n\
+         \x20 if (url.pathname.startsWith(SPA_ASSETS)) {\n\
+         \x20   event.respondWith(spaAsset(request))\n\
+         \x20   return\n\
+         \x20 }\n",
+    ),
+    (
+        "async function networkThenOffline(request) {",
+        "async function spaAsset(request) {\n\
+         \x20 for (const key of await caches.keys()) {\n\
+         \x20   if (!key.startsWith(SPA_CACHE_PREFIX)) continue\n\
+         \x20   const cached = await caches.match(request, { cacheName: key, ignoreVary: true })\n\
+         \x20   if (cached) return cached\n\
+         \x20 }\n\
+         \x20 return fetch(request)\n\
+         }\n\n\
+         async function networkThenOffline(request) {",
+    ),
+];
+
+/// Rails' worker body with [`SERVICE_WORKER_SPA_PATCH`] applied; each replaced span must occur
+/// exactly once, so a drifting Rails body or patch fails loudly.
+pub fn rails_service_worker_with_spa_patch(rails: &str) -> String {
+    SERVICE_WORKER_SPA_PATCH
+        .iter()
+        .fold(rails.to_owned(), |body, (from, to)| {
+            assert_eq!(body.matches(from).count(), 1, "worker patch span: {from:?}");
+            body.replacen(from, to, 1)
+        })
+}
+
 /// `pwa/manifest.json.erb`. Preserve ERB's HTML escaping inside JSON, including `&amp;` in
 /// the small-logo URL. Byte parity includes that behavior.
 #[derive(Template)]

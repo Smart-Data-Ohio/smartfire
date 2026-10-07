@@ -359,7 +359,9 @@ fn pwa_endpoints_match_rails() {
     assert!(compare(
         "pwa_service_worker",
         campfire_views::pwa::SERVICE_WORKER_JS,
-        &fixture("pages/pwa_service_worker.js")
+        &campfire_views::pwa::rails_service_worker_with_spa_patch(&fixture(
+            "pages/pwa_service_worker.js"
+        ))
     ));
 }
 

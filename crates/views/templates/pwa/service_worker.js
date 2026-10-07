@@ -8,6 +8,10 @@
 // everything else are never cached and never served from the cache.
 const STATIC_CACHE = "smartfire-static-v1"
 const OFFLINE_URL = "/offline.html"
+// The SPA worker's build caches outlive a switch to this worker: SPA tabs still open on an
+// older build keep loading its chunks from them. They are read here, never written.
+const SPA_CACHE_PREFIX = "smartfire-spa-"
+const SPA_ASSETS = "/app/assets/"
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -20,7 +24,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE && !key.startsWith(SPA_CACHE_PREFIX)).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   )
 })
@@ -34,6 +38,11 @@ self.addEventListener("fetch", (event) => {
 
   if (isCacheableStaticAsset(url)) {
     event.respondWith(cacheFirst(request))
+    return
+  }
+
+  if (url.pathname.startsWith(SPA_ASSETS)) {
+    event.respondWith(spaAsset(request))
     return
   }
 
@@ -60,6 +69,15 @@ async function cacheFirst(request) {
     await cache.put(request, response.clone())
   }
   return response
+}
+
+async function spaAsset(request) {
+  for (const key of await caches.keys()) {
+    if (!key.startsWith(SPA_CACHE_PREFIX)) continue
+    const cached = await caches.match(request, { cacheName: key, ignoreVary: true })
+    if (cached) return cached
+  }
+  return fetch(request)
 }
 
 async function networkThenOffline(request) {

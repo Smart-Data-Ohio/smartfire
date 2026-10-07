@@ -207,12 +207,24 @@ export function smartfireServiceWorker(): Plugin {
           return;
         }
 
+        // The real classic worker (served verbatim by the Rust app) and the page it precaches, so
+        // switching tests exercise its activation against the SPA's caches.
         if (testing && request.url === "/service-worker.js") {
           response.setHeader("Content-Type", "text/javascript; charset=utf-8");
           response.setHeader("Cache-Control", "no-cache");
           response.end(
-            'self.addEventListener("install", e => e.waitUntil(self.skipWaiting())); self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));',
+            await readFile(
+              resolve(root, "../crates/views/templates/pwa/service_worker.js"),
+              "utf8",
+            ),
           );
+
+          return;
+        }
+
+        if (testing && request.url === "/offline.html") {
+          response.setHeader("Content-Type", "text/html; charset=utf-8");
+          response.end("<!doctype html><title>Offline</title>");
 
           return;
         }
