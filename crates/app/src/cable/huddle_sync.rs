@@ -17,10 +17,6 @@ use super::Cable;
 use super::sync::room_topic;
 
 /// A timestamp as the wire carries it: RFC 3339 in UTC with milliseconds.
-fn time(time: Timestamp) -> String {
-    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
-}
-
 pub fn stage_role(role: campfire_db::StageRole) -> StageRole {
     match role {
         campfire_db::StageRole::Listener => StageRole::Listener,
@@ -104,7 +100,7 @@ pub fn stage(conn: &Connection, room_id: i64) -> campfire_db::Result<StageState>
                 membership_id: m.id,
                 user_id: m.user_id,
                 role: stage_role(m.stage_role?),
-                hand_raised_at: m.hand_raised_at.map(time),
+                hand_raised_at: m.hand_raised_at.map(|at| at.to_wire()),
                 server_muted: m.server_muted_at.is_some(),
             })
         })
@@ -138,7 +134,7 @@ pub fn stream(conn: &Connection, stream: &Stream) -> campfire_db::Result<Option<
         user_id: stream.user_id,
         identity,
         quality,
-        started_at: time(stream.started_at),
+        started_at: stream.started_at.to_wire(),
     }))
 }
 

@@ -148,6 +148,44 @@ async fn join(b: &mut Browser<'_>, room_id: i64) -> api::HuddleCredentials {
     parse(&reply)
 }
 
+/// The LiveKit token's claims.
+fn claims(credentials: &api::HuddleCredentials) -> Value {
+    use base64::Engine as _;
+    let payload = credentials.token.split('.').nth(1).expect("a JWT");
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(payload)
+        .expect("base64url claims");
+    serde_json::from_slice(&bytes).expect("JSON claims")
+}
+
+/// The token is the classic `Huddle#token`: this room, this identity, two minutes, and publishing
+/// (with the classic sources) only when `publish`.
+fn assert_grant(credentials: &api::HuddleCredentials, room_id: i64, publish: bool) {
+    let claims = claims(credentials);
+    let video = &claims["video"];
+    assert_eq!(
+        video["room"],
+        rails_compat::jwt::livekit::room_name("ws13-fixture-api-secret", room_id)
+    );
+    assert_eq!(claims["sub"], credentials.identity.as_str());
+    assert_eq!(
+        claims["exp"].as_i64().unwrap() - claims["iat"].as_i64().unwrap(),
+        120
+    );
+    assert_eq!(
+        (video["canPublish"].as_bool(), credentials.can_publish),
+        (Some(publish), publish)
+    );
+    let sources = if publish {
+        json!(["microphone", "screen_share", "screen_share_audio", "camera"])
+    } else {
+        json!([])
+    };
+    assert_eq!(video["canPublishSources"], sources);
+    assert_eq!(video["roomJoin"], true);
+    assert_eq!(video["canSubscribe"], true);
+}
+
 async fn serve(a: &TestApp) -> (SocketAddr, tokio::task::JoinHandle<()>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -606,6 +644,177 @@ async fn moderation_follows_call_moderation() {
         ))
         .await;
     assert_eq!(denial(&reply).1, "NotFound");
+    // Nor is a direct message, though it has calls: moderation is for voice rooms and stages.
+    let direct = a
+        .db()
+        .write(|tx| Room::find_or_create_direct_for(tx, &[DAVID, JASON], DAVID))
+        .await
+        .unwrap();
+    let direct_jason = a
+        .db()
+        .read(move |c| {
+            Ok(Membership::find_by_room_and_user(c, direct.id, JASON)?
+                .unwrap()
+                .id)
+        })
+        .await
+        .unwrap();
+    let reply = david
+        .write(send_json(
+            Method::POST,
+            &format!("/api/v1/rooms/{}/huddle/moderation", direct.id),
+            &json!({"membershipId": direct_jason, "action": "mute"}),
+        ))
+        .await;
+    assert_eq!(
+        denial(&reply),
+        denied(StatusCode::NOT_FOUND, "NotFound", "Not found")
+    );
+}
+
+#[tokio::test]
+async fn the_livekit_token_is_the_classic_grant() {
+    let Some(a) = app(true).await else { return };
+    let (room, _, _, speaker) = stage(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    // A stage: the host and a speaker publish, a listener only listens.
+    assert_grant(&join(&mut david, room.id).await, room.id, true);
+    assert_grant(&join(&mut jason, room.id).await, room.id, false);
+    let kevins = join(&mut kevin, room.id).await;
+    assert_grant(&kevins, room.id, true);
+    // A server mute takes publishing away from the next token.
+    seen(&a, kevins.grant_id).await;
+    let reply = david
+        .write(send_json(
+            Method::POST,
+            &format!("/api/v1/rooms/{}/huddle/moderation", room.id),
+            &json!({"membershipId": speaker, "action": "mute"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    assert_grant(&join(&mut kevin, room.id).await, room.id, false);
+    // A voice room: everyone publishes.
+    let lounge = voice(&a).await;
+    assert_grant(&join(&mut jason, lounge.id).await, lounge.id, true);
+}
+
+#[tokio::test]
+async fn a_stage_says_nothing_to_people_outside_it() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    // A stage without Kevin, and a voice room with him (the sentinel).
+    let (room, jason_member) = a
+        .db()
+        .write(|tx| {
+            let room =
+                Room::create_for(tx, RoomType::Stage, Some("Board"), DAVID, &[DAVID, JASON])?;
+            let jason = Membership::find_by_room_and_user(tx.conn(), room.id, JASON)?
+                .unwrap()
+                .id;
+            Ok((room, jason))
+        })
+        .await
+        .unwrap();
+    let room_id = room.id;
+    let lounge = voice(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut kevin_sync =
+        Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{room_id}")]).await;
+
+    // Roster, hand and call changes on the stage.
+    let reply = jason
+        .write(empty(
+            Method::POST,
+            &format!("/api/v1/rooms/{room_id}/stage/hand"),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let davids = join(&mut david, room_id).await;
+    seen(&a, davids.grant_id).await;
+    let reply = david
+        .write(send_json(
+            Method::PATCH,
+            &format!("/api/v1/rooms/{room_id}/stage/members/{jason_member}"),
+            &json!({"role": "speaker"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    // Then something Kevin does hear: everything before it has been delivered.
+    let jasons = join(&mut jason, lounge.id).await;
+    seen(&a, jasons.grant_id).await;
+    kevin_sync.until(presence_of(lounge.id)).await;
+    let leaked: Vec<_> = kevin_sync
+        .pending
+        .iter()
+        .filter(|event| match &event.payload {
+            api::SyncPayload::StageUpdated(stage) => stage.room_id == room_id,
+            api::SyncPayload::HuddlePresence(presence) => presence.room_id == room_id,
+            api::SyncPayload::HuddleNotice(_) | api::SyncPayload::HuddleRing(_) => true,
+            _ => false,
+        })
+        .collect();
+    assert!(leaked.is_empty(), "{leaked:#?}");
+
+    // Every stage and moderation write is a 404 to him, as is reading it.
+    let base = format!("/api/v1/rooms/{room_id}/stage");
+    for reply in [
+        kevin.send(get(&base)).await,
+        kevin
+            .write(empty(Method::POST, &format!("{base}/hand")))
+            .await,
+        kevin
+            .write(empty(
+                Method::DELETE,
+                &format!("{base}/hand?membershipId={jason_member}"),
+            ))
+            .await,
+        kevin
+            .write(send_json(
+                Method::PATCH,
+                &format!("{base}/members/{jason_member}"),
+                &json!({"role": "host"}),
+            ))
+            .await,
+        kevin
+            .write(send_json(
+                Method::POST,
+                &format!("{base}/stream"),
+                &json!({"quality": "720p15"}),
+            ))
+            .await,
+        kevin
+            .write(empty(Method::DELETE, &format!("{base}/stream?streamId=1")))
+            .await,
+        kevin
+            .write(send_json(
+                Method::POST,
+                &format!("/api/v1/rooms/{room_id}/huddle/moderation"),
+                &json!({"membershipId": jason_member, "action": "disconnect"}),
+            ))
+            .await,
+        kevin
+            .write(empty(
+                Method::POST,
+                &format!("/api/v1/rooms/{room_id}/huddle"),
+            ))
+            .await,
+    ] {
+        // The message varies by controller ("Not found" or "Room not found or inaccessible");
+        // what matters is the 404, which says nothing about the stage.
+        let (status, tag, _) = denial(&reply);
+        assert_eq!(
+            (status, tag.as_str()),
+            (StatusCode::NOT_FOUND, "NotFound"),
+            "{}",
+            reply.text()
+        );
+    }
+    server.abort();
 }
 
 #[tokio::test]
@@ -859,21 +1068,27 @@ async fn settle(
 }
 
 /// Every classic publication while two people join a stage, one raises a hand, gets promoted,
-/// goes live and is stopped, muted and disconnected, and a voice call is left: all through the
-/// classic routes.
+/// goes live and is stopped, muted and disconnected, and the call is left; then a direct call
+/// rings and ends, and the last host leaves the stage (its "stage ended" note). All through the
+/// classic routes but the host's departure, which is a membership removal.
 async fn classic_frames(spa: bool) -> Option<Vec<(String, String)>> {
     use crate::controllers::presenters::test_support::SEED_NOW;
     use campfire_kit::clock::FrozenClock;
     let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
     let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
     let a = TestApp::boot_with_settings(configured(), clock, env).await?;
-    let (room, _, listener, _) = stage(&a).await;
+    let (room, host, listener, _) = stage(&a).await;
     let room_id = room.id;
+    let direct = a
+        .db()
+        .write(|tx| Room::find_or_create_direct_for(tx, &[DAVID, KEVIN], DAVID))
+        .await
+        .unwrap();
     let mut david = a.sign_in(DAVID).await;
     let mut jason = a.sign_in(JASON).await;
     let (addr, server) = serve(&a).await;
-    // Only streams with a subscriber are recorded: everyone's sidebar, notices and inbox, and
-    // the stage room's messages.
+    // Only streams with a subscriber are recorded: everyone's sidebar, notices and inbox (the
+    // direct call's ring), and the stage room's messages (its "stage ended" note).
     let mut classic = Vec::new();
     for user in [DAVID, JASON, KEVIN] {
         let mut socket = socket(&a, addr, user).await;
@@ -881,7 +1096,7 @@ async fn classic_frames(spa: bool) -> Option<Vec<(String, String)>> {
             json!({"channel": "HuddleNoticeChannel"}),
             json!({"channel": "ActivityChannel"}),
         ];
-        if user == DAVID {
+        {
             let stream = crate::channels::broadcasts::Stream::room_messages(&room);
             let signed = rails_compat::turbo::signed_stream_name(
                 &a.booted.app.secrets,
@@ -975,18 +1190,42 @@ async fn classic_frames(spa: bool) -> Option<Vec<(String, String)>> {
         assert!(reply.status.is_success(), "{}", reply.text());
         settle(capture, &mut frames).await;
     }
+    // A direct call rings Kevin (the `huddleInvitation` frames on his activity stream), then ends.
+    let direct_huddle = format!("/rooms/{}/huddle", direct.id);
+    let reply = david
+        .write(Req::new(Method::POST, &direct_huddle).header("accept", "application/json"))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    settle(capture, &mut frames).await;
+    seen(&a, reply.json()["grant_id"].as_i64().unwrap()).await;
+    settle(capture, &mut frames).await;
+    let reply = david
+        .write(
+            Req::new(Method::POST, &format!("{direct_huddle}/leave"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert!(reply.status.is_success(), "{}", reply.text());
+    settle(capture, &mut frames).await;
+    // The last host leaves the stage: it ends, with a note in the room.
+    a.db()
+        .write(move |tx| Membership::find(tx.conn(), host)?.destroy(tx))
+        .await
+        .unwrap();
+    settle(capture, &mut frames).await;
     drop(classic);
     server.abort();
-    // LiveKit identities are random per grant; everything else is the same run to run.
+    // LiveKit identities are random per grant, and a system note's client message id is a
+    // random UUID; everything else is the same run to run.
     let identity = regex::Regex::new(r"campfire-participant-[0-9a-f]+").unwrap();
+    let uuid =
+        regex::Regex::new(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").unwrap();
     Some(
         frames
             .into_iter()
             .map(|(stream, frame)| {
-                (
-                    stream,
-                    identity.replace_all(&frame, "IDENTITY").into_owned(),
-                )
+                let frame = identity.replace_all(&frame, "IDENTITY");
+                (stream, uuid.replace_all(&frame, "UUID").into_owned())
             })
             .collect(),
     )
@@ -1000,6 +1239,11 @@ async fn the_classic_call_frames_are_the_same_with_the_sync_engine_on() {
     let any = |needle: &str| off.iter().any(|(_, frame)| frame.contains(needle));
     assert!(any("Hand raised"), "a hand: {off:#?}");
     assert!(any("stage_roster"), "a roster: {off:#?}");
+    assert!(any("huddleInvitation"), "a ring: {off:#?}");
+    assert!(
+        any("The stage ended because the last host left."),
+        "the stage-ended note: {off:#?}"
+    );
     // The presence and notice jobs run concurrently, so their frames can interleave
     // differently from run to run: compare the frames, not their order.
     let (mut off, mut on) = (off, on);

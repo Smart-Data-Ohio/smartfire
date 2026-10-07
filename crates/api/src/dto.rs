@@ -15,7 +15,7 @@ use rails_compat::Secrets;
 
 /// A [`Timestamp`] as the wire carries it: RFC 3339 in UTC with milliseconds.
 pub fn time(time: Timestamp) -> String {
-    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    time.to_wire()
 }
 
 fn present(value: Option<&str>) -> Option<String> {
