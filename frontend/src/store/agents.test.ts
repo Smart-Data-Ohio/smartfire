@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, pageFixture, userFixture } from "../api/testing.ts";
+import {
+  factsFixture,
+  threadDetailFixture,
+  workDetailFixture,
+} from "../features/work/test-fixtures.ts";
 import type { AgentDirectoryRow } from "../gen/AgentDirectoryRow.ts";
 import type { AgentStatusChanged } from "../gen/AgentStatusChanged.ts";
 import type { AgentStep } from "../gen/AgentStep.ts";
@@ -21,6 +26,7 @@ import {
 import type { SyncEvent } from "./model.ts";
 import { applyEvents, applyPage, receiveMessage, updateMessage } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
+import { landWorkDetail } from "./work.ts";
 
 const NOW = Date.UTC(2026, 9, 6, 16, 30, 0);
 
@@ -229,12 +235,23 @@ describe("agent steps", () => {
     expect(merged.steps[0]?.status).toBe("done");
   });
 
-  it("applies agent.steps to a held message, and leaves a work thread's to the work view", () => {
-    const state = applyPage(
+  it("applies agent.steps to held messages and work threads", () => {
+    const messages = applyPage(
       initialState,
       ROOM,
       pageFixture([messageFixture(100, ROOM)]),
       "replace",
+    );
+
+    const state = landWorkDetail(
+      messages,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({
+          steps: [step(2, 0, { messageId: null, threadId: 7, status: "running" })],
+        }),
+      ),
     );
 
     const stepped = applyEvents(
@@ -264,13 +281,88 @@ describe("agent steps", () => {
           seq: 2,
           topic: `room:${ROOM}`,
           type: "agent.steps",
+          data: {
+            roomId: ROOM,
+            messageId: null,
+            threadId: 7,
+            steps: [step(2, 1, { messageId: null, threadId: 7 })],
+          },
+        },
+      ],
+      NOW,
+    );
+
+    expect(thread.work.details[7]?.steps.map((each) => each.status)).toEqual(["done"]);
+    expect(thread.messages).toBe(stepped.messages);
+  });
+
+  it("keeps newer thread steps when an older event follows", () => {
+    const newer = step(2, 9, { messageId: null, threadId: 7, status: "done" });
+
+    const state = landWorkDetail(
+      initialState,
+      threadDetailFixture(7, factsFixture(), workDetailFixture({ steps: [newer] })),
+    );
+
+    const next = applyEvents(
+      state,
+      [
+        {
+          seq: 1,
+          topic: "thread:7",
+          type: "agent.steps",
+          data: {
+            roomId: ROOM,
+            messageId: null,
+            threadId: 7,
+            steps: [step(2, 2, { messageId: null, threadId: 7, status: "running" })],
+          },
+        },
+      ],
+      NOW,
+    );
+
+    expect(next).toBe(state);
+    expect(next.work.details[7]?.steps).toEqual([newer]);
+  });
+
+  it("ignores thread steps when no work detail is held", () => {
+    const next = applyEvents(
+      initialState,
+      [
+        {
+          seq: 1,
+          topic: "thread:7",
+          type: "agent.steps",
           data: { roomId: ROOM, messageId: null, threadId: 7, steps: [step(2, 1)] },
         },
       ],
       NOW,
     );
 
-    expect(thread).toBe(stepped);
+    expect(next).toBe(initialState);
+  });
+
+  it("keeps live thread steps when a detail with older steps lands", () => {
+    const newer = step(2, 9, { messageId: null, threadId: 7, status: "done" });
+
+    const state = landWorkDetail(
+      initialState,
+      threadDetailFixture(7, factsFixture(), workDetailFixture({ steps: [newer] })),
+    );
+
+    const landed = landWorkDetail(
+      state,
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture({
+          steps: [step(2, 2, { messageId: null, threadId: 7, status: "running" })],
+        }),
+      ),
+    );
+
+    expect(landed.work.details[7]?.steps).toEqual([newer]);
   });
 
   it("keeps steps an update or a re-received copy doesn't know yet", () => {

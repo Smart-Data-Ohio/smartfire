@@ -446,13 +446,29 @@ function newerOnly(
 }
 
 /**
- * `agent.steps` on a message: its steps merged in. Steps on a work thread are the work view's
- * (they arrive on `thread:<id>` with no message); a message not held picks its steps up when it
- * loads.
+ * `agent.steps` merged into a held message or work detail. Unheld parents pick up their steps
+ * when they load.
  */
 export function applyAgentSteps(state: State, change: AgentStepsChanged): State {
   if (change.messageId === null) {
-    return state;
+    const threadId = change.threadId;
+    const detail = threadId === null ? undefined : state.work.details[threadId];
+
+    if (threadId === null || detail === undefined) {
+      return state;
+    }
+
+    const steps = mergeSteps(detail.steps, change.steps);
+
+    return steps === detail.steps
+      ? state
+      : {
+          ...state,
+          work: {
+            ...state.work,
+            details: { ...state.work.details, [threadId]: { ...detail, steps: [...steps] } },
+          },
+        };
   }
 
   const message = state.messages[change.messageId];

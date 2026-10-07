@@ -13,6 +13,7 @@ import type { WorkLink } from "../gen/WorkLink.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkListRow } from "../gen/WorkListRow.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
+import { mergeSteps } from "./agents.ts";
 import type { LoadStatus, Thread } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import type { State } from "./state.ts";
@@ -135,9 +136,13 @@ function withWork(state: State, change: Partial<WorkSlice>): State {
 export function landWorkDetail(state: State, detail: ThreadDetail): State {
   const threadId = detail.thread.id;
   const { [threadId]: _old, ...others } = state.work.details;
+  const steps = detail.work === null ? [] : mergeSteps(_old?.steps ?? [], detail.work.steps);
 
   return withWork(state, {
-    details: detail.work === null ? others : { ...others, [threadId]: detail.work },
+    details:
+      detail.work === null
+        ? others
+        : { ...others, [threadId]: { ...detail.work, steps: [...steps] } },
     heldFacts: { ...state.work.heldFacts, [threadId]: detail.thread.work },
     heldVersions: { ...state.work.heldVersions, [threadId]: workVersion(state, threadId) },
   });
