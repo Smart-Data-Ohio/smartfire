@@ -298,17 +298,18 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         }
         let label =
             format!("enabled={enabled} default_next={default_next} preference={preference:?}");
-        let expected = if next {
-            "/app/service-worker.js"
-        } else {
-            "/service-worker.js"
+        // Without the SPA the layout is the Rails layout and names no worker.
+        let expected = match (enabled, next) {
+            (false, _) => None,
+            (true, true) => Some("/app/service-worker.js"),
+            (true, false) => Some("/service-worker.js"),
         };
         let mut b = a.sign_in(DAVID).await;
         let classic = b.get("/users/me/profile?classic=1").await;
         assert_eq!(classic.status, StatusCode::OK, "{label}");
         assert_eq!(
             meta(&classic.text(), "service-worker-url").as_deref(),
-            Some(expected),
+            expected,
             "{label}"
         );
         assert!(
@@ -334,16 +335,16 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
             assert_eq!(boot.status, StatusCode::NOT_FOUND, "{label}");
         }
         // With no signed-in user, SPA_DEFAULT selects the classic layout's worker.
-        let expected = if enabled && default_next {
-            "/app/service-worker.js"
-        } else {
-            "/service-worker.js"
+        let expected = match (enabled, default_next) {
+            (false, _) => None,
+            (true, true) => Some("/app/service-worker.js"),
+            (true, false) => Some("/service-worker.js"),
         };
         let signed_out = a.anonymous().get("/session/new").await;
         assert_eq!(signed_out.status, StatusCode::OK, "{label}");
         assert_eq!(
             meta(&signed_out.text(), "service-worker-url").as_deref(),
-            Some(expected),
+            expected,
             "signed out: {label}"
         );
     }
@@ -529,6 +530,9 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..").canonicalize().unwrap();
     let local = std::env::var("PWA_BROWSER_LOCAL").as_deref() == Ok("1");
+    // Only an explicit opt-out lets a browser without a push service skip the subscription proof.
+    let allow_unavailable = std::env::var("PWA_ALLOW_PUSH_UNAVAILABLE").as_deref() == Ok("1");
+    let allow_flag = if allow_unavailable { "1" } else { "0" };
     // Killing a Docker CLI alone leaves its browser container running.
     struct Container(String);
     impl Drop for Container {
@@ -556,6 +560,8 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
             .arg(format!("PWA_BROWSER_TARGET={target}"))
             .arg("--env")
             .arg(format!("PWA_BROWSER_EMAIL={email}"))
+            .arg("--env")
+            .arg(format!("PWA_ALLOW_PUSH_UNAVAILABLE={allow_flag}"))
             .arg(std::env::var("PWA_PLAYWRIGHT_IMAGE")
                 .expect("ci/correctness.sh pwa supplies the pinned browser image"))
             .arg("node");
@@ -565,6 +571,7 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
         .arg(root.join("test-support/pwa_registration_browser.mjs"))
         .env("PWA_BROWSER_TARGET", target)
         .env("PWA_BROWSER_EMAIL", email)
+        .env("PWA_ALLOW_PUSH_UNAVAILABLE", allow_flag)
         .kill_on_drop(true).output().await.unwrap();
     let stdout = String::from_utf8_lossy(&output.stdout);
     println!("{stdout}");
@@ -577,4 +584,13 @@ async fn pwa_browser_reconciles_turbo_sign_in_and_preserves_root_registration() 
         stdout.contains("PWA_REGISTRATION_RECEIPT "),
         "browser completed every lifecycle assertion"
     );
+    if stdout.contains("PWA_PUSH_PRESERVATION_SKIPPED ") {
+        assert!(allow_unavailable, "subscription preservation was skipped without an opt-out");
+        println!("SKIPPED: push subscription preservation (no push service in this browser)");
+    } else {
+        assert!(
+            stdout.contains("\"subscription\":\"endpoint-and-keys-preserved\""),
+            "a real subscription survived every worker swap"
+        );
+    }
 }

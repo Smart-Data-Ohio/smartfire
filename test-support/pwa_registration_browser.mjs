@@ -138,19 +138,29 @@ try {
   console.log(`PWA_PUSH_ATTEMPT ${JSON.stringify(enrollment.subscribed
     ? { subscribed: true, before: enrollment.before, after: enrollment.after }
     : enrollment)}`)
-  if (!enrollment.subscribed) {
-    assert.ok(["AbortError", "NotSupportedError", "Pending"].includes(enrollment.name), JSON.stringify(enrollment))
+  // Preservation is only proven with a real subscription. An environment whose Chromium has no
+  // push service must opt out explicitly, and then the preservation checks are reported skipped.
+  const skipPreservation = !enrollment.subscribed
+  if (skipPreservation) {
+    assert.ok(
+      process.env.PWA_ALLOW_PUSH_UNAVAILABLE === "1",
+      `Chromium could not create a push subscription, so preservation is unproven: ${JSON.stringify(enrollment)}`,
+    )
     await activeWorker("/app/service-worker.js")
-    console.log(`PWA_PUSH_UNAVAILABLE ${JSON.stringify(enrollment)}`)
+    console.log(`PWA_PUSH_PRESERVATION_SKIPPED ${JSON.stringify(enrollment)}`)
   }
   const initialSubscription = await subscription()
-  if (enrollment.subscribed) {
+  if (!skipPreservation) {
     assert.deepEqual(initialSubscription, enrollment.subscription)
     assert.ok(initialSubscription.endpoint)
     assert.ok(initialSubscription.keys.p256dh)
     assert.ok(initialSubscription.keys.auth)
-  } else {
-    assert.equal(initialSubscription, null, "a failed enrollment never becomes subscription proof")
+  }
+  const assertPreserved = async (message) => {
+    if (skipPreservation) return
+    const current = await subscription()
+    assert.ok(current?.endpoint, `${message}: a subscription is still present`)
+    assert.deepEqual(current, initialSubscription, message)
   }
 
   // Password sign-in is a real Turbo form submission. The stored classic choice must replace
@@ -167,7 +177,7 @@ try {
   assert.equal(registrationIds.size, 1, "Turbo sign-in keeps Chromium's root registration identity")
   assert.equal(deletedIds.size, 0, "Turbo sign-in does not delete the root registration")
   assert.equal(await page.locator('meta[name="current-user-id"]').getAttribute("content"), "127326141")
-  assert.deepEqual(await subscription(), initialSubscription, "Turbo sign-in preserves the root subscription")
+  await assertPreserved("Turbo sign-in preserves the root subscription")
 
   await page.goto(`${origin}/users/me/profile?classic=1`)
   // Password authentication grants the session but still enforces authenticator enrollment.
@@ -185,19 +195,19 @@ try {
   await page.waitForURL((url) => url.pathname.startsWith("/app/"))
   await page.getByRole("button", { name: "Your account", exact: true }).waitFor()
   await activeWorker("/app/service-worker.js")
-  assert.deepEqual(await subscription(), initialSubscription, "classic to SPA preserves endpoint and keys")
+  await assertPreserved("classic to SPA preserves endpoint and keys")
 
   await page.getByRole("button", { name: "Your account", exact: true }).click()
   await page.getByRole("menuitem", { name: "Switch to classic" }).click()
   await page.waitForURL((url) => !url.pathname.startsWith("/app/"))
   await activeWorker("/service-worker.js")
-  assert.deepEqual(await subscription(), initialSubscription, "SPA to classic preserves endpoint and keys")
+  await assertPreserved("SPA to classic preserves endpoint and keys")
   assert.equal(registrationIds.size, 1, "Chromium's root registration identity survives every script swap")
   assert.equal(deletedIds.size, 0, "application code never deletes the root registration")
   console.log(`PWA_REGISTRATION_RECEIPT ${JSON.stringify({
     scripts: ["/app/service-worker.js", "/service-worker.js", "/app/service-worker.js", "/service-worker.js"],
     rootRegistrationIds: [...registrationIds],
-    subscription: enrollment.subscribed ? "endpoint-and-keys-preserved" : "unavailable-real-getSubscription-null",
+    subscription: skipPreservation ? "preservation-skipped-push-unavailable" : "endpoint-and-keys-preserved",
     enrollment: enrollment.subscribed ? { subscribed: true, before: enrollment.before, after: enrollment.after } : enrollment,
   })}`)
   await context.close()
