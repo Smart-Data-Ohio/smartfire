@@ -54,23 +54,21 @@ endpoint!(
     involvement => put_involvement
 );
 
-/// The viewer's category `id`, or a 404 (another person's, or none).
-async fn category(c: &Ctx, id: Option<i64>) -> Result<RoomCategory> {
-    let user_id = concerns::require_current_user(c)?.id;
-    let id = id.ok_or(Error::NotFound)?;
-    c.app()
-        .db
-        .read(move |conn| {
-            Ok(RoomCategory::find_by_id(conn, id)?.filter(|row| row.user_id == user_id))
-        })
-        .await
-        .map_err(db_error)?
+fn path_category_id(c: &Ctx) -> Result<i64> {
+    c.param_str("category_id")
+        .and_then(cast_integer)
         .ok_or(Error::NotFound)
 }
 
-async fn path_category(c: &Ctx) -> Result<RoomCategory> {
-    let id = c.param_str("category_id").and_then(cast_integer);
-    category(c, id).await
+/// The person's category `id`, read in the write that changes it.
+fn owned(
+    conn: &campfire_db::Connection,
+    user_id: i64,
+    id: i64,
+) -> campfire_db::Result<RoomCategory> {
+    RoomCategory::find_by_id(conn, id)?
+        .filter(|row| row.user_id == user_id)
+        .ok_or(campfire_db::Error::RecordNotFound("RoomCategory"))
 }
 
 async fn post_category(c: &mut Ctx) -> Result {
@@ -91,15 +89,22 @@ async fn post_category(c: &mut Ctx) -> Result {
 
 async fn patch_category(c: &mut Ctx) -> Result {
     before_actions(c).await?;
-    let mut row = path_category(c).await?;
+    let user_id = concerns::require_current_user(c)?.id;
+    let id = path_category_id(c)?;
     let api::UpdateRoomCategory { name, collapsed } = body(c).await?;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_category_write(id).await;
+    // Read in the write, so a reorder or another field changed in another tab since isn't
+    // written back; only the fields sent change.
     let updated = c
         .app()
         .db
         .write(move |tx| {
+            let mut row = owned(tx.conn(), user_id, id)?;
             let name = name.unwrap_or_else(|| row.name.clone());
             let collapsed = collapsed.unwrap_or(row.collapsed);
-            row.update(tx, &name, row.position, collapsed)?;
+            let position = row.position;
+            row.update(tx, &name, position, collapsed)?;
             Ok(row)
         })
         .await
@@ -109,10 +114,11 @@ async fn patch_category(c: &mut Ctx) -> Result {
 
 async fn delete_category(c: &mut Ctx) -> Result {
     before_actions(c).await?;
-    let row = path_category(c).await?;
+    let user_id = concerns::require_current_user(c)?.id;
+    let id = path_category_id(c)?;
     c.app()
         .db
-        .write(move |tx| row.destroy(tx))
+        .write(move |tx| owned(tx.conn(), user_id, id)?.destroy(tx))
         .await
         .map_err(db_error)?;
     Ok(c.head(StatusCode::NO_CONTENT))
@@ -166,14 +172,17 @@ async fn put_category(c: &mut Ctx) -> Result {
             validation("roomCategoryId", "can only be set on a channel"),
         ));
     }
-    let category_id = match room_category_id {
-        Some(id) => Some(category(c, Some(id)).await?.id),
-        None => None,
-    };
     let membership_id = membership.id;
+    let user_id = membership.user_id;
     c.app()
         .db
-        .write(move |tx| membership.update_category(tx, category_id))
+        .write(move |tx| {
+            // Checked in the write: a category deleted meanwhile is a 404, not a failed write.
+            let category_id = room_category_id
+                .map(|id| owned(tx.conn(), user_id, id).map(|row| row.id))
+                .transpose()?;
+            membership.update_category(tx, category_id)
+        })
         .await
         .map_err(db_error)?;
     let row = row(c, room, membership_id).await?;
@@ -248,8 +257,9 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         api::Involvement::Mentions => Involvement::Mentions,
         api::Involvement::Everything => Involvement::Everything,
     };
+    let was_unread = membership.unread();
     let membership = involvements::change(c, &room, membership, Some(involvement)).await?;
-    if membership.involved_in(Involvement::Muted) {
+    if was_unread && membership.involved_in(Involvement::Muted) {
         // `change` marked it read; the other tabs clear its unread state.
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }

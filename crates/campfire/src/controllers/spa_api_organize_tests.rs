@@ -504,6 +504,22 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     assert_eq!(back.involvement, api::Involvement::Everything);
     sync.until(row_of(ALL_TALK), |_| false).await;
 
+    // Muting a room that's already read changes no unread state: no `room.read`, just the row.
+    ok::<api::Membership>(
+        &send(
+            &mut david,
+            Method::PUT,
+            &path,
+            json!({"involvement": "muted"}),
+        )
+        .await,
+    );
+    sync.until(
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.involvement == api::Involvement::Muted),
+        |e| matches!(&e.payload, api::SyncPayload::RoomRead(_)),
+    )
+    .await;
+
     // Any level for any kind of room; an unknown one is a 422; not a member, a 404.
     let direct = format!("/api/v1/rooms/{DIRECT_DAVID_JASON}/involvement");
     let hidden: api::Membership = ok(&send(
@@ -540,4 +556,377 @@ async fn involvement_answers_the_membership_and_mutes_read() {
         StatusCode::NOT_FOUND
     );
     server.abort();
+}
+
+fn any_sidebar(event: &api::SyncEvent) -> bool {
+    matches!(
+        &event.payload,
+        api::SyncPayload::SidebarRowUpserted(_)
+            | api::SyncPayload::SidebarRowRemoved(_)
+            | api::SyncPayload::SidebarCategoryUpserted(_)
+            | api::SyncPayload::SidebarCategoryRemoved(_)
+    )
+}
+
+#[tokio::test]
+async fn another_persons_tab_hears_none_of_davids_organising() {
+    let Some(a) = app(true).await else { return };
+    clean_slate(&a).await;
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut davids = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    davids.welcome().await;
+    let mut kevins = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    kevins.welcome().await;
+
+    // Quiet Corner has both of them in it.
+    let reply = send(
+        &mut david,
+        Method::POST,
+        "/api/v1/room_categories",
+        json!({"name": "Mine"}),
+    )
+    .await;
+    let mine: api::RoomCategory = parse(&reply);
+    davids.until(category_upserted(mine.id), |_| false).await;
+    let path = format!("/api/v1/room_categories/{}", mine.id);
+    ok::<api::RoomCategory>(
+        &send(&mut david, Method::PATCH, &path, json!({"collapsed": true})).await,
+    );
+    davids
+        .until(
+            |e| matches!(&e.payload, api::SyncPayload::SidebarCategoryUpserted(c) if c.collapsed),
+            |_| false,
+        )
+        .await;
+    let favorite = format!("/api/v1/rooms/{QUIET_CORNER}/favorite");
+    ok::<api::SidebarRow>(&david.write(Req::new(Method::POST, &favorite)).await);
+    davids.until(row_of(QUIET_CORNER), |_| false).await;
+    let involvement = format!("/api/v1/rooms/{QUIET_CORNER}/involvement");
+    ok::<api::Membership>(
+        &send(
+            &mut david,
+            Method::PUT,
+            &involvement,
+            json!({"involvement": "muted"}),
+        )
+        .await,
+    );
+    davids.until(|e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == QUIET_CORNER && r.membership.involvement == api::Involvement::Muted), |_| false).await;
+    ok::<api::SidebarRow>(&david.write(Req::new(Method::DELETE, &favorite)).await);
+    davids.until(|e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == QUIET_CORNER && r.membership.favorite_position.is_none()), |_| false).await;
+    assert_eq!(
+        david.write(Req::new(Method::DELETE, &path)).await.status,
+        StatusCode::NO_CONTENT
+    );
+    davids
+        .until(
+            |e| matches!(&e.payload, api::SyncPayload::SidebarCategoryRemoved(_)),
+            |_| false,
+        )
+        .await;
+
+    // David's tabs have every event, so anything sent to Kevin went before his own next one.
+    let reply = send(
+        &mut kevin,
+        Method::POST,
+        "/api/v1/room_categories",
+        json!({"name": "Kevin's"}),
+    )
+    .await;
+    let kevins_own: api::RoomCategory = parse(&reply);
+    kevins
+        .until(category_upserted(kevins_own.id), |event| {
+            any_sidebar(event) && !category_upserted(kevins_own.id)(event)
+        })
+        .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn classic_organising_tells_the_spa_tabs() {
+    let Some(a) = app(true).await else { return };
+    clean_slate(&a).await;
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    let created = david
+        .write(
+            Req::new(Method::POST, "/room_categories").form(&[("room_category[name]", "Classic")]),
+        )
+        .await;
+    assert!(created.status.is_redirection(), "{}", created.status);
+    let category = a
+        .db()
+        .read(|conn| RoomCategory::ordered_for_user(conn, DAVID))
+        .await
+        .unwrap()
+        .pop()
+        .expect("the category");
+    sync.until(category_upserted(category.id), |_| false).await;
+
+    let favorited = david
+        .write(Req::new(
+            Method::POST,
+            &format!("/rooms/{ALL_TALK}/favorite.json"),
+        ))
+        .await;
+    assert_eq!(favorited.status, StatusCode::OK);
+    sync.until(
+        |e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.favorite_position.is_some()),
+        |_| false,
+    )
+    .await;
+    server.abort();
+}
+
+/// The classic frames for a run of classic organising, with or without the SPA and a sync
+/// socket open.
+async fn organizing_frames(spa: bool) -> Option<Vec<(String, String)>> {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    use campfire_kit::clock::FrozenClock;
+    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
+    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
+    clean_slate(&a).await;
+    // A classic tab, listening on David's rooms stream.
+    let (mut client, cable) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
+    let rooms = campfire_app::cable::user_gid(DAVID).to_param();
+    let signed = rails_compat::turbo::signed_stream_name(&a.booted.app.secrets, &[&rooms, "rooms"]);
+    client
+        .confirm(&crate::channels::tests::support::identifier(
+            json!({"channel": "Turbo::StreamsChannel", "signed_stream_name": signed}),
+        ))
+        .await;
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let (_sync, server) = if spa {
+        let (addr, server) = serve(&a).await;
+        let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+        sync.welcome().await;
+        (Some(sync), Some(server))
+    } else {
+        (None, None)
+    };
+    let capture = a.publications();
+    capture.take();
+
+    let created = david
+        .write(Req::new(Method::POST, "/room_categories").form(&[("room_category[name]", "Work")]))
+        .await;
+    assert!(created.status.is_redirection(), "{}", created.status);
+    let category = a
+        .db()
+        .read(|conn| RoomCategory::ordered_for_user(conn, DAVID))
+        .await
+        .unwrap()
+        .pop()
+        .expect("the category");
+    let steps = [
+        Req::new(Method::PATCH, &format!("/room_categories/{}", category.id))
+            .form(&[("room_category[collapsed]", "true")]),
+        Req::new(
+            Method::PATCH,
+            &format!("/rooms/{ALL_TALK}/category_assignment.json"),
+        )
+        .form(&[("room_category_id", &category.id.to_string())]),
+        Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/favorite.json")),
+        Req::new(
+            Method::POST,
+            &format!("/rooms/{QUIET_CORNER}/favorite.json"),
+        ),
+        Req::new(
+            Method::PATCH,
+            &format!("/rooms/{QUIET_CORNER}/favorite.json"),
+        )
+        .form(&[("position", "0")]),
+        Req::new(Method::DELETE, &format!("/rooms/{ALL_TALK}/favorite.json")),
+        Req::new(
+            Method::PUT,
+            &format!("/rooms/{QUIET_CORNER}/involvement.json"),
+        )
+        .form(&[("involvement", "invisible")]),
+        Req::new(
+            Method::PUT,
+            &format!("/rooms/{QUIET_CORNER}/involvement.json"),
+        )
+        .form(&[("involvement", "everything")]),
+        Req::new(Method::DELETE, &format!("/room_categories/{}", category.id)),
+    ];
+    for step in steps {
+        let reply = david.write(step).await;
+        assert!(
+            reply.status.is_success() || reply.status.is_redirection(),
+            "{}",
+            reply.text()
+        );
+    }
+
+    // Some frames go out after the response (the after-commit sink): wait for them to settle.
+    let mut frames = Vec::new();
+    let mut quiet = 0;
+    while quiet < 10 {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let more = capture.take();
+        quiet = if more.is_empty() { quiet + 1 } else { 0 };
+        frames.extend(more);
+    }
+    cable.abort();
+    if let Some(server) = server {
+        server.abort();
+    }
+    Some(frames)
+}
+
+#[tokio::test]
+async fn classic_organising_frames_are_the_same_with_the_sync_engine_on() {
+    let (Some(off), Some(on)) = (
+        organizing_frames(false).await,
+        organizing_frames(true).await,
+    ) else {
+        return;
+    };
+    // Favourites and categories send no classic frames; hiding and showing a room do, on the
+    // person's rooms stream.
+    let sent = |action: &str| {
+        off.iter()
+            .any(|(stream, frame)| stream.ends_with(":rooms") && frame.contains(action))
+    };
+    assert!(
+        sent(r#"action=\"remove\""#) && sent(r#"action=\"prepend\""#),
+        "{off:?}"
+    );
+    assert_eq!(off, on);
+}
+
+#[tokio::test]
+async fn a_favourite_in_a_deleted_room_isnt_counted() {
+    let Some(a) = app(true).await else { return };
+    clean_slate(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    for room in [ALL_TALK, DESIGNERS, ALL_PETS] {
+        let reply = david
+            .write(Req::new(
+                Method::POST,
+                &format!("/api/v1/rooms/{room}/favorite"),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    }
+    // Designers goes; its membership and favourite stay, as a soft delete leaves them.
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE rooms SET deleted_at = ? WHERE id = ?",
+                rusqlite::params![tx.now(), DESIGNERS],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    // The sidebar shows All Talk, Pets: All Talk at 1 goes after Pets.
+    let list: api::FavoriteList = ok(&send(
+        &mut david,
+        Method::PATCH,
+        &format!("/api/v1/rooms/{ALL_TALK}/favorite"),
+        json!({"position": 1}),
+    )
+    .await);
+    assert_eq!(
+        list.rows.iter().map(|row| row.room.id).collect::<Vec<_>>(),
+        [ALL_PETS, ALL_TALK]
+    );
+    assert_eq!(
+        favorite_positions(&a).await,
+        [
+            (DESIGNERS, Some(0)),
+            (ALL_PETS, Some(1)),
+            (ALL_TALK, Some(2))
+        ]
+    );
+}
+
+/// A PATCH whose request reads nothing stale: held after it's parsed, while another tab
+/// reorders and renames, then let go.
+async fn race_a_patch(
+    a: &TestApp,
+    patch: serde_json::Value,
+) -> (
+    api::RoomCategory,
+    Vec<RoomCategory>,
+    api::RoomCategory,
+    api::RoomCategory,
+) {
+    clean_slate(a).await;
+    let mut tab_a = a.sign_in(DAVID).await;
+    let mut tab_b = a.sign_in(DAVID).await;
+    tab_a.authenticity_token().await;
+    tab_b.authenticity_token().await;
+    let work: api::RoomCategory = parse(
+        &send(
+            &mut tab_a,
+            Method::POST,
+            "/api/v1/room_categories",
+            json!({"name": "Work"}),
+        )
+        .await,
+    );
+    let play: api::RoomCategory = parse(
+        &send(
+            &mut tab_a,
+            Method::POST,
+            "/api/v1/room_categories",
+            json!({"name": "Play"}),
+        )
+        .await,
+    );
+    let hold = campfire_api::test_hooks::hold_before_category_write(work.id);
+    let path = format!("/api/v1/room_categories/{}", work.id);
+    let (reply, ()) = tokio::join!(send(&mut tab_b, Method::PATCH, &path, patch), async {
+        hold.reached.wait().await;
+        let reordered = send(
+            &mut tab_a,
+            Method::PUT,
+            "/api/v1/room_categories/order",
+            json!({"categoryIds": [play.id, work.id]}),
+        )
+        .await;
+        assert_eq!(reordered.status, StatusCode::OK, "{}", reordered.text());
+        let renamed = send(&mut tab_a, Method::PATCH, &path, json!({"name": "Jobs"})).await;
+        assert_eq!(renamed.status, StatusCode::OK, "{}", renamed.text());
+        hold.release.wait().await;
+    });
+    let answered: api::RoomCategory = ok(&reply);
+    let stored = a
+        .db()
+        .read(|conn| RoomCategory::ordered_for_user(conn, DAVID))
+        .await
+        .unwrap();
+    (answered, stored, work, play)
+}
+
+#[tokio::test]
+async fn a_category_patch_racing_a_reorder_and_a_rename_keeps_both() {
+    let Some(a) = app(true).await else { return };
+    let (answered, stored, work, play) = race_a_patch(&a, json!({"collapsed": true})).await;
+    // The fold lands; the reorder and the rename made meanwhile stay.
+    assert_eq!(
+        (
+            answered.name.as_str(),
+            answered.position,
+            answered.collapsed
+        ),
+        ("Jobs", 2, true)
+    );
+    assert_eq!(
+        stored
+            .iter()
+            .map(|c| (c.id, c.position, c.name.as_str(), c.collapsed))
+            .collect::<Vec<_>>(),
+        [(play.id, 1, "Play", false), (work.id, 2, "Jobs", true)]
+    );
 }

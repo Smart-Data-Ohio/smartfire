@@ -357,7 +357,11 @@ impl Membership {
 
     /// Assign/unassign; channel-only eligibility and ownership scoping belong to WS8b's HTTP
     /// layer. Rails' model permits an assignment on any room type.
+    ///
+    /// Each organising write re-reads the row first, so a change another tab committed since
+    /// this copy was read isn't undone.
     pub fn update_category(&mut self, tx: &mut Tx<'_>, category_id: Option<i64>) -> Result<()> {
+        self.reload(tx.conn())?;
         self.validate_organization(tx.conn(), category_id)?;
         if self.room_category_id != category_id {
             tx.conn().execute_cached("UPDATE memberships SET room_category_id = ?, updated_at = ? WHERE id = ?", params![category_id, tx.now(), self.id])?;
@@ -384,12 +388,14 @@ impl Membership {
     }
 
     pub fn favorite(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.reload(tx.conn())?;
         if self.favorited() { return Ok(()); }
         let position = tx.conn().query_row_cached("SELECT COALESCE(MAX(favorite_position), -1) + 1 FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL", [self.user_id], |r| r.get::<_, i64>(0))?;
         self.set_favorite_position(tx, Some(position))
     }
 
     pub fn unfavorite(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.reload(tx.conn())?;
         self.set_favorite_position(tx, None)
     }
 
@@ -414,6 +420,7 @@ impl Membership {
     /// New: Rails inserts `position` among all favourites, hidden ones included, so a drop
     /// with a hidden favourite ahead of it lands a place off. A classic bug fix.
     pub fn move_favorite_to(&mut self, tx: &mut Tx<'_>, position: i64) -> Result<()> {
+        self.reload(tx.conn())?;
         if !self.favorited() { return Ok(()); }
         let favorites = Self::favorites_for_user(tx.conn(), self.user_id)?;
         let mut ids: Vec<_> = favorites
