@@ -33,6 +33,14 @@ export interface Ballot {
   readonly asOf: string;
 }
 
+/**
+ * An event answer on its way: shown over the fetched attendance at once, dropped when its reply
+ * lands or fails, unless a later answer has replaced it (compared by identity).
+ */
+export interface PendingAnswer {
+  readonly response: AttendanceResponse;
+}
+
 /** What each preview table holds. */
 export interface PreviewValues {
   readonly github: GithubPullRequestCard;
@@ -67,6 +75,8 @@ export interface CardsState {
   readonly pendingVotes: Readonly<Record<number, readonly number[]>>;
   /** The per-viewer results fetch per poll id (anonymous polls need it for the viewer's vote). */
   readonly pollLoads: Readonly<Record<number, LoadStatus>>;
+  /** Event answers on their way per event id (see `PendingAnswer`). */
+  readonly pendingAnswers: Readonly<Record<number, PendingAnswer>>;
   readonly previews: PreviewTables;
 }
 
@@ -74,6 +84,7 @@ export const emptyCards: CardsState = {
   ballots: {},
   pendingVotes: {},
   pollLoads: {},
+  pendingAnswers: {},
   previews: { github: {}, fizzy: {}, quotes: {}, attendance: {} },
 };
 
@@ -421,6 +432,52 @@ export function withResponse(
   const previous = COUNT_FIELD[attendance.response];
 
   return { ...next, [previous]: Math.max(0, attendance[previous] - 1) };
+}
+
+/** An answer on its way (`answer`), or none (`null`). */
+export function setPendingAnswer(
+  state: State,
+  eventId: number,
+  answer: PendingAnswer | null,
+): State {
+  const { [eventId]: _previous, ...others } = state.cards.pendingAnswers;
+
+  return withCards(state, {
+    ...state.cards,
+    pendingAnswers: answer === null ? others : { ...others, [eventId]: answer },
+  });
+}
+
+/**
+ * An answer's reply landed (`reply`, fetched at `now`) or it was refused (`null`): the reply
+ * becomes the attendance, and the pending answer is dropped only if it is still `answer` (a later
+ * one stays shown until its own reply).
+ */
+export function settleAnswer(
+  state: State,
+  eventId: number,
+  answer: PendingAnswer,
+  reply: EventAttendance | null,
+  now: number,
+): State {
+  const landed =
+    reply === null
+      ? state
+      : previewLoaded(state, "attendance", attendanceKey(eventId), eventId, reply, now);
+
+  return landed.cards.pendingAnswers[eventId] === answer
+    ? setPendingAnswer(landed, eventId, null)
+    : landed;
+}
+
+/** The attendance as shown: the fetched one with the answer on its way, if any, applied. */
+export function shownAttendance(
+  attendance: EventAttendance | null,
+  pending: PendingAnswer | undefined,
+): EventAttendance | null {
+  return attendance === null || pending === undefined
+    ? attendance
+    : withResponse(attendance, pending.response);
 }
 
 // --- reading polls ----------------------------------------------------------------------------

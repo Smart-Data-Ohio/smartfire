@@ -15,10 +15,10 @@ import {
   attendanceKey,
   fizzyKey,
   githubKey,
+  type PendingAnswer,
   type PreviewKind,
   type PreviewValues,
   quoteKey,
-  withResponse,
 } from "../store/cards.ts";
 import { mutations, store } from "../store/store.ts";
 import { keyedSerial } from "./serial.ts";
@@ -31,7 +31,7 @@ const FIRST_RETRY = Duration.seconds(2);
 /** Ballots go out one at a time per poll, so the server sees them in the order they were cast. */
 const votes = keyedSerial<number>();
 
-/** Answers go out one at a time per event, so each rolls back to a copy no other is holding. */
+/** Answers go out one at a time per event, so the server sees them in the order they were given. */
 const answers = keyedSerial<number>();
 
 /** Fetches the viewer's results for a poll (its choice in an anonymous poll comes only here). */
@@ -189,8 +189,11 @@ export const loadAttendance = Effect.fn("cards.loadAttendance")(function* (
 });
 
 /**
- * Answers an event (with `applyToFuture`, every later occurrence too). Shown at once; a refusal
- * puts the previous answer back, if nothing newer has replaced the guess since, and rejects.
+ * Answers an event (with `applyToFuture`, every later occurrence too). The answer shows at once,
+ * over the fetched attendance, even while an earlier answer to the same event is still on its
+ * way; the requests go out one at a time per event. A refusal (or an interrupt) drops the answer,
+ * unless a newer one has replaced it since, so the card falls back to the server's last reply,
+ * never to another guess; then it rejects.
  */
 export const respond = Effect.fn("cards.respond")(function* (
   roomId: number,
@@ -198,32 +201,15 @@ export const respond = Effect.fn("cards.respond")(function* (
   response: AttendanceResponse,
   applyToFuture: boolean,
 ) {
-  const key = attendanceKey(eventId);
+  const answer: PendingAnswer = { response };
 
-  yield* answers.run(
-    eventId,
-    Effect.gen(function* () {
-      const before = store.getState().cards.previews.attendance[key];
-      const shown = before?.value ?? null;
-      const guess = shown === null ? null : withResponse(shown, response);
+  cardMutations.setPendingAnswer(eventId, answer);
 
-      if (guess !== null) {
-        cardMutations.setAttendance(guess, yield* Clock.currentTimeMillis);
-      }
+  const reply = yield* answers
+    .run(eventId, api.respondToEvent(roomId, eventId, response, applyToFuture))
+    .pipe(
+      Effect.onError(() => Effect.sync(() => cardMutations.settleAnswer(eventId, answer, null, 0))),
+    );
 
-      const reply = yield* api.respondToEvent(roomId, eventId, response, applyToFuture).pipe(
-        Effect.onError(() =>
-          Effect.sync(() => {
-            const held = store.getState().cards.previews.attendance[key]?.value ?? null;
-
-            if (shown !== null && guess !== null && held === guess) {
-              cardMutations.setAttendance(shown, before?.fetchedAt ?? 0);
-            }
-          }),
-        ),
-      );
-
-      cardMutations.setAttendance(reply, yield* Clock.currentTimeMillis);
-    }),
-  );
+  cardMutations.settleAnswer(eventId, answer, reply, yield* Clock.currentTimeMillis);
 });

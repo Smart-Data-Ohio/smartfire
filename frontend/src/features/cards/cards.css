@@ -515,6 +515,11 @@
     color: inherit;
   }
 
+  /* The answer on its way: shown at once, a little dimmer until the server has it. */
+  .event-choice[data-pending] {
+    opacity: 0.72;
+  }
+
   /* ── GitHub ────────────────────────────────────────────────────────────── */
 
   .github-head {

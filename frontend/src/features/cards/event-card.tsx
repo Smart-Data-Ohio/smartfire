@@ -4,7 +4,8 @@ import type { AttendanceResponse } from "../../gen/AttendanceResponse.ts";
 import type { EventAttendance } from "../../gen/EventAttendance.ts";
 import type { EventCard as EventCardData } from "../../gen/EventCard.ts";
 import { AnimatedNumber } from "../../motion/animated-number.tsx";
-import { attendanceKey } from "../../store/cards.ts";
+import { attendanceKey, shownAttendance } from "../../store/cards.ts";
+import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
@@ -31,13 +32,19 @@ function respondError(error: Error): void {
   toast({ title: "Couldn't save your response", description: error.message, tone: "danger" });
 }
 
-/** Going / Maybe / Can't go with their counts, and "all future occurrences" for a series. */
+/**
+ * Going / Maybe / Can't go with their counts, and "all future occurrences" for a series. While an
+ * answer is on its way (`pending`) the group says it's busy and the chosen pill dims a little;
+ * the pills stay enabled (focus stays put), and another answer just queues behind it.
+ */
 function Attendance({
   event,
   attendance,
+  pending,
 }: {
   readonly event: EventCardData;
   readonly attendance: EventAttendance;
+  readonly pending: boolean;
 }) {
   const [future, setFuture] = useState(false);
 
@@ -49,7 +56,7 @@ function Attendance({
 
   return (
     <div className="event-attendance">
-      <fieldset className="event-choices">
+      <fieldset className="event-choices" aria-busy={pending || undefined}>
         <legend className="visually-hidden">Your response</legend>
         {CHOICES.map((choice) => (
           <Button
@@ -59,6 +66,7 @@ function Attendance({
             className="event-choice"
             data-response={choice.response}
             aria-pressed={attendance.response === choice.response}
+            data-pending={(pending && attendance.response === choice.response) || undefined}
             disabled={!attendance.respondable}
             onClick={() => respond(choice.response)}
           >
@@ -133,7 +141,9 @@ export function EventCard({ event }: { readonly event: EventCardData }) {
   );
 
   const preview = usePreview("attendance", attendanceKey(event.eventId), load);
-  const attendance = preview?.value ?? null;
+  const pending = useStore((state) => state.cards.pendingAnswers[event.eventId]);
+  const fetched = preview?.value ?? null;
+  const attendance = shownAttendance(fetched, pending);
 
   return (
     <section
@@ -186,7 +196,9 @@ export function EventCard({ event }: { readonly event: EventCardData }) {
               </div>
             }
           >
-            {attendance === null ? null : <Attendance event={event} attendance={attendance} />}
+            {attendance === null ? null : (
+              <Attendance event={event} attendance={attendance} pending={pending !== undefined} />
+            )}
           </SkeletonReveal>
         )}
       </div>

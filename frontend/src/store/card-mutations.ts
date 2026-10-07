@@ -34,18 +34,14 @@ export const cardMutations = {
   ) => apply((state) => cards.previewLoaded(state, kind, key, ref, value, now)),
   previewFailed: (kind: cards.PreviewKind, key: string, ref: number, error: string) =>
     apply((state) => cards.previewFailed(state, kind, key, ref, error)),
-  /** Shows an attendance before (or instead of) the server's reply. */
-  setAttendance: (attendance: EventAttendance, fetchedAt: number) =>
-    apply((state) => {
-      const key = cards.attendanceKey(attendance.eventId);
-
-      return cards.previewLoaded(
-        state,
-        "attendance",
-        key,
-        attendance.eventId,
-        attendance,
-        fetchedAt,
-      );
-    }),
+  /** Shows an answer over the fetched attendance until its reply. */
+  setPendingAnswer: (eventId: number, answer: cards.PendingAnswer) =>
+    apply((state) => cards.setPendingAnswer(state, eventId, answer)),
+  /** The answer was replied to (`reply`) or refused (`null`). */
+  settleAnswer: (
+    eventId: number,
+    answer: cards.PendingAnswer,
+    reply: EventAttendance | null,
+    now: number,
+  ) => apply((state) => cards.settleAnswer(state, eventId, answer, reply, now)),
 };

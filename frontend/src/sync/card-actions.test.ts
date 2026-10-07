@@ -5,7 +5,7 @@ import { Forbidden, Validation } from "../api/errors.ts";
 import { FakeApi, meFixture, messageFixture, pageFixture } from "../api/testing.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { Poll } from "../gen/Poll.ts";
-import { attendanceKey, githubKey } from "../store/cards.ts";
+import { attendanceKey, githubKey, shownAttendance } from "../store/cards.ts";
 import { mutations, store } from "../store/store.ts";
 import * as cards from "./card-actions.ts";
 
@@ -42,6 +42,16 @@ function seed(): void {
 }
 
 const pending = () => store.getState().cards.pendingVotes[40];
+
+/** Event 3's attendance as the card shows it: the fetched one with any answer on its way. */
+const shown = () => {
+  const { cards: slice } = store.getState();
+
+  return shownAttendance(
+    slice.previews.attendance[attendanceKey(3)]?.value ?? null,
+    slice.pendingAnswers[3],
+  );
+};
 
 describe("card actions", () => {
   afterEach(() => mutations.reset());
@@ -184,7 +194,7 @@ describe("card actions", () => {
       let seen: EventAttendance | null | undefined;
 
       yield* fake.route("PUT /rooms/12/events/3/attendance", () => {
-        seen = store.getState().cards.previews.attendance[attendanceKey(3)]?.value;
+        seen = shown();
 
         return Effect.fail(new Forbidden({ message: "Not allowed" }));
       });
@@ -193,9 +203,8 @@ describe("card actions", () => {
 
       expect(failure.message).toBe("Not allowed");
       expect(seen).toMatchObject({ response: "going", goingCount: 2 });
-      expect(store.getState().cards.previews.attendance[attendanceKey(3)]?.value).toEqual(
-        attendance,
-      );
+      expect(shown()).toEqual(attendance);
+      expect(store.getState().cards.pendingAnswers[3]).toBeUndefined();
 
       expect((yield* fake.requests).at(-1)?.body).toEqual({
         response: "going",
@@ -241,9 +250,76 @@ describe("card actions", () => {
       yield* Deferred.succeed(gate, undefined);
       yield* Fiber.await(both);
 
-      expect(store.getState().cards.previews.attendance[attendanceKey(3)]?.value).toEqual(
-        attendance,
+      expect(shown()).toEqual(attendance);
+      expect(store.getState().cards.pendingAnswers[3]).toBeUndefined();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("show a second answer at once while the first is still on its way", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const gate = yield* Deferred.make<void>();
+
+      const attendance: EventAttendance = {
+        eventId: 3,
+        response: null,
+        goingCount: 1,
+        maybeCount: 0,
+        declinedCount: 0,
+        respondable: true,
+        canApplyToFuture: false,
+      };
+
+      yield* fake.reply("GET /rooms/12/events/3/attendance", attendance);
+      yield* cards.loadAttendance(ROOM, 3);
+
+      let calls = 0;
+
+      yield* fake.route("PUT /rooms/12/events/3/attendance", () => {
+        calls += 1;
+
+        const response = calls === 1 ? "going" : "maybe";
+
+        const reply: EventAttendance = {
+          ...attendance,
+          response,
+          goingCount: response === "going" ? 2 : 1,
+          maybeCount: response === "maybe" ? 1 : 0,
+        };
+
+        return Deferred.await(gate).pipe(Effect.as(reply));
+      });
+
+      const going = yield* Effect.forkChild(cards.respond(ROOM, 3, "going", false));
+
+      yield* Effect.yieldNow;
+      expect(shown()).toMatchObject({ response: "going", goingCount: 2 });
+      expect(store.getState().cards.pendingAnswers[3]).toBeDefined();
+
+      const maybe = yield* Effect.forkChild(cards.respond(ROOM, 3, "maybe", false));
+
+      yield* Effect.yieldNow;
+
+      // The second answer shows while the first request still holds the event's turn.
+      expect(calls).toBe(1);
+      expect(shown()).toMatchObject({ response: "maybe", goingCount: 1, maybeCount: 1 });
+
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(going);
+      yield* Fiber.join(maybe);
+
+      const sent = (yield* fake.requests).flatMap((request) =>
+        request.method === "PUT" ? [request.body] : [],
       );
+
+      expect(sent).toEqual([
+        { response: "going", applyToFuture: false },
+        { response: "maybe", applyToFuture: false },
+      ]);
+      expect(shown()).toMatchObject({ response: "maybe", maybeCount: 1 });
+      expect(store.getState().cards.pendingAnswers[3]).toBeUndefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 });

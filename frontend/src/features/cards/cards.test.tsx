@@ -29,7 +29,7 @@ let network: MockNetwork;
 
 const ROOM = CARD_IDS.room;
 
-const { messages, polls } = CARD_IDS;
+const { events, messages, polls } = CARD_IDS;
 
 function headers() {
   return { "Content-Type": "application/json", "X-CSRF-Token": network.server.csrfToken() };
@@ -119,6 +119,26 @@ function refuse(matches: (method: string, path: string) => boolean, message: str
 
   return () => {
     server.handle = handle;
+  };
+}
+
+/** Makes the requests `matches` picks wait until the returned function lets them through. */
+function hold(matches: (method: string, path: string) => boolean): () => void {
+  const { server } = network;
+  const handle = server.handle;
+  const waiting: (() => void)[] = [];
+
+  server.handle = (request) =>
+    matches(request.method, request.path)
+      ? new Promise<void>((resolve) => waiting.push(resolve)).then(() => handle(request))
+      : handle(request);
+
+  return () => {
+    server.handle = handle;
+
+    for (const release of waiting) {
+      release();
+    }
   };
 }
 
@@ -367,6 +387,37 @@ describe("events", () => {
     expect(going.textContent).toContain("3");
     await user.click(within(event).getByRole("button", { name: /^Can't go/ }));
     await waitFor(() => expect(going.textContent).toContain("2"));
+  });
+
+  it("shows an answer at once and marks it pending until the server has it", async () => {
+    const user = userEvent.setup();
+
+    await renderCards(messages.eventRecurring);
+
+    const event = screen.getByRole("region", { name: "Event: Weekly product sync" });
+    const going = await within(event).findByRole("button", { name: /^Going/ });
+    const group = within(event).getByRole("group", { name: "Your response" });
+
+    const release = hold(
+      (method, path) => method === "PUT" && path.endsWith(`/events/${events.recurring}/attendance`),
+    );
+
+    await user.click(going);
+    expect(going.getAttribute("aria-pressed")).toBe("true");
+    expect(going.hasAttribute("data-pending")).toBe(true);
+    expect(group.getAttribute("aria-busy")).toBe("true");
+
+    // A second answer shows at once too, queued behind the first.
+    const maybe = within(event).getByRole("button", { name: /^Maybe/ });
+
+    await user.click(maybe);
+    expect(maybe.getAttribute("aria-pressed")).toBe("true");
+    expect(maybe.hasAttribute("data-pending")).toBe(true);
+
+    release();
+    await waitFor(() => expect(group.hasAttribute("aria-busy")).toBe(false));
+    expect(maybe.getAttribute("aria-pressed")).toBe("true");
+    expect(maybe.hasAttribute("data-pending")).toBe(false);
   });
 
   it("strikes a cancelled event through and takes no responses", async () => {
