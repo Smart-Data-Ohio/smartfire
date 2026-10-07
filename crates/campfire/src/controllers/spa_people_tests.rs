@@ -484,6 +484,119 @@ async fn private_ip_bans_keep_classic_validation_and_roll_back() {
     assert!(outcome.frames.is_empty());
 }
 
+#[tokio::test]
+async fn profile_fields_share_the_row_after_a_racing_ban_or_unban() {
+    use campfire_db::{NewUser, Status, UserChanges};
+
+    let Some(a) = app().await else { return };
+    // A new target keeps the barrier separate from parallel tests of seeded people.
+    let id = a
+        .db()
+        .write(|tx| {
+            Ok(User::create(
+                tx,
+                NewUser {
+                    name: "Profile race".into(),
+                    email_address: Some("profile-race@example.com".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    b.grant_sudo().await;
+    for (method, initially_banned, racing_ban) in [
+        (Method::GET, false, true),
+        (Method::GET, true, false),
+        (Method::POST, false, false),
+        (Method::DELETE, true, true),
+    ] {
+        a.db()
+            .write(move |tx| {
+                User::find(tx.conn(), id)?.update(
+                    tx,
+                    UserChanges {
+                        status: Some(if initially_banned {
+                            Status::Banned
+                        } else {
+                            Status::Active
+                        }),
+                        email_address: Some(Some("before-race@example.com".into())),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let path = if method == Method::GET {
+            format!("/api/v1/people/{id}")
+        } else {
+            format!("/api/v1/people/{id}/ban")
+        };
+        let hold = campfire_api::test_hooks::hold_before_profile_read(id);
+        let (reply, row) = tokio::join!(
+            async {
+                if method == Method::GET {
+                    b.send(get(&path)).await
+                } else {
+                    write(&mut b, method, &path, Value::Null).await
+                }
+            },
+            async {
+                hold.reached.wait().await;
+                let row = a
+                    .db()
+                    .write(move |tx| {
+                        let mut user = User::find(tx.conn(), id)?;
+                        if racing_ban {
+                            user.ban(tx)?;
+                        } else {
+                            user.unban(tx)?;
+                        }
+                        user.update(
+                            tx,
+                            UserChanges {
+                                email_address: Some(Some("after-race@example.com".into())),
+                                ..Default::default()
+                            },
+                        )?;
+                        Ok(user)
+                    })
+                    .await
+                    .unwrap();
+                hold.release.wait().await;
+                row
+            }
+        );
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let profile: api::PersonProfile = parse(&reply);
+        assert_eq!(profile.user.id, id);
+        assert_eq!(profile.user.updated_at, updated_at(&row));
+        assert_eq!(
+            profile.user.status,
+            if racing_ban {
+                api::UserStatus::Banned
+            } else {
+                api::UserStatus::Active
+            }
+        );
+        assert_eq!(profile.dnd_allowed, (!racing_ban).then_some(false));
+        assert_eq!(profile.transfer_url.is_some(), !racing_ban);
+        assert_eq!(
+            profile.transfer_qr_svg,
+            profile.transfer_url.as_deref().and_then(qr_code::transfer_svg)
+        );
+        assert_eq!(
+            profile.email_address.as_deref(),
+            Some("after-race@example.com")
+        );
+        assert!(profile.status.is_some());
+        assert!(profile.can_ban);
+    }
+}
+
 async fn check_profile(
     a: &TestApp,
     b: &mut Browser<'_>,

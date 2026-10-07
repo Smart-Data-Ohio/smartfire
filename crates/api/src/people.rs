@@ -74,41 +74,33 @@ async fn directory(c: &mut Ctx) -> Result {
 async fn profile(c: &mut Ctx) -> Result {
     let viewer = admin::viewer(c).await?;
     let user = find_user(c, "id").await?;
-    reply(c, &viewer, user).await
+    reply(c, &viewer, user.id).await
 }
 
-async fn reply(c: &mut Ctx, viewer: &User, user: User) -> Result {
+async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
     let now = c.app().db.env().now();
     let secrets = c.app().secrets.clone();
     let zone = presenters::view_context::time_zone(c).await?;
     let viewer_id = viewer.id;
     let administrator = viewer.can_administer(None, false);
-    // `users/show.html:21,45-49,51,58-65`: all these sections are inside the person branch.
-    let person = !user.is_bot() && !user.is_deactivated();
-    let active = person && user.is_active();
-    let other = user.id != viewer_id;
-    let email_address = (administrator && person)
-        .then(|| user.email_address.clone())
-        .flatten();
-    let transfer_url = (administrator && active).then(|| {
-        // `users/profiles/_transfer.html:1`, exactly as G2's `AccountSettings.transfer_url`.
-        let transfer = presenters::accounts::transfer_id(&c.app().secrets, user.id, c.now());
-        c.url_for(&campfire_routes::session_transfer(&transfer))
-    });
-    let transfer_qr_svg = transfer_url
-        .as_deref()
-        .map(|url| {
-            qr_code::transfer_svg(url).ok_or_else(|| {
-                Error::internal(std::io::Error::other(
-                    "the sign-in link doesn't fit a QR code",
-                ))
-            })
-        })
-        .transpose()?;
-    let (user, status) = c
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_profile_read(id).await;
+    let (mut profile, active) = c
         .app()
         .db
         .read(move |conn| {
+            // `db.read` only leases a connection. One deferred snapshot keeps the user,
+            // status and DTO from mixing fields when a ban or unban commits between queries.
+            let snapshot = conn.unchecked_transaction()?;
+            let conn = &snapshot;
+            let user = User::find(conn, id)?;
+            // `users/show.html:21,45-49,51,58-65`: all these sections are inside the person branch.
+            let person = !user.is_bot() && !user.is_deactivated();
+            let active = person && user.is_active();
+            let other = user.id != viewer_id;
+            let email_address = (administrator && person)
+                .then(|| user.email_address.clone())
+                .flatten();
             let status = if person {
                 Some(presenters::status_settings::profile_status_in_zone(
                     conn,
@@ -121,38 +113,55 @@ async fn reply(c: &mut Ctx, viewer: &User, user: User) -> Result {
             } else {
                 None
             };
+            let dnd_allowed = status
+                .as_ref()
+                .filter(|_| active && other)
+                .map(|s| s.dnd_allowed);
+            let status = status.map(|status| api::PersonStatus {
+                presence: match status.presence.as_str() {
+                    "online" => api::Presence::Online,
+                    "idle" => api::Presence::Idle,
+                    "dnd" => api::Presence::Dnd,
+                    _ => api::Presence::Offline,
+                },
+                status_text: status.status_text,
+            });
             let user = dto::users(conn, &secrets, [user.id], now)?
                 .pop()
                 .ok_or(campfire_db::Error::RecordNotFound("User"))?;
-            Ok((user, status))
+            Ok((
+                api::PersonProfile {
+                    user,
+                    status,
+                    dnd_allowed,
+                    email_address,
+                    transfer_url: None,
+                    transfer_qr_svg: None,
+                    can_ban: administrator && person && other,
+                },
+                active,
+            ))
         })
         .await
         .map_err(Error::internal)?;
-    let dnd_allowed = status
-        .as_ref()
-        .filter(|_| active && other)
-        .map(|s| s.dnd_allowed);
-    let status = status.map(|status| api::PersonStatus {
-        presence: match status.presence.as_str() {
-            "online" => api::Presence::Online,
-            "idle" => api::Presence::Idle,
-            "dnd" => api::Presence::Dnd,
-            _ => api::Presence::Offline,
-        },
-        status_text: status.status_text,
+    profile.transfer_url = (administrator && active).then(|| {
+        // `users/profiles/_transfer.html:1`, exactly as G2's `AccountSettings.transfer_url`.
+        let transfer =
+            presenters::accounts::transfer_id(&c.app().secrets, profile.user.id, c.now());
+        c.url_for(&campfire_routes::session_transfer(&transfer))
     });
-    c.json(
-        StatusCode::OK,
-        &api::PersonProfile {
-            user,
-            status,
-            dnd_allowed,
-            email_address,
-            transfer_url,
-            transfer_qr_svg,
-            can_ban: administrator && person && other,
-        },
-    )
+    profile.transfer_qr_svg = profile
+        .transfer_url
+        .as_deref()
+        .map(|url| {
+            qr_code::transfer_svg(url).ok_or_else(|| {
+                Error::internal(std::io::Error::other(
+                    "the sign-in link doesn't fit a QR code",
+                ))
+            })
+        })
+        .transpose()?;
+    c.json(StatusCode::OK, &profile)
 }
 
 async fn create_ban(c: &mut Ctx) -> Result {
@@ -170,11 +179,5 @@ async fn change_ban(c: &mut Ctx, banned: bool) -> Result {
     let id = user.id;
     // Classic has no server-side self, bot or deactivated guard; keep the same write path.
     bans::set_banned(c, user, banned).await?;
-    let user = c
-        .app()
-        .db
-        .read(move |conn| User::find(conn, id))
-        .await
-        .map_err(Error::internal)?;
-    reply(c, &viewer, user).await
+    reply(c, &viewer, id).await
 }
