@@ -49,7 +49,7 @@ class SpaConfigurationTest(unittest.TestCase):
         return code, stdout.getvalue(), stderr.getvalue()
 
     def host_run(self, payload, *, before_change=None, after_change=None, healthy=True, update_code=0,
-                 script="configure-spa.py"):
+                 script="configure-spa.py", settings_label=None, write_failure=None):
         settings = {"host": "chat.example.com", "image": self.image, "autoUpdate": False,
                     "env": copy.deepcopy(self.existing), "secretKeyBase": "PRIVATE-SIGNING-KEY",
                     "backup": {"path": "/backups", "schedule": "daily"}, "port": 443}
@@ -61,7 +61,8 @@ class SpaConfigurationTest(unittest.TestCase):
             before_change(settings, runtime, container)
 
         def serialize():
-            container["Config"]["Labels"]["once"] = json.dumps(settings)
+            label = settings_label(settings) if settings_label else settings
+            container["Config"]["Labels"]["once"] = json.dumps(label)
             container["Config"]["Env"] = [k + "=" + v for k, v in runtime.items()]
 
         serialize()
@@ -98,9 +99,17 @@ class SpaConfigurationTest(unittest.TestCase):
                 return SimpleNamespace(returncode=0, stdout=output, stderr="")
 
             stdout, stderr = io.StringIO(), io.StringIO()
+            real_write = once_configuration.protected_write
+
+            def fake_write(path, value):
+                if path.name == write_failure:
+                    raise OSError("PRIVATE-WRITE-ERROR")
+                real_write(path, value)
+
             with patch("sys.stdin", io.StringIO(json.dumps(payload))), patch("sys.stdout", stdout), patch("sys.stderr", stderr), \
                  patch("builtins.open", return_value=io.StringIO()), patch("fcntl.flock"), \
                  patch.object(once_configuration, "Path", return_value=temporary), \
+                 patch.object(once_configuration, "protected_write", side_effect=fake_write), \
                  patch("subprocess.run", side_effect=fake_run), \
                  patch("urllib.request.urlopen", return_value=nullcontext(SimpleNamespace(status=200 if healthy else 503))), \
                  patch("time.monotonic", side_effect=[0, 121]):
@@ -110,13 +119,14 @@ class SpaConfigurationTest(unittest.TestCase):
                 except SystemExit as error:
                     code = error.code
             files = {str(p.relative_to(temporary)): p.read_text() for p in temporary.glob("*/*")}
+            backups = [str(path) for path in temporary.iterdir()]
             for path in temporary.iterdir():
                 self.assertEqual(path.stat().st_mode & 0o777, 0o700)
                 for file in path.iterdir():
                     self.assertEqual(file.stat().st_mode & 0o777, 0o600)
         self.assertNotIn("PRIVATE-", stdout.getvalue() + stderr.getvalue())
         return SimpleNamespace(code=code, stdout=stdout.getvalue(), stderr=stderr.getvalue(), commands=commands,
-                               settings=settings, runtime=runtime, files=files)
+                               settings=settings, runtime=runtime, files=files, backups=backups)
 
     def test_every_mode_has_explicit_values_and_unchanged_has_no_overrides(self):
         for mode, expected in {
@@ -250,6 +260,80 @@ class SpaConfigurationTest(unittest.TestCase):
         })
         self.assertEqual(result.files, {})
         self.assertFalse(any(c[:2] == ["once", "update"] for c in result.commands))
+
+    def test_regression_rejects_malformed_persistent_environment_before_output_or_update(self):
+        for mode in ["plan", "apply"]:
+            for value in [["SECRET_KEY_BASE=PRIVATE-SIGNING-KEY"], [], None, "PRIVATE-SIGNING-KEY",
+                          {"KEY": None}, {"KEY": 1}, {"KEY": ["PRIVATE-SIGNING-KEY"]}]:
+                with self.subTest(mode=mode, shape=type(value).__name__):
+                    result = self.host_run(dict(self.payload(), mode=mode),
+                                           before_change=lambda s, r, c: s.update(env=value))
+                    self.assertEqual(result.code, 1)
+                    self.assertEqual(result.stdout, "")
+                    self.assertIn("Invalid ONCE environment", result.stderr)
+                    self.assertEqual(result.backups, [])
+                    self.assertFalse(any(c[:2] == ["once", "update"] for c in result.commands))
+        result = self.host_run({"mode": "plan", "host": "chat.example.com"}, script="configure-google.py",
+                               before_change=lambda s, r, c: s.update(env=["SECRET_KEY_BASE=PRIVATE-SIGNING-KEY"]))
+        self.assertEqual(result.code, 1)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Invalid ONCE environment", result.stderr)
+
+    def test_regression_rejects_non_object_settings_with_a_sanitized_message(self):
+        for mode in ["plan", "apply"]:
+            for value in [None, [], ["PRIVATE-SIGNING-KEY"], "PRIVATE-SIGNING-KEY", 1]:
+                with self.subTest(mode=mode, shape=type(value).__name__):
+                    result = self.host_run(dict(self.payload(), mode=mode), settings_label=lambda s: value)
+                    self.assertEqual(result.code, 1)
+                    self.assertEqual(result.stdout, "")
+                    self.assertIn("Invalid ONCE settings", result.stderr)
+                    self.assertEqual(result.backups, [])
+                    self.assertFalse(any(c[:2] == ["once", "update"] for c in result.commands))
+
+    def test_regression_every_post_backup_failure_reports_the_recovery_directory(self):
+        cases = [
+            {"update_code": 1}, {"healthy": False},
+            {"after_change": lambda s, r, c: r.pop("SECRET_KEY_BASE")},
+            {"after_change": lambda s, r, c: s["env"].pop("LIVEKIT_API_SECRET")},
+            {"after_change": lambda s, r, c: s.update(autoUpdate=True)},
+            {"after_change": lambda s, r, c: s.pop("backup")},
+            {"after_change": lambda s, r, c: c.update(Image="changed")},
+            {"after_change": lambda s, r, c: c["Mounts"][0].update(Source="/other")},
+            {"after_change": lambda s, r, c: c.update(Mounts=None)},
+            {"write_failure": "before-inspect.json"}, {"write_failure": "before-settings.json"},
+            {"write_failure": "update-output.log"}, {"write_failure": "after-settings.json"},
+        ]
+        for options in cases:
+            with self.subTest(options=list(options)):
+                result = self.host_run(self.payload(), **options)
+                self.assertEqual(result.code, 1)
+                self.assertEqual(result.stdout, "")
+                self.assertEqual(len(result.backups), 1)
+                self.assertTrue(result.stderr.rstrip().endswith("protected diagnostics: " + result.backups[0]))
+                self.assertEqual(result.stderr.count("protected diagnostics:"), 1)
+
+    def test_regression_detects_missing_null_setting_and_new_unexpected_setting(self):
+        for name, change in [("missing", lambda s, r, c: s.pop("optional")),
+                             ("added", lambda s, r, c: s.update(unexpected=None))]:
+            with self.subTest(change=name):
+                result = self.host_run(self.payload(), before_change=lambda s, r, c: s.update(optional=None),
+                                       after_change=change)
+                self.assertEqual(result.code, 1)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("ONCE setting", result.stderr)
+
+    def test_regression_detects_missing_and_added_environment_keys_even_with_empty_values(self):
+        self.existing["OPTIONAL"] = ""
+        for change, message in [
+            (lambda s, r, c: r.pop("OPTIONAL"), "Runtime environment verification failed"),
+            (lambda s, r, c: s["env"].pop("OPTIONAL"), "Persistent environment verification failed"),
+            (lambda s, r, c: r.update(UNEXPECTED=""), "Runtime environment verification failed"),
+            (lambda s, r, c: s["env"].update(UNEXPECTED=""), "Persistent environment verification failed"),
+        ]:
+            result = self.host_run(self.payload(), after_change=change)
+            self.assertEqual(result.code, 1)
+            self.assertEqual(result.stdout, "")
+            self.assertIn(message, result.stderr)
 
 
 if __name__ == "__main__":

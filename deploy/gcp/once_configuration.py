@@ -16,12 +16,20 @@ def run(args, *, data=None):
         raise RuntimeError("Command failed: " + args[0])
     return result.stdout
 
+def environment(values):
+    if not isinstance(values, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in values.items()):
+        raise RuntimeError("Invalid ONCE environment; expected a string-to-string map")
+    return values
+
 def current(host):
     ids = run(["docker", "ps", "-q", "--filter", "label=once"]).split()
     containers = json.loads(run(["docker", "inspect", *ids])) if ids else []
     found = []
     for container in containers:
         settings = json.loads(container["Config"]["Labels"].get("once", "{}"))
+        if not isinstance(settings, dict):
+            raise RuntimeError("Invalid ONCE settings; expected an object")
+        environment(settings.get("env", {}))
         if settings.get("host") == host:
             found.append((container, settings))
     if len(found) != 1:
@@ -41,6 +49,7 @@ def protected_write(path, value):
 
 def configure(allowed, validate, backup_prefix, *, configuration_name, include_plan_values=False):
     os.umask(0o077)
+    backup = None
     try:
         request = json.load(sys.stdin)
         host = request["host"]
@@ -53,7 +62,7 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
             if request["mode"] == "plan":
                 result = {"host": host, "image": settings["image"], "revision": before_env.get("GIT_REVISION"), "configured_environment_keys": sorted(settings.get("env", {})), "override_keys": sorted(allowed), "will_preserve_existing_settings": True}
                 if include_plan_values:
-                    changes = request["environment"]
+                    changes = environment(request["environment"])
                     if set(changes) != allowed:
                         raise RuntimeError("Unexpected or missing " + configuration_name)
                     validate(changes, host, settings)
@@ -69,14 +78,15 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
                 raise RuntimeError("Production image changed; refusing configuration update")
             if not re.fullmatch(r"[a-z0-9.-]+/[a-zA-Z0-9._/-]+@sha256:[0-9a-f]{64}", image):
                 raise RuntimeError("Current image must be the pinned production image")
-            changes = request["environment"]
+            changes = environment(request["environment"])
             if set(changes) != allowed:
                 raise RuntimeError("Unexpected or missing " + configuration_name)
             validate(changes, host, settings)
             merged = dict(settings.get("env", {}))
             merged.update(changes)
-            backup = Path("/var/backups") / time.strftime(backup_prefix + "-%Y%m%dT%H%M%SZ", time.gmtime())
-            backup.mkdir(mode=0o700)
+            backup_directory = Path("/var/backups") / time.strftime(backup_prefix + "-%Y%m%dT%H%M%SZ", time.gmtime())
+            backup_directory.mkdir(mode=0o700)
+            backup = backup_directory
             protected_write(backup / "before-inspect.json", json.dumps(before))
             protected_write(backup / "before-settings.json", json.dumps(settings))
             args = ["once", "update", host, "--image", image, "--auto-update=false"]
@@ -85,7 +95,7 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
             result = subprocess.run(args, capture_output=True, text=True)
             protected_write(backup / "update-output.log", result.stdout + result.stderr)
             if result.returncode:
-                raise RuntimeError("ONCE configuration update failed; protected diagnostics: " + str(backup))
+                raise RuntimeError("ONCE configuration update failed")
             deadline = time.monotonic() + 120
             while True:
                 try:
@@ -109,13 +119,18 @@ def configure(allowed, validate, backup_prefix, *, configuration_name, include_p
             if storage(after) != storage(before) or after["Image"] != before["Image"]:
                 raise RuntimeError("Image or storage changed unexpectedly")
             for key in settings:
-                if key not in {"env", "autoUpdate"} and after_settings.get(key) != settings[key]:
+                if key not in {"env", "autoUpdate"} and (key not in after_settings or after_settings[key] != settings[key]):
                     raise RuntimeError("An existing ONCE setting changed unexpectedly")
+            if after_settings.keys() - settings.keys() - {"env", "autoUpdate"}:
+                raise RuntimeError("An unexpected ONCE setting appeared")
             protected_write(backup / "after-settings.json", json.dumps(after_settings))
             print(json.dumps({"host": host, "revision": env(after)["GIT_REVISION"], "configured_keys": sorted(changes), "existing_environment_preserved": True, "existing_settings_preserved": True, "image_and_storage_preserved": True, "healthy": True, "protected_backup": str(backup)}))
     except Exception as error:
         if isinstance(error, RuntimeError):
-            print(str(error), file=sys.stderr)
+            message = str(error)
         else:
-            print("Configuration operation failed: " + type(error).__name__, file=sys.stderr)
+            message = "Configuration operation failed: " + type(error).__name__
+        if backup is not None:
+            message += "; protected diagnostics: " + str(backup)
+        print(message, file=sys.stderr)
         sys.exit(1)
