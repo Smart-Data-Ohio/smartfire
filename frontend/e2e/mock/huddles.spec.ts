@@ -162,7 +162,7 @@ test("a host's mute rejoins without the microphone and says why", async ({ page,
 test("an administrator mutes and removes someone from a voice call", async ({ page }) => {
   await open(page, LOUNGE);
   await join(page);
-  await page.getByRole("button", { name: /^Maya/ }).click();
+  await page.getByRole("button", { name: /^Maya Okafor(, speaking)?$/ }).click();
 
   const menu = page.getByRole("dialog", { name: "Maya Okafor in the call" });
 
@@ -172,7 +172,7 @@ test("an administrator mutes and removes someone from a voice call", async ({ pa
     page.locator(".voice-participant", { hasText: "Maya" }).locator(".voice-participant-muted"),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: /^Maya/ }).click();
+  await page.getByRole("button", { name: /^Maya Okafor(, speaking)?$/ }).click();
   await page
     .getByRole("dialog", { name: "Maya Okafor in the call" })
     .getByRole("button", { name: "Remove from call" })

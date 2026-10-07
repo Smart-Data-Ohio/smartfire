@@ -1,3 +1,4 @@
+import screens from "../../src/gen/screens.json" with { type: "json" };
 import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
 
 matrix("the user menu offers the way back to classic", async ({ page, theme }) => {
@@ -40,15 +41,26 @@ test("Switch to classic posts the choice and where the person is", async ({ page
   });
 });
 
+// Whichever destination is still unported (the trains flip rows as they land), without parameters.
+const unported = screens.find((screen) => !screen.ported && !screen.classic.includes(":"));
+
 test("a destination the SPA hasn't ported opens on its classic page", async ({ page }) => {
-  await page.route("**/searches?classic=1", (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic search</p>" }),
+  if (unported === undefined) {
+    test.skip(true, "every destination in the screen map is ported");
+
+    return;
+  }
+
+  const { classic, spa } = unported;
+
+  await page.route(`**${classic}?classic=1`, (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<p>the classic page</p>" }),
   );
 
-  await page.goto("/app/search");
+  await page.goto(spa);
 
-  await expect(page.getByText("classic search")).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe("/searches");
+  await expect(page.getByText("the classic page")).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(classic);
 });
 
 test("a link to a ported classic page opens in place", async ({ page }) => {

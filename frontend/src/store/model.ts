@@ -11,6 +11,8 @@ import type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
 
 export type { Me } from "../gen/Me.ts";
 
+export type { Membership } from "../gen/Membership.ts";
+
 export type { MessageDTO } from "../gen/MessageDTO.ts";
 
 export type { MessagePage } from "../gen/MessagePage.ts";

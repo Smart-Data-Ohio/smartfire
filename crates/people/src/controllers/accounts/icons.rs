@@ -122,7 +122,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         Err(error) => Err(Error::internal(error)),
     }
 }
-pub(super) async fn image_facts(
+pub async fn image_facts(
     c: &Ctx,
     assignment: &Assignment<campfire_storage::Staged>,
 ) -> Result<Option<ImageFacts>> {

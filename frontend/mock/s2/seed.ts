@@ -9,6 +9,7 @@ import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { Reaction } from "../../src/gen/Reaction.ts";
 import { type Mentionable, renderMarkdown } from "../markdown.ts";
 import { createRandom, type Random } from "../random.ts";
+import { seedCards } from "../s3/cards.ts";
 import {
   ROOM_IDS,
   type RoomRecord,
@@ -173,6 +174,7 @@ export function buildWorld(now: number, seed: number): World {
   const world = seedWorld(now, createRandom(seed));
 
   seedS2(world, now, createRandom(seed * 65_537 + 11));
+  seedCards(world, now);
 
   return world;
 }

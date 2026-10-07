@@ -169,12 +169,7 @@ pub async fn disconnect(c: &mut Ctx) -> Result {
     concerns::require_sudo_mode(c)?;
     let user = concerns::require_current_user(c)?.clone();
     let path = return_path(&user, &param(c, "return_to"));
-    let context = audit(c, &user)?;
-    if service(c)
-        .disconnect(user, context)
-        .await
-        .map_err(Error::internal)?
-    {
+    if disconnect_user(c, user).await? {
         redirect(c, &path, Some("Slack disconnected."), None)
     } else {
         redirect(
@@ -183,6 +178,24 @@ pub async fn disconnect(c: &mut Ctx) -> Result {
             None,
             Some("Finish or cancel your running Slack import first."),
         )
+    }
+}
+/// `disconnect` once the person is known and their password confirmed: drops their Slack
+/// connection, then the audit; `false` (nothing dropped) while their import runs.
+pub async fn disconnect_user(c: &Ctx, user: User) -> Result<bool> {
+    let context = audit(c, &user)?;
+    service(c)
+        .disconnect(user, context)
+        .await
+        .map_err(Error::internal)
+}
+/// Where the classic `Connect Slack` link starts the OAuth round trip, coming back to the
+/// administrator's setup page or the personal imports page.
+pub fn connect_path(admin: bool) -> &'static str {
+    if admin {
+        "/slack/oauth/start?return_to=%2Faccount%2Fslack_import"
+    } else {
+        "/slack/oauth/start?return_to=%2Fslack%2Fimports"
     }
 }
 pub mod runs;

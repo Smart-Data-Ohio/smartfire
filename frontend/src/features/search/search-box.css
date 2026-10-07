@@ -1,0 +1,319 @@
+/* The search field and its typeahead: the page's wide field and the room header's compact one. */
+@layer app {
+  .search-box {
+    position: relative;
+    min-width: 0;
+  }
+
+  .search-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--control-lg);
+    padding: 0 var(--space-1) 0 var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text);
+    transition:
+      box-shadow var(--duration-small) var(--ease-enter),
+      background-color var(--duration-small) var(--ease-enter),
+      width var(--duration-medium) var(--ease-move);
+  }
+
+  .search-field:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .search-field:focus-within {
+    background: var(--bg-pane);
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px var(--accent-soft);
+  }
+
+  .search-field-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .search-field:focus-within .search-field-icon {
+    color: var(--text-muted);
+  }
+
+  .search-input {
+    flex: 1;
+    align-self: stretch;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-ui);
+    outline: none;
+    appearance: none;
+  }
+
+  .search-input::-webkit-search-cancel-button,
+  .search-input::-webkit-search-decoration {
+    appearance: none;
+  }
+
+  /* The mirror and placeholder sit exactly over the input's text (the recipe's layers). */
+  .search-field-text {
+    left: calc(var(--space-3) + 18px + var(--space-2));
+    right: var(--space-8);
+    color: var(--text-faint);
+    font-size: var(--text-ui);
+  }
+
+  .search-field .t-clear-mirror {
+    color: var(--text);
+  }
+
+  .search-clear {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  /* ── The page's field ─────────────────────────────────────────────────── */
+
+  .search-box[data-variant="page"] {
+    flex: 1;
+    max-width: 760px;
+  }
+
+  .search-box[data-variant="page"] .search-input,
+  .search-box[data-variant="page"] .search-field-text {
+    font-size: var(--text-body);
+  }
+
+  /* ── The header's field: compact, wider while in use ───────────────────── */
+
+  .search-box[data-variant="header"] .search-field {
+    width: 200px;
+    height: var(--control-sm);
+    padding-left: var(--space-2);
+    gap: var(--space-1-5);
+    border-radius: var(--radius-sm);
+  }
+
+  .search-box[data-variant="header"] .search-field:focus-within {
+    width: 300px;
+  }
+
+  .search-box[data-variant="header"] .search-input,
+  .search-box[data-variant="header"] .search-field-text {
+    font-size: var(--text-sidebar);
+  }
+
+  .search-box[data-variant="header"] .search-field-text {
+    left: calc(var(--space-2) + 15px + var(--space-1-5));
+  }
+
+  .search-box[data-variant="header"] .search-clear {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* ── The suggestions ──────────────────────────────────────────────────── */
+
+  .search-dropdown {
+    position: absolute;
+    top: calc(100% + var(--space-1-5));
+    left: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 320px;
+    max-height: min(440px, 60vh);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .search-box[data-variant="header"] .search-dropdown {
+    right: 0;
+    left: auto;
+    width: 400px;
+  }
+
+  .search-dropdown-list {
+    flex: 1;
+    min-height: 0;
+    padding: var(--space-1-5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: var(--space-6) var(--space-1);
+  }
+
+  .search-dropdown-group + .search-dropdown-group {
+    margin-top: var(--space-1);
+  }
+
+  .search-dropdown-title {
+    padding: var(--space-2) var(--space-2) var(--space-1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+  }
+
+  .search-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 34px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .search-option[aria-selected="true"] {
+    background: var(--bg-selected);
+    color: var(--text);
+    transition-duration: 0ms;
+  }
+
+  .search-option-glyph {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    color: var(--text-faint);
+  }
+
+  .search-option[aria-selected="true"] .search-option-glyph {
+    color: var(--text-muted);
+  }
+
+  .search-option-label {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-option-label strong {
+    font-weight: var(--weight-semibold);
+  }
+
+  .search-option-faint {
+    color: var(--text-muted);
+  }
+
+  .search-option-detail {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: var(--text-sidebar);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .search-option[data-kind="values"] .search-option-detail,
+  .search-option[data-kind="operators"] .search-option-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-sidebar);
+  }
+
+  .search-option[data-kind="operators"] .search-option-detail {
+    font-family: inherit;
+  }
+
+  .search-option-enter {
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .search-option[aria-selected="true"] .search-option-enter {
+    opacity: 1;
+  }
+
+  .search-option-enter .kbd-key {
+    min-width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .search-dropdown-footer {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 34px;
+    padding: 0 var(--space-3);
+    box-shadow: 0 -1px 0 var(--border);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .search-dropdown-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    white-space: nowrap;
+  }
+
+  .search-dropdown-keys .kbd-key {
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .search-dropdown-clear {
+    margin-left: auto;
+    font-size: var(--text-meta);
+  }
+
+  /* ── The room header's slot ───────────────────────────────────────────── */
+
+  .header-search {
+    margin-left: var(--space-1);
+  }
+
+  /* The header is its own stacking layer below the timeline's floating pills; lift it while the
+     suggestions hang over the timeline. */
+  .room-header:has(.search-dropdown) {
+    z-index: 10;
+  }
+
+  @media (width < 720px), (hover: none) {
+    .search-dropdown-keys {
+      display: none;
+    }
+
+    .search-dropdown-footer:not(:has(.search-dropdown-clear)) {
+      display: none;
+    }
+  }
+
+  @media (width < 720px) {
+    .header-search {
+      display: none;
+    }
+  }
+
+  @media (width < 1000px) {
+    .search-box[data-variant="header"] .search-field {
+      width: 150px;
+    }
+
+    .search-box[data-variant="header"] .search-field:focus-within {
+      width: 240px;
+    }
+  }
+}

@@ -5,6 +5,7 @@ import {
   type SyntheticEvent,
   useId,
   useLayoutEffect,
+  useRef,
 } from "react";
 import { usePresence } from "../motion/presence.ts";
 import { IconButton } from "./icon-button.tsx";
@@ -20,6 +21,8 @@ interface DialogProps {
   readonly size?: "sm" | "md";
   readonly footer?: ReactNode;
   readonly children?: ReactNode;
+  /** Where focus goes on close when whatever opened the dialog has gone (a deleted item's menu). */
+  readonly returnFocus?: () => HTMLElement | null;
 }
 
 const FOCUSABLE = [
@@ -65,11 +68,17 @@ export function Dialog({
   size = "md",
   footer,
   children,
+  returnFocus,
 }: DialogProps) {
   const id = useId();
+  const returnFocusRef = useRef(returnFocus);
   const presence = usePresence<HTMLDialogElement>(open);
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
+
+  useLayoutEffect(() => {
+    returnFocusRef.current = returnFocus;
+  });
 
   useLayoutEffect(() => {
     const dialog = presence.ref.current;
@@ -95,6 +104,8 @@ export function Dialog({
 
       if (opener instanceof HTMLElement && opener.isConnected) {
         opener.focus({ preventScroll: true });
+      } else {
+        returnFocusRef.current?.()?.focus({ preventScroll: true });
       }
     };
   }, [presence.mounted, presence.ref]);

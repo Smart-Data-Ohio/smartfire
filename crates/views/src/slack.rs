@@ -251,7 +251,8 @@ fn humanize(s: &str) -> String {
         .map(|c| format!("{}{}", c.to_uppercase(), chars.as_str()))
         .unwrap_or_default()
 }
-fn conversation_type(c: &serde_json::Value) -> String {
+/// A conversation's kind as the plan tables name it.
+pub fn conversation_type(c: &serde_json::Value) -> String {
     match c["type"].as_str().unwrap_or("") {
         "public_channel" => "Public channel".into(),
         "private_channel" => "Private channel".into(),
@@ -275,10 +276,11 @@ fn checkbox(c: &serde_json::Value) -> h::Html {
             .attr("checked", true),
     )
 }
-fn target_select(c: &serde_json::Value, rooms: &[RoomTarget]) -> h::Html {
-    let id = text(&c["id"]);
+/// A planned conversation's target as the plan's select picks it: `"skip"`, a room to merge
+/// into (its id, while the room is still there), or `"new"`.
+pub fn target_value(c: &serde_json::Value, rooms: &[RoomTarget]) -> String {
     let target = &c["target"];
-    let selected = if target["action"] == "skip" {
+    if target["action"] == "skip" {
         "skip".into()
     } else if target["action"] == "merge"
         && rooms
@@ -288,7 +290,11 @@ fn target_select(c: &serde_json::Value, rooms: &[RoomTarget]) -> h::Html {
         text(&target["room_id"])
     } else {
         "new".into()
-    };
+    }
+}
+fn target_select(c: &serde_json::Value, rooms: &[RoomTarget]) -> h::Html {
+    let id = text(&c["id"]);
+    let selected = target_value(c, rooms);
     let opts = std::iter::once(("New room".to_owned(), "new".to_owned()))
         .chain(rooms.iter().map(|r| (r.name.clone(), r.id.to_string())))
         .chain(std::iter::once(("Skip".into(), "skip".into())))

@@ -1,8 +1,6 @@
+import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
-
-/** The classic profile and settings page (not ported yet, so it opens with a full page load). */
-const PROFILE_PATH = "/users/me/profile";
 
 /**
  * Leaves the new UI: `POST /app/ui_preference` with `ui=classic`, as the classic profile's form
@@ -45,10 +43,12 @@ export function switchToClassic(
 
 /**
  * The signed-in person's menu, opened from their panel at the foot of the sidebar (`children` is
- * the trigger's content): their profile and settings (on the classic pages until S7 ports them),
- * and the way back to the classic UI.
+ * the trigger's content): their profile and settings, the workspace (its people, and for
+ * administrators the rest of the classic account pages), and the way back to the classic UI.
  */
 export function UserMenu({ children }: { readonly children: ReactNode }) {
+  const navigate = useNavigate();
+
   return (
     <Menu
       label="Your account"
@@ -59,8 +59,11 @@ export function UserMenu({ children }: { readonly children: ReactNode }) {
         </button>
       )}
     >
-      <MenuItem icon="settings" onSelect={() => window.location.assign(PROFILE_PATH)}>
+      <MenuItem icon="settings" onSelect={() => void navigate({ to: "/settings" })}>
         Profile and settings
+      </MenuItem>
+      <MenuItem icon="home" onSelect={() => void navigate({ to: "/admin" })}>
+        Workspace and people
       </MenuItem>
       <MenuSeparator />
       <MenuItem icon="rotate-ccw" onSelect={() => switchToClassic()}>

@@ -155,7 +155,8 @@ pub enum SyncPayload {
     #[serde(rename = "thread.created")]
     ThreadCreated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was renamed, closed, reopened, locked or
-    /// unlocked, or its reply count or last activity moved. New, as `thread.created`.
+    /// unlocked, or its reply count or last activity moved, or its work changed (status, owner,
+    /// result, run URL, links, a handoff; see [`crate::WorkFacts`]). New, as `thread.created`.
     #[serde(rename = "thread.updated")]
     ThreadUpdated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was deleted. Connections following

@@ -1,7 +1,7 @@
 import { type ReactElement, useState } from "react";
 
 interface Announcer {
-  /** Says `text` politely; the same text twice is said twice. */
+  /** Says `text` (politely unless asked otherwise); the same text twice is said twice. */
   readonly announce: (text: string) => void;
   /** The page's one visually hidden live region: render it once, anywhere on the page. */
   readonly region: ReactElement;
@@ -10,9 +10,10 @@ interface Announcer {
 /**
  * A polite live region for what a key or menu just did to a row ("Marked handled", "Removed"),
  * since the row itself goes and focus moves on to its neighbour. Each message is a fresh node, so
- * a repeat is announced again.
+ * a repeat is announced again. `assertive` interrupts instead, for step-by-step feedback such as
+ * a keyboard drag's moves.
  */
-export function useAnnouncer(): Announcer {
+export function useAnnouncer(politeness: "polite" | "assertive" = "polite"): Announcer {
   const [said, setSaid] = useState<{ readonly text: string; readonly count: number }>({
     text: "",
     count: 0,
@@ -21,7 +22,12 @@ export function useAnnouncer(): Announcer {
   const announce = (text: string) => setSaid((last) => ({ text, count: last.count + 1 }));
 
   const region = (
-    <div className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+    <div
+      className="visually-hidden"
+      role={politeness === "polite" ? "status" : undefined}
+      aria-live={politeness}
+      aria-atomic="true"
+    >
       {said.text === "" ? null : <span key={said.count}>{said.text}</span>}
     </div>
   );
