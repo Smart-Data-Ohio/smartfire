@@ -192,6 +192,10 @@
       grid-row: 1 / -1;
     }
 
+    .app-shell[data-view="tab"] .app-main {
+      grid-row: 1;
+    }
+
     .rail {
       grid-row: 2;
       flex-direction: row;
@@ -203,6 +207,7 @@
     }
 
     .app-shell[data-view="list"] .app-main,
+    .app-shell[data-view="tab"] .sidebar,
     .app-shell[data-view="room"] .sidebar,
     .app-shell[data-view="room"] .rail {
       display: none;

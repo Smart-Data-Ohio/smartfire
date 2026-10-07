@@ -1,5 +1,9 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
+import type { ActivityState } from "../gen/ActivityState.ts";
+import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
@@ -7,10 +11,17 @@ import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { PinList } from "../gen/PinList.ts";
+import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
+import type { SavedStatus } from "../gen/SavedStatus.ts";
+import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
+import type { ActivityAction } from "../store/activity.ts";
+import type { ScheduledListKey } from "../store/scheduled.ts";
+import * as activityActions from "./activity-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -18,7 +29,9 @@ import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { asAction } from "./run.ts";
+import { ActionError, asAction } from "./run.ts";
+import * as savedActions from "./saved-actions.ts";
+import * as scheduledActions from "./scheduled-actions.ts";
 import * as session from "./session.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -131,10 +144,74 @@ const threads = {
   prefetchMemberships: (roomId: number): Promise<void> => runAction(prefetchMemberships(roomId)),
 };
 
+/**
+ * The activity inbox (S3). Loads land in the store (a failure as the list's `error`) and never
+ * reject; state changes show at once and reject (rolled back) on failure.
+ */
+const activity = {
+  /** Loads (or reloads) a tab's first page in one state. */
+  load: (tab: ActivityTab, status: ActivityState): Promise<void> =>
+    runAction(activityActions.load(tab, status)),
+  /** Loads the tab's next page in that state, if any. */
+  loadMore: (tab: ActivityTab, status: ActivityState): Promise<void> =>
+    runAction(activityActions.loadMore(tab, status)),
+  /** Refreshes the badge; answers the count. */
+  loadUnreadCount: (): Promise<number> => runAction(activityActions.loadUnreadCount()),
+  /** Read, unread, handled, or unhandled ("Clear handled"). */
+  setState: (activityItemId: number, action: ActivityAction): Promise<ActivityItem> =>
+    runAction(activityActions.setState(activityItemId, action)),
+  /** Marks it read and answers it; then go to `activityDestination(item)`. */
+  open: (activityItemId: number): Promise<ActivityItem> =>
+    runAction(activityActions.open(activityItemId)),
+};
+
+/** The Saved page (S3). Loads never reject; writes show at once and reject on failure. */
+const saved = {
+  load: (filter: SavedFilter): Promise<void> => runAction(savedActions.load(filter)),
+  loadMore: (filter: SavedFilter): Promise<void> => runAction(savedActions.loadMore(filter)),
+  /** Mark done (`done`) or reopen (`in_progress`). */
+  setStatus: (savedItemId: number, status: SavedStatus): Promise<SavedItem> =>
+    runAction(savedActions.setStatus(savedItemId, status)),
+  /** Unsave. */
+  remove: (savedItemId: number): Promise<void> => runAction(savedActions.remove(savedItemId)),
+  /** Undoes a removal: saves the message again with its status and (still due) reminder. */
+  restore: (removed: SavedItem): Promise<SavedItem> => runAction(savedActions.restore(removed)),
+  /** Sets (RFC 3339, future) or clears (`null`) the reminder; saves the message if it wasn't. */
+  setReminder: (messageId: number, remindAt: string | null): Promise<SavedItem> =>
+    runAction(savedActions.setReminder(messageId, remindAt)),
+};
+
+/** Scheduled messages (S3, and the composer's). Loads never reject; writes reject on failure. */
+const scheduled = {
+  /** Loads (or reloads) `pending`, `past` or `room:<id>` (see `roomScheduledKey`). */
+  load: (key: ScheduledListKey): Promise<void> => runAction(scheduledActions.load(key)),
+  loadMore: (key: ScheduledListKey): Promise<void> => runAction(scheduledActions.loadMore(key)),
+  create: (roomId: number, body: CreateScheduledMessage): Promise<ScheduledMessage> =>
+    runAction(scheduledActions.create(roomId, body)),
+  /** New text and/or time. */
+  update: (id: number, body: UpdateScheduledMessage): Promise<ScheduledMessage> =>
+    runAction(scheduledActions.update(id, body)),
+  /**
+   * `"sent"`, or `"held"` (202: it stays scheduled). Rejects when it was dropped instead, with an
+   * error `isScheduledDropped` recognises (its message is the reason).
+   */
+  sendNow: (id: number): Promise<"sent" | "held"> => runAction(scheduledActions.sendNow(id)),
+  /** Cancels it at once; it comes back if refused (409 while sending). */
+  cancel: (id: number): Promise<void> => runAction(scheduledActions.cancel(id)),
+};
+
+/** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
+export function isScheduledDropped(error: Error): boolean {
+  return error instanceof ActionError && error.tag === "ScheduledDropped";
+}
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
   threads,
+  activity,
+  saved,
+  scheduled,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

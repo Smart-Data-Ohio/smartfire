@@ -52,8 +52,19 @@ export interface Messages {
   save(messageId: number, remindAt: string | null): SavedItem;
 }
 
-/** Creates the messages module. */
-export function createMessages(ctx: S2Context, threads: Threads): Messages {
+/** Tells another module about a saved item that changed: saved, re-saved, unsaved or deleted. */
+export type SavedHook = (
+  messageId: number,
+  before: SavedItem | null,
+  after: SavedItem | null,
+) => void;
+
+/** Creates the messages module. `savedChanged` hears about every saved item change. */
+export function createMessages(
+  ctx: S2Context,
+  threads: Threads,
+  savedChanged: SavedHook = () => undefined,
+): Messages {
   const messageOr404 = (messageId: number): MessageLocation => {
     const location = locate(ctx.world(), messageId);
 
@@ -159,7 +170,10 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
       });
     }
 
+    const savedBefore = world.saved.get(message.id) ?? null;
+
     if (world.saved.delete(message.id)) {
+      savedChanged(message.id, savedBefore, null);
       events.push({
         topic: "user",
         type: "saved.changed",
@@ -393,6 +407,7 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
 
     world.saved.set(messageId, item);
     ctx.publish([{ topic: "user", type: "saved.changed", data: { messageId, item } }]);
+    savedChanged(messageId, current ?? null, item);
 
     return item;
   };
@@ -404,6 +419,7 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
       if (item.id !== savedItemId) continue;
 
       world.saved.delete(item.messageId);
+      savedChanged(item.messageId, item, null);
       ctx.publish([
         {
           topic: "user",

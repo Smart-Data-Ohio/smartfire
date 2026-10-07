@@ -11,6 +11,7 @@ import {
   roomDetailFixture,
   sidebarFixture,
   sidebarRowFixture,
+  userFixture,
 } from "../api/testing.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
@@ -385,6 +386,7 @@ describe("resync", () => {
 
         expect((yield* api.requests).slice(before)).toEqual([
           { method: "GET", path: "/sidebar" },
+          { method: "GET", path: "/activity/unread_count" },
           { method: "GET", path: "/rooms/12/messages" },
         ]);
         expect(timelineIds(12)).toEqual([1, 2, 3]);
@@ -974,6 +976,60 @@ describe("typing", () => {
         yield* TestClock.adjust(3000);
 
         expect(store.getState().typing["room:12"]?.[9]).toBeUndefined();
+      }),
+    ),
+  );
+});
+
+describe("people", () => {
+  it.effect("fetches a live activity item's unknown creator, so its row can name them", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(0, false);
+        yield* api.reply("GET /users", { users: [userFixture(8, "Lucía Fernández")] });
+
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "activity.item",
+          data: {
+            unreadCount: 1,
+            item: {
+              id: 40,
+              eventType: "mention",
+              state: "unread",
+              readAt: null,
+              handledAt: null,
+              createdAt: "2026-10-06T09:00:00Z",
+              updatedAt: "2026-10-06T09:00:00Z",
+              source: {
+                sourceType: "message",
+                sourceId: 900,
+                roomId: 12,
+                threadId: null,
+                messageId: 900,
+                eventId: null,
+                creatorId: 8,
+                title: "general",
+                body: "@you have a look?",
+                occurredAt: "2026-10-06T09:00:00Z",
+                approvalStatus: null,
+                budgetCap: null,
+                path: "/rooms/12/@900",
+              },
+            },
+          },
+        });
+
+        const lookups = (yield* api.requests).filter((request) => request.path === "/users");
+
+        expect(lookups.at(-1)?.query).toEqual({ ids: "8" });
+        expect(store.getState().activity.items[40]?.source.creatorId).toBe(8);
+        expect(store.getState().users[8]?.name).toBe("Lucía Fernández");
       }),
     ),
   );

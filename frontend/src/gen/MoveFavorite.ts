@@ -2,9 +2,12 @@
 
 /**
  * `PATCH /api/v1/rooms/:id/favorite`: move a favourite to `position`, 0-based among the
- * viewer's favourites (`rooms/favorites#update`, `Membership#move_favorite_to`). The position
- * is clamped to the list, and every favourite is renumbered 0, 1, … Answers
- * [`FavoriteList`] and publishes `sidebar.row.upserted` for each favourite whose position
+ * favourites the viewer's sidebar shows (`rooms/favorites#update`,
+ * `Membership#move_favorite_to`). Hidden favourites aren't counted: the room lands just before
+ * the shown favourite now at `position` (after every favourite when `position` is past the
+ * end), and hidden ones keep their places. The position is clamped, never rejected, and every
+ * favourite, hidden ones included, is renumbered 0, 1, … Answers [`FavoriteList`] (the shown
+ * favourites) and publishes `sidebar.row.upserted` for each shown favourite whose position
  * changed. A room that isn't a favourite is left alone (200 with the list unchanged).
  *
  * `POST /api/v1/rooms/:id/favorite` adds a room of any kind to the end of the favourites
