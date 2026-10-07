@@ -380,6 +380,42 @@ test.describe("room settings", () => {
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
   });
 
+  test("a save that lands after Back left the settings doesn't step back again", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await rowFor(page, "general").click();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await rowFor(page, "quiet").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Channel settings" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    let release: () => void = () => undefined;
+
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await page.route("**/api/v1/rooms/*", async (route) => {
+      if (route.request().method() !== "PATCH") {
+        return route.continue();
+      }
+
+      await held;
+
+      return route.continue();
+    });
+    await dialog.getByLabel("Name", { exact: true }).fill("quiet-renamed");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+
+    release();
+    await expect(page.getByText("Changes saved")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+  });
+
   test("settings opened as the first page close onto the room in place", async ({ page }) => {
     await openApp(page, `r/${ROOM_IDS.design}`);
     await page.goto(`/app/r/${ROOM_IDS.quiet}/settings`);

@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { RoomForm } from "../../gen/RoomForm.ts";
 import { useStore } from "../../store/store.ts";
@@ -88,6 +88,7 @@ export default function RoomSettingsDialog({
   onOpenChange,
 }: RoomSettingsDialogProps) {
   const navigate = useNavigate();
+  const router = useRouter();
   const formId = useId();
   const tabsId = useId();
   const panelId = useId();
@@ -111,12 +112,24 @@ export default function RoomSettingsDialog({
     opening.current = open
       ? { id: opening.current.id + 1, open: true }
       : { ...opening.current, open: false };
+
+    // Unmounting (say Back left the settings URL) ends the opening too.
+    return () => {
+      opening.current = { ...opening.current, open: false };
+    };
   }, [open]);
 
   const close = () => {
     opening.current = { ...opening.current, open: false };
     onOpenChange(false);
   };
+
+  /**
+   * Whether the viewer is still on this room (its settings or its conversation) when a delete or
+   * a self-removal completes: the room vanishing can unmount the dialog first, but staying on a
+   * room they no longer have is never right. Somewhere else (say Back left it), they stay put.
+   */
+  const stillOnRoom = () => new RegExp(`/r/${roomId}(/|$)`).test(router.state.location.pathname);
 
   /** A check, for a write's completion, that the opening it started in is still the one showing. */
   const stillShowing = () => {
@@ -261,7 +274,7 @@ export default function RoomSettingsDialog({
         // closes the dialog; replacing it keeps Back from stepping into the room they left.
         toast({ title: `You left ${roomLabel(result.room.kind, result.room.name ?? "the room")}` });
 
-        if (showing()) void navigate({ to: "/", replace: true });
+        if (showing() || stillOnRoom()) void navigate({ to: "/", replace: true });
       } else {
         if (showing()) close();
 
@@ -284,7 +297,7 @@ export default function RoomSettingsDialog({
         toast({ title: `Deleted ${roomLabel(kind, form.name ?? form.displayName)}` });
 
         // Leaving the settings URL closes the dialog (stepping back would land on the deleted room).
-        if (showing()) void navigate({ to: "/", replace: true });
+        if (showing() || stillOnRoom()) void navigate({ to: "/", replace: true });
       },
       fail(`Couldn't delete the ${noun}`),
     );

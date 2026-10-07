@@ -1252,6 +1252,57 @@ describe("room management refresh", () => {
     ),
   );
 
+  it.effect("drops a repair read that was on its way during a resync", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const releaseSave = yield* Deferred.make<void>();
+        const releaseRepair = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+        let reads = 0;
+
+        yield* api.route("PATCH /rooms/12", () =>
+          Deferred.await(releaseSave).pipe(Effect.as(stale)),
+        );
+        // The save's repair read is held across the resync; later reads find the room gone.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Deferred.await(releaseRepair).pipe(Effect.as(roomDetailFixture(12)))
+            : Effect.fail(new NotFound({ message: "gone" }));
+        });
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+        // A management change lands while the save is on its way: its reply is superseded.
+        invalidateRoom(12);
+        yield* Deferred.succeed(releaseSave, undefined);
+        yield* settle;
+        expect(reads).toBe(1);
+
+        // While the repair read is held, the viewer loses the room and the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        yield* Deferred.succeed(releaseRepair, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
   it.effect("doesn't land a create that was on its way during a resync over the snapshot", () =>
     withSync(
       Effect.gen(function* () {

@@ -22,9 +22,18 @@ const landForm = (form: RoomForm): RoomForm => {
  */
 const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId: number) {
   const revision = invalidateRoom(roomId);
+  const since = managementEpoch();
   const fetched = yield* Effect.result(room(roomId));
 
   if (roomRevision(roomId) !== revision) {
+    return;
+  }
+
+  // A resync or snapshot rewrote the room while this read was on its way, so the read is older
+  // than the store. Readers are asked to read once more; this repair doesn't retry itself.
+  if (changedSince(roomId, since)) {
+    invalidateRoom(roomId);
+
     return;
   }
 
