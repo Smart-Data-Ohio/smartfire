@@ -15,6 +15,13 @@ export const ADMIN_SECTIONS = [
   { key: "people", label: "People", icon: "users", path: "/admin/people", admin: false },
   { key: "icons", label: "Workspace icons", icon: "smile", path: "/admin/icons", admin: true },
   { key: "bots", label: "Chat bots", icon: "bot", path: "/admin/bots", admin: true },
+  {
+    key: "slack",
+    label: "Slack import",
+    icon: "cloud-upload",
+    path: "/admin/slack",
+    admin: true,
+  },
   { key: "styles", label: "Custom styles", icon: "code", path: "/admin/styles", admin: true },
   { key: "audit", label: "Audit log", icon: "file-text", path: "/admin/audit-log", admin: true },
   {

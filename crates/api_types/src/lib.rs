@@ -39,6 +39,7 @@ mod saved;
 mod search;
 mod settings;
 mod sidebar;
+mod slack;
 mod stage;
 mod switcher;
 mod sync;
@@ -131,6 +132,13 @@ pub use settings::{
     TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile,
     UpdateStatus,
 };
+pub use slack::{
+    SaveSlackCredentials, SlackConnectionState, SlackConversation, SlackCounts, SlackDisconnected,
+    SlackIssue, SlackPeople, SlackPersonal, SlackPlan, SlackPlanConversation, SlackPreset,
+    SlackRoomTarget, SlackRun, SlackRunChange, SlackRunKind, SlackRunList, SlackRunMode,
+    SlackRunPage, SlackRunRow, SlackRunStatus, SlackRunSummary, SlackSample, SlackSetup,
+    SlackSetupChange, StartPersonalSlackImport, StartSlackDryRun, StartSlackImport,
+};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
 pub use stage::{
     ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
@@ -173,3 +181,5 @@ mod tests_s7;
 mod tests_s7_admin;
 #[cfg(test)]
 mod tests_s7_bots;
+#[cfg(test)]
+mod tests_s7_slack;

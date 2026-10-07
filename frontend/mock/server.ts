@@ -56,6 +56,7 @@ import { createPanes } from "./s2/panes.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
+import { createSlack } from "./s2/slack.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
@@ -715,6 +716,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createSettings(ctx, uploads).routes,
     ...admin.routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
+    ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx).routes,
   ];
 

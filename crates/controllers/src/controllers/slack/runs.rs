@@ -30,7 +30,9 @@ fn base(admin: bool) -> &'static str {
 fn path(admin: bool, id: i64) -> String {
     format!("{}/{id}", base(admin))
 }
-async fn find(c: &mut Ctx, user: &User, admin: bool) -> Result<SlackImport> {
+/// `set_run`: the run in the `:id` path parameter, an administrator's any run and anyone else's
+/// only their own personal runs; anything else is `head :not_found`.
+pub async fn find(c: &mut Ctx, user: &User, admin: bool) -> Result<SlackImport> {
     let id = concerns::ruby_to_i(&param(c, "id"));
     let uid = user.id;
     c.app()
@@ -85,8 +87,12 @@ async fn connection(c: &Ctx, uid: i64) -> Result<Option<SlackConnection>> {
         .await
         .map_err(Error::internal)
 }
+/// Whether a run is queued, running or undoing: anyone's (`None`), or the person's own.
+fn any_active(conn: &rusqlite::Connection, uid: Option<i64>) -> campfire_db::Result<bool> {
+    Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing') AND (? IS NULL OR user_id=?))",params![uid,uid],|r|r.get(0))?)
+}
 async fn active(c: &Ctx, uid: Option<i64>) -> Result<bool> {
-    c.app().db.read(move |conn| Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing') AND (? IS NULL OR user_id=?))",params![uid,uid],|r|r.get(0))?)).await.map_err(Error::internal)
+    c.app().db.read(move |conn| any_active(conn, uid)).await.map_err(Error::internal)
 }
 async fn blocker(c: &Ctx, uid: i64) -> Result<Option<&'static str>> {
     if connection(c, uid).await?.is_none() {
@@ -99,12 +105,8 @@ async fn blocker(c: &Ctx, uid: i64) -> Result<Option<&'static str>> {
         Ok(None)
     }
 }
-fn selected(c: &Ctx) -> Vec<Value> {
-    let value = c
-        .params
-        .get("conversation_ids")
-        .map(Param::to_json)
-        .unwrap_or(Value::Null);
+/// The checked conversation ids: one id or a list, blanks dropped.
+pub fn selected(value: Value) -> Vec<Value> {
     let values = match value {
         Value::Null => vec![],
         Value::Array(a) => a,
@@ -127,7 +129,8 @@ fn known_selection(selected: Vec<Value>, run: &SlackImport) -> Vec<Value> {
     }
     ids
 }
-async fn zone(c: &Ctx, id: i64) -> Result<campfire_views::time::Zone> {
+/// The person's saved time zone, as the run pages show times and read dates in it.
+pub async fn zone(c: &Ctx, id: i64) -> Result<campfire_views::time::Zone> {
     let saved = c
         .app()
         .db
@@ -136,8 +139,8 @@ async fn zone(c: &Ctx, id: i64) -> Result<campfire_views::time::Zone> {
         .map_err(Error::internal)?;
     Ok(campfire_views::time::Zone::for_user(saved.as_deref()))
 }
-fn bound(c: &Ctx, zone: &campfire_views::time::Zone, key: &str, latest: bool) -> Option<String> {
-    let date = param(c, key).parse::<jiff::civil::Date>().ok()?;
+fn bound(zone: &campfire_views::time::Zone, value: &str, latest: bool) -> Option<String> {
+    let date = value.parse::<jiff::civil::Date>().ok()?;
     let time = if latest {
         jiff::civil::Time::new(23, 59, 59, 0).ok()?
     } else {
@@ -146,6 +149,9 @@ fn bound(c: &Ctx, zone: &campfire_views::time::Zone, key: &str, latest: bool) ->
     let zoned = date.to_datetime(time).to_zoned(zone.tz().clone()).ok()?;
     Some(zone.iso8601(zoned.timestamp()))
 }
+/// Creates the run, unless one is active by then (anyone's for a workspace run, the person's own
+/// for a personal one): the check and the insert share one write, so two starts racing past the
+/// callers' earlier check can't both begin. `None` is the lost race, refused as the check is.
 async fn start(
     c: &Ctx,
     user: &User,
@@ -154,7 +160,11 @@ async fn start(
     kind: Kind,
     mode: Mode,
     options: Value,
-) -> Result<SlackImport> {
+) -> Result<Option<SlackImport>> {
+    let scope = match kind {
+        Kind::Workspace => None,
+        Kind::Personal => Some(user.id),
+    };
     let options = crate::integrations::slack::options::normalize(&options)
         .map_err(|s| Error::internal(campfire_db::Error::Other(s)))?;
     let user_id = user.id;
@@ -170,6 +180,9 @@ async fn start(
     c.app()
         .db
         .write(move |tx| {
+            if any_active(tx.conn(), scope)? {
+                return Ok(None);
+            }
             SlackImport::create_with_enqueued_at(
                 tx,
                 NewImport {
@@ -182,12 +195,92 @@ async fn start(
                 },
                 Some(&stamp),
             )
+            .map(Some)
         })
         .await
         .map_err(Error::internal)
 }
+/// What starting a run came to: the new run and the notice the classic page flashes, or the
+/// classic page's alert and the page it sends the person back to.
+#[derive(Debug)]
+pub enum Started {
+    Run {
+        run: Box<SlackImport>,
+        notice: &'static str,
+    },
+    Refused {
+        path: String,
+        alert: &'static str,
+    },
+}
+
+fn refused(path: impl Into<String>, alert: &'static str) -> Started {
+    Started::Refused {
+        path: path.into(),
+        alert,
+    }
+}
+
+/// A start's answer on the classic pages: the run with its notice, or back with the alert.
+fn answer(c: &mut Ctx, admin: bool, started: Started) -> Result {
+    match started {
+        Started::Run { run, notice } => redirect(c, &path(admin, run.id), Some(notice), None),
+        Started::Refused { path, alert } => redirect(c, &path, None, Some(alert)),
+    }
+}
+
+/// `accounts/slack_import_runs#create`'s form: a workspace dry run. The dates are the form's
+/// `YYYY-MM-DD` text, read in the person's time zone; anything else is no bound.
+#[derive(Debug, Clone, Default)]
+pub struct DryRunForm {
+    pub include_private: bool,
+    pub oldest: String,
+    pub latest: String,
+}
+
+/// `slack/imports#create`'s form: a preview, or an import of the checked conversations of a
+/// completed preview.
+#[derive(Debug, Clone, Default)]
+pub struct PersonalForm {
+    pub import: bool,
+    pub dry_run_id: i64,
+    pub conversation_ids: Vec<Value>,
+}
+
+/// `accounts/slack_import_runs#start_import`'s form: the checked conversations, each one's
+/// target (`"new"`, `"skip"` or a room id, as text), the preset, and a test import's dates.
+#[derive(Debug, Clone, Default)]
+pub struct ImportForm {
+    pub conversation_ids: Vec<Value>,
+    pub room_targets: Value,
+    pub full: bool,
+    pub oldest: String,
+    pub latest: String,
+}
+
+/// `conversation_ids[]` as the classic forms post it.
+fn selected_param(c: &Ctx) -> Vec<Value> {
+    selected(
+        c.params
+            .get("conversation_ids")
+            .map(Param::to_json)
+            .unwrap_or(Value::Null),
+    )
+}
+
 pub async fn admin_create(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
+    let form = DryRunForm {
+        include_private: param(c, "include_private") != "0",
+        oldest: param(c, "oldest"),
+        latest: param(c, "latest"),
+    };
+    let started = start_dry_run(c, &user, form).await?;
+    answer(c, true, started)
+}
+
+/// `accounts/slack_import_runs#create` once the administrator is known: a workspace dry run.
+pub async fn start_dry_run(c: &Ctx, user: &User, form: DryRunForm) -> Result<Started> {
     let workspace = service(c)
         .current_workspace()
         .await
@@ -199,45 +292,62 @@ pub async fn admin_create(c: &mut Ctx) -> Result {
         .is_none_or(campfire_richtext::ruby::is_blank)
         || connection.is_none()
     {
-        return redirect(
-            c,
+        return Ok(refused(
             "/account/slack_import",
-            None,
-            Some("Connect your Slack account first."),
-        );
+            "Connect your Slack account first.",
+        ));
     }
     if active(c, None).await? {
-        return redirect(
-            c,
+        return Ok(refused(
             base(true),
-            None,
-            Some("Another import is already running. Wait for it to finish."),
-        );
+            "Another import is already running. Wait for it to finish.",
+        ));
     }
     let zone = zone(c, user.id).await?;
-    let options = json!({"include_private":param(c,"include_private")!="0","oldest":bound(c,&zone,"oldest",false),"latest":bound(c,&zone,"latest",true)});
-    let run = start(
+    let options = json!({"include_private":form.include_private,"oldest":bound(&zone,&form.oldest,false),"latest":bound(&zone,&form.latest,true)});
+    let Some(run) = start(
         c,
-        &user,
+        user,
         workspace.unwrap().id,
         connection.unwrap().id,
         Kind::Workspace,
         Mode::DryRun,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            base(true),
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
-        &user,
+        user,
         run.id,
         "slack.import.start",
         Some(json!({"kind":"workspace","mode":"dry_run"})),
     )
     .await?;
-    redirect(c, &path(true, run.id), Some("Dry run started."), None)
+    Ok(Started::Run {
+        run: Box::new(run),
+        notice: "Dry run started.",
+    })
 }
+
 pub async fn personal_create(c: &mut Ctx) -> Result {
     let user = before(c, false).await?;
+    let form = PersonalForm {
+        import: param(c, "mode") == "import",
+        dry_run_id: concerns::ruby_to_i(&param(c, "dry_run_id")),
+        conversation_ids: selected_param(c),
+    };
+    let started = start_personal(c, &user, form).await?;
+    answer(c, false, started)
+}
+
+/// `slack/imports#create` once the person is known: a preview, or an import from one.
+pub async fn start_personal(c: &Ctx, user: &User, form: PersonalForm) -> Result<Started> {
     let workspace = service(c)
         .current_workspace()
         .await
@@ -247,32 +357,23 @@ pub async fn personal_create(c: &mut Ctx) -> Result {
         .and_then(|w| w.team_id.as_deref())
         .is_none_or(campfire_richtext::ruby::is_blank)
     {
-        return redirect(
-            c,
+        return Ok(refused(
             base(false),
-            None,
-            Some("An administrator needs to set up Slack import first."),
-        );
+            "An administrator needs to set up Slack import first.",
+        ));
     }
     let Some(connection) = connection(c, user.id).await? else {
-        return redirect(
-            c,
-            base(false),
-            None,
-            Some("Connect your Slack account first."),
-        );
+        return Ok(refused(base(false), "Connect your Slack account first."));
     };
     if active(c, Some(user.id)).await? {
-        return redirect(
-            c,
+        return Ok(refused(
             base(false),
-            None,
-            Some("You already have an import running. Wait for it to finish."),
-        );
+            "You already have an import running. Wait for it to finish.",
+        ));
     }
-    let importing = param(c, "mode") == "import";
+    let importing = form.import;
     let options = if importing {
-        let id = concerns::ruby_to_i(&param(c, "dry_run_id"));
+        let id = form.dry_run_id;
         let uid = user.id;
         let preview = c
             .app()
@@ -288,25 +389,21 @@ pub async fn personal_create(c: &mut Ctx) -> Result {
             .await
             .map_err(Error::internal)?;
         let Some(preview) = preview else {
-            return redirect(c, base(false), None, Some("Run a preview first."));
+            return Ok(refused(base(false), "Run a preview first."));
         };
-        let ids = selected(c);
+        let ids = form.conversation_ids;
         if ids.is_empty() {
-            return redirect(
-                c,
-                &path(false, id),
-                None,
-                Some("Check at least one conversation to import."),
-            );
+            return Ok(refused(
+                path(false, id),
+                "Check at least one conversation to import.",
+            ));
         }
         let ids = known_selection(ids, &preview);
         if ids.is_empty() {
-            return redirect(
-                c,
-                &path(false, id),
-                None,
-                Some("Those conversations are not in the preview."),
-            );
+            return Ok(refused(
+                path(false, id),
+                "Those conversations are not in the preview.",
+            ));
         }
         json!({"conversation_ids":ids})
     } else {
@@ -317,74 +414,92 @@ pub async fn personal_create(c: &mut Ctx) -> Result {
     } else {
         Mode::DryRun
     };
-    let run = start(
+    let Some(run) = start(
         c,
-        &user,
+        user,
         workspace.unwrap().id,
         connection.id,
         Kind::Personal,
         mode,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            base(false),
+            "You already have an import running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
-        &user,
+        user,
         run.id,
         "slack.import.start",
         Some(json!({"kind":"personal","mode":if importing {"import"}else{"dry_run"}})),
     )
     .await?;
-    redirect(
-        c,
-        &path(false, run.id),
-        Some(if importing {
+    Ok(Started::Run {
+        run: Box::new(run),
+        notice: if importing {
             "Import started."
         } else {
             "Preview started."
-        }),
-        None,
-    )
+        },
+    })
 }
+
 pub async fn start_import(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
     let run = find(c, &user, true).await?;
+    let form = ImportForm {
+        conversation_ids: selected_param(c),
+        room_targets: c
+            .params
+            .get("room_targets")
+            .map(Param::to_json)
+            .unwrap_or(Value::Null),
+        full: param(c, "preset") == "full",
+        oldest: param(c, "oldest"),
+        latest: param(c, "latest"),
+    };
+    let started = start_workspace_import(c, &user, run, form).await?;
+    answer(c, true, started)
+}
+
+/// `accounts/slack_import_runs#start_import` once the run is found: a test or full import of a
+/// completed dry run's checked conversations.
+pub async fn start_workspace_import(
+    c: &Ctx,
+    user: &User,
+    run: SlackImport,
+    form: ImportForm,
+) -> Result<Started> {
     if run.kind != "workspace" || run.mode != "dry_run" || run.status != "completed" {
-        return redirect(
-            c,
-            &path(true, run.id),
-            None,
-            Some("Start from a completed dry run."),
-        );
+        return Ok(refused(
+            path(true, run.id),
+            "Start from a completed dry run.",
+        ));
     }
     let plan_path = format!("{}/plan", path(true, run.id));
     if let Some(reason) = blocker(c, user.id).await? {
-        return redirect(c, &plan_path, None, Some(reason));
+        return Ok(refused(plan_path, reason));
     }
-    let ids = selected(c);
+    let ids = form.conversation_ids;
     if ids.is_empty() {
-        return redirect(
-            c,
-            &plan_path,
-            None,
-            Some("Check at least one conversation to import."),
-        );
+        return Ok(refused(
+            plan_path,
+            "Check at least one conversation to import.",
+        ));
     }
     let ids = known_selection(ids, &run);
     if ids.is_empty() {
-        return redirect(
-            c,
-            &plan_path,
-            None,
-            Some("Those conversations are not in the dry run."),
-        );
+        return Ok(refused(
+            plan_path,
+            "Those conversations are not in the dry run.",
+        ));
     }
     let alive=c.app().db.read(|conn| {let mut stmt=conn.prepare("SELECT id FROM rooms WHERE deleted_at IS NULL AND type IN ('Rooms::Open','Rooms::Closed')")?;Ok(stmt.query_map([],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?)}).await.map_err(Error::internal)?;
-    let nested = c
-        .params
-        .get("room_targets")
-        .map(Param::to_json)
-        .unwrap_or(Value::Null);
+    let nested = form.room_targets;
     let mut targets = serde_json::Map::new();
     for id in &ids {
         let id = id.as_str().unwrap();
@@ -400,7 +515,7 @@ pub async fn start_import(c: &mut Ctx) -> Result {
             }
         }
     }
-    let full = param(c, "preset") == "full";
+    let full = form.full;
     let mut options = json!({"conversation_ids":ids,"include_private":run.options["include_private"]!=false,"room_targets":targets});
     if !full {
         let zone = zone(c, user.id).await?;
@@ -410,7 +525,7 @@ pub async fn start_import(c: &mut Ctx) -> Result {
             .date()
             .checked_sub(jiff::Span::new().days(14))
             .map_err(Error::internal)?;
-        options["oldest"] = json!(bound(c, &zone, "oldest", false).unwrap_or_else(|| {
+        options["oldest"] = json!(bound(&zone, &form.oldest, false).unwrap_or_else(|| {
             zone.iso8601(
                 day.at(0, 0, 0, 0)
                     .to_zoned(zone.tz().clone())
@@ -418,55 +533,65 @@ pub async fn start_import(c: &mut Ctx) -> Result {
                     .timestamp(),
             )
         }));
-        options["latest"] = json!(bound(c, &zone, "latest", true));
+        options["latest"] = json!(bound(&zone, &form.latest, true));
     }
     let connection = connection(c, user.id).await?.ok_or(Error::NotFound)?;
-    let created = start(
+    let Some(created) = start(
         c,
-        &user,
+        user,
         run.slack_workspace_id,
         connection.id,
         Kind::Workspace,
         Mode::Import,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            plan_path,
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
-        &user,
+        user,
         created.id,
         "slack.import.start",
         Some(json!({"kind":"workspace","mode":"import","preset":if full {"full"}else{"test"}})),
     )
     .await?;
-    redirect(
-        c,
-        &path(true, created.id),
-        Some(if full {
+    Ok(Started::Run {
+        run: Box::new(created),
+        notice: if full {
             "Full import started."
         } else {
             "Test import started."
-        }),
-        None,
-    )
+        },
+    })
 }
+
 pub async fn catch_up(c: &mut Ctx) -> Result {
     let user = before(c, true).await?;
     let run = find(c, &user, true).await?;
+    let started = start_catch_up(c, &user, run).await?;
+    answer(c, true, started)
+}
+
+/// `accounts/slack_import_runs#catch_up` once the run is found: the same conversations and
+/// targets again, from a completed full import.
+pub async fn start_catch_up(c: &Ctx, user: &User, run: SlackImport) -> Result<Started> {
     if run.kind != "workspace"
         || run.mode != "import"
         || run.status != "completed"
         || oauth::present(&run.options["oldest"])
     {
-        return redirect(
-            c,
-            &path(true, run.id),
-            None,
-            Some("Catch-up starts from a completed full import."),
-        );
+        return Ok(refused(
+            path(true, run.id),
+            "Catch-up starts from a completed full import.",
+        ));
     }
     if let Some(reason) = blocker(c, user.id).await? {
-        return redirect(c, &path(true, run.id), None, Some(reason));
+        return Ok(refused(path(true, run.id), reason));
     }
     let mut options = serde_json::Map::new();
     for key in ["conversation_ids", "room_targets", "include_private"] {
@@ -475,35 +600,54 @@ pub async fn catch_up(c: &mut Ctx) -> Result {
         }
     }
     let connection = connection(c, user.id).await?.ok_or(Error::NotFound)?;
-    let created = start(
+    let Some(created) = start(
         c,
-        &user,
+        user,
         run.slack_workspace_id,
         connection.id,
         Kind::Workspace,
         Mode::Import,
         json!(options),
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            path(true, run.id),
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
-        &user,
+        user,
         created.id,
         "slack.import.start",
         Some(json!({"kind":"workspace","mode":"import","preset":"catch_up"})),
     )
     .await?;
-    redirect(
-        c,
-        &path(true, created.id),
-        Some("Catch-up import started."),
-        None,
-    )
+    Ok(Started::Run {
+        run: Box::new(created),
+        notice: "Catch-up import started.",
+    })
 }
+
 async fn mutate(c: &mut Ctx, admin: bool, undo: bool) -> Result {
     let user = before(c, admin).await?;
     let run = find(c, &user, admin).await?;
     let id = run.id;
+    match change(c, &user, id, undo).await? {
+        Ok(notice) => redirect(c, &path(admin, id), Some(notice), None),
+        Err(reason) => redirect(c, &path(admin, id), None, Some(&reason)),
+    }
+}
+
+/// `cancel` and `undo` once the run is found: the notice when it changed, else the reason it
+/// couldn't.
+pub async fn change(
+    c: &Ctx,
+    user: &User,
+    id: i64,
+    undo: bool,
+) -> Result<std::result::Result<&'static str, String>> {
     let changed = c
         .app()
         .db
@@ -519,7 +663,7 @@ async fn mutate(c: &mut Ctx, admin: bool, undo: bool) -> Result {
     if changed {
         log(
             c,
-            &user,
+            user,
             id,
             if undo {
                 "slack.import.undo"
@@ -529,16 +673,11 @@ async fn mutate(c: &mut Ctx, admin: bool, undo: bool) -> Result {
             None,
         )
         .await?;
-        redirect(
-            c,
-            &path(admin, id),
-            Some(if undo {
-                "Undo started."
-            } else {
-                "Import cancelled."
-            }),
-            None,
-        )
+        Ok(Ok(if undo {
+            "Undo started."
+        } else {
+            "Import cancelled."
+        }))
     } else {
         let reason = if undo {
             let now = campfire_db::Timestamp::from_jiff(c.now());
@@ -555,7 +694,7 @@ async fn mutate(c: &mut Ctx, admin: bool, undo: bool) -> Result {
         } else {
             "That run already finished.".into()
         };
-        redirect(c, &path(admin, id), None, Some(&reason))
+        Ok(Err(reason))
     }
 }
 pub async fn admin_cancel(c: &mut Ctx) -> Result {
@@ -604,7 +743,8 @@ pub fn data(
         ..Default::default()
     })
 }
-async fn list(c: &Ctx, uid: Option<i64>) -> Result<Vec<RunData>> {
+/// Every run newest first (`None`), or one person's personal runs.
+pub async fn list(c: &Ctx, uid: Option<i64>) -> Result<Vec<RunData>> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     c.app().db.read(move |conn|{
         let mut stmt=conn.prepare("SELECT id FROM slack_imports WHERE (? IS NULL OR (user_id=? AND kind='personal')) ORDER BY created_at DESC, id DESC")?;
@@ -622,10 +762,24 @@ pub async fn admin_index(c: &mut Ctx) -> Result {
 }
 pub async fn personal_index(c: &mut Ctx) -> Result {
     let user = before(c, false).await?;
-    let uid = user.id;
+    let setup = personal_data(c, user.id).await?;
+    let mut runs = list(c, Some(user.id)).await?;
+    let zone = zone(c, user.id).await?;
+    for run in &mut runs {
+        run.format_times(&zone);
+    }
+    framed_page!(c, StatusCode::OK, |ctx| PersonalIndex {
+        ctx,
+        data: &setup,
+        runs: &runs
+    })
+    .await
+}
+/// The personal page's setup state for `uid`: whether an administrator set up the import, and
+/// the person's own Slack connection.
+pub async fn personal_data(c: &Ctx, uid: i64) -> Result<campfire_views::slack::SetupData> {
     let crypto = service(c).encryption;
-    let setup = c
-        .app()
+    c.app()
         .db
         .read(move |conn| {
             let w = campfire_db::models::slack::SlackWorkspace::current(conn)?;
@@ -647,18 +801,7 @@ pub async fn personal_index(c: &mut Ctx) -> Result {
             })
         })
         .await
-        .map_err(Error::internal)?;
-    let mut runs = list(c, Some(user.id)).await?;
-    let zone = zone(c, user.id).await?;
-    for run in &mut runs {
-        run.format_times(&zone);
-    }
-    framed_page!(c, StatusCode::OK, |ctx| PersonalIndex {
-        ctx,
-        data: &setup,
-        runs: &runs
-    })
-    .await
+        .map_err(Error::internal)
 }
 async fn show(c: &mut Ctx, admin: bool, status: bool) -> Result {
     let user = before(c, admin).await?;
@@ -668,10 +811,7 @@ async fn show(c: &mut Ctx, admin: bool, status: bool) -> Result {
     let mut data=c.app().db.read(move |conn| {
         let mut data=data(conn,run,now)?;
         if admin && !status {
-            let page=Page::new(page_param.as_deref(),data.issues_count,&[50]);
-            let mut stmt=conn.prepare("SELECT level,slack_ref,message FROM slack_import_issues WHERE slack_import_id=? ORDER BY id LIMIT ? OFFSET ?")?;
-            data.issues=stmt.query_map(params![data.id,page.limit(),page.offset()],|r|Ok(Issue{level:r.get(0)?,slack_ref:r.get(1)?,message:r.get(2)?}))?.collect::<rusqlite::Result<_>>()?;
-            data.next_page=(!page.is_last()).then(||page.next_param());
+            (data.issues, data.next_page) = issues_page(conn, data.id, data.issues_count, page_param.as_deref())?;
         }
         Ok(data)
     }).await.map_err(Error::internal)?;
@@ -688,6 +828,26 @@ async fn show(c: &mut Ctx, admin: bool, status: bool) -> Result {
         admin
     })
     .await
+}
+/// A page of a run's issues (50 a page, oldest first) and the next page's number, if any.
+pub fn issues_page(
+    conn: &rusqlite::Connection,
+    id: i64,
+    count: i64,
+    page: Option<&str>,
+) -> campfire_db::Result<(Vec<Issue>, Option<i64>)> {
+    let page = Page::new(page, count, &[50]);
+    let mut stmt=conn.prepare("SELECT level,slack_ref,message FROM slack_import_issues WHERE slack_import_id=? ORDER BY id LIMIT ? OFFSET ?")?;
+    let issues = stmt
+        .query_map(params![id, page.limit(), page.offset()], |r| {
+            Ok(Issue {
+                level: r.get(0)?,
+                slack_ref: r.get(1)?,
+                message: r.get(2)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok((issues, (!page.is_last()).then(|| page.next_param())))
 }
 pub async fn admin_show(c: &mut Ctx) -> Result {
     show(c, true, false).await
@@ -712,6 +872,24 @@ pub async fn plan(c: &mut Ctx) -> Result {
             Some("The plan is ready when the dry run completes."),
         );
     }
+    let (data, rooms, oldest) = plan_data(c, &user, run).await?;
+    framed_page!(c, StatusCode::OK, |ctx| Plan {
+        ctx,
+        data: &data,
+        rooms: &rooms,
+        oldest: &oldest
+    })
+    .await
+}
+
+/// A completed dry run's plan: the run with its samples rendered, the rooms a conversation can
+/// merge into (by name), and a test import's default oldest day (two weeks back, in the
+/// person's time zone).
+pub async fn plan_data(
+    c: &Ctx,
+    user: &User,
+    run: SlackImport,
+) -> Result<(RunData, Vec<RoomTarget>, String)> {
     let now = campfire_db::Timestamp::from_jiff(c.now());
     let secrets = c.app().secrets.clone();
     let host = crate::controllers::presenters::page::renderer_base_url(c);
@@ -730,13 +908,7 @@ pub async fn plan(c: &mut Ctx) -> Result {
         .checked_sub(jiff::Span::new().days(14))
         .map_err(Error::internal)?
         .to_string();
-    framed_page!(c, StatusCode::OK, |ctx| Plan {
-        ctx,
-        data: &data,
-        rooms: &rooms,
-        oldest: &oldest
-    })
-    .await
+    Ok((data, rooms, oldest))
 }
 
 pub fn sample_htmls(
