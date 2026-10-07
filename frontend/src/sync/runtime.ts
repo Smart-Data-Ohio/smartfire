@@ -5,6 +5,7 @@ import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
+import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
@@ -15,10 +16,13 @@ import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
+import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
@@ -37,6 +41,7 @@ import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
+import * as workActions from "./work-actions.ts";
 
 const API_BASE = "/api/v1";
 
@@ -206,12 +211,33 @@ export function isScheduledDropped(error: Error): boolean {
 }
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
+/** Work tracking (S4). Loads and refreshes never reject; writes reject on failure. */
+const work = {
+  /** Loads (or reloads) a filter of the work list. */
+  loadList: (filter: WorkFilter): Promise<void> => runAction(workActions.loadList(filter)),
+  /** Refetches a thread's detail after live work facts moved past the pane's. */
+  refresh: (threadId: number): Promise<void> => runAction(workActions.refresh(threadId)),
+  /** Moves, starts (on an untracked thread) or stops (`null`) tracking; optimistic. */
+  setStatus: (threadId: number, status: WorkStatus | null): Promise<ThreadDetail> =>
+    runAction(workActions.setStatus(threadId, status)),
+  /** Assigns (or, with `null`, unassigns) the owner; optimistic. */
+  assign: (threadId: number, ownerId: number | null): Promise<ThreadDetail> =>
+    runAction(workActions.assign(threadId, ownerId)),
+  /** Records the result, or clears it (`null`). */
+  saveResult: (threadId: number, markdown: string | null): Promise<ThreadDetail> =>
+    runAction(workActions.saveResult(threadId, markdown)),
+  /** Hands the work to an agent from `handoffReceivers`. */
+  handOff: (threadId: number, body: CreateWorkHandoff): Promise<ThreadDetail> =>
+    runAction(workActions.handOff(threadId, body)),
+};
+
 export const actions = {
   messages,
   threads,
   activity,
   saved,
   scheduled,
+  work,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

@@ -20,6 +20,7 @@ import type {
 } from "./model.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
+import { emptyWork, type WorkSlice } from "./work.ts";
 
 /**
  * The whole live store. Normalized: every entity lives once, by id; views hold ids. The sync
@@ -63,6 +64,8 @@ export interface State {
   readonly scheduled: ScheduledSlice;
   /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
+  /** Work detail for open thread panes and the work lists (S4); facts live on threads. */
+  readonly work: WorkSlice;
 }
 
 export interface SidebarState {
@@ -107,6 +110,7 @@ export const initialState: State = {
   savedList: emptySavedList,
   scheduled: emptyScheduled,
   conversationNames: {},
+  work: emptyWork,
 };
 
 export const emptyTimeline: Timeline = {

@@ -15,6 +15,9 @@ import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import type { WorkFacts } from "../gen/WorkFacts.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkList } from "../gen/WorkList.ts";
 import * as activity from "./activity.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -38,6 +41,7 @@ import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
+import * as work from "./work.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -137,11 +141,14 @@ export const mutations = {
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
   loadThreadDetail: (detail: ThreadDetail) =>
-    apply((state) => threads.loadThreadDetail(state, detail)),
+    apply((state) => work.landWorkDetail(threads.loadThreadDetail(state, detail), detail)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
   threadCreated: (created: ThreadCreated) =>
     apply((state) =>
-      reduce.receiveMessage(threads.loadThreadDetail(state, created.detail), created.message),
+      reduce.receiveMessage(
+        work.landWorkDetail(threads.loadThreadDetail(state, created.detail), created.detail),
+        created.message,
+      ),
     ),
   upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
@@ -214,6 +221,18 @@ export const mutations = {
     apply((state) =>
       scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
     ),
+  // --- S4: work tracking ---
+  /** Shows work facts on a thread at once: an optimistic change or its rollback. */
+  putWorkFacts: (threadId: number, facts: WorkFacts | null) =>
+    apply((state) => work.putWorkFacts(state, threadId, facts)),
+  countWorkWrite: (threadId: number, delta: 1 | -1) =>
+    apply((state) => work.countWorkWrite(state, threadId, delta)),
+  setWorkListLoading: (filter: WorkFilter) =>
+    apply((state) => work.setWorkListLoading(state, filter)),
+  setWorkListFailed: (filter: WorkFilter, error: string, generation: number) =>
+    apply((state) => work.setWorkListFailed(state, filter, error, generation)),
+  landWorkList: (filter: WorkFilter, list: WorkList, generation: number) =>
+    apply((state) => work.landWorkList(state, filter, list, generation)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };

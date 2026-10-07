@@ -108,15 +108,9 @@ function activeAgent(user: User | undefined): User["agent"] {
 /** Whether `userId` is an active human in the room. */
 export function isActiveHumanMember(world: World, roomId: number, userId: number): boolean {
   const user = world.users.get(userId);
-  const room = world.rooms.get(roomId);
+  const member = world.rooms.get(roomId)?.memberIds.includes(userId) === true;
 
-  return (
-    user !== undefined &&
-    user.role !== "bot" &&
-    user.status === "active" &&
-    room !== undefined &&
-    room.memberIds.includes(userId)
-  );
+  return user !== undefined && user.role !== "bot" && user.status === "active" && member;
 }
 
 /**
@@ -124,13 +118,9 @@ export function isActiveHumanMember(world: World, roomId: number, userId: number
  * capability in the rooms it's in, so the post, manage-threads and read-messages checks agree.
  */
 export function isPostingAgentMember(world: World, roomId: number, userId: number): boolean {
-  const room = world.rooms.get(roomId);
+  const member = world.rooms.get(roomId)?.memberIds.includes(userId) === true;
 
-  return (
-    activeAgent(world.users.get(userId)) !== null &&
-    room !== undefined &&
-    room.memberIds.includes(userId)
-  );
+  return activeAgent(world.users.get(userId)) !== null && member;
 }
 
 /** `work_owner_active`: the owner can act on the work. */
