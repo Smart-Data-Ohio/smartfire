@@ -17,6 +17,7 @@
 
 mod actions;
 mod activity;
+mod admin;
 mod attachment;
 mod cards;
 mod composer;
@@ -49,6 +50,13 @@ pub use activity::{
     ActivityAction, ActivityEventType, ActivityItem, ActivityItemChanged, ActivityItemRemoved,
     ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
+};
+pub use admin::{
+    AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
+    EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
+    IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
+    PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    WorkspaceIconList,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use cards::{
@@ -121,3 +129,5 @@ mod tests_s2;
 mod tests_s3;
 #[cfg(test)]
 mod tests_s7;
+#[cfg(test)]
+mod tests_s7_admin;
