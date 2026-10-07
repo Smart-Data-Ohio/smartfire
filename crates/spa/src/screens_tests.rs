@@ -447,3 +447,43 @@ fn export_screens() {
     let parsed: serde_json::Value = serde_json::from_str(&committed).unwrap();
     assert_eq!(parsed.as_array().map(Vec::len), Some(SCREENS.len()));
 }
+
+#[test]
+fn event_pages_open_in_the_spa_and_fall_back_to_classic() {
+    for (endpoint, classic, spa) in [
+        ("rooms/events#index", "/rooms/12/events", "/app/r/12/events"),
+        (
+            "rooms/events#new",
+            "/rooms/12/events/new",
+            "/app/r/12/events/new",
+        ),
+        (
+            "rooms/events#show",
+            "/rooms/12/events/34",
+            "/app/r/12/events/34",
+        ),
+        (
+            "rooms/events#edit",
+            "/rooms/12/events/34/edit",
+            "/app/r/12/events/34/edit",
+        ),
+        (
+            "rooms/events/attendances#show",
+            "/rooms/12/events/34/attendance",
+            "/app/r/12/events/34/attendance",
+        ),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // `new` is not an event id: the show row doesn't take it.
+    assert_eq!(
+        spa_url("rooms/events#show", "/rooms/12/events/new", None),
+        None
+    );
+}
