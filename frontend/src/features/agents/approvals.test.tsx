@@ -23,6 +23,7 @@ import {
   decisionLine,
   shownStatus,
 } from "./approval-format.ts";
+import { liveDecisionAnnouncement, liveDecisions, nextWatched } from "./approval-live.ts";
 import {
   externalLine,
   hopText,
@@ -332,5 +333,67 @@ describe("the ledger row", () => {
     expect(screen.getByText("Handoff:")).toBeTruthy();
     expect(screen.getByText("Staging is green.", { exact: false })).toBeTruthy();
     expect(screen.queryByText("Content unavailable")).toBeNull();
+  });
+});
+
+describe("decisions made elsewhere", () => {
+  const pending = approval({ id: 1, status: "pending", summary: "Merge PR #318" });
+
+  it("finds shown pending requests now decided, skipping the viewer's own", () => {
+    const watched = new Map([
+      [1, "pending" as const],
+      [2, "pending" as const],
+      [3, "approved" as const],
+    ]);
+
+    const items = {
+      1: { ...pending, status: "approved" as const, decidedById: 7 },
+      2: approval({ id: 2, status: "denied" }),
+      3: approval({ id: 3, status: "approved" }),
+    };
+
+    expect(liveDecisions(watched, items, new Set()).map((each) => each.id)).toEqual([1, 2]);
+    expect(liveDecisions(watched, items, new Set([1])).map((each) => each.id)).toEqual([2]);
+    expect(liveDecisions(new Map([[1, "pending" as const]]), { 1: pending }, new Set())).toEqual(
+      [],
+    );
+  });
+
+  it("keeps watching a pending request that left the list before its event", () => {
+    const shown = approval({ id: 2, status: "pending" });
+
+    const previous = new Map([
+      [1, "pending" as const],
+      [3, "pending" as const],
+    ]);
+
+    const next = nextWatched(previous, [shown], {
+      1: pending,
+      2: shown,
+      3: approval({ id: 3, status: "denied" }),
+    });
+
+    expect([...next]).toEqual([
+      [2, "pending"],
+      [1, "pending"],
+    ]);
+  });
+
+  it("names one decision and its decider, and counts a burst", () => {
+    const decided = { ...pending, status: "approved" as const, decidedById: 7 };
+    const nameOf = (userId: number) => (userId === 7 ? "Priya Raman" : null);
+
+    expect(liveDecisionAnnouncement([decided], nameOf)).toBe(
+      "Approved by Priya Raman: Merge PR #318",
+    );
+    expect(
+      liveDecisionAnnouncement(
+        [{ ...pending, status: "expired" as const, decidedById: null }],
+        nameOf,
+      ),
+    ).toBe("Expired: Merge PR #318");
+    expect(liveDecisionAnnouncement([decided, { ...decided, id: 2 }], nameOf)).toBe(
+      "2 approval requests were decided",
+    );
   });
 });

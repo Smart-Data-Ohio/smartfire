@@ -22,6 +22,7 @@ import {
   beamedApprovalId,
   decisionAnnouncement,
 } from "./approval-format.ts";
+import { useLiveDecisionAnnouncements } from "./approval-live.ts";
 
 /** What a refused decision's toast says. */
 function failureTitle(decision: ApprovalDecision): string {
@@ -37,7 +38,7 @@ interface AgentApprovalsProps {
 /**
  * An agent's approval requests, newest first, in a status filter: pending ones carry Approve and
  * Deny (the decision shows at once and comes back if the server refuses it), decided ones say who
- * decided and when. Decisions made elsewhere arrive live (`approval.updated`).
+ * decided and when. Decisions made elsewhere arrive live (`approval.updated`) and are announced.
  */
 export function AgentApprovals({ agentId, filter, onFilterChange }: AgentApprovalsProps) {
   const now = useNow();
@@ -58,9 +59,19 @@ export function AgentApprovals({ agentId, filter, onFilterChange }: AgentApprova
 
   const beamed = beamedApprovalId(view.rows, now);
 
+  // Decisions made elsewhere while the list is shown are announced too.
+  const live = useLiveDecisionAnnouncements(
+    `${agentId}:${filter}`,
+    view.status === "ready",
+    view.rows,
+    announce,
+  );
+
   const decide = (approval: AgentApproval, decision: ApprovalDecision, note: string | null) => {
+    live.noteLocal(approval.id);
     announce(decisionAnnouncement(decision, approval.summary));
     actions.approvals.decide(approval.id, decision, note).catch((error: Error) => {
+      live.forgetLocal(approval.id);
       announce(`${failureTitle(decision)}: ${approval.summary}`);
       toast({ title: failureTitle(decision), description: error.message, tone: "danger" });
     });

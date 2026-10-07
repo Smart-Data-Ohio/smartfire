@@ -98,10 +98,26 @@ test("a decision made elsewhere and a new request arrive live", async ({ page })
     deciderId: USER_IDS.priya,
   });
   await expect(card(page, "Merge PR #318")).toHaveCount(0);
+  // Said politely, once the burst settles; the first load said nothing.
+  await expect(
+    page.getByRole("status").filter({ hasText: "Denied by Priya Raman: Merge PR #318" }),
+  ).toBeAttached();
 
   await control(page.request, "approval-request", { summary: "Merge PR #400 into main" });
   await expect(card(page, "Merge PR #400")).toBeVisible();
   await expect(card(page, "Merge PR #400").getByRole("button", { name: "Approve" })).toBeVisible();
+});
+
+test("deciding by keyboard in All keeps focus on the request", async ({ page }) => {
+  await openSection(page, `agents/${EMBER}/approvals`);
+
+  const deploy = card(page, "deploy production");
+
+  await deploy.getByRole("button", { name: "Approve" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(deploy.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  await expect(deploy).toContainText("Approved by Riel St. Amand");
+  await expect(deploy.locator(".approval-summary")).toBeFocused();
 });
 
 test("the approvals list pages past the first fifty", async ({ page }) => {

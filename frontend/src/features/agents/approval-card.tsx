@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type KeyboardEvent, useState } from "react";
+import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import type { AgentApproval } from "../../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../../gen/ApprovalDecision.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -129,6 +129,31 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
   const adminOnly = pending ? adminOnlyText(approval) : null;
   const decides = pending && (approval.approvable || approval.deniable);
 
+  // Deciding removes the buttons while the card stays (as in the All tab): focus that was on
+  // them moves to the summary rather than falling to the page.
+  const cardRef = useRef<HTMLElement>(null);
+  const summaryRef = useRef<HTMLHeadingElement>(null);
+  const refocus = useRef(false);
+
+  useLayoutEffect(() => {
+    if (decides || !refocus.current) {
+      return;
+    }
+
+    refocus.current = false;
+
+    const active = document.activeElement;
+
+    if (active === null || active === document.body) {
+      summaryRef.current?.focus();
+    }
+  }, [decides]);
+
+  const decideHere: ApprovalCardProps["onDecide"] = (decided, decision, note) => {
+    refocus.current = cardRef.current?.contains(document.activeElement) ?? false;
+    onDecide(decided, decision, note);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
 
@@ -148,6 +173,7 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
       <div className="approval-card-pad">
         <Beam active={beamed && pending} radius={10}>
           <article
+            ref={cardRef}
             className="approval-card"
             data-status={status}
             aria-label={`${approvalStatusLabel(status)}: ${approval.summary}`}
@@ -158,7 +184,7 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
               </span>
               <div className="approval-main">
                 {/* The row's main element: arrows and row focus land here; the buttons follow. */}
-                <h3 className="approval-summary list-row-open" tabIndex={-1}>
+                <h3 ref={summaryRef} className="approval-summary list-row-open" tabIndex={-1}>
                   {approval.summary}
                 </h3>
                 <p className="approval-meta">
@@ -182,7 +208,7 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
             {approval.decisionNote === null ? null : (
               <blockquote className="approval-note">{approval.decisionNote}</blockquote>
             )}
-            {decides ? <Decide approval={approval} onDecide={onDecide} /> : null}
+            {decides ? <Decide approval={approval} onDecide={decideHere} /> : null}
             {adminOnly === null ? null : <p className="approval-admin-only">{adminOnly}</p>}
           </article>
         </Beam>
