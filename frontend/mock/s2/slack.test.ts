@@ -259,3 +259,39 @@ describe("the mock's Slack import pages", () => {
     );
   });
 });
+
+/** The files a page of issues names, in order. */
+const files = (page: SlackRunPage) => page.issues.map((issue) => issue.slackRef);
+
+describe("the mock's Slack run issues", () => {
+  it("page in the order they were recorded, and grow on the last page while the run goes", async () => {
+    const { server } = harness();
+
+    const { run } = await expectStatus<SlackRunChange>(
+      server,
+      "POST",
+      "/api/v1/admin/slack/runs",
+      null,
+      200,
+    );
+
+    const path = `/api/v1/admin/slack/runs/${run.id}`;
+    const queued = await get<SlackRunPage>(server, path);
+
+    expect(queued.run.issuesCount).toBe(60);
+    expect(files(queued)).toHaveLength(50);
+    expect(files(queued)[0]).toBe("F1001");
+    expect(queued.nextPage).toBe(2);
+
+    await get(server, `${path}/status`);
+    await get(server, `${path}/status`);
+
+    const first = await get<SlackRunPage>(server, path);
+    const last = await get<SlackRunPage>(server, `${path}?page=4`);
+
+    expect(first.run).toMatchObject({ status: "completed", issuesCount: 160 });
+    expect(files(first)).toEqual(files(queued));
+    expect(files(last)).toEqual(Array.from({ length: 10 }, (_, n) => `F${1151 + n}`));
+    expect(last.nextPage).toBeNull();
+  });
+});

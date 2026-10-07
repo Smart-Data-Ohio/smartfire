@@ -7,6 +7,7 @@ import type { SlackPreset } from "../../gen/SlackPreset.ts";
 import type { SlackRunMode } from "../../gen/SlackRunMode.ts";
 import type { SlackRunSummary } from "../../gen/SlackRunSummary.ts";
 import type { StartSlackImport } from "../../gen/StartSlackImport.ts";
+import { MAX_ISSUE_PAGES } from "./slack-pages.ts";
 
 /** How often an active run's status is read again (the classic page's frame poll). */
 export const POLL_MS = 5000;
@@ -99,11 +100,16 @@ export interface RunSearch {
   readonly page?: number | undefined;
 }
 
-/** Reads `?page=`; anything but a page number past the first is the default. */
+/**
+ * Reads `?page=`; anything but a page number past the first is the default, and a page past
+ * `MAX_ISSUE_PAGES` reads as that many.
+ */
 export function parseRunSearch(search: RawRunSearch): RunSearch {
   const page = Number(String(search.page ?? ""));
 
-  return { page: Number.isSafeInteger(page) && page > 1 ? page : undefined };
+  return {
+    page: Number.isSafeInteger(page) && page > 1 ? Math.min(page, MAX_ISSUE_PAGES) : undefined,
+  };
 }
 
 /** A form value: blank is none (no date bound, no new secret). */

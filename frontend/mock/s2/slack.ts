@@ -127,17 +127,27 @@ const VALIDATION: ApiError["_tag"] = "Validation";
 /** Issues a run page shows at a time, as the classic page pages them. */
 const ISSUES_PER_PAGE = 50;
 
-/** The issues a workspace dry run records: two pages' worth. */
+/** The issues a finished workspace dry run recorded: two pages' worth. */
 const DRY_RUN_ISSUES = 60;
 
-/** A page of a run's issues, newest first, as the classic page's `?page=N` shows them. */
+/**
+ * The issues a live workspace dry run has recorded at each step: they pile up while it runs, so
+ * the pages grow under the person reading them (queued, running, completed).
+ */
+const LIVE_DRY_RUN_ISSUES = { queued: 60, running: 110, completed: 160 } as const;
+
+/**
+ * A page of a run's issues in the order they were recorded (`ORDER BY id`), as the classic page's
+ * `?page=N` shows them: new issues land on the last page.
+ */
 function issuesPage(record: RunRecord, raw: string | null) {
   const asked = Number(raw ?? "1");
   const page = Number.isSafeInteger(asked) && asked > 0 ? asked : 1;
-  const first = record.issues - (page - 1) * ISSUES_PER_PAGE;
+  const from = (page - 1) * ISSUES_PER_PAGE + 1;
+  const to = Math.min(page * ISSUES_PER_PAGE, record.issues);
   const issues: SlackIssue[] = [];
 
-  for (let n = first; n > Math.max(first - ISSUES_PER_PAGE, 0); n -= 1) {
+  for (let n = from; n <= to; n += 1) {
     issues.push({
       level: n % 10 === 0 ? "error" : "warning",
       slackRef: `F${1000 + n}`,
@@ -145,7 +155,7 @@ function issuesPage(record: RunRecord, raw: string | null) {
     });
   }
 
-  return { issues, nextPage: first - ISSUES_PER_PAGE > 0 ? page + 1 : null };
+  return { issues, nextPage: page * ISSUES_PER_PAGE < record.issues ? page + 1 : null };
 }
 
 /** The classic page's alert, a 422 naming no field. */
@@ -332,16 +342,19 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
     createdAt: record.createdAt,
   });
 
-  /** An active run moves one step on each time it's read. */
+  /** An active run moves one step on each time it's read; a dry run's issues pile up as it goes. */
   const advance = (record: RunRecord) => {
     const at = timestamp(ctx.now());
+    const live = record.kind === "workspace" && record.mode === "dry_run";
 
     if (record.status === "queued") {
       record.status = "running";
       record.startedAt = at;
+      record.issues = live ? LIVE_DRY_RUN_ISSUES.running : record.issues;
     } else if (record.status === "running") {
       record.status = "completed";
       record.finishedAt = at;
+      record.issues = live ? LIVE_DRY_RUN_ISSUES.completed : record.issues;
     } else if (record.status === "undoing") {
       record.status = "undone";
       record.finishedAt = at;
@@ -375,7 +388,7 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
       conversations,
       oldest,
       // A workspace dry run finds files it won't import; the other runs record none.
-      issues: kind === "workspace" && mode === "dry_run" ? DRY_RUN_ISSUES : 0,
+      issues: kind === "workspace" && mode === "dry_run" ? LIVE_DRY_RUN_ISSUES.queued : 0,
     };
 
     s.nextId += 1;

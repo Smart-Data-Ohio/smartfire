@@ -12,6 +12,7 @@ import {
   peopleLine,
   personalConnectionSentence,
 } from "./slack-format.ts";
+import { MAX_ISSUE_PAGES } from "./slack-pages.ts";
 
 const conversation = (id: string) => ({
   id,
@@ -117,5 +118,6 @@ describe("a run page's query", () => {
     expect(parseRunSearch({ page: 1 })).toEqual({ page: undefined });
     expect(parseRunSearch({ page: "x" })).toEqual({ page: undefined });
     expect(parseRunSearch({})).toEqual({ page: undefined });
+    expect(parseRunSearch({ page: "1000000" })).toEqual({ page: MAX_ISSUE_PAGES });
   });
 });
