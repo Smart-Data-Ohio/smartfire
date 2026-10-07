@@ -135,7 +135,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
     },
     onCustomRemind: (item) => setCustom(item),
     onRemove: (item) => {
-      announce("Removed");
+      // The toast says it (with its Undo), so the live region stays quiet.
       actions.saved.remove(item.id).then(
         () =>
           toast({

@@ -201,7 +201,9 @@ test("removing a saved message offers Undo", async ({ page }) => {
   await page.keyboard.press("Delete");
   await expect(rows(page).first().locator(".saved-body")).not.toHaveText(text);
   await expect(openButton(page)).toBeFocused();
-  await expect(said(page)).toHaveText("Removed");
+  // The toast is the one announcement: the live region stays quiet.
+  await expect(page.getByRole("status").filter({ hasText: "Removed from saved" })).toBeVisible();
+  await expect(said(page)).toHaveText("");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
 });
@@ -286,7 +288,9 @@ test("cancelling asks first, then removes the message", async ({ page }) => {
   await expect(rows(page).first().locator(".scheduled-body")).not.toHaveText(text);
   // The dialog came from a row that's gone: focus lands on the row that took its place.
   await expect(openButton(page)).toBeFocused();
-  await expect(said(page)).toHaveText("Cancelled");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Scheduled message cancelled" }),
+  ).toBeVisible();
 });
 
 test("editing a scheduled message saves its new text", async ({ page }) => {
