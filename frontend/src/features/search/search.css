@@ -45,6 +45,11 @@
     flex-shrink: 0;
   }
 
+  /* A pill's wrapper, which only marks it for focus keeping: the pill lays out as before. */
+  .search-filter-item {
+    display: contents;
+  }
+
   .search-chip {
     display: inline-flex;
     align-items: center;

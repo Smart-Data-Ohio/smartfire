@@ -6,6 +6,7 @@ import type { SearchChip } from "../../gen/SearchChip.ts";
 import type { SearchSectionKind } from "../../gen/SearchSectionKind.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { formatTime, toMillis } from "../../lib/time.ts";
+import type { SearchResultsView } from "../../store/search-hooks.ts";
 
 const monthDay = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 
@@ -67,4 +68,49 @@ export function messageCount(count: number, more: boolean): string {
 /** A chip's label; the server labels `is:thread` by its value ("is: true"), which reads oddly. */
 export function chipLabel(chip: SearchChip): string {
   return chip.operator === "is" ? "is: thread" : chip.label;
+}
+
+/** What a screen reader hears about the results as they change; "" when nothing is searched. */
+export function resultsAnnouncement(
+  results: Pick<
+    SearchResultsView,
+    "query" | "status" | "error" | "messages" | "sections" | "hasMore" | "loadingMore" | "moreError"
+  >,
+): string {
+  if (results.query === "") {
+    return "";
+  }
+
+  if (results.status === "error") {
+    return `Search failed. ${results.error ?? "Something went wrong."}`;
+  }
+
+  if (results.status !== "ready") {
+    return "Searching…";
+  }
+
+  if (results.loadingMore) {
+    return "Loading older messages…";
+  }
+
+  if (results.moreError !== null) {
+    return "Couldn't load more results.";
+  }
+
+  const others = results.sections.reduce((total, section) => total + section.rows.length, 0);
+  const count = results.messages.length;
+
+  if (count === 0 && others === 0) {
+    return `No results for “${results.query}”`;
+  }
+
+  const noun = count === 1 && !results.hasMore ? "message" : "messages";
+  const messages = `${messageCount(count, results.hasMore)} ${noun}`;
+
+  const extra =
+    others === 0 ? "" : `, ${others} ${others === 1 ? "other result" : "other results"}`;
+
+  const stale = results.error === null ? "" : `. Showing earlier results: ${results.error}`;
+
+  return `${messages}${extra}${stale}`;
 }

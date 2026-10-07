@@ -1,8 +1,8 @@
-import { type ReactNode, useEffect, useEffectEvent, useRef } from "react";
+import { type MouseEvent, type ReactNode, useEffect, useEffectEvent, useRef } from "react";
 import type { MessageDTO } from "../../store/model.ts";
 import { conversationKey } from "../../store/search.ts";
 import type { SearchResultsView } from "../../store/search-hooks.ts";
-import { Button, Spinner } from "../../ui/button.tsx";
+import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { chipLabel, messageCount } from "./format.ts";
@@ -74,9 +74,29 @@ export function SearchState({
   );
 }
 
-/** Loads the next page when the bottom of the list scrolls into view. */
+/**
+ * Puts focus on the results' scroll region before the control that has it gives way (a state
+ * swapping to skeletons), so it doesn't drop to the page; ↑/↓ go on from there.
+ */
+function holdFocusInResults(event: MouseEvent<HTMLElement>): void {
+  event.currentTarget.closest<HTMLElement>(".search-scroll")?.focus({ preventScroll: true });
+}
+
+/** Focus fell to the page (its control went away). */
+function focusDropped(): boolean {
+  const active = document.activeElement;
+
+  return active === null || active === document.body;
+}
+
+/**
+ * Loads the next page when the bottom of the list scrolls into view, or from its button. The
+ * button stays one element through loading and failing (busy, then "Try again"), so focus stays
+ * on it; when no page is left it goes, and focus moves to the first message it loaded.
+ */
 function MoreSentinel({ results }: { readonly results: SearchResultsView }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const resumeAt = useRef<number | null>(null);
   const armed = results.hasMore && !results.loadingMore && results.moreError === null;
   const onVisible = useEffectEvent(() => results.loadMore());
 
@@ -101,30 +121,40 @@ function MoreSentinel({ results }: { readonly results: SearchResultsView }) {
     return () => observer.disconnect();
   }, [armed]);
 
-  if (results.moreError !== null) {
-    return (
-      <div className="search-more" role="status">
-        <span>Couldn't load more results.</span>
-        <Button variant="link" size="sm" onClick={results.loadMore}>
-          Try again
-        </Button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const from = resumeAt.current;
 
-  if (results.hasMore) {
+    if (from === null || results.loadingMore) {
+      return;
+    }
+
+    resumeAt.current = null;
+
+    if (!focusDropped()) {
+      return;
+    }
+
+    const links = document.querySelectorAll<HTMLElement>(".search-scroll [data-search-hit-link]");
+
+    (links[from] ?? links[links.length - 1])?.focus({ preventScroll: true });
+  }, [results.loadingMore]);
+
+  if (results.hasMore || results.moreError !== null) {
     return (
-      <div ref={ref} className="search-more" role="status">
-        {results.loadingMore ? (
-          <>
-            <Spinner />
-            <span>Loading older messages…</span>
-          </>
-        ) : (
-          <Button variant="link" size="sm" onClick={results.loadMore}>
-            Load older messages
-          </Button>
-        )}
+      <div ref={ref} className="search-more">
+        {results.moreError === null ? null : <span>Couldn't load more results.</span>}
+        <Button
+          variant="link"
+          size="sm"
+          loading={results.loadingMore}
+          loadingLabel="Loading older messages…"
+          onClick={() => {
+            resumeAt.current = results.messages.length;
+            results.loadMore();
+          }}
+        >
+          {results.moreError === null ? "Load older messages" : "Try again"}
+        </Button>
       </div>
     );
   }
@@ -154,7 +184,15 @@ export function SearchResults({ results, words, now, onQuery }: SearchResultsPro
     return (
       <SearchState icon="alert" title="Search isn't working right now" tone="danger">
         <p className="search-state-text">{results.error ?? "Something went wrong."}</p>
-        <Button variant="secondary" size="sm" icon="rotate-ccw" onClick={results.reload}>
+        <Button
+          variant="secondary"
+          size="sm"
+          icon="rotate-ccw"
+          onClick={(event) => {
+            holdFocusInResults(event);
+            results.reload();
+          }}
+        >
           Try again
         </Button>
       </SearchState>
@@ -179,7 +217,10 @@ export function SearchResults({ results, words, now, onQuery }: SearchResultsPro
                     variant="pill"
                     size="sm"
                     icon="x"
-                    onClick={() => onQuery(chip.removeQuery)}
+                    onClick={(event) => {
+                      holdFocusInResults(event);
+                      onQuery(chip.removeQuery);
+                    }}
                   >
                     {chipLabel(chip)}
                   </Button>
@@ -201,7 +242,7 @@ export function SearchResults({ results, words, now, onQuery }: SearchResultsPro
       {loading ? null : (
         <>
           {results.error === null ? null : (
-            <p className="search-stale" role="status">
+            <p className="search-stale">
               <Icon name="alert" size={14} /> Showing earlier results: {results.error}
             </p>
           )}

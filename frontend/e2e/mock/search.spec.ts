@@ -167,3 +167,46 @@ test("arrow keys move through the results", async ({ page }) => {
   await page.keyboard.press("ArrowUp");
   await expect(field(page)).toBeFocused();
 });
+
+/** The page's live region, which says what a filter did and what the results hold. */
+function said(page: Page) {
+  return page.locator(".search-page [role='status'][aria-live='polite']");
+}
+
+test("focus stays on the page as filters and recent searches go", async ({ page }) => {
+  await search(page, "onboarding in:#general has:link", "light");
+
+  const filters = page.getByRole("toolbar", { name: "Filters" });
+
+  // A removed chip hands focus to the item beside it.
+  await filters.getByRole("button", { name: "Remove in: general" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/q=onboarding(\+|%20)has(%3A|:)link$/);
+  await expect(filters.getByText("in: general")).toHaveCount(0);
+  await expect(filters.locator(":focus")).toHaveCount(1);
+  await expect(said(page)).toHaveText(/messages?|No results/);
+
+  // So does a pill that leaves once its chip appears.
+  await filters.getByRole("button", { name: "Files" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(filters.getByRole("button", { name: "Files" })).toHaveCount(0);
+  await expect(filters.locator(":focus")).toHaveCount(1);
+
+  // Clearing the recents leaves focus in the field.
+  await open(page, "search");
+
+  const recents = page.getByRole("region", { name: "Recent searches" });
+
+  await recents.getByRole("button", { name: "Clear" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(recents).toHaveCount(0);
+  await expect(field(page)).toBeFocused();
+  await expect(said(page)).toHaveText("Cleared your recent searches");
+});
+
+test("the arrow keys reach the section rows", async ({ page }) => {
+  await search(page, "onboarding", "light");
+  await page.locator(".search-section-row").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator(".search-section-row").nth(1)).toBeFocused();
+});

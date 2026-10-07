@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { SearchChip } from "../../gen/SearchChip.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { searchKey } from "../../store/search.ts";
@@ -10,8 +10,10 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useAnnouncer } from "../destinations/live-region.tsx";
+import { type RowParts, useKeepRowFocus } from "../destinations/row-focus.ts";
 import { useNow } from "../threads/use-now.ts";
-import { chipLabel } from "./format.ts";
+import { chipLabel, resultsAnnouncement } from "./format.ts";
 import { appendToken, textWords } from "./query.ts";
 import { SearchBox } from "./search-box.tsx";
 import { visibleSearchInput } from "./search-hotkey.tsx";
@@ -59,19 +61,40 @@ interface FilterBarProps {
   readonly chips: readonly SearchChip[];
   readonly onQuery: (query: string) => void;
   readonly onCompose: (value: string) => void;
+  /** Says what a chip or pill just did, in the page's live region. */
+  readonly announce: (text: string) => void;
 }
 
+/**
+ * The filter bar's items for `useKeepRowFocus`: a chip leaves when it's removed and a pill when its
+ * chip appears, and focus moves on to the item beside it rather than dropping to the page.
+ */
+const FILTER_PARTS: RowParts = {
+  list: ".search-filters",
+  row: "[data-filter-item]",
+  open: "button",
+  leaving: "[data-filter-leaving]",
+};
+
 /** The query's filters as removable chips, then pills that add the common ones. */
-function FilterBar({ query, chips, onQuery, onCompose }: FilterBarProps) {
+function FilterBar({ query, chips, onQuery, onCompose, announce }: FilterBarProps) {
+  const barRef = useRef<HTMLDivElement | null>(null);
+
+  useKeepRowFocus(barRef, FILTER_PARTS);
+
   const toggles = TOGGLES.filter(
     (toggle) =>
       !chips.some((chip) => chip.operator === toggle.operator && chip.value === toggle.value),
   );
 
   return (
-    <div className="search-filters" role="toolbar" aria-label="Filters">
+    <div ref={barRef} className="search-filters" role="toolbar" aria-label="Filters">
       {chips.map((chip) => (
-        <span key={`${chip.token}:${chip.removeQuery}`} className="search-chip enter-pop">
+        <span
+          key={`${chip.token}:${chip.removeQuery}`}
+          className="search-chip enter-pop"
+          data-filter-item
+        >
           <Icon name={CHIP_ICON[chip.operator]} size={14} className="search-chip-icon" />
           <span className="search-chip-label">{chipLabel(chip)}</span>
           <IconButton
@@ -80,33 +103,41 @@ function FilterBar({ query, chips, onQuery, onCompose }: FilterBarProps) {
             size="sm"
             className="search-chip-remove"
             tooltipPlacement="bottom"
-            onClick={() => onQuery(chip.removeQuery)}
+            onClick={() => {
+              announce(`Removed the ${chipLabel(chip)} filter`);
+              onQuery(chip.removeQuery);
+            }}
           />
         </span>
       ))}
       {chips.length === 0 ? null : <span className="search-filters-divider" aria-hidden="true" />}
       {PICKERS.map((picker) => (
-        <Button
-          key={picker.token}
-          variant="pill"
-          size="sm"
-          icon={picker.icon}
-          trailingIcon="chevron-down"
-          onClick={() => onCompose(appendToken(query, picker.token))}
-        >
-          {picker.label}
-        </Button>
+        <span key={picker.token} className="search-filter-item" data-filter-item>
+          <Button
+            variant="pill"
+            size="sm"
+            icon={picker.icon}
+            trailingIcon="chevron-down"
+            onClick={() => onCompose(appendToken(query, picker.token))}
+          >
+            {picker.label}
+          </Button>
+        </span>
       ))}
       {toggles.map((toggle) => (
-        <Button
-          key={toggle.token}
-          variant="pill"
-          size="sm"
-          icon={toggle.icon}
-          onClick={() => onQuery(appendToken(query, toggle.token))}
-        >
-          {toggle.label}
-        </Button>
+        <span key={toggle.token} className="search-filter-item" data-filter-item>
+          <Button
+            variant="pill"
+            size="sm"
+            icon={toggle.icon}
+            onClick={() => {
+              announce(`Added the ${toggle.label} filter`);
+              onQuery(appendToken(query, toggle.token));
+            }}
+          >
+            {toggle.label}
+          </Button>
+        </span>
       ))}
     </div>
   );
@@ -121,7 +152,11 @@ const EXAMPLES = [
 ] as const;
 
 /** Nothing searched yet: recent searches to run again, and how to narrow a search. */
-function SearchHome({ onQuery, onCompose }: Pick<FilterBarProps, "onQuery" | "onCompose">) {
+function SearchHome({
+  onQuery,
+  onCompose,
+  announce,
+}: Pick<FilterBarProps, "onQuery" | "onCompose" | "announce">) {
   const recents = useRecentSearches();
 
   return (
@@ -140,6 +175,9 @@ function SearchHome({ onQuery, onCompose }: Pick<FilterBarProps, "onQuery" | "on
               variant="link"
               size="sm"
               onClick={() => {
+                // The section goes with its recents: focus waits in the field instead.
+                visibleSearchInput()?.focus({ preventScroll: true });
+                announce("Cleared your recent searches");
                 actions.search.clearRecents().catch((error: Error) =>
                   toast({
                     title: "Couldn't clear your recent searches",
@@ -242,11 +280,38 @@ export function SearchPage() {
   const [shown, setShown] = useState(query);
   const now = useNow();
   const results = useSearchResults(query);
+  const { announce, region } = useAnnouncer();
+  const [readyChips, setReadyChips] = useState<readonly SearchChip[]>([]);
 
   if (shown !== query) {
     setShown(query);
     setDraft(query);
   }
+
+  if (results.status === "ready" && results.chips !== readyChips) {
+    setReadyChips(results.chips);
+  }
+
+  // While a changed query loads, its chips are the last ones shown that it still holds, so the
+  // bar doesn't empty and refill (and focus has a chip beside it to land on).
+  const chips =
+    results.status === "ready"
+      ? results.chips
+      : readyChips.filter((chip) => query.includes(chip.token));
+
+  const said = resultsAnnouncement(results);
+  const saidFor = `${results.generation}:${said}`;
+  const lastSaid = useRef("");
+
+  useEffect(() => {
+    if (saidFor !== lastSaid.current) {
+      lastSaid.current = saidFor;
+
+      if (said !== "") {
+        announce(said);
+      }
+    }
+  });
 
   useEffect(() => {
     if (query !== "") {
@@ -266,6 +331,11 @@ export function SearchPage() {
     }
 
     void navigate({ to: "/search", search: key === "" ? {} : { q: key } });
+
+    // The filter bar goes with the last filter: the field takes focus.
+    if (key === "") {
+      requestAnimationFrame(() => visibleSearchInput()?.focus());
+    }
   };
 
   const compose = (value: string) => {
@@ -313,22 +383,24 @@ export function SearchPage() {
       {query === "" ? null : (
         <FilterBar
           query={query}
-          chips={results.status === "ready" ? results.chips : []}
+          chips={chips}
           onQuery={run}
           onCompose={compose}
+          announce={announce}
         />
       )}
       {/* The results list takes ↑/↓ (and j/k) between its links; it's a scroll region, not a widget. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: arrow keys only move focus between the links inside */}
-      <div className="search-scroll" onKeyDown={moveFocus}>
+      <div className="search-scroll" tabIndex={-1} onKeyDown={moveFocus}>
         <div className="search-content">
           {query === "" ? (
-            <SearchHome onQuery={run} onCompose={compose} />
+            <SearchHome onQuery={run} onCompose={compose} announce={announce} />
           ) : (
             <SearchResults results={results} words={textWords(query)} now={now} onQuery={run} />
           )}
         </div>
       </div>
+      {region}
     </section>
   );
 }

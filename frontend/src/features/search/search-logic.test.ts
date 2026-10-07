@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SearchChip } from "../../gen/SearchChip.ts";
 import type { SwitcherItem } from "../switcher/ranking.ts";
-import { chipLabel, hitDay, messageCount } from "./format.ts";
+import { messageFixture } from "../threads/test-fixtures.ts";
+import { chipLabel, hitDay, messageCount, resultsAnnouncement } from "./format.ts";
 import { highlightHtml, markRuns, wordMatcher } from "./highlight.ts";
 import {
   appendToken,
@@ -277,6 +278,37 @@ describe("format", () => {
     expect(chipLabel(chip)).toBe("is: thread");
     expect(chipLabel({ ...chip, operator: "has", value: "file", label: "has: file" })).toBe(
       "has: file",
+    );
+  });
+
+  it("says what the results hold as they load, land and fail", () => {
+    const base = {
+      query: "launch",
+      status: "ready" as const,
+      error: null,
+      messages: [],
+      sections: [],
+      hasMore: false,
+      loadingMore: false,
+      moreError: null,
+    };
+
+    const one = [messageFixture(1)];
+    const forty = Array.from({ length: 40 }, (_, index) => messageFixture(index + 1));
+
+    expect(resultsAnnouncement({ ...base, query: "" })).toBe("");
+    expect(resultsAnnouncement({ ...base, status: "loading" })).toBe("Searching…");
+    expect(resultsAnnouncement({ ...base, status: "error", error: "Down" })).toBe(
+      "Search failed. Down",
+    );
+    expect(resultsAnnouncement(base)).toBe("No results for “launch”");
+    expect(resultsAnnouncement({ ...base, messages: one })).toBe("1 message");
+    expect(resultsAnnouncement({ ...base, messages: forty, hasMore: true })).toBe("40+ messages");
+    expect(resultsAnnouncement({ ...base, messages: forty, loadingMore: true })).toBe(
+      "Loading older messages…",
+    );
+    expect(resultsAnnouncement({ ...base, messages: forty, moreError: "Down" })).toBe(
+      "Couldn't load more results.",
     );
   });
 });
