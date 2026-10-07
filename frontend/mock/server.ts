@@ -54,6 +54,7 @@ import {
   threadStatus,
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
+import { createPeople } from "./s2/people.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
@@ -717,6 +718,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createSettings(ctx, uploads, admin.requireSudo).routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
+    ...createPeople(ctx, admin.requireSudo).routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,
     ...createOrganize(ctx).routes,
