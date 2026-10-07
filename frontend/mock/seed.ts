@@ -280,6 +280,12 @@ function seedUsers(now: number): Map<number, User> {
               text: person.customStatus.text,
               expiresAt: timestamp(now + 3 * DAY),
             },
+      avatarIcon: null,
+      agent:
+        person.role === "bot"
+          ? // One agent per bot; the mock reuses the bot user's id as the agent id.
+            { agentId: person.id, kind: "workspace", status: "idle", suspended: false }
+          : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
     });
   }
@@ -733,6 +739,7 @@ export function seedWorld(now: number, random: Random): World {
       poll: null,
       cards: [],
       cardsAsOf: createdAt,
+      steps: [],
       createdAt,
       updatedAt: editedAt ?? createdAt,
     });

@@ -29,6 +29,7 @@ export function messageFixture(id: number, extra: Partial<MessageDTO> = {}): Mes
     poll: null,
     cards: [],
     cardsAsOf: createdAt,
+    steps: [],
     createdAt,
     updatedAt: createdAt,
     ...extra,

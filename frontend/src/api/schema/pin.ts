@@ -7,11 +7,17 @@ import type { Schema } from "effect";
  */
 export type ToleratedWire = { readonly kind: string; readonly data?: unknown };
 
-type IsTolerated<T> = [T] extends [ToleratedWire]
-  ? [ToleratedWire] extends [T]
-    ? true
-    : false
-  : false;
+/**
+ * The wire side of a tolerant literal (`tolerantLiterals`): any string, typed apart from `string`
+ * so a union with the known literals doesn't collapse. Left out of the comparison like
+ * `ToleratedWire`, so a tolerant literal pins against the generated union of its known values.
+ */
+export type ToleratedString = string & { readonly toleratedString?: never };
+
+type IsExactly<T, Marker> = [T] extends [Marker] ? ([Marker] extends [T] ? true : false) : false;
+
+type IsTolerated<T> =
+  IsExactly<T, ToleratedWire> extends true ? true : IsExactly<T, ToleratedString>;
 
 /**
  * Effect Schema's arrays and records are readonly and ts-rs's aren't. Readonly-ness says nothing

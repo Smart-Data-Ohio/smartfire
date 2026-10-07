@@ -55,6 +55,9 @@ pub fn user(settings: &UserStatusSettings, secrets: &Secrets, now: Timestamp) ->
         bio: user.bio.clone(),
         avatar_url: presenters::avatar_path(secrets, user),
         custom_status,
+        // Agent identity still renders in the HTML only; the S4 backend fills these.
+        avatar_icon: None,
+        agent: None,
         created_at: time(user.created_at),
     }
 }
@@ -192,6 +195,8 @@ pub fn messages(
                 poll: None,
                 cards: Vec::new(),
                 cards_as_of: as_of.clone(),
+                // Agent steps still render in the HTML only; the S4 backend fills them.
+                steps: Vec::new(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
             })

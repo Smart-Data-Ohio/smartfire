@@ -218,6 +218,7 @@ export function buildMessage(
     poll: null,
     cards: [],
     cardsAsOf: createdAt,
+    steps: [],
     createdAt,
     updatedAt: createdAt,
   };

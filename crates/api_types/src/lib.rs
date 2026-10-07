@@ -18,6 +18,7 @@
 mod actions;
 mod activity;
 mod admin;
+mod agents;
 mod attachment;
 mod bots;
 mod cards;
@@ -59,6 +60,12 @@ pub use admin::{
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
     PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
+};
+pub use agents::{
+    AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
+    AgentCapability, AgentDirectory, AgentDirectoryRow, AgentGrant, AgentGrants, AgentKind,
+    AgentManagement, AgentProfile, AgentProfileRoom, AgentStatus, AgentStatusChanged, AgentStep,
+    AgentStepStatus, AgentStepsChanged, ApprovalDecision, ApprovalUpdated, DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use bots::{
@@ -142,6 +149,8 @@ mod tests;
 mod tests_s2;
 #[cfg(test)]
 mod tests_s3;
+#[cfg(test)]
+mod tests_s4;
 #[cfg(test)]
 mod tests_s7;
 #[cfg(test)]
