@@ -57,7 +57,7 @@ function row(agentId: number, change: Partial<AgentDirectoryRow> = {}): AgentDir
     createdAt: at(-1000),
     statusChangedAt: null,
     lastSeenAt: null,
-    updatedAt: change.statusChangedAt ?? at(0),
+    updatedAt: (change.statusChangedAt ?? at(0)).replace(/Z$/, "000Z"),
     ...change,
   };
 }
@@ -89,7 +89,7 @@ function status(change: Partial<AgentStatusChanged> = {}): AgentStatusChanged {
     suspended: false,
     workingPresence: "Reading the logs",
     workingPresenceExpiresAt: at(300),
-    updatedAt: change.statusChangedAt ?? at(1),
+    updatedAt: (change.statusChangedAt ?? at(1)).replace(/Z$/, "000Z"),
     ...change,
   };
 }

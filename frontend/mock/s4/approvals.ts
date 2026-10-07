@@ -19,12 +19,12 @@ import { forbidden, notFound, ok } from "../http.ts";
 import { field, type Json, stringField } from "../json.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso, touched } from "../s2/model.ts";
+import { iso } from "../s2/model.ts";
 import type { Activity, ActivityDraft } from "../s3/activity.ts";
 import { conversationTitle } from "../s3/conversations.ts";
 import { beforeOf, oneOf } from "../s3/model.ts";
 import { APPROVALS, seededApprovalAt, seededApprovalId } from "../s3/seed.ts";
-import { ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
+import { ROOM_IDS, rowTimestamp, touchedRow, USER_IDS, VIEWER_ID } from "../seed.ts";
 import {
   AGENT_IDS,
   type Agents,
@@ -229,7 +229,7 @@ export function createApprovals(
     );
 
   const publishUpdated = (record: ApprovalRecord) => {
-    record.updatedAt = touched(ctx.now(), record.updatedAt);
+    record.updatedAt = touchedRow(ctx.now(), record.updatedAt);
 
     const data: ApprovalUpdated = { approval: present(record), users: usersOf([record]) };
 
@@ -248,7 +248,7 @@ export function createApprovals(
   const add = (seed: Omit<ApprovalRecord, "updatedAt">): ApprovalRecord => {
     const record = {
       ...seed,
-      updatedAt: iso(
+      updatedAt: rowTimestamp(
         seed.decidedAt ?? (seed.status === "expired" ? seed.expiresAt : seed.createdAt),
       ),
     };

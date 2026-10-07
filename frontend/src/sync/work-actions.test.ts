@@ -40,7 +40,8 @@ function liveStatus(status: WorkFacts["status"]): void {
         data: threadFixture(THREAD, {
           work: factsFixture({
             status,
-            updatedAt: status === "done" ? "2026-10-06T09:20:00.000Z" : "2026-10-06T09:10:00.000Z",
+            updatedAt:
+              status === "done" ? "2026-10-06T09:20:00.000000Z" : "2026-10-06T09:10:00.000000Z",
           }),
         }),
       },
@@ -67,7 +68,7 @@ describe("work actions", () => {
         return Effect.succeed(
           threadDetailFixture(
             THREAD,
-            factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000Z" }),
+            factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000000Z" }),
             workDetailFixture(),
           ),
         );
@@ -111,7 +112,7 @@ describe("work actions", () => {
       yield* Effect.yieldNow;
       mutations.upsertThread(
         threadFixture(THREAD, {
-          work: factsFixture({ status: "planned", updatedAt: "2026-10-06T09:15:00.000Z" }),
+          work: factsFixture({ status: "planned", updatedAt: "2026-10-06T09:15:00.000000Z" }),
         }),
       );
       yield* Deferred.succeed(gate, undefined);
@@ -209,7 +210,7 @@ describe("work actions", () => {
       seed();
       mutations.upsertThread(
         threadFixture(THREAD, {
-          work: factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }),
+          work: factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }),
         }),
       );
 
@@ -223,7 +224,7 @@ describe("work actions", () => {
           Effect.as(
             threadDetailFixture(
               THREAD,
-              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }),
+              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }),
               workDetailFixture(),
             ),
           ),
@@ -267,7 +268,7 @@ describe("work actions", () => {
         );
         expect(factsOf()).toMatchObject({
           status: "blocked",
-          updatedAt: "2026-10-06T09:10:00.000Z",
+          updatedAt: "2026-10-06T09:10:00.000000Z",
         });
         expect(workDetailStale(store.getState(), THREAD)).toBe(true);
       }).pipe(Effect.provide(FakeApi.layerClient)),
@@ -369,7 +370,7 @@ describe("work actions", () => {
 
   it.effect("merge list and detail responses into the same work key", () =>
     Effect.gen(function* () {
-      seed(factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }));
+      seed(factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }));
 
       const fake = yield* FakeApi;
       const done = rowFixture(THREAD);
@@ -380,7 +381,7 @@ describe("work actions", () => {
             ...done,
             thread: {
               ...done.thread,
-              work: factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000Z" }),
+              work: factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000000Z" }),
             },
           },
         ],
@@ -408,7 +409,7 @@ describe("work actions", () => {
           Effect.as(
             threadDetailFixture(
               THREAD,
-              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }),
+              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }),
               workDetailFixture(),
             ),
           ),
@@ -423,7 +424,7 @@ describe("work actions", () => {
         `GET /threads/${THREAD}`,
         threadDetailFixture(
           THREAD,
-          factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000Z" }),
+          factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000000Z" }),
           workDetailFixture(),
         ),
       );
@@ -438,7 +439,7 @@ describe("work actions", () => {
 
   it.effect("keep a successful write after its echo and a late older refresh", () =>
     Effect.gen(function* () {
-      seed(factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }));
+      seed(factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }));
 
       const fake = yield* FakeApi;
       const started = yield* Deferred.make<void>();
@@ -446,7 +447,7 @@ describe("work actions", () => {
 
       const done = threadDetailFixture(
         THREAD,
-        factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000Z" }),
+        factsFixture({ status: "done", updatedAt: "2026-10-06T09:20:00.000000Z" }),
         workDetailFixture(),
       );
 
@@ -456,7 +457,7 @@ describe("work actions", () => {
           Effect.as(
             threadDetailFixture(
               THREAD,
-              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }),
+              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }),
               workDetailFixture(),
             ),
           ),
@@ -495,7 +496,7 @@ describe("work actions", () => {
           Effect.as(
             threadDetailFixture(
               THREAD,
-              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" }),
+              factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" }),
               workDetailFixture(),
             ),
           ),
@@ -522,7 +523,7 @@ describe("work actions", () => {
       const fake = yield* FakeApi;
       const started = yield* Deferred.make<void>();
       const gate = yield* Deferred.make<void>();
-      const blocked = factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000Z" });
+      const blocked = factsFixture({ status: "blocked", updatedAt: "2026-10-06T09:10:00.000000Z" });
 
       yield* fake.route(`PATCH /threads/${THREAD}/work`, () =>
         Deferred.succeed(started, undefined).pipe(

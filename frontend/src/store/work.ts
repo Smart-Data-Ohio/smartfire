@@ -430,7 +430,7 @@ export function optimisticFacts(
         runUrl: null,
         resultUpdatedAt: null,
         links: [],
-        updatedAt: "0001-01-01T00:00:00.000Z",
+        updatedAt: "0001-01-01T00:00:00.000000Z",
       }
     : { ...current, status };
 }

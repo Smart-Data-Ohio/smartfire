@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { userFixture } from "../api/testing.ts";
+import { rowVersionFixture, userFixture } from "../api/testing.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
@@ -36,6 +36,10 @@ function at(minute: number): string {
   return new Date(NOW + minute * 60_000).toISOString();
 }
 
+function revision(minute: number): string {
+  return rowVersionFixture(NOW + minute * 60_000);
+}
+
 function approval(id: number, status: AgentApprovalStatus = "pending"): AgentApproval {
   return {
     id,
@@ -56,7 +60,7 @@ function approval(id: number, status: AgentApprovalStatus = "pending"): AgentApp
     adminOnly: false,
     approvable: true,
     deniable: true,
-    updatedAt: status === "pending" ? at(0) : at(1),
+    updatedAt: revision(status === "pending" ? 0 : 1),
   };
 }
 
@@ -126,7 +130,7 @@ describe("approval requests in the store", () => {
       loading,
       key,
       {
-        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) }],
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: revision(1) }],
         users: [],
         nextCursor: null,
       },
@@ -134,7 +138,11 @@ describe("approval requests in the store", () => {
     );
 
     const newer = applyApprovalUpdated(state, {
-      approval: { ...approval(2, "denied"), decidedAt: at(2), updatedAt: at(2) },
+      approval: {
+        ...approval(2, "denied"),
+        decidedAt: at(2),
+        updatedAt: revision(2),
+      },
       users: [],
     });
 
@@ -163,7 +171,7 @@ describe("approval requests in the store", () => {
     const before = approval(2);
     const shown = decidedLocally(before, "approved", 1, "Ok", NOW);
     const local = showApproval(loaded(), shown);
-    const echoed = applyApproval(local, { ...shown, updatedAt: at(1) });
+    const echoed = applyApproval(local, { ...shown, updatedAt: revision(1) });
 
     expect(rollbackApproval(echoed, shown, before)).toBe(echoed);
     expect(echoed.approvals.items[2]?.status).toBe("approved");
@@ -193,7 +201,7 @@ describe("approval requests in the store", () => {
 
     const confirmed = applyApproval(loading, {
       ...decidedLocally(approval(2), "approved", 1, "Ok", NOW),
-      updatedAt: at(1),
+      updatedAt: revision(1),
     });
 
     const landed = landApprovalPage(
@@ -214,7 +222,11 @@ describe("approval requests in the store", () => {
     const loading = setApprovalListLoading(loaded(), key, false);
 
     const updated = applyApprovalUpdated(loading, {
-      approval: { ...approval(2, "denied"), decidedAt: at(1), updatedAt: at(1) },
+      approval: {
+        ...approval(2, "denied"),
+        decidedAt: at(1),
+        updatedAt: revision(1),
+      },
       users: [],
     });
 
@@ -234,14 +246,18 @@ describe("approval requests in the store", () => {
     const newer = {
       ...approval(2, "denied"),
       decidedAt: at(2),
-      updatedAt: at(2),
+      updatedAt: revision(2),
       decisionNote: "Newer",
     };
 
     const updated = applyApprovalUpdated(loaded(), { approval: newer, users: [] });
 
     const landed = applyApprovalUpdated(updated, {
-      approval: { ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) },
+      approval: {
+        ...approval(2, "approved"),
+        decidedAt: at(1),
+        updatedAt: revision(1),
+      },
       users: [],
     });
 
@@ -257,7 +273,7 @@ describe("approval requests in the store", () => {
       state,
       approved,
       {
-        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: at(1) }],
+        approvals: [{ ...approval(2, "approved"), decidedAt: at(1), updatedAt: revision(1) }],
         users: [],
         nextCursor: null,
       },
@@ -345,7 +361,7 @@ describe("approval requests in the store", () => {
               ...approval(3, "denied"),
               decidedById: 4,
               decidedAt: at(1),
-              updatedAt: at(1),
+              updatedAt: revision(1),
             },
             users: [userFixture(4, "Priya")],
           },

@@ -1,5 +1,6 @@
 /** Ordering and merging helpers the reducers share. */
 import type { MessageDTO, User } from "./model.ts";
+import { landsOver } from "./revision.ts";
 import type { State } from "./state.ts";
 
 /** `(createdAt, id)`: the server's timeline order. */
@@ -44,11 +45,7 @@ export function insertOrdered(
  * Answers `users` itself when nothing landed.
  */
 export function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
-  const landing = list.filter((user) => {
-    const held = users[user.id];
-
-    return held === undefined || user.updatedAt >= held.updatedAt;
-  });
+  const landing = list.filter((user) => landsOver(users[user.id], user));
 
   if (landing.length === 0) {
     return users;

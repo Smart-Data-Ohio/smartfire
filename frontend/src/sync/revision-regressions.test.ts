@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber } from "effect";
 import { Forbidden, ServerError } from "../api/errors.ts";
-import { FakeApi, pageFixture, userFixture } from "../api/testing.ts";
+import { FakeApi, pageFixture, rowVersionFixture, userFixture } from "../api/testing.ts";
 import { messageFixture, threadFixture } from "../features/threads/test-fixtures.ts";
 import {
   factsFixture,
@@ -23,7 +23,7 @@ const THREAD = 7;
 const NOW = Date.UTC(2026, 9, 6, 9, 15);
 
 function facts(offset: number, change: Partial<WorkFacts> = {}): WorkFacts {
-  return factsFixture({ updatedAt: new Date(NOW + offset).toISOString(), ...change });
+  return factsFixture({ updatedAt: rowVersionFixture(NOW + offset), ...change });
 }
 
 function detail(incoming: WorkFacts): ThreadDetail {
@@ -221,7 +221,7 @@ describe("S4 revisions through held network responses", () => {
       expect(store.getState().threads[THREAD]?.work).toMatchObject({
         status: "planned",
         ownerActive: false,
-        updatedAt: new Date(NOW).toISOString(),
+        updatedAt: rowVersionFixture(NOW),
       });
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -251,7 +251,7 @@ describe("S4 revisions through held network responses", () => {
       expect(store.getState().threads[THREAD]?.work).toMatchObject({
         status: "planned",
         ownerActive: false,
-        updatedAt: new Date(NOW).toISOString(),
+        updatedAt: rowVersionFixture(NOW),
       });
       expect((yield* fake.requests).length).toBe(1);
     }).pipe(Effect.provide(FakeApi.layerClient)),
@@ -333,7 +333,7 @@ describe("S4 revisions through held network responses", () => {
 
       expect(store.getState().threads[THREAD]?.work).toMatchObject({
         status: "planned",
-        updatedAt: new Date(NOW + 2).toISOString(),
+        updatedAt: rowVersionFixture(NOW + 2),
       });
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
@@ -507,7 +507,7 @@ describe("S4 revisions through held network responses", () => {
         expect(store.getState().threads[THREAD]?.work).toMatchObject({
           ownerActive: false,
           runUrl: "https://example.test/run/held",
-          updatedAt: new Date(NOW).toISOString(),
+          updatedAt: rowVersionFixture(NOW),
         });
         expect((yield* fake.requests).length).toBe(1);
       }).pipe(Effect.provide(FakeApi.layerClient)),
@@ -578,10 +578,10 @@ describe("S4 revisions through held network responses", () => {
           adminOnly: false,
           approvable: true,
           deniable: true,
-          updatedAt: new Date(NOW).toISOString(),
+          updatedAt: rowVersionFixture(NOW),
         };
 
-        const newest = { ...approved, updatedAt: new Date(NOW + 2).toISOString() };
+        const newest = { ...approved, updatedAt: rowVersionFixture(NOW + 2) };
 
         yield* fake.reply("GET /agents/9/approvals", {
           approvals: [approved],

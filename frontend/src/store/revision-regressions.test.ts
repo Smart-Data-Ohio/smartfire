@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { rowVersionFixture } from "../api/testing.ts";
 import { messageFixture, threadFixture } from "../features/threads/test-fixtures.ts";
 import {
   agentFixture,
@@ -30,8 +31,12 @@ const AGENT = 9;
 
 const NOW = Date.UTC(2026, 9, 6, 9, 15);
 
-function revision(offset: number): string {
+function at(offset: number): string {
   return new Date(NOW + offset).toISOString();
+}
+
+function revision(offset: number): string {
+  return rowVersionFixture(NOW + offset);
 }
 
 function facts(offset: number, change: Partial<WorkFacts> = {}): WorkFacts {
@@ -48,8 +53,8 @@ function approval(offset: number, change: Partial<AgentApproval> = {}): AgentApp
     action: "messages.post",
     summary: "Post the result",
     status: "pending",
-    expiresAt: revision(3_600_000),
-    createdAt: revision(-1000),
+    expiresAt: at(3_600_000),
+    createdAt: at(-1000),
     decidedById: null,
     decidedAt: null,
     decisionNote: null,
@@ -73,7 +78,7 @@ function agentRow(offset: number, change: Partial<AgentDirectoryRow> = {}): Agen
     statusNote: null,
     statusChangedAt: null,
     suspended: false,
-    createdAt: revision(-1000),
+    createdAt: at(-1000),
     lastSeenAt: null,
     updatedAt: revision(offset),
     ...change,
@@ -120,8 +125,8 @@ function step(offset: number, change: Partial<AgentStep> = {}): AgentStep {
     outputSummary: null,
     durationMs: null,
     position: 1,
-    createdAt: revision(-1000),
-    updatedAt: revision(offset),
+    createdAt: at(-1000),
+    updatedAt: at(offset),
     ...change,
   };
 }
@@ -334,7 +339,7 @@ describe("server revisions on S4 records", () => {
       agentStatus(2, {
         suspended: true,
         workingPresence: "Publishing",
-        workingPresenceExpiresAt: revision(300_000),
+        workingPresenceExpiresAt: at(300_000),
       }),
     );
     publishAgent(agentStatus(1));
@@ -362,12 +367,8 @@ describe("server revisions on S4 records", () => {
   });
 
   it("accepts a newer server approval even when its decision display time went backwards", () => {
-    landApproval(
-      approval(1, { status: "approved", decidedAt: revision(500), decisionNote: "First" }),
-    );
-    landApproval(
-      approval(2, { status: "approved", decidedAt: revision(400), decisionNote: "Revised" }),
-    );
+    landApproval(approval(1, { status: "approved", decidedAt: at(500), decisionNote: "First" }));
+    landApproval(approval(2, { status: "approved", decidedAt: at(400), decisionNote: "Revised" }));
 
     expect(store.getState().approvals.items[3]).toMatchObject({
       decisionNote: "Revised",
@@ -376,8 +377,8 @@ describe("server revisions on S4 records", () => {
   });
 
   it("uses an agent's updatedAt even when statusChangedAt did not move", () => {
-    landAgent(agentRow(1, { statusChangedAt: revision(500) }));
-    publishAgent(agentStatus(2, { suspended: true, statusChangedAt: revision(400) }));
+    landAgent(agentRow(1, { statusChangedAt: at(500) }));
+    publishAgent(agentStatus(2, { suspended: true, statusChangedAt: at(400) }));
 
     expect(store.getState().agents.rows[AGENT]).toMatchObject({
       suspended: true,
@@ -403,7 +404,7 @@ describe("server revisions on S4 records", () => {
     expect(state.work.details[THREAD]?.steps[0]).toMatchObject({
       status: "done",
       outputSummary: "Found the cause",
-      updatedAt: revision(3),
+      updatedAt: at(3),
     });
   });
 
@@ -433,7 +434,7 @@ describe("server revisions on S4 records", () => {
 
     expect(store.getState().work.details[THREAD]?.steps[0]).toMatchObject({
       status: "done",
-      updatedAt: revision(2),
+      updatedAt: at(2),
     });
   });
 

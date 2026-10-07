@@ -3,6 +3,7 @@ import type { PeopleDirectory } from "../gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { User } from "../gen/User.ts";
+import { landsOver } from "../store/revision.ts";
 import { mutations, store } from "../store/store.ts";
 
 /** The requests the people pages make, as promises (the runtime's in the app, fakes in tests). */
@@ -73,7 +74,7 @@ export function peoplePagesOver(requests: PeopleRequests) {
   function overtaken(user: User): boolean {
     const held = store.getState().users[user.id];
 
-    return held !== undefined && held.updatedAt > user.updatedAt;
+    return !landsOver(held, user);
   }
 
   const pages = {

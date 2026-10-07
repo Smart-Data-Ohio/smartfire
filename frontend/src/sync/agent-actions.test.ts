@@ -21,7 +21,7 @@ function row(agentId: number): AgentDirectoryRow {
     createdAt: "2026-10-01T00:00:00.000Z",
     statusChangedAt: null,
     lastSeenAt: null,
-    updatedAt: "2026-10-07T16:00:00.000Z",
+    updatedAt: "2026-10-07T16:00:00.000000Z",
   };
 }
 
@@ -183,7 +183,7 @@ describe("agent actions", () => {
                 suspended: true,
                 workingPresence: "Reading logs",
                 workingPresenceExpiresAt: "2026-10-08T16:30:00.000Z",
-                updatedAt: "2026-10-07T16:10:00.000Z",
+                updatedAt: "2026-10-07T16:10:00.000000Z",
               },
             },
           ],
@@ -222,7 +222,7 @@ describe("agent actions", () => {
         const newer = {
           ...row(40),
           statusChangedAt: "2026-10-07T16:20:00.000Z",
-          updatedAt: "2026-10-07T16:20:00.000Z",
+          updatedAt: "2026-10-07T16:20:00.000000Z",
         };
 
         yield* fake.route(path, () =>
@@ -253,7 +253,7 @@ describe("agent actions", () => {
                 status: "working",
                 statusNote: "Old",
                 statusChangedAt: "2026-10-07T16:10:00.000Z",
-                updatedAt: "2026-10-07T16:10:00.000Z",
+                updatedAt: "2026-10-07T16:10:00.000000Z",
                 suspended: false,
                 workingPresence: null,
                 workingPresenceExpiresAt: null,

@@ -13,7 +13,7 @@ import { type Mentionable, renderMarkdown } from "../markdown.ts";
 import { DEFAULT_AUTO_ARCHIVE_MINUTES, iso } from "../s2/model.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { S3_THREAD_IDS } from "../s3/seed.ts";
-import { ROOM_IDS, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
+import { ROOM_IDS, rowTimestamp, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
 import { emptyWork, ownerActive, ownerSnapshot, setOwner, type WorkRecord } from "./work-model.ts";
 import { S4_BOARD, type WorkState, workStateOf } from "./work-state.ts";
 
@@ -409,7 +409,7 @@ function buildWork(
   now: number,
   people: readonly Mentionable[],
 ): WorkRecord {
-  const work = emptyWork(iso(now - seed.updatedAgo));
+  const work = emptyWork(rowTimestamp(now - seed.updatedAgo));
 
   work.status = seed.status;
   setOwner(world, work, seed.ownerId);

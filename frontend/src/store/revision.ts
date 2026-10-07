@@ -1,4 +1,4 @@
-/** Records use fixed-width server timestamps; arrival and request order do not matter. */
+/** The one comparison rule for server-revisioned users, work facts, approvals and agent status. */
 export interface Revisioned {
   readonly updatedAt: string;
 }

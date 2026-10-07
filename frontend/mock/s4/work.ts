@@ -22,9 +22,9 @@ import {
 } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { iso, type ThreadRecord, threadDto, touched } from "../s2/model.ts";
+import { iso, type ThreadRecord, threadDto } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
-import { VIEWER_ID } from "../seed.ts";
+import { rowTimestamp, touchedRow, VIEWER_ID } from "../seed.ts";
 import { invalid, invalidBody, sentence } from "./http.ts";
 import { S4_BOARD, workStateOf } from "./seed.ts";
 import {
@@ -164,7 +164,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
    */
   const apply = (thread: ThreadRecord, change: WorkChange, actorId: number): boolean => {
     const world = ctx.world();
-    const work: WorkRecord = thread.work ?? emptyWork(iso(ctx.now()));
+    const work: WorkRecord = thread.work ?? emptyWork(rowTimestamp(ctx.now()));
     const status = change.status === undefined ? work.status : change.status;
     const ownerId = change.ownerId === undefined ? work.ownerId : change.ownerId;
     const ownerChanged = ownerId !== work.ownerId;
@@ -251,7 +251,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       );
     }
 
-    work.updatedAt = touched(ctx.now(), work.updatedAt);
+    work.updatedAt = touchedRow(ctx.now(), work.updatedAt);
     ctx.publish(threads.updated(thread));
 
     return true;
@@ -405,7 +405,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     );
     setOwner(world, work, receiver.id);
     work.ownerActive = true;
-    work.updatedAt = touched(ctx.now(), work.updatedAt);
+    work.updatedAt = touchedRow(ctx.now(), work.updatedAt);
     ctx.publish(threads.updated(thread));
 
     return ok(threads.detail(thread), 201);

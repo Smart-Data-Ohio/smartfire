@@ -112,7 +112,7 @@ describe("work in the store", () => {
 
   it("builds optimistic facts for a start, a move and a stop", () => {
     expect(optimisticFacts(null, "planned")).toEqual({
-      updatedAt: "0001-01-01T00:00:00.000Z",
+      updatedAt: "0001-01-01T00:00:00.000000Z",
       status: "planned",
       owner: null,
       ownerActive: false,
@@ -143,15 +143,15 @@ describe("work in the store", () => {
   });
 
   it.each([
-    { name: "older", updatedAt: "2026-10-06T09:15:00.001Z", runUrl: null },
+    { name: "older", updatedAt: "2026-10-06T09:15:00.001000Z", runUrl: null },
     {
       name: "equal",
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       runUrl: "https://ci.example/filled",
     },
   ])("keeps newer links when a held $name-revision GET lands", ({ updatedAt, runUrl }) => {
     const facts = factsFixture({
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       links: [linkFixture(1, { title: "Captured" })],
     });
 
@@ -177,7 +177,7 @@ describe("work in the store", () => {
 
   it("keeps links after an equal observation and a late ABA GET at the same revision", () => {
     const facts = factsFixture({
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       links: [linkFixture(1, { pullRequestState: "open" })],
     });
 
@@ -198,7 +198,7 @@ describe("work in the store", () => {
 
   it("merges freshly observed links from an older work revision without replacing its status", () => {
     const facts = factsFixture({
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       status: "done",
       links: [linkFixture(1, { title: "Before" })],
     });
@@ -211,7 +211,7 @@ describe("work in the store", () => {
       THREAD,
       {
         ...facts,
-        updatedAt: "2026-10-06T09:15:00.001Z",
+        updatedAt: "2026-10-06T09:15:00.001000Z",
         status: "planned",
         links: newerLinks,
       },
@@ -229,7 +229,7 @@ describe("work in the store", () => {
 
   it("keeps observed links in an optimistic status overlay and its rollback", () => {
     const facts = factsFixture({
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       links: [linkFixture(1, { title: "Captured" })],
     });
 
@@ -255,7 +255,7 @@ describe("work in the store", () => {
 
   it("keeps observed links when a held status write reply settles the overlay", () => {
     const facts = factsFixture({
-      updatedAt: "2026-10-06T09:15:00.002Z",
+      updatedAt: "2026-10-06T09:15:00.002000Z",
       links: [linkFixture(1, { title: "Captured" })],
     });
 
@@ -268,7 +268,7 @@ describe("work in the store", () => {
 
     const reply = threadDetailFixture(
       THREAD,
-      { ...shown, updatedAt: "2026-10-06T09:15:00.003Z" },
+      { ...shown, updatedAt: "2026-10-06T09:15:00.003000Z" },
       workDetailFixture(),
     );
 

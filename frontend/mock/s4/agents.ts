@@ -24,7 +24,7 @@ import { notFound, ok } from "../http.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso, touched } from "../s2/model.ts";
-import { BOT_ID, ROOM_IDS, USER_IDS, VIEWER_ID } from "../seed.ts";
+import { BOT_ID, ROOM_IDS, rowTimestamp, touchedRow, USER_IDS, VIEWER_ID } from "../seed.ts";
 import { validation } from "./http.ts";
 import { workStateOf } from "./work-state.ts";
 
@@ -401,7 +401,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       avatarIcon: seed.avatarIcon,
       agent: { agentId: seed.id, kind: seed.kind, status: seed.status, suspended: seed.suspended },
       createdAt: held?.createdAt ?? iso(now - seed.createdDaysAgo * DAY),
-      updatedAt: held?.updatedAt ?? iso(now - seed.createdDaysAgo * DAY),
+      updatedAt: held?.updatedAt ?? rowTimestamp(now - seed.createdDaysAgo * DAY),
     };
   };
 
@@ -530,8 +530,10 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
           lastSeenAt: minutesAgo(each.lastSeenMinutesAgo),
           updatedAt:
             each.presence !== null
-              ? iso(now)
-              : iso(now - (each.statusChangedMinutesAgo ?? each.createdDaysAgo * 24 * 60) * MINUTE),
+              ? rowTimestamp(now)
+              : rowTimestamp(
+                  now - (each.statusChangedMinutesAgo ?? each.createdDaysAgo * 24 * 60) * MINUTE,
+                ),
         },
         presence:
           each.presence === null
@@ -646,7 +648,7 @@ export function createAgents(ctx: S2Context, random: Random, paused: () => boole
       suspended,
       statusChangedAt: statusMoved ? iso(now) : record.row.statusChangedAt,
       lastSeenAt: iso(now),
-      updatedAt: changed ? touched(now, record.row.updatedAt) : record.row.updatedAt,
+      updatedAt: changed ? touchedRow(now, record.row.updatedAt) : record.row.updatedAt,
     };
     record.presence = presence;
 

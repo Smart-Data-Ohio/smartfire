@@ -340,19 +340,15 @@ test("a deactivated person's page says they've gone, and an unknown one says so"
   await expect(page.getByText("There's nobody here by that link.")).toBeVisible();
 });
 
-test("a bot's page opens on the classic page until the SPA has its agent profile", async ({
-  page,
-}) => {
-  await page.route("**/users/9?classic=1", (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<h1>Classic Ember</h1>" }),
-  );
+test("a bot's page opens its ported agent profile", async ({ page }) => {
   await openPeople(page);
 
   await expect(row(page, "Ember").getByRole("link", { name: "Ember" })).toHaveAttribute(
     "href",
-    "/users/9?classic=1",
+    "/app/agents/9",
   );
 
   await page.goto("/app/people/9");
-  await expect(page).toHaveURL(/\/users\/9\?classic=1$/);
+  await expect(page).toHaveURL(/\/app\/agents\/9$/);
+  await expect(page.getByRole("heading", { name: "Ember", exact: true })).toBeVisible();
 });

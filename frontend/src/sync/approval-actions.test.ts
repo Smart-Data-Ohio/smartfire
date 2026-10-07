@@ -30,7 +30,7 @@ const pending: AgentApproval = {
   adminOnly: true,
   approvable: true,
   deniable: true,
-  updatedAt: "2026-10-06T16:30:00.000Z",
+  updatedAt: "2026-10-06T16:30:00.000000Z",
 };
 
 /** The viewer (Ada, user 7) with the agent's pending list loaded. */
@@ -63,7 +63,7 @@ describe("approval actions", () => {
         ...pending,
         status: "approved",
         decidedAt: "2026-10-06T16:31:00.000Z",
-        updatedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000000Z",
       };
 
       yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
@@ -172,7 +172,7 @@ describe("approval actions", () => {
           ...pending,
           status: refusal.message.includes("expired") ? "expired" : "denied",
           decidedById: refusal.message.includes("expired") ? null : 4,
-          updatedAt: "2026-10-06T16:31:00.000Z",
+          updatedAt: "2026-10-06T16:31:00.000000Z",
           decidedAt: refusal.message.includes("expired") ? null : "2026-10-06T16:31:00.000Z",
         };
 
@@ -209,7 +209,7 @@ describe("approval actions", () => {
         status: "approved",
         decidedById: 7,
         decidedAt: "2026-10-06T16:31:00.000Z",
-        updatedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000000Z",
         decisionNote: "Ship it",
       };
 
@@ -268,7 +268,7 @@ describe("approval actions", () => {
       const reply: AgentApproval = {
         ...pending,
         status: "approved",
-        updatedAt: "2026-10-06T16:29:00.000Z",
+        updatedAt: "2026-10-06T16:29:00.000000Z",
       };
 
       yield* fake.reply("PATCH /agent_approvals/100", reply);
@@ -320,7 +320,7 @@ describe("approval actions", () => {
       const reply: AgentApproval = {
         ...pending,
         status: "approved",
-        updatedAt: "2026-10-06T16:29:00.000Z",
+        updatedAt: "2026-10-06T16:29:00.000000Z",
       };
 
       yield* fake.reply("PATCH /agent_approvals/100", reply);
@@ -354,7 +354,7 @@ describe("approval actions", () => {
         ...pending,
         status: "denied",
         decidedById: 4,
-        updatedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000000Z",
       };
 
       yield* fake.route("PATCH /agent_approvals/100", () =>

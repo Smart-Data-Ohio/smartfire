@@ -23,7 +23,7 @@ describe("S4 mock server revisions", () => {
     const before = await get<ThreadDetail>(server, path);
     const revisions = [before.thread.work?.updatedAt];
 
-    expect(revisions[0]).toMatch(/^2026-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+    expect(revisions[0]).toMatch(/^2026-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/);
 
     for (const change of [
       { status: "planned" },
@@ -45,10 +45,10 @@ describe("S4 mock server revisions", () => {
 
     revisions.push(handoff.thread.work?.updatedAt);
     expect(revisions.slice(1)).toEqual([
-      "2026-10-06T16:30:00.000Z",
-      "2026-10-06T16:30:00.001Z",
-      "2026-10-06T16:30:00.002Z",
-      "2026-10-06T16:30:00.003Z",
+      "2026-10-06T16:30:00.000000Z",
+      "2026-10-06T16:30:00.001000Z",
+      "2026-10-06T16:30:00.002000Z",
+      "2026-10-06T16:30:00.003000Z",
     ]);
 
     const unchanged = await expectStatus<ThreadDetail>(
@@ -85,7 +85,7 @@ describe("S4 mock server revisions", () => {
       201,
     );
 
-    expect(requested.updatedAt).toBe("2026-10-06T16:30:00.000Z");
+    expect(requested.updatedAt).toBe("2026-10-06T16:30:00.000000Z");
 
     const approved = await expectStatus<AgentApproval>(
       server,
@@ -95,7 +95,7 @@ describe("S4 mock server revisions", () => {
       200,
     );
 
-    expect(approved.updatedAt).toBe("2026-10-06T16:30:00.001Z");
+    expect(approved.updatedAt).toBe("2026-10-06T16:30:00.001000Z");
 
     const revisions = [approved.updatedAt];
 
@@ -112,10 +112,10 @@ describe("S4 mock server revisions", () => {
     }
 
     expect(revisions).toEqual([
-      "2026-10-06T16:30:00.001Z",
-      "2026-10-06T16:30:00.002Z",
-      "2026-10-06T16:30:00.003Z",
-      "2026-10-06T16:30:00.004Z",
+      "2026-10-06T16:30:00.001000Z",
+      "2026-10-06T16:30:00.002000Z",
+      "2026-10-06T16:30:00.003000Z",
+      "2026-10-06T16:30:00.004000Z",
     ]);
     expect(
       events.flatMap((event) =>
@@ -164,7 +164,7 @@ describe("S4 mock server revisions", () => {
 
     const expired = page.approvals.find((approval) => approval.id === listed.id);
 
-    expect(expired).toMatchObject({ status: "expired", updatedAt: "2026-10-08T16:30:00.000Z" });
+    expect(expired).toMatchObject({ status: "expired", updatedAt: "2026-10-08T16:30:00.000000Z" });
     expect(
       events.flatMap((event) =>
         event.type === "approval.updated" &&
@@ -172,7 +172,7 @@ describe("S4 mock server revisions", () => {
           ? [event.data.approval.updatedAt]
           : [],
       ),
-    ).toEqual(["2026-10-08T16:30:00.000Z", "2026-10-08T16:30:00.000Z"]);
+    ).toEqual(["2026-10-08T16:30:00.000000Z", "2026-10-08T16:30:00.000000Z"]);
 
     const again = await get<AgentApprovalPage>(
       server,
@@ -190,7 +190,7 @@ describe("S4 mock server revisions", () => {
     const before = directory.agents.find((agent) => agent.agentId === AGENT_IDS.ember);
     const revisions: string[] = [];
 
-    expect(before?.updatedAt).toMatch(/^2026-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+    expect(before?.updatedAt).toMatch(/^2026-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{6}Z$/);
 
     for (const change of [
       { status: "working" },
@@ -221,7 +221,9 @@ describe("S4 mock server revisions", () => {
     }
 
     expect(revisions).toEqual(
-      Array.from({ length: 7 }, (_, index) => new Date(NOW + index).toISOString()),
+      Array.from({ length: 7 }, (_, index) =>
+        new Date(NOW + index).toISOString().replace(/Z$/, "000Z"),
+      ),
     );
 
     const unchanged = await expectStatus<AgentStatusChanged>(
