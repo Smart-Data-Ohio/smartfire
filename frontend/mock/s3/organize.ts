@@ -43,6 +43,11 @@ function byFavorite(left: RoomRecord, right: RoomRecord): number {
   );
 }
 
+/** Whether the room has a sidebar row: a hidden (`invisible`) membership has none. */
+function visible(record: RoomRecord): boolean {
+  return record.membership.involvement !== "invisible";
+}
+
 /** A category name as the model validates it: present (not just spaces) and at most 50 long. */
 function validName(raw: string | null): string {
   if (raw === null || raw.trim() === "") throw validation("name", "Name can't be blank");
@@ -85,14 +90,30 @@ export function createOrganize(ctx: S2Context): Organize {
     ].sort(byPosition);
   };
 
-  const favorites = (): RoomRecord[] =>
+  /** Every favourite, hidden ones included (`favorites_for_user`). */
+  const allFavorites = (): RoomRecord[] =>
     [...world().rooms.values()]
-      .filter(
-        (record) =>
-          record.membership.favoritePosition !== null &&
-          record.membership.involvement !== "invisible",
-      )
+      .filter((record) => record.membership.favoritePosition !== null)
       .sort(byFavorite);
+
+  /** The favourites the sidebar shows, in its order. */
+  const favorites = (): RoomRecord[] => allFavorites().filter(visible);
+
+  /**
+   * A room the viewer is a member of, hidden or not: as in the classic controllers, organising
+   * calls accept a hidden room, which stays hidden.
+   */
+  const memberRoomOr404 = (roomId: number): RoomRecord => {
+    const record = world().rooms.get(roomId);
+
+    if (record === undefined) throw notFound("Room not found");
+
+    return record;
+  };
+
+  /** A change to a hidden room's membership publishes nothing: it has no sidebar row. */
+  const rowEvents = (records: readonly RoomRecord[]): Outgoing[] =>
+    records.flatMap((record) => (visible(record) ? [rowEvent(record)] : []));
 
   const setMembership = (record: RoomRecord, change: Partial<Membership>) => {
     record.membership = { ...record.membership, ...change };
@@ -192,7 +213,7 @@ export function createOrganize(ctx: S2Context): Organize {
   // --- placement ---
 
   const assignCategory = (roomId: number, body: Json | undefined): MockResponse => {
-    const record = ctx.roomOr404(roomId);
+    const record = memberRoomOr404(roomId);
     const categoryId = intField(body, "roomCategoryId");
 
     if (field(body, "roomCategoryId") !== null && categoryId === null) {
@@ -206,7 +227,7 @@ export function createOrganize(ctx: S2Context): Organize {
     if (categoryId !== null) categoryOr404(categoryId);
 
     setMembership(record, { roomCategoryId: categoryId });
-    ctx.publish([rowEvent(record)]);
+    ctx.publish(rowEvents([record]));
 
     const row: SidebarRow = ctx.sidebarRow(record);
 
@@ -214,53 +235,59 @@ export function createOrganize(ctx: S2Context): Organize {
   };
 
   const favorite = (roomId: number): MockResponse => {
-    const record = ctx.roomOr404(roomId);
+    const record = memberRoomOr404(roomId);
 
     if (record.membership.favoritePosition === null) {
-      const highest = favorites().reduce(
+      const highest = allFavorites().reduce(
         (max, held) => Math.max(max, held.membership.favoritePosition ?? -1),
         -1,
       );
 
       setMembership(record, { favoritePosition: highest + 1 });
-      ctx.publish([rowEvent(record)]);
+      ctx.publish(rowEvents([record]));
     }
 
     return ok(ctx.sidebarRow(record));
   };
 
   const unfavorite = (roomId: number): MockResponse => {
-    const record = ctx.roomOr404(roomId);
+    const record = memberRoomOr404(roomId);
 
     if (record.membership.favoritePosition !== null) {
       // The others keep their positions: favourites can have gaps.
       setMembership(record, { favoritePosition: null });
-      ctx.publish([rowEvent(record)]);
+      ctx.publish(rowEvents([record]));
     }
 
     return ok(ctx.sidebarRow(record));
   };
 
   const moveFavorite = (roomId: number, body: Json | undefined): MockResponse => {
-    const record = ctx.roomOr404(roomId);
+    const record = memberRoomOr404(roomId);
     const position = intField(body, "position");
 
     if (position === null) throw validation("position", "Position must be a number");
 
     if (record.membership.favoritePosition !== null) {
-      const others = favorites().filter((held) => held !== record);
-      const index = Math.min(Math.max(position, 0), others.length);
-      const order = [...others.slice(0, index), record, ...others.slice(index)];
-      const events: Outgoing[] = [];
+      // `position` is an index among the favourites the sidebar shows: the room lands just before
+      // the shown favourite now at that index (or after every favourite). Hidden favourites keep
+      // their places, and every favourite is renumbered from 0.
+      const others = allFavorites().filter((held) => held !== record);
+      const shown = others.filter(visible);
+      const anchor = shown[Math.min(Math.max(position, 0), shown.length)];
+      const at = anchor === undefined ? others.length : others.indexOf(anchor);
+      const order = [...others.slice(0, at), record, ...others.slice(at)];
+
+      const changed: RoomRecord[] = [];
 
       order.forEach((held, renumbered) => {
         if (held.membership.favoritePosition === renumbered) return;
 
         setMembership(held, { favoritePosition: renumbered });
-        events.push(rowEvent(held));
+        changed.push(held);
       });
 
-      ctx.publish(events);
+      ctx.publish(rowEvents(changed));
     }
 
     const list: FavoriteList = { rows: favorites().map(ctx.sidebarRow) };

@@ -286,6 +286,53 @@ describe("mock sidebar organisation", () => {
       ]);
       expect(events).toEqual([]);
     });
+
+    it("organises a hidden room without a row; a move counts shown favourites only", async () => {
+      const { server } = harness();
+
+      const hide = (roomId: number, involvement: string) =>
+        expectStatus(server, "PUT", `/api/v1/rooms/${roomId}/involvement`, { involvement }, 200);
+
+      await hide(ROOM_IDS.dmMaya, "invisible");
+      await hide(ROOM_IDS.quiet, "invisible");
+
+      const events = collect(server);
+
+      await expectStatus(
+        server,
+        "PUT",
+        `/api/v1/rooms/${ROOM_IDS.quiet}/category`,
+        { roomCategoryId: CATEGORY_IDS.team },
+        200,
+      );
+      expect(events).toEqual([]);
+
+      await expectStatus(server, "POST", `/api/v1/rooms/${ROOM_IDS.general}/favorite`, null, 200);
+
+      // Engineering 0, Maya 1 (hidden), General 2: General to shown index 0 goes before
+      // Engineering, and Maya keeps its place after it.
+      const moved = await expectStatus<FavoriteListType>(
+        server,
+        "PATCH",
+        `/api/v1/rooms/${ROOM_IDS.general}/favorite`,
+        { position: 0 },
+        200,
+      );
+
+      expect(moved.rows.map((row) => row.room.id)).toEqual([
+        ROOM_IDS.general,
+        ROOM_IDS.engineering,
+      ]);
+
+      // Unfavouriting the hidden room succeeds and publishes nothing for it.
+      events.length = 0;
+
+      await expectStatus(server, "DELETE", `/api/v1/rooms/${ROOM_IDS.dmMaya}/favorite`, null, 200);
+      expect(events).toEqual([]);
+
+      await hide(ROOM_IDS.dmMaya, "everything");
+      expect((await rowOf(server, ROOM_IDS.dmMaya))?.membership.favoritePosition).toBeNull();
+    });
   });
 
   describe("involvement", () => {
