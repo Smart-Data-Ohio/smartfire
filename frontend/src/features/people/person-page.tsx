@@ -5,6 +5,7 @@ import { useStore } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
 import { ActionError } from "../../sync/run.ts";
+import { settings as settingsActions } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -17,6 +18,7 @@ import {
   BAN_CONFIRMATION,
   botPage,
   landBan,
+  newerUser,
   OWN_TRANSFER_HINT,
   PRESENCE_LABEL,
   presenceOf,
@@ -163,14 +165,16 @@ function Profile({
   const [savingDnd, setSavingDnd] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [banning, setBanning] = useState(false);
-  const { user } = profile;
+  const held = useStore((state) => state.users[profile.user.id]);
+  // Their user as the newest copy has it: a resync may have brought a later one than this page's.
+  const user = newerUser(profile.user, held);
   const own = user.id === viewerId;
   const active = user.status === "active";
   const deactivated = user.status === "deactivated";
 
   const setAllowance = (allowed: boolean) => {
     setSavingDnd(true);
-    peoplePages
+    settingsActions
       .setDndAllowance(user.id, allowed)
       .then(
         // Only the field this changed, so a ban that landed meanwhile stays.
@@ -282,7 +286,7 @@ function Profile({
           </Button>
         </div>
       ) : null}
-      {profile.transferUrl === null ? null : (
+      {profile.transferUrl === null || !active ? null : (
         <TransferGroup
           url={profile.transferUrl}
           qrSvg={profile.transferQrSvg}

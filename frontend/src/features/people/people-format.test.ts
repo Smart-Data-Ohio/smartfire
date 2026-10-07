@@ -5,6 +5,7 @@ import {
   botPage,
   directoryBadge,
   landBan,
+  newerUser,
   presenceOf,
   selectionPlan,
   toggleSelection,
@@ -23,6 +24,7 @@ function user(id: number, role: User["role"], agent = false): User {
     avatarIcon: null,
     agent: agent ? { agentId: id, kind: "workspace", status: "idle", suspended: false } : null,
     createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
   };
 }
 
@@ -116,9 +118,22 @@ describe("presenceOf", () => {
   });
 });
 
+describe("newerUser", () => {
+  const at = (minute: number): User => ({
+    ...user(5, "member"),
+    updatedAt: `2026-10-07T10:0${minute}:00.000Z`,
+  });
+
+  it("picks the later copy and keeps the first on a tie or when there's no other", () => {
+    expect(newerUser(at(1), at(2)).updatedAt).toBe(at(2).updatedAt);
+    expect(newerUser(at(2), at(1)).updatedAt).toBe(at(2).updatedAt);
+    expect(newerUser(at(1), undefined).updatedAt).toBe(at(1).updatedAt);
+  });
+});
+
 describe("landBan", () => {
-  const page = (status: User["status"], dndAllowed: boolean | null): PersonProfile => ({
-    user: { ...user(5, "member"), status },
+  const page = (status: User["status"], dndAllowed: boolean | null, minute = 1): PersonProfile => ({
+    user: { ...user(5, "member"), status, updatedAt: `2026-10-07T10:0${minute}:00.000Z` },
     status: { presence: status === "active" ? "online" : "offline", statusText: null },
     dndAllowed,
     emailAddress: "sam@example.com",
@@ -129,8 +144,8 @@ describe("landBan", () => {
 
   it("keeps a DND change that landed after the unban's reply was made", () => {
     // The page saved DND (true) while the unban's reply, made before it, still says false.
-    const current = { ...page("banned", null), dndAllowed: true };
-    const landed = landBan(current, page("active", false));
+    const current = { ...page("banned", null, 1), dndAllowed: true };
+    const landed = landBan(current, page("active", false, 2));
 
     expect(landed.dndAllowed).toBe(true);
     expect(landed.user.status).toBe("active");
@@ -139,16 +154,12 @@ describe("landBan", () => {
   });
 
   it("takes the reply's DND exception when the page had none", () => {
-    expect(landBan(page("banned", null), page("active", false)).dndAllowed).toBe(false);
+    expect(landBan(page("banned", null, 1), page("active", false, 2)).dndAllowed).toBe(false);
   });
 
-  it("lands only the status from the reply's user", () => {
-    const current = page("active", true);
-    const reply = page("banned", null);
-    const landed = landBan(current, { ...reply, user: { ...reply.user, name: "Old name" } });
+  it("changes nothing when the page already has a later copy of them", () => {
+    const current = page("active", true, 3);
 
-    expect(landed.user).toEqual({ ...current.user, status: "banned" });
-    expect(landed.transferUrl).toBeNull();
-    expect(landed.dndAllowed).toBe(true);
+    expect(landBan(current, page("banned", null, 2))).toBe(current);
   });
 });

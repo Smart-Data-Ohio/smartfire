@@ -291,6 +291,7 @@ function seedUsers(now: number): Map<number, User> {
             { agentId: person.id, kind: "workspace", status: "idle", suspended: false }
           : null,
       createdAt: timestamp(now - person.joinedDaysAgo * DAY),
+      updatedAt: timestamp(now - person.joinedDaysAgo * DAY),
     });
   }
 

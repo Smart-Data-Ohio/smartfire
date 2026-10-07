@@ -134,16 +134,26 @@ export function presenceOf(live: PresenceStatus | undefined, loaded: Presence): 
   return live === undefined ? loaded : FROM_STATUS[live];
 }
 
+/** The later of two copies of a user (`users.updated_at`); the first when they tie. */
+export function newerUser(first: User, second: User | undefined): User {
+  return second !== undefined && second.updatedAt > first.updatedAt ? second : first;
+}
+
 /**
- * A person's page after a ban or its removal lands: the status and what follows from it (their
- * presence, the sign-in link), from the server's reply. Their DND exception stays as the page has
- * it, since a DND change can land after the ban's reply was made; the reply's only fills it in
- * when the page had none (a page loaded while they were banned).
+ * A person's page after a ban or its removal lands. A reply older than the page's copy of them
+ * changes nothing. Otherwise their user and what follows from its status (their presence, the
+ * sign-in link) come from the reply. Their DND exception lives in its own table and changes only
+ * through its own write, so it stays as the page has it; the reply's only fills it in when the
+ * page had none (a page loaded while they were banned).
  */
 export function landBan(current: PersonProfile, reply: PersonProfile): PersonProfile {
+  if (reply.user.updatedAt < current.user.updatedAt) {
+    return current;
+  }
+
   return {
     ...current,
-    user: { ...current.user, status: reply.user.status },
+    user: reply.user,
     status: reply.status,
     transferUrl: reply.transferUrl,
     transferQrSvg: reply.transferQrSvg,

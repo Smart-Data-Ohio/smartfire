@@ -264,7 +264,9 @@ export function createSettings(
     const users = ctx.world().users;
     const viewer = users.get(VIEWER_ID);
 
-    if (viewer !== undefined) users.set(VIEWER_ID, { ...viewer, name });
+    if (viewer !== undefined) {
+      users.set(VIEWER_ID, { ...viewer, name, updatedAt: new Date(ctx.now()).toISOString() });
+    }
   };
 
   const profile = (body: Json | undefined) => {

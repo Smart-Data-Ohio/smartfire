@@ -269,7 +269,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
         audit("user.role.change", user.name, "User", `role: ${target.role} → ${role}`);
       }
 
-      users.set(id, { ...user, role });
+      users.set(id, { ...user, role, updatedAt: new Date(ctx.now()).toISOString() });
     }
 
     return ok({ person: personOr404(id), notice: null });

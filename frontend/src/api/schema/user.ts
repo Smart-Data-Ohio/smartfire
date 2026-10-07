@@ -42,6 +42,8 @@ export const User = Schema.Struct({
   /** Set for an agent (a bot with an `agents` row); `null` for people and plain bots. */
   agent: Schema.NullOr(AgentBadge),
   createdAt: Timestamp,
+  /** `users.updated_at`: of two copies of a user, the client keeps the later. */
+  updatedAt: Timestamp,
 });
 
 export type User = typeof User.Type;

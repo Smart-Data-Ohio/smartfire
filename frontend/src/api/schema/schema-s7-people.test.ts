@@ -15,6 +15,7 @@ const user = {
   avatarIcon: null,
   agent: null,
   createdAt: "2026-09-26T12:26:46.848Z",
+  updatedAt: "2026-09-26T12:26:46.848Z",
 } as const;
 
 const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S["Encoded"]) =>

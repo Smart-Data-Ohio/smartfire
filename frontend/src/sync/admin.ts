@@ -41,7 +41,6 @@ import {
   updateBot,
 } from "../api/bot-endpoints.ts";
 import { peopleDirectory, personProfile, setBanned } from "../api/people-endpoints.ts";
-import { setDndAllowance } from "../api/settings-endpoints.ts";
 import {
   cancelSlackRun,
   disconnectSlack,
@@ -82,7 +81,6 @@ import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { PersonRemoved } from "../gen/PersonRemoved.ts";
 import type { PersonRole } from "../gen/PersonRole.ts";
 import type { SaveSlackCredentials } from "../gen/SaveSlackCredentials.ts";
-import type { Settings } from "../gen/Settings.ts";
 import type { SlackDisconnected } from "../gen/SlackDisconnected.ts";
 import type { SlackPersonal } from "../gen/SlackPersonal.ts";
 import type { SlackPlan } from "../gen/SlackPlan.ts";
@@ -99,8 +97,7 @@ import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
-import { mutations, store } from "../store/store.ts";
-import { recordFreshness, touchChanged } from "./record-freshness.ts";
+import { mutations } from "../store/store.ts";
 import { runAction } from "./runtime.ts";
 
 export const admin = {
@@ -241,93 +238,29 @@ export const slack = {
 };
 
 /**
- * The people records' freshness, by user id. Every store writer that changes a user moves its
- * mark (the subscription below catches sidebar resyncs, sync events and other pages' replies), as
- * do bans and DND changes while they're in flight.
- */
-const freshness = recordFreshness();
-
-store.subscribe((state, previous) => touchChanged(freshness, previous.users, state.users));
-
-/** How many times a person's page load refetches after a change overtook it. */
-const PROFILE_ATTEMPTS = 4;
-
-/**
- * Runs a write on someone's record, keeping their reads off it until it settles; its reply lands
- * (`land`) before that, so a read waiting on it starts after the change.
- */
-function writePerson<A>(
-  userId: number,
-  write: () => Promise<A>,
-  land: (reply: A) => void = () => undefined,
-): Promise<A> {
-  const settle = freshness.startWrite(userId);
-
-  return write()
-    .then((reply) => {
-      land(reply);
-
-      return reply;
-    })
-    .finally(settle);
-}
-
-/**
- * The people directory and a person's page: plain promises over the S7 people endpoints. A read
- * lands a user in the store only while nothing has changed them since it started; a person's page
- * load refetches until it gets a reply nothing overtook. Writes land only what they changed.
- * Banning fails as `admin`'s writes do.
+ * The people directory and a person's page: plain promises over the S7 people endpoints, each
+ * reply's users landed in the store first. The store keeps whichever copy of a user has the later
+ * `updatedAt`, so replies may land in any order. Banning fails as `admin`'s writes do.
  */
 export const peoplePages = {
-  directory: (): Promise<readonly DirectoryPerson[]> => {
-    const ticket = freshness.startRead();
-
-    return runAction(peopleDirectory()).then((list) => {
-      const fresh = list.users.filter((user) => freshness.fresh(ticket, user.id));
-
-      if (fresh.length > 0) mutations.mergeUsers(fresh);
+  directory: (): Promise<readonly DirectoryPerson[]> =>
+    runAction(peopleDirectory()).then((list) => {
+      mutations.mergeUsers(list.users);
 
       return list.people;
-    });
-  },
+    }),
 
-  /**
-   * Someone's page, as it stands once their writes settle. A reply that a change overtook is
-   * dropped and fetched again; after `PROFILE_ATTEMPTS` the last reply is answered unlanded.
-   */
-  profile: async (userId: number): Promise<PersonProfile> => {
-    for (let attempt = 1; ; attempt += 1) {
-      await freshness.settled(userId);
+  profile: (userId: number): Promise<PersonProfile> =>
+    runAction(personProfile(userId)).then(landProfile),
 
-      const ticket = freshness.startRead();
-      const profile = await runAction(personProfile(userId));
-
-      if (freshness.fresh(ticket, userId)) {
-        mutations.mergeUsers([profile.user]);
-
-        return profile;
-      }
-
-      if (attempt >= PROFILE_ATTEMPTS) return profile;
-    }
-  },
-
-  /**
-   * Bans them (`true`) or removes the ban (`false`); answers their page as the server now has it.
-   * Only their status lands in the store: the rest of the reply may be older than other changes.
-   */
+  /** Bans them (`true`) or removes the ban (`false`); answers their page as it now stands. */
   setBanned: (userId: number, banned: boolean): Promise<PersonProfile> =>
-    writePerson(
-      userId,
-      () => runAction(setBanned(userId, banned)),
-      (profile) => {
-        const current = store.getState().users[userId] ?? profile.user;
-
-        mutations.mergeUsers([{ ...current, status: profile.user.status }]);
-      },
-    ),
-
-  /** Lets them through your Do Not Disturb (`true`) or not, as a write on their record. */
-  setDndAllowance: (userId: number, allowed: boolean): Promise<Settings> =>
-    writePerson(userId, () => runAction(setDndAllowance(userId, allowed))),
+    runAction(setBanned(userId, banned)).then(landProfile),
 };
+
+/** A person page's reply, with their user landed in the store (if it's the newest copy). */
+function landProfile(profile: PersonProfile): PersonProfile {
+  mutations.mergeUsers([profile.user]);
+
+  return profile;
+}

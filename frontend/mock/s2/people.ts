@@ -102,7 +102,11 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
     if (user === undefined) throw notFound("User not found");
 
     requireSudo();
-    world.users.set(userId, { ...user, status: banned ? "banned" : "active" });
+    world.users.set(userId, {
+      ...user,
+      status: banned ? "banned" : "active",
+      updatedAt: new Date(ctx.now()).toISOString(),
+    });
 
     return ok(profile(userId));
   };
