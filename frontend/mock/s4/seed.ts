@@ -4,16 +4,18 @@
  * history with each entry kind, agent steps, and board posts in a board the viewer can't open
  * here.
  */
+
 import type { AgentStep } from "../../src/gen/AgentStep.ts";
 import type { WorkHistoryEntry } from "../../src/gen/WorkHistoryEntry.ts";
 import type { WorkLink } from "../../src/gen/WorkLink.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import { type Mentionable, renderMarkdown } from "../markdown.ts";
-import { DEFAULT_AUTO_ARCHIVE_MINUTES, iso, type ThreadRecord } from "../s2/model.ts";
+import { DEFAULT_AUTO_ARCHIVE_MINUTES, iso } from "../s2/model.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { S3_THREAD_IDS } from "../s3/seed.ts";
 import { ROOM_IDS, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
 import { emptyWork, ownerActive, ownerSnapshot, setOwner, type WorkRecord } from "./work-model.ts";
+import { S4_BOARD, type WorkState, workStateOf } from "./work-state.ts";
 
 const MINUTE = 60_000;
 
@@ -37,34 +39,10 @@ export const S4_WORK_IDS = {
   unassigned: S3_THREAD_IDS.ssoDocs,
 } as const;
 
-/** The board the seeded board posts live in. The viewer belongs to it; the SPA has no page. */
-export const S4_BOARD = { roomId: 41, name: "Product roadmap" } as const;
+export { S4_BOARD, type WorkState, workStateOf } from "./work-state.ts";
 
 /** The seeded board posts. */
 export const S4_BOARD_POST_IDS = { publicApi: 901, darkMode: 902, billing: 903 } as const;
-
-/** Work state the world type doesn't hold: board posts and the next ids. */
-export interface WorkState {
-  /** Board posts: tracked threads in a board room, each with `work`. */
-  readonly boardPosts: ThreadRecord[];
-  nextHistoryId: number;
-  nextLinkId: number;
-}
-
-const states = new WeakMap<World, WorkState>();
-
-/** The world's work state (an empty one for a world the work seed never saw). */
-export function workStateOf(world: World): WorkState {
-  const existing = states.get(world);
-
-  if (existing !== undefined) return existing;
-
-  const fresh: WorkState = { boardPosts: [], nextHistoryId: 1, nextLinkId: 1 };
-
-  states.set(world, fresh);
-
-  return fresh;
-}
 
 interface EntrySeed {
   readonly kind: WorkHistoryEntry["kind"];

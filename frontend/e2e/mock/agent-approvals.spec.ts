@@ -1,5 +1,6 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { AGENT_IDS } from "../../mock/s4/agents.ts";
+import type { AgentLedgerPage } from "../../src/gen/AgentLedgerPage.ts";
 import { expect, matrix, openApp, shot, test, USER_IDS } from "./support.ts";
 
 const { ember: EMBER, scout: SCOUT } = AGENT_IDS;
@@ -169,10 +170,21 @@ matrix("an agent's activity ledger", async ({ page, theme }) => {
   await shot(page, "agents-ledger-suppressed", theme);
 });
 
-test("the ledger shows every kind of entry, and links to messages", async ({ page }) => {
+test("the ledger skips unknown entries, keeps a short page's cursor, and links to messages", async ({
+  page,
+}) => {
   await openSection(page, `agents/${EMBER}/events`);
+
+  const first: AgentLedgerPage = await (
+    await page.request.get(`/api/v1/agents/${EMBER}/events`)
+  ).json();
+
+  expect(first.events).toHaveLength(48);
+  expect(first.nextCursor).not.toBeNull();
+  expect(first.events.map((event) => event.eventType)).not.toContain("budget_threshold_crossed");
+
   await scrollUntil(page, page.getByText("Handoff:").first());
-  await scrollUntil(page, page.getByText("Budget threshold crossed").first());
+  await expect(page.getByText("Budget threshold crossed")).toHaveCount(0);
   await scrollUntil(page, page.getByText("Webhook failed · 3 attempts", { exact: false }).first());
   await scrollUntil(page, page.getByText("ops-oncall").first());
 

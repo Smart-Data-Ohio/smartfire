@@ -15,8 +15,8 @@ import type { AgentApprovalPage } from "../../src/gen/AgentApprovalPage.ts";
 import type { AgentApprovalStatus } from "../../src/gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../../src/gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../../src/gen/ApprovalUpdated.ts";
-import { forbidden, notFound, ok, validation } from "../http.ts";
-import { type Json, stringField } from "../json.ts";
+import { forbidden, notFound, ok } from "../http.ts";
+import { field, type Json, stringField } from "../json.ts";
 import type { Random } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso } from "../s2/model.ts";
@@ -33,6 +33,7 @@ import {
   viewerManages,
   viewerRoomName,
 } from "./agents.ts";
+import { sentence, validation } from "./http.ts";
 
 const MINUTE = 60_000;
 
@@ -154,7 +155,7 @@ export function createApprovals(
   const recordOr404 = (id: number) => {
     const record = records.get(id);
 
-    if (record === undefined) throw notFound("Approval not found");
+    if (record === undefined) throw notFound();
 
     return record;
   };
@@ -162,7 +163,7 @@ export function createApprovals(
   const agentOr404 = (agentId: number) => {
     const row = agents.record(agentId);
 
-    if (row === null) throw notFound("Agent not found");
+    if (row === null) throw notFound();
 
     return row;
   };
@@ -181,7 +182,8 @@ export function createApprovals(
       row !== null &&
       viewerManages(ctx, row) &&
       user?.status === "active" &&
-      viewer?.status === "active"
+      viewer?.status === "active" &&
+      viewer.role !== "bot"
     );
   };
 
@@ -373,37 +375,38 @@ export function createApprovals(
     try {
       text = atob(cursor);
     } catch {
-      throw validation("before", "Before is not a valid cursor");
+      throw validation("before", "is invalid");
     }
 
     const id = Number(text.replace(/^approval:/, ""));
 
     if (!text.startsWith("approval:") || !Number.isInteger(id)) {
-      throw validation("before", "Before is not a valid cursor");
+      throw validation("before", "is invalid");
     }
 
     return id;
   };
 
   const list = (agentId: number, query: URLSearchParams): AgentApprovalPage => {
+    const before = beforeOf(query);
+    const after = before === null ? null : decodeCursor(before);
     const row = agentOr404(agentId);
+    const user = ctx.world().users.get(row.userId);
+    const viewer = ctx.world().users.get(VIEWER_ID);
 
-    if (!viewerManages(ctx, row)) throw notFound("Agent not found");
+    if (
+      !viewerManages(ctx, row) ||
+      user?.status !== "active" ||
+      viewer?.status !== "active" ||
+      viewer.role === "bot"
+    ) {
+      throw notFound();
+    }
 
     const mine = [...records.values()].filter((record) => record.agentId === agentId);
 
-    // Listing settles the overdue requests, as the classic page does.
-    for (const record of mine) {
-      if (record.status === "pending" && effectiveStatus(record) === "expired") {
-        record.status = "expired";
-        publishUpdated(record);
-      }
-    }
-
     const status = query.get("status");
     const filter = STATUSES.find((candidate) => candidate === status) ?? null;
-    const before = beforeOf(query);
-    const after = before === null ? null : decodeCursor(before);
 
     const matching = mine
       .filter((record) => filter === null || effectiveStatus(record) === filter)
@@ -412,6 +415,14 @@ export function createApprovals(
 
     const page = matching.slice(0, APPROVAL_PAGE_SIZE);
     const last = page.at(-1);
+
+    // Listing settles only the overdue requests on the page, as the classic page does.
+    for (const record of page) {
+      if (record.status === "pending" && effectiveStatus(record) === "expired") {
+        record.status = "expired";
+        publishUpdated(record);
+      }
+    }
 
     return {
       approvals: page.map(present),
@@ -426,35 +437,44 @@ export function createApprovals(
   const decisionOf = (body: Json | undefined): DecisionBody => {
     const decision = oneOf(stringField(body, "decision"), ["approved", "denied", ""], "");
 
-    if (decision === "") throw validation("decision", "Decision must be approved or denied");
-
-    const raw = stringField(body, "note")?.trim() ?? "";
-    const note = raw === "" ? null : raw;
-
-    if (note !== null && note.length > 200) {
-      throw validation("note", "Note is too long (maximum is 200 characters)");
+    if (decision === "" || (field(body, "note") != null && stringField(body, "note") === null)) {
+      throw validation("decision", "must be approved or denied");
     }
+
+    const raw = stringField(body, "note") ?? "";
+    const note = raw.trim() === "" ? null : raw;
 
     return { decision, note };
   };
 
   const decide = (approvalId: number, body: Json | undefined): AgentApproval => {
+    const { decision, note } = decisionOf(body);
     const record = recordOr404(approvalId);
 
-    if (!decides(record)) throw notFound("Approval not found");
+    if (!decides(record)) throw notFound();
 
-    const { decision, note } = decisionOf(body);
+    if (decision === "approved" && adminOnly(record.action) && !viewerIsAdmin(ctx)) {
+      const service = record.action.startsWith("fizzy.") ? "Fizzy" : "GitHub";
+
+      throw forbidden(`Only an administrator can approve ${service} write actions`);
+    }
+
+    if (record.status === "pending" && effectiveStatus(record) === "expired") {
+      record.status = "expired";
+      publishUpdated(record);
+    }
+
     const status = effectiveStatus(record);
 
     if (status !== "pending") {
-      throw validation(
-        "status",
-        status === "expired" ? "This request has expired" : "This request was already decided",
+      throw sentence(
+        "base",
+        status === "expired" ? "Request has expired" : `Request is already ${status}`,
       );
     }
 
-    if (decision === "approved" && adminOnly(record.action) && !viewerIsAdmin(ctx)) {
-      throw forbidden("Only an administrator can approve GitHub and Fizzy write actions");
+    if (note !== null && [...note].length > 200) {
+      throw sentence("base", "Decision note is too long (maximum is 200 characters)");
     }
 
     record.status = decision;

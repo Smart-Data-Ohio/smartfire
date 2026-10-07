@@ -4,20 +4,28 @@
  * `thread.updated` each change publishes (`work_threads#index`, `#create_handoff`,
  * `channel_threads#update`).
  */
-import type { ApiError } from "../../src/gen/ApiError.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { WorkFilter } from "../../src/gen/WorkFilter.ts";
 import type { WorkHistoryEntry } from "../../src/gen/WorkHistoryEntry.ts";
 import type { WorkList } from "../../src/gen/WorkList.ts";
 import type { WorkListRow } from "../../src/gen/WorkListRow.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
-import { forbidden, HttpError, type MockResponse, ok, validation } from "../http.ts";
-import { field, intField, isString, type Json, stringArrayField, stringField } from "../json.ts";
+import { forbidden, HttpError, type MockResponse, notFound, ok } from "../http.ts";
+import {
+  field,
+  intField,
+  isRecord,
+  isString,
+  type Json,
+  stringArrayField,
+  stringField,
+} from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso, type ThreadRecord, threadDto, touched } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
 import { VIEWER_ID } from "../seed.ts";
+import { invalid, invalidBody, sentence } from "./http.ts";
 import { S4_BOARD, workStateOf } from "./seed.ts";
 import {
   emptyWork,
@@ -25,14 +33,15 @@ import {
   HANDOFF_ENTRY_LIMIT,
   HANDOFF_SUMMARY_LIMIT,
   HISTORY_SUMMARY_LIMIT,
-  handoffReceivers,
   isActiveHumanMember,
+  isAgentOwner,
   isPostingAgentMember,
   isTracked,
   normalizeList,
   ownerActive,
   ownerSnapshot,
   RESULT_LIMIT,
+  receiverError,
   setOwner,
   truncate,
   WORK_STATUSES,
@@ -40,22 +49,6 @@ import {
 } from "./work-model.ts";
 
 const FILTERS: readonly WorkFilter[] = ["open", "done", "all", "agents", "boards"];
-
-/** The wire tag, as http.ts spells it (the mock has no Effect tagged constructors). */
-const VALIDATION: ApiError["_tag"] = "Validation";
-
-/** A 422 with every message the record collected, as Rails' `errors.full_messages` reads. */
-const invalid = (errors: readonly (readonly [string, string])[]): HttpError => {
-  const fields: Record<string, string[]> = {};
-
-  for (const [key, message] of errors) fields[key] = [...(fields[key] ?? []), message];
-
-  return new HttpError(422, {
-    _tag: VALIDATION,
-    message: `Validation failed: ${errors.map(([, message]) => message).join(", ")}`,
-    fields,
-  });
-};
 
 /** What a work change asks for: each key is `undefined` when the request left it out. */
 interface WorkChange {
@@ -76,8 +69,19 @@ export interface Work {
 
 /** Creates the work module on top of the threads module. */
 export function createWork(ctx: S2Context, threads: Threads): Work {
-  const isAgentUser = (userId: number | null): boolean =>
-    userId !== null && ctx.world().users.get(userId)?.role === "bot";
+  const scope = (threadId: number): ThreadRecord => {
+    const viewer = ctx.world().users.get(VIEWER_ID);
+
+    if (viewer?.role === "bot" || viewer?.status !== "active") throw notFound();
+
+    try {
+      return threads.threadOr404(threadId);
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) throw notFound();
+
+      throw error;
+    }
+  };
 
   /** The thread's `updated_at` for the list: the later of its last work change and reply. */
   const updatedAt = (thread: ThreadRecord): string => {
@@ -97,7 +101,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       case "all":
         return true;
       case "agents":
-        return isAgentUser(thread.work?.ownerId ?? null);
+        return isAgentOwner(ctx.world(), thread.work?.ownerId ?? null);
       case "boards":
         return board;
     }
@@ -105,6 +109,9 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
 
   const list = (query: URLSearchParams): WorkList => {
     const world = ctx.world();
+
+    if (world.users.get(VIEWER_ID)?.role === "bot") return { threads: [], users: [] };
+
     const raw = query.get("state");
     const filter = FILTERS.find((candidate) => candidate === raw) ?? "open";
     const rows: WorkListRow[] = [];
@@ -164,17 +171,17 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     const errors: [string, string][] = [];
 
     if (ownerId !== null && status === null) {
-      errors.push(["ownerId", "Work owner requires work tracking"]);
+      errors.push(["work_owner", "requires work tracking"]);
     } else if (ownerChanged && ownerId !== null) {
-      if (isAgentUser(ownerId)) {
+      if (world.users.get(ownerId)?.role === "bot") {
         if (!isPostingAgentMember(world, thread.roomId, ownerId)) {
           errors.push([
-            "ownerId",
-            "Work owner must be an active agent member of the parent room with permission to post",
+            "work_owner",
+            "must be an active agent member of the parent room with permission to post",
           ]);
         }
       } else if (!isActiveHumanMember(world, thread.roomId, ownerId)) {
-        errors.push(["ownerId", "Work owner must be an active human member of the parent room"]);
+        errors.push(["work_owner", "must be an active human member of the parent room"]);
       }
     }
 
@@ -187,13 +194,10 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
           : change.resultMarkdown;
 
     if (result !== undefined && result !== null && [...result].length > RESULT_LIMIT) {
-      errors.push([
-        "resultMarkdown",
-        `Result markdown is too long (maximum is ${RESULT_LIMIT} characters)`,
-      ]);
+      errors.push(["result_markdown", `is too long (maximum is ${RESULT_LIMIT} characters)`]);
     }
 
-    if (errors.length > 0) throw invalid(errors);
+    if (errors.length > 0) throw invalid(errors, { work_owner: "ownerId" });
 
     const at = iso(ctx.now());
     const statusChanged = status !== work.status;
@@ -254,6 +258,8 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
   };
 
   const parseChange = (body: Json | undefined): WorkChange => {
+    if (!isRecord(body)) throw invalidBody("expected an object");
+
     // `undefined` when the body leaves a key out, `null` when it sends `null`.
     const rawStatus = field(body, "status");
     const rawOwner = field(body, "ownerId");
@@ -261,17 +267,17 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     const status = WORK_STATUSES.find((candidate) => candidate === rawStatus);
 
     if (rawStatus !== undefined && rawStatus !== null && status === undefined) {
-      throw validation("status", "Work status is invalid");
+      throw invalidBody("status must be a work status or null");
     }
 
     const ownerId = intField(body, "ownerId");
 
     if (rawOwner !== undefined && rawOwner !== null && ownerId === null) {
-      throw validation("ownerId", "Work owner must be an active human member of the parent room");
+      throw invalidBody("ownerId must be an integer or null");
     }
 
     if (rawResult !== undefined && rawResult !== null && !isString(rawResult)) {
-      throw validation("resultMarkdown", "Result markdown is invalid");
+      throw invalidBody("resultMarkdown must be a string or null");
     }
 
     return {
@@ -282,38 +288,19 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
   };
 
   const update = (threadId: number, body: Json | undefined): ThreadDetail => {
-    const thread = threads.threadOr404(threadId);
+    const thread = scope(threadId);
     const change = parseChange(body);
     const allowed = threads.detail(thread).permissions;
-    const tracked = isTracked(thread);
-    const converting = !tracked && change.status !== undefined && change.status !== null;
-
-    const refuse = () => {
-      throw forbidden("You can't change this work");
-    };
-
-    if (change.status !== undefined) {
-      if (converting) {
-        if (!allowed.canConvertWork) refuse();
-      } else if (change.status === null) {
-        if (!allowed.canAssignWork) refuse();
-      } else if (!allowed.canUpdateWorkStatus) {
-        refuse();
-      }
-    }
+    const manager = allowed.canManageWork || allowed.canConvertWork;
+    const assignment = allowed.canAssignWork || allowed.canConvertWork;
 
     if (
-      change.ownerId !== undefined &&
-      !(allowed.canAssignWork || (converting && allowed.canConvertWork))
+      (change.resultMarkdown !== undefined && !manager) ||
+      ((change.status !== undefined || change.ownerId !== undefined) && !manager) ||
+      (change.ownerId !== undefined && !assignment) ||
+      (change.status !== undefined && (change.status !== null) !== isTracked(thread) && !assignment)
     ) {
-      refuse();
-    }
-
-    if (
-      change.resultMarkdown !== undefined &&
-      !(allowed.canManageWork || (converting && allowed.canConvertWork))
-    ) {
-      refuse();
+      throw forbidden("You can't make that change to this thread");
     }
 
     apply(thread, change, VIEWER_ID);
@@ -323,74 +310,75 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
 
   const handoff = (threadId: number, body: Json | undefined): MockResponse => {
     const world = ctx.world();
-    const thread = threads.threadOr404(threadId);
+    const thread = scope(threadId);
     const work = thread.work;
 
     if (work === undefined || work.status === null) {
-      throw validation("base", "This thread isn't tracked as work");
+      throw sentence("base", "This thread isn't tracked as work");
     }
 
     if (!threads.detail(thread).permissions.canManageWork) {
-      throw forbidden("You can't hand off this work");
+      throw forbidden("You cannot manage work in this thread");
     }
 
     const receiverAgentId = intField(body, "receiverAgentId");
-    const receivers = handoffReceivers(world, thread.roomId, work.ownerId);
-    const receiver = receivers.find((candidate) => candidate.agentId === receiverAgentId);
+    const summary = stringField(body, "summary");
+    const rawLinks = stringArrayField(body, "links");
+    const rawQuestions = stringArrayField(body, "openQuestions");
 
-    if (receiver === undefined) {
-      const owner = work.ownerId === null ? undefined : world.users.get(work.ownerId);
-
-      throw validation(
-        "receiverAgentId",
-        owner?.agent?.agentId === receiverAgentId && receiverAgentId !== null
-          ? "Receiver is already the owner of this work"
-          : "Receiver must be an active agent member of this room with permission to post",
+    if (
+      receiverAgentId === null ||
+      summary === null ||
+      rawLinks === null ||
+      rawQuestions === null
+    ) {
+      throw invalidBody(
+        "receiverAgentId, summary, links and openQuestions must match the contract",
       );
     }
 
-    const summary = stringField(body, "summary") ?? "";
-    const links = normalizeList(stringArrayField(body, "links") ?? []);
-    const questions = normalizeList(stringArrayField(body, "openQuestions") ?? []);
+    const error = receiverError(world, thread.roomId, work.ownerId, receiverAgentId);
+
+    if (error !== null) throw sentence("receiverAgentId", error);
+
+    const receiver = [...world.users.values()].find(
+      (user) => user.agent?.agentId === receiverAgentId,
+    );
+
+    if (receiver === undefined) throw notFound();
+
+    const links = normalizeList(rawLinks);
+    const questions = normalizeList(rawQuestions);
     const errors: [string, string][] = [];
 
-    if (summary.trim() === "") errors.push(["summary", "Summary can't be blank"]);
+    if (summary.trim() === "") errors.push(["summary", "can't be blank"]);
 
     if ([...summary].length > HANDOFF_SUMMARY_LIMIT) {
-      errors.push([
-        "summary",
-        `Summary is too long (maximum is ${HANDOFF_SUMMARY_LIMIT} characters)`,
-      ]);
+      errors.push(["summary", `is too long (maximum is ${HANDOFF_SUMMARY_LIMIT} characters)`]);
     }
 
     if (links.length > HANDOFF_COLLECTION_LIMIT) {
-      errors.push(["links", `Links are limited to ${HANDOFF_COLLECTION_LIMIT} per handoff`]);
+      errors.push(["links", `are limited to ${HANDOFF_COLLECTION_LIMIT} per handoff`]);
     }
 
     for (const link of links) {
       if ([...link].length > HANDOFF_ENTRY_LIMIT) {
-        errors.push(["links", `Links must be at most ${HANDOFF_ENTRY_LIMIT} characters each`]);
+        errors.push(["links", `must be at most ${HANDOFF_ENTRY_LIMIT} characters each`]);
         break;
       }
 
       if (!/^https?:\/\//i.test(link)) {
-        errors.push(["links", "Links must be http(s) URLs"]);
+        errors.push(["links", "must be http(s) URLs"]);
         break;
       }
     }
 
     if (questions.length > HANDOFF_COLLECTION_LIMIT) {
-      errors.push([
-        "openQuestions",
-        `Open questions are limited to ${HANDOFF_COLLECTION_LIMIT} per handoff`,
-      ]);
+      errors.push(["open_questions", `are limited to ${HANDOFF_COLLECTION_LIMIT} per handoff`]);
     }
 
     if (questions.some((question) => [...question].length > HANDOFF_ENTRY_LIMIT)) {
-      errors.push([
-        "openQuestions",
-        `Open questions must be at most ${HANDOFF_ENTRY_LIMIT} characters each`,
-      ]);
+      errors.push(["open_questions", `must be at most ${HANDOFF_ENTRY_LIMIT} characters each`]);
     }
 
     if (errors.length > 0) throw invalid(errors);
@@ -405,7 +393,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
         fromStatus: work.status,
         toStatus: work.status,
         fromOwner: ownerSnapshot(world, work.ownerId),
-        toOwner: ownerSnapshot(world, receiver.userId),
+        toOwner: ownerSnapshot(world, receiver.id),
         note: null,
         handoff: {
           summary: truncate(summary, HISTORY_SUMMARY_LIMIT),
@@ -415,7 +403,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       },
       at,
     );
-    setOwner(world, work, receiver.userId);
+    setOwner(world, work, receiver.id);
     work.ownerActive = true;
     work.updatedAt = touched(ctx.now(), work.updatedAt);
     ctx.publish(threads.updated(thread));

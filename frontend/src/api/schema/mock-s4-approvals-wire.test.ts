@@ -77,6 +77,13 @@ describe("the S4 approvals mock against the pinned wire schemas", () => {
     const bad = await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.ember}/approvals?before=%%%`);
 
     expect(bad.status).toBe(422);
+    expect(bad.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Before is invalid",
+        fields: { before: ["is invalid"] },
+      },
+    });
     mock.dispose();
   });
 
@@ -104,6 +111,13 @@ describe("the S4 approvals mock against the pinned wire schemas", () => {
     const again = await send(mock, "PATCH", "/api/v1/agent_approvals/100", { decision: "denied" });
 
     expect(again.status).toBe(422);
+    expect(again.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Request is already approved",
+        fields: { base: ["Request is already approved"] },
+      },
+    });
 
     const events = frames.map((frame) => Schema.decodeUnknownSync(SyncEvent)(frame));
 
@@ -132,6 +146,12 @@ describe("the S4 approvals mock against the pinned wire schemas", () => {
     });
 
     expect(refused.status).toBe(403);
+    expect(refused.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Forbidden$/),
+        message: "Only an administrator can approve GitHub write actions",
+      },
+    });
 
     const denied = await send(mock, "PATCH", "/api/v1/agent_approvals/99", { decision: "denied" });
 
@@ -140,6 +160,121 @@ describe("the S4 approvals mock against the pinned wire schemas", () => {
     const others = await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.scout}/approvals`);
 
     expect(others.status).toBe(404);
+    expect(others.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
+    mock.dispose();
+  });
+
+  it("returns classic base refusal sentences for every settled status", async () => {
+    const mock = server();
+
+    for (const status of ["approved", "denied", "cancelled", "expired"]) {
+      await send(mock, "POST", "/__mock/approval-settle", { id: 100, status });
+
+      const response = await send(mock, "PATCH", "/api/v1/agent_approvals/100", {
+        decision: "denied",
+        note: "x".repeat(201),
+      });
+
+      const message = status === "expired" ? "Request has expired" : `Request is already ${status}`;
+
+      expect(response.status).toBe(422);
+      expect(response.json).toEqual({
+        error: {
+          _tag: expect.stringMatching(/^Validation$/),
+          message,
+          fields: { base: [message] },
+        },
+      });
+    }
+
+    mock.dispose();
+  });
+
+  it("validates decision notes on base, counting characters as Rust does", async () => {
+    const mock = server();
+    const message = "Decision note is too long (maximum is 200 characters)";
+
+    const refused = await send(mock, "PATCH", "/api/v1/agent_approvals/100", {
+      decision: "denied",
+      note: "x".repeat(201),
+    });
+
+    expect(refused.status).toBe(422);
+    expect(refused.json).toEqual({
+      error: { _tag: expect.stringMatching(/^Validation$/), message, fields: { base: [message] } },
+    });
+
+    const allowed = await send(mock, "PATCH", "/api/v1/agent_approvals/100", {
+      decision: "denied",
+      note: "😀".repeat(200),
+    });
+
+    expect(allowed.status).toBe(200);
+    expect(Schema.decodeUnknownSync(AgentApproval)(allowed.json).decisionNote).toBe(
+      "😀".repeat(200),
+    );
+    mock.dispose();
+  });
+
+  it("names Fizzy for its admin-only refusal, before status or note validation", async () => {
+    const mock = server();
+
+    const asked = await send(mock, "POST", "/__mock/approval-request", {
+      action: "fizzy.create_card",
+      summary: "Add a card",
+    });
+
+    const { id } = Schema.decodeUnknownSync(AgentApproval)(asked.json);
+
+    await send(mock, "POST", "/__mock/approval-settle", { id, status: "denied" });
+    await send(mock, "POST", "/__mock/viewer-role", { role: "member" });
+
+    const response = await send(mock, "PATCH", `/api/v1/agent_approvals/${id}`, {
+      decision: "approved",
+      note: "x".repeat(201),
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Forbidden$/),
+        message: "Only an administrator can approve Fizzy write actions",
+      },
+    });
+    mock.dispose();
+  });
+
+  it("puts undecodable decisions on decision and returns generic not-found text", async () => {
+    const mock = server();
+
+    const malformed = await send(mock, "PATCH", "/api/v1/agent_approvals/999999", {
+      decision: "cancelled",
+    });
+
+    const missing = await send(mock, "PATCH", "/api/v1/agent_approvals/999999", {
+      decision: "approved",
+    });
+
+    const agent = await send(mock, "GET", "/api/v1/agents/999999");
+
+    expect(malformed.status).toBe(422);
+    expect(malformed.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Decision must be approved or denied",
+        fields: { decision: ["must be approved or denied"] },
+      },
+    });
+    expect(missing.status).toBe(404);
+    expect(missing.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
+    expect(agent.status).toBe(404);
+    expect(agent.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
     mock.dispose();
   });
 
@@ -178,12 +313,13 @@ describe("the S4 ledger mock against the pinned wire schemas", () => {
     const mock = server();
     const first = await ledgerPage(mock, AGENT_IDS.ember);
 
-    expect(first.events).toHaveLength(50);
-    expect(first.events.some((event) => event.eventType === "unknown")).toBe(true);
+    expect(first.events).toHaveLength(48);
+    expect(first.nextCursor).not.toBeNull();
+    expect(first.events.some((event) => event.eventType === "unknown")).toBe(false);
 
     const raw = await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.ember}/events`);
 
-    expect(rawTypes(raw.json)).toContain(UNKNOWN_LEDGER_TYPE);
+    expect(rawTypes(raw.json)).not.toContain(UNKNOWN_LEDGER_TYPE);
 
     const second = await ledgerPage(
       mock,
@@ -193,7 +329,11 @@ describe("the S4 ledger mock against the pinned wire schemas", () => {
 
     const ids = [...first.events, ...second.events].map((event) => event.id);
 
-    expect(new Set(ids).size).toBe(EMBER_LEDGER_SIZE);
+    expect(new Set(ids).size).toBe(EMBER_LEDGER_SIZE - 4);
+    expect(ids).toHaveLength(EMBER_LEDGER_SIZE - 4);
+    expect(first.events.at(-1)?.id).toBe(4951);
+    expect(second.events[0]?.id).toBe(4949);
+    expect(ids).toEqual([...ids].sort((left, right) => right - left));
     expect(second.nextCursor).toBeNull();
 
     const suppressed = await ledgerPage(mock, AGENT_IDS.ember, "?outcome=suppressed");
@@ -226,8 +366,32 @@ describe("the S4 ledger mock against the pinned wire schemas", () => {
     const roomless = asOwner.events.find((event) => event.roomId === null);
 
     expect(roomless?.detail).not.toBeNull();
-    expect((await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.scout}/events`)).status).toBe(403);
-    expect((await send(mock, "GET", "/api/v1/agents/999/events")).status).toBe(404);
+    const forbidden = await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.scout}/events`);
+    const missing = await send(mock, "GET", "/api/v1/agents/999/events");
+
+    expect(forbidden.status).toBe(403);
+    expect(forbidden.json).toEqual({
+      error: { _tag: expect.stringMatching(/^Forbidden$/), message: "Forbidden" },
+    });
+    expect(missing.status).toBe(404);
+    expect(missing.json).toEqual({
+      error: { _tag: expect.stringMatching(/^NotFound$/), message: "Not found" },
+    });
+    mock.dispose();
+  });
+
+  it("uses the real bad-cursor envelope for ledger pages", async () => {
+    const mock = server();
+    const response = await send(mock, "GET", `/api/v1/agents/${AGENT_IDS.ember}/events?before=%%%`);
+
+    expect(response.status).toBe(422);
+    expect(response.json).toEqual({
+      error: {
+        _tag: expect.stringMatching(/^Validation$/),
+        message: "Before is invalid",
+        fields: { before: ["is invalid"] },
+      },
+    });
     mock.dispose();
   });
 });
