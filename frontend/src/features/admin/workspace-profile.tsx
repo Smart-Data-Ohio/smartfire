@@ -8,6 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { adminFailure, needsSudo, useAdmin } from "./admin-parts.tsx";
+import { mayAnimate, useFirstFrame } from "./first-frame.ts";
 import {
   imageProblem,
   PROFILE_FORMATS,
@@ -20,6 +21,8 @@ import {
 /** A slot's upload in flight: the chosen file shown at once, and how far its bytes have got. */
 interface Pending {
   readonly preview: string;
+  /** The chosen file, for a still of its first frame when motion is reduced. */
+  readonly file: File | null;
   readonly percent: number;
   readonly saving: boolean;
 }
@@ -28,6 +31,8 @@ interface Pending {
 interface Shown {
   readonly url: string | null;
   readonly stillUrl: string | null;
+  /** A file being uploaded in its place: it has no still from the server yet. */
+  readonly file?: File | null;
 }
 
 function serverImage(workspace: Workspace, kind: ProfileImageKind): Shown {
@@ -50,11 +55,24 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-/** The image as it should show here: animated unless motion is reduced. */
+/**
+ * The image as it should show here: animated unless motion is reduced. Under reduced motion a
+ * file still uploading shows its first frame, drawn here (nothing until it's drawn).
+ */
 function useShownSrc(image: Shown): string | null {
   const reduced = useReducedMotion();
+  const file = image.file ?? null;
+  const drawn = useFirstFrame(file, reduced && file !== null && mayAnimate(file));
 
-  return reduced && image.stillUrl !== null ? image.stillUrl : image.url;
+  if (!reduced) {
+    return image.url;
+  }
+
+  if (file !== null && mayAnimate(file)) {
+    return drawn;
+  }
+
+  return image.stillUrl ?? image.url;
 }
 
 /**
@@ -71,7 +89,10 @@ function ProfilePreview({
   readonly banner: Shown;
 }) {
   const logoSrc = useShownSrc(logo);
-  const bannerSrc = useShownSrc(banner);
+  const shownBanner = useShownSrc(banner);
+  // An image that fails to load leaves the plain header, as the sidebar does.
+  const [brokenBanner, setBrokenBanner] = useState<string | null>(null);
+  const bannerSrc = shownBanner === brokenBanner ? null : shownBanner;
 
   return (
     <figure className="profile-preview" aria-label="Preview">
@@ -94,6 +115,7 @@ function ProfilePreview({
               src={bannerSrc}
               alt=""
               draggable={false}
+              onError={() => setBrokenBanner(bannerSrc)}
             />
           )}
           <span className="profile-preview-name">
@@ -320,13 +342,14 @@ export function WorkspaceProfile() {
     const preview = URL.createObjectURL(file);
 
     previews.current.add(preview);
-    set(kind, { pending: { preview, percent: 0, saving: false }, error: null });
+    set(kind, { pending: { preview, file, percent: 0, saving: false }, error: null });
 
     const task = new UploadTask(file, browserDeps(actions.messages.startUpload), (snapshot) => {
       if (snapshot.phase === "uploading") {
         set(kind, {
           pending: {
             preview,
+            file,
             percent: uploadPercent(snapshot.loaded, snapshot.total),
             saving: false,
           },
@@ -344,7 +367,7 @@ export function WorkspaceProfile() {
           throw new Error(error ?? "The upload didn't finish.");
         }
 
-        set(kind, { pending: { preview, percent: 100, saving: true }, error: null });
+        set(kind, { pending: { preview, file, percent: 100, saving: true }, error: null });
 
         return SET[kind](signedId);
       })
@@ -360,7 +383,7 @@ export function WorkspaceProfile() {
   };
 
   const remove = (kind: ProfileImageKind) => {
-    set(kind, { pending: { preview: "", percent: 100, saving: true }, error: null });
+    set(kind, { pending: { preview: "", file: null, percent: 100, saving: true }, error: null });
     REMOVE[kind]().then(
       (next) => {
         replace(next);
@@ -371,9 +394,11 @@ export function WorkspaceProfile() {
   };
 
   const shown = (kind: ProfileImageKind): Shown => {
-    const preview = slots[kind].pending?.preview ?? "";
+    const pending = slots[kind].pending;
 
-    return preview === "" ? serverImage(workspace, kind) : { url: preview, stillUrl: null };
+    return pending === null || pending.preview === ""
+      ? serverImage(workspace, kind)
+      : { url: pending.preview, stillUrl: null, file: pending.file };
   };
 
   return (

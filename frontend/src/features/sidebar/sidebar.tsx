@@ -384,27 +384,37 @@ function workspaceLogo(state: State): string | null {
   return account?.logoStillUrl ?? account?.logoUrl ?? null;
 }
 
-/** The workspace banner behind the header: animated unless motion is reduced. */
-function SidebarBanner({
-  url,
-  stillUrl,
-}: {
+/** A banner as the header shows it: the image, and an animated one's first frame. */
+interface Banner {
   readonly url: string;
   readonly stillUrl: string | null;
+}
+
+/**
+ * The workspace banner behind the header: animated only while it shows and motion isn't reduced.
+ * Folded away, an animated banner rests on its first frame. A load failure is reported, so the
+ * header goes back to the plain one.
+ */
+function SidebarBanner({
+  banner,
+  folded,
+  onBroken,
+}: {
+  readonly banner: Banner;
+  readonly folded: boolean;
+  readonly onBroken: (src: string) => void;
 }) {
   const reduced = useReducedMotion();
-  const [broken, setBroken] = useState<string | null>(null);
+  const src = (reduced || folded) && banner.stillUrl !== null ? banner.stillUrl : banner.url;
 
-  const src = reduced && stillUrl !== null ? stillUrl : url;
-
-  return src === broken ? null : (
+  return (
     <div className="sidebar-banner" aria-hidden="true">
       <img
         className="sidebar-banner-image"
         src={src}
         alt=""
         draggable={false}
-        onError={() => setBroken(src)}
+        onError={() => onBroken(src)}
       />
     </div>
   );
@@ -416,15 +426,18 @@ function WorkspaceHeader({
   logo,
   banner,
   folded,
+  onBannerBroken,
   onNewCategory,
 }: {
   readonly title: string;
   /** The workspace logo's still, beside the name where the rail is a tab bar (phones). */
   readonly logo: string | null;
   /** The workspace banner (Discord's server banner), when one is uploaded and shown here. */
-  readonly banner: { readonly url: string; readonly stillUrl: string | null } | null;
+  readonly banner: Banner | null;
   /** The list has scrolled: the banner folds into the plain header. */
   readonly folded: boolean;
+  /** The banner image didn't load: show the plain header instead. */
+  readonly onBannerBroken: (src: string) => void;
   readonly onNewCategory?: (() => void) | undefined;
 }) {
   return (
@@ -433,7 +446,9 @@ function WorkspaceHeader({
       data-banner={banner === null ? undefined : ""}
       data-folded={banner !== null && folded ? "" : undefined}
     >
-      {banner === null ? null : <SidebarBanner url={banner.url} stillUrl={banner.stillUrl} />}
+      {banner === null ? null : (
+        <SidebarBanner banner={banner} folded={folded} onBroken={onBannerBroken} />
+      )}
       <Menu
         label={`${title} menu`}
         trigger={(props) => (
@@ -669,9 +684,15 @@ export function Sidebar() {
   // A keyboard drag's steps interrupt: each one answers the key just pressed.
   const announcer = useAnnouncer("assertive");
 
+  // An image that failed to load: its banner gives way to the plain header.
+  const [brokenBanner, setBrokenBanner] = useState<string | null>(null);
+
   // The banner shows over the workspace's conversations, not the direct-message list.
-  const banner =
-    destination === "dms" || bannerUrl === null
+  const banner: Banner | null =
+    destination === "dms" ||
+    bannerUrl === null ||
+    brokenBanner === bannerUrl ||
+    (brokenBanner !== null && brokenBanner === bannerStillUrl)
       ? null
       : { url: bannerUrl, stillUrl: bannerStillUrl };
 
@@ -980,6 +1001,7 @@ export function Sidebar() {
         logo={destination === "dms" ? null : logo}
         banner={banner}
         folded={folded}
+        onBannerBroken={setBrokenBanner}
         onNewCategory={destination === "dms" ? undefined : () => newCategory()}
       />
       <JumpButton />

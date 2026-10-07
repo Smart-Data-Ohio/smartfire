@@ -16,6 +16,7 @@ import { HttpError, notFound, ok, plainError } from "../http.ts";
 import { booleanField, type Json, stringField } from "../json.ts";
 import { rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
+import { PROFILE_MAX_SIZE, readProfileImage } from "./profile-image.ts";
 import type { Uploads } from "./uploads.ts";
 
 /** Facts about a person only administrators see. */
@@ -269,15 +270,20 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     ctx.publish([{ topic: "user", type: "workspace.updated", data: branding() }]);
   };
 
-  /** The uploaded image a logo or banner write names, checked as the server checks it. */
-  const profileImage = (body: Json | undefined): Image => {
+  /**
+   * The uploaded image a logo or banner write names, checked as the server checks it: the bytes
+   * must really be a PNG, JPEG, GIF or WebP within the size caps, whatever type was declared.
+   */
+  const profileImage = (kind: "logo" | "banner", body: Json | undefined): Image => {
     const signedId = stringField(body, "signedId");
 
     if (signedId === null) throw invalid({ signedId: ["isn't an uploaded file"] });
 
     const attachment = uploads.attachment(signedId);
+    const bytes = ctx.world().blobs.get(signedId)?.bytes ?? new Uint8Array();
+    const info = PROFILE_TYPES.has(attachment.contentType) ? readProfileImage(bytes) : null;
 
-    if (!PROFILE_TYPES.has(attachment.contentType)) {
+    if (info === null) {
       throw invalid({ signedId: ["must be a PNG, JPEG, GIF or WebP image"] });
     }
 
@@ -285,11 +291,14 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       throw invalid({ signedId: ["must be 10 MB or smaller"] });
     }
 
-    // A GIF or WebP stands in for an animated image; its thumbnail is the still.
-    const animated =
-      attachment.contentType === "image/gif" || attachment.contentType === "image/webp";
+    const [maxWidth, maxHeight] = PROFILE_MAX_SIZE[kind];
 
-    return { url: attachment.url, stillUrl: animated ? attachment.thumbnailUrl : null };
+    if (info.width > maxWidth || info.height > maxHeight) {
+      throw invalid({ signedId: [`must be at most ${maxWidth} × ${maxHeight} pixels`] });
+    }
+
+    // An animated GIF or WebP gets a still: the mock's thumbnail stands in for its first frame.
+    return { url: attachment.url, stillUrl: info.animated ? attachment.thumbnailUrl : null };
   };
 
   /** A logo or banner change: audited as the classic settings change, then published. */
@@ -547,7 +556,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
       ...(["logo", "banner"] as const).flatMap((kind) => [
         route("PUT", new RegExp(`^/admin/workspace/${kind}$`), ({ body }) => {
-          current()[kind] = profileImage(body);
+          current()[kind] = profileImage(kind, body);
           changed(kind, true);
 
           return ok(workspace());

@@ -23,7 +23,8 @@ export const PROFILE_SLOTS: Readonly<
 };
 
 /** The file types and size, said once under both slots. */
-export const PROFILE_FORMATS = "PNG, JPEG, GIF or WebP, up to 10 MB. GIF and WebP can be animated.";
+export const PROFILE_FORMATS =
+  "PNG, JPEG, GIF or WebP, up to 10 MB and 4096 pixels wide. GIF and WebP can be animated.";
 
 /** Why `file` can't be a logo or banner, before it's uploaded; `null` when it can. */
 export function imageProblem(file: Pick<File, "type" | "size">): string | null {

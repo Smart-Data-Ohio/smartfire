@@ -51,15 +51,19 @@
     transition: opacity var(--duration-medium) var(--ease-move);
   }
 
-  /* The top shade keeps the name and buttons readable on any image. */
+  /*
+   * The top shade keeps the name and buttons readable on any image: 60% black holds through the
+   * header row, so white text keeps at least 5.7:1 even over a pure white banner (4.5:1 needs
+   * 54%), then it fades out over the rest of the image.
+   */
   .sidebar-banner::after {
     position: absolute;
     inset: 0;
     background: linear-gradient(
       to bottom,
-      oklch(0% 0 0 / 55%),
-      oklch(0% 0 0 / 18%) 45%,
-      oklch(0% 0 0 / 0%) 75%
+      oklch(0% 0 0 / 60%),
+      oklch(0% 0 0 / 60%) var(--pane-header-height),
+      oklch(0% 0 0 / 0%) 100%
     );
     content: "";
   }

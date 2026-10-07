@@ -92,9 +92,9 @@
     inset: 0;
     background: linear-gradient(
       to bottom,
-      oklch(0% 0 0 / 55%),
-      oklch(0% 0 0 / 18%) 45%,
-      oklch(0% 0 0 / 0%) 75%
+      oklch(0% 0 0 / 60%),
+      oklch(0% 0 0 / 60%) 44px,
+      oklch(0% 0 0 / 0%) 100%
     );
     content: "";
   }
