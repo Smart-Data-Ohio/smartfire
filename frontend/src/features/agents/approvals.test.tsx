@@ -150,7 +150,9 @@ describe("S4 client contracts", () => {
     });
 
     expect(load).toHaveBeenCalledTimes(2);
-    expect(Object.values(store.getState().freshness.reads)).toEqual([{ list: "approvals:9:all", reload: true }]);
+    expect(Object.values(store.getState().freshness.reads)).toEqual([
+      { list: "approvals:9:all", reload: true },
+    ]);
 
     view.unmount();
 
