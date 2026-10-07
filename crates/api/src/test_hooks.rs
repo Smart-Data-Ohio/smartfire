@@ -30,43 +30,64 @@ pub(crate) async fn after_duplicate_check(client_message_id: &str) {
     }
 }
 
-/// A `PATCH /api/v1/room_categories/:id` held just before its write: the test waits on
-/// `reached`, does what it likes, then waits on `release` to let the write go on.
-pub struct CategoryWriteHold {
+/// A write held just before its transaction: the test waits on `reached`, does what it likes,
+/// then waits on `release` to let the write go on.
+pub struct WriteHold {
     pub reached: Arc<Barrier>,
     pub release: Arc<Barrier>,
 }
 
-static BEFORE_CATEGORY_WRITE: Mutex<Option<HashMap<i64, CategoryWriteHold>>> = Mutex::new(None);
+type Holds = Mutex<Option<HashMap<i64, WriteHold>>>;
 
-/// Holds the next `PATCH /api/v1/room_categories/:id` of this category just before its write
-/// transaction, until the test has waited on both barriers.
-pub fn hold_before_category_write(category_id: i64) -> CategoryWriteHold {
-    let hold = || CategoryWriteHold {
+static BEFORE_CATEGORY_WRITE: Holds = Mutex::new(None);
+static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
+
+fn hold(holds: &Holds, id: i64) -> WriteHold {
+    let held = WriteHold {
         reached: Arc::new(Barrier::new(2)),
         release: Arc::new(Barrier::new(2)),
     };
-    let held = hold();
-    let copy = CategoryWriteHold {
+    let copy = WriteHold {
         reached: held.reached.clone(),
         release: held.release.clone(),
     };
-    BEFORE_CATEGORY_WRITE
+    holds
         .lock()
         .unwrap()
         .get_or_insert_with(HashMap::new)
-        .insert(category_id, held);
+        .insert(id, held);
     copy
 }
 
-pub(crate) async fn before_category_write(category_id: i64) {
-    let held = BEFORE_CATEGORY_WRITE
+async fn wait(holds: &Holds, id: i64) {
+    let held = holds
         .lock()
         .unwrap()
         .as_mut()
-        .and_then(|held| held.remove(&category_id));
+        .and_then(|held| held.remove(&id));
     if let Some(held) = held {
         held.reached.wait().await;
         held.release.wait().await;
     }
+}
+
+/// Holds the next `PATCH /api/v1/room_categories/:id` of this category just before its write
+/// transaction, until the test has waited on both barriers.
+pub fn hold_before_category_write(category_id: i64) -> WriteHold {
+    hold(&BEFORE_CATEGORY_WRITE, category_id)
+}
+
+pub(crate) async fn before_category_write(category_id: i64) {
+    wait(&BEFORE_CATEGORY_WRITE, category_id).await;
+}
+
+/// Holds the next `PUT /api/v1/rooms/:id/involvement` of this membership after the room and
+/// membership are looked up, just before its write transaction, until the test has waited on
+/// both barriers.
+pub fn hold_before_involvement_write(membership_id: i64) -> WriteHold {
+    hold(&BEFORE_INVOLVEMENT_WRITE, membership_id)
+}
+
+pub(crate) async fn before_involvement_write(membership_id: i64) {
+    wait(&BEFORE_INVOLVEMENT_WRITE, membership_id).await;
 }

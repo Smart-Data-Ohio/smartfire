@@ -257,10 +257,12 @@ async fn put_involvement(c: &mut Ctx) -> Result {
         api::Involvement::Mentions => Involvement::Mentions,
         api::Involvement::Everything => Involvement::Everything,
     };
-    let was_unread = membership.unread();
-    let membership = involvements::change(c, &room, membership, Some(involvement)).await?;
-    if was_unread && membership.involved_in(Involvement::Muted) {
-        // `change` marked it read; the other tabs clear its unread state.
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_involvement_write(membership.id).await;
+    let (membership, cleared_unread) =
+        involvements::change(c, &room, membership.id, Some(involvement)).await?;
+    if cleared_unread {
+        // Muting marked it read inside the write; the other tabs clear its unread state.
         campfire_app::cable::sync::room_read(&c.app().cable, membership.user_id, room.id);
     }
     c.json(StatusCode::OK, &dto::membership(&membership))
