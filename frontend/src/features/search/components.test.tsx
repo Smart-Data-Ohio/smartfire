@@ -288,6 +288,29 @@ describe("SearchBox", () => {
     expect(onSearch).toHaveBeenCalledWith("launch has:file");
   });
 
+  it("points the active descendant at an option id with no spaces, even for a recent search", async () => {
+    searchStore.setState({
+      recents: {
+        status: "ready",
+        searches: [{ id: 1, query: "launch checklist", searchedAt: "2026-10-06T10:00:00.000Z" }],
+      },
+    });
+
+    const user = userEvent.setup();
+
+    await renderRouted(() => <Field variant="header" onSearch={vi.fn()} />);
+
+    const input = screen.getByRole("combobox", { name: "Search messages" });
+
+    await user.click(input);
+    await user.keyboard("{ArrowDown}");
+
+    const id = input.getAttribute("aria-activedescendant") ?? "";
+
+    expect(id).not.toMatch(/\s/u);
+    expect(document.getElementById(id)?.textContent).toContain("launch checklist");
+  });
+
   it("leaves the page's empty field to the page's own lists", async () => {
     searchStore.setState({
       recents: {

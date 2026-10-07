@@ -203,19 +203,20 @@ export function SearchBox({
   const flat = flattenTypeahead(sections);
   const active = activeIndex < 0 ? undefined : flat[Math.min(activeIndex, flat.length - 1)];
   const listId = `${id}-list`;
-  const optionId = (item: TypeaheadItem) => `${id}-${item.key}`;
+  // By position: an item's key can hold the typed text (spaces and all), which isn't an id.
+  const optionId = (item: TypeaheadItem) => `${id}-option-${flat.indexOf(item)}`;
   // The page lists recent searches and examples itself while its field is empty.
   const idle = variant === "page" && value.trim() === "";
   const showing = open && !idle && flat.length > 0;
   const showClear = value.trim() === "" && recents.searches.length > 0;
 
-  useLayoutEffect(() => {
-    if (active === undefined) {
-      return;
-    }
+  const activeId = active === undefined ? undefined : optionId(active);
 
-    document.getElementById(`${id}-${active.key}`)?.scrollIntoView({ block: "nearest" });
-  }, [active, id]);
+  useLayoutEffect(() => {
+    if (activeId !== undefined) {
+      document.getElementById(activeId)?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeId]);
 
   useEffect(() => () => stopClear.current?.(), []);
 
@@ -386,7 +387,7 @@ export function SearchBox({
           aria-expanded={showing}
           aria-controls={listId}
           aria-autocomplete="list"
-          aria-activedescendant={showing && active !== undefined ? optionId(active) : undefined}
+          aria-activedescendant={showing ? activeId : undefined}
           aria-keyshortcuts="Meta+Shift+F Control+Shift+F /"
           autoComplete="off"
           spellCheck={false}
