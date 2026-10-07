@@ -6,6 +6,7 @@ import { actions } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
 import { type FizzyMessageScope, scopeKey } from "./fizzy-card-model.ts";
 import { useCloseOverlay } from "./overlay-history.ts";
+import { useSourceFollower } from "./source-focus.ts";
 
 const FizzyCardDialog = lazy(() => import("./fizzy-card-dialog.tsx"));
 
@@ -18,50 +19,6 @@ interface Shown {
 /** The source row, for focus after the dialog when the menu that opened it is gone. */
 function sourceRow(scope: FizzyMessageScope): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-message-id="${scope.messageId}"]`);
-}
-
-/** How long focus follows the source row after the dialog closes. */
-const SOURCE_ROW_WAIT_MS = 5000;
-
-/**
- * Focus after the dialog: the source row. Closing can load the conversation around it (a direct
- * entry's permalink, or an older thread reply), which mounts the row late or replaces it, so for a
- * moment focus follows the row: whenever focus falls back to the page or to a container, it
- * returns to the row. It stops as soon as a control the viewer can reach takes focus.
- */
-function focusSource(scope: FizzyMessageScope): HTMLElement | null {
-  const follow = () => {
-    const active = document.activeElement;
-    const row = sourceRow(scope);
-
-    // A control the viewer can reach (tabIndex 0 or more) took focus: they've moved on. Panes,
-    // logs and rows (tabIndex -1) only take focus programmatically, as the thread pane does when
-    // it reloads, so focus keeps returning to the row past them.
-    if (active instanceof HTMLElement && active !== document.body && active.tabIndex >= 0) {
-      stop();
-
-      return;
-    }
-
-    if (row !== null && active !== row) {
-      row.focus({ preventScroll: true });
-    }
-  };
-
-  // The row mounting or being replaced, and focus moving to a container, both send focus back.
-  const observer = new MutationObserver(follow);
-  const onFocusIn = () => requestAnimationFrame(follow);
-
-  const stop = () => {
-    observer.disconnect();
-    document.removeEventListener("focusin", onFocusIn);
-  };
-
-  observer.observe(document.body, { childList: true, subtree: true });
-  document.addEventListener("focusin", onFocusIn);
-  window.setTimeout(stop, SOURCE_ROW_WAIT_MS);
-
-  return sourceRow(scope);
 }
 
 /**
@@ -107,6 +64,9 @@ export function FizzyCardOverlay({ roomId }: { readonly roomId: number }) {
       active.current = null;
     };
   }, [opening]);
+
+  // Focus after closing follows the source row for a moment; a new opening, or unmounting, ends it.
+  const sourceFocus = useSourceFollower(opening);
 
   // Someone opened the dialog's URL: closing lands on the source message in its conversation.
   const closeOverlay = useCloseOverlay(() => {
@@ -165,7 +125,7 @@ export function FizzyCardOverlay({ roomId }: { readonly roomId: number }) {
         open={open}
         onClose={close}
         onCreated={created}
-        returnFocus={() => focusSource(shown.scope)}
+        returnFocus={() => sourceFocus.follow(() => sourceRow(shown.scope))}
         returnFocusFirst
       />
     </Suspense>

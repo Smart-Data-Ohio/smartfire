@@ -376,6 +376,23 @@ test.describe("Create Fizzy card", () => {
     );
     await expect(row(pane(page), oldest)).toBeVisible();
     await expect(row(pane(page), oldest)).toBeFocused();
+
+    // The viewer moves on with the keyboard, and focus stays where they put it.
+    const focusedMessage = () =>
+      page.evaluate(
+        () =>
+          document.activeElement?.closest("[data-message-id]")?.getAttribute("data-message-id") ??
+          null,
+      );
+
+    await page.keyboard.press("ArrowDown");
+    await expect.poll(focusedMessage).not.toBe(String(oldest));
+
+    const moved = await focusedMessage();
+
+    expect(moved).not.toBeNull();
+    await page.waitForTimeout(1000);
+    expect(await focusedMessage()).toBe(moved);
   });
 
   test("a locked thread's reply opens the form, and creating says the thread is locked", async ({
