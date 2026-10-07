@@ -20,8 +20,8 @@
     {% block head %}{% endblock %}
   </head>
   <body class="auth">
-{% if let Some(notice) = ctx.flash_notice() %}    <div class="auth-flash" data-tone="success" role="status"><span class="auth-flash-icon">{% call auth::check() %}</span><span>{{ notice }}</span></div>
-{% else if let Some(alert) = ctx.flash_alert() %}    <div class="auth-flash" id="{{ h::AUTH_ALERT_ID }}" data-tone="danger" role="alert"><span class="auth-flash-icon">{% call auth::circle_alert() %}</span><span>{{ alert }}</span></div>
+{% if let Some(notice) = ctx.flash_notice() %}    <div class="flash auth-flash" data-tone="success" role="status"><span class="auth-flash-icon">{% call auth::check() %}</span><span>{{ notice }}</span></div>
+{% else if let Some(alert) = ctx.flash_alert() %}    <div class="flash auth-flash" id="{{ h::AUTH_ALERT_ID }}" data-tone="danger" role="alert"><span class="auth-flash-icon">{% call auth::circle_alert() %}</span><span>{{ alert }}</span></div>
 {% endif %}    {% block content %}{% endblock %}
   </body>
 </html>
