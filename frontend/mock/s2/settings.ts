@@ -9,6 +9,8 @@ import type { SessionInfo } from "../../src/gen/SessionInfo.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
 import type { StatusExpiry } from "../../src/gen/StatusExpiry.ts";
+import type { TextSize } from "../../src/gen/TextSize.ts";
+import type { Theme } from "../../src/gen/Theme.ts";
 import { noContent, notFound, ok, plainError, refused, validation } from "../http.ts";
 import {
   booleanField,
@@ -191,6 +193,8 @@ function initialState(world: World, now: number): State {
 /** The settings module. */
 export interface SettingsModule {
   readonly routes: readonly Route[];
+  /** The viewer's saved theme and text size, which boot and `/me` carry. */
+  readonly appearance: () => { readonly theme: Theme; readonly textSize: TextSize };
 }
 
 /** A value of `body[key]` when the key is present and not null. */
@@ -631,6 +635,11 @@ export function createSettings(
     }));
 
   return {
+    appearance: () => {
+      const { theme, textSize } = current().settings.appearance;
+
+      return { theme, textSize };
+    },
     routes: [
       route("GET", /^\/settings$/, () => ok(page())),
       route("PATCH", /^\/settings\/profile$/, ({ body }) => profile(body)),

@@ -80,6 +80,27 @@
     --tracking-tight: -0.011em;
     --tracking-title: -0.017em;
   }
+
+  /*
+   * The account's text size (`<html data-text-size>`), as the classic pages scale it: every text
+   * token above is in rem, so the root size scales all text together while spacing (px) holds.
+   * Percentages stack on the browser's own default, so an OS or browser text size still applies.
+   */
+  :root[data-text-size="smaller"] {
+    font-size: 87.5%;
+  }
+
+  :root[data-text-size="small"] {
+    font-size: 93.75%;
+  }
+
+  :root[data-text-size="large"] {
+    font-size: 106.25%;
+  }
+
+  :root[data-text-size="larger"] {
+    font-size: 112.5%;
+  }
 }
 
 @layer base {

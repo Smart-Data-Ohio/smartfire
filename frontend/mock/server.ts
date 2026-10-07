@@ -332,8 +332,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
       account: { name: "Smart Data" },
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       cableUrl: "/cable",
       version: "mock",
       revision: null,
@@ -345,8 +344,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
@@ -687,6 +685,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
+  // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
+  const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
@@ -715,7 +715,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...settings.routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...createPeople(ctx, admin.requireSudo).routes,
