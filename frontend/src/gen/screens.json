@@ -47,6 +47,5 @@
   { "endpoint": "accounts/slack_import_runs#show", "classic": "/account/slack_import/runs/:id", "spa": "/app/admin/slack/runs/:id", "ported": true },
   { "endpoint": "accounts/slack_import_runs#plan", "classic": "/account/slack_import/runs/:id/plan", "spa": "/app/admin/slack/runs/:id/plan", "ported": true },
   { "endpoint": "slack/imports#index", "classic": "/slack/imports", "spa": "/app/settings/slack", "ported": true },
-  { "endpoint": "slack/imports#show", "classic": "/slack/imports/:id", "spa": "/app/settings/slack/:id", "ported": true },
-  { "endpoint": "channel_threads#new", "classic": "/rooms/:room_id/threads/new", "spa": "/app/r/:room_id/posts/new", "ported": true }
+  { "endpoint": "slack/imports#show", "classic": "/slack/imports/:id", "spa": "/app/settings/slack/:id", "ported": true }
 ]
