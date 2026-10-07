@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { directs } from "../../sync/directs.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -33,6 +34,7 @@ function closest(
 function PersonMatch({ item }: { readonly item: SwitcherItem }) {
   const navigate = useNavigate();
   const userId = item.userId ?? 0;
+  const [creating, setCreating] = useState(false);
 
   const open = () => {
     if (item.roomId !== null) {
@@ -41,19 +43,32 @@ function PersonMatch({ item }: { readonly item: SwitcherItem }) {
       return;
     }
 
+    // One create at a time: a second click while it's on its way would make another request.
+    setCreating(true);
     directs.create([userId]).then(
-      (row) => navigate({ to: "/r/$roomId", params: { roomId: row.room.id } }),
-      (error: Error) =>
+      (row) => {
+        setCreating(false);
+        void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } });
+      },
+      (error: Error) => {
+        setCreating(false);
         toast({
           title: "Couldn't open the conversation",
           description: error.message,
           tone: "danger",
-        }),
+        });
+      },
     );
   };
 
   return (
-    <Button variant="ghost" className="search-match" data-search-nav onClick={open}>
+    <Button
+      variant="ghost"
+      className="search-match"
+      data-search-nav
+      loading={creating}
+      onClick={open}
+    >
       <UserAvatar userId={userId} size={24} presence decorative />
       <span className="search-match-label">{item.label}</span>
     </Button>
