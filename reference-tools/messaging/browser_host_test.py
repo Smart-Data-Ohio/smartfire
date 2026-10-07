@@ -14,7 +14,7 @@ class HostSourceTests(unittest.TestCase):
             root = Path(directory)
             inputs = {
                 "public/500.html": b"original error page",
-                "crates/campfire/src/receipt.rs":
+                "crates/campfire_tests/src/receipt.rs":
                     b'include_str!(\n "../../../plans/receipt.json"\n);\n'
                     b'include_bytes!("../../../reference-tools/original.rb");',
                 "plans/receipt.json": b'{"original_assertions":3}',
@@ -34,7 +34,7 @@ class HostSourceTests(unittest.TestCase):
 
     def test_generated_pwa_module_keeps_its_real_relative_compile_inputs(self):
         project = Path(__file__).resolve().parents[2]
-        module = Path("crates/campfire/src/controllers/pwa/tests.rs")
+        module = Path("crates/campfire_tests/src/controllers/pwa/tests.rs")
         content = (project / module).read_bytes()
         includes = re.findall(r'\binclude_(?:str|bytes)!\s*\(\s*"([^"]+)"', content.decode())
         self.assertTrue(includes, "the real PWA module must exercise compile-time inputs")
@@ -68,7 +68,7 @@ class HostSourceTests(unittest.TestCase):
         from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire'},
+            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire_tests'},
                         'profile': {'test': True}, 'executable': str(root / 'target/ws8bm-browser-host/debug/deps/host')}
             result = SimpleNamespace(returncode=0, stdout=json.dumps(artifact))
             with patch('browser_host.prepare_source', return_value=root / 'generated'), \
@@ -85,7 +85,7 @@ class HostSourceTests(unittest.TestCase):
                 "Cargo.toml": b"workspace",
                 "parity/reference.sha": b"pinned",
                 "reference-tools/messaging/browser-attachment-jobs.rs": b"explicit attachment job adapter",
-                "crates/campfire/src/controllers/presenters/test_support.rs":
+                "crates/campfire_tests/src/controllers/presenters/test_support.rs":
                     b'''async fn ws8bm_browser_host_without_jobs() {}
                     include_str!("../../../../../public/500.html");
                     include_str!("../../../../../reference-tools/messaging/older_provider_callbacks.rb");
@@ -384,7 +384,7 @@ class HostSourceTests(unittest.TestCase):
         from types import SimpleNamespace
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire'},
+            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire_tests'},
                         'profile': {'test': True}, 'executable': str(root / 'host')}
             with patch('browser_host.prepare_source', return_value=root / 'generated'), \
                     patch('browser_host.subprocess.run', return_value=SimpleNamespace(returncode=0, stdout=json.dumps(artifact))), \

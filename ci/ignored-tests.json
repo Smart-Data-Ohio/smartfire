@@ -9,416 +9,416 @@
   ],
   "browsers": [
     {
-      "path": "crates/campfire/src/controllers/internal_huddle_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/internal_huddle_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::internal_huddle_tests::huddle_gateway_own_node_suite_against_rust_endpoints",
       "seconds": 9
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
       "seconds": 60
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
       "seconds": 39
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions",
       "seconds": 50
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c224_original_named_system_assertions",
       "seconds": 10
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c225_original_named_system_assertions",
       "seconds": 5
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c226_original_named_system_assertions",
       "seconds": 21
     },
     {
-      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c227_original_named_system_assertions",
       "seconds": 5
     },
     {
-      "path": "crates/campfire/src/controllers/rooms/system_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/rooms/system_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::rooms::system_browser_tests::huddle_system_cases_in_real_browser",
       "seconds": 208
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_people_assertions",
       "seconds": 67
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions",
       "seconds": 49
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions",
       "seconds": 24
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions",
       "seconds": 27
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions",
       "seconds": 46
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
       "seconds": 41
     },
     {
-      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ledger_browser_tests::original_ledger_navigation_assertions",
       "seconds": 653
     },
     {
-      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ledger_browser_tests::original_ledger_member_assertions",
       "seconds": 643
     },
     {
-      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ledger_browser_tests::original_ledger_surface_assertions",
       "seconds": 379
     },
     {
-      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions",
       "seconds": 85
     }
   ],
   "livekit": [
     {
-      "path": "crates/campfire/src/controllers/rooms/system_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/rooms/system_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::rooms::system_browser_tests::livekit_stage_system_cases_in_real_browser"
     }
   ],
   "drive": [
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14e_101"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_224"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_225"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_226"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_227"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_228"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_229"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_230"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_232"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_233"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_234"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_235"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_236"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_237"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_238"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_239"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_240"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_241"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_242"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_243"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_244"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_245"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_246"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_247"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_248"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_249"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_250"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_251"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_252"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_253"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_254"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_255"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_256"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_257"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_258"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_259"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_260"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_261"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_262"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_263"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_264"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_265"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_266"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_267"
     },
     {
-      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
+      "path": "crates/campfire_tests/src/controllers/drive_browser_tests.rs",
+      "package": "campfire_tests",
+      "binary": "campfire_tests",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_272"
     }
   ]

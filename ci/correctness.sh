@@ -81,7 +81,7 @@ run_suite() {
       browser_images
       # Start the private media server after the cold compile so its lifetime
       # and logs cover the browser run rather than several minutes of rustc.
-      cargo test --locked -p campfire --no-run -j 4
+      cargo test --locked -p campfire_tests --no-run -j 4
       web/bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
       web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &

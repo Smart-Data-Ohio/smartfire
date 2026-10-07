@@ -1,20 +1,20 @@
 [
   {
-    "path": "crates/campfire/src/jobs/tests.rs",
-    "package": "campfire",
-    "binary": "campfire",
+    "path": "crates/campfire_tests/src/jobs/tests.rs",
+    "package": "campfire_tests",
+    "binary": "campfire_tests",
     "test": "jobs::tests::push_latency"
   },
   {
-    "path": "crates/campfire/src/controllers/presenters/test_support.rs",
-    "package": "campfire",
-    "binary": "campfire",
+    "path": "crates/campfire_tests/src/controllers/presenters/test_support.rs",
+    "package": "campfire_tests",
+    "binary": "campfire_tests",
     "test": "controllers::presenters::test_support::ws8bm_browser_host_without_jobs"
   },
   {
-    "path": "crates/campfire/src/controllers/ledger_browser_tests/lifecycle_host.rs",
-    "package": "campfire",
-    "binary": "campfire",
+    "path": "crates/campfire_tests/src/controllers/ledger_browser_tests/lifecycle_host.rs",
+    "package": "campfire_tests",
+    "binary": "campfire_tests",
     "test": "controllers::ledger_browser_tests::lifecycle_host::original_ledger_injected_clock_host"
   }
 ]

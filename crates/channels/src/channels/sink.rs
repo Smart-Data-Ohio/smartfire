@@ -393,7 +393,7 @@ mod tests {
 
     #[test]
     fn huddle_configuration_matches_ws13_rails_vectors() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../campfire/src/huddle/protocol_vectors.json")).unwrap();
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../campfire_tests/src/huddle/protocol_vectors.json")).unwrap();
         for case in vectors["urls"].as_array().unwrap() {
             let configured = huddle_configured(|name| Some(match name {
                 "LIVEKIT_URL" => case["public_url"].as_str().unwrap(),

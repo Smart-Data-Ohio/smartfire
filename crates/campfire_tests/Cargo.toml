@@ -1,40 +1,37 @@
 [package]
-name = "campfire"
+name = "campfire_tests"
 version = "0.1.0"
 edition.workspace = true
 
-[features]
-# The server's test hooks (fixture inputs, the cable stream capacity, the ledger host's test
-# session route, the github-client boots) that campfire_tests drives. Production builds don't
-# compile them.
-test-support = ["campfire_app/test-support"]
-
-[dependencies]
+# Test code only (src/lib.rs is #![cfg(test)]): the tests that boot the whole app, with the
+# campfire crates' test hooks on.
+[dev-dependencies]
+campfire = { workspace = true, features = ["test-support"] }
 bnum.workspace = true
 rails_compat.workspace = true
-campfire_kit.workspace = true
+campfire_kit = { workspace = true, features = ["test-support"] }
 campfire_routes.workspace = true
-campfire_db.workspace = true
-campfire_jobs.workspace = true
+campfire_db = { workspace = true, features = ["test-support"] }
+campfire_jobs = { workspace = true, features = ["test-support"] }
 campfire_mail.workspace = true
 campfire_richtext.workspace = true
 campfire_storage.workspace = true
-campfire_cable.workspace = true
+campfire_cable = { workspace = true, features = ["test-support"] }
 campfire_assets.workspace = true
 campfire_views.workspace = true
-campfire_app.workspace = true
-campfire_web.workspace = true
-campfire_channels.workspace = true
+campfire_app = { workspace = true, features = ["test-support"] }
+campfire_web = { workspace = true, features = ["test-support"] }
+campfire_channels = { workspace = true, features = ["test-support"] }
 campfire_messages.workspace = true
 campfire_rooms.workspace = true
-campfire_people.workspace = true
-campfire_controllers.workspace = true
+campfire_people = { workspace = true, features = ["test-support"] }
+campfire_controllers = { workspace = true, features = ["test-support"] }
 campfire_spa.workspace = true
-campfire_api.workspace = true
+campfire_api = { workspace = true, features = ["test-support"] }
 anyhow.workspace = true
 tikv-jemallocator.workspace = true
 libc.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
 axum.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -44,12 +41,11 @@ regex.workspace = true
 indexmap = { workspace = true, features = ["serde"] }
 askama.workspace = true
 futures-util.workspace = true
-rusqlite = { workspace = true, features = ["backup"] }
+rusqlite = { workspace = true, features = ["backup", "limits", "trace"] }
 tempfile.workspace = true
 rand.workspace = true
 percent-encoding.workspace = true
 tracing-subscriber.workspace = true
-# integrations/
 hyper = { workspace = true, features = ["client", "http1"] }
 hyper-util.workspace = true
 http.workspace = true
@@ -64,9 +60,12 @@ url.workspace = true
 flate2.workspace = true
 base64.workspace = true
 uuid.workspace = true
-
-[dev-dependencies]
-campfire_app = { workspace = true, features = ["test-support"] }
-campfire_kit = { workspace = true, features = ["test-support"] }
+campfire_api_types.workspace = true
+httpdate.workspace = true
+async-trait.workspace = true
+hmac.workspace = true
+rcgen.workspace = true
 tikv-jemalloc-sys.workspace = true
 tower = { workspace = true, features = ["util"] }
+tokio-tungstenite.workspace = true
+ring.workspace = true

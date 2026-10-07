@@ -85,7 +85,7 @@ say whether the seeds were restored when you report results. Then:
 ```sh
 cargo nextest run --workspace --exclude html5ever \
   -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))"
-cargo nextest run -p campfire -p campfire_app --config ci/llvm.toml --profile ci-llvm \
+cargo nextest run -p campfire_tests -p campfire_app --config ci/llvm.toml --profile ci-llvm \
   -E "$CAMPFIRE_LLVM_ONLY_TESTS"
 cargo test --workspace --exclude html5ever --doc
 ```

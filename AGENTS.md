@@ -117,7 +117,7 @@ differential and rollback comparisons are retired; their recorded results
   `.cargo/config.toml`'s Cranelift settings.
 - `cargo nextest run --workspace --exclude html5ever -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
   runs everything but four panic-recovery tests, which need the campfire crates on LLVM:
-  `cargo nextest run -p campfire -p campfire_app --config ci/llvm.toml --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS"`
+  `cargo nextest run -p campfire_tests -p campfire_app --config ci/llvm.toml --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS"`
   (`CAMPFIRE_LLVM_ONLY_TESTS` is in `.github/workflows/rust.yml`). Plain `cargo test --workspace`
   exits 101 at the first of them under Cranelift. The app's integration tests need
   the committed seeds (`python3 parity/bin/frozen-seeds restore` copies `default`, `first_run`,

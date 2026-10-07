@@ -32,6 +32,7 @@ campfire_people   = { path = "crates/people" }
 campfire_controllers = { path = "crates/controllers" }
 campfire_api_types = { path = "crates/api_types" }
 campfire_api      = { path = "crates/api" }
+campfire          = { path = "crates/campfire" }
 mailparse        = "0.16"
 lettre           = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs", "hostname", "builder"] }
 

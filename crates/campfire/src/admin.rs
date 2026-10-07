@@ -36,7 +36,7 @@ pub fn run(args: &[String]) -> Option<i32> {
     })
 }
 
-fn execute(args: &[String]) -> Result<String, (i32, String)> {
+pub fn execute(args: &[String]) -> Result<String, (i32, String)> {
     let fail = |error: anyhow::Error| (2, format!("ERROR: {error}"));
     match args
         .iter()
@@ -129,7 +129,7 @@ fn twitter_backfill(database: &Path) -> anyhow::Result<String> {
     twitter_backfill_with_env(&conn, &env)
 }
 
-fn twitter_backfill_with_env(conn: &Connection, env: &campfire_db::Env) -> anyhow::Result<String> {
+pub fn twitter_backfill_with_env(conn: &Connection, env: &campfire_db::Env) -> anyhow::Result<String> {
     let count = crate::integrations::twitter::references::backfill_database(conn, env)?;
     Ok(format!(
         "Backfilled {count} {}\n",
@@ -200,9 +200,6 @@ fn migrate(database: &Path) -> anyhow::Result<String> {
     output.push_str(&format!("MIGRATIONS: {} applied\n", applied.len()));
     Ok(output)
 }
-
-#[cfg(test)]
-mod twitter_tests;
 
 #[cfg(test)]
 mod tests {

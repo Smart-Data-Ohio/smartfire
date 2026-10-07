@@ -26,15 +26,15 @@ use crate::{channels, controllers, jobs};
 use crate::app::{App, AppCtx, AppState};
 use crate::controllers::presenters::agent_payload::StateExt as _;
 
-pub(crate) mod json_params;
+pub mod json_params;
 
 /// A booted app: its state, the HTTP service, and the job runner (with the periodic loops).
 pub struct Booted {
     pub app: App,
     pub router: Router,
     pub jobs: jobs::Runner,
-    #[cfg(test)]
-    pub(crate) fixture_kit: Kit,
+    #[cfg(any(test, feature = "test-support"))]
+    pub fixture_kit: Kit,
 }
 
 /// Boots the app from `config`: prepares the database, restores the reference's boot-time
@@ -49,13 +49,13 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     boot_with_network(config, clock, crate::net::Network::system()).await
 }
 
-pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::net::Network) -> anyhow::Result<Booted> {
+pub async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::net::Network) -> anyhow::Result<Booted> {
     boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
 }
 
 /// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
 /// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
-pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+pub async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     let network = subscription_network.clone();
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
@@ -66,13 +66,13 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
 }
 
 /// Injects the fixed-host GitHub client for runtime acceptance tests.
-#[cfg(test)]
-pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
+#[cfg(any(test, feature = "test-support"))]
+pub async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
     boot_with_github_network(config, clock, github_read, crate::net::Network::system()).await
 }
 
-#[cfg(test)]
-pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
+#[cfg(any(test, feature = "test-support"))]
+pub async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
         std::env::var("GITHUB_APP_CLIENT_SECRET").ok(),
@@ -81,17 +81,17 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
     boot_with_github_clients(config, clock, github_read, github_app, github_network).await
 }
 
-#[cfg(test)]
-pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
+#[cfg(any(test, feature = "test-support"))]
+pub async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network) -> anyhow::Result<Booted> {
     boot_with_all_services(config, clock, github_read, github_app, github_network, crate::net::Network::system(), jobs::periodic::Intervals::from_env()).await
 }
 
-pub(crate) async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+pub async fn boot_with_all_services(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::net::Network, subscription_network: crate::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     boot_with_integrations(config, clock, BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy: crate::integrations::fizzy::State::system() }, intervals).await
 }
 
 /// Per-app transports, including fixture transports; production uses the shared clients.
-pub(crate) struct BootIntegrations {
+pub struct BootIntegrations {
     pub github_read: crate::integrations::github::client::ReadClient,
     pub github_app: crate::integrations::github::client::AppClient,
     pub github_network: crate::net::Network,
@@ -99,7 +99,7 @@ pub(crate) struct BootIntegrations {
     pub fizzy: crate::integrations::fizzy::State,
 }
 
-pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, integrations: BootIntegrations, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
+pub async fn boot_with_integrations(config: Config, clock: SharedClock, integrations: BootIntegrations, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     let BootIntegrations { github_read, github_app, github_network, subscription_network, fizzy } = integrations;
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
@@ -140,7 +140,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         assume_ssl: !config.disable_ssl,
         ..campfire_cable::Config::default()
     };
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let cable_config = campfire_cable::Config {
         stream_capacity: crate::test_support::cable_stream_capacity().unwrap_or(cable_config.stream_capacity),
         ..cable_config
@@ -211,7 +211,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         app,
         router,
         jobs: runner,
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         fixture_kit: kit,
     })
 }
@@ -237,7 +237,7 @@ async fn open_database(
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
         ..Default::default()
     };
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let env = campfire_db::Env {
         fixture_inputs: crate::test_support::message_inputs(),
         // WS16 flagged, per-database entropy seam for real first-login enrollment.
@@ -299,10 +299,10 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     let routes = if app.config.environment == "test" && std::env::var("WS11UI_LEDGER_HOST").as_deref() == Ok("1") {
         routes.route("/test_session", axum::routing::get(campfire_kit::action(
-            controllers::ledger_browser_tests::original_test_session,
+            original_test_session,
         )))
     } else {
         routes
@@ -312,10 +312,38 @@ fn router(app: &App, kit: Kit) -> Router {
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
 }
 
+/// Exact pinned TestSessionController#create, available only in the private
+/// test renderer. This verifies the original password and creates a real new
+/// two-factor-satisfied session rather than importing a fixture session cookie.
+#[cfg(any(test, feature = "test-support"))]
+async fn original_test_session(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+    use crate::app::AppCtx;
+    use crate::concerns::{self, Before};
+    use campfire_kit::{Response, StatusCode};
+
+    concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    if c.app().config.environment != "test" || std::env::var("WS11UI_LEDGER_HOST").as_deref() != Ok("1") {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    }
+    let credentials = c.param_str("email_address").zip(c.param_str("password"))
+        .map(|(email, password)| (email.to_owned(), password.to_owned()));
+    let user = match credentials {
+        Some((email, password)) => concerns::authenticate_by(c, email, password).await?,
+        None => None,
+    };
+    if let Some(user) = user {
+        concerns::start_new_verified_session_for(c, user).await?;
+        let location = concerns::post_authenticating_url(c);
+        c.redirect_to(&location)
+    } else {
+        Ok(Response::with_body(StatusCode::UNAUTHORIZED, "text/plain; charset=utf-8", "Unauthorized"))
+    }
+}
+
 /// Rebuild the unchanged real HTTP stack for the original helper's late
 /// configuration input, without booting another DB, Cable server or job runner.
-#[cfg(test)]
-pub(crate) fn fixture_router(app: &App, original: &Kit) -> (Kit, Router) {
+#[cfg(any(test, feature = "test-support"))]
+pub fn fixture_router(app: &App, original: &Kit) -> (Kit, Router) {
     let mut kit_config = KitConfig::production(app.config.disable_ssl);
     kit_config.error_pages = error_pages();
     kit_config.default_headers = crate::security::default_headers();

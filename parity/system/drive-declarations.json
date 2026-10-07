@@ -1,6 +1,6 @@
 {
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
-  "about": "The pinned Rails system-test declarations parity/system/{drive-*,events}.test.mjs port, one per Rust test in crates/campfire/src/controllers/drive_browser_tests.rs.",
+  "about": "The pinned Rails system-test declarations parity/system/{drive-*,events}.test.mjs port, one per Rust test in crates/campfire_tests/src/controllers/drive_browser_tests.rs.",
   "records": [
     {
       "id": "WS14e-101",

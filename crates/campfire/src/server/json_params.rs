@@ -4,7 +4,7 @@
 
 /// Preserve numeric JSON lexemes solely for this controller's token `.to_s`.
 /// All other routes and attributes retain the kit's ordinary parameter parser.
-pub(crate) fn json_body_params(
+pub fn json_body_params(
     method: &campfire_kit::Method,
     path: &str,
     raw: &[u8],
@@ -87,7 +87,7 @@ fn unused_json_param(
 }
 
 /// Other routes keep the already-parsed parameters without decoding them twice.
-pub(crate) fn scoped_json_body_params(
+pub fn scoped_json_body_params(
     method: &campfire_kit::Method,
     path: &str,
     raw: &[u8],
