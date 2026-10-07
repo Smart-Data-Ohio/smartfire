@@ -15,7 +15,8 @@ import type { WorkStatus } from "./WorkStatus";
  *   in the classic app);
  * - another status on a tracked thread: `canUpdateWorkStatus`;
  * - `ownerId`: `canAssignWork`;
- * - `resultMarkdown`: `canManageWork`.
+ * - `resultMarkdown`: `canManageWork`;
+ * - `tags` (board posts only): `canManageWork`.
  *
  * Errors:
  * - 404 unless the viewer is an active human member of the thread's room;
@@ -37,4 +38,9 @@ ownerId?: number | null,
 /**
  * Omit to leave alone; `null` or blank clears the result.
  */
-resultMarkdown?: string | null, };
+resultMarkdown?: string | null, 
+/**
+ * A board post's tags, replacing the set: omit to leave alone, `[]` clears them. Normalised
+ * as on [`crate::CreateBoardPost::tags`]; `canManageWork`. `Validation` on `tags` as there.
+ */
+tags?: Array<string>, };

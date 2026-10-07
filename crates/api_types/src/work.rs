@@ -55,6 +55,9 @@ pub struct WorkFacts {
     pub result_updated_at: Option<Timestamp>,
     /// Linked pull requests, calendar events and Drive files, oldest first.
     pub links: Vec<WorkLink>,
+    /// A board post's tags (`thread_tags`), by name: lower-case, at most 5. Empty for a thread
+    /// outside a board, which has none.
+    pub tags: Vec<String>,
 }
 
 /// `work_thread_links.kind`.
@@ -277,7 +280,8 @@ pub struct WorkList {
 ///   in the classic app);
 /// - another status on a tracked thread: `canUpdateWorkStatus`;
 /// - `ownerId`: `canAssignWork`;
-/// - `resultMarkdown`: `canManageWork`.
+/// - `resultMarkdown`: `canManageWork`;
+/// - `tags` (board posts only): `canManageWork`.
 ///
 /// Errors:
 /// - 404 unless the viewer is an active human member of the thread's room;
@@ -302,6 +306,11 @@ pub struct UpdateWork {
     #[ts(optional)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result_markdown: Option<Option<String>>,
+    /// A board post's tags, replacing the set: omit to leave alone, `[]` clears them. Normalised
+    /// as on [`crate::CreateBoardPost::tags`]; `canManageWork`. `Validation` on `tags` as there.
+    #[ts(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
 }
 
 /// [`UpdateWork`] as it decodes: serde reads a `null` and a missing key alike as `None` for an
@@ -316,6 +325,8 @@ struct UpdateWorkFields {
     owner_id: Option<Option<i64>>,
     #[serde(default, deserialize_with = "present")]
     result_markdown: Option<Option<String>>,
+    #[serde(default)]
+    tags: Option<Vec<String>>,
 }
 
 impl<'de> Deserialize<'de> for UpdateWork {
@@ -325,6 +336,7 @@ impl<'de> Deserialize<'de> for UpdateWork {
             status: fields.status,
             owner_id: fields.owner_id,
             result_markdown: fields.result_markdown,
+            tags: fields.tags,
         })
     }
 }

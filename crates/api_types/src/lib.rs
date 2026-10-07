@@ -20,6 +20,7 @@ mod activity;
 mod admin;
 mod agents;
 mod attachment;
+mod board;
 mod bots;
 mod cards;
 mod composer;
@@ -74,6 +75,10 @@ pub use agents::{
     DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use board::{
+    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
+    CreateBoardPost,
+};
 pub use bots::{
     Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
     BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
@@ -190,3 +195,5 @@ mod tests_s7_slack;
 
 #[cfg(test)]
 mod tests_s7_people;
+#[cfg(test)]
+mod tests_s6;

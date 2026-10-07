@@ -41,4 +41,9 @@ resultUpdatedAt: string | null,
 /**
  * Linked pull requests, calendar events and Drive files, oldest first.
  */
-links: Array<WorkLink>, };
+links: Array<WorkLink>, 
+/**
+ * A board post's tags (`thread_tags`), by name: lower-case, at most 5. Empty for a thread
+ * outside a board, which has none.
+ */
+tags: Array<string>, };

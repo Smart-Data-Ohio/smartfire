@@ -170,6 +170,7 @@ fn work_facts() -> WorkFacts {
         run_url: Some("https://ci.example.com/runs/7".into()),
         result_updated_at: None,
         links: vec![pull_request_link()],
+        tags: vec![],
     }
 }
 
@@ -191,6 +192,7 @@ fn work_facts_wire() -> serde_json::Value {
             "eventTimeZone": null,
             "eventCancelled": false,
         }],
+        "tags": [],
     })
 }
 
@@ -415,6 +417,7 @@ fn update_work_tells_a_null_from_a_missing_key() {
         status: None,
         owner_id: None,
         result_markdown: None,
+        tags: None,
     };
     assert_wire(&empty, json!({}));
 
@@ -424,6 +427,7 @@ fn update_work_tells_a_null_from_a_missing_key() {
             status: Some(None),
             owner_id: Some(None),
             result_markdown: None,
+            tags: None,
         },
         json!({"status": null, "ownerId": null}),
     );
@@ -433,8 +437,20 @@ fn update_work_tells_a_null_from_a_missing_key() {
             status: Some(Some(WorkStatus::Blocked)),
             owner_id: Some(Some(40)),
             result_markdown: Some(Some("Waiting on review".into())),
+            tags: None,
         },
         json!({"status": "blocked", "ownerId": 40, "resultMarkdown": "Waiting on review"}),
+    );
+
+    // A board post's tags replace the set; `[]` clears them.
+    assert_wire(
+        &UpdateWork {
+            status: None,
+            owner_id: None,
+            result_markdown: None,
+            tags: Some(vec!["api".into(), "bug".into()]),
+        },
+        json!({"tags": ["api", "bug"]}),
     );
 
     assert!(serde_json::from_value::<UpdateWork>(json!({"status": "started"})).is_err());
