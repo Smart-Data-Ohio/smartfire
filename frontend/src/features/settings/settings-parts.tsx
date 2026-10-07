@@ -9,6 +9,11 @@ import type { Choice } from "./settings-format.ts";
 export interface SettingsState {
   readonly settings: Settings;
   readonly replace: (next: Settings) => void;
+  /**
+   * Changes the page from whatever it holds when the change lands, so answers that settle out of
+   * order each touch only their own part.
+   */
+  readonly update: (change: (current: Settings) => Settings) => void;
 }
 
 export const SettingsContext = createContext<SettingsState | null>(null);

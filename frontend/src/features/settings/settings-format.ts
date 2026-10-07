@@ -1,9 +1,11 @@
 /** The settings screens' words and the small rules behind their forms. */
 import type { Connection } from "../../gen/Connection.ts";
+import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
 import type { OooPreset } from "../../gen/OooPreset.ts";
 import type { PresenceSetting } from "../../gen/PresenceSetting.ts";
 import type { PushSubscriptionInfo } from "../../gen/PushSubscriptionInfo.ts";
 import type { SessionInfo } from "../../gen/SessionInfo.ts";
+import type { Settings } from "../../gen/Settings.ts";
 import type { StatusExpiry } from "../../gen/StatusExpiry.ts";
 import type { StatusSettings } from "../../gen/StatusSettings.ts";
 import type { TextSize } from "../../gen/TextSize.ts";
@@ -193,4 +195,29 @@ export function classicPage(path: string, anchor = ""): string {
   params.set("classic", "1");
 
   return `${base}?${params.toString()}${anchor === "" ? "" : `#${anchor}`}`;
+}
+
+/**
+ * The page after a change to `service`: only that service's connection is taken from the answer,
+ * so two answers settling out of order never undo each other's service.
+ */
+export function withConnection(
+  current: Settings,
+  service: "github" | "fizzy" | "google",
+  change: IntegrationChange,
+): Settings {
+  return {
+    ...current,
+    integrations: { ...current.integrations, [service]: change.integrations[service] },
+  };
+}
+
+/**
+ * The parts of the page a connection change also moves, from a fresh load: GitHub sets (or frees)
+ * the profile's GitHub username, and dropping Google Calendar deletes the meeting cache behind
+ * the status's calendar out-of-office. The connections themselves stay as the change answers left
+ * them.
+ */
+export function withDependents(current: Settings, fresh: Settings): Settings {
+  return { ...current, profile: fresh.profile, status: fresh.status };
 }

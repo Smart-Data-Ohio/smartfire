@@ -84,8 +84,8 @@ function refreshMe(): void {
   runAction(me()).then(mutations.setMe, () => undefined);
 }
 
-/** Runs a write that answers the settings page, then refreshes `/me`. */
-async function write(run: Promise<Settings>): Promise<Settings> {
+/** Runs a write, then refreshes `/me`. */
+async function write<A>(run: Promise<A>): Promise<A> {
   const next = await run;
 
   refreshMe();
@@ -139,9 +139,12 @@ export const settings = {
 
   /** Connects GitHub or Fizzy with a personal access token. */
   connect: (service: TokenService, accessToken: string): Promise<IntegrationChange> =>
-    runAction(connectService(service, accessToken)),
+    write(runAction(connectService(service, accessToken))),
 
-  /** Disconnects GitHub, Fizzy or Google Calendar. */
+  /**
+   * Disconnects GitHub, Fizzy or Google Calendar (dropping Google can end a calendar out of
+   * office, so `/me` is reloaded after each change).
+   */
   disconnect: (service: TokenService | "google"): Promise<IntegrationChange> =>
-    runAction(disconnectService(service)),
+    write(runAction(disconnectService(service))),
 };

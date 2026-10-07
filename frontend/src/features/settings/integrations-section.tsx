@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type FormEvent, type ReactNode, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import type { Connection } from "../../gen/Connection.ts";
 import type { GoogleIntegration } from "../../gen/GoogleIntegration.ts";
 import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
@@ -12,7 +12,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { needsSudo, SUDO_PAGE } from "../admin/admin-parts.tsx";
-import { connectionSummary } from "./settings-format.ts";
+import { connectionSummary, withConnection, withDependents } from "./settings-format.ts";
 import {
   SettingsGroup,
   SettingsPage,
@@ -47,6 +47,20 @@ function failed(title: string, error: Error): void {
   }
 
   toastFailure(title, error);
+}
+
+/** The id of a service's group on the page, where focus lands after its change. */
+const GROUP_ID = {
+  github: "integration-github",
+  fizzy: "integration-fizzy",
+  google: "integration-google",
+} as const;
+
+const FOCUSABLE = "input:not([disabled]), button:not([disabled]), a[href]";
+
+/** A service's group's first control (its disconnect, token field or connect button). */
+function groupControl(service: Service): HTMLElement | null {
+  return document.getElementById(GROUP_ID[service])?.querySelector<HTMLElement>(FOCUSABLE) ?? null;
 }
 
 /** `POST /google/connect`, a full page load to Google; `drive` asks for Drive previews too. */
@@ -259,10 +273,28 @@ const GITHUB_TOKEN_HINT =
  * with Google or GitHub is a full page load to the provider and back, as on the classic page.
  */
 export function IntegrationsSection() {
-  const { settings, replace } = useSettings();
+  const { settings, update } = useSettings();
   const { integrations } = settings;
   const { google, github, fizzy } = integrations;
   const { busy, track } = useBusy();
+  // Each change starts a fresh load of what it moves; only the latest load may land.
+  const reloads = useRef(0);
+  // The group whose control a change replaced: focus moves into it once it shows the result.
+  const [refocus, setRefocus] = useState<{ readonly service: Service } | null>(null);
+
+  useEffect(() => {
+    if (refocus === null) {
+      return;
+    }
+
+    const active = document.activeElement;
+    const group = document.getElementById(GROUP_ID[refocus.service]);
+    const lost = active === null || active === document.body || group?.contains(active) === true;
+
+    if (lost) {
+      groupControl(refocus.service)?.focus();
+    }
+  }, [refocus]);
 
   // The service stays put while the question closes, so its words don't blank mid-fade.
   const [ask, setAsk] = useState<{ readonly service: Service; readonly open: boolean }>({
@@ -274,14 +306,20 @@ export function IntegrationsSection() {
   const fizzyLine = connectionSummary("Fizzy", fizzy);
 
   const landed = (change: IntegrationChange, service: Service) => {
-    replace({ ...settings, integrations: change.integrations });
+    update((current) => withConnection(current, service, change));
     toast({ title: change.notice, tone: "success" });
+    setRefocus({ service });
 
-    // A GitHub link sets (and an unlink frees) the profile's GitHub username: reload the page so
-    // the profile section shows it.
-    if (service === "github") {
-      void settingsActions.load().then(replace, () => undefined);
-    }
+    const ticket = ++reloads.current;
+
+    void settingsActions.load().then(
+      (fresh) => {
+        if (ticket === reloads.current) {
+          update((current) => withDependents(current, fresh));
+        }
+      },
+      () => undefined,
+    );
   };
 
   const disconnect = (service: Service) => {
@@ -329,11 +367,11 @@ export function IntegrationsSection() {
         </SettingsGroup>
       ) : null}
 
-      <SettingsGroup title="Google Calendar">
+      <SettingsGroup title="Google Calendar" id={GROUP_ID.google}>
         <GoogleCalendar google={google} disconnect={disconnectButton("google", "Disconnect")} />
       </SettingsGroup>
 
-      <SettingsGroup title="GitHub">
+      <SettingsGroup title="GitHub" id={GROUP_ID.github}>
         {githubLine === null ? null : <p>{githubLine}</p>}
         {githubPurpose(github)}
         {github.state === "connected" ? (
@@ -367,7 +405,7 @@ export function IntegrationsSection() {
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Fizzy">
+      <SettingsGroup title="Fizzy" id={GROUP_ID.fizzy}>
         {fizzyLine === null ? null : <p>{fizzyLine}</p>}
         {fizzyPurpose(fizzy)}
         {fizzy.state === "connected" ? (
@@ -396,6 +434,7 @@ export function IntegrationsSection() {
         role="alertdialog"
         size="sm"
         title={`Disconnect ${SERVICE_NAME[ask.service]}?`}
+        returnFocus={() => groupControl(ask.service)}
         description={DISCONNECT_WARNING[ask.service]}
         footer={
           <>

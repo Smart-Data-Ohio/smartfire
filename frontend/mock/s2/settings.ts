@@ -607,10 +607,13 @@ export function createSettings(
       notice: service === "github" ? "GitHub disconnected." : "Fizzy disconnected.",
     }));
 
+  // Dropping Google deletes the meeting cache, so a calendar out of office ends; a manual one
+  // stays (`ooo_until_effective`).
   const disconnectGoogle = () =>
     integration((held) => ({
       settings: {
         ...held,
+        status: held.status.oooManual ? held.status : { ...held.status, oooUntil: null },
         integrations: {
           ...held.integrations,
           google: {
