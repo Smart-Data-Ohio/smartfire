@@ -99,7 +99,8 @@ interface ActivityRowProps {
  * One inbox entry, Slack's activity row: who (their avatar, badged with the kind), what kind and
  * where, the excerpt, and how long ago. Unread rows carry a dot and a heavier title; handled ones
  * a check. The whole row opens it (named by a summary, described by the excerpt); hover (or focus) shows read and handled toggles and a menu.
- * Keys on a focused row: ↑/↓ move, ⏎ opens, U toggles read, E toggles handled, Shift+F10 the menu.
+ * Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, U toggles read, E toggles handled,
+ * Shift+F10 the menu.
  */
 export function ActivityRow({
   item,

@@ -96,6 +96,25 @@ export function landingFor(
   return list;
 }
 
+/** The open button of the first or last row inside `root` that can take focus, if any. */
+export function edgeRowOpen(
+  root: Element,
+  edge: "first" | "last",
+  parts: RowParts = LIST_ROW_PARTS,
+): HTMLElement | null {
+  const rows = [...root.querySelectorAll(parts.row)];
+
+  for (const row of edge === "first" ? rows : rows.reverse()) {
+    const open = isLive(row, parts) ? openOf(row, parts) : null;
+
+    if (open !== null) {
+      return open;
+    }
+  }
+
+  return null;
+}
+
 /** Focus fell on <body> (or is stuck inside something inert, before the browser moves it). */
 function focusDropped(): boolean {
   const active = document.activeElement;

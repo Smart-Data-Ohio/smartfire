@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { useRef } from "react";
 import { describe, expect, it } from "vitest";
-import { landingFor, placeOf, useKeepRowFocus } from "./row-focus.ts";
+import { edgeRowOpen, landingFor, placeOf, useKeepRowFocus } from "./row-focus.ts";
 
 interface HarnessProps {
   readonly rows: readonly number[];
@@ -167,5 +167,16 @@ describe("where focus lands", () => {
     expect(landingFor(root, placeOf(root, second))).toBe(row(1));
     expect(landingFor(root, placeOf(root, first))).toBe(row(2));
     expect(landingFor(root, { row: first, before: [], after: [third] })).toBe(root);
+  });
+});
+
+describe("the edge rows", () => {
+  it("are the first and last rows that can take focus", () => {
+    render(<Harness rows={[1, 2, 3, 4]} leaving={4} disabled={1} />);
+
+    const root = screen.getByRole("list", { name: "Rows" });
+
+    expect(edgeRowOpen(root, "first")).toBe(row(2));
+    expect(edgeRowOpen(root, "last")).toBe(row(3));
   });
 });

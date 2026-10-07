@@ -103,8 +103,8 @@ interface SavedRowProps {
 /**
  * One saved message: its author and conversation, the message itself (a few lines of it), its
  * attachment, the reminder and whether it's done. The row opens the message; hover (or focus)
- * shows done, remind and remove, plus the menu. Keys on a focused row: ↑/↓ move, ⏎ opens, E
- * toggles done, Delete removes, Shift+F10 the menu.
+ * shows done, remind and remove, plus the menu. Keys on a focused row: ↑/↓ move, Home/End jump,
+ * ⏎ opens, E toggles done, Delete removes, Shift+F10 the menu.
  */
 export function SavedRow({
   item,
