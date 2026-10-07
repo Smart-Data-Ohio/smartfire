@@ -19,12 +19,18 @@ mkdir -p "$receipts"
 started=$(date +%s)
 
 ignored() {
-  local filter package selection=()
+  local filter package selection=() build=()
   [[ -z "$shard" ]] || selection=(--shard "$shard")
   filter=$(python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}")
-  package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
-  cargo nextest run --locked -p "$package" \
-    --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
+  if [[ -n "${CORRECTNESS_ARCHIVE:-}" ]]; then
+    mkdir -p "$repo/target/correctness-archive"
+    build=(--archive-file "$CORRECTNESS_ARCHIVE" --workspace-remap "$repo" --extract-to "$repo/target/correctness-archive")
+  else
+    package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
+    build=(--locked -p "$package" --build-jobs 4)
+  fi
+  cargo nextest run "${build[@]}" \
+    --profile ci -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
   cp target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
   python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
 }
@@ -40,6 +46,10 @@ browser_images() {
 
 run_suite() {
   python3 ci/ignored_tests.py
+  if [[ -n "${CORRECTNESS_ARCHIVE:-}" && ! -s "$CORRECTNESS_ARCHIVE" ]]; then
+    echo "Correctness archive is missing or empty: $CORRECTNESS_ARCHIVE" >&2
+    return 1
+  fi
   case "$suite" in
     acme)
       local pebble="campfire-ci-pebble-$$"
@@ -58,6 +68,10 @@ run_suite() {
       ignored
       ;;
     browsers)
+      if [[ -n "${CORRECTNESS_ARCHIVE:-}" && ! -x "$repo/target/debug/campfire" ]]; then
+        echo "Prebuilt browser server is missing: $repo/target/debug/campfire" >&2
+        return 1
+      fi
       browser_images
       if first_shard; then
         docker run --rm --init --network none --ipc host --cpus 2 \
@@ -66,7 +80,9 @@ run_suite() {
       fi
       # The paired original-assertion wrappers launch the normal server, which
       # nextest's cfg(test) harness does not build.
-      cargo build --locked -p campfire --bin campfire
+      if [[ -z "${CORRECTNESS_ARCHIVE:-}" ]]; then
+        cargo build --locked -p campfire --bin campfire
+      fi
       export WS11UI_BROWSER_BINARY="$repo/target/debug/campfire"
       export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
       ignored
@@ -81,7 +97,9 @@ run_suite() {
       browser_images
       # Start the private media server after the cold compile so its lifetime
       # and logs cover the browser run rather than several minutes of rustc.
-      cargo test --locked -p campfire --no-run -j 4
+      if [[ -z "${CORRECTNESS_ARCHIVE:-}" ]]; then
+        cargo test --locked -p campfire --no-run -j 4
+      fi
       web/bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
       web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
