@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { TextSize } from "../gen/TextSize.ts";
 import { prefersReducedMotion } from "../motion/reduced-motion.ts";
+import { PALETTE_TOKEN_NAMES, PALETTES, type PalettePreset, paletteTokens } from "./palette.ts";
 
 /**
  * Appearance lives as attributes on <html> (`data-theme`, `data-text-size`, `data-density`,
@@ -12,7 +13,8 @@ import { prefersReducedMotion } from "../motion/reduced-motion.ts";
  * 2. the account's theme, from the inline boot JSON before the first paint and from `/me` after;
  * 3. the account's theme as this device last saw it, until boot is read (the Vite page has none);
  * 4. the OS setting.
- * Text size is the account's alone. Density and motion are this device's alone. Everything is
+ * Text size is the account's alone. Density, motion, the colour palette (`data-palette`, its
+ * tokens set on <html>) and the font (`data-font`) are this device's alone. Everything is
  * remembered under one localStorage key; its `theme` is the theme on screen, which the classic
  * pages' script (crates/assets/auth/auth.js) applies too.
  */
@@ -23,6 +25,11 @@ export type DensityPreference = "comfortable" | "compact";
 export type MotionPreference = "system" | "reduce" | "full";
 
 export type ResolvedTheme = "light" | "dark";
+
+/** Inter is Smartfire's own; the rest are self-hosted presets (typography.css). */
+export type FontPreset = "inter" | "system" | "atkinson" | "serif" | "mono";
+
+export type { PalettePreset };
 
 export type { TextSize };
 
@@ -41,6 +48,8 @@ export interface Appearance {
   readonly textSize: TextSize;
   readonly density: DensityPreference;
   readonly motion: MotionPreference;
+  readonly palette: PalettePreset;
+  readonly font: FontPreset;
 }
 
 const STORAGE_KEY = "smartfire.appearance";
@@ -53,6 +62,10 @@ const DENSITIES: readonly DensityPreference[] = ["comfortable", "compact"];
 
 const MOTIONS: readonly MotionPreference[] = ["system", "reduce", "full"];
 
+const PALETTE_VALUES: readonly PalettePreset[] = PALETTES.map((palette) => palette.value);
+
+const FONTS: readonly FontPreset[] = ["inter", "system", "atkinson", "serif", "mono"];
+
 function pick<T extends string>(options: readonly T[], value: string | undefined): T | null {
   return options.find((option) => option === value) ?? null;
 }
@@ -64,6 +77,8 @@ const DEFAULTS: Appearance = {
   textSize: "default",
   density: "comfortable",
   motion: "system",
+  palette: "smartfire",
+  font: "inter",
 };
 
 let current: Appearance = DEFAULTS;
@@ -91,6 +106,39 @@ function writeAttributes(appearance: Appearance): void {
     delete dataset.motion;
   } else {
     dataset.motion = appearance.motion;
+  }
+
+  if (appearance.font === "inter") {
+    delete dataset.font;
+  } else {
+    dataset.font = appearance.font;
+  }
+
+  writePalette(appearance.palette);
+}
+
+/**
+ * Sets the palette's tokens on <html> (through the CSSOM, which the shell's CSP allows), over the
+ * stylesheet's and the workspace's custom CSS; Smartfire's own palette removes them.
+ */
+function writePalette(palette: PalettePreset): void {
+  const root = document.documentElement;
+  const tokens = paletteTokens(palette);
+
+  if (palette === "smartfire") {
+    delete root.dataset.palette;
+  } else {
+    root.dataset.palette = palette;
+  }
+
+  for (const name of PALETTE_TOKEN_NAMES) {
+    const value = tokens.get(name);
+
+    if (value === undefined) {
+      root.style.removeProperty(name);
+    } else {
+      root.style.setProperty(name, value);
+    }
   }
 }
 
@@ -182,6 +230,8 @@ export function restoreAppearance(): void {
     textSize: boot.textSize ?? pick(TEXT_SIZES, saved.get("textSize")) ?? "default",
     density: pick(DENSITIES, saved.get("density")) ?? "comfortable",
     motion: pick(MOTIONS, saved.get("motion")) ?? "system",
+    palette: pick(PALETTE_VALUES, saved.get("palette")) ?? "smartfire",
+    font: pick(FONTS, saved.get("font")) ?? "inter",
   });
 }
 
@@ -218,6 +268,15 @@ export function setDensity(density: DensityPreference): void {
 
 export function setMotion(motion: MotionPreference): void {
   commit({ ...current, motion });
+}
+
+/** Paints this device in `palette`, cross-fading like a theme change. */
+export function setPalette(palette: PalettePreset): void {
+  transition(() => commit({ ...current, palette }));
+}
+
+export function setFont(font: FontPreset): void {
+  commit({ ...current, font });
 }
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";

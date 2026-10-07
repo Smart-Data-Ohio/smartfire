@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Regenerates src/styles/fonts/*.woff2 from the upstream releases: Inter 4.1 (rsms/inter) and
-# JetBrains Mono 2.304 (JetBrains/JetBrainsMono), both SIL OFL 1.1. Needs gh, unzip and python3;
+# Regenerates src/styles/fonts/*.woff2 from the upstream releases: Inter 4.1 (rsms/inter),
+# JetBrains Mono 2.304 (JetBrains/JetBrainsMono), and the font presets people can pick in
+# Settings: Atkinson Hyperlegible Next (googlefonts/atkinson-hyperlegible-next, pinned commit) and
+# Source Serif 4.005 (adobe-fonts/source-serif). All are SIL OFL 1.1. Needs gh, unzip and python3;
 # fonttools and brotli are installed into a throwaway venv under the work directory.
 #
 #   tools/fonts/subset.sh [work-dir]     (default: ~/.cache/smartfire-fonts)
@@ -15,6 +17,17 @@ gh release download v4.1 --repo rsms/inter -p 'Inter-4.1.zip' --clobber
 gh release download v2.304 --repo JetBrains/JetBrainsMono -p 'JetBrainsMono-2.304.zip' --clobber
 unzip -o -q Inter-4.1.zip -d inter
 unzip -o -q JetBrainsMono-2.304.zip -d jbm
+gh release download 4.005R --repo adobe-fonts/source-serif -p 'source-serif-4.005_Desktop.zip' --clobber
+unzip -o -q source-serif-4.005_Desktop.zip -d sserif
+# Atkinson Hyperlegible Next publishes no releases; its variable fonts are fetched at one commit.
+ahn_commit="${AHN_COMMIT:-7925f50f649b3813257faf2f4c0b381011f434f1}"
+echo "Atkinson Hyperlegible Next at $ahn_commit"
+for file in 'AtkinsonHyperlegibleNext[wght].ttf' 'AtkinsonHyperlegibleNext-Italic[wght].ttf'; do
+  gh api -H 'Accept: application/vnd.github.raw' \
+    "repos/googlefonts/atkinson-hyperlegible-next/contents/fonts/variable/$file?ref=$ahn_commit" > "$file"
+done
+gh api -H 'Accept: application/vnd.github.raw' \
+  "repos/googlefonts/atkinson-hyperlegible-next/contents/OFL.txt?ref=$ahn_commit" > ahn-OFL.txt
 [ -x venv/bin/pyftsubset ] || { python3 -m venv venv && venv/bin/pip -q install fonttools brotli; }
 
 # Latin + Latin Extended (Google Fonts' ranges) plus arrows and the keyboard symbols Kbd shows.
@@ -34,6 +47,19 @@ venv/bin/fonttools varLib.instancer 'jbm/fonts/variable/JetBrainsMono[wght].ttf'
 subset inter.ttf "$out/inter-latin-var.woff2" "$inter_features"
 subset inter-italic.ttf "$out/inter-latin-var-italic.woff2" "$inter_features"
 subset jbm.ttf "$out/jetbrains-mono-latin-var.woff2" "kern,liga,calt,ccmp,locl,mark,mkmk,zero"
+
+# Presets: the same weights and ranges; Source Serif pinned to its text optical size.
+preset_features="kern,liga,calt,ccmp,locl,mark,mkmk,case,tnum"
+venv/bin/fonttools varLib.instancer 'AtkinsonHyperlegibleNext[wght].ttf' wght=400:600 -o ahn.ttf -q
+venv/bin/fonttools varLib.instancer 'AtkinsonHyperlegibleNext-Italic[wght].ttf' wght=400:600 -o ahn-italic.ttf -q
+venv/bin/fonttools varLib.instancer sserif/source-serif-4.005_Desktop/VAR/SourceSerif4Variable-Roman.ttf opsz=16 wght=400:600 -o sserif.ttf -q
+venv/bin/fonttools varLib.instancer sserif/source-serif-4.005_Desktop/VAR/SourceSerif4Variable-Italic.ttf opsz=16 wght=400:600 -o sserif-italic.ttf -q
+subset ahn.ttf "$out/atkinson-hyperlegible-next-latin-var.woff2" "$preset_features"
+subset ahn-italic.ttf "$out/atkinson-hyperlegible-next-latin-var-italic.woff2" "$preset_features"
+subset sserif.ttf "$out/source-serif-4-latin-var.woff2" "$preset_features"
+subset sserif-italic.ttf "$out/source-serif-4-latin-var-italic.woff2" "$preset_features"
 cp inter/LICENSE.txt "$out/LICENSE-Inter.txt"
 cp jbm/OFL.txt "$out/LICENSE-JetBrainsMono.txt"
+cp ahn-OFL.txt "$out/LICENSE-AtkinsonHyperlegibleNext.txt"
+cp sserif/source-serif-4.005_Desktop/LICENSE.md "$out/LICENSE-SourceSerif4.md"
 ls -l "$out"

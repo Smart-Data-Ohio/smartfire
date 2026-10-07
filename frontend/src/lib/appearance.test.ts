@@ -35,9 +35,11 @@ beforeEach(() => {
   localStorage.clear();
   document.getElementById("boot")?.remove();
 
-  for (const name of ["theme", "textSize", "density", "motion"]) {
+  for (const name of ["theme", "textSize", "density", "motion", "palette", "font"]) {
     delete html().dataset[name];
   }
+
+  html().removeAttribute("style");
 });
 
 afterEach(() => {
@@ -162,5 +164,65 @@ describe("appearanceSnapshot", () => {
       accountTheme: "dark",
       textSize: "large",
     });
+  });
+});
+
+describe("palette and font", () => {
+  it("paints a palette's tokens on the page and remembers it for this device", async () => {
+    const { setPalette } = await load();
+
+    setPalette("ember");
+
+    expect(html().dataset.palette).toBe("ember");
+    expect(html().style.getPropertyValue("--bg-pane")).toMatch(/^light-dark\(oklch/);
+    expect(html().style.getPropertyValue("--accent")).toMatch(/^light-dark\(oklch/);
+    expect(stored()).toMatchObject({ palette: "ember" });
+  });
+
+  it("goes back to the stylesheet's colours with Smartfire's palette", async () => {
+    const { setPalette } = await load();
+
+    setPalette("forest");
+    setPalette("smartfire");
+
+    expect(html().dataset.palette).toBeUndefined();
+    expect(html().style.getPropertyValue("--bg-pane")).toBe("");
+  });
+
+  it("sets the font on the page, Inter being the default", async () => {
+    const { setFont } = await load();
+
+    setFont("atkinson");
+    expect(html().dataset.font).toBe("atkinson");
+
+    setFont("inter");
+    expect(html().dataset.font).toBeUndefined();
+    expect(stored()).toMatchObject({ font: "inter" });
+  });
+
+  it("restores this device's palette and font before the first render", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ accountTheme: "dark", palette: "ocean", font: "serif" }),
+    );
+    inlineBoot("dark", "default");
+    const { restoreAppearance } = await load();
+
+    restoreAppearance();
+
+    expect(html().dataset.palette).toBe("ocean");
+    expect(html().style.getPropertyValue("--accent")).not.toBe("");
+    expect(html().dataset.font).toBe("serif");
+  });
+
+  it("ignores a palette or font it doesn't know", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ accountTheme: "light", palette: "neon", font: "comic" }));
+    const { restoreAppearance, appearanceSnapshot } = await load();
+
+    restoreAppearance();
+
+    expect(html().dataset.palette).toBeUndefined();
+    expect(html().dataset.font).toBeUndefined();
+    expect(appearanceSnapshot()).toMatchObject({ palette: "smartfire", font: "inter" });
   });
 });
