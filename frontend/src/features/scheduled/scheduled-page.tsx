@@ -10,6 +10,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { LazyCustomTimeDialog } from "../composer/schedule/lazy-custom-time-dialog.tsx";
 import { conversationText } from "../destinations/conversation-label.tsx";
 import { type MotionRow, useListMotion } from "../destinations/list-motion.ts";
+import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList, type PagedState } from "../destinations/paged-list.tsx";
 import { PaneEmpty } from "../panes/pane-states.tsx";
@@ -91,6 +92,7 @@ export function ScheduledPage() {
   const navigate = useNavigate();
   const pending = useScheduledList("pending");
   const past = useScheduledList("past");
+  const { announce, region } = useAnnouncer();
   const [sending, setSending] = useState<ReadonlySet<number>>(() => new Set());
   const [editing, setEditing] = useState<ScheduledMessage | null>(null);
   const [rescheduling, setRescheduling] = useState<ScheduledMessage | null>(null);
@@ -272,6 +274,7 @@ export function ScheduledPage() {
                 setCancelling(null);
 
                 if (item !== null) {
+                  announce("Cancelled");
                   actions.scheduled.cancel(item.id).then(
                     () => toast({ title: "Scheduled message cancelled" }),
                     (error: Error) =>
@@ -293,6 +296,7 @@ export function ScheduledPage() {
           <p className="scheduled-cancel-preview">{markdownExcerpt(cancelling.markdownSource)}</p>
         )}
       </Dialog>
+      {region}
     </PageFrame>
   );
 }

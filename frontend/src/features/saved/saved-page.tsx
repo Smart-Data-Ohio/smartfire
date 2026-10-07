@@ -9,6 +9,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { LazyCustomTimeDialog } from "../composer/schedule/lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "../composer/schedule/presets.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
+import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList } from "../destinations/paged-list.tsx";
 import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/point-menu.tsx";
@@ -66,6 +67,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
   const now = useNow();
   const navigate = useNavigate();
   const view = useSavedList(filter);
+  const { announce, region } = useAnnouncer();
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
   const [custom, setCustom] = useState<SavedItem | null>(null);
   const [menu, setMenu] = useState<{ request: PointMenuRequest; item: SavedItem } | null>(null);
@@ -109,6 +111,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
         setCelebrated((ids) => new Set([...ids, item.id]));
       }
 
+      announce(next === "done" ? "Marked done" : "Moved back to in progress");
       actions.saved
         .setStatus(item.id, next)
         .catch(failed(next === "done" ? "Couldn't mark it as done" : "Couldn't reopen it"));
@@ -121,6 +124,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
     },
     onCustomRemind: (item) => setCustom(item),
     onRemove: (item) => {
+      announce("Removed");
       actions.saved.remove(item.id).then(
         () =>
           toast({
@@ -209,6 +213,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
           }
         }}
       />
+      {region}
     </PageFrame>
   );
 }

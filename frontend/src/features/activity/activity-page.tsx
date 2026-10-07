@@ -10,6 +10,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
+import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList } from "../destinations/paged-list.tsx";
 import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/point-menu.tsx";
@@ -47,6 +48,14 @@ const ACTION_FAILED = {
   unread: "Couldn't mark it as unread",
   handled: "Couldn't mark it as handled",
   unhandled: "Couldn't mark it as not handled",
+} as const satisfies Record<ActivityAction, string>;
+
+/** What the page's live region says once a change shows. */
+const ANNOUNCED = {
+  read: "Marked as read",
+  unread: "Marked as unread",
+  handled: "Marked handled",
+  unhandled: "Marked as not handled",
 } as const satisfies Record<ActivityAction, string>;
 
 /** Follows an item's target: an SPA screen, or the classic page for one the SPA hasn't ported. */
@@ -109,6 +118,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   const view = useActivityList(tab, status);
   const unread = useActivityUnread();
   const follow = useFollowTarget();
+  const { announce, region } = useAnnouncer();
   const [celebrated, setCelebrated] = useState<ReadonlySet<number>>(() => new Set());
   const [menu, setMenu] = useState<{ request: PointMenuRequest; item: ActivityItem } | null>(null);
 
@@ -130,6 +140,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
       setCelebrated((ids) => new Set([...ids, item.id]));
     }
 
+    announce(ANNOUNCED[action]);
     actions.activity.setState(item.id, action).catch((error: Error) => {
       toast({ title: ACTION_FAILED[action], description: error.message, tone: "danger" });
     });
@@ -217,6 +228,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
           <ActivityMenuItems item={menu.item} onOpen={open} onAction={change} />
         </PointMenu>
       )}
+      {region}
     </PageFrame>
   );
 }
