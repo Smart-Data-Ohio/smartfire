@@ -1,3 +1,4 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Placement } from "../../lib/anchor.ts";
 import { readDurationMs } from "../../motion/durations.ts";
@@ -97,14 +98,25 @@ interface RoomMenuItemsProps {
 
 /**
  * A conversation's menu: favourite (and, for a favourite, move up or down among them), move to a
- * category (channels only), notification level, mute, and mark as read when there is something
- * unread.
+ * category (channels only), notification level, mute, mark as read when there is something
+ * unread, and the room's settings (not a direct message's: its header has rename and add people).
  */
 export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsProps) {
+  const navigate = useNavigate();
   const { favoritePosition, roomCategoryId, involvement, unreadAt } = row.membership;
   const starred = favoritePosition !== null;
   const muted = involvement === "muted";
   const favorite = useFavoritePlace(row.room.id);
+  const { kind } = row.room;
+
+  const openSettings = () => {
+    if (kind === "board") {
+      // Boards live on their classic pages until they're ported.
+      window.location.assign(`/rooms/boards/${row.room.id}/edit`);
+    } else {
+      void navigate({ to: "/r/$roomId/settings", params: { roomId: row.room.id } });
+    }
+  };
 
   return (
     <>
@@ -185,6 +197,14 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
           <MenuSeparator />
           <MenuItem icon="check-check" onSelect={() => markRead(row)}>
             Mark as read
+          </MenuItem>
+        </>
+      )}
+      {kind === "direct" ? null : (
+        <>
+          <MenuSeparator />
+          <MenuItem icon="settings" onSelect={openSettings}>
+            {kind === "open" || kind === "closed" ? "Channel settings" : "Settings"}
           </MenuItem>
         </>
       )}

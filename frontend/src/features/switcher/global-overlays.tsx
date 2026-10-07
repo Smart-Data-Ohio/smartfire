@@ -20,6 +20,8 @@ const ShortcutsDialog = lazy(overlayChunks.shortcuts);
 
 const NewDirectDialog = lazy(overlayChunks["new-direct"]);
 
+const NewRoomDialog = lazy(overlayChunks["new-room"]);
+
 const OVERLAY_FOR = {
   switcher: "switcher",
   shortcuts: "shortcuts",
@@ -143,6 +145,11 @@ export function GlobalOverlays() {
       <Suspense fallback={null}>
         {seen.has("new-direct") ? (
           <NewDirectDialog open={open === "new-direct"} onOpenChange={onOpenChange("new-direct")} />
+        ) : null}
+      </Suspense>
+      <Suspense fallback={null}>
+        {seen.has("new-room") ? (
+          <NewRoomDialog open={open === "new-room"} onOpenChange={onOpenChange("new-room")} />
         ) : null}
       </Suspense>
     </>

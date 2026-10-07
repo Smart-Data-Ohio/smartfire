@@ -26,6 +26,7 @@ import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { openNewRoom } from "../rooms/new-room-store.ts";
 import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
@@ -382,6 +383,8 @@ function WorkspaceHeader({
   readonly title: string;
   readonly onNewCategory?: (() => void) | undefined;
 }) {
+  const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
+
   return (
     <header className="sidebar-header">
       <Menu
@@ -405,6 +408,11 @@ function WorkspaceHeader({
         >
           New message
         </MenuItem>
+        {canCreateRooms ? (
+          <MenuItem icon="plus" onSelect={() => openNewRoom()}>
+            Create a channel…
+          </MenuItem>
+        ) : null}
         <MenuItem
           icon="search"
           shortcut={shortcutKeys("switcher")}
@@ -606,6 +614,7 @@ export function Sidebar() {
   const selectedRoomId = params.roomId ?? null;
   const destination = useDestination();
   const view = organizedSidebar(sidebar);
+  const { canCreateRooms } = sidebar;
   const categories = view.categories;
   const all = sidebarSections(sidebar);
   const flip = useFlip(scrollRef);
@@ -789,6 +798,18 @@ export function Sidebar() {
     />
   );
 
+  /** The "+" on a section of rooms (Discord's): creates one of that section's kind. */
+  const createButton = (kind: "open" | "voice", label: string) =>
+    canCreateRooms ? (
+      <IconButton
+        icon="plus"
+        label={label}
+        size="sm"
+        className="sidebar-section-action"
+        onClick={() => openNewRoom(kind)}
+      />
+    ) : null;
+
   const emptyFor = (section: SidebarSection) => {
     switch (section.kind) {
       case "direct":
@@ -839,7 +860,14 @@ export function Sidebar() {
 
     switch (section.kind) {
       case "channels":
-        return newCategoryButton;
+        return (
+          <>
+            {createButton("open", "Create a channel")}
+            {newCategoryButton}
+          </>
+        );
+      case "voice":
+        return createButton("voice", "Create a voice channel") ?? undefined;
       case "direct":
         return newMessage;
       default:

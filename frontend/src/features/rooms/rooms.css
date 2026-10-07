@@ -1,0 +1,571 @@
+/*
+ * Room create and settings (S8): the kind cards, the icon well beside the name, the privacy
+ * switch, the member list and the delete row; plus the room glyph wherever a room is named.
+ * Motion uses the tokens, so under reduced motion the slides and pops become short fades.
+ */
+@layer app {
+  /* A room's own icon in place of its kind's glyph. */
+  .room-glyph {
+    flex-shrink: 0;
+  }
+
+  .room-glyph-emoji {
+    display: inline-grid;
+    place-items: center;
+    line-height: 1;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", var(--font-sans);
+  }
+
+  .room-glyph-image {
+    border-radius: var(--radius-xs);
+    object-fit: contain;
+  }
+
+  /* The header's name is a button to the settings, as Slack's channel name is. */
+  .room-title-button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    margin-inline: calc(var(--space-1-5) * -1);
+    padding: var(--space-1) var(--space-1-5);
+    border-radius: var(--radius-sm);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .room-title-button:hover {
+    background: var(--bg-hover);
+  }
+
+  .room-title-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .room-title-chevron {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    transition:
+      color var(--duration-micro) var(--ease-enter),
+      translate var(--duration-small) var(--ease-move);
+  }
+
+  .room-title-button:hover .room-title-chevron {
+    color: var(--text-muted);
+    translate: 0 1px;
+  }
+
+  /* A dialog step slides in from the side it was reached from. */
+  .room-step {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-height: 0;
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: var(--distance-pane) 0;
+    }
+  }
+
+  .room-step[data-direction="back"] {
+    @starting-style {
+      opacity: 0;
+      translate: calc(var(--distance-pane) * -1) 0;
+    }
+  }
+
+  .room-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .room-form-legend {
+    margin-bottom: var(--space-2);
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .room-form-description strong {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .room-form-back {
+    margin-right: auto;
+  }
+
+  .room-form-dirty {
+    align-self: center;
+    margin-right: auto;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  /* The kind cards: Discord's channel type list. */
+  .kind-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .kind-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      box-shadow var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .kind-card:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .kind-card:active {
+    scale: var(--scale-press);
+  }
+
+  .kind-card[data-checked="true"] {
+    background: color-mix(in oklch, var(--accent), var(--bg-sunken) 90%);
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+  }
+
+  .kind-card:has(:focus-visible) {
+    box-shadow:
+      inset 0 0 0 1.5px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .kind-card-glyph {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-control);
+    color: var(--text-muted);
+    transition: color var(--duration-small) var(--ease-enter);
+  }
+
+  .kind-card[data-checked="true"] .kind-card-glyph {
+    color: var(--accent);
+  }
+
+  .kind-card-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .kind-card-title {
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-ui);
+  }
+
+  .kind-card-blurb {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The radio: a ring whose dot springs in. */
+  .kind-card-radio {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px var(--border-strong);
+    appearance: none;
+    cursor: pointer;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .kind-card-radio::after {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--on-accent);
+    content: "";
+    scale: 0;
+    transition: scale var(--duration-spring) var(--ease-spring);
+  }
+
+  .kind-card-radio:checked {
+    background: var(--accent-solid);
+    box-shadow: none;
+  }
+
+  .kind-card-radio:checked::after {
+    scale: 1;
+  }
+
+  .kind-card-radio:focus-visible {
+    outline: none;
+  }
+
+  /* Icon and name side by side; the well lines up with the input, below the label. */
+  .room-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .room-identity > .field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .room-icon-well {
+    position: relative;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+      box-shadow var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .room-icon-well[data-empty] {
+    box-shadow: inset 0 0 0 1.5px var(--border-strong);
+    background: transparent;
+  }
+
+  button.room-icon-well:hover {
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  button.room-icon-well:active {
+    scale: var(--scale-press);
+  }
+
+  button.room-icon-well:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .room-icon-well[aria-invalid="true"] {
+    box-shadow: inset 0 0 0 1px var(--danger);
+  }
+
+  .room-icon-well[data-disabled] {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .room-icon-badge {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent-solid);
+    box-shadow: 0 0 0 2px var(--bg-raised);
+    color: var(--on-accent);
+    opacity: 0;
+    scale: var(--scale-chip);
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-spring) var(--ease-spring);
+  }
+
+  .room-icon-well[data-empty] .room-icon-badge,
+  .room-icon-well:hover .room-icon-badge,
+  .room-icon-well:focus-visible .room-icon-badge,
+  .room-icon-well[aria-expanded="true"] .room-icon-badge {
+    opacity: 1;
+    scale: 1;
+  }
+
+  .room-identity > .room-icon-well {
+    margin-top: calc(var(--leading-ui) + var(--space-1-5) - 2px);
+  }
+
+  .room-icon-popover {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .room-icon-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: var(--space-1-5) var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  .room-privacy {
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  .room-readonly-note {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
+  /* Settings: the tab panels and the delete row. */
+  .room-tab-panel {
+    padding-top: var(--space-4);
+  }
+
+  .room-settings-general {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .room-settings-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-block: var(--space-2);
+  }
+
+  .room-settings-skeleton .room-identity {
+    align-items: center;
+  }
+
+  .room-danger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger), transparent 60%);
+  }
+
+  .room-danger-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .room-danger-title {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .room-danger-hint {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  /* The member list. */
+  .member-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .member-add {
+    position: relative;
+  }
+
+  .member-add-field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--control-lg);
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: text;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .member-add-field:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .member-add-field:focus-within {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .member-add-icon {
+    color: var(--text-faint);
+  }
+
+  .member-add-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-ui);
+    outline: none;
+  }
+
+  .member-add-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .member-matches {
+    margin-top: var(--space-1-5);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .member-matches .picker-empty {
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .member-match-add {
+    color: var(--text-faint);
+  }
+
+  .picker-option[data-active] .member-match-add {
+    color: var(--accent);
+  }
+
+  .member-list > .room-form-legend {
+    margin-bottom: 0;
+  }
+
+  .member-rows {
+    display: flex;
+    flex-direction: column;
+    max-height: min(320px, 40dvh);
+    margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0;
+    padding: var(--space-0-5) var(--space-2);
+    overflow: auto;
+    overscroll-behavior: contain;
+    list-style: none;
+  }
+
+  .member-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .member-row:hover {
+    background: var(--bg-hover);
+  }
+
+  .member-row .avatar {
+    --avatar-ring: var(--bg-raised);
+  }
+
+  .member-row:hover .avatar {
+    --avatar-ring: var(--bg-hover);
+  }
+
+  .member-row-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .member-row-you {
+    color: var(--text-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  .member-tag {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-xs);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .member-tag[data-tone="accent"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .member-row-remove {
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .member-row:hover .member-row-remove,
+  .member-row-remove:focus-visible {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .member-row-remove {
+      opacity: 1;
+    }
+  }
+
+  /* Phones: smaller glyph tiles, and a blurb may wrap rather than lose its end. */
+  @media (width < 480px) {
+    .kind-card-glyph {
+      width: 32px;
+      height: 32px;
+    }
+
+    .kind-card-blurb {
+      white-space: normal;
+    }
+  }
+}
