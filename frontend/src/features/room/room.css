@@ -18,6 +18,14 @@
     isolation: isolate;
   }
 
+  .room-error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+  }
+
   .room-error,
   .home-empty {
     align-items: center;

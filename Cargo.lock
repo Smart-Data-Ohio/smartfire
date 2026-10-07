@@ -860,6 +860,7 @@ name = "campfire_spa"
 version = "0.1.0"
 dependencies = [
  "brotli",
+ "campfire_routes",
  "flate2",
  "serde",
  "serde_json",
@@ -923,6 +924,7 @@ dependencies = [
  "campfire_mail",
  "campfire_richtext",
  "campfire_routes",
+ "campfire_spa",
  "campfire_storage",
  "campfire_views",
  "futures-util",

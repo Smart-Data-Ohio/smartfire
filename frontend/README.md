@@ -44,6 +44,25 @@ hand in `src/api/schema/` and `src/api/errors.ts`, and each exports a
 (`UserId`, `RoomId`, ...) and `DateTime.Utc` timestamps. After changing a Rust DTO, run
 `pnpm gen`, then update the schema until `pnpm typecheck` passes.
 
+## Coexistence with the classic UI
+
+The SPA replaces the classic pages one screen at a time, and both stay reachable (`SPA_ENABLED`).
+`crates/spa/src/screens.rs` maps each classic page to its SPA URL and says whether the SPA has
+ported it; `pnpm gen` writes it to `src/gen/screens.json`, which `src/lib/screens.ts` reads.
+
+- A person chooses a UI: "Try the new Smartfire" on the classic profile, "Switch to classic" in
+  the menu on the sidebar's user panel (both `POST /app/ui_preference`). `SPA_DEFAULT=next`
+  makes the SPA the default for everyone who hasn't chosen.
+- For people who use the SPA, a classic HTML GET of a ported screen redirects here; `?classic=1`
+  keeps them on the classic page.
+- Here, a path the router has no route for but the map names opens on its classic page with a
+  full page load (the router's not-found), and clicks on links to ported classic pages open in
+  place (`features/shell/classic-links.ts`). Board rooms open on the classic board until boards
+  are ported.
+
+Porting a screen: add its route, flip `ported` in `screens.rs` in the same PR, and run `pnpm gen`
+(`src/router.test.ts` fails until the two agree).
+
 ## Design system
 
 `/app/_kitchen-sink` (the `pnpm dev` server, or a build) shows every component in every variant

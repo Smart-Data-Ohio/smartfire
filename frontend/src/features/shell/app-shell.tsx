@@ -6,6 +6,7 @@ import { Toaster } from "../../ui/toast.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
+import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
 import "./app-shell.css";
@@ -41,6 +42,7 @@ export function AppShell() {
   }, []);
 
   useDocumentTitle(roomId);
+  useClassicLinks();
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
 

@@ -22,3 +22,7 @@ mod api_threads_tests;
 #[cfg(test)]
 #[path = "spa_settings_tests.rs"]
 mod settings_tests;
+
+#[cfg(test)]
+#[path = "spa_coexistence_tests.rs"]
+mod coexistence_tests;

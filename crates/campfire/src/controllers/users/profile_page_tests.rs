@@ -75,6 +75,7 @@ async fn profile_case(markup: bool) {
         theme_errors: vec![],
         text_size_errors: vec![],
         time_zone_errors: vec![],
+        next_ui: None,
     };
     let security = app
         .db()
