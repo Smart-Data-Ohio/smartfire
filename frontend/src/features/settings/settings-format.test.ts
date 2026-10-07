@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { get, harness } from "../../../mock/s2/testing.ts";
+import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
+import type { Settings } from "../../gen/Settings.ts";
 import type { StatusSettings } from "../../gen/StatusSettings.ts";
 import {
   classicPage,
@@ -10,6 +13,8 @@ import {
   SECTIONS,
   sessionMeta,
   statusExpiry,
+  withConnection,
+  withDependents,
 } from "./settings-format.ts";
 
 const status: StatusSettings = {
@@ -98,9 +103,12 @@ describe("settings words", () => {
       }),
     ).toBe("Connected as ada (37s).");
     expect(connectionSummary("Fizzy", { state: "rejected", reason: "revoked" })).toBe(
-      "Fizzy rejected the connection (revoked). Reconnect it on the classic page.",
+      "Fizzy rejected the connection (revoked). Paste a new token to reconnect.",
     );
-    expect(connectionSummary("GitHub", { state: "missing" })).toBe("Not connected.");
+    expect(connectionSummary("GitHub", { state: "rejected", reason: null })).toBe(
+      "GitHub rejected the connection. Reconnect below.",
+    );
+    expect(connectionSummary("GitHub", { state: "missing" })).toBeNull();
   });
 
   it("keeps classic links on the classic page", () => {
@@ -108,5 +116,46 @@ describe("settings words", () => {
     expect(classicPage("/users/me/profile?tab=x", "github-connection-title")).toBe(
       "/users/me/profile?tab=x&classic=1#github-connection-title",
     );
+  });
+
+  it("takes only the changed service from a connection answer, and only dependents from a load", async () => {
+    const page = await get<Settings>(harness().server, "/api/v1/settings");
+    const { integrations } = page;
+
+    // An older GitHub answer still says Fizzy is missing; a Fizzy connect landed since.
+    const current: Settings = {
+      ...page,
+      integrations: {
+        ...integrations,
+        fizzy: { state: "connected", name: "Riel", workspace: null, appToken: false },
+      },
+    };
+
+    const stale: IntegrationChange = {
+      notice: "GitHub disconnected.",
+      integrations: {
+        ...integrations,
+        github: { state: "missing" },
+        fizzy: { state: "missing" },
+      },
+    };
+
+    const next = withConnection(current, "github", stale);
+
+    expect(next.integrations.github).toEqual({ state: "missing" });
+    expect(next.integrations.fizzy).toEqual(current.integrations.fizzy);
+
+    const fresh: Settings = {
+      ...page,
+      profile: { ...page.profile, githubLogin: null },
+      status: { ...page.status, oooUntil: null },
+      integrations: { ...integrations, github: { state: "missing" } },
+    };
+
+    const merged = withDependents(next, fresh);
+
+    expect(merged.profile.githubLogin).toBeNull();
+    expect(merged.status.oooUntil).toBeNull();
+    expect(merged.integrations).toBe(next.integrations);
   });
 });

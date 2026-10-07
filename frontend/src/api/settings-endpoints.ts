@@ -1,5 +1,10 @@
-/** The S7 settings endpoints: the profile page's sections, sessions and push subscriptions. */
+/**
+ * The S7 settings endpoints: the profile page's sections, sessions, push subscriptions and the
+ * personal GitHub, Fizzy and Google Calendar connections.
+ */
 import { Effect } from "effect";
+import type { IntegrationChange } from "../gen/IntegrationChange.ts";
+import type { IntegrationToken } from "../gen/IntegrationToken.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
@@ -11,6 +16,7 @@ import type { UpdateStatus } from "../gen/UpdateStatus.ts";
 import { call, get } from "./call.ts";
 import type { ApiRequest } from "./client.ts";
 import {
+  IntegrationChange as IntegrationChangeSchema,
   PushSubscriptionList as PushSubscriptionListSchema,
   SessionList as SessionListSchema,
   Settings as SettingsSchema,
@@ -121,5 +127,37 @@ export const removePushSubscription = Effect.fn("api.removePushSubscription")(fu
   return yield* call(
     { method: "DELETE", path: `/settings/push_subscriptions/${subscriptionId}` },
     pushReply,
+  );
+});
+
+const integrationReply = wire<IntegrationChange>(IntegrationChangeSchema);
+
+/** A personal connection made with a pasted token. */
+export type TokenService = "github" | "fizzy";
+
+/**
+ * `PUT /settings/{github,fizzy}_connection`: the service checks the token before it is stored. A
+ * refusal (blank, rejected, unreachable, no Fizzy account) fails `Validation` with the classic
+ * alert; a lapsed password confirmation fails `SudoRequired`.
+ */
+export const connectService = Effect.fn("api.connectService")(function* (
+  service: TokenService,
+  accessToken: string,
+) {
+  const body: IntegrationToken = { accessToken };
+
+  return yield* call(
+    { method: "PUT", path: `/settings/${service}_connection`, body },
+    integrationReply,
+  );
+});
+
+/** `DELETE /settings/{github,fizzy,google}_connection`: the classic profile's disconnect. */
+export const disconnectService = Effect.fn("api.disconnectService")(function* (
+  service: TokenService | "google",
+) {
+  return yield* call(
+    { method: "DELETE", path: `/settings/${service}_connection` },
+    integrationReply,
   );
 });

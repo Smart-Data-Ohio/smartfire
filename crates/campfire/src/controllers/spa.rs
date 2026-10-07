@@ -47,3 +47,7 @@ mod bots_tests;
 #[cfg(test)]
 #[path = "spa_slack_tests.rs"]
 mod slack_tests;
+
+#[cfg(test)]
+#[path = "spa_integrations_tests.rs"]
+mod integrations_tests;

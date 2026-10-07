@@ -5,7 +5,9 @@ import type { Connection as GeneratedConnection } from "../../gen/Connection.ts"
 import type { DndAllowedPerson as GeneratedDndAllowedPerson } from "../../gen/DndAllowedPerson.ts";
 import type { GoogleIntegration as GeneratedGoogleIntegration } from "../../gen/GoogleIntegration.ts";
 import type { InboxSwitch as GeneratedInboxSwitch } from "../../gen/InboxSwitch.ts";
+import type { IntegrationChange as GeneratedIntegrationChange } from "../../gen/IntegrationChange.ts";
 import type { IntegrationSettings as GeneratedIntegrationSettings } from "../../gen/IntegrationSettings.ts";
+import type { IntegrationToken as GeneratedIntegrationToken } from "../../gen/IntegrationToken.ts";
 import type { NotificationSettings as GeneratedNotificationSettings } from "../../gen/NotificationSettings.ts";
 import type { OooPreset as GeneratedOooPreset } from "../../gen/OooPreset.ts";
 import type { ProfileSettings as GeneratedProfileSettings } from "../../gen/ProfileSettings.ts";
@@ -174,6 +176,25 @@ export type IntegrationSettings = typeof IntegrationSettings.Type;
 
 export type IntegrationSettingsPin = Assert<
   Pinned<typeof IntegrationSettings, GeneratedIntegrationSettings>
+>;
+
+/** `PUT /api/v1/settings/github_connection` and `/fizzy_connection`: a personal access token. */
+export const IntegrationToken = Schema.Struct({ accessToken: Schema.String });
+
+export type IntegrationTokenPin = Assert<
+  Pinned<typeof IntegrationToken, GeneratedIntegrationToken>
+>;
+
+/** A connect or disconnect: the integrations as they now stand, and the classic notice. */
+export const IntegrationChange = Schema.Struct({
+  integrations: IntegrationSettings,
+  notice: Schema.String,
+});
+
+export type IntegrationChange = typeof IntegrationChange.Type;
+
+export type IntegrationChangePin = Assert<
+  Pinned<typeof IntegrationChange, GeneratedIntegrationChange>
 >;
 
 /** `GET /api/v1/settings`: everything the settings screens show. */

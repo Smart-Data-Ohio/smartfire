@@ -713,7 +713,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads).routes,
+    ...createSettings(ctx, uploads, admin.requireSudo).routes,
     ...admin.routes,
     ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createSlack(ctx, admin.requireSudo).routes,

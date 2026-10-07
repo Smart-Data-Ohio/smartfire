@@ -5,8 +5,8 @@
 //! for those it leaves as they are (a blank string clears a clearable text), and answers with the
 //! whole [`Settings`] again, as the classic forms redirect back to the profile. A rejected change is
 //! `ApiError::Validation` with the classic page's messages, its `fields` keyed by the wire names
-//! (`currentPassword`, `customStatusText`, `oooUntil`, ...). Sessions and push subscriptions have
-//! their own lists, never cached.
+//! (`currentPassword`, `customStatusText`, `oooUntil`, ...). Integration writes answer with
+//! [`IntegrationChange`]. Sessions and push subscriptions have their own lists, never cached.
 
 use std::collections::BTreeMap;
 
@@ -15,7 +15,7 @@ use ts_rs::TS;
 
 use crate::{PresenceSetting, TextSize, Theme, Timestamp, VoiceMode};
 
-/// `GET /api/v1/settings`, and the answer to every settings write.
+/// `GET /api/v1/settings`, and the answer to profile, appearance, notification and status writes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -259,8 +259,25 @@ pub struct UpdateCalls {
     pub push_to_talk_key: Option<String>,
 }
 
-/// The connected services. Connecting and disconnecting are OAuth or token round trips on the
-/// classic page (`managePath`), so these are read-only here.
+/// `PUT /api/v1/settings/github_connection` and `/fizzy_connection`: a personal access token,
+/// checked with the service before it is stored. It is never shown again.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct IntegrationToken {
+    pub access_token: String,
+}
+
+/// What a connect or disconnect did: the integrations as they now stand, and the classic notice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct IntegrationChange {
+    pub integrations: IntegrationSettings,
+    pub notice: String,
+}
+
+/// The connected services. OAuth starts remain browser navigations on the classic page.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

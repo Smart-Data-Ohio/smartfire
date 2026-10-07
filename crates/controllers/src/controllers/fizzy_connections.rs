@@ -23,10 +23,22 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     concerns::require_sudo_mode(c)?;
     let user = require_current_user(c)?.clone();
-    let token =
-        campfire_richtext::ruby::strip(c.param_str("access_token").unwrap_or("")).to_owned();
+    let token = c.param_str("access_token").unwrap_or("").to_owned();
+    match connect_token(c, user, &token).await? {
+        Ok(notice) => redirect(c, true, &notice),
+        Err(alert) => redirect(c, false, &alert),
+    }
+}
+
+/// The PAT action after authentication and sudo: the classic notice or alert.
+pub async fn connect_token(
+    c: &Ctx,
+    user: User,
+    token: &str,
+) -> Result<std::result::Result<String, String>> {
+    let token = campfire_richtext::ruby::strip(token).to_owned();
     if token.is_empty() {
-        return redirect(c, false, "Paste a token to connect Fizzy.");
+        return Ok(Err("Paste a token to connect Fizzy.".into()));
     }
     let identity = match Client::new(Network::system(), token.clone(), &client::api_base_url())
         .identity()
@@ -34,15 +46,12 @@ pub async fn create(c: &mut Ctx) -> Result {
     {
         Ok(identity) => identity,
         Err(error) => {
-            return redirect(
-                c,
-                false,
-                if error.kind == ErrorKind::Unauthorized {
-                    "Fizzy rejected that token. Check it and try again."
-                } else {
-                    "Could not reach Fizzy. Try again."
-                },
-            );
+            let alert = if error.kind == ErrorKind::Unauthorized {
+                "Fizzy rejected that token. Check it and try again."
+            } else {
+                "Could not reach Fizzy. Try again."
+            };
+            return Ok(Err(alert.into()));
         }
     };
     let Some(account) = identity["accounts"]
@@ -50,7 +59,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .and_then(|a| a.first())
         .filter(|a| !super::fizzy_message_cards::blank(&a["slug"]))
     else {
-        return redirect(c, false, "That token has no Fizzy account to use.");
+        return Ok(Err("That token has no Fizzy account to use.".into()));
     };
     let account = account.clone();
     let crypto = ArEncryption::new(&c.app().secrets);
@@ -61,13 +70,19 @@ pub async fn create(c: &mut Ctx) -> Result {
         AuditLog::record(tx, NewAuditLog { action: "fizzy.account.connect".into(), target: Some((&user).into()), changes: Some(json!({"fizzy_user_name":linked.fizzy_user_name,"fizzy_account_name":linked.account_name})), ..Default::default() }, &audit)?;
         Ok(format!("Fizzy connected as {} ({}).", linked.fizzy_user_name.as_deref().unwrap_or(""), linked.account_name.as_deref().unwrap_or("")))
     }).await.map_err(db_error)?;
-    redirect(c, true, &notice)
+    Ok(Ok(notice))
 }
 
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     concerns::require_sudo_mode(c)?;
     let user = require_current_user(c)?.clone();
+    let notice = disconnect_user(c, user).await?;
+    redirect(c, true, &notice)
+}
+
+/// The disconnect action after authentication and sudo, including cache cleanup and its audit.
+pub async fn disconnect_user(c: &Ctx, user: User) -> Result<String> {
     let audit = audit_context(c, &user)?;
     c.app().db.write(move |tx| {
         let existing = Account::for_user(tx.conn(), user.id)?;
@@ -77,7 +92,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         }
         Ok(())
     }).await.map_err(db_error)?;
-    redirect(c, true, "Fizzy disconnected.")
+    Ok("Fizzy disconnected.".into())
 }
 
 pub(crate) fn redirect(c: &mut Ctx, notice: bool, message: &str) -> Result {

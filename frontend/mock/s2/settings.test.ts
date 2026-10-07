@@ -1,10 +1,12 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
+  IntegrationChange as IntegrationChangeSchema,
   PushSubscriptionList as PushSubscriptionListSchema,
   SessionList as SessionListSchema,
   Settings as SettingsSchema,
 } from "../../src/api/schema/settings.ts";
+import type { IntegrationChange } from "../../src/gen/IntegrationChange.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
@@ -171,6 +173,62 @@ describe("the mock's settings", () => {
     );
 
     expect(errorOf(own).tag).toBe("Unauthorized");
+  });
+
+  it("connect and disconnect GitHub, Fizzy and Google with the classic words", async () => {
+    const { server } = harness();
+    const fizzy = "/api/v1/settings/fizzy_connection";
+
+    for (const [token, message] of [
+      ["  ", "Paste a token to connect Fizzy."],
+      ["bad-1", "Fizzy rejected that token. Check it and try again."],
+      ["none-1", "That token has no Fizzy account to use."],
+    ] as const) {
+      const refused = await expectStatus<Json>(server, "PUT", fizzy, { accessToken: token }, 422);
+
+      expect(errorOf(refused)).toMatchObject({ tag: "Validation", message });
+    }
+
+    const linked = await expectStatus<IntegrationChange>(
+      server,
+      "PUT",
+      fizzy,
+      { accessToken: "fizzy-token" },
+      200,
+    );
+
+    Schema.decodeUnknownSync(IntegrationChangeSchema)(linked);
+    expect(linked.notice).toBe("Fizzy connected as Riel (Smart Data).");
+    expect(linked.integrations.fizzy.state).toBe("connected");
+
+    const unlinked = await expectStatus<IntegrationChange>(server, "DELETE", fizzy, null, 200);
+
+    expect(unlinked).toMatchObject({
+      notice: "Fizzy disconnected.",
+      integrations: { fizzy: { state: "missing" } },
+    });
+
+    const github = await expectStatus<IntegrationChange>(
+      server,
+      "DELETE",
+      "/api/v1/settings/github_connection",
+      null,
+      200,
+    );
+
+    expect(github.notice).toBe("GitHub disconnected.");
+    expect((await get<Settings>(server, "/api/v1/settings")).profile.githubVerified).toBe(false);
+
+    const google = await expectStatus<IntegrationChange>(
+      server,
+      "DELETE",
+      "/api/v1/settings/google_connection",
+      null,
+      200,
+    );
+
+    expect(google.notice).toBe("Google Calendar disconnected.");
+    expect(google.integrations.google).toMatchObject({ connected: false, email: null });
   });
 
   it("start over on reset", async () => {

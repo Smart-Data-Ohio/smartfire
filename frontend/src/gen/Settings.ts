@@ -7,6 +7,6 @@ import type { ProfileSettings } from "./ProfileSettings";
 import type { StatusSettings } from "./StatusSettings";
 
 /**
- * `GET /api/v1/settings`, and the answer to every settings write.
+ * `GET /api/v1/settings`, and the answer to profile, appearance, notification and status writes.
  */
 export type Settings = { profile: ProfileSettings, appearance: AppearanceSettings, notifications: NotificationSettings, status: StatusSettings, calls: CallSettings, integrations: IntegrationSettings, };

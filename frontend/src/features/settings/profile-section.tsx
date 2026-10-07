@@ -6,9 +6,9 @@ import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { ClassicLink } from "./integrations-section.tsx";
 import { classicPage, fieldError } from "./settings-format.ts";
 import {
+  ClassicLink,
   FieldError,
   fieldsOf,
   SettingsGroup,

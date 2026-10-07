@@ -268,3 +268,36 @@ fn sessions_and_push_subscriptions_wire() {
         }),
     );
 }
+
+#[test]
+fn integration_changes_wire() {
+    assert_wire(
+        &IntegrationToken { access_token: "personal-token".into() },
+        json!({ "accessToken": "personal-token" }),
+    );
+    assert_wire(
+        &IntegrationChange {
+            integrations: settings().integrations,
+            notice: "GitHub connected as ada.".into(),
+        },
+        json!({
+            "integrations": {
+                "google": {
+                    "signInConfigured": true,
+                    "identityEmail": null,
+                    "calendarConfigured": true,
+                    "connected": true,
+                    "calendar": true,
+                    "drive": false,
+                    "email": "ada@example.com"
+                },
+                "github": { "state": "connected", "name": "ada", "workspace": null, "appToken": false },
+                "githubAppConfigured": false,
+                "fizzy": { "state": "rejected", "reason": "The token was revoked." },
+                "managePath": "/users/me/profile",
+                "slackImportPath": "/slack/imports"
+            },
+            "notice": "GitHub connected as ada."
+        }),
+    );
+}
