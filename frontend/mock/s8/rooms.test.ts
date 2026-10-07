@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { CreateRoom } from "../../src/gen/CreateRoom.ts";
 import type { RoomForm } from "../../src/gen/RoomForm.ts";
 import type { RoomMutation } from "../../src/gen/RoomMutation.ts";
 import { notFound } from "../http.ts";
@@ -17,32 +18,25 @@ describe("room management mock", () => {
     const events = collect(server);
 
     for (const type of ["open", "closed", "voice", "stage", "board"] as const) {
-      const body =
+      const body: CreateRoom =
         type === "open"
-          ? { type, clientRoomId: `replay-${type}`, name: "Once", iconName: null }
+          ? { type, clientRoomId: `replay-${type}`, name: " Once ", iconName: " :FIRE: " }
           : {
               type,
               clientRoomId: `replay-${type}`,
-              name: "Once",
-              iconName: null,
-              userIds: [users.maya],
+              name: " Once ",
+              iconName: " :FIRE: ",
+              userIds: [users.maya, users.dana],
             };
 
       const first = await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", body, 201);
       const count = events.length;
+      const retry = { ...body, clientRoomId: ` ${body.clientRoomId} `, iconName: "fire" };
 
-      const replay = await expectStatus<RoomMutation>(
-        server,
-        "POST",
-        "/api/v1/rooms",
-        {
-          ...body,
-          clientRoomId: ` ${body.clientRoomId} `,
-          name: "Changed",
-          iconName: "invalid_retry_icon",
-        },
-        200,
-      );
+      if ("userIds" in retry)
+        retry.userIds = [users.dana, users.maya, users.maya, ...(type === "stage" ? [viewer] : [])];
+
+      const replay = await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", retry, 200);
 
       expect(replay).toEqual(first);
       expect(events).toHaveLength(count);
@@ -52,6 +46,63 @@ describe("room management mock", () => {
         "POST",
         "/api/v1/rooms",
         { ...body, clientRoomId: `next-${type}` },
+        201,
+      );
+
+      expect(next.room.id).toBe(first.room.id + 1);
+
+      if (next.detail !== null && first.detail !== null)
+        expect(next.detail.membership.id).toBe(first.detail.membership.id + 1);
+    }
+  });
+
+  it("refuses changed creation parameters without allocating ids, granting members or publishing", async () => {
+    const { server } = harness();
+    const events = collect(server);
+
+    for (const type of ["open", "closed", "voice", "stage", "board"] as const) {
+      const common = { clientRoomId: `conflict-${type}`, name: "Once", iconName: "fire" };
+
+      const body =
+        type === "open" ? { ...common, type } : { ...common, type, userIds: [viewer, users.maya] };
+
+      const first = await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", body, 201);
+
+      const count = events.length;
+
+      const changedType =
+        type === "open"
+          ? { ...common, type: "closed", userIds: [viewer, users.maya] }
+          : { ...common, type: "open" };
+
+      const retries = [
+        { ...body, name: "Different" },
+        { ...body, iconName: "smile" },
+        { ...body, iconName: "invalid_retry_icon" },
+        changedType,
+        ...(type === "open" ? [] : [{ ...body, userIds: [viewer, users.sam] }]),
+      ];
+
+      for (const retry of retries) {
+        const response = await send(server, "POST", "/api/v1/rooms", retry);
+
+        expect(response.status).toBe(409);
+        expect(field(field(response.json, "error"), "_tag")).toBe("Conflict");
+        expect(field(field(response.json, "error"), "message")).toBe(
+          "clientRoomId was already used with different room parameters",
+        );
+        expect(events).toHaveLength(count);
+      }
+
+      expect(await expectStatus<RoomMutation>(server, "POST", "/api/v1/rooms", body, 200)).toEqual(
+        first,
+      );
+
+      const next = await expectStatus<RoomMutation>(
+        server,
+        "POST",
+        "/api/v1/rooms",
+        { ...body, clientRoomId: `next-conflict-${type}` },
         201,
       );
 

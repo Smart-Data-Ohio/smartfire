@@ -254,6 +254,8 @@ impl Room {
 
     /// The room created by this viewer's API operation, including soft-deleted rooms.
     pub fn find_by_creation_key(conn: &Connection, creator_id: i64, key: &str) -> Result<Option<Self>> {
+        // Physical destruction removes the key, so a later retry creates another room.
+        // Accepted: keys live for one dialog opening, and destruction runs long after realistic retries.
         query_one(
             conn,
             "SELECT rooms.* FROM rooms WHERE creator_id=? AND client_room_id=? LIMIT 1",

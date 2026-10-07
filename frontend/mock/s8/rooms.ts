@@ -2,7 +2,7 @@ import type { RoomForm } from "../../src/gen/RoomForm.ts";
 import type { RoomKind } from "../../src/gen/RoomKind.ts";
 import type { RoomMutation } from "../../src/gen/RoomMutation.ts";
 import type { User } from "../../src/gen/User.ts";
-import { forbidden, HttpError, notFound, ok, validation } from "../http.ts";
+import { conflict, forbidden, HttpError, notFound, ok, validation } from "../http.ts";
 import { field, isNumber, isRecord, isString, type Json } from "../json.ts";
 import type { AdminModule } from "../s2/admin.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
@@ -176,15 +176,17 @@ export function createRoomManagement(
     };
   };
 
+  const normalizeIcon = (name: string | null | undefined): string | null =>
+    name
+      ?.trim()
+      .replace(/^:+|:+$/g, "")
+      .trim()
+      .toLowerCase() || null;
+
   const icon = (name: string | null | undefined, previous: string | null): string | null => {
     if (name === undefined) return previous;
 
-    const normalized =
-      name
-        ?.trim()
-        .replace(/^:+|:+$/g, "")
-        .trim()
-        .toLowerCase() || null;
+    const normalized = normalizeIcon(name);
 
     if (
       normalized !== null &&
@@ -240,14 +242,32 @@ export function createRoomManagement(
     const keys = creationKeys.get(world) ?? new Map<string, RoomRecord>();
     const replay = keys.get(key);
 
-    if (replay !== undefined) return ok(result(replay));
+    const memberIds = input.type === "open" ? activeUsers().map((user) => user.id) : input.ids;
+
+    if (input.type === "stage" && !memberIds.includes(VIEWER_ID)) memberIds.unshift(VIEWER_ID);
+
+    const normalizedIcon = normalizeIcon(input.iconName);
+
+    // Like the API's room-backed key, edits can make a replay conflict with the current room.
+    if (replay !== undefined) {
+      const requested = new Set(memberIds);
+      const existing = new Set(replay.memberIds);
+
+      if (
+        replay.room.kind !== input.type ||
+        replay.room.name !== (input.name ?? null) ||
+        replay.room.iconName !== normalizedIcon ||
+        (input.type !== "open" &&
+          (requested.size !== existing.size || [...requested].some((id) => !existing.has(id))))
+      )
+        throw conflict("clientRoomId was already used with different room parameters");
+
+      return ok(result(replay));
+    }
 
     const iconName = icon(input.iconName, null);
     const id = world.nextRoomId++;
     const createdAt = timestamp(ctx.now());
-    const memberIds = input.type === "open" ? activeUsers().map((user) => user.id) : input.ids;
-
-    if (input.type === "stage" && !memberIds.includes(VIEWER_ID)) memberIds.unshift(VIEWER_ID);
 
     const record: RoomRecord = {
       room: {

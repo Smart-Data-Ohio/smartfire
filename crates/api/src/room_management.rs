@@ -1,5 +1,5 @@
 //! Facts and writes behind the classic room management forms.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
@@ -346,6 +346,51 @@ fn call_invalid(c: &mut Ctx, messages: Vec<String>) -> Error {
     )
 }
 
+async fn replay_creation(c: &mut Ctx, room: Room, input: api::CreateRoom) -> Result {
+    let (kind, name, icon, ids) = create_fields(input);
+    let icon = if matches!(kind, api::RoomKind::Voice | api::RoomKind::Stage) {
+        call_icon(icon)
+    } else {
+        Room::normalize_icon_name(icon.as_deref())
+    };
+    // The key stores no original parameters, so edits can make a retry conflict with the
+    // current room. Creation preserves names verbatim, including null and whitespace.
+    if room.room_type != room_type(kind) || room.name != name || room.icon_name != icon {
+        return Err(creation_conflict(c));
+    }
+    if kind != api::RoomKind::Open {
+        let existing = room.clone();
+        let matches = c
+            .app()
+            .db
+            .read(move |conn| {
+                let mut requested: BTreeSet<_> = User::where_ids(conn, &ids)?
+                    .into_iter()
+                    .map(|user| user.id)
+                    .collect();
+                if kind == api::RoomKind::Stage {
+                    requested.insert(existing.creator_id);
+                }
+                Ok(requested == existing.user_ids(conn)?.into_iter().collect())
+            })
+            .await
+            .map_err(db_error)?;
+        if !matches {
+            return Err(creation_conflict(c));
+        }
+    }
+    c.json(StatusCode::OK, &mutation(c, room).await?)
+}
+
+fn creation_conflict(c: &mut Ctx) -> Error {
+    fail(
+        c,
+        api::ApiError::Conflict {
+            message: "clientRoomId was already used with different room parameters".into(),
+        },
+    )
+}
+
 async fn create_room(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     rooms::ensure_permission_to_create_rooms(c).await?;
@@ -363,11 +408,11 @@ async fn create_room(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     if let Some(room) = duplicate {
-        return c.json(StatusCode::OK, &mutation(c, room).await?);
+        return replay_creation(c, room, input).await;
     }
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_duplicate_check(&key).await;
-    let (kind, name, icon, ids) = create_fields(input);
+    let (kind, name, icon, ids) = create_fields(input.clone());
     let app = c.app().clone();
     let audit = Context {
         actor: Some(require_current_user(c)?.into()),
@@ -456,18 +501,12 @@ async fn create_room(c: &mut Ctx) -> Result {
         }
         result => result.map_err(db_error)?,
     };
-    if created {
-        broadcast(c, &room, false).await?;
+    if !created {
+        return replay_creation(c, room, input).await;
     }
+    broadcast(c, &room, false).await?;
     let result = mutation(c, room).await?;
-    c.json(
-        if created {
-            StatusCode::CREATED
-        } else {
-            StatusCode::OK
-        },
-        &result,
-    )
+    c.json(StatusCode::CREATED, &result)
 }
 
 async fn update_room(c: &mut Ctx) -> Result {

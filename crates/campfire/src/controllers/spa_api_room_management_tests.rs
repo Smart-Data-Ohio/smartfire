@@ -23,19 +23,25 @@ async fn spa_api_rooms_creation_replays_without_any_side_effects() {
     let capture = a.booted.app.cable.capture_every_publication();
     for name in ["open", "closed", "board", "voice", "stage"] {
         let key = format!("room-replay-{name}");
-        let mut body = json!({"type":name,"clientRoomId":key,"name":"Once"});
+        let mut body =
+            json!({"type":name,"clientRoomId":key,"name":" Once ","iconName":" :SMILE: "});
         if name != "open" {
-            body["userIds"] = json!([KEVIN]);
+            body["userIds"] = json!([KEVIN, RITA]);
         }
         let first = write(&mut david, Method::POST, "/api/v1/rooms", body.clone()).await;
         assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
         let first: api::RoomMutation = parse(&first);
         assert!(!super::admin_tests::settle(&capture).await.is_empty());
         let before = dump(&a).await;
-        // Replays return the persisted room, even if the retry's form facts differ.
-        body["name"] = json!("Changed on retry");
-        body["iconName"] = json!("missing_icon_s8");
+        body["iconName"] = json!("smile");
         body["clientRoomId"] = json!(format!(" {key} "));
+        if name != "open" {
+            body["userIds"] = if name == "stage" {
+                json!([RITA, DAVID, KEVIN, KEVIN])
+            } else {
+                json!([RITA, KEVIN, KEVIN])
+            };
+        }
         let replay = write(&mut david, Method::POST, "/api/v1/rooms", body).await;
         assert_eq!(replay.status, StatusCode::OK, "{}", replay.text());
         assert_eq!(parse::<api::RoomMutation>(&replay), first);
@@ -46,6 +52,115 @@ async fn spa_api_rooms_creation_replays_without_any_side_effects() {
         );
         assert!(super::admin_tests::settle(&capture).await.is_empty());
     }
+}
+
+#[tokio::test]
+async fn spa_api_rooms_creation_rejects_changed_parameters_without_side_effects() {
+    let a = app().await.expect("frozen seeds required");
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    for name in ["open", "closed", "board", "voice", "stage"] {
+        let mut body = json!({"type":name,"clientRoomId":format!("room-conflict-{name}"),"name":"Once","iconName":"smile"});
+        if name != "open" {
+            body["userIds"] = json!([DAVID, KEVIN]);
+        }
+        let first = write(&mut david, Method::POST, "/api/v1/rooms", body.clone()).await;
+        assert_eq!(first.status, StatusCode::CREATED, "{}", first.text());
+        let first: api::RoomMutation = parse(&first);
+        super::admin_tests::settle(&capture).await;
+        let before = dump(&a).await;
+        let mut changed_name = body.clone();
+        changed_name["name"] = json!("Different");
+        let mut changed_icon = body.clone();
+        changed_icon["iconName"] = json!("fire");
+        let mut invalid_icon = body.clone();
+        invalid_icon["iconName"] = json!("missing_icon_s8");
+        let mut changed_type = body.clone();
+        if name == "open" {
+            changed_type["type"] = json!("closed");
+            changed_type["userIds"] = json!([DAVID, KEVIN]);
+        } else {
+            changed_type["type"] = json!("open");
+            changed_type.as_object_mut().unwrap().remove("userIds");
+        }
+        let mut retries = vec![changed_name, changed_icon, invalid_icon, changed_type];
+        if name != "open" {
+            let mut changed_members = body.clone();
+            changed_members["userIds"] = json!([DAVID, JASON]);
+            retries.push(changed_members);
+        }
+        for retry in retries {
+            let reply = write(&mut david, Method::POST, "/api/v1/rooms", retry).await;
+            assert_eq!(reply.status, StatusCode::CONFLICT, "{}", reply.text());
+            assert_eq!(
+                error(&reply),
+                json!({"_tag":"Conflict","message":"clientRoomId was already used with different room parameters"})
+            );
+            assert_eq!(
+                dump(&a).await,
+                before,
+                "{name}: rooms, memberships, audits and jobs"
+            );
+            assert!(super::admin_tests::settle(&capture).await.is_empty());
+        }
+        let replay = write(&mut david, Method::POST, "/api/v1/rooms", body).await;
+        assert_eq!(replay.status, StatusCode::OK, "{}", replay.text());
+        assert_eq!(parse::<api::RoomMutation>(&replay), first);
+    }
+}
+
+#[tokio::test]
+async fn spa_api_rooms_concurrent_creation_rejects_changed_parameters() {
+    let a = app().await.expect("frozen seeds required");
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    first.authenticity_token().await;
+    second.authenticity_token().await;
+    let capture = a.booted.app.cable.capture_every_publication();
+    let body = json!({"type":"closed","clientRoomId":"room-conflict-control","name":"Once","userIds":[DAVID,KEVIN]});
+    let before = dump(&a).await;
+    let control = write(&mut first, Method::POST, "/api/v1/rooms", body.clone()).await;
+    assert_eq!(control.status, StatusCode::CREATED, "{}", control.text());
+    let after = dump(&a).await;
+    let frames = super::admin_tests::settle(&capture).await;
+    let mut one = body;
+    one["clientRoomId"] = json!("room-conflict-race");
+    let mut two = one.clone();
+    two["name"] = json!("Different");
+    campfire_api::test_hooks::hold_after_duplicate_check("room-conflict-race", 2);
+    let (one, two) = tokio::join!(
+        write(&mut first, Method::POST, "/api/v1/rooms", one),
+        write(&mut second, Method::POST, "/api/v1/rooms", two),
+    );
+    let mut statuses = [one.status, two.status];
+    statuses.sort();
+    assert_eq!(
+        statuses,
+        [StatusCode::CREATED, StatusCode::CONFLICT],
+        "{} / {}",
+        one.text(),
+        two.text()
+    );
+    let refused = if one.status == StatusCode::CONFLICT {
+        &one
+    } else {
+        &two
+    };
+    assert_eq!(error(refused)["_tag"], "Conflict");
+    let raced = dump(&a).await;
+    for table in ["rooms", "memberships", "audit_logs", "background_jobs"] {
+        let count = |rows: &Value| rows[table].as_array().unwrap().len();
+        assert_eq!(
+            count(&raced) - count(&after),
+            count(&after) - count(&before),
+            "{table}"
+        );
+    }
+    assert_eq!(
+        super::admin_tests::settle(&capture).await.len(),
+        frames.len()
+    );
 }
 
 #[tokio::test]
