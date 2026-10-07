@@ -76,6 +76,7 @@ function SectionRow(props: RowProps) {
         to="/r/$roomId/t/$threadId"
         params={{ roomId: row.roomId, threadId: row.id }}
         className="search-section-row"
+        data-search-nav
       >
         <RowBody {...props} />
       </Link>
@@ -88,7 +89,7 @@ function SectionRow(props: RowProps) {
       : `/rooms/${row.roomId}/threads/${row.id}`;
 
   return (
-    <a href={href} className="search-section-row">
+    <a href={href} className="search-section-row" data-search-nav>
       <RowBody {...props} />
     </a>
   );
