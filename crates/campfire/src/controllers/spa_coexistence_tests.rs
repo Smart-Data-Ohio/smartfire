@@ -136,7 +136,7 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         // Unported pages, and paths a ported pattern doesn't cover.
         Req::new(Method::GET, "/users/me/profile"),
         Req::new(Method::GET, "/rooms/new"),
-        Req::new(Method::GET, "/searches"),
+        Req::new(Method::GET, "/work"),
         Req::new(Method::GET, &format!("{room_path}/messages")),
     ];
     for request in requests {

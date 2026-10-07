@@ -1170,6 +1170,8 @@ pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) 
         last_activity_at: time(thread.last_activity_at),
         auto_archive_after_minutes: thread.auto_archive_after_minutes,
         created_at: time(thread.created_at),
+        // Work facts still render in the HTML only; the S4 backend fills them.
+        work: None,
     }
 }
 
@@ -1220,6 +1222,12 @@ pub fn thread_permissions(
         can_lock: moderator && !locked,
         can_unlock: moderator && locked,
         can_delete: moderator,
+        // With `work` still null, no work action is offered until the S4 backend.
+        can_convert_work: false,
+        can_manage_work: false,
+        can_update_work_status: false,
+        can_assign_work: false,
+        can_remove_work: false,
     }
 }
 
@@ -1247,6 +1255,7 @@ pub fn thread_detail(
         permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
         membership: membership.as_ref().map(thread_membership),
         parent_message,
+        work: None,
         users: users(conn, &app.secrets, people, now)?,
     })
 }

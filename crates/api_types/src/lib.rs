@@ -41,6 +41,7 @@ mod switcher;
 mod sync;
 mod thread;
 mod user;
+mod work;
 
 pub use actions::{
     CreateForwards, ForwardDestination, ForwardDestinationList, ForwardResult, ForwardTarget,
@@ -54,9 +55,11 @@ pub use activity::{
 };
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
-    AgentCapability, AgentDirectory, AgentDirectoryRow, AgentGrant, AgentGrants, AgentKind,
+    AgentCapability, AgentDeliveryOutcome, AgentDirectory, AgentDirectoryRow, AgentExternalResult,
+    AgentGrant, AgentGrants, AgentKind, AgentLedgerEvent, AgentLedgerEventType, AgentLedgerPage,
     AgentManagement, AgentProfile, AgentProfileRoom, AgentStatus, AgentStatusChanged, AgentStep,
-    AgentStepStatus, AgentStepsChanged, ApprovalDecision, ApprovalUpdated, DecideApproval,
+    AgentStepStatus, AgentStepsChanged, AgentWebhookStatus, ApprovalDecision, ApprovalUpdated,
+    DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use cards::{
@@ -119,6 +122,11 @@ pub use thread::{
     UpdateThread,
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
+pub use work::{
+    CreateWorkHandoff, UpdateWork, WorkDetail, WorkFacts, WorkFilter, WorkHandoffReceiver,
+    WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink, WorkLinkKind, WorkList,
+    WorkListRow, WorkOwnerCandidate, WorkOwnerSnapshot, WorkPullRequestState,
+};
 
 /// A UTC instant as Rails' JSON encodes it: RFC 3339 with millisecond precision and a `Z`
 /// suffix, e.g. `"2026-09-26T12:26:46.848Z"` (what `json_time` produces across the app).
@@ -132,5 +140,7 @@ mod tests_s2;
 mod tests_s3;
 #[cfg(test)]
 mod tests_s4;
+#[cfg(test)]
+mod tests_s4b;
 #[cfg(test)]
 mod tests_s5;

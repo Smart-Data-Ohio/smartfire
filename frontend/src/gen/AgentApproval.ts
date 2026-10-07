@@ -19,7 +19,9 @@ agentUserId: number,
  */
 roomId: number | null, 
 /**
- * The viewer-relative room name ("in {room}"); `null` when `roomId` is.
+ * The viewer-relative room name ("in {room}"); `null` when `roomId` is, and when the viewer
+ * is neither an administrator nor a member of the room (an owner deciding for a room they
+ * aren't in sees "in a room you're not in"). **New**: the classic card always names it.
  */
 roomName: string | null, 
 /**
