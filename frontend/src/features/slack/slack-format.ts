@@ -89,6 +89,23 @@ export function keyed<T>(
   });
 }
 
+/** A run page's URL query as the URL has it (`?page=N` from a classic link). */
+export interface RawRunSearch {
+  readonly page?: unknown;
+}
+
+/** A run page's query: how many pages of issues to show at first, left out at one. */
+export interface RunSearch {
+  readonly page?: number | undefined;
+}
+
+/** Reads `?page=`; anything but a page number past the first is the default. */
+export function parseRunSearch(search: RawRunSearch): RunSearch {
+  const page = Number(String(search.page ?? ""));
+
+  return { page: Number.isSafeInteger(page) && page > 1 ? page : undefined };
+}
+
 /** A form value: blank is none (no date bound, no new secret). */
 export function optional(value: string): string | null {
   const trimmed = value.trim();

@@ -15,11 +15,10 @@ import {
   googleUnlinkConfirmation,
   googleUnlinkTitle,
   groupPeople,
-  neighbour,
   REMOVE_CONFIRMATION,
   twoFactorResetConfirmation,
 } from "./admin-format.ts";
-import { adminFailure, useAdmin, useFocusAfter } from "./admin-parts.tsx";
+import { adminFailure, useAdmin, useRowFocus } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -50,13 +49,6 @@ function confirmation(pending: Pending): string {
     case "remove":
       return REMOVE_CONFIRMATION;
   }
-}
-
-/** The people's ids in the order the page shows them: administrators, then members. */
-function shownIds(people: readonly Person[]): readonly number[] {
-  const { administrators, members } = groupPeople(people);
-
-  return [...administrators, ...members].map((person) => person.id);
 }
 
 /** One person: their avatar and name, and for an administrator the classic row's buttons. */
@@ -183,7 +175,7 @@ export function PeopleSection() {
   const [pending, setPending] = useState<Pending | null>(null);
   const [more, setMore] = useState(false);
   const { busy, track } = useBusy();
-  const { container, focusAfter } = useFocusAfter();
+  const container = useRowFocus();
 
   const fetchPeople = useCallback(() => {
     admin.people().then(
@@ -251,7 +243,6 @@ export function PeopleSection() {
         (change) => {
           // The row moves to the other list and remounts; its switch keeps the focus.
           landed(change);
-          focusAfter({ row: `${person.id}`, control: "role" });
         },
         (error: Error) => adminFailure(`Couldn't change ${person.name}'s role`, error),
       ),
@@ -296,11 +287,7 @@ export function PeopleSection() {
           admin.removePerson(person.id).then(
             ({ id }) => {
               // The removed row was where the dialog handed focus back; the next row takes it.
-              const next =
-                load.status === "ready" ? neighbour(shownIds(load.page.people), id) : null;
-
               edit((people) => people.filter((each) => each.id !== id));
-              focusAfter({ row: next === null ? null : `${next}`, control: "remove" });
               toast({ title: `${person.name} was removed`, tone: "success" });
             },
             (error: Error) => adminFailure(`Couldn't remove ${person.name}`, error),

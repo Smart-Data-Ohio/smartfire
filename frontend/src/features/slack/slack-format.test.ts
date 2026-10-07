@@ -8,6 +8,7 @@ import {
   keyed,
   modeLabel,
   optional,
+  parseRunSearch,
   peopleLine,
   personalConnectionSentence,
 } from "./slack-format.ts";
@@ -106,5 +107,15 @@ describe("row keys", () => {
     expect(new Set(first).size).toBe(3);
     expect(grown.slice(0, 3)).toEqual(first);
     expect(new Set(grown).size).toBe(4);
+  });
+});
+
+describe("a run page's query", () => {
+  it("reads a later page from a classic link, and the first page otherwise", () => {
+    expect(parseRunSearch({ page: 3 })).toEqual({ page: 3 });
+    expect(parseRunSearch({ page: "2" })).toEqual({ page: 2 });
+    expect(parseRunSearch({ page: 1 })).toEqual({ page: undefined });
+    expect(parseRunSearch({ page: "x" })).toEqual({ page: undefined });
+    expect(parseRunSearch({})).toEqual({ page: undefined });
   });
 });

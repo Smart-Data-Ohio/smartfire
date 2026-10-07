@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { useRef } from "react";
 import { describe, expect, it } from "vitest";
-import { edgeRowOpen, landingFor, placeOf, useKeepRowFocus } from "./row-focus.ts";
+import { edgeRowOpen, landingFor, placeOf, type RowParts, useKeepRowFocus } from "./row-focus.ts";
 
 interface HarnessProps {
   readonly rows: readonly number[];
@@ -149,6 +149,127 @@ describe("keeping focus as rows leave", () => {
     rerender(<Harness rows={[1, 2, 3]} leaving={2} />);
 
     expect(document.activeElement).toBe(elsewhere);
+  });
+});
+
+/** Rows that name themselves and their controls, as the admin lists do. */
+const NAMED: RowParts = {
+  list: ".named-root",
+  row: "[data-row]",
+  open: "[data-row-control]",
+  leaving: "[data-motion='leave']",
+  id: "data-row",
+  control: "data-row-control",
+};
+
+interface NamedRow {
+  readonly id: number;
+  /** Which of the two lists it's in: moving it remounts it. */
+  readonly list: "admins" | "members";
+  /** Whether it still has its Remove control (a revoked row loses it). */
+  readonly removable?: boolean;
+}
+
+function NamedHarness({
+  rows,
+  busy = false,
+}: {
+  readonly rows: readonly NamedRow[];
+  readonly busy?: boolean;
+}) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useKeepRowFocus(rootRef, NAMED);
+
+  const list = (name: NamedRow["list"]) => (
+    <ul aria-label={name}>
+      {rows
+        .filter((each) => each.list === name)
+        .map((each) => (
+          <li
+            key={`${name}-${each.id}`}
+            data-row={each.id}
+            tabIndex={-1}
+            aria-label={`Person ${each.id}`}
+          >
+            <button type="button" data-row-control="role" disabled={busy}>
+              Role {each.id}
+            </button>
+            {each.removable === false ? null : (
+              <button type="button" data-row-control="remove" disabled={busy}>
+                Remove {each.id}
+              </button>
+            )}
+          </li>
+        ))}
+    </ul>
+  );
+
+  return (
+    <div ref={rootRef} className="named-root" tabIndex={-1}>
+      {list("admins")}
+      {list("members")}
+    </div>
+  );
+}
+
+const control = (name: string) => screen.getByRole("button", { name });
+
+describe("keeping focus in rows that name themselves", () => {
+  it("lands on the same control in the next row when a row goes", () => {
+    const members: NamedRow[] = [1, 2, 3].map((id) => ({ id, list: "members" }));
+    const { rerender } = render(<NamedHarness rows={members} />);
+
+    control("Remove 2").focus();
+    rerender(<NamedHarness rows={members.filter((each) => each.id !== 2)} />);
+
+    expect(document.activeElement).toBe(control("Remove 3"));
+  });
+
+  it("follows a row that moves to the other list, once its control is free again", () => {
+    const before: NamedRow[] = [
+      { id: 1, list: "admins" },
+      { id: 2, list: "members" },
+      { id: 3, list: "members" },
+    ];
+
+    const after: NamedRow[] = [
+      { id: 1, list: "admins" },
+      { id: 2, list: "admins" },
+      { id: 3, list: "members" },
+    ];
+
+    const { rerender } = render(<NamedHarness rows={before} />);
+
+    control("Role 2").focus();
+    // The save disables the controls, and the browser drops focus from the disabled switch.
+    rerender(<NamedHarness rows={before} busy />);
+    control("Role 2").blur();
+    rerender(<NamedHarness rows={after} busy />);
+    expect(document.activeElement).toBe(document.body);
+
+    rerender(<NamedHarness rows={after} />);
+    expect(document.activeElement).toBe(control("Role 2"));
+  });
+
+  it("stays on the row when the control it was in goes away", () => {
+    const second: NamedRow = { id: 2, list: "members" };
+    const { rerender } = render(<NamedHarness rows={[{ id: 1, list: "members" }, second]} />);
+
+    control("Remove 1").focus();
+    rerender(<NamedHarness rows={[{ id: 1, list: "members", removable: false }, second]} />);
+
+    // The row's first control is its open button.
+    expect(document.activeElement).toBe(control("Role 1"));
+  });
+
+  it("holds focus on the container when the last row goes", () => {
+    const { rerender, container } = render(<NamedHarness rows={[{ id: 1, list: "members" }]} />);
+
+    control("Remove 1").focus();
+    rerender(<NamedHarness rows={[]} />);
+
+    expect(document.activeElement).toBe(container.firstElementChild);
   });
 });
 

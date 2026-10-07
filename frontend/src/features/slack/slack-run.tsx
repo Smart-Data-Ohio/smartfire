@@ -401,6 +401,24 @@ type Load =
       readonly nextPage: number | null;
     };
 
+/** A run with its issues through the first `pages` pages (fewer when it has fewer). */
+async function readPages(runId: number, pages: number) {
+  const first = await slack.runPage(runId);
+  const issues = [...first.issues];
+  let nextPage = first.nextPage;
+  let read = 1;
+
+  while (read < pages && nextPage !== null) {
+    const page = await slack.runPage(runId, nextPage);
+
+    issues.push(...page.issues);
+    nextPage = page.nextPage;
+    read += 1;
+  }
+
+  return { run: first.run, issues, nextPage, pages: read };
+}
+
 /**
  * One run, as its classic page shows it: the status (read again every few seconds while the run
  * is active), the cancel, undo, plan and catch-up buttons, and for an administrator the issues;
@@ -409,9 +427,12 @@ type Load =
 export function SlackRunView({
   admin,
   runId,
+  throughPage = 1,
 }: {
   readonly admin: boolean;
   readonly runId: number;
+  /** How many pages of issues to show at first: a classic `?page=N` link shows through page N. */
+  readonly throughPage?: number;
 }) {
   const navigate = useNavigate();
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -419,17 +440,22 @@ export function SlackRunView({
   const [focusAsked, setFocusAsked] = useState(0);
   // A read that started before an undo must not put back the status the undo replaced.
   const [tickets] = useState(newestOnly);
+  // How many pages of issues are on the page: a reread (when the run settles) reads them all again.
+  const pages = useRef(throughPage);
 
   const fetchRun = useCallback(() => {
     const latest = tickets.take();
 
     const work = admin
-      ? slack.runPage(runId)
-      : slack.status(false, runId).then((run) => ({ run, issues: [], nextPage: null }));
+      ? readPages(runId, pages.current)
+      : slack.status(false, runId).then((run) => ({ run, issues: [], nextPage: null, pages: 1 }));
 
     work.then(
-      (page) => {
-        if (latest()) setLoad({ status: "ready", ...page });
+      ({ pages: read, ...page }) => {
+        if (!latest()) return;
+
+        pages.current = read;
+        setLoad({ status: "ready", ...page });
       },
       (error: Error) => {
         if (latest()) setLoad({ status: "error", message: error.message });
@@ -499,7 +525,7 @@ export function SlackRunView({
 
   const run = load.status === "ready" ? load.run : null;
 
-  // Once the run settles its issues are final: read the page again for them.
+  // Once the run settles its issues are final: read the pages on show again for them.
   const trouble = usePoll(run, read, fetchRun);
 
   const reload = () => {
@@ -533,6 +559,7 @@ export function SlackRunView({
     try {
       const page = await slack.runPage(runId, load.nextPage);
 
+      pages.current += 1;
       setLoad((current) =>
         current.status === "ready"
           ? { ...current, issues: [...current.issues, ...page.issues], nextPage: page.nextPage }

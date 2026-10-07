@@ -77,6 +77,29 @@ test("a dry run shows its progress live, then offers the plan", async ({ page })
   await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/2\/plan$/);
 });
 
+test("a classic link to a later page of issues shows the issues through it", async ({ page }) => {
+  await page.goto("/app/admin/slack/runs/1?page=2");
+
+  const issues = page.getByRole("list").filter({ hasText: "wasn't imported" });
+
+  await expect(page.getByRole("heading", { name: "Issues (60)" })).toBeVisible();
+  await expect(issues.getByRole("listitem")).toHaveCount(60);
+  await expect(page.getByRole("button", { name: "Older issues" })).toHaveCount(0);
+});
+
+test("older issues stay on the page when the run settles", async ({ page }) => {
+  await open(page, "admin/slack");
+  await page.getByRole("button", { name: "Start dry run" }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/2$/);
+
+  const issues = page.getByRole("list").filter({ hasText: "wasn't imported" });
+
+  await page.getByRole("button", { name: "Older issues" }).click();
+  await expect(issues.getByRole("listitem")).toHaveCount(60);
+  await expect(facts(page)).toContainText("completed", SETTLED);
+  await expect(issues.getByRole("listitem")).toHaveCount(60);
+});
+
 test("a full import from the plan, then undoing it", async ({ page }) => {
   await open(page, "admin/slack/runs/1/plan");
 
