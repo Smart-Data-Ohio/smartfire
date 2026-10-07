@@ -14,6 +14,9 @@
     "lineWidth": 100
   },
   "linter": {
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
       "preset": "recommended"
     }
