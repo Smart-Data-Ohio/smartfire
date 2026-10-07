@@ -2,14 +2,35 @@
 
 use std::io::Read;
 use std::path::Path;
+use std::time::Duration;
 
-use crate::{Blob, Filename, Json, Staged, Storage, Variation, vips::Image};
+use crate::{
+    Blob, Filename, Json, Staged, Storage, Variation,
+    vips::{Cancellation, Image},
+};
 
 pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
 /// A frame's canvas counts even when its encoded update covers only a small rectangle.
 /// At most 100 megapixels across all frames, checked before evaluating any pixels.
 pub const MAX_ANIMATION_PIXELS: u64 = 100_000_000;
+pub const MAX_LEGACY_PIXELS: u64 = 100_000_000;
 pub const ANIMATED_KEY: &str = "branding_animated";
+
+/// Includes waiting for the media slot, header probing and pixel evaluation.
+pub fn processing_timeout(_blob: &Blob) -> Duration {
+    #[cfg(feature = "test-support")]
+    if test_hooks::held(&_blob.key).is_some() {
+        return Duration::from_millis(500);
+    }
+    Duration::from_secs(10)
+}
+
+fn configure_cancellation(_blob: &Blob, _cancel: &Cancellation) {
+    #[cfg(feature = "test-support")]
+    if let Some((phase, reached)) = test_hooks::held(&_blob.key) {
+        _cancel.stall_at(phase, reached);
+    }
+}
 
 #[derive(Clone, Copy)]
 pub enum Kind {
@@ -71,9 +92,15 @@ pub fn animated(blob: &Blob) -> bool {
 
 /// Must run on the media blocking pool. The strict, single-page loader only reads headers
 /// until dimensions and the total animation budget have been checked.
-pub fn prepare(storage: &Storage, mut blob: Blob, kind: Kind) -> Result<Prepared, Invalid> {
+pub fn prepare(
+    storage: &Storage,
+    mut blob: Blob,
+    kind: Kind,
+    cancel: &Cancellation,
+) -> Result<Prepared, Invalid> {
+    configure_cancellation(&blob, cancel);
     let path = storage.service.path_for(&blob.key);
-    let (image, content_type) = header(&path, kind)?;
+    let (image, content_type) = header(&path, kind, cancel)?;
     blob.content_type = Some(content_type.to_owned());
     blob.metadata.set("identified", Json::Bool(true));
     let pages = if matches!(content_type, "image/gif" | "image/webp") {
@@ -86,7 +113,7 @@ pub fn prepare(storage: &Storage, mut blob: Blob, kind: Kind) -> Result<Prepared
     let still = if pages.is_some_and(|n| n > 1) {
         let variation = kind.still_variation();
         // A damaged frame degrades to static. Rendering never tries this extraction again.
-        transform(storage, &blob, image, &variation)
+        transform(storage, &blob, image, &variation, cancel)
             .ok()
             .map(|staged| (variation, staged))
     } else {
@@ -96,19 +123,43 @@ pub fn prepare(storage: &Storage, mut blob: Blob, kind: Kind) -> Result<Prepared
     Ok(Prepared { blob, still })
 }
 
-/// The same bounds also apply to a static variant requested for a classic/older attachment.
+/// Older/classic attachments retain the classic variable formats and first-page conversion,
+/// with a larger pixel budget. API uploads retain their strict validation on cache misses.
 pub fn transform_variant(
     storage: &Storage,
     blob: &Blob,
     kind: Kind,
     variation: &Variation,
+    cancel: &Cancellation,
 ) -> crate::Result<Staged> {
-    let (image, _) = header(&storage.service.path_for(&blob.key), kind)
-        .map_err(|invalid| crate::Error::Analyze(invalid.message(kind).to_owned()))?;
-    transform(storage, blob, image, variation)
+    configure_cancellation(blob, cancel);
+    let path = storage.service.path_for(&blob.key);
+    let image = if blob.metadata.get(ANIMATED_KEY).is_none() {
+        if !blob.is_variable() {
+            return Err(crate::Error::Invariable(blob.content_type().to_owned()));
+        }
+        let image = Image::open_legacy_branding(&path, cancel)?;
+        let (width, height) = (image.width(), image.height());
+        if width <= 0 || height <= 0 || width as u64 * height as u64 > MAX_LEGACY_PIXELS {
+            return Err(crate::Error::Analyze(
+                "legacy image exceeds the 100 megapixel budget".into(),
+            ));
+        }
+        image
+    } else {
+        header(&path, kind, cancel)
+            .map_err(|invalid| crate::Error::Analyze(invalid.message(kind).to_owned()))?
+            .0
+    };
+    transform(storage, blob, image, variation, cancel)
 }
 
-fn header(path: &Path, kind: Kind) -> Result<(Image, &'static str), Invalid> {
+fn header(
+    path: &Path,
+    kind: Kind,
+    cancel: &Cancellation,
+) -> Result<(Image, &'static str), Invalid> {
+    cancel.check().map_err(|_| Invalid::Format)?;
     let mut file = std::fs::File::open(path).map_err(|_| Invalid::Format)?;
     if file.metadata().map_err(|_| Invalid::Format)?.len() > MAX_BYTES {
         return Err(Invalid::Size);
@@ -126,7 +177,7 @@ fn header(path: &Path, kind: Kind) -> Result<(Image, &'static str), Invalid> {
     } else {
         return Err(Invalid::Format);
     };
-    let image = Image::open_branding(path, content_type).map_err(|_| Invalid::Format)?;
+    let image = Image::open_branding(path, content_type, cancel).map_err(|_| Invalid::Format)?;
     let (width, height) = (image.width(), image.height());
     if width <= 0 || height <= 0 {
         return Err(Invalid::Format);
@@ -155,9 +206,12 @@ fn transform(
     blob: &Blob,
     image: Image,
     variation: &Variation,
+    cancel: &Cancellation,
 ) -> crate::Result<Staged> {
+    cancel.check()?;
     let format = variation.format()?;
     let image = image.autorot()?;
+    image.cancel_on(cancel)?;
     let image = match variation
         .transformations()
         .iter()
@@ -176,14 +230,61 @@ fn transform(
             ));
         }
     };
+    image.cancel_on(cancel)?;
     let output = tempfile::Builder::new()
         .prefix("branding-")
         .suffix(&format!(".{format}"))
         .tempfile()?;
     image.write_to_file(output.path())?;
-    storage.stage_analyzed(
-        output.path(),
-        Filename::new(format!("{}.{format}", blob.filename.base())),
-        &variation.content_type()?,
-    )
+    cancel.check()?;
+    // The generated, bounded image already supplies its dimensions. Avoid starting another
+    // uncancellable analyzer/header read while staging it.
+    let staged = storage
+        .stage_file(
+            output.path(),
+            Filename::new(format!("{}.{format}", blob.filename.base())),
+            Some(&variation.content_type()?),
+        )?
+        .with_image_dimensions(image.width(), image.height());
+    cancel.check()?;
+    Ok(staged)
+}
+
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use crate::vips::StallPhase;
+    use std::collections::HashMap;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::{Arc, LazyLock, Mutex};
+
+    type Hold = (StallPhase, Arc<AtomicBool>);
+    static HELD: LazyLock<Mutex<HashMap<String, Hold>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
+
+    pub struct Stall {
+        key: String,
+        pub reached: Arc<AtomicBool>,
+    }
+
+    impl Drop for Stall {
+        fn drop(&mut self) {
+            HELD.lock().unwrap().remove(&self.key);
+        }
+    }
+
+    /// Stall inside the actual source/eval callback; only cancellation can end the work.
+    pub fn stall(key: &str, phase: StallPhase) -> Stall {
+        let reached = Arc::new(AtomicBool::new(false));
+        HELD.lock()
+            .unwrap()
+            .insert(key.to_owned(), (phase, reached.clone()));
+        Stall {
+            key: key.to_owned(),
+            reached,
+        }
+    }
+
+    pub(super) fn held(key: &str) -> Option<Hold> {
+        HELD.lock().unwrap().get(key).cloned()
+    }
 }

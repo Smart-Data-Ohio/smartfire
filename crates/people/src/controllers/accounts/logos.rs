@@ -42,7 +42,35 @@ pub async fn show(c: &mut Ctx) -> Result {
         // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
         Some(account) => {
             let size = if small { 192 } else { 512 };
-            attachments::processed_variant(c.app(), Record::account(account.id), "logo", Variation::resize_to_limit(size, size, Some("png"))).await?
+            let id = account.id;
+            let blob = c
+                .app()
+                .db
+                .read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
+                .await
+                .map_err(Error::internal)?;
+            if let Some(blob) = blob.filter(|blob| blob.is_variable()) {
+                let timeout = campfire_storage::branding::processing_timeout(&blob);
+                campfire_web::active_storage::processed_variant_with_deadline(
+                    c.app(),
+                    blob,
+                    Variation::resize_to_limit(size, size, Some("png")),
+                    timeout,
+                    |storage, blob, variation, cancel| {
+                        campfire_storage::branding::transform_variant(
+                            storage,
+                            blob,
+                            campfire_storage::branding::Kind::Logo,
+                            variation,
+                            cancel,
+                        )
+                    },
+                )
+                .await
+                .ok()
+            } else {
+                None
+            }
         }
         None => None,
     };
@@ -52,12 +80,18 @@ pub async fn show(c: &mut Ctx) -> Result {
             c.send_file(path, SendOptions::inline("image/png"))
         }
         // send_stock_icon
-        None => {
-            let filename = if small { "app-icon-192.png" } else { "app-icon.png" };
-            let path = asset_file(&format!("logos/{filename}"))?;
-            c.send_file(path, SendOptions::inline("image/png"))
-        }
+        None => stock_icon(c, small),
     }
+}
+
+pub(super) fn stock_icon(c: &mut Ctx, small: bool) -> Result {
+    let filename = if small {
+        "app-icon-192.png"
+    } else {
+        "app-icon.png"
+    };
+    let path = asset_file(&format!("logos/{filename}"))?;
+    c.send_file(path, SendOptions::inline("image/png"))
 }
 
 /// `Current.account.logo.destroy`

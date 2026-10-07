@@ -610,6 +610,390 @@ async fn spa_workspace_branding_animated_sources_and_png_stills() {
     );
 }
 
+async fn media_slots_are_free() {
+    tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        loop {
+            let (available, capacity) = campfire_web::active_storage::media_permits();
+            if available == capacity {
+                assert_eq!(available, capacity);
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("cancelled decoder must stop and release its media permit");
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_deadline_stops_headers_and_decodes_and_releases_slots() {
+    use campfire_storage::branding::test_hooks;
+    use campfire_storage::vips::StallPhase;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    for kind in ["logo", "banner"] {
+        for phase in [StallPhase::Header, StallPhase::Evaluation] {
+            media_slots_are_free().await;
+            let (signed, id) = upload_bytes(&a, &animated_gif(), "stalled.gif", "image/gif").await;
+            let key = a
+                .db()
+                .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
+                .await
+                .unwrap();
+            let stall = test_hooks::stall(&key, phase);
+            let started = Instant::now();
+            let reply = tokio::time::timeout(
+                Duration::from_secs(2),
+                write(
+                    &mut admin,
+                    Method::PUT,
+                    &format!("/api/v1/admin/workspace/{kind}"),
+                    json!({"signedId": signed}),
+                ),
+            )
+            .await
+            .expect("upload deadline must answer the request");
+            assert_eq!(
+                reply.status,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "{}",
+                reply.text()
+            );
+            assert_eq!(
+                error(&reply)["fields"]["signedId"],
+                json!(["couldn't be read as an image"])
+            );
+            assert!(
+                stall.reached.load(Ordering::Relaxed),
+                "the real libvips callback was entered"
+            );
+            media_slots_are_free().await;
+            assert!(started.elapsed() < Duration::from_secs(2));
+            drop(stall);
+
+            // Exercise pixel evaluation again, with the same limiter after cancellation.
+            let (signed, _) = upload_bytes(&a, &animated_gif(), "normal.gif", "image/gif").await;
+            let workspace: api::Workspace = spa(
+                &mut admin,
+                Method::PUT,
+                &format!("/api/v1/admin/workspace/{kind}"),
+                json!({"signedId": signed}),
+            )
+            .await;
+            let still = if kind == "logo" {
+                workspace.logo_still_url
+            } else {
+                workspace.banner_still_url
+            };
+            assert_eq!(admin.get(&still.unwrap()).await.status, StatusCode::OK);
+        }
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_static_cache_miss_cancels_and_releases_slots() {
+    use campfire_storage::branding::test_hooks;
+    use campfire_storage::vips::StallPhase;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    for kind in ["logo", "banner"] {
+        let (signed, id) = upload_bytes(&a, &png(2, 2, false), "static.png", "image/png").await;
+        let workspace: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            &format!("/api/v1/admin/workspace/{kind}"),
+            json!({"signedId": signed}),
+        )
+        .await;
+        let url = if kind == "logo" {
+            workspace.logo_url
+        } else {
+            workspace.banner_url.unwrap()
+        };
+        let key = a
+            .db()
+            .read(move |conn| {
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = ?",
+                        [id],
+                        |row| row.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+                Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key)
+            })
+            .await
+            .unwrap();
+        media_slots_are_free().await;
+        let stall = test_hooks::stall(&key, StallPhase::Evaluation);
+        let response = tokio::time::timeout(Duration::from_secs(2), admin.get(&url))
+            .await
+            .unwrap();
+        assert_eq!(response.status, StatusCode::NOT_FOUND);
+        assert!(stall.reached.load(Ordering::Relaxed));
+        media_slots_are_free().await;
+        drop(stall);
+        assert_eq!(
+            admin.get(&url).await.status,
+            StatusCode::OK,
+            "retry an uncached, cancelled variant"
+        );
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_legacy_tiff_and_large_png_render_uncached_static_urls() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let input = tempfile::NamedTempFile::new().unwrap();
+    std::fs::write(input.path(), png(2, 2, false)).unwrap();
+    let tiff = tempfile::Builder::new().suffix(".tiff").tempfile().unwrap();
+    campfire_storage::vips::Image::open_sequential(input.path())
+        .unwrap()
+        .write_to_file(tiff.path())
+        .unwrap();
+    for (bytes, filename, content_type, expected_width) in [
+        (
+            std::fs::read(tiff.path()).unwrap(),
+            "legacy.tiff",
+            "image/tiff",
+            2,
+        ),
+        (png(5000, 10, false), "legacy.png", "image/png", 512),
+    ] {
+        let (signed, id) = upload_bytes(&a, &bytes, filename, content_type).await;
+        classic(
+            &mut admin,
+            Method::PATCH,
+            "/account",
+            &[("account[logo]", &signed)],
+        )
+        .await;
+        a.db()
+            .read(move |conn| {
+                let blob = campfire_storage::Blob::find(conn, id).unwrap().unwrap();
+                assert_eq!(
+                    blob.metadata.get(campfire_storage::branding::ANIMATED_KEY),
+                    None
+                );
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = ?",
+                        [id],
+                        |row| row.get::<_, i64>(0)
+                    )?,
+                    0
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let boot: Value = parse(&admin.get("/api/v1/boot").await);
+        let workspace: api::Workspace = parse(&admin.get("/api/v1/admin/workspace").await);
+        assert_eq!(boot["account"]["logoUrl"], workspace.logo_url);
+        let response = admin
+            .get(boot["account"]["logoUrl"].as_str().unwrap())
+            .await;
+        assert_eq!(response.status, StatusCode::OK);
+        assert_eq!(response.content_type(), Some("image/png"));
+        assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n");
+        let output = tempfile::NamedTempFile::new().unwrap();
+        std::fs::write(output.path(), response.body).unwrap();
+        let image = campfire_storage::vips::Image::open_sequential(output.path()).unwrap();
+        assert_eq!(
+            image.width(),
+            expected_width,
+            "converted the legacy source rather than serving the stock icon"
+        );
+        assert!(image.height() <= 512);
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_legacy_pixel_budget_falls_back_to_stock_logo() {
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let stock = admin.get("/account/logo").await.body;
+    // Only the header is needed: no allocation or decode of this 100+ MP canvas.
+    let mut bytes = b"\x89PNG\r\n\x1a\n".to_vec();
+    let mut header = 10001u32.to_be_bytes().to_vec();
+    header.extend_from_slice(&10000u32.to_be_bytes());
+    header.extend_from_slice(&[8, 2, 0, 0, 0]);
+    png_chunk(&mut bytes, b"IHDR", &header);
+    png_chunk(&mut bytes, b"IDAT", &[0]);
+    png_chunk(&mut bytes, b"IEND", &[]);
+    let (signed, id) = upload_bytes(&a, &bytes, "huge.png", "image/png").await;
+    classic(
+        &mut admin,
+        Method::PATCH,
+        "/account",
+        &[("account[logo]", &signed)],
+    )
+    .await;
+    let boot: Value = parse(&admin.get("/api/v1/boot").await);
+    let response = admin
+        .get(boot["account"]["logoUrl"].as_str().unwrap())
+        .await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert_eq!(response.body, stock);
+    assert_eq!(admin.get("/account/logo").await.body, stock);
+    a.db()
+        .write(move |tx| {
+            use crate::controllers::presenters::attachments::{self, Assignment, Record};
+            let account = campfire_db::Account::first(tx.conn())?.unwrap();
+            let blob = campfire_storage::Blob::find(tx.conn(), id)
+                .unwrap()
+                .unwrap();
+            attachments::assign(
+                tx,
+                Record::account(account.id),
+                "banner",
+                Assignment::Existing(blob),
+            )
+        })
+        .await
+        .unwrap();
+    let boot: Value = parse(&admin.get("/api/v1/boot").await);
+    assert_eq!(
+        admin
+            .get(boot["account"]["bannerUrl"].as_str().unwrap())
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    media_slots_are_free().await;
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() {
+    use campfire_storage::branding::test_hooks;
+    use campfire_storage::vips::StallPhase;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let stock = admin.get("/account/logo").await.body;
+    let (signed, id) = upload_bytes(&a, &png(2, 2, false), "legacy.png", "image/png").await;
+    classic(
+        &mut admin,
+        Method::PATCH,
+        "/account",
+        &[("account[logo]", &signed)],
+    )
+    .await;
+    let key = a
+        .db()
+        .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
+        .await
+        .unwrap();
+    let boot: Value = parse(&admin.get("/api/v1/boot").await);
+    let url = boot["account"]["logoUrl"].as_str().unwrap();
+    for path in [url, "/account/logo"] {
+        media_slots_are_free().await;
+        let stall = test_hooks::stall(&key, StallPhase::Evaluation);
+        let reply = tokio::time::timeout(Duration::from_secs(2), admin.get(path))
+            .await
+            .unwrap();
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.body, stock);
+        assert!(stall.reached.load(Ordering::Relaxed));
+        media_slots_are_free().await;
+    }
+    let reply = admin.get(url).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_ne!(reply.body, stock);
+}
+
+async fn branding_still(a: &TestApp, id: i64, kind: &'static str) -> campfire_storage::Blob {
+    let storage = a.booted.app.storage.clone();
+    a.db()
+        .read(move |conn| {
+            let blob = campfire_storage::Blob::find(conn, id).unwrap().unwrap();
+            let kind = if kind == "logo" {
+                campfire_storage::branding::Kind::Logo
+            } else {
+                campfire_storage::branding::Kind::Banner
+            };
+            Ok(storage
+                .existing_variant(conn, &blob, &kind.still_variation())
+                .unwrap()
+                .unwrap())
+        })
+        .await
+        .unwrap()
+}
+
+async fn still_was_purged(a: &TestApp, still: campfire_storage::Blob) {
+    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+        while a.booted.app.storage.service.exist(&still.key) {
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("purge job must delete the old still file");
+    a.db()
+        .read(move |conn| {
+            assert!(
+                campfire_storage::Blob::find(conn, still.id)
+                    .unwrap()
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_replacing_and_removing_animations_purges_still_files() {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
+        SEED_NOW.parse().unwrap(),
+    ));
+    // Keep the real job runner: replacing/removing a source enqueues dependent purges.
+    let Some(a) = TestApp::boot_seed_with_env("default", clock, &[("SPA_ENABLED", "1")]).await
+    else {
+        return;
+    };
+    let mut admin = a.sign_in(DAVID).await;
+    for kind in ["logo", "banner"] {
+        let mut previous = None;
+        for _ in 0..2 {
+            let (signed, id) =
+                upload_bytes(&a, &animated_gif(), "animation.gif", "image/gif").await;
+            let _: api::Workspace = spa(
+                &mut admin,
+                Method::PUT,
+                &format!("/api/v1/admin/workspace/{kind}"),
+                json!({"signedId": signed}),
+            )
+            .await;
+            let still = branding_still(&a, id, kind).await;
+            assert!(a.booted.app.storage.service.exist(&still.key));
+            if let Some(previous) = previous.take() {
+                still_was_purged(&a, previous).await;
+            }
+            previous = Some(still);
+        }
+        let _: api::Workspace = spa(
+            &mut admin,
+            Method::DELETE,
+            &format!("/api/v1/admin/workspace/{kind}"),
+            Value::Null,
+        )
+        .await;
+        still_was_purged(&a, previous.unwrap()).await;
+    }
+}
+
 async fn updated(sync: &mut Sync) -> api::WorkspaceBranding {
     let event = sync
         .until(

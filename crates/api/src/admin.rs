@@ -373,14 +373,11 @@ async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prep
         return Err(fail(c, validation("signedId", "must be 10 MB or smaller")));
     }
     let storage = c.app().storage.clone();
-    let prepared = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
-        campfire_web::active_storage::process_media(move || {
-            Ok(branding::prepare(&storage, blob, kind))
-        }),
+    let prepared = campfire_web::active_storage::process_media_with_deadline(
+        branding::processing_timeout(&blob),
+        move |cancel| Ok(branding::prepare(&storage, blob, kind, &cancel)),
     )
     .await
-    .map_err(|_| fail(c, validation("signedId", "couldn't be read as an image")))?
     .map_err(|_| fail(c, validation("signedId", "couldn't be read as an image")))?;
     prepared.map_err(|invalid| fail(c, validation("signedId", invalid.message(kind))))
 }

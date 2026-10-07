@@ -26,6 +26,18 @@ const SERVICE_URLS_EXPIRE_IN: i64 = 5 * 60;
 const HUNDRED_YEARS: u64 = 3_155_695_200;
 /// The most image and video jobs (variants, previews, analysis) that run at once.
 const MAX_MEDIA_JOBS: usize = 4;
+static MEDIA_PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(media_capacity())));
+
+fn media_capacity() -> usize {
+    std::thread::available_parallelism()
+        .map_or(2, |n| n.get())
+        .clamp(1, MAX_MEDIA_JOBS)
+}
+
+#[cfg(feature = "test-support")]
+pub fn media_permits() -> (usize, usize) {
+    (MEDIA_PERMITS.available_permits(), media_capacity())
+}
 
 // --- Blobs -----------------------------------------------------------------------------------------
 
@@ -142,7 +154,54 @@ pub async fn processed_variant_with(
     app: &App,
     blob: Blob,
     variation: Variation,
-    transform: impl FnOnce(&Storage, &Blob, &Variation) -> campfire_storage::Result<Staged> + Send + 'static,
+    transform: impl FnOnce(&Storage, &Blob, &Variation) -> campfire_storage::Result<Staged>
+    + Send
+    + 'static,
+) -> Result<Blob> {
+    processed_variant_using(
+        app,
+        blob,
+        variation,
+        |storage, blob, variation| async move {
+            process_media(move || transform(&storage, &blob, &variation)).await
+        },
+    )
+    .await
+}
+
+pub async fn processed_variant_with_deadline(
+    app: &App,
+    blob: Blob,
+    variation: Variation,
+    timeout: std::time::Duration,
+    transform: impl FnOnce(
+        &Storage,
+        &Blob,
+        &Variation,
+        &campfire_storage::vips::Cancellation,
+    ) -> campfire_storage::Result<Staged>
+    + Send
+    + 'static,
+) -> Result<Blob> {
+    processed_variant_using(
+        app,
+        blob,
+        variation,
+        |storage, blob, variation| async move {
+            process_media_with_deadline(timeout, move |cancel| {
+                transform(&storage, &blob, &variation, &cancel)
+            })
+            .await
+        },
+    )
+    .await
+}
+
+async fn processed_variant_using<F: std::future::Future<Output = Result<Staged>>>(
+    app: &App,
+    blob: Blob,
+    variation: Variation,
+    work: impl FnOnce(Arc<Storage>, Blob, Variation) -> F,
 ) -> Result<Blob> {
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
@@ -155,7 +214,7 @@ pub async fn processed_variant_with(
 
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
-    let image = process_media(move || transform(&storage, &source, &digested)).await?.defer_analysis();
+    let image = work(storage, source, digested).await?.defer_analysis();
 
     let storage = app.storage.clone();
     app.db
@@ -304,19 +363,42 @@ pub async fn process_media<T: Send + 'static>(
     process_media_work(work).await.map_err(Error::internal)
 }
 
+/// Branding's timeout cancels the decoder, including when a disconnected request drops this
+/// future. The blocking work retains its media slot until libvips has actually stopped.
+pub async fn process_media_with_deadline<T: Send + 'static>(
+    timeout: std::time::Duration,
+    work: impl FnOnce(campfire_storage::vips::Cancellation) -> campfire_storage::Result<T>
+    + Send
+    + 'static,
+) -> Result<T> {
+    struct CancelOnDrop(campfire_storage::vips::Cancellation);
+    impl Drop for CancelOnDrop {
+        fn drop(&mut self) {
+            self.0.cancel();
+        }
+    }
+    let cancel = campfire_storage::vips::Cancellation::new(timeout);
+    let _guard = CancelOnDrop(cancel.clone());
+    tokio::time::timeout(
+        timeout,
+        process_media(move || {
+            cancel.check()?;
+            let result = work(cancel.clone());
+            // A failed still can degrade to static, but cancellation must reject the upload.
+            cancel.check()?;
+            result
+        }),
+    )
+    .await
+    .map_err(Error::internal)?
+}
+
 async fn process_media_work<T: Send + 'static>(
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> anyhow::Result<T> {
-    static PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| {
-        Arc::new(Semaphore::new(
-            std::thread::available_parallelism()
-                .map_or(2, |n| n.get())
-                .clamp(1, MAX_MEDIA_JOBS),
-        ))
-    });
     // The permit goes with the work: a request that gives up (a timeout, a closed connection)
     // doesn't stop the blocking task, so it mustn't free the slot either.
-    let permit = PERMITS.clone().acquire_owned().await?;
+    let permit = MEDIA_PERMITS.clone().acquire_owned().await?;
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
         work()
@@ -789,6 +871,36 @@ fn random_hex(bytes: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn dropping_media_request_cancels_work_and_releases_permit() {
+        let (started, start) = tokio::sync::oneshot::channel();
+        let (finished, finish) = tokio::sync::oneshot::channel();
+        let request = tokio::spawn(process_media_with_deadline(
+            std::time::Duration::from_secs(10),
+            move |cancel| {
+                let _ = started.send(());
+                while !cancel.is_cancelled() {
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+                let _ = finished.send(());
+                cancel.check()
+            },
+        ));
+        start.await.unwrap();
+        assert!(MEDIA_PERMITS.available_permits() < media_capacity());
+        request.abort();
+        let _ = request.await;
+        tokio::time::timeout(std::time::Duration::from_millis(500), async {
+            finish.await.unwrap();
+            while MEDIA_PERMITS.available_permits() != media_capacity() {
+                tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            }
+        })
+        .await
+        .expect("dropping the request must cancel before its ten second deadline");
+        assert_eq!(MEDIA_PERMITS.available_permits(), media_capacity());
+    }
 
     #[tokio::test]
     async fn byte_ranges_are_not_read_into_memory() {

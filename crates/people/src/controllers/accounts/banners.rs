@@ -82,14 +82,7 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
             if name != "logo" {
                 return Err(Error::NotFound);
             }
-            let filename = if small {
-                "app-icon-192.png"
-            } else {
-                "app-icon.png"
-            };
-            let path =
-                crate::controllers::users::avatars::asset_file(&format!("logos/{filename}"))?;
-            return c.send_file(path, SendOptions::inline("image/png"));
+            return super::logos::stock_icon(c, small);
         }
         let (width, height) = if name == "banner" {
             (1920, 1080)
@@ -103,20 +96,25 @@ pub(super) async fn show_image(c: &mut Ctx, name: &'static str) -> Result {
         } else {
             blob.default_variant_format()
         };
-        tokio::time::timeout(
-            std::time::Duration::from_secs(10),
-            campfire_web::active_storage::processed_variant_with(
-                c.app(),
-                blob,
-                Variation::resize_to_limit(width, height, Some(&format)),
-                move |storage, blob, variation| {
-                    branding::transform_variant(storage, blob, kind, variation)
-                },
-            ),
+        let legacy = blob.metadata.get(branding::ANIMATED_KEY).is_none();
+        let timeout = branding::processing_timeout(&blob);
+        let variant = campfire_web::active_storage::processed_variant_with_deadline(
+            c.app(),
+            blob,
+            Variation::resize_to_limit(width, height, Some(&format)),
+            timeout,
+            move |storage, blob, variation, cancel| {
+                branding::transform_variant(storage, blob, kind, variation, cancel)
+            },
         )
-        .await
-        .map_err(|_| Error::NotFound)?
-        .map_err(|_| Error::NotFound)?
+        .await;
+        match variant {
+            Ok(image) => image,
+            Err(_) if legacy && name == "logo" => {
+                return super::logos::stock_icon(c, small);
+            }
+            Err(_) => return Err(Error::NotFound),
+        }
     };
     c.send_file(
         c.app().storage.service.path_for(&image.key),

@@ -47,6 +47,13 @@ impl Staged {
         &self.blob
     }
 
+    pub(crate) fn with_image_dimensions(mut self, width: i32, height: i32) -> Self {
+        self.blob.metadata.set("width", Json::Int(width.into()));
+        self.blob.metadata.set("height", Json::Int(height.into()));
+        self.blob.metadata.set("analyzed", Json::Bool(true));
+        self
+    }
+
     /// A generated attachment is identified now and analyzed by its after-commit
     /// attachment callback. Keep that boundary when persisting a variant for HTTP.
     pub fn defer_analysis(mut self) -> Self {
