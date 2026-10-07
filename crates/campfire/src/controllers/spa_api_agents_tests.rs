@@ -3,17 +3,19 @@
 //! `User`; and the twins `agent.status`, `agent.steps` and `approval.updated`, with the classic
 //! frames of the broadcasts they sit beside byte for byte the same with the sync engine on.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use campfire_db::models::agent_step::{AgentStep, NewAgentStep, StepParentChange};
 use campfire_db::{Agent, AgentApproval, Event, NewApproval};
+use campfire_kit::clock::FrozenClock;
 use serde_json::json;
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, BENDER, DAVID, JASON, KEVIN, TestApp,
+    ALL_TALK, BENDER, DAVID, JASON, KEVIN, SEED_NOW, TestApp,
 };
 
 /// Bender's agent: a workspace agent David owns. Bender is in All Talk, Archive, the release
@@ -410,6 +412,309 @@ fn agent_status(event: &api::SyncEvent) -> bool {
     matches!(&event.payload, api::SyncPayload::AgentStatus(changed) if changed.agent_id == AGENT)
 }
 
+async fn revision_app() -> Option<(TestApp, Arc<FrozenClock>)> {
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app =
+        TestApp::boot_seed_with_env("default", clock.clone(), &[("SPA_ENABLED", "1")]).await?;
+    Some((app, clock))
+}
+
+fn revision(value: &str) -> jiff::Timestamp {
+    value.parse().expect("a wire timestamp")
+}
+
+#[tokio::test]
+async fn agent_status_revisions_cover_each_change_and_change_back_on_every_read() {
+    let Some((a, clock)) = revision_app().await else {
+        return;
+    };
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM agent_grants WHERE agent_id = ?", [AGENT])?;
+            let mut agent = Agent::find(tx.conn(), AGENT)?.unwrap();
+            agent.status = "idle".into();
+            agent.status_note = None;
+            agent.suspended_at = None;
+            agent.working_presence = None;
+            agent.working_presence_expires_at = None;
+            agent.save(tx)
+        })
+        .await
+        .unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let initial: api::AgentProfile =
+        parse(&david.send(get(&format!("/api/v1/agents/{AGENT}"))).await);
+    let mut previous = revision(&initial.agent.updated_at);
+
+    for change in 0..11 {
+        clock.advance(jiff::SignedDuration::from_millis(10));
+        // Each covered fact is changed alone, including presence replacement and renewing the
+        // same text. The final state restores the original status facts.
+        let written = a
+            .db()
+            .write(move |tx| {
+                let mut agent = Agent::find(tx.conn(), AGENT)?.unwrap();
+                match change {
+                    0 => agent.status = "working".into(),
+                    1 => agent.status = "idle".into(),
+                    2 => agent.status_note = Some("Reviewing".into()),
+                    3 => agent.status_note = None,
+                    4 => agent.suspended_at = Some(tx.now()),
+                    5 => agent.suspended_at = None,
+                    6 | 8 | 9 => agent.assign_working_presence(Some("Reviewing"), tx.now()),
+                    7 => agent.assign_working_presence(Some("Deploying"), tx.now()),
+                    10 => {
+                        agent.clear_working_presence(tx)?;
+                        return Ok(agent);
+                    }
+                    _ => unreachable!(),
+                }
+                agent.save(tx)?;
+                Ok(agent)
+            })
+            .await
+            .unwrap();
+        let event = sync.until(
+            |event| matches!(&event.payload, api::SyncPayload::AgentStatus(changed)
+                if changed.agent_id == AGENT && revision(&changed.updated_at) == written.updated_at.jiff()),
+            |_| false,
+        ).await;
+        let api::SyncPayload::AgentStatus(changed) = event.payload else {
+            unreachable!()
+        };
+        let profile: api::AgentProfile =
+            parse(&david.send(get(&format!("/api/v1/agents/{AGENT}"))).await);
+        let directory: api::AgentDirectory = parse(&david.send(get("/api/v1/agents")).await);
+        let row = directory
+            .agents
+            .iter()
+            .find(|row| row.agent_id == AGENT)
+            .unwrap();
+        assert_eq!(row.updated_at, profile.agent.updated_at, "change {change}");
+        assert_eq!(changed.updated_at, row.updated_at, "change {change}");
+        assert_eq!(
+            revision(&row.updated_at),
+            written.updated_at.jiff(),
+            "writer return, change {change}"
+        );
+        assert!(revision(&row.updated_at) > previous, "change {change}");
+        assert_eq!(
+            (changed.status, &changed.status_note, changed.suspended),
+            (row.status, &row.status_note, row.suspended)
+        );
+        assert_eq!(
+            changed.working_presence.as_deref(),
+            written.working_presence.as_deref()
+        );
+        assert_eq!(
+            changed.working_presence_expires_at.as_deref().map(revision),
+            written.working_presence_expires_at.map(|at| at.jiff())
+        );
+        previous = revision(&row.updated_at);
+    }
+    let final_profile: api::AgentProfile =
+        parse(&david.send(get(&format!("/api/v1/agents/{AGENT}"))).await);
+    assert_eq!(
+        (
+            final_profile.agent.status,
+            &final_profile.agent.status_note,
+            final_profile.agent.suspended
+        ),
+        (
+            initial.agent.status,
+            &initial.agent.status_note,
+            initial.agent.suspended
+        )
+    );
+    assert!(revision(&final_profile.agent.updated_at) > revision(&initial.agent.updated_at));
+    server.abort();
+}
+
+#[tokio::test]
+async fn approval_decision_revisions_match_the_write_reply_get_and_sync() {
+    let Some((a, clock)) = revision_app().await else {
+        return;
+    };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let page_path = format!("/api/v1/agents/{AGENT}/approvals");
+    for decision in ["approved", "denied"] {
+        let id = approval(&a, "deploy.revision", false).await;
+        let before: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+        let before = before.approvals.iter().find(|row| row.id == id).unwrap();
+        clock.advance(jiff::SignedDuration::from_millis(10));
+        let response = david
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/agent_approvals/{id}"),
+                &json!({"decision": decision, "note": "Reviewed"}),
+            ))
+            .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let written: api::AgentApproval = parse(&response);
+        assert!(revision(&written.updated_at) > revision(&before.updated_at));
+        assert_eq!(written.decided_by_id, Some(DAVID));
+        assert_eq!(written.decision_note.as_deref(), Some("Reviewed"));
+        let event = sync
+            .until(
+                |event| {
+                    matches!(&event.payload, api::SyncPayload::ApprovalUpdated(changed)
+                if changed.approval.id == id && changed.approval.status == written.status)
+                },
+                |_| false,
+            )
+            .await;
+        let api::SyncPayload::ApprovalUpdated(changed) = event.payload else {
+            unreachable!()
+        };
+        let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+        let fetched = page.approvals.iter().find(|row| row.id == id).unwrap();
+        assert_eq!(fetched, &written);
+        assert_eq!(changed.approval, written);
+        let stored = a
+            .db()
+            .read(move |conn| AgentApproval::find(conn, id))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(revision(&written.updated_at), stored.updated_at.jiff());
+
+        // Decisions are terminal: a contrary decision and note cannot change them back.
+        clock.advance(jiff::SignedDuration::from_millis(10));
+        let response = david.write(json_body(Method::PATCH,
+            &format!("/api/v1/agent_approvals/{id}"),
+            &json!({"decision": if decision == "approved" { "denied" } else { "approved" }, "note": "Changed"}))).await;
+        assert_eq!(validation_fields(&response), vec!["base".to_string()]);
+        let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+        assert_eq!(
+            page.approvals.iter().find(|row| row.id == id).unwrap(),
+            &written
+        );
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn approval_cancel_revision_matches_the_writer_get_and_sync() {
+    let Some((a, clock)) = revision_app().await else {
+        return;
+    };
+    let id = approval(&a, "deploy.cancel_revision", false).await;
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let page_path = format!("/api/v1/agents/{AGENT}/approvals");
+    let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+    let before = page.approvals.iter().find(|row| row.id == id).unwrap();
+    clock.advance(jiff::SignedDuration::from_millis(10));
+    let written = a
+        .db()
+        .write(move |tx| {
+            let mut approval = AgentApproval::find(tx.conn(), id)?.unwrap();
+            assert!(approval.cancel_by_agent(tx)?.is_empty());
+            Ok(approval)
+        })
+        .await
+        .unwrap();
+    let event = sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::ApprovalUpdated(changed)
+            if changed.approval.id == id && changed.approval.status == api::AgentApprovalStatus::Cancelled),
+        |_| false,
+    ).await;
+    let api::SyncPayload::ApprovalUpdated(changed) = event.payload else {
+        unreachable!()
+    };
+    let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+    let fetched = page.approvals.iter().find(|row| row.id == id).unwrap();
+    assert_eq!(&changed.approval, fetched);
+    assert_eq!(revision(&fetched.updated_at), written.updated_at.jiff());
+    assert!(revision(&fetched.updated_at) > revision(&before.updated_at));
+    server.abort();
+}
+
+#[tokio::test]
+async fn approval_expiry_revision_covers_the_effective_status_before_the_settle_write() {
+    use campfire_app::cable::sync::SyncRenderer;
+    let Some((a, clock)) = revision_app().await else {
+        return;
+    };
+    let written = a
+        .db()
+        .write(|tx| {
+            AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: AGENT,
+                    room_id: Some(ALL_TALK),
+                    action: "deploy.expiry_revision".into(),
+                    summary: "Check expiry revision".into(),
+                    expires_at: Some(tx.now().since(jiff::SignedDuration::from_mins(5))),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let id = written.id;
+    let mut david = a.sign_in(DAVID).await;
+    let page_path = format!("/api/v1/agents/{AGENT}/approvals");
+    let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+    let before = page.approvals.iter().find(|row| row.id == id).unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    clock.advance(jiff::SignedDuration::from_mins(5));
+    let renderer =
+        campfire_api::sync::Renderer::new(&a.booted.app, tokio::runtime::Handle::current());
+    let effective = a
+        .db()
+        .read(move |conn| {
+            let stored = AgentApproval::find(conn, id)?.unwrap();
+            assert_eq!(stored.status, "pending");
+            assert_eq!(stored.updated_at, written.updated_at);
+            Ok(renderer
+                .approval_updated(conn, id, DAVID)?
+                .unwrap()
+                .approval)
+        })
+        .await
+        .unwrap();
+    assert_eq!(effective.status, api::AgentApprovalStatus::Expired);
+    assert_eq!(effective.updated_at, effective.expires_at);
+    assert!(revision(&effective.updated_at) > revision(&before.updated_at));
+
+    clock.advance(jiff::SignedDuration::from_millis(10));
+    let page: api::AgentApprovalPage = parse(&david.send(get(&page_path)).await);
+    let settled = page.approvals.iter().find(|row| row.id == id).unwrap();
+    assert!(revision(&settled.updated_at) >= revision(&settled.expires_at));
+    assert!(revision(&settled.updated_at) > revision(&effective.updated_at));
+    let event = sync.until(
+        |event| matches!(&event.payload, api::SyncPayload::ApprovalUpdated(changed)
+            if changed.approval.id == id && changed.approval.status == api::AgentApprovalStatus::Expired),
+        |_| false,
+    ).await;
+    let api::SyncPayload::ApprovalUpdated(changed) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(&changed.approval, settled);
+    let stored = a
+        .db()
+        .read(move |conn| AgentApproval::find(conn, id))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(stored.status, "expired");
+    assert_eq!(revision(&settled.updated_at), stored.updated_at.jiff());
+    server.abort();
+}
+
 #[tokio::test]
 async fn agent_status_tells_everyone_and_working_presence_only_its_room_mates() {
     let Some(a) = app(true).await else { return };
@@ -437,6 +742,7 @@ async fn agent_status_tells_everyone_and_working_presence_only_its_room_mates() 
         Some("Reviewing the deploy")
     );
     assert!(seen.working_presence_expires_at.is_some());
+    let shared_revision = seen.updated_at;
     let event = lous.until(agent_status, |_| false).await;
     assert_eq!(event.topic, "user");
     let api::SyncPayload::AgentStatus(seen) = event.payload else {
@@ -446,6 +752,7 @@ async fn agent_status_tells_everyone_and_working_presence_only_its_room_mates() 
         (seen.working_presence, seen.working_presence_expires_at),
         (None, None)
     );
+    assert_eq!(seen.updated_at, shared_revision);
     assert_eq!(seen.user_id, BENDER);
 
     // Suspension has no classic frame, but an `agent.status` all the same.
