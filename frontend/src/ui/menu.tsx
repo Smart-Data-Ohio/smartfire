@@ -448,6 +448,41 @@ export function MenuCheckboxItem({ checked, onCheckedChange, children }: MenuChe
   );
 }
 
+interface MenuRadioItemProps {
+  readonly checked: boolean;
+  readonly onSelect: () => void;
+  /** Read by typeahead when the children aren't plain text. */
+  readonly label?: string;
+  readonly children: ReactNode;
+}
+
+/**
+ * One choice of several inside a menu (a status, an owner): checked shows a tick. Choosing it
+ * selects it and closes the menu, as a plain item does.
+ */
+export function MenuRadioItem({ checked, onSelect, label, children }: MenuRadioItemProps) {
+  const { closeAll } = use(MenuContext);
+
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the menu's keydown handler turns Enter and Space into this click
+    <div
+      role="menuitemradio"
+      aria-checked={checked}
+      tabIndex={-1}
+      className="menu-item"
+      data-label={label}
+      onPointerMove={focusOnPointer}
+      onClick={() => {
+        onSelect();
+        closeAll(true);
+      }}
+    >
+      <span className="menu-item-icon">{checked ? <Icon name="check" /> : null}</span>
+      <span className="menu-item-label">{children}</span>
+    </div>
+  );
+}
+
 export function MenuSeparator() {
   return <hr className="menu-separator" />;
 }
