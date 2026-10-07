@@ -1,7 +1,7 @@
 import { Navigate } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
 import { useStore } from "../../store/store.ts";
-import { Skeleton } from "../../ui/skeleton.tsx";
+import { PageLoading } from "./page-loading.tsx";
 
 const PHONE_QUERY = "(width < 720px)";
 
@@ -34,11 +34,7 @@ export function HomeView() {
   }
 
   if (me === null) {
-    return (
-      <div className="home-empty" aria-busy="true">
-        <Skeleton width={180} height={14} />
-      </div>
-    );
+    return <PageLoading />;
   }
 
   return (

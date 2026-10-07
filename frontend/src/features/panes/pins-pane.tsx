@@ -2,7 +2,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Pin } from "../../gen/Pin.ts";
 import type { PinList } from "../../gen/PinList.ts";
-import { inlineMentions } from "../../lib/body-html.ts";
 import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -11,6 +10,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { BodyHtml } from "../messages/body-html.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -86,11 +86,7 @@ function PinCard({ entry, now, onJump, onUnpin }: PinCardProps) {
           <IconButton icon="pin" size="sm" label="Unpin" onClick={() => onUnpin(message)} />
         </span>
       </header>
-      <div
-        className="pin-card-body message-body"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-        dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
-      />
+      <BodyHtml html={message.bodyHtml} className="pin-card-body message-body" />
       {message.attachment === null ? null : (
         <p className="pin-card-file">{message.attachment.filename}</p>
       )}

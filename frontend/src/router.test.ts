@@ -20,6 +20,11 @@ function routed(path: string): boolean {
   return leaf !== undefined && leaf !== "__root__" && leaf !== "/shell";
 }
 
+/** Parameter names and an index route's trailing slash do not distinguish screen patterns. */
+function routePattern(pattern: string): string {
+  return pattern.replace(/[$:][A-Za-z_][A-Za-z_0-9]*/g, ":id").replace(/\/$/, "");
+}
+
 describe("the screen map and the router", () => {
   it("routes every ported screen, and none the SPA forwards to classic", () => {
     for (const screen of SCREENS) {
@@ -27,26 +32,22 @@ describe("the screen map and the router", () => {
     }
   });
 
-  it("names every built classic-backed route in the screen map", () => {
+  it("maps every public router route back to a ported classic page", () => {
     const mapped = new Set(
-      SCREENS.filter((screen) => screen.ported).map(
-        (screen) =>
-          screen.spa
-            .replace(/^\/app/, "")
-            .replace(/:[^/]+/g, ":id")
-            .replace(/\/$/, "") || "/",
-      ),
+      SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
 
+    // These are SPA-only tools, without a classic page of their own.
+    const internal = new Set(["/app/_kitchen-sink", "/app/r/:id/t/new"]);
+
     for (const route of Object.values(router.routesById)) {
-      // The gallery has no classic page; a thread draft needs its parent query, not just a path.
-      if (route.fullPath === "/_kitchen-sink" || route.fullPath === "/r/$roomId/t/new") {
+      if (route.id === "__root__" || route.id === "/shell") {
         continue;
       }
 
-      const path = route.fullPath.replace(/\$[^/]+/g, ":id").replace(/\/$/, "") || "/";
+      const path = routePattern(`/app${route.fullPath}`);
 
-      expect(mapped.has(path), route.fullPath).toBe(true);
+      expect(mapped.has(path) || internal.has(path), path).toBe(true);
     }
   });
 });

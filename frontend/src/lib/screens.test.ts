@@ -16,6 +16,11 @@ function sample(pattern: string): string {
   return pattern.replace(/:[a-z_]+/g, () => String(next++));
 }
 
+/** Parameter names do not distinguish paths that map to the same SPA screen. */
+function screenPattern(pattern: string): string {
+  return pattern.replace(/:[a-z_]+/g, ":id");
+}
+
 describe("the screen map", () => {
   it("maps ported classic pages to their SPA URLs", () => {
     expect(spaUrlFor("/")).toBe("/app/");
@@ -64,6 +69,31 @@ describe("the screen map", () => {
     expect(classicToSpaUrl("/rooms/12", "invalid origin")).toBeNull();
   });
 
+  it.each([
+    ["/rooms/12/messages/345", "/app/r/12/m/345"],
+    ["/rooms/12/messages/345/edit", "/app/r/12/m/345"],
+    ["/messages/345", "/app/m/345"],
+    ["/messages/345/edit", "/app/m/345"],
+    ["/messages/345/boosts", "/app/m/345"],
+    ["/messages/345/boosts/new", "/app/m/345"],
+    ["/rooms/12/threads", "/app/r/12/threads"],
+    ["/rooms/12/files", "/app/r/12/files"],
+    ["/rooms/12/pins", "/app/r/12/pins"],
+    ["/rooms/12/involvement", "/app/r/12/notifications"],
+  ])("maps the existing-screen classic link %s to %s", (classic, spa) => {
+    expect(spaUrlFor(classic, "?source=classic")).toBe(`${spa}?source=classic`);
+  });
+
+  it("opens every ported classic path, including aliases of an existing destination", () => {
+    for (const screen of SCREENS.filter((row) => row.ported)) {
+      const canonical = SCREENS.find((row) => row.ported && row.classic === screen.classic);
+
+      expect(spaUrlFor(sample(screen.classic)), screen.classic).toBe(
+        canonical === undefined ? null : sample(canonical.spa),
+      );
+    }
+  });
+
   it("matches only record ids, as the server does", () => {
     for (const path of [
       "/rooms/new",
@@ -84,9 +114,13 @@ describe("the screen map", () => {
     }
   });
 
-  it("maps every SPA URL back to its classic page", () => {
+  it("maps every SPA URL back to its first classic page, including shared destination aliases", () => {
     for (const screen of SCREENS) {
-      expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(sample(screen.classic));
+      const canonical = SCREENS.find((row) => screenPattern(row.spa) === screenPattern(screen.spa));
+
+      expect(classicUrlFor(sample(screen.spa)), screen.spa).toBe(
+        canonical === undefined ? null : sample(canonical.classic),
+      );
     }
 
     expect(classicUrlFor("/app")).toBe("/");

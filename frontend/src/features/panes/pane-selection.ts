@@ -1,10 +1,10 @@
 /**
  * What the right pane shows. A thread lives in the URL (`/r/$roomId/t/$threadId`, or
- * `/r/$roomId/t/new?parent=` while drafting one); the side panes (members, pins, files, threads)
- * live in the per-tab pane store. The URL wins, so a thread opened from the Threads pane sits on
+ * `/r/$roomId/t/new?parent=` while drafting one); a side pane can live in the URL or the per-tab
+ * pane store. The URL wins, so a thread opened from the Threads pane sits on
  * top of it and closing the thread goes back to the list.
  */
-import type { PaneKind } from "./pane-store.ts";
+import type { PaneKind, RoutePaneKind } from "./pane-store.ts";
 
 export type RightPaneView =
   | { readonly kind: "thread"; readonly threadId: number }
@@ -16,6 +16,8 @@ export interface PaneInputs {
   readonly threadId: number | null;
   /** `?parent=` on the new-thread route, when it matched. */
   readonly newThreadParent: number | null;
+  /** A side-pane page in the URL wins over a locally remembered side pane. */
+  readonly routePane?: RoutePaneKind | null;
   readonly openPane: PaneKind | null;
 }
 
@@ -23,6 +25,7 @@ export interface PaneInputs {
 export function selectRightPaneView({
   threadId,
   newThreadParent,
+  routePane = null,
   openPane,
 }: PaneInputs): RightPaneView | null {
   if (threadId !== null) {
@@ -33,7 +36,26 @@ export function selectRightPaneView({
     return { kind: "new-thread", parentId: newThreadParent };
   }
 
-  return openPane === null ? null : { kind: "pane", pane: openPane };
+  const pane = routePane ?? openPane;
+
+  return pane === null ? null : { kind: "pane", pane };
+}
+
+/** The URL of a side pane's classic page mapping, or null for a local-only pane. */
+export function paneRoute(
+  pane: PaneKind,
+): "/r/$roomId/threads" | "/r/$roomId/files" | "/r/$roomId/pins" | null {
+  switch (pane) {
+    case "threads":
+      return "/r/$roomId/threads";
+    case "files":
+      return "/r/$roomId/files";
+    case "pins":
+      return "/r/$roomId/pins";
+    case "members":
+    case "stage":
+      return null;
+  }
 }
 
 /** A stable key per view: a different thread or pane remounts the pane's body. */
