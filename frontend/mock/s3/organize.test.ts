@@ -287,7 +287,7 @@ describe("mock sidebar organisation", () => {
       expect(events).toEqual([]);
     });
 
-    it("organises a hidden room without a row; a move counts shown favourites only", async () => {
+    it("organises a hidden room without a row; a move counts hidden favourites too", async () => {
       const { server } = harness();
 
       const hide = (roomId: number, involvement: string) =>
@@ -309,20 +309,31 @@ describe("mock sidebar organisation", () => {
 
       await expectStatus(server, "POST", `/api/v1/rooms/${ROOM_IDS.general}/favorite`, null, 200);
 
-      // Engineering 0, Maya 1 (hidden), General 2: General to shown index 0 goes before
-      // Engineering, and Maya keeps its place after it.
+      // Engineering 1, Maya 2 (hidden), General 3. As in `move_favorite_to`, the position counts
+      // every other favourite: Engineering to 1 goes after Maya, so it stays ahead of General
+      // in the list the sidebar shows, and everything is renumbered from 0.
       const moved = await expectStatus<FavoriteListType>(
         server,
         "PATCH",
-        `/api/v1/rooms/${ROOM_IDS.general}/favorite`,
-        { position: 0 },
+        `/api/v1/rooms/${ROOM_IDS.engineering}/favorite`,
+        { position: 1 },
         200,
       );
 
-      expect(moved.rows.map((row) => row.room.id)).toEqual([
-        ROOM_IDS.general,
-        ROOM_IDS.engineering,
+      expect(moved.rows.map((row) => [row.room.id, row.membership.favoritePosition])).toEqual([
+        [ROOM_IDS.engineering, 1],
+        [ROOM_IDS.general, 2],
       ]);
+
+      const past = await expectStatus<FavoriteListType>(
+        server,
+        "PATCH",
+        `/api/v1/rooms/${ROOM_IDS.engineering}/favorite`,
+        { position: 2 },
+        200,
+      );
+
+      expect(past.rows.map((row) => row.room.id)).toEqual([ROOM_IDS.general, ROOM_IDS.engineering]);
 
       // Unfavouriting the hidden room succeeds and publishes nothing for it.
       events.length = 0;

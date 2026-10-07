@@ -247,6 +247,46 @@ export function favoriteRows(view: SidebarState): readonly SidebarRow[] {
 }
 
 /**
+ * Where `roomId` sits among the favourites `view` shows, as a favourite slot's index counts it
+ * (the favourites ahead of it); -1 when it isn't one.
+ */
+export function shownFavoriteIndex(view: SidebarState, roomId: number): number {
+  return favoriteRows(view).findIndex((row) => row.room.id === roomId);
+}
+
+/**
+ * The `position` a favourite move sends to put `roomId` at `index` among the other favourites
+ * the sidebar shows: just before the one there now, or just after the last.
+ *
+ * The server counts every favourite, hidden (`invisible`) ones included, which the client has
+ * no rows for (`Membership#move_favorite_to`). A move renumbers every favourite 0, 1, …, so a
+ * hidden one shows as a gap in the shown positions, and the shown position of the favourite to
+ * land before is its place in the full list. Until the next move an unstarred favourite leaves a
+ * gap too, which this reads as a hidden one: the room then lands a little late, and the caller
+ * moves it again from the renumbered positions the reply brings.
+ */
+export function serverFavoritePosition(view: SidebarState, roomId: number, index: number): number {
+  const own = view.rows[roomId]?.membership.favoritePosition ?? Number.POSITIVE_INFINITY;
+  const others = favoriteRows(view).filter((row) => row.room.id !== roomId);
+  const anchor = others[Math.min(Math.max(index, 0), others.length)];
+  const last = others.at(-1);
+
+  // The anchor's place among every other favourite: its position, less this room's own place
+  // when this room sits ahead of it.
+  const placeOf = (row: SidebarRow) => {
+    const position = row.membership.favoritePosition ?? 0;
+
+    return own < position ? position - 1 : position;
+  };
+
+  if (anchor !== undefined) {
+    return placeOf(anchor);
+  }
+
+  return last === undefined ? 0 : placeOf(last) + 1;
+}
+
+/**
  * The membership fields that put `roomId` in `slot`, as the server will leave them. A favourite
  * move renumbers every favourite 0, 1, … (`Membership#move_favorite_to`), so it touches them all.
  */
@@ -287,10 +327,7 @@ export function isInSlot(view: SidebarState, row: SidebarRow, slot: RoomSlot): b
 
   switch (slot.kind) {
     case "favorite":
-      return (
-        favoritePosition !== null &&
-        favoriteRows(view).findIndex((favorite) => favorite.room.id === row.room.id) === slot.index
-      );
+      return favoritePosition !== null && shownFavoriteIndex(view, row.room.id) === slot.index;
     case "category":
       return favoritePosition === null && roomCategoryId === slot.categoryId;
     case "channels":

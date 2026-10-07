@@ -19,6 +19,8 @@ import {
   placementPatches,
   type RoomSlot,
   type SidebarOverlay,
+  serverFavoritePosition,
+  shownFavoriteIndex,
 } from "../store/organize.ts";
 import { mutations, store } from "../store/store.ts";
 
@@ -93,6 +95,35 @@ function categoryAfter(slot: RoomSlot, current: number | null): number | null {
   }
 }
 
+/** One favourite move from the positions the store has; whether the room ended up at `index`. */
+const moveFavoriteOnce = Effect.fn("organize.moveFavoriteOnce")(function* (
+  roomId: number,
+  index: number,
+) {
+  const position = serverFavoritePosition(store.getState().sidebar, roomId, index);
+
+  yield* landRows((yield* api.moveFavorite(roomId, position)).rows);
+
+  return shownFavoriteIndex(store.getState().sidebar, roomId) === index;
+});
+
+/**
+ * Moves a favourite to `index` among the favourites the sidebar shows. The server's position
+ * counts hidden favourites too (`serverFavoritePosition` reads them from gaps); when a gap was an
+ * unstarred favourite instead, the room lands late, and one more move from the renumbered
+ * positions in the reply puts it right.
+ */
+const moveFavoriteTo = Effect.fn("organize.moveFavoriteTo")(function* (
+  roomId: number,
+  index: number,
+) {
+  const landed = yield* moveFavoriteOnce(roomId, index);
+
+  if (!landed) {
+    yield* moveFavoriteOnce(roomId, index);
+  }
+});
+
 /** The calls that take a room from where the server has it to `slot`. */
 const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
   roomId: number,
@@ -117,7 +148,7 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
     // A new favourite lands at the end, which may already be where it was dropped.
     if (favorite || slot.index < others.length) {
-      yield* landRows((yield* api.moveFavorite(roomId, slot.index)).rows);
+      yield* moveFavoriteTo(roomId, Math.min(slot.index, others.length));
     }
 
     return;

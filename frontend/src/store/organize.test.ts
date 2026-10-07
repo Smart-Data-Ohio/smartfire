@@ -10,6 +10,7 @@ import {
   placementPatches,
   removeCategory,
   type SidebarOverlay,
+  serverFavoritePosition,
   setMembership,
 } from "./organize.ts";
 import { applyEvents, loadSidebar, setRoomDetail } from "./reducers.ts";
@@ -141,5 +142,27 @@ describe("sidebar organisation reducers", () => {
     expect(rows[2] && isInSlot(view, rows[2], { kind: "category", categoryId: 1 })).toBe(true);
     expect(rows[1] && isInSlot(view, rows[1], { kind: "channels" })).toBe(true);
     expect(rows[1] && isInSlot(view, rows[1], { kind: "category", categoryId: 1 })).toBe(false);
+  });
+
+  it("counts hidden favourites, read from gaps, in the position a favourite move sends", () => {
+    // Shown: mine 0, alpha 1, beta 3; position 2 is a hidden favourite the client has no row for.
+    const sidebar = loadSidebar(initialState, {
+      ...sidebarFixture([
+        withMembership(sidebarRowFixture(1, "mine"), { favoritePosition: 0 }),
+        withMembership(sidebarRowFixture(2, "alpha"), { favoritePosition: 1 }),
+        withMembership(sidebarRowFixture(3, "beta"), { favoritePosition: 3 }),
+        withMembership(sidebarRowFixture(4, "late"), { favoritePosition: 4 }),
+      ]),
+      categories: [],
+    }).sidebar;
+
+    // Before beta: past the hidden one, less mine's own place ahead of it.
+    expect(serverFavoritePosition(sidebar, 1, 1)).toBe(2);
+    // After the last shown one.
+    expect(serverFavoritePosition(sidebar, 1, 3)).toBe(4);
+    expect(serverFavoritePosition(sidebar, 1, 99)).toBe(4);
+    // From the end to the top, and to just before beta.
+    expect(serverFavoritePosition(sidebar, 4, 0)).toBe(0);
+    expect(serverFavoritePosition(sidebar, 4, 2)).toBe(3);
   });
 });
