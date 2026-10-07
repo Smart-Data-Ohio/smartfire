@@ -726,7 +726,7 @@ async fn the_ledger_is_for_managers_and_gates_what_a_room_outsider_reads() {
         2,
     )
     .await;
-    let roomless = ledger_entry(&a, "slash_command", None, None, json!({}), 3).await;
+    let roomless = ledger_entry(&a, "fizzy_action_completed", None, None, json!({}), 3).await;
 
     // David owns it and is in every room: nothing is gated for him.
     let mut david = a.sign_in(DAVID).await;
@@ -847,4 +847,240 @@ async fn the_ledger_is_for_managers_and_gates_what_a_room_outsider_reads() {
     );
     let response = kevin.send(get(&format!("{path}?before=garbage"))).await;
     assert_eq!(validation_fields(&response), vec!["before".to_string()]);
+}
+
+#[tokio::test]
+async fn deleting_a_private_room_keeps_its_ledger_text_hidden_from_an_outside_owner() {
+    use campfire_db::Room;
+    use campfire_db::models::room_delete;
+
+    let a = app(true)
+        .await
+        .expect("the frozen default seed is required")
+        .without_job_runner()
+        .await;
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE agents SET owner_id = ? WHERE id = ?",
+                [KEVIN, AGENT],
+            )?;
+            assert!(Room::find(tx.conn(), ALL_TALK)?.closed());
+            assert!(
+                campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, KEVIN)?
+                    .is_none()
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let handoff = ledger_entry(
+        &a,
+        "work_handed_off",
+        Some(ALL_TALK),
+        Some(BENDERS_MESSAGE),
+        json!({"handoff": {"summary": "Private handoff"}}),
+        1,
+    )
+    .await;
+    let github = ledger_entry(
+        &a,
+        "github_action_completed",
+        Some(ALL_TALK),
+        None,
+        json!({"action": "comment", "status": "completed", "message": "Private result"}),
+        2,
+    )
+    .await;
+    let roomless = ledger_entry(
+        &a,
+        "fizzy_action_completed",
+        None,
+        None,
+        json!({"action": "comment", "status": "completed", "message": "Roomless result"}),
+        3,
+    )
+    .await;
+    // These types allow optional rooms at creation, but no column records whether one was
+    // deleted. Even a genuinely roomless instance follows the conservative gate.
+    let roomless_github = ledger_entry(
+        &a,
+        "github_action_completed",
+        None,
+        None,
+        json!({"action": "comment", "status": "completed", "message": "Ambiguous result"}),
+        4,
+    )
+    .await;
+    let roomless_approval = ledger_entry(&a, "approval_decided", None, None, json!({}), 5).await;
+    let path = format!("/api/v1/agents/{AGENT}/events");
+    let mut owner = a.sign_in(KEVIN).await;
+    let find = |page: &api::AgentLedgerPage, id: i64| {
+        page.events
+            .iter()
+            .find(|event| event.id == id)
+            .cloned()
+            .unwrap_or_else(|| panic!("entry {id}"))
+    };
+    let assert_hidden = |page: &api::AgentLedgerPage, room_id| {
+        let entry = find(page, handoff);
+        assert_eq!(entry.room_id, room_id);
+        assert_eq!(
+            (
+                entry.room_name,
+                entry.detail,
+                entry.handoff_summary,
+                entry.content
+            ),
+            (None, None, None, None)
+        );
+        let entry = find(page, github);
+        assert_eq!(entry.room_id, room_id);
+        assert_eq!(
+            (entry.room_name, entry.detail, entry.content),
+            (None, None, None)
+        );
+        let result = entry
+            .external
+            .expect("the result's non-private fields remain");
+        assert_eq!(result.action.as_deref(), Some("comment"));
+        assert_eq!(result.status.as_deref(), Some("completed"));
+        assert_eq!(result.message, None);
+    };
+    let before: api::AgentLedgerPage = parse(&owner.send(get(&path)).await);
+    assert_hidden(&before, Some(ALL_TALK));
+
+    // Use the real asynchronous deletion lifecycle, including the final ledger unlink.
+    a.db()
+        .write(|tx| {
+            room_delete::begin_destroy(tx, &Room::find(tx.conn(), ALL_TALK)?, &Default::default())
+        })
+        .await
+        .unwrap();
+    room_delete::perform_with_config(a.db(), ALL_TALK, Default::default())
+        .await
+        .unwrap();
+    assert!(
+        a.db()
+            .read(|conn| Room::find_by_id(conn, ALL_TALK))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let after: api::AgentLedgerPage = parse(&owner.send(get(&path)).await);
+    assert_hidden(&after, None);
+    let entry = find(&after, roomless);
+    assert_eq!(entry.room_id, None);
+    assert_eq!(entry.detail.as_deref(), Some("Room detail"));
+    assert_eq!(
+        entry.external.unwrap().message.as_deref(),
+        Some("Roomless result")
+    );
+    let ambiguous = find(&after, roomless_github);
+    assert_eq!(ambiguous.detail, None);
+    assert_eq!(ambiguous.external.unwrap().message, None);
+    assert_eq!(find(&after, roomless_approval).detail, None);
+
+    let mut administrator = a.sign_in(DAVID).await;
+    let page: api::AgentLedgerPage = parse(&administrator.send(get(&path)).await);
+    let entry = find(&page, handoff);
+    assert_eq!(entry.room_id, None);
+    assert_eq!(entry.detail.as_deref(), Some("Room detail"));
+    assert_eq!(entry.handoff_summary.as_deref(), Some("Private handoff"));
+    let entry = find(&page, github);
+    assert_eq!(entry.detail.as_deref(), Some("Room detail"));
+    assert_eq!(
+        entry.external.unwrap().message.as_deref(),
+        Some("Private result")
+    );
+    assert_eq!(
+        find(&page, roomless_approval).detail.as_deref(),
+        Some("Room detail")
+    );
+}
+
+#[tokio::test]
+async fn the_ledger_pages_past_unknown_types_without_losing_timestamp_ties() {
+    let a = app(true)
+        .await
+        .expect("the frozen default seed is required")
+        .without_job_runner()
+        .await;
+    let (expected, unknown) = a
+        .db()
+        .write(|tx| {
+            tx.conn().execute("DELETE FROM agent_events WHERE agent_id = ?", [AGENT])?;
+            // The newest 125 rows are unknown, followed by 110 recognised rows. Groups of
+            // seven equal timestamps straddle both the type boundary and 50-row page cuts.
+            let now = tx.now().as_second();
+            for index in (0..235).rev() {
+                let at = campfire_db::Timestamp::from_second(now - index / 7);
+                let event_type = if index < 125 { "future_unknown" } else { "work_assigned" };
+                tx.conn().execute(
+                    "INSERT INTO agent_events (agent_id, room_id, event_type, outcome, created_at) VALUES (?, ?, ?, 'delivered', ?)",
+                    rusqlite::params![AGENT, ARCHIVE, event_type, at],
+                )?;
+            }
+            let mut rows = tx.conn().prepare(
+                "SELECT id, event_type, created_at FROM agent_events WHERE agent_id = ? ORDER BY created_at DESC, id DESC",
+            )?;
+            let rows = rows
+                .query_map([AGENT], |row| {
+                    Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, campfire_db::Timestamp>(2)?))
+                })?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            assert_eq!(rows[124].2, rows[125].2, "a tie across the type boundary");
+            for boundary in [50, 100, 150, 200] {
+                assert_eq!(rows[boundary - 1].2, rows[boundary].2, "a tie across page {boundary}");
+            }
+            let expected = rows.iter().filter(|row| row.1 == "work_assigned").map(|row| row.0).collect::<Vec<_>>();
+            let unknown = rows.iter().filter(|row| row.1 == "future_unknown").map(|row| row.0).collect::<std::collections::BTreeSet<_>>();
+            Ok((expected, unknown))
+        })
+        .await
+        .unwrap();
+    assert_eq!((expected.len(), unknown.len()), (110, 125));
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/agents/{AGENT}/events");
+    let mut next = None;
+    let mut cursors = std::collections::BTreeSet::new();
+    let mut events = Vec::new();
+    let mut lengths = Vec::new();
+    loop {
+        let url = next
+            .as_ref()
+            .map_or_else(|| path.clone(), |cursor| format!("{path}?before={cursor}"));
+        let reply = david.send(get(&url)).await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let page: api::AgentLedgerPage = parse(&reply);
+        lengths.push(page.events.len());
+        for event in &page.events {
+            assert_eq!(event.event_type, api::AgentLedgerEventType::WorkAssigned);
+            assert!(!unknown.contains(&event.id));
+        }
+        events.extend(page.events);
+        next = page.next_cursor;
+        match &next {
+            Some(cursor) => assert!(cursors.insert(cursor.clone()), "a page cursor repeated"),
+            None => break,
+        }
+        assert!(lengths.len() < 10, "paging must terminate");
+    }
+    assert_eq!(lengths, vec![0, 0, 25, 50, 35]);
+    assert_eq!(next, None, "the final page has no next cursor");
+    let ids = events.iter().map(|event| event.id).collect::<Vec<_>>();
+    assert_eq!(
+        ids, expected,
+        "every recognised entry appears once, in database order"
+    );
+    assert_eq!(
+        ids.iter().collect::<std::collections::BTreeSet<_>>().len(),
+        ids.len()
+    );
+    assert!(
+        events
+            .windows(2)
+            .all(|pair| { (&pair[0].created_at, pair[0].id) > (&pair[1].created_at, pair[1].id) }),
+        "created_at DESC, id DESC across every page"
+    );
 }

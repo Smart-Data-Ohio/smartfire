@@ -573,6 +573,36 @@ fn metadata_text(value: &serde_json::Value) -> String {
     }
 }
 
+/// Only a type whose writers never attach a room may expose NULL-room text to an owner.
+/// `room_delete::finish_destroy` nulls the room link without preserving its former value.
+fn ledger_event_is_always_roomless(event_type: api::AgentLedgerEventType) -> bool {
+    match event_type {
+        // app/src/integrations/fizzy/agent_job.rs::claim never inserts a room_id.
+        api::AgentLedgerEventType::FizzyActionCompleted => true,
+        // db/src/models/agent_approval.rs::decide and
+        // app/src/integrations/github/agent_actions.rs::insert_event copy the approval's
+        // optional room_id. NULL cannot distinguish a roomless approval from a deleted room.
+        api::AgentLedgerEventType::ApprovalDecided
+        | api::AgentLedgerEventType::GithubActionCompleted => false,
+        // db/src/models/agent_delivery.rs::enqueue_for_message always uses the message's room;
+        // ::perform_delivery copies that room for revoked/rate/hop suppression. Hop suppression is
+        // also created with the thread's room by agent_work_events.rs::record.
+        api::AgentLedgerEventType::Mention
+        | api::AgentLedgerEventType::DirectMessage
+        | api::AgentLedgerEventType::Reply
+        | api::AgentLedgerEventType::Posted
+        | api::AgentLedgerEventType::DeliverySuppressedRateLimit
+        | api::AgentLedgerEventType::DeliverySuppressedHopLimit
+        | api::AgentLedgerEventType::DeliverySuppressedRevoked => false,
+        // db/src/models/agent_work_events.rs::{record,record_deleted} use the thread's room.
+        api::AgentLedgerEventType::WorkAssigned
+        | api::AgentLedgerEventType::WorkUnassigned
+        | api::AgentLedgerEventType::WorkHandedOff => false,
+        // db/src/models/agent_slash_command.rs::invoke uses the command context's room.
+        api::AgentLedgerEventType::SlashCommand => false,
+    }
+}
+
 /// What one viewer may read of an agent's ledger entries, per room.
 struct LedgerGates<'a> {
     conn: &'a Connection,
@@ -637,9 +667,11 @@ fn ledger_event(
         .and_then(|outcome| wire::<api::AgentDeliveryOutcome>(outcome).ok());
     let webhook_status = wire::<api::AgentWebhookStatus>(&event.webhook_status)
         .unwrap_or(api::AgentWebhookStatus::None);
-    // Entries with no room are never gated.
     let (room_name, open) = match event.room_id {
-        None => (None, true),
+        None => (
+            None,
+            gates.viewer.is_administrator() || ledger_event_is_always_roomless(event_type),
+        ),
         Some(room_id) => {
             let open = gates.sees_room(room_id)?;
             let name = match gates.room(room_id)? {
@@ -659,7 +691,7 @@ fn ledger_event(
         .transpose()?
         .flatten()
     {
-        Some(message) if gates.reads_content(message.room_id)? => {
+        Some(message) if open && gates.reads_content(message.room_id)? => {
             Some(cut(&message.plain_text_body(gates.conn, rich_text)?))
         }
         _ => None,

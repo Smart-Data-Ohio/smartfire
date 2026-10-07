@@ -421,6 +421,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         None::<Vec<campfire_db::WorkThreadEvent>>,
     )));
     let capture = attempted.clone();
+    let published = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let publication = published.clone();
     let result = c
         .app()
         .db
@@ -535,15 +537,24 @@ pub async fn update(c: &mut Ctx) -> Result {
             *capture.lock().expect("thread attempt") =
                 (thread.clone(), pending_name, pending_tags, history);
             outcome.map(|()| {
-                // A work change already publishes `thread.updated` from the model.
-                let published = thread.work_changed_from(&before);
-                (thread, published)
+                let work_changed = thread.work_changed_from(&before);
+                // Tag assignment can change work in an earlier after-commit callback. Check
+                // after those callbacks, on the writer, before another queued write can run.
+                tx.after_commit(move |tx| {
+                    let current = ChannelThread::find(tx.conn(), thread_id)?;
+                    publication.store(
+                        work_changed || current.work_changed_from(&before),
+                        std::sync::atomic::Ordering::Relaxed,
+                    );
+                    Ok(())
+                });
+                thread
             })
         })
         .await;
     let (attempted, pending_name, pending_tags, history) =
         attempted.lock().expect("thread attempt").clone();
-    let (thread, published) = match result {
+    let thread = match result {
         Ok(updated) => updated,
         Err(campfire_db::Error::RecordNotFound(_)) => return forbidden_update(c, &thread),
         Err(campfire_db::Error::Other(message))
@@ -594,7 +605,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         Err(error) => return write_error(c, Error::internal(error)),
     };
-    if !published {
+    if !published.load(std::sync::atomic::Ordering::Relaxed) {
         c.app().broadcasts.thread_updated(thread_id);
     }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::HTML {

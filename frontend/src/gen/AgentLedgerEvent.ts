@@ -15,9 +15,12 @@ outcome: AgentDeliveryOutcome | null, createdAt: string, roomId: number | null,
 /**
  * The viewer-relative room name; `null` when `roomId` is, when the room is gone, and when
  * the viewer is neither an administrator nor a member of the room ("a room you're not in").
- * This membership gate also covers `detail`, `external.message` and `handoffSummary`, and
- * is **new**: the classic page shows them to the owner whatever the room. An entry with no
- * room is never gated.
+ * This membership gate also covers `detail`, `external.message`, `handoffSummary` and
+ * `content`, and is **new**: the classic page shows the first three to the owner whatever
+ * the room. Deleting a room clears `roomId` but keeps this gate: only administrators see
+ * that text. A missing room also gates types created both with and without rooms
+ * (`approval_decided`, `github_action_completed`), since deletion is indistinguishable.
+ * Only `fizzy_action_completed`, whose writer never sets a room, is ungated without one.
  */
 roomName: string | null, 
 /**
@@ -57,7 +60,8 @@ external: AgentExternalResult | null,
 handoffSummary: string | null, 
 /**
  * The message's plain text, cut as `handoffSummary` is, only when the agent is a member of
- * its room with `read_messages` there and the viewer is an administrator or a member of
- * that room. `null` otherwise: "Content unavailable" (or no message at all).
+ * its room with `read_messages` there, the viewer is an administrator or a member of
+ * that room, and the entry's room gate permits it. `null` otherwise: "Content unavailable"
+ * (or no message at all).
  */
 content: string | null, };

@@ -12,7 +12,9 @@ use campfire_db::{NewWorkThreadLink, WorkThreadLink};
 use serde_json::json;
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
-use crate::controllers::presenters::test_support::{BENDER, DAVID, JASON, KEVIN, Reply, TestApp};
+use crate::controllers::presenters::test_support::{
+    BENDER, Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp,
+};
 
 /// Bender's agent.
 const AGENT: i64 = 773018776;
@@ -81,6 +83,75 @@ async fn sql(a: &TestApp, statements: &'static [&'static str]) {
 
 fn thread_updated(thread_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| matches!(&event.payload, api::SyncPayload::ThreadUpdated(thread) if thread.id == thread_id)
+}
+
+fn board_topics() -> [String; 2] {
+    // Boards require replies inside a post. Keep marker replies away from the tested post.
+    [format!("room:{BOARD}"), format!("thread:{DONE_POST}")]
+}
+
+/// A later committed message fences publications without depending on a quiet-time timeout.
+async fn no_more_thread_updates(
+    browser: &mut Browser<'_>,
+    sync: &mut Sync,
+    room_id: i64,
+    thread_id: i64,
+    marker: &str,
+) {
+    let path = if room_id == BOARD {
+        assert_ne!(thread_id, DONE_POST, "the marker uses a different post");
+        format!("/rooms/{room_id}/threads/{DONE_POST}/messages")
+    } else {
+        format!("/rooms/{room_id}/messages")
+    };
+    let reply = browser
+        .write(
+            Req::new(Method::POST, &path)
+                .header("accept", "text/vnd.turbo-stream.html")
+                .header("content-type", "application/json")
+                .body(
+                    json!({"message": {"markdown_source": marker, "client_message_id": marker}})
+                        .to_string(),
+                ),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    sync.until(
+        |event| {
+            matches!(&event.payload, api::SyncPayload::MessageCreated(message)
+                if message.room_id == room_id && message.client_message_id == marker)
+        },
+        thread_updated(thread_id),
+    )
+    .await;
+}
+
+/// The existing writer-queue interleaving pattern, without a production pause hook.
+async fn hold_writer(a: &TestApp) -> (std::sync::mpsc::Sender<()>, tokio::task::JoinHandle<()>) {
+    let (entered, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = std::sync::mpsc::channel();
+    let db = a.db().clone();
+    let blocker = tokio::spawn(async move {
+        db.write(move |_| {
+            entered.send(()).unwrap();
+            wait.recv_timeout(Duration::from_secs(10)).unwrap();
+            Ok(())
+        })
+        .await
+        .unwrap();
+    });
+    ready.await.unwrap();
+    (release, blocker)
+}
+
+async fn wait_for_queued_writes(a: &TestApp, count: usize) {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while a.db().queued_writes() < count {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("the competing HTTP writes queued behind the held writer");
 }
 
 #[tokio::test]
@@ -307,6 +378,14 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         thread.work.as_ref().map(|work| work.status),
         Some(api::WorkStatus::Planned)
     );
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "work-start-marker",
+    )
+    .await;
 
     // Kevin owns it now: he may write its result and move it, not reassign it.
     let reply = kevin
@@ -346,6 +425,14 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
         )
         .await;
     assert_eq!(event.topic, format!("room:{DESIGNERS}"));
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "work-result-marker",
+    )
+    .await;
     let reply = kevin
         .write(json_body(Method::PATCH, &path, &json!({"ownerId": JZ})))
         .await;
@@ -419,6 +506,14 @@ async fn work_changes_take_the_classic_checks_and_publish_thread_updated() {
             |_| false,
         )
         .await;
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "work-untrack-marker",
+    )
+    .await;
     server.abort();
 }
 
@@ -463,6 +558,15 @@ async fn a_link_change_publishes_thread_updated() {
         format!("/rooms/{DESIGNERS}/events/{DESIGNERS_EVENT}")
     );
     assert!(links[0].event_starts_at.is_some());
+    let mut david = a.sign_in(DAVID).await;
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "event-link-marker",
+    )
+    .await;
 
     a.db().write(move |tx| link.destroy(tx)).await.unwrap();
     kevins_tab
@@ -474,6 +578,14 @@ async fn a_link_change_publishes_thread_updated() {
             |_| false,
         )
         .await;
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "link-removal-marker",
+    )
+    .await;
     // A pull request link, with its state.
     a.db()
         .write(|tx| {
@@ -511,6 +623,14 @@ async fn a_link_change_publishes_thread_updated() {
         )
     );
     assert!(link.url.starts_with("https://"), "{}", link.url);
+    no_more_thread_updates(
+        &mut david,
+        &mut kevins_tab,
+        DESIGNERS,
+        THREAD,
+        "pull-request-link-marker",
+    )
+    .await;
     server.abort();
 }
 
@@ -609,8 +729,7 @@ async fn a_handoff_takes_the_classic_checks_and_moves_the_owner() {
     assert_eq!(reply.status, StatusCode::NOT_FOUND, "{}", reply.text());
 
     let jason = a.sign_in(JASON).await;
-    let mut jasons_tab =
-        Sync::connect(addr, &jason.cookie_header(), &[format!("room:{BOARD}")]).await;
+    let mut jasons_tab = Sync::connect(addr, &jason.cookie_header(), &board_topics()).await;
     jasons_tab.welcome().await;
     let reply = david
         .write(json_body(
@@ -659,6 +778,14 @@ async fn a_handoff_takes_the_classic_checks_and_moves_the_owner() {
             .map(|owner| owner.id),
         Some(BENDER)
     );
+    no_more_thread_updates(
+        &mut david,
+        &mut jasons_tab,
+        BOARD,
+        PLANNED_POST,
+        "handoff-marker",
+    )
+    .await;
     // Handing it to its owner again names the receiver.
     let reply = david
         .write(json_body(Method::POST, &path, &body(AGENT, "Again")))
@@ -672,7 +799,6 @@ async fn a_handoff_takes_the_classic_checks_and_moves_the_owner() {
 
 #[tokio::test]
 async fn a_classic_thread_update_publishes_thread_updated_once() {
-    use crate::controllers::presenters::test_support::Req;
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
@@ -705,24 +831,361 @@ async fn a_classic_thread_update_publishes_thread_updated_once() {
         assert!(reply.status.is_redirection(), "{form:?}: {}", reply.text());
         kevins_tab.until(thread_updated(THREAD), |_| false).await;
         marker += 1;
-        let body = format!("Marker {marker}");
-        let reply = david
-            .write(
-                Req::new(Method::POST, &format!("/rooms/{DESIGNERS}/messages"))
-                    .header("accept", "text/vnd.turbo-stream.html")
-                    .header("content-type", "application/json")
-                    .body(json!({"message": {"markdown_source": body, "client_message_id": format!("marker-{marker}")}}).to_string()),
-            )
-            .await;
-        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-        kevins_tab
-            .until(
-                super::api_tests::created_in(DESIGNERS),
-                thread_updated(THREAD),
-            )
-            .await;
+        no_more_thread_updates(
+            &mut david,
+            &mut kevins_tab,
+            DESIGNERS,
+            THREAD,
+            &format!("classic-update-marker-{marker}"),
+        )
+        .await;
     }
     server.abort();
+}
+
+#[tokio::test]
+async fn a_tag_only_classic_update_auto_assigns_and_publishes_thread_updated_once() {
+    use campfire_db::{BoardTagAssignment, ChannelThread, NewBoardTagAssignment, NewChannelThread};
+
+    let a = app(true).await.expect("the frozen default seed");
+    let post = a
+        .db()
+        .write(|tx| {
+            BoardTagAssignment::create(
+                tx,
+                NewBoardTagAssignment {
+                    room_id: BOARD,
+                    tag: "release".into(),
+                    assignee_id: JASON,
+                    created_by_id: DAVID,
+                },
+            )?;
+            ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: BOARD,
+                    creator_id: DAVID,
+                    name: Some("Unassigned release".into()),
+                    work_status: Some("planned".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(post.work_owner_id, None);
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut tab = Sync::connect(addr, &david.cookie_header(), &board_topics()).await;
+    tab.welcome().await;
+    let reply = david
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/{BOARD}/threads/{}", post.id),
+            )
+            .header("accept", "text/html")
+            .form(&[("thread[tags]", "release")]),
+        )
+        .await;
+    assert!(reply.status.is_redirection(), "{}", reply.text());
+    let event = tab.until(thread_updated(post.id), |_| false).await;
+    let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(
+        thread.work.unwrap().owner.unwrap().id,
+        JASON,
+        "the tag callback committed the assignment"
+    );
+    let stored = a
+        .db()
+        .read(move |conn| ChannelThread::find(conn, post.id))
+        .await
+        .unwrap();
+    assert_eq!(stored.work_owner_id, Some(JASON));
+    no_more_thread_updates(
+        &mut david,
+        &mut tab,
+        BOARD,
+        post.id,
+        "tag-assignment-marker",
+    )
+    .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn agent_token_work_writes_publish_thread_updated_once() {
+    use campfire_db::{Agent, AgentGrant, NewAgent, NewGrant, User};
+
+    let a = app(true).await.expect("the frozen default seed");
+    crate::controllers::agent_http_tests::initialize(&a).await;
+    grant_bender(&a).await;
+    let receiver = a
+        .db()
+        .write(|tx| {
+            let user = User::create_bot(tx, "Release receiver", None)?;
+            tx.conn().execute(
+                "INSERT INTO memberships (room_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?)",
+                rusqlite::params![BOARD, user.id, tx.now(), tx.now()],
+            )?;
+            let agent = Agent::create(
+                tx,
+                NewAgent {
+                    user_id: user.id,
+                    owner_id: Some(DAVID),
+                    ..Default::default()
+                },
+            )?;
+            for capability in ["post_messages", "manage_threads", "read_messages"] {
+                AgentGrant::create(
+                    tx,
+                    NewGrant {
+                        agent_id: agent.id,
+                        room_id: Some(BOARD),
+                        capability: capability.into(),
+                        granted_by_id: DAVID,
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok(agent)
+        })
+        .await
+        .unwrap();
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut tab = Sync::connect(addr, &david.cookie_header(), &board_topics()).await;
+    tab.welcome().await;
+    let authorization = format!("Bearer {}", crate::controllers::agent_http_tests::SECRET);
+    for (index, (method, suffix, body, status)) in [
+        (
+            Method::PATCH,
+            "",
+            json!({"work_status": "in_progress"}),
+            StatusCode::OK,
+        ),
+        (
+            Method::PATCH,
+            "",
+            json!({"run_url": "https://ci.example/runs/agent"}),
+            StatusCode::OK,
+        ),
+        (
+            Method::PUT,
+            "/result",
+            json!({"markdown": "Release **complete**"}),
+            StatusCode::OK,
+        ),
+        (
+            Method::POST,
+            "/handoff",
+            json!({"receiver_agent_id": receiver.id, "summary": "Take over"}),
+            StatusCode::CREATED,
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let reply = a
+            .anonymous()
+            .send(
+                json_body(
+                    method,
+                    &format!("/agents/work/{BLOCKED_POST}{suffix}"),
+                    &body,
+                )
+                .header("authorization", &authorization),
+            )
+            .await;
+        assert_eq!(reply.status, status, "write {index}: {}", reply.text());
+        let event = tab.until(thread_updated(BLOCKED_POST), |_| false).await;
+        let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
+            unreachable!()
+        };
+        let work = thread.work.unwrap();
+        match index {
+            0 => assert_eq!(work.status, api::WorkStatus::InProgress),
+            1 => assert_eq!(
+                work.run_url.as_deref(),
+                Some("https://ci.example/runs/agent")
+            ),
+            2 => {
+                assert!(work.result_updated_at.is_some());
+                let detail: api::ThreadDetail = parse(
+                    &david
+                        .send(get(&format!("/api/v1/threads/{BLOCKED_POST}")))
+                        .await,
+                );
+                assert_eq!(
+                    detail.work.unwrap().result_markdown.as_deref(),
+                    Some("Release **complete**")
+                );
+            }
+            3 => assert_eq!(work.owner.unwrap().id, receiver.user_id),
+            _ => unreachable!(),
+        }
+        no_more_thread_updates(
+            &mut david,
+            &mut tab,
+            BOARD,
+            BLOCKED_POST,
+            &format!("agent-write-marker-{index}"),
+        )
+        .await;
+    }
+    server.abort();
+}
+
+#[tokio::test]
+async fn overlapping_handoffs_commit_once_and_publish_thread_updated_once() {
+    let a = app(true).await.expect("the frozen default seed");
+    grant_bender(&a).await;
+    let (addr, server) = serve(&a).await;
+    let path = format!("/api/v1/threads/{PLANNED_POST}/work/handoff");
+    let body = json!({"receiverAgentId": AGENT, "summary": "Take the release", "links": [], "openQuestions": []});
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    first.authenticity_token().await;
+    second.authenticity_token().await;
+    let mut tab = Sync::connect(addr, &first.cookie_header(), &board_topics()).await;
+    tab.welcome().await;
+    let (accepted, refused) = {
+        let (release, blocker) = hold_writer(&a).await;
+        let request = first.write(json_body(Method::POST, &path, &body));
+        tokio::pin!(request);
+        tokio::select! {
+            _ = &mut request => panic!("the handoff ended while the writer was held"),
+            () = wait_for_queued_writes(&a, 1) => {}
+        }
+        let release = async {
+            wait_for_queued_writes(&a, 2).await;
+            release.send(()).unwrap();
+        };
+        let (accepted, refused, ()) = tokio::join!(
+            request,
+            second.write(json_body(Method::POST, &path, &body)),
+            release,
+        );
+        blocker.await.unwrap();
+        (accepted, refused)
+    };
+    assert_eq!(accepted.status, StatusCode::CREATED, "{}", accepted.text());
+    assert_eq!(
+        validation_fields(&refused),
+        vec!["receiverAgentId".to_string()]
+    );
+    let api::ApiError::Validation { message, .. } = envelope(&refused) else {
+        unreachable!()
+    };
+    assert_eq!(message, "Receiver is already the owner of this work");
+    let committed = a
+        .db()
+        .read(|conn| Ok(campfire_db::WorkHandoff::for_thread(conn, PLANNED_POST)?.len()))
+        .await
+        .unwrap();
+    assert_eq!(committed, 1);
+    let event = tab.until(thread_updated(PLANNED_POST), |_| false).await;
+    let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
+        unreachable!()
+    };
+    assert_eq!(thread.work.unwrap().owner.unwrap().id, BENDER);
+    no_more_thread_updates(
+        &mut first,
+        &mut tab,
+        BOARD,
+        PLANNED_POST,
+        "concurrent-handoff-marker",
+    )
+    .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
+    // Exercise both queue orders: a later work write cannot suppress the classic rename's
+    // publication, and a rename cannot overwrite the work columns from an earlier API write.
+    for classic_first in [true, false] {
+        let a = app(true).await.expect("the frozen default seed");
+        let (addr, server) = serve(&a).await;
+        let mut classic = a.sign_in(DAVID).await;
+        let mut spa = a.sign_in(DAVID).await;
+        classic.authenticity_token().await;
+        spa.authenticity_token().await;
+        let mut tab = Sync::connect(
+            addr,
+            &classic.cookie_header(),
+            &[format!("room:{DESIGNERS}")],
+        )
+        .await;
+        tab.welcome().await;
+        let (renamed, changed) = {
+            let (release, blocker) = hold_writer(&a).await;
+            let classic_request = classic.write(
+                Req::new(
+                    Method::PATCH,
+                    &format!("/rooms/{DESIGNERS}/threads/{THREAD}"),
+                )
+                .header("accept", "text/html")
+                .form(&[("thread[name]", "Concurrent release")]),
+            );
+            let work_request = spa.write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/threads/{THREAD}/work"),
+                &json!({"status": "in_progress", "ownerId": KEVIN}),
+            ));
+            tokio::pin!(classic_request, work_request);
+            if classic_first {
+                tokio::select! {
+                    _ = &mut classic_request => panic!("the classic edit ended while the writer was held"),
+                    () = wait_for_queued_writes(&a, 1) => {}
+                }
+            } else {
+                tokio::select! {
+                    _ = &mut work_request => panic!("the API edit ended while the writer was held"),
+                    () = wait_for_queued_writes(&a, 1) => {}
+                }
+            }
+            let release = async {
+                wait_for_queued_writes(&a, 2).await;
+                release.send(()).unwrap();
+            };
+            let (renamed, changed, ()) = tokio::join!(classic_request, work_request, release);
+            blocker.await.unwrap();
+            (renamed, changed)
+        };
+        assert!(renamed.status.is_redirection(), "{}", renamed.text());
+        assert_eq!(changed.status, StatusCode::OK, "{}", changed.text());
+        tab.until(thread_updated(THREAD), |_| false).await;
+        let last = tab.until(thread_updated(THREAD), |_| false).await;
+        let api::SyncPayload::ThreadUpdated(thread) = last.payload else {
+            unreachable!()
+        };
+        assert_eq!(thread.name, "Concurrent release");
+        let work = thread.work.unwrap();
+        assert_eq!(work.status, api::WorkStatus::InProgress);
+        assert_eq!(work.owner.unwrap().id, KEVIN);
+        let detail: api::ThreadDetail = parse(
+            &classic
+                .send(get(&format!("/api/v1/threads/{THREAD}")))
+                .await,
+        );
+        assert_eq!(detail.thread.name, "Concurrent release");
+        assert_eq!(
+            detail.thread.work.unwrap().status,
+            api::WorkStatus::InProgress
+        );
+        no_more_thread_updates(
+            &mut classic,
+            &mut tab,
+            DESIGNERS,
+            THREAD,
+            &format!("concurrent-rename-marker-{classic_first}"),
+        )
+        .await;
+        server.abort();
+    }
 }
 
 /// The classic frames of a board post's work change through `channel_threads#update`: its rows
@@ -751,8 +1214,7 @@ async fn classic_board_frames(spa: bool) -> Option<Vec<(String, String)>> {
     david.authenticity_token().await;
     let (sync, server) = if spa {
         let (addr, server) = serve(&a).await;
-        let mut sync =
-            Sync::connect(addr, &david.cookie_header(), &[format!("room:{BOARD}")]).await;
+        let mut sync = Sync::connect(addr, &david.cookie_header(), &board_topics()).await;
         sync.welcome().await;
         (Some(sync), Some(server))
     } else {
@@ -801,12 +1263,20 @@ async fn classic_board_frames(spa: bool) -> Option<Vec<(String, String)>> {
     }
     if let Some(mut sync) = sync {
         // The post's new status, then its link: each a `thread.updated`.
-        sync.until(
-            |event| {
-                matches!(&event.payload, api::SyncPayload::ThreadUpdated(thread)
-                    if thread.id == PLANNED_POST && thread.work.as_ref().is_some_and(|work| work.status == api::WorkStatus::Blocked && work.links.len() == 1))
-            },
-            |_| false,
+        sync.until(thread_updated(PLANNED_POST), |_| false).await;
+        let event = sync.until(thread_updated(PLANNED_POST), |_| false).await;
+        let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
+            unreachable!()
+        };
+        let work = thread.work.unwrap();
+        assert_eq!(work.status, api::WorkStatus::Blocked);
+        assert_eq!(work.links.len(), 1);
+        no_more_thread_updates(
+            &mut david,
+            &mut sync,
+            BOARD,
+            PLANNED_POST,
+            "board-frame-marker",
         )
         .await;
     }
