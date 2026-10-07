@@ -125,6 +125,27 @@ test("deciding by keyboard in All keeps focus on the request", async ({ page }) 
   await expect(deploy.locator(".approval-summary")).toBeFocused();
 });
 
+test("a decision made elsewhere keeps focus on the request it removed buttons from", async ({
+  page,
+}) => {
+  const welcomed = syncWelcomed(page);
+
+  await openSection(page, `agents/${EMBER}/approvals`);
+
+  const merge = card(page, "Merge PR #318");
+
+  await merge.getByRole("button", { name: "Approve" }).focus();
+  await welcomed;
+  await control(page.request, "approval-settle", {
+    id: 99,
+    status: "denied",
+    deciderId: USER_IDS.priya,
+  });
+  await expect(merge.getByRole("button", { name: "Approve" })).toHaveCount(0);
+  await expect(merge).toContainText("Denied by Priya Raman");
+  await expect(merge.locator(".approval-summary")).toBeFocused();
+});
+
 test("the approvals list pages past the first fifty", async ({ page }) => {
   const second = page.waitForResponse(
     (response) => response.url().includes("/approvals?") && response.url().includes("before="),

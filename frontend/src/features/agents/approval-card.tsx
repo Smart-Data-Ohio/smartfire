@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
+import { type FocusEvent, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import type { AgentApproval } from "../../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../../gen/ApprovalDecision.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -129,18 +129,15 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
   const adminOnly = pending ? adminOnlyText(approval) : null;
   const decides = pending && (approval.approvable || approval.deniable);
 
-  // Deciding removes the buttons while the card stays (as in the All tab): focus that was on
-  // them moves to the summary rather than falling to the page.
-  const cardRef = useRef<HTMLElement>(null);
+  // Deciding removes the buttons while the card stays (as in the All tab), whoever decides:
+  // focus that was in the card moves to the summary rather than falling to the page.
   const summaryRef = useRef<HTMLHeadingElement>(null);
-  const refocus = useRef(false);
+  const focusWithin = useRef(false);
 
   useLayoutEffect(() => {
-    if (decides || !refocus.current) {
+    if (decides || !focusWithin.current) {
       return;
     }
-
-    refocus.current = false;
 
     const active = document.activeElement;
 
@@ -149,9 +146,22 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
     }
   }, [decides]);
 
-  const decideHere: ApprovalCardProps["onDecide"] = (decided, decision, note) => {
-    refocus.current = cardRef.current?.contains(document.activeElement) ?? false;
-    onDecide(decided, decision, note);
+  const onFocus = () => {
+    focusWithin.current = true;
+  };
+
+  // Focus leaving for another element, or for nowhere from a control still on the page (a click
+  // on the background), leaves the card; a control removed while focused doesn't.
+  const onBlur = (event: FocusEvent<HTMLElement>) => {
+    const next = event.relatedTarget;
+
+    if (
+      next instanceof Node
+        ? !event.currentTarget.contains(next)
+        : event.target instanceof Node && event.target.isConnected
+    ) {
+      focusWithin.current = false;
+    }
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -173,7 +183,8 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
       <div className="approval-card-pad">
         <Beam active={beamed && pending} radius={10}>
           <article
-            ref={cardRef}
+            onFocus={onFocus}
+            onBlur={onBlur}
             className="approval-card"
             data-status={status}
             aria-label={`${approvalStatusLabel(status)}: ${approval.summary}`}
@@ -208,7 +219,7 @@ export function ApprovalCard({ approval, now, motion, beamed, onDecide }: Approv
             {approval.decisionNote === null ? null : (
               <blockquote className="approval-note">{approval.decisionNote}</blockquote>
             )}
-            {decides ? <Decide approval={approval} onDecide={decideHere} /> : null}
+            {decides ? <Decide approval={approval} onDecide={onDecide} /> : null}
             {adminOnly === null ? null : <p className="approval-admin-only">{adminOnly}</p>}
           </article>
         </Beam>
