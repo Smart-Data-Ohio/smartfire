@@ -8,14 +8,14 @@ use std::time::{Duration, Instant};
 
 use super::{Error, Image, Path, Result, VipsImage, c_char, c_int, c_void, g_object_unref};
 
-#[cfg(feature = "test-support")]
-type Stall = (StallPhase, Arc<AtomicBool>);
+#[cfg(any(test, feature = "test-support"))]
+type Stall = (StallPhase, Arc<AtomicBool>, Option<Arc<AtomicBool>>);
 
 #[derive(Clone)]
 pub struct Cancellation {
     deadline: Instant,
     cancelled: Arc<AtomicBool>,
-    #[cfg(feature = "test-support")]
+    #[cfg(any(test, feature = "test-support"))]
     stall: Arc<Mutex<Option<Stall>>>,
 }
 
@@ -24,7 +24,7 @@ impl Cancellation {
         Self {
             deadline: Instant::now() + timeout,
             cancelled: Arc::new(AtomicBool::new(false)),
-            #[cfg(feature = "test-support")]
+            #[cfg(any(test, feature = "test-support"))]
             stall: Arc::new(Mutex::new(None)),
         }
     }
@@ -45,31 +45,40 @@ impl Cancellation {
         }
     }
 
-    #[cfg(feature = "test-support")]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn stall_at(&self, phase: StallPhase, reached: Arc<AtomicBool>) {
-        *self.stall.lock().unwrap() = Some((phase, reached));
+        *self.stall.lock().unwrap() = Some((phase, reached, None));
     }
 
     #[cfg(feature = "test-support")]
+    pub(crate) fn block_reads(&self, reached: Arc<AtomicBool>, released: Arc<AtomicBool>) {
+        *self.stall.lock().unwrap() = Some((StallPhase::Header, reached, Some(released)));
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
     fn stall(&self, phase: StallPhase) {
         let held = self.stall.lock().ok().and_then(|stall| stall.clone());
-        if let Some((at, reached)) = held
+        if let Some((at, reached, released)) = held
             && at == phase
         {
             reached.store(true, Ordering::Relaxed);
-            // This never finishes without the same cancellation check used by real work.
-            while !self.is_cancelled() {
+            // A blocked codec need not observe cancellation; the test releases it explicitly.
+            while released.as_ref().map_or_else(
+                || !self.is_cancelled(),
+                |released| !released.load(Ordering::Relaxed),
+            ) {
                 std::thread::sleep(Duration::from_millis(1));
             }
         }
     }
 }
 
-#[cfg(feature = "test-support")]
+#[cfg(any(test, feature = "test-support"))]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum StallPhase {
     Header,
     Evaluation,
+    Progress,
 }
 
 #[link(name = "vips")]
@@ -96,14 +105,18 @@ impl Image {
             // libvips sends progress on the most downstream image with progress enabled.
             // Each image owns its token until GObject releases the signal closure, including
             // when the operation cache retains the pipeline after Rust's Image is dropped.
-            for signal in [c"preeval", c"eval"] {
+            type EvalCallback = unsafe extern "C" fn(*mut VipsImage, *mut c_void, *mut c_void);
+            for (signal, handler) in [
+                (c"preeval", preeval as EvalCallback),
+                (c"eval", eval as EvalCallback),
+            ] {
                 g_signal_connect_data(
                     self.0.cast(),
                     signal.as_ptr(),
                     std::mem::transmute::<
                         unsafe extern "C" fn(*mut VipsImage, *mut c_void, *mut c_void),
                         unsafe extern "C" fn(),
-                    >(eval),
+                    >(handler),
                     Box::into_raw(Box::new(cancel.clone())).cast(),
                     destroy::<Cancellation>,
                     0,
@@ -114,9 +127,33 @@ impl Image {
     }
 }
 
-unsafe extern "C" fn eval(image: *mut VipsImage, _: *mut c_void, data: *mut c_void) {
+// The VipsProgress prefix through npels (vips/image.h), used only by progress test hooks.
+#[cfg(any(test, feature = "test-support"))]
+#[repr(C)]
+struct Progress {
+    _image: *mut VipsImage,
+    _run: c_int,
+    _eta: c_int,
+    _total_pixels: i64,
+    evaluated_pixels: i64,
+}
+
+unsafe extern "C" fn preeval(image: *mut VipsImage, _: *mut c_void, data: *mut c_void) {
     let cancel = unsafe { &*data.cast::<Cancellation>() };
-    #[cfg(feature = "test-support")]
+    cancel_evaluation(image, cancel);
+}
+
+unsafe extern "C" fn eval(image: *mut VipsImage, _progress: *mut c_void, data: *mut c_void) {
+    let cancel = unsafe { &*data.cast::<Cancellation>() };
+    #[cfg(any(test, feature = "test-support"))]
+    if !_progress.is_null() && unsafe { (*_progress.cast::<Progress>()).evaluated_pixels } > 0 {
+        cancel.stall(StallPhase::Progress);
+    }
+    cancel_evaluation(image, cancel);
+}
+
+fn cancel_evaluation(image: *mut VipsImage, cancel: &Cancellation) {
+    #[cfg(any(test, feature = "test-support"))]
     cancel.stall(StallPhase::Evaluation);
     if cancel.is_cancelled() {
         unsafe { vips_image_set_kill(image, 1) };
@@ -188,7 +225,7 @@ unsafe extern "C" fn read(
     data: *mut c_void,
 ) -> i64 {
     let input = unsafe { &*data.cast::<Arc<Input>>() };
-    #[cfg(feature = "test-support")]
+    #[cfg(any(test, feature = "test-support"))]
     input.cancel.stall(StallPhase::Header);
     if input.cancel.is_cancelled() || length < 0 || buffer.is_null() {
         return -1;
@@ -233,14 +270,11 @@ unsafe extern "C" fn destroy<T>(data: *mut c_void, _: *mut c_void) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn eval_callback_kills_pixel_evaluation() {
-        // Enough scanlines for repeated progress callbacks: a tiny image can finish before
-        // the sink checks the kill flag set by its final progress notification.
+    fn memory_image() -> Image {
         super::super::init();
         let pixels = vec![0.0; 2048 * 2048];
         // A memory image has no cancellable source; only the eval signal can stop this write.
-        let image = Image::wrap(unsafe {
+        Image::wrap(unsafe {
             super::super::vips_image_new_matrix_from_array(
                 2048,
                 2048,
@@ -248,11 +282,51 @@ mod tests {
                 pixels.len() as c_int,
             )
         })
-        .unwrap();
+        .unwrap()
+    }
+
+    #[test]
+    fn eval_callback_kills_pixel_evaluation() {
+        // Enough scanlines for repeated progress callbacks: a tiny image can finish before
+        // the sink checks the kill flag set by its final progress notification.
+        let image = memory_image();
         let cancel = Cancellation::new(Duration::from_secs(10));
         image.cancel_on(&cancel).unwrap();
         cancel.cancel();
         let output = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
         assert!(image.write_to_file(output.path()).is_err());
+    }
+
+    #[test]
+    fn eval_callback_cancels_after_pixel_progress() {
+        let image = memory_image();
+        let cancel = Cancellation::new(Duration::from_secs(10));
+        let reached = Arc::new(AtomicBool::new(false));
+        cancel.stall_at(StallPhase::Progress, reached.clone());
+        image.cancel_on(&cancel).unwrap();
+        let worker = std::thread::spawn(move || {
+            let output = tempfile::Builder::new().suffix(".png").tempfile().unwrap();
+            image.write_to_file(output.path())
+        });
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while !reached.load(Ordering::Relaxed) && !worker.is_finished() && Instant::now() < deadline
+        {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        let started = reached.load(Ordering::Relaxed);
+        cancel.cancel();
+        let result = worker.join().unwrap();
+        assert!(
+            started,
+            "eval reported nonzero pixel progress before cancellation"
+        );
+        assert!(
+            result.is_err(),
+            "pixel evaluation must stop after cancellation"
+        );
+        assert_eq!(
+            cancel.check().unwrap_err().to_string(),
+            "libvips: image processing cancelled"
+        );
     }
 }

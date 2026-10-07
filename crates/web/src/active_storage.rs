@@ -28,6 +28,11 @@ const HUNDRED_YEARS: u64 = 3_155_695_200;
 const MAX_MEDIA_JOBS: usize = 4;
 static MEDIA_PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(media_capacity())));
 
+// Codec calls may not observe cancellation. Keep branding from occupying attachment slots.
+const MAX_BRANDING_JOBS: usize = 1;
+static BRANDING_PERMITS: LazyLock<Arc<Semaphore>> =
+    LazyLock::new(|| Arc::new(Semaphore::new(MAX_BRANDING_JOBS)));
+
 fn media_capacity() -> usize {
     std::thread::available_parallelism()
         .map_or(2, |n| n.get())
@@ -37,6 +42,11 @@ fn media_capacity() -> usize {
 #[cfg(feature = "test-support")]
 pub fn media_permits() -> (usize, usize) {
     (MEDIA_PERMITS.available_permits(), media_capacity())
+}
+
+#[cfg(feature = "test-support")]
+pub fn branding_permits() -> (usize, usize) {
+    (BRANDING_PERMITS.available_permits(), MAX_BRANDING_JOBS)
 }
 
 // --- Blobs -----------------------------------------------------------------------------------------
@@ -169,7 +179,7 @@ pub async fn processed_variant_with(
     .await
 }
 
-pub async fn processed_variant_with_deadline(
+pub async fn processed_branding_variant_with_deadline(
     app: &App,
     blob: Blob,
     variation: Variation,
@@ -188,7 +198,7 @@ pub async fn processed_variant_with_deadline(
         blob,
         variation,
         |storage, blob, variation| async move {
-            process_media_with_deadline(timeout, move |cancel| {
+            process_branding_with_deadline(timeout, move |cancel| {
                 transform(&storage, &blob, &variation, &cancel)
             })
             .await
@@ -288,7 +298,7 @@ async fn analyze_with(app: &App, blob_id: i64, skip_analyzed: bool) -> anyhow::R
     let storage = app.storage.clone();
     let mut source = blob.clone();
     source.metadata = Json::object();
-    let metadata = process_media_work(move || storage.analyzed_metadata(&source)).await?;
+    let metadata = process_blocking_work(MEDIA_PERMITS.clone(), move || storage.analyzed_metadata(&source)).await?;
     app.db
         .write(move |tx| {
             // Another delivery or synchronous message processing may have finished meanwhile.
@@ -360,12 +370,14 @@ pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
 pub async fn process_media<T: Send + 'static>(
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> Result<T> {
-    process_media_work(work).await.map_err(Error::internal)
+    process_blocking_work(MEDIA_PERMITS.clone(), work)
+        .await
+        .map_err(Error::internal)
 }
 
-/// Branding's timeout cancels the decoder, including when a disconnected request drops this
-/// future. The blocking work retains its media slot until libvips has actually stopped.
-pub async fn process_media_with_deadline<T: Send + 'static>(
+/// The branding deadline includes waiting for its own slot. Cancellation is cooperative;
+/// timed out or disconnected work retains that slot until the blocking task actually ends.
+pub async fn process_branding_with_deadline<T: Send + 'static>(
     timeout: std::time::Duration,
     work: impl FnOnce(campfire_storage::vips::Cancellation) -> campfire_storage::Result<T>
     + Send
@@ -381,7 +393,7 @@ pub async fn process_media_with_deadline<T: Send + 'static>(
     let _guard = CancelOnDrop(cancel.clone());
     tokio::time::timeout(
         timeout,
-        process_media(move || {
+        process_blocking_work(BRANDING_PERMITS.clone(), move || {
             cancel.check()?;
             let result = work(cancel.clone());
             // A failed still can degrade to static, but cancellation must reject the upload.
@@ -391,14 +403,16 @@ pub async fn process_media_with_deadline<T: Send + 'static>(
     )
     .await
     .map_err(Error::internal)?
+    .map_err(Error::internal)
 }
 
-async fn process_media_work<T: Send + 'static>(
+async fn process_blocking_work<T: Send + 'static>(
+    permits: Arc<Semaphore>,
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> anyhow::Result<T> {
     // The permit goes with the work: a request that gives up (a timeout, a closed connection)
     // doesn't stop the blocking task, so it mustn't free the slot either.
-    let permit = MEDIA_PERMITS.clone().acquire_owned().await?;
+    let permit = permits.acquire_owned().await?;
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
         work()
@@ -873,10 +887,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn dropping_media_request_cancels_work_and_releases_permit() {
+    async fn dropping_branding_request_cancels_work_and_releases_permit() {
         let (started, start) = tokio::sync::oneshot::channel();
         let (finished, finish) = tokio::sync::oneshot::channel();
-        let request = tokio::spawn(process_media_with_deadline(
+        let request = tokio::spawn(process_branding_with_deadline(
             std::time::Duration::from_secs(10),
             move |cancel| {
                 let _ = started.send(());
@@ -888,17 +902,19 @@ mod tests {
             },
         ));
         start.await.unwrap();
-        assert!(MEDIA_PERMITS.available_permits() < media_capacity());
+        assert_eq!(BRANDING_PERMITS.available_permits(), 0);
+        assert_eq!(MEDIA_PERMITS.available_permits(), media_capacity());
         request.abort();
         let _ = request.await;
         tokio::time::timeout(std::time::Duration::from_millis(500), async {
             finish.await.unwrap();
-            while MEDIA_PERMITS.available_permits() != media_capacity() {
+            while BRANDING_PERMITS.available_permits() != MAX_BRANDING_JOBS {
                 tokio::time::sleep(std::time::Duration::from_millis(1)).await;
             }
         })
         .await
         .expect("dropping the request must cancel before its ten second deadline");
+        assert_eq!(BRANDING_PERMITS.available_permits(), MAX_BRANDING_JOBS);
         assert_eq!(MEDIA_PERMITS.available_permits(), media_capacity());
     }
 

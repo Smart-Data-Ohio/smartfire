@@ -9,6 +9,9 @@ use super::admin_tests::{app, classic, error, get, parse, spa, upload, write};
 use super::api_tests::{Sync, serve};
 use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, TestApp};
 
+// These tests inspect the process-wide branding limiter and install deadline hooks.
+static BRANDING_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 /// Two 1x1 frames, black then white, looping forever.
 fn animated_gif() -> Vec<u8> {
     gif_with_canvas(1, 1, 2)
@@ -124,6 +127,7 @@ async fn banner_audits(a: &TestApp) -> Vec<Value> {
 
 #[tokio::test]
 async fn spa_workspace_branding_permissions_and_validation() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let banner = "/api/v1/admin/workspace/banner";
     let signed = upload(&a, "banner.png").await;
@@ -191,6 +195,7 @@ async fn spa_workspace_branding_permissions_and_validation() {
 
 #[tokio::test]
 async fn spa_workspace_branding_validates_bytes_dimensions_and_frame_budget() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let oversized = png(5000, 10, false);
@@ -257,6 +262,7 @@ async fn spa_workspace_branding_validates_bytes_dimensions_and_frame_budget() {
 
 #[tokio::test]
 async fn spa_workspace_branding_corrupt_frames_degrade_to_static() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let mut bytes = animated_gif();
@@ -312,6 +318,7 @@ async fn spa_workspace_branding_corrupt_frames_degrade_to_static() {
 
 #[tokio::test]
 async fn spa_workspace_branding_legacy_metadata_and_broken_sources_never_break_rendering() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     for kind in ["logo", "banner"] {
@@ -394,6 +401,7 @@ async fn spa_workspace_branding_legacy_metadata_and_broken_sources_never_break_r
 
 #[tokio::test]
 async fn spa_workspace_branding_apng_is_static_and_served_as_png() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let bytes = png(2, 2, true);
@@ -435,6 +443,7 @@ async fn spa_workspace_branding_apng_is_static_and_served_as_png() {
 
 #[tokio::test]
 async fn spa_workspace_branding_banner_lifecycle_boot_and_audits() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     let boot: Value = parse(&b.send(get("/api/v1/boot")).await);
@@ -496,6 +505,7 @@ async fn spa_workspace_branding_banner_lifecycle_boot_and_audits() {
 
 #[tokio::test]
 async fn spa_workspace_branding_static_banner_resizes_and_keeps_jpeg() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let (signed, _) = upload_bytes(
         &a,
@@ -524,6 +534,7 @@ async fn spa_workspace_branding_static_banner_resizes_and_keeps_jpeg() {
 
 #[tokio::test]
 async fn spa_workspace_branding_animated_sources_and_png_stills() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     let gif = animated_gif();
@@ -610,10 +621,10 @@ async fn spa_workspace_branding_animated_sources_and_png_stills() {
     );
 }
 
-async fn media_slots_are_free() {
+async fn branding_slots_are_free() {
     tokio::time::timeout(std::time::Duration::from_secs(3), async {
         loop {
-            let (available, capacity) = campfire_web::active_storage::media_permits();
+            let (available, capacity) = campfire_web::active_storage::branding_permits();
             if available == capacity {
                 assert_eq!(available, capacity);
                 return;
@@ -622,11 +633,238 @@ async fn media_slots_are_free() {
         }
     })
     .await
-    .expect("cancelled decoder must stop and release its media permit");
+    .expect("cancelled decoder must stop and release its branding permit");
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_blocked_codec_does_not_take_attachment_slots() {
+    let _branding = BRANDING_TESTS.lock().await;
+    use campfire_storage::branding::test_hooks;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    branding_slots_are_free().await;
+    let (signed, id) = upload_bytes(&a, &animated_gif(), "blocked.gif", "image/gif").await;
+    let blob = a
+        .db()
+        .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap()))
+        .await
+        .unwrap();
+    let blocked = test_hooks::block_reads(&blob.key);
+    let reply = tokio::time::timeout(
+        Duration::from_secs(2),
+        write(
+            &mut admin,
+            Method::PUT,
+            "/api/v1/admin/workspace/logo",
+            json!({"signedId": signed}),
+        ),
+    )
+    .await
+    .unwrap();
+    let reached = blocked.reached.load(Ordering::Relaxed);
+    let during = campfire_web::active_storage::media_permits();
+    let branding_during = campfire_web::active_storage::branding_permits();
+    // An ordinary, uncached Active Storage representation still uses the shared media pool.
+    let (_, attachment_id) =
+        upload_bytes(&a, &png(64, 64, false), "attachment.png", "image/png").await;
+    let attachment = a
+        .db()
+        .read(move |conn| {
+            Ok(campfire_storage::Blob::find(conn, attachment_id)
+                .unwrap()
+                .unwrap())
+        })
+        .await
+        .unwrap();
+    let storage = &a.booted.app.storage;
+    let url = campfire_storage::paths::representation_proxy_path(
+        &*storage.verifier,
+        &attachment,
+        &campfire_storage::Variation::resize_to_limit(32, 32, Some("png")),
+    );
+    let thumbnail = tokio::time::timeout(Duration::from_secs(1), admin.get(&url)).await;
+    let after = campfire_web::active_storage::media_permits();
+    // Release before asserting: fail-first runs cannot leave a blocking task behind.
+    drop(blocked);
+    branding_slots_are_free().await;
+    assert!(reached, "entered the real source callback");
+    assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        error(&reply)["fields"]["signedId"],
+        json!(["couldn't be read as an image"])
+    );
+    let thumbnail = thumbnail.unwrap();
+    assert_eq!(thumbnail.status, StatusCode::OK);
+    assert_eq!(thumbnail.content_type(), Some("image/png"));
+    assert_eq!(
+        u32::from_be_bytes(thumbnail.body[16..20].try_into().unwrap()),
+        32
+    );
+    assert_eq!(branding_during, (0, 1));
+    assert_eq!(
+        during.0, during.1,
+        "branding must leave every attachment slot free"
+    );
+    assert_eq!(after.0, after.1);
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_full_pool_times_out_and_recovers_after_blocked_codec() {
+    let _branding = BRANDING_TESTS.lock().await;
+    use campfire_storage::branding::test_hooks;
+    use std::sync::atomic::Ordering;
+    use std::time::{Duration, Instant};
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    branding_slots_are_free().await;
+    let (signed, id) = upload_bytes(&a, &animated_gif(), "blocked.gif", "image/gif").await;
+    let key = a
+        .db()
+        .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
+        .await
+        .unwrap();
+    let blocked = test_hooks::block_reads(&key);
+    let first = tokio::time::timeout(
+        Duration::from_secs(2),
+        write(
+            &mut admin,
+            Method::PUT,
+            "/api/v1/admin/workspace/logo",
+            json!({"signedId": signed}),
+        ),
+    )
+    .await
+    .unwrap();
+    let first_reached = blocked.reached.load(Ordering::Relaxed);
+    let branding_during = campfire_web::active_storage::branding_permits();
+    let (second_signed, second_id) =
+        upload_bytes(&a, &animated_gif(), "queued.gif", "image/gif").await;
+    let second_key = a
+        .db()
+        .read(move |conn| {
+            Ok(campfire_storage::Blob::find(conn, second_id)
+                .unwrap()
+                .unwrap()
+                .key)
+        })
+        .await
+        .unwrap();
+    // Shorten the queued deadline; its eval hook must never be reached.
+    let queued = test_hooks::stall(&second_key, campfire_storage::vips::StallPhase::Evaluation);
+    let started = Instant::now();
+    let second = tokio::time::timeout(
+        Duration::from_secs(2),
+        write(
+            &mut admin,
+            Method::PUT,
+            "/api/v1/admin/workspace/banner",
+            json!({"signedId": second_signed}),
+        ),
+    )
+    .await;
+    let elapsed = started.elapsed();
+    let second_reached = queued.reached.load(Ordering::Relaxed);
+    drop(queued);
+    drop(blocked);
+    branding_slots_are_free().await;
+    assert!(first_reached);
+    assert_eq!(branding_during, (0, 1));
+    assert_eq!(first.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let second = second.expect("a full branding pool must answer within its deadline");
+    assert_eq!(second.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        error(&second)["fields"]["signedId"],
+        json!(["couldn't be read as an image"])
+    );
+    assert!(elapsed >= Duration::from_millis(400) && elapsed < Duration::from_secs(2));
+    assert!(
+        !second_reached,
+        "queued branding work must not start while the slot is held"
+    );
+    let workspace: api::Workspace = spa(
+        &mut admin,
+        Method::PUT,
+        "/api/v1/admin/workspace/banner",
+        json!({"signedId": second_signed}),
+    )
+    .await;
+    assert!(workspace.banner_still_url.is_some());
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_cancellation_after_pixel_progress_releases_slot() {
+    let _branding = BRANDING_TESTS.lock().await;
+    use campfire_storage::branding::{self, test_hooks};
+    use campfire_storage::vips::StallPhase;
+    use std::sync::atomic::Ordering;
+    use std::time::Duration;
+
+    let Some(a) = app().await else { return };
+    branding_slots_are_free().await;
+    let (_, id) = upload_bytes(&a, &png(2048, 2048, false), "progress.png", "image/png").await;
+    let blob = a
+        .db()
+        .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap()))
+        .await
+        .unwrap();
+    let progress = test_hooks::stall(&blob.key, StallPhase::Progress);
+    let stopped = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let returned = stopped.clone();
+    let result = tokio::time::timeout(
+        Duration::from_secs(2),
+        campfire_web::active_storage::processed_branding_variant_with_deadline(
+            &a.booted.app,
+            blob.clone(),
+            campfire_storage::Variation::resize_to_limit(2048, 2048, Some("png")),
+            branding::processing_timeout(&blob),
+            move |storage, blob, variation, cancel| {
+                let result = branding::transform_variant(
+                    storage,
+                    blob,
+                    branding::Kind::Logo,
+                    variation,
+                    cancel,
+                );
+                *returned.lock().unwrap() = cancel.check().err().map(|error| error.to_string());
+                result
+            },
+        ),
+    )
+    .await
+    .unwrap();
+    branding_slots_are_free().await;
+    assert!(
+        progress.reached.load(Ordering::Relaxed),
+        "eval observed nonzero pixel progress before the deadline cancelled it"
+    );
+    assert!(result.is_err());
+    assert_eq!(
+        stopped.lock().unwrap().as_deref(),
+        Some("libvips: image processing cancelled")
+    );
+    a.db()
+        .read(move |conn| {
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = ?",
+                    [id],
+                    |row| row.get::<_, i64>(0),
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn spa_workspace_branding_deadline_stops_headers_and_decodes_and_releases_slots() {
+    let _branding = BRANDING_TESTS.lock().await;
     use campfire_storage::branding::test_hooks;
     use campfire_storage::vips::StallPhase;
     use std::sync::atomic::Ordering;
@@ -636,7 +874,7 @@ async fn spa_workspace_branding_deadline_stops_headers_and_decodes_and_releases_
     let mut admin = a.sign_in(DAVID).await;
     for kind in ["logo", "banner"] {
         for phase in [StallPhase::Header, StallPhase::Evaluation] {
-            media_slots_are_free().await;
+            branding_slots_are_free().await;
             let (signed, id) = upload_bytes(&a, &animated_gif(), "stalled.gif", "image/gif").await;
             let key = a
                 .db()
@@ -670,7 +908,7 @@ async fn spa_workspace_branding_deadline_stops_headers_and_decodes_and_releases_
                 stall.reached.load(Ordering::Relaxed),
                 "the real libvips callback was entered"
             );
-            media_slots_are_free().await;
+            branding_slots_are_free().await;
             assert!(started.elapsed() < Duration::from_secs(2));
             drop(stall);
 
@@ -695,6 +933,7 @@ async fn spa_workspace_branding_deadline_stops_headers_and_decodes_and_releases_
 
 #[tokio::test]
 async fn spa_workspace_branding_static_cache_miss_cancels_and_releases_slots() {
+    let _branding = BRANDING_TESTS.lock().await;
     use campfire_storage::branding::test_hooks;
     use campfire_storage::vips::StallPhase;
     use std::sync::atomic::Ordering;
@@ -731,14 +970,14 @@ async fn spa_workspace_branding_static_cache_miss_cancels_and_releases_slots() {
             })
             .await
             .unwrap();
-        media_slots_are_free().await;
+        branding_slots_are_free().await;
         let stall = test_hooks::stall(&key, StallPhase::Evaluation);
         let response = tokio::time::timeout(Duration::from_secs(2), admin.get(&url))
             .await
             .unwrap();
         assert_eq!(response.status, StatusCode::NOT_FOUND);
         assert!(stall.reached.load(Ordering::Relaxed));
-        media_slots_are_free().await;
+        branding_slots_are_free().await;
         drop(stall);
         assert_eq!(
             admin.get(&url).await.status,
@@ -750,6 +989,7 @@ async fn spa_workspace_branding_static_cache_miss_cancels_and_releases_slots() {
 
 #[tokio::test]
 async fn spa_workspace_branding_legacy_tiff_and_large_png_render_uncached_static_urls() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let input = tempfile::NamedTempFile::new().unwrap();
@@ -818,6 +1058,7 @@ async fn spa_workspace_branding_legacy_tiff_and_large_png_render_uncached_static
 
 #[tokio::test]
 async fn spa_workspace_branding_legacy_pixel_budget_falls_back_to_stock_logo() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let mut admin = a.sign_in(DAVID).await;
     let stock = admin.get("/account/logo").await.body;
@@ -868,11 +1109,110 @@ async fn spa_workspace_branding_legacy_pixel_budget_falls_back_to_stock_logo() {
             .status,
         StatusCode::NOT_FOUND
     );
-    media_slots_are_free().await;
+    branding_slots_are_free().await;
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_legacy_byte_cap_skips_decode_and_uses_existing_fallbacks() {
+    let _branding = BRANDING_TESTS.lock().await;
+    use campfire_storage::branding::test_hooks;
+    use campfire_storage::vips::StallPhase;
+    use std::sync::atomic::Ordering;
+
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let stock = admin.get("/account/logo").await.body;
+    let mut bytes = png(2, 2, false);
+    bytes.resize(campfire_storage::branding::MAX_BYTES as usize + 1, 0);
+    let (signed, id) = upload_bytes(&a, &bytes, "padded.png", "image/png").await;
+    classic(
+        &mut admin,
+        Method::PATCH,
+        "/account",
+        &[("account[logo]", &signed)],
+    )
+    .await;
+    let key = a
+        .db()
+        .write(move |tx| {
+            use crate::controllers::presenters::attachments::{self, Assignment, Record};
+            let account = campfire_db::Account::first(tx.conn())?.unwrap();
+            let blob = campfire_storage::Blob::find(tx.conn(), id)
+                .unwrap()
+                .unwrap();
+            assert!(
+                blob.metadata
+                    .get(campfire_storage::branding::ANIMATED_KEY)
+                    .is_none()
+            );
+            assert_eq!(
+                blob.byte_size,
+                campfire_storage::branding::MAX_BYTES as i64 + 1
+            );
+            attachments::assign(
+                tx,
+                Record::account(account.id),
+                "banner",
+                Assignment::Existing(blob.clone()),
+            )?;
+            Ok(blob.key)
+        })
+        .await
+        .unwrap();
+    let boot: Value = parse(&admin.get("/api/v1/boot").await);
+    // Both the recorded blob size and the actual file size must refuse input before libvips.
+    for declared_size in [campfire_storage::branding::MAX_BYTES as i64 + 1, 1] {
+        a.db()
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE active_storage_blobs SET byte_size = ? WHERE id = ?",
+                    [declared_size, id],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let stall = test_hooks::stall(&key, StallPhase::Header);
+        for path in [
+            boot["account"]["logoUrl"].as_str().unwrap(),
+            "/account/logo",
+        ] {
+            let reply = admin.get(path).await;
+            assert_eq!(reply.status, StatusCode::OK);
+            assert_eq!(reply.body, stock);
+        }
+        assert_eq!(
+            admin
+                .get(boot["account"]["bannerUrl"].as_str().unwrap())
+                .await
+                .status,
+            StatusCode::NOT_FOUND
+        );
+        branding_slots_are_free().await;
+        assert!(
+            !stall.reached.load(Ordering::Relaxed),
+            "oversize encoded input must never reach a libvips source read"
+        );
+        a.db()
+            .read(move |conn| {
+                assert_eq!(
+                    conn.query_row(
+                        "SELECT COUNT(*) FROM active_storage_variant_records WHERE blob_id = ?",
+                        [id],
+                        |row| row.get::<_, i64>(0),
+                    )?,
+                    0
+                );
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
 }
 
 #[tokio::test]
 async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() {
+    let _branding = BRANDING_TESTS.lock().await;
     use campfire_storage::branding::test_hooks;
     use campfire_storage::vips::StallPhase;
     use std::sync::atomic::Ordering;
@@ -897,7 +1237,7 @@ async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() 
     let boot: Value = parse(&admin.get("/api/v1/boot").await);
     let url = boot["account"]["logoUrl"].as_str().unwrap();
     for path in [url, "/account/logo"] {
-        media_slots_are_free().await;
+        branding_slots_are_free().await;
         let stall = test_hooks::stall(&key, StallPhase::Evaluation);
         let reply = tokio::time::timeout(Duration::from_secs(2), admin.get(path))
             .await
@@ -905,7 +1245,7 @@ async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() 
         assert_eq!(reply.status, StatusCode::OK);
         assert_eq!(reply.body, stock);
         assert!(stall.reached.load(Ordering::Relaxed));
-        media_slots_are_free().await;
+        branding_slots_are_free().await;
     }
     let reply = admin.get(url).await;
     assert_eq!(reply.status, StatusCode::OK);
@@ -954,6 +1294,7 @@ async fn still_was_purged(a: &TestApp, still: campfire_storage::Blob) {
 
 #[tokio::test]
 async fn spa_workspace_branding_replacing_and_removing_animations_purges_still_files() {
+    let _branding = BRANDING_TESTS.lock().await;
     use crate::controllers::presenters::test_support::SEED_NOW;
     let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
@@ -1010,6 +1351,7 @@ async fn updated(sync: &mut Sync) -> api::WorkspaceBranding {
 
 #[tokio::test]
 async fn spa_workspace_branding_updates_reach_other_users_and_classic_writes() {
+    let _branding = BRANDING_TESTS.lock().await;
     let Some(a) = app().await else { return };
     let (addr, server) = serve(&a).await;
     let observer = a.sign_in(JASON).await;

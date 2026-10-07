@@ -373,7 +373,7 @@ async fn branding_image(c: &mut Ctx, signed_id: &str, kind: Kind) -> Result<Prep
         return Err(fail(c, validation("signedId", "must be 10 MB or smaller")));
     }
     let storage = c.app().storage.clone();
-    let prepared = campfire_web::active_storage::process_media_with_deadline(
+    let prepared = campfire_web::active_storage::process_branding_with_deadline(
         branding::processing_timeout(&blob),
         move |cancel| Ok(branding::prepare(&storage, blob, kind, &cancel)),
     )

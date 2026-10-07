@@ -9,6 +9,8 @@ use crate::{
     vips::{Cancellation, Image},
 };
 
+/// Bound encoded input for both uploads and legacy conversions: small canvases can still
+/// carry large metadata that a loader buffers before the pixel budget can be checked.
 pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
 /// A frame's canvas counts even when its encoded update covers only a small rectangle.
 /// At most 100 megapixels across all frames, checked before evaluating any pixels.
@@ -16,7 +18,7 @@ pub const MAX_ANIMATION_PIXELS: u64 = 100_000_000;
 pub const MAX_LEGACY_PIXELS: u64 = 100_000_000;
 pub const ANIMATED_KEY: &str = "branding_animated";
 
-/// Includes waiting for the media slot, header probing and pixel evaluation.
+/// Includes waiting for the branding slot, header probing and pixel evaluation.
 pub fn processing_timeout(_blob: &Blob) -> Duration {
     #[cfg(feature = "test-support")]
     if test_hooks::held(&_blob.key).is_some() {
@@ -27,8 +29,11 @@ pub fn processing_timeout(_blob: &Blob) -> Duration {
 
 fn configure_cancellation(_blob: &Blob, _cancel: &Cancellation) {
     #[cfg(feature = "test-support")]
-    if let Some((phase, reached)) = test_hooks::held(&_blob.key) {
-        _cancel.stall_at(phase, reached);
+    if let Some((phase, reached, released)) = test_hooks::held(&_blob.key) {
+        match released {
+            Some(released) => _cancel.block_reads(reached, released),
+            None => _cancel.stall_at(phase, reached),
+        }
     }
 }
 
@@ -90,7 +95,7 @@ pub fn animated(blob: &Blob) -> bool {
     matches!(blob.metadata.get(ANIMATED_KEY), Some(Json::Bool(true)))
 }
 
-/// Must run on the media blocking pool. The strict, single-page loader only reads headers
+/// Must run on the branding blocking pool. The strict, single-page loader only reads headers
 /// until dimensions and the total animation budget have been checked.
 pub fn prepare(
     storage: &Storage,
@@ -137,6 +142,9 @@ pub fn transform_variant(
     let image = if blob.metadata.get(ANIMATED_KEY).is_none() {
         if !blob.is_variable() {
             return Err(crate::Error::Invariable(blob.content_type().to_owned()));
+        }
+        if blob.byte_size > MAX_BYTES as i64 || std::fs::metadata(&path)?.len() > MAX_BYTES {
+            return Err(crate::Error::Analyze("legacy image exceeds the 10 MB byte budget".into()));
         }
         let image = Image::open_legacy_branding(&path, cancel)?;
         let (width, height) = (image.width(), image.height());
@@ -254,33 +262,51 @@ fn transform(
 pub mod test_hooks {
     use crate::vips::StallPhase;
     use std::collections::HashMap;
-    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::{Arc, LazyLock, Mutex};
 
-    type Hold = (StallPhase, Arc<AtomicBool>);
+    type Hold = (StallPhase, Arc<AtomicBool>, Option<Arc<AtomicBool>>);
     static HELD: LazyLock<Mutex<HashMap<String, Hold>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
 
     pub struct Stall {
         key: String,
         pub reached: Arc<AtomicBool>,
+        released: Option<Arc<AtomicBool>>,
     }
 
     impl Drop for Stall {
         fn drop(&mut self) {
+            if let Some(released) = &self.released {
+                released.store(true, Ordering::Relaxed);
+            }
             HELD.lock().unwrap().remove(&self.key);
         }
     }
 
     /// Stall inside the actual source/eval callback; only cancellation can end the work.
     pub fn stall(key: &str, phase: StallPhase) -> Stall {
+        hold(key, phase, None)
+    }
+
+    /// Block a source read without checking cancellation, until the test drops this guard.
+    pub fn block_reads(key: &str) -> Stall {
+        hold(
+            key,
+            StallPhase::Header,
+            Some(Arc::new(AtomicBool::new(false))),
+        )
+    }
+
+    fn hold(key: &str, phase: StallPhase, released: Option<Arc<AtomicBool>>) -> Stall {
         let reached = Arc::new(AtomicBool::new(false));
         HELD.lock()
             .unwrap()
-            .insert(key.to_owned(), (phase, reached.clone()));
+            .insert(key.to_owned(), (phase, reached.clone(), released.clone()));
         Stall {
             key: key.to_owned(),
             reached,
+            released,
         }
     }
 
