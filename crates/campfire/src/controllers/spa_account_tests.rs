@@ -690,9 +690,13 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
             "missing",
             "rate",
             "google",
+            "not_enabled",
         ] {
             let notice = if all { ALL_FORGOTTEN } else { FORGOTTEN };
             let accepted = matches!(case, "password" | "code" | "other" | "missing" | "google");
+            // The response cookies, the session they leave and the remember cookie the browser
+            // still holds, from the classic side, for the API side to match.
+            let expected_cookies = std::sync::Mutex::new(None);
             let path = |context: &Value, api: bool| {
                 let prefix = if api {
                     "/api/v1/settings/two_factor/devices"
@@ -742,6 +746,15 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                         );
                         assert_eq!(b.flash(), json!({"notice": notice}));
                         check_devices(b.app(), &context, case, all).await;
+                    } else if case == "not_enabled" {
+                        // Forgetting has no enrollment check in classic: with two-step sign-in
+                        // off, the password still confirms it and the notice comes back.
+                        assert_eq!(reply.status, StatusCode::FOUND);
+                        assert_eq!(
+                            reply.location(),
+                            Some("http://campfire.test/users/me/profile")
+                        );
+                        assert_eq!(b.flash(), json!({"notice": notice}));
                     } else {
                         classic_alert(
                             b,
@@ -755,6 +768,8 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                             },
                         );
                     }
+                    *expected_cookies.lock().unwrap() =
+                        Some((cookies(b.app(), b, &reply), remember_cookie(b)));
                 },
                 async |b, context| {
                     let reply = write(
@@ -771,6 +786,12 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                         assert!(change.two_factor.confirmed_at.is_some());
                         check_panel(b.app(), DAVID, &change.two_factor).await;
                         check_devices(b.app(), &context, case, all).await;
+                    } else if case == "not_enabled" {
+                        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+                        let change: api::TwoFactorChange = parse(&reply);
+                        assert_eq!(change.notice, notice);
+                        assert!(change.two_factor.confirmed_at.is_none());
+                        assert!(change.two_factor.devices.is_empty());
                     } else {
                         api_alert(
                             &reply,
@@ -793,22 +814,37 @@ async fn forgetting_one_or_all_devices_matches_ownership_refusals_and_rate_limit
                             },
                         );
                     }
+                    assert_eq!(
+                        (cookies(b.app(), b, &reply), remember_cookie(b)),
+                        expected_cookies.lock().unwrap().clone().unwrap(),
+                        "{case} all={all}: response cookies, session and remember cookie"
+                    );
                 },
             )
             .await
             else {
                 return;
             };
+            // With two-step sign-in off, classic still confirms and forgets (and audits it).
+            let confirmed = accepted || case == "not_enabled";
             assert_eq!(
                 audits(&outcome).contains("two_factor.devices.revoke_all"),
-                all && accepted
+                all && confirmed
             );
-            if !accepted || (!all && matches!(case, "other" | "missing")) {
+            if !confirmed || (!all && matches!(case, "other" | "missing")) {
                 assert_eq!(outcome.rows, outcome.before, "{case} all={all}");
             }
             assert!(outcome.frames.is_empty());
         }
     }
+}
+
+/// The `two_factor_remember` cookie the browser holds after a reply, if any.
+fn remember_cookie(b: &Browser<'_>) -> Option<String> {
+    campfire_kit::cookies::parse_cookie_header(&b.cookie_header())
+        .into_iter()
+        .find(|(name, _)| name == "two_factor_remember")
+        .map(|(_, value)| value)
 }
 
 async fn check_devices(a: &TestApp, context: &Value, case: &'static str, all: bool) {
@@ -946,7 +982,7 @@ async fn check_job(a: &TestApp, id: i64) {
 }
 
 #[tokio::test]
-async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot_visibility() {
+async fn account_read_uses_classic_membership_order_device_rows_transfer_and_null_levels() {
     let Some(a) = stopped_app().await else { return };
     let mut b = a.sign_in(DAVID).await;
     b.grant_sudo().await;
@@ -958,11 +994,19 @@ async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot
                 "UPDATE two_factor_remembered_devices SET last_used_at=NULL WHERE user_agent=?",
                 [" \t"],
             )?;
+            // A membership with no level stored, as old rows have: classic labels it with nothing.
+            tx.conn().execute(
+                "UPDATE memberships SET involvement=NULL WHERE id=(SELECT m.id FROM memberships m
+                 JOIN rooms r ON r.id=m.room_id WHERE m.user_id=? AND r.type!='Rooms::Direct'
+                 ORDER BY m.id LIMIT 1)",
+                [DAVID],
+            )?;
             Ok(())
         })
         .await
         .unwrap();
-    for user_id in [DAVID, BENDER] {
+    {
+        let user_id = DAVID;
         let mut browser = a.sign_in(user_id).await;
         browser.authenticity_token().await;
         let before = dump(&a).await;
@@ -985,10 +1029,11 @@ async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot
             for (row, classic) in actual.iter().zip(expected) {
                 assert_eq!(row.room_id, classic.room_id);
                 assert_eq!(row.name, classic.room_display_name);
+                // NULL (an empty classic label) stays null: it is not `mentions`.
                 let classic_involvement = if classic.involvement.is_empty() {
-                    "mentions"
+                    Value::Null
                 } else {
-                    classic.involvement.as_str()
+                    json!(classic.involvement)
                 };
                 assert_eq!(
                     serde_json::to_value(row.involvement).unwrap(),
@@ -997,13 +1042,38 @@ async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot
                 assert_eq!(row.direct, classic.direct);
             }
         }
-        if user_id == DAVID {
+        let unset = account
+            .shared_rooms
+            .iter()
+            .find(|row| row.involvement.is_none())
+            .expect("the NULL membership reads as no level")
+            .room_id;
+        // Choosing Mentions from no level is a real change: it is stored and reads back.
+        let reply = browser
+            .write(
+                Req::new(Method::PUT, &format!("/rooms/{unset}/involvement.json"))
+                    .form(&[("involvement", "mentions")]),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let after: api::AccountSettings =
+            parse(&browser.send(get("/api/v1/settings/account")).await);
+        assert_eq!(
+            after
+                .shared_rooms
+                .iter()
+                .find(|row| row.room_id == unset)
+                .unwrap()
+                .involvement,
+            Some(api::Involvement::Mentions)
+        );
+        {
             assert!(!account.shared_rooms.is_empty());
             assert!(!account.direct_rooms.is_empty());
             assert!(account.shared_rooms.iter().all(|row| !row.direct));
             assert!(account.direct_rooms.iter().all(|row| row.direct));
-            let panel = account.two_factor.unwrap();
-            check_panel(&a, user_id, &panel).await;
+            let panel = &account.two_factor;
+            check_panel(&a, user_id, panel).await;
             assert!(panel.confirmed_at.is_some());
             assert_eq!(panel.devices.len(), 2);
             assert!(
@@ -1019,8 +1089,6 @@ async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot
                     .iter()
                     .any(|device| device.description == "Expired browser")
             );
-        } else {
-            assert!(account.two_factor.is_none());
         }
         let transfer =
             accounts::transfer_id(&a.booted.app.secrets, user_id, a.booted.app.clock.now());
@@ -1038,6 +1106,11 @@ async fn account_read_uses_classic_membership_order_device_rows_transfer_and_bot
                 a.booted.app.clock.now()
             ),
             Some(user_id)
+        );
+        assert_eq!(
+            Some(account.transfer_qr_svg),
+            campfire_people::controllers::qr_code::transfer_svg(&account.transfer_url),
+            "the QR code is the classic image of the same link, drawn in place"
         );
     }
 }
@@ -1129,7 +1202,7 @@ async fn every_account_write_requires_csrf_and_typed_reauthentication() {
 }
 
 #[tokio::test]
-async fn disable_preserves_the_classic_human_only_check_for_bot_sessions() {
+async fn every_account_route_refuses_a_bot_session() {
     let Some(a) = stopped_app().await else { return };
     let mut b = a.sign_in(BENDER).await;
     let reply = b
@@ -1137,15 +1210,19 @@ async fn disable_preserves_the_classic_human_only_check_for_bot_sessions() {
         .await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
     let before = dump(&a).await;
-    let reply = write(
-        &mut b,
-        Method::DELETE,
-        "/api/v1/settings/two_factor",
-        json!({"reauth": PASSWORD}),
-    )
-    .await;
-    api_alert(&reply, "Forbidden", StatusCode::FORBIDDEN, "Not allowed");
-    assert_eq!(dump(&a).await, before);
+    let capture = a.booted.app.cable.capture_every_publication();
+    // No sign-in link, codes, device changes or test push for a bot's own session.
+    for (method, path) in actions() {
+        let reply = if method == Method::GET {
+            b.send(get(path)).await
+        } else {
+            write(&mut b, method, path, json!({"reauth": PASSWORD})).await
+        };
+        api_alert(&reply, "Forbidden", StatusCode::FORBIDDEN, "Not allowed");
+        assert!(!reply.text().contains("session/transfers"), "{path}");
+        assert_eq!(dump(&a).await, before, "{path}");
+    }
+    assert!(settle(&capture).await.is_empty());
 }
 
 struct ConfiguredGoogle;
@@ -1183,8 +1260,8 @@ async fn account_google_option_requires_both_configuration_and_the_viewers_link(
             Ok(())
         }).await.unwrap();
         let account: api::AccountSettings = parse(&b.send(get("/api/v1/settings/account")).await);
-        assert_eq!(account.two_factor.as_ref().unwrap().google, linked);
-        check_panel(&a, DAVID, account.two_factor.as_ref().unwrap()).await;
+        assert_eq!(account.two_factor.google, linked);
+        check_panel(&a, DAVID, &account.two_factor).await;
     }
 }
 

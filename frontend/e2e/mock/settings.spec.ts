@@ -495,16 +495,161 @@ test("turning two-step sign-in off goes to the setup page", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Set up two-step" })).toBeVisible();
 });
 
-test("the sign-in link shows its QR code from the classic image", async ({ page }) => {
+test("the sign-in link's QR code is drawn in the page, never fetched by URL", async ({ page }) => {
+  const fetched: string[] = [];
+
+  page.on("request", (request) => {
+    if (request.url().includes("/qr_code/")) fetched.push(request.url());
+  });
   await openSettings(page, "security");
 
   const link = page.getByRole("region", { name: "Sign in on another device" });
+  const opener = link.getByRole("button", { name: "Show QR code" });
 
   await expect(link.getByLabel("Your sign-in link")).toHaveValue(/\/session\/transfers\//);
-  await link.getByRole("button", { name: "Show QR code" }).click();
+  await opener.focus();
+  await page.keyboard.press("Enter");
+
+  const dialog = page.getByRole("dialog", { name: "Scan to sign in" });
+
+  await expect(dialog.getByRole("img")).toHaveAttribute("src", /^data:image\/svg\+xml;/);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+  expect(fetched).toEqual([]);
+});
+
+test("a refused or cancelled confirmation keeps no code, and closed codes are gone", async ({
+  page,
+}) => {
+  await openSettings(page, "security");
+
+  const opener = page.getByRole("button", { name: "New backup codes" });
+
+  await opener.click();
+
+  const ask = page.getByRole("dialog", { name: "New backup codes?" });
+  const field = ask.getByLabel("Authenticator code or password");
+
+  await field.fill("000000");
+  await ask.getByRole("button", { name: "Make new codes" }).click();
   await expect(
-    page.getByRole("dialog", { name: "Scan to sign in" }).getByRole("img"),
-  ).toHaveAttribute("src", /^\/qr_code\/[A-Za-z0-9_-]+=*$/);
+    ask.getByText("Enter your authenticator code or password to continue."),
+  ).toBeVisible();
+  await expect(field).toHaveValue("");
+
+  await field.fill("999999");
+  await ask.getByRole("button", { name: "Cancel" }).click();
+  await expect(ask).toBeHidden();
+  await opener.click();
+  await expect(field).toHaveValue("");
+
+  await field.fill("123456");
+  await page.keyboard.press("Enter");
+
+  const codes = page.getByRole("dialog", { name: "Your new backup codes" });
+  const first = (await codes.getByRole("listitem").first().textContent()) ?? "";
+
+  expect(first).not.toBe("");
+  await codes.getByRole("button", { name: "Done" }).click();
+  await expect(codes).toBeHidden();
+  await expect(opener).toBeFocused();
+  await expect(page.getByText(first, { exact: true })).toHaveCount(0);
+});
+
+test("forgetting a browser by keyboard leaves focus on the next one", async ({ page }) => {
+  await openSettings(page, "security");
+
+  const rows = page.getByRole("region", { name: "Two-step sign-in" }).getByRole("listitem");
+
+  await expect(rows).toHaveCount(2);
+  await rows
+    .first()
+    .getByRole("button", { name: /^Forget/ })
+    .focus();
+  await page.keyboard.press("Enter");
+
+  const ask = page.getByRole("dialog", { name: "Forget this browser?" });
+
+  await ask.getByLabel("Authenticator code or password").fill("123456");
+  await page.keyboard.press("Enter");
+  await expect(ask).toBeHidden();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first().getByRole("button", { name: /^Forget/ })).toBeFocused();
+});
+
+test("a failed room change never undoes a newer one", async ({ page }) => {
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  let calls = 0;
+
+  await page.route("**/api/v1/rooms/*/involvement", async (route) => {
+    calls += 1;
+
+    if (calls > 1) {
+      await route.fallback();
+
+      return;
+    }
+
+    await held;
+    await route.fulfill({ status: 500, contentType: "text/plain", body: "Not now." });
+  });
+  await openSettings(page, "rooms");
+
+  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
+  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
+
+  const label = (await level.getAttribute("aria-label")) ?? "";
+  const room = label.replace(/^Notifications for /, "").replace(/: .*$/, "");
+  // The newer choice differs from where the room started, so undoing to that would show.
+  const newer = label.endsWith(": All messages") ? "No notifications" : "All messages";
+
+  await level.click();
+  await page.getByRole("menuitemradio", { name: /Muted/ }).click();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Muted`);
+  await level.click();
+  await page.getByRole("menuitemradio", { name: newer }).click();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: ${newer}`);
+
+  release();
+  await expect(page.getByText(`Couldn't change notifications for ${room}`)).toBeVisible();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: ${newer}`);
+  await expect.poll(() => calls).toBe(2);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: `Notifications for ${room}: ${newer}` }),
+  ).toBeVisible();
+});
+
+test("a room with no level stored shows none chosen, and Mentions can be chosen", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/settings/account", async (route) => {
+    const response = await route.fetch();
+    const account = await response.json();
+
+    account.sharedRooms[0].involvement = null;
+    await route.fulfill({ response, json: account });
+  });
+  await openSettings(page, "rooms");
+
+  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
+  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
+
+  const room = ((await level.getAttribute("aria-label")) ?? "")
+    .replace(/^Notifications for /, "")
+    .replace(/: .*$/, "");
+
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
+  await level.click();
+  await expect(page.getByRole("menuitemradio", { checked: true })).toHaveCount(0);
+  await page.getByRole("menuitemradio", { name: /Mentions/ }).click();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Mentions`);
 });
 
 test("a push device gets a test notification", async ({ page }) => {
@@ -512,4 +657,35 @@ test("a push device gets a test notification", async ({ page }) => {
 
   await page.getByRole("button", { name: "Send a test" }).first().click();
   await expect(page.getByText("Test notification sent")).toBeVisible();
+});
+
+test("two devices' tests run on their own", async ({ page }) => {
+  let release = () => {};
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  let first = true;
+
+  await page.route("**/api/v1/settings/push_subscriptions/*/test", async (route) => {
+    if (first) {
+      first = false;
+      await held;
+    }
+
+    await route.fallback();
+  });
+  await openSettings(page, "devices");
+
+  const tests = page.getByRole("button", { name: "Send a test" });
+
+  await tests.nth(0).click();
+  await expect(tests.nth(0)).toHaveAttribute("aria-busy", "true");
+  await tests.nth(1).click();
+  await expect(page.getByText("Test notification sent")).toBeVisible();
+  await expect(tests.nth(1)).not.toHaveAttribute("aria-busy", "true");
+  await expect(tests.nth(0)).toHaveAttribute("aria-busy", "true");
+  release();
+  await expect(tests.nth(0)).not.toHaveAttribute("aria-busy", "true");
 });

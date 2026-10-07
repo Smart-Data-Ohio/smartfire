@@ -36,10 +36,14 @@ pub struct AccountSettings {
     /// Shared rooms first, then direct messages, each in the classic page's order.
     pub shared_rooms: Vec<RoomMembershipRow>,
     pub direct_rooms: Vec<RoomMembershipRow>,
-    /// `None` for bots (the classic page hides the panel for them).
-    pub two_factor: Option<TwoFactorSettings>,
+    /// The two-step sign-in panel. These routes answer people only, so it is always there (the
+    /// classic page hides it for bots).
+    pub two_factor: TwoFactorSettings,
     /// The absolute sign-in transfer URL the classic `_transfer.html` shows.
     pub transfer_url: String,
+    /// `transfer_url`'s QR code, a whole SVG document drawn here, so the link never travels in a
+    /// request path the way the classic `/qr_code/:id` image's does.
+    pub transfer_qr_svg: String,
 }
 
 /// A room in the classic profile's membership list.
@@ -50,8 +54,9 @@ pub struct RoomMembershipRow {
     pub room_id: i64,
     /// `membership.room_display_name`, as the classic row shows it.
     pub name: String,
-    /// The same involvement the room's existing involvement API changes.
-    pub involvement: Involvement,
+    /// The same involvement the room's existing involvement API changes. `None` for a membership
+    /// with none stored: the classic row labels it with nothing, and no mention reaches it.
+    pub involvement: Option<Involvement>,
     pub direct: bool,
 }
 

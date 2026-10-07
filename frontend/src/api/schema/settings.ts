@@ -375,7 +375,8 @@ export type PushSubscriptionListPin = Assert<
 export const RoomMembershipRow = Schema.Struct({
   roomId: RoomId,
   name: Schema.String,
-  involvement: Involvement,
+  /** `null` when the membership has no level stored (classic labels it with nothing). */
+  involvement: Schema.NullOr(Involvement),
   direct: Schema.Boolean,
 });
 
@@ -413,8 +414,10 @@ export type TwoFactorSettingsPin = Assert<
 export const AccountSettings = Schema.Struct({
   sharedRooms: Schema.Array(RoomMembershipRow),
   directRooms: Schema.Array(RoomMembershipRow),
-  twoFactor: Schema.NullOr(TwoFactorSettings),
+  twoFactor: TwoFactorSettings,
   transferUrl: Schema.String,
+  /** The transfer link's QR code, a whole SVG document drawn on the server (never in a URL). */
+  transferQrSvg: Schema.String,
 });
 
 export type AccountSettings = typeof AccountSettings.Type;

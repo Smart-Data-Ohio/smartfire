@@ -11,10 +11,16 @@ export type AccountSettings = {
  */
 sharedRooms: Array<RoomMembershipRow>, directRooms: Array<RoomMembershipRow>, 
 /**
- * `None` for bots (the classic page hides the panel for them).
+ * The two-step sign-in panel. These routes answer people only, so it is always there (the
+ * classic page hides it for bots).
  */
-twoFactor: TwoFactorSettings | null, 
+twoFactor: TwoFactorSettings, 
 /**
  * The absolute sign-in transfer URL the classic `_transfer.html` shows.
  */
-transferUrl: string, };
+transferUrl: string, 
+/**
+ * `transfer_url`'s QR code, a whole SVG document drawn here, so the link never travels in a
+ * request path the way the classic `/qr_code/:id` image's does.
+ */
+transferQrSvg: string, };

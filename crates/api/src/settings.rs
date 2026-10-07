@@ -17,7 +17,7 @@ use campfire_db::{
     DndAllowedUser, Errors, PushSubscription, Session, User, UserChanges, UserStatusSettings,
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_people::controllers::{two_factor, users::push_subscriptions::test_notifications};
+use campfire_people::controllers::{qr_code, two_factor, users::push_subscriptions::test_notifications};
 use campfire_web::authentication;
 use campfire_web::concerns::{self, Authentication, Before, current_session};
 use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
@@ -1150,13 +1150,15 @@ async fn account_two_factor(c: &Ctx, user: &User) -> Result<api::TwoFactorSettin
 }
 
 fn account_membership(row: campfire_views::users::ProfileMembership) -> Result<api::RoomMembershipRow> {
-    // The presenter supplies the classic involvement name. A missing one (NULL, shown as "")
-    // reads as `mentions`, as every other API membership does (`dto::membership`).
+    // The presenter supplies the classic involvement name. A missing one (NULL, which the classic
+    // row shows as "") stays `None`: no mention reaches it, so it isn't `mentions`.
     let involvement = if row.involvement.is_empty() {
-        api::Involvement::Mentions
+        None
     } else {
-        serde_json::from_value(serde_json::Value::String(row.involvement))
-            .map_err(Error::internal)?
+        Some(
+            serde_json::from_value(serde_json::Value::String(row.involvement))
+                .map_err(Error::internal)?,
+        )
     };
     Ok(api::RoomMembershipRow {
         room_id: row.room_id,
@@ -1166,8 +1168,23 @@ fn account_membership(row: campfire_views::users::ProfileMembership) -> Result<a
     })
 }
 
-async fn show_account(c: &mut Ctx) -> Result {
+/// The signed-in person for the account panels and their writes: people only. A bot's session
+/// gets no sign-in link, backup codes or test push (`deny_bots` turns away bot keys alone).
+async fn human_viewer(c: &mut Ctx) -> Result<User> {
     let user = viewer(c).await?;
+    if user.is_bot() {
+        return Err(fail(
+            c,
+            api::ApiError::Forbidden {
+                message: "Not allowed".into(),
+            },
+        ));
+    }
+    Ok(user)
+}
+
+async fn show_account(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
     two_factor::no_store(c);
     let owner = user.clone();
     let (direct, shared) = c
@@ -1176,17 +1193,18 @@ async fn show_account(c: &mut Ctx) -> Result {
         .read(move |conn| presenters::accounts::profile_memberships(conn, &owner))
         .await
         .map_err(Error::internal)?;
-    let two_factor = if user.is_bot() {
-        None
-    } else {
-        Some(account_two_factor(c, &user).await?)
-    };
+    let two_factor = account_two_factor(c, &user).await?;
     let transfer = presenters::accounts::transfer_id(&c.app().secrets, user.id, c.now());
+    let transfer_url = c.url_for(&campfire_routes::session_transfer(&transfer));
+    let transfer_qr_svg = qr_code::transfer_svg(&transfer_url).ok_or_else(|| {
+        Error::internal(std::io::Error::other("the sign-in link doesn't fit a QR code"))
+    })?;
     let settings = api::AccountSettings {
         shared_rooms: shared.into_iter().map(account_membership).collect::<Result<_>>()?,
         direct_rooms: direct.into_iter().map(account_membership).collect::<Result<_>>()?,
         two_factor,
-        transfer_url: c.url_for(&campfire_routes::session_transfer(&transfer)),
+        transfer_url,
+        transfer_qr_svg,
     };
     c.json(StatusCode::OK, &settings)
 }
@@ -1233,14 +1251,14 @@ async fn two_factor_reply(c: &mut Ctx, user: &User, outcome: two_factor::Managem
 }
 
 async fn regenerate_backup_codes(c: &mut Ctx) -> Result {
-    let user = viewer(c).await?;
+    let user = human_viewer(c).await?;
     let input: api::Reauthentication = body(c).await?;
     let outcome = two_factor::regenerate_backup_codes(c, user.clone(), reauth(&input)).await?;
     two_factor_reply(c, &user, outcome).await
 }
 
 async fn destroy_two_factor(c: &mut Ctx) -> Result {
-    let user = viewer(c).await?;
+    let user = human_viewer(c).await?;
     let input: api::Reauthentication = body(c).await?;
     let outcome = two_factor::disable_two_factor(c, user.clone(), reauth(&input)).await?;
     two_factor_reply(c, &user, outcome).await
@@ -1255,7 +1273,7 @@ async fn destroy_all_devices(c: &mut Ctx) -> Result {
 }
 
 async fn destroy_devices(c: &mut Ctx, all: bool) -> Result {
-    let user = viewer(c).await?;
+    let user = human_viewer(c).await?;
     let input: api::Reauthentication = body(c).await?;
     let id = c.param_str("id").and_then(concerns::cast_integer);
     let outcome = two_factor::forget_devices(c, user.clone(), reauth(&input), id, all).await?;
@@ -1263,7 +1281,7 @@ async fn destroy_devices(c: &mut Ctx, all: bool) -> Result {
 }
 
 async fn create_test_push(c: &mut Ctx) -> Result {
-    let user = viewer(c).await?;
+    let user = human_viewer(c).await?;
     let id = c.param_str("id")
         .and_then(concerns::cast_integer)
         .ok_or(Error::NotFound)?;

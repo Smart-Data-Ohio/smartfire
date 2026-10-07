@@ -255,12 +255,9 @@ export function reauthLabel(hasPassword: boolean): string {
 }
 
 /**
- * The classic QR code image for a link: `/qr_code/<urlsafe base64>`, as `link_to_zoom_qr_code`
- * builds it (padding kept, like Ruby's `Base64.urlsafe_encode64`).
+ * An SVG document as an image source that never leaves the page: a `data:` URL, so the sign-in
+ * link it encodes reaches no request path, log or cache.
  */
-export function qrCodePath(url: string): string {
-  const bytes = new TextEncoder().encode(url);
-  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
-
-  return `/qr_code/${btoa(binary).replaceAll("+", "-").replaceAll("/", "_")}`;
+export function svgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }

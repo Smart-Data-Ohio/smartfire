@@ -305,10 +305,13 @@ fn integration_changes_wire() {
 #[test]
 fn account_settings_and_two_factor_wire() {
     let room = RoomMembershipRow {
-        room_id: 12, name: "Everyone".into(), involvement: Involvement::Everything, direct: false,
+        room_id: 12, name: "Everyone".into(), involvement: Some(Involvement::Everything), direct: false,
     };
     let room_wire = json!({"roomId": 12, "name": "Everyone", "involvement": "everything", "direct": false});
     assert_wire(&room, room_wire.clone());
+    assert_wire(&RoomMembershipRow {
+        room_id: 14, name: "Old room".into(), involvement: None, direct: false,
+    }, json!({"roomId": 14, "name": "Old room", "involvement": null, "direct": false}));
     let device = RememberedDevice {
         id: 6, description: "Unknown browser".into(), ip_address: None, last_used_at: None,
     };
@@ -330,16 +333,15 @@ fn account_settings_and_two_factor_wire() {
     }, json!({"confirmedAt": null, "google": false, "hasPassword": true, "devices": []}));
     assert_wire(&AccountSettings {
         shared_rooms: vec![room], direct_rooms: vec![RoomMembershipRow {
-            room_id: 13, name: "Grace".into(), involvement: Involvement::Mentions, direct: true,
-        }], two_factor: Some(two_factor.clone()), transfer_url: "https://chat.example/session/transfers/signed".into(),
+            room_id: 13, name: "Grace".into(), involvement: Some(Involvement::Mentions), direct: true,
+        }], two_factor: two_factor.clone(), transfer_url: "https://chat.example/session/transfers/signed".into(),
+        transfer_qr_svg: "<svg/>".into(),
     }, json!({
         "sharedRooms": [room_wire],
         "directRooms": [{"roomId": 13, "name": "Grace", "involvement": "mentions", "direct": true}],
-        "twoFactor": panel_wire, "transferUrl": "https://chat.example/session/transfers/signed"
+        "twoFactor": panel_wire, "transferUrl": "https://chat.example/session/transfers/signed",
+        "transferQrSvg": "<svg/>"
     }));
-    assert_wire(&AccountSettings {
-        shared_rooms: vec![], direct_rooms: vec![], two_factor: None, transfer_url: "https://chat.example/session/transfers/bot".into(),
-    }, json!({"sharedRooms": [], "directRooms": [], "twoFactor": null, "transferUrl": "https://chat.example/session/transfers/bot"}));
     assert_wire(&Reauthentication { reauth: "123456".into() }, json!({"reauth": "123456"}));
     assert_wire(&Reauthentication { reauth: String::new() }, json!({"reauth": ""}));
     assert_wire(&BackupCodes { codes: vec!["1234-5678".into()] }, json!({"codes": ["1234-5678"]}));

@@ -12,7 +12,7 @@ import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
-import { qrCodePath, reauthLabel, rememberedMeta, twoFactorSince } from "./settings-format.ts";
+import { reauthLabel, rememberedMeta, svgDataUrl, twoFactorSince } from "./settings-format.ts";
 import { SettingsGroup, SettingsPage, toastFailure } from "./settings-parts.tsx";
 
 type Load =
@@ -30,6 +30,40 @@ type Ask =
 /** The sign-in link's warning, the classic share sheet's words. */
 const LINK_WARNING =
   "This is your own private sign-in link. Don't share it. Use it to sign in on another device or if you get locked out.";
+
+/** The two-step sign-in group, for putting focus back when a dialog's opener is gone. */
+const TWO_FACTOR_ID = "settings-two-factor";
+
+/** The sign-in link group, likewise. */
+const TRANSFER_ID = "settings-transfer";
+
+/**
+ * Where focus lands when a two-step dialog closes and its opener has gone (a forgotten browser's
+ * button, or the confirmation that made new codes): the first remaining Forget, else the group's
+ * first button.
+ */
+function twoFactorControl(): HTMLElement | null {
+  const group = document.getElementById(TWO_FACTOR_ID);
+
+  return (
+    group?.querySelector<HTMLElement>("[data-forget]") ??
+    group?.querySelector<HTMLElement>("button, a[href]") ??
+    null
+  );
+}
+
+/** Where focus lands when the new codes close: the button that makes them, else the group. */
+function codesControl(): HTMLElement | null {
+  return (
+    document.getElementById(TWO_FACTOR_ID)?.querySelector<HTMLElement>("[data-codes]") ??
+    twoFactorControl()
+  );
+}
+
+/** The sign-in link group's first button, likewise. */
+function transferControl(): HTMLElement | null {
+  return document.getElementById(TRANSFER_ID)?.querySelector<HTMLElement>("button") ?? null;
+}
 
 /** Whether a refusal belongs under the confirmation field: a wrong code, or too many tries. */
 function fieldRefusal(error: Error): boolean {
@@ -75,14 +109,16 @@ export function SecuritySection() {
     >
       {load.status === "loading" ? <PaneListSkeleton rows={3} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-      {load.status === "ready" && load.account.twoFactor !== null ? (
+      {load.status === "ready" ? (
         <TwoFactorGroup
           twoFactor={load.account.twoFactor}
           onChange={replaceTwoFactor}
           onStale={reload}
         />
       ) : null}
-      {load.status === "ready" ? <TransferGroup url={load.account.transferUrl} /> : null}
+      {load.status === "ready" ? (
+        <TransferGroup url={load.account.transferUrl} qrSvg={load.account.transferQrSvg} />
+      ) : null}
     </SettingsPage>
   );
 }
@@ -101,7 +137,7 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
 
   if (twoFactor.confirmedAt === null) {
     return (
-      <SettingsGroup title="Two-step sign-in" description="Not set up yet.">
+      <SettingsGroup id={TWO_FACTOR_ID} title="Two-step sign-in" description="Not set up yet.">
         <div className="settings-actions">
           <a className="button" data-variant="primary" href="/two_factor_setup">
             Set up two-step sign-in
@@ -156,6 +192,7 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
 
   return (
     <SettingsGroup
+      id={TWO_FACTOR_ID}
       title="Two-step sign-in"
       description={`${twoFactorSince(twoFactor.confirmedAt)} Signing in asks for your authenticator code.`}
     >
@@ -164,7 +201,7 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
         {twoFactor.hasPassword ? "authenticator code or password" : "authenticator code"} first.
       </p>
       <div className="settings-actions">
-        <Button variant="secondary" onClick={() => setAsk({ kind: "codes" })}>
+        <Button variant="secondary" data-codes onClick={() => setAsk({ kind: "codes" })}>
           New backup codes
         </Button>
         <Button variant="danger" onClick={() => setAsk({ kind: "disable" })}>
@@ -200,6 +237,8 @@ function TwoFactorGroup({ twoFactor, onChange, onStale }: TwoFactorGroupProps) {
                   <Button
                     variant="secondary"
                     size="sm"
+                    data-forget
+                    aria-label={`Forget ${device.description}`}
                     onClick={() => setAsk({ kind: "forget", device })}
                   >
                     Forget
@@ -301,6 +340,11 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
     setError(undefined);
   }
 
+  // A closed dialog keeps no code or password.
+  if (ask === null && reauth !== "") {
+    setReauth("");
+  }
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
 
@@ -309,9 +353,11 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
     }
 
     setSaving(true);
+    // The code or password is sent once and never kept, whatever the answer.
+    setReauth("");
     onConfirm(ask, reauth)
       .then(
-        () => setReauth(""),
+        () => undefined,
         (failure: Error) => {
           if (fieldRefusal(failure)) {
             setError(failure.message);
@@ -334,6 +380,7 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
         if (!open && !saving) onClose();
       }}
       size="sm"
+      returnFocus={twoFactorControl}
       title={text?.title ?? ""}
       description={text?.description}
       footer={
@@ -378,6 +425,7 @@ function CodesDialog({
   readonly codes: readonly string[] | null;
   readonly onClose: () => void;
 }) {
+  // The codes stay for the fade-out only; once the dialog has closed nothing holds them.
   const [kept, setKept] = useState<readonly string[]>([]);
 
   if (codes !== null && codes !== kept) {
@@ -409,6 +457,8 @@ function CodesDialog({
         if (!open) onClose();
       }}
       size="sm"
+      returnFocus={codesControl}
+      onExited={() => setKept([])}
       title="Your new backup codes"
       description="Each code works once, if you can't use your authenticator. Keep them somewhere safe: they won't be shown again."
       footer={
@@ -437,7 +487,7 @@ function CodesDialog({
 }
 
 /** The private sign-in link: copy it, scan its QR code, or hand it to the share sheet. */
-function TransferGroup({ url }: { readonly url: string }) {
+function TransferGroup({ url, qrSvg }: { readonly url: string; readonly qrSvg: string }) {
   const [qr, setQr] = useState(false);
   const fieldId = useId();
   const canShare = "share" in navigator;
@@ -455,6 +505,7 @@ function TransferGroup({ url }: { readonly url: string }) {
 
   return (
     <SettingsGroup
+      id={TRANSFER_ID}
       title="Sign in on another device"
       description="Open this link on another device to sign in there without a password."
     >
@@ -488,10 +539,11 @@ function TransferGroup({ url }: { readonly url: string }) {
         open={qr}
         onOpenChange={setQr}
         size="sm"
+        returnFocus={transferControl}
         title="Scan to sign in"
         description="Point your phone's camera at the code. Don't show it to anyone else."
       >
-        <img className="settings-qr" src={qrCodePath(url)} alt="QR code for your sign-in link" />
+        <img className="settings-qr" src={svgDataUrl(qrSvg)} alt="QR code for your sign-in link" />
       </Dialog>
     </SettingsGroup>
   );

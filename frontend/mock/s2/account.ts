@@ -29,6 +29,10 @@ export const RATE_ALERT = "Too many attempts. Try again in a few minutes.";
 /** The sign-in link the mock shows. */
 export const MOCK_TRANSFER_URL = "http://localhost/session/transfers/mock-transfer-token";
 
+/** The sign-in link's QR code the mock shows: a stand-in drawing, not a scannable code. */
+export const MOCK_TRANSFER_QR_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 3" width="240" height="240"><path d="M0 0h1v1H0zM2 0h1v1H2zM1 1h1v1H1zM0 2h1v1H0z"/></svg>';
+
 const DISABLED_NOTICE = "Two-step sign-in is off. Set it up again to keep signing in.";
 
 const FORGOT_ONE = "Device forgotten. It will ask for a code at next sign-in.";
@@ -109,6 +113,7 @@ export function createAccount(ctx: S2Context): AccountModule {
       directRooms: all.filter((row) => row.direct),
       twoFactor: current().twoFactor,
       transferUrl: MOCK_TRANSFER_URL,
+      transferQrSvg: MOCK_TRANSFER_QR_SVG,
     };
   };
 

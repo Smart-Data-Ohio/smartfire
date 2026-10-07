@@ -199,16 +199,14 @@ describe("S7 settings schemas", () => {
     };
 
     roundTrips(AccountSettings, {
-      sharedRooms: [{ roomId: 12, name: "Everyone", involvement: "everything", direct: false }],
+      sharedRooms: [
+        { roomId: 12, name: "Everyone", involvement: "everything", direct: false },
+        { roomId: 14, name: "Old room", involvement: null, direct: false },
+      ],
       directRooms: [{ roomId: 13, name: "Grace", involvement: "mentions", direct: true }],
       twoFactor: panel,
       transferUrl: "https://chat.example/session/transfers/signed",
-    });
-    roundTrips(AccountSettings, {
-      sharedRooms: [],
-      directRooms: [],
-      twoFactor: null,
-      transferUrl: "https://chat.example/session/transfers/bot",
+      transferQrSvg: '<svg xmlns="http://www.w3.org/2000/svg"/>',
     });
     roundTrips(Reauthentication, { reauth: "" });
     roundTrips(BackupCodes, { codes: ["1234-5678"] });

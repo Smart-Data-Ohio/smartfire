@@ -35,17 +35,26 @@ export function DevicesSection() {
     fetchList();
   };
 
-  const [testing, setTesting] = useState<number | null>(null);
+  // Each device's test runs on its own: one finishing never clears another still on its way.
+  const [testing, setTesting] = useState<ReadonlySet<number>>(new Set());
 
   const test = (id: number) => {
-    setTesting(id);
+    setTesting((current) => new Set(current).add(id));
     settingsActions
       .testPush(id)
       .then(
         () => toast({ title: "Test notification sent", tone: "success" }),
         (error: Error) => toastFailure("Couldn't send a test", error),
       )
-      .finally(() => setTesting(null));
+      .finally(() =>
+        setTesting((current) => {
+          const next = new Set(current);
+
+          next.delete(id);
+
+          return next;
+        }),
+      );
   };
 
   const remove = (id: number) => {
@@ -85,7 +94,7 @@ export function DevicesSection() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  loading={testing === subscription.id}
+                  loading={testing.has(subscription.id)}
                   disabled={busy !== null}
                   onClick={() => test(subscription.id)}
                 >
