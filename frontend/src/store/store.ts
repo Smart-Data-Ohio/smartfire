@@ -316,13 +316,14 @@ export const mutations = {
     page: AgentApprovalPage,
     mode: "replace" | "more",
     generation?: number,
-  ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation)),
-  applyApproval: (approval: AgentApproval) =>
-    apply((state) => approvals.applyApproval(state, approval)),
+    ticket?: number,
+  ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket)),
+  applyApproval: (approval: AgentApproval, ticket?: number) =>
+    apply((state) => approvals.applyApproval(state, approval, ticket)),
   showApproval: (approval: AgentApproval) =>
     apply((state) => approvals.showApproval(state, approval)),
-  rollbackApproval: (shown: AgentApproval) =>
-    apply((state) => approvals.rollbackApproval(state, shown)),
+  rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>
+    apply((state) => approvals.rollbackApproval(state, shown, before)),
   /** Every approvals list reloads when next shown. */
   markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
   setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>

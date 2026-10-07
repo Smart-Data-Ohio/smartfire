@@ -154,7 +154,17 @@ describe("approval requests in the store", () => {
 
     expect(landed.approvals.items[2]).toBe(shown);
     expect(ids(landed, "pending")).toEqual([]);
-    expect(rollbackApproval(landed, shown).approvals.items[2]).toEqual(approval(2));
+    expect(rollbackApproval(landed, shown, approval(2)).approvals.items[2]).toEqual(approval(2));
+  });
+
+  it("never rolls back an equal server echo that confirmed the local decision", () => {
+    const before = approval(2);
+    const shown = decidedLocally(before, "approved", 1, "Ok", NOW);
+    const local = showApproval(loaded(), shown);
+    const echoed = applyApproval(local, { ...shown });
+
+    expect(rollbackApproval(echoed, shown, before)).toBe(echoed);
+    expect(echoed.approvals.items[2]?.status).toBe("approved");
   });
 
   it("keeps a confirmed decision when an earlier Pending GET lands", () => {
@@ -287,7 +297,7 @@ describe("approval requests in the store", () => {
     });
 
     // Rolled back: pending again, in its place.
-    const back = rollbackApproval(decided, optimistic);
+    const back = rollbackApproval(decided, optimistic, approval(2));
 
     expect(ids(back, "pending")).toEqual([3, 2]);
     expect(ids(back, "approved")).toEqual([1]);

@@ -52,6 +52,101 @@ function pendingIds(): readonly number[] {
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
+  it.effect("keep a live Approved member after a late empty reload and refetch itself", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      const decided: AgentApproval = {
+        ...pending,
+        status: "approved",
+        decidedAt: "2026-10-06T16:31:00.000Z",
+      };
+
+      yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
+        approvals: [],
+        users: [],
+        nextCursor: null,
+      });
+      yield* approvals.load(AGENT, "approved");
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ approvals: [], users: [], nextCursor: null }),
+        ),
+      );
+
+      const loading = yield* Effect.forkChild(approvals.load(AGENT, "approved"));
+
+      yield* Deferred.await(started);
+      mutations.applyEvents(
+        [
+          {
+            seq: 1,
+            topic: "user:7",
+            type: "approval.updated",
+            data: { approval: decided, users: [] },
+          },
+        ],
+        0,
+      );
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () => {
+        expect(approvalListOf(store.getState(), approvalListKey(AGENT, "approved")).ids).toEqual([
+          100,
+        ]);
+
+        return Effect.succeed({ approvals: [decided], users: [], nextCursor: null });
+      });
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
+
+      expect(approvalListOf(store.getState(), approvalListKey(AGENT, "approved")).ids).toEqual([
+        100,
+      ]);
+      expect((yield* fake.requests).length).toBe(3);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep Pending's last loaded row after a late All page and page before it", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ approvals: [{ ...pending, id: 51 }], users: [], nextCursor: null }),
+        ),
+      );
+
+      const loading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+      yield* Deferred.await(started);
+      yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
+        approvals: Array.from({ length: 50 }, (_, index) => ({ ...pending, id: 100 - index })),
+        users: [],
+        nextCursor: "51",
+      });
+      yield* approvals.load(AGENT, "pending");
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
+
+      expect(pendingIds()).toEqual(Array.from({ length: 50 }, (_, index) => 100 - index));
+
+      yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
+        approvals: [{ ...pending, id: 50 }],
+        users: [],
+        nextCursor: null,
+      });
+      yield* approvals.loadMore(AGENT, "pending");
+
+      expect(pendingIds().slice(-2)).toEqual([51, 50]);
+      expect((yield* fake.requests).at(-1)?.query?.before).toBe("51");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   for (const refusal of [
     ...["approved", "denied", "cancelled"].map((status) => {
       const message = `Request is already ${status}`;
