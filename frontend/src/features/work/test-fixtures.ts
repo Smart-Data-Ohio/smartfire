@@ -129,3 +129,13 @@ export function rowFixture(id: number, extra: Partial<WorkListRow> = {}): WorkLi
     ...extra,
   };
 }
+
+/**
+ * The `"unknown"` a tolerant field decodes to (a status, kind or state added after this build),
+ * which the generated types leave out.
+ */
+export function tolerated<T extends string>(): T {
+  // SAFETY: tolerantLiterals decodes any unrecognised wire value to "unknown", so the store can
+  // hold it in a field whose generated type lists only the known values.
+  return "unknown" as T;
+}
