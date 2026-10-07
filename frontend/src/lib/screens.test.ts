@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { classicUrlFor, SCREENS, spaUrlFor, withClassicBypass } from "./screens.ts";
+import {
+  classicPageFor,
+  classicUrlFor,
+  SCREENS,
+  spaUrlFor,
+  unportedClassicPage,
+  withClassicBypass,
+} from "./screens.ts";
 
 /** `pattern` with its parameters filled with 7, 8, 9 in order. */
 function sample(pattern: string): string {
@@ -52,5 +59,14 @@ describe("the screen map", () => {
     expect(classicUrlFor("/app/search", "q=fire&classic=1")).toBe("/searches?q=fire");
     expect(withClassicBypass("/activity")).toBe("/activity?classic=1");
     expect(withClassicBypass("/searches?q=fire#top")).toBe("/searches?q=fire&classic=1#top");
+  });
+
+  it("finds the classic page for a router location, with or without the basepath", () => {
+    expect(unportedClassicPage("/activity", "")).toBe("/activity?classic=1");
+    expect(unportedClassicPage("/nowhere", "")).toBeNull();
+    expect(classicPageFor("/r/12", "?message_id=9")).toBe("/rooms/12?message_id=9&classic=1");
+    expect(classicPageFor("/app/r/12")).toBe("/rooms/12?classic=1");
+    expect(classicPageFor("/")).toBe("/?classic=1");
+    expect(classicPageFor("/nowhere")).toBe("/?classic=1");
   });
 });

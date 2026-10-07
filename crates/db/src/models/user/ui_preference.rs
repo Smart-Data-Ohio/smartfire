@@ -77,13 +77,19 @@ pub fn stored(conn: &Connection, user: i64) -> Result<Option<UiPreference>> {
 }
 
 /// Records the person's choice, keeping every other key. Preferences that aren't a JSON object
-/// (never written by the app) start over as one.
+/// (never written by the app) start over as one. A missing user (deleted meanwhile) is a no-op.
 pub fn store(tx: &Tx<'_>, user: i64, preference: UiPreference) -> Result<()> {
-    let raw: Option<String> = tx.conn().query_row(
-        "SELECT inbox_preferences FROM users WHERE id=?",
-        [user],
-        |row| row.get(0),
-    )?;
+    let Some(raw) = tx
+        .conn()
+        .query_row(
+            "SELECT inbox_preferences FROM users WHERE id=?",
+            [user],
+            |row| row.get::<_, Option<String>>(0),
+        )
+        .optional()?
+    else {
+        return Ok(());
+    };
     let mut preferences = raw
         .and_then(|raw| serde_json::from_str::<Value>(&raw).ok())
         .and_then(|value| value.as_object().cloned())

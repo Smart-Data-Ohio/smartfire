@@ -125,6 +125,21 @@ export function classicUrlFor(path: string, search = ""): string | null {
   return null;
 }
 
+/** A router location's path as the map spells it: the router's `pathname` leaves out `/app/`. */
+function spaPath(pathname: string): string {
+  return pathname === "/app" || pathname.startsWith("/app/")
+    ? pathname
+    : `/app/${pathname.replace(/^\//, "")}`;
+}
+
+/**
+ * The classic page, with `?classic=1`, for a router location (its `pathname` with or without the
+ * `/app/` basepath), or the classic home when nothing maps.
+ */
+export function classicPageFor(pathname: string, search = ""): string {
+  return withClassicBypass(classicUrlFor(spaPath(pathname), search) ?? "/");
+}
+
 /** `url` with `?classic=1`, which keeps a person who uses the SPA on the classic page. */
 export function withClassicBypass(url: string): string {
   const parsed = new URL(url, "http://x");
@@ -135,19 +150,13 @@ export function withClassicBypass(url: string): string {
 }
 
 /**
- * An SPA path the router can't open: forward it to its classic page with a full page load
- * (`replace`, so Back skips it). Returns whether it did.
+ * Where an SPA path the router can't open goes: its classic page (with `?classic=1`) when the map
+ * names one, else `null` (a 404).
  */
-export function openUnportedInClassic(path: string, search: string): boolean {
-  const classic = classicUrlFor(path, search);
+export function unportedClassicPage(pathname: string, search: string): string | null {
+  const classic = classicUrlFor(spaPath(pathname), search);
 
-  if (classic === null) {
-    return false;
-  }
-
-  window.location.replace(withClassicBypass(classic));
-
-  return true;
+  return classic === null ? null : withClassicBypass(classic);
 }
 
 /** Whether `path` is the SPA's (under `/app/`). */

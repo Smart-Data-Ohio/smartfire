@@ -1,6 +1,6 @@
-import { useParams } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { classicUrlFor, withClassicBypass } from "../../lib/screens.ts";
+import { classicPageFor } from "../../lib/screens.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -37,10 +37,10 @@ interface RoomPaneProps {
 }
 
 /** The classic page for where the SPA is now (`?classic=1`, so it doesn't send them back here). */
-function classicPage(): string {
-  const { pathname, search } = window.location;
+function useClassicPage(): string {
+  const { pathname, searchStr } = useLocation();
 
-  return withClassicBypass(classicUrlFor(pathname, search) ?? "/");
+  return classicPageFor(pathname, searchStr);
 }
 
 function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
@@ -50,6 +50,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const paneOpen = useRightPaneView() !== null;
   const phone = usePhoneLayout();
   const covered = phone && paneOpen;
+  const classicPage = useClassicPage();
 
   // Learn which of the room's threads the viewer follows, so reply indicators can show unread.
   useEffect(() => {
@@ -61,9 +62,9 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   // Boards aren't ported yet (their own route comes later): the classic board opens instead.
   useEffect(() => {
     if (kind === "board") {
-      window.location.replace(classicPage());
+      window.location.replace(classicPage);
     }
-  }, [kind]);
+  }, [kind, classicPage]);
 
   if (kind === "board") {
     return null;
@@ -83,7 +84,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
           >
             Try again
           </Button>
-          <a className="text-muted" href={classicPage()}>
+          <a className="text-muted" href={classicPage}>
             Open in classic
           </a>
         </div>

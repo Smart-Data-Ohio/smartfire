@@ -263,10 +263,12 @@ pub async fn before_actions_with_authentication(
 
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
 /// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
-/// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page:
-/// not a Turbo frame's, a script's or a JSON request, and not with `?classic=1`, which keeps them
-/// on the classic page. It runs last in the chain, so signing in, two-step enforcement and the
-/// rest come first, and a page's own checks (room access) are the SPA's to make.
+/// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page
+/// ([`navigates`]): not a Turbo frame's, a script's, a JSON request or a bare `fetch()`, and not
+/// with `?classic=1`, which keeps them on the classic page, nor while a flash waits for the page
+/// (the SPA has no way to show it). It runs last in the chain, so signing
+/// in, two-step enforcement and the rest come first, and a page's own checks (room access) are the
+/// SPA's to make.
 pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
     use campfire_kit::format;
@@ -289,7 +291,12 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     let Some(location) = campfire_spa::screens::spa_url(endpoint, c.request.path(), query) else {
         return Ok(());
     };
-    if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) {
+    if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) || !navigates(c) {
+        return Ok(());
+    }
+    // A notice or alert a classic action left for this page (`redirect_to ..., notice:`) shows
+    // here: the SPA can't show it.
+    if !c.peek_flash().is_empty() {
         return Ok(());
     }
     let user_id = require_current_user(c)?.id;
@@ -299,6 +306,13 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     }
     let location = c.url_for(&location);
     halt(c.redirect_to(&location)?)
+}
+
+/// A browser opening a page: `Sec-Fetch-Mode: navigate`, or an `Accept` naming `text/html`. A
+/// `fetch()` or `curl` with the session cookie and `Accept: */*` isn't one, so it isn't redirected.
+fn navigates(c: &Ctx) -> bool {
+    c.request.header("sec-fetch-mode").is_some_and(|mode| mode.eq_ignore_ascii_case("navigate"))
+        || c.request.header("accept").is_some_and(|accept| accept.to_ascii_lowercase().contains("text/html"))
 }
 
 // --- VersionHeaders ----------------------------------------------------------------------------

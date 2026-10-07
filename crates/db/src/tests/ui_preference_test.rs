@@ -28,6 +28,7 @@ fn no_choice_until_one_is_stored() {
         None,
         "a missing user"
     );
+    t.write(|tx| ui_preference::store(tx, 999_999, UiPreference::Next));
 
     t.write(move |tx| ui_preference::store(tx, david, UiPreference::Next));
     assert_eq!(

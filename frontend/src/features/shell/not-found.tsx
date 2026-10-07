@@ -1,19 +1,23 @@
-import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { openUnportedInClassic } from "../../lib/screens.ts";
+import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { unportedClassicPage } from "../../lib/screens.ts";
 
 /**
  * Any path the router has no route for. A destination the SPA hasn't ported yet (the screen map
  * names it) opens on its classic page with a full page load; anything else is a 404.
  */
 export function NotFound() {
-  const [forwarding, setForwarding] = useState(true);
+  const { pathname, searchStr } = useLocation();
+  const classic = unportedClassicPage(pathname, searchStr);
 
+  // `replace`, so Back skips the forwarding.
   useEffect(() => {
-    setForwarding(openUnportedInClassic(window.location.pathname, window.location.search));
-  }, []);
+    if (classic !== null) {
+      window.location.replace(classic);
+    }
+  }, [classic]);
 
-  if (forwarding) {
+  if (classic !== null) {
     return null;
   }
 

@@ -154,6 +154,139 @@ async fn only_html_navigations_of_ported_pages_redirect() {
     assert_eq!(signed_out.location(), Some(to("/session/new").as_str()));
 }
 
+/// A classic action that leaves a notice for the next page keeps that page classic, so the
+/// notice shows; the next visit, with the flash shown, goes to the SPA again.
+#[tokio::test]
+async fn a_pending_flash_keeps_the_classic_page() {
+    let Some(a) = enabled().await else { return };
+    let room = room(&a).await;
+    let path = format!("/rooms/{room}");
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut b = a.sign_in(DAVID).await;
+    let saved = b
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    let shown = b.get(&path).await;
+    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
+    assert!(redirected_to_spa(&b.get(&path).await));
+}
+
+/// A page fetched by a script with the session cookie (`fetch()`, `curl`): `Accept: */*` and no
+/// `Sec-Fetch-Mode: navigate`, so it gets the page, not a redirect. Either navigation signal alone
+/// is enough to redirect.
+#[tokio::test]
+async fn a_fetch_with_the_session_cookie_is_not_a_navigation() {
+    let Some(a) = enabled().await else { return };
+    let room = room(&a).await;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut b = a.sign_in(DAVID).await;
+    let path = format!("/rooms/{room}");
+    for request in [
+        Req::new(Method::GET, &path).header("accept", "*/*"),
+        Req::new(Method::GET, &path)
+            .header("accept", "*/*")
+            .header("sec-fetch-mode", "cors"),
+        Req::new(Method::HEAD, &path).header("accept", "*/*"),
+    ] {
+        let label = format!("{} {:?}", request.method, request.headers);
+        let reply = b.send(request).await;
+        assert!(
+            !redirected_to_spa(&reply),
+            "{label}: {:?}",
+            reply.location()
+        );
+    }
+    for request in [
+        Req::new(Method::GET, &path)
+            .header("accept", "*/*")
+            .header("sec-fetch-mode", "navigate"),
+        Req::new(Method::GET, &path).header("accept", "text/html"),
+    ] {
+        let label = format!("{:?}", request.headers);
+        assert!(redirected_to_spa(&b.send(request).await), "{label}");
+    }
+}
+
+/// Only a browser session is redirected: a bot key or an agent token reading a ported page, and
+/// any `POST` to one, get what they always got, even with everyone defaulted to the new UI.
+#[tokio::test]
+async fn keys_tokens_and_posts_are_never_redirected() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+    use campfire_db::{AgentCredential, NewCredential};
+    use sha2::{Digest, Sha256};
+
+    const SECRET: &str = "coexistence-agent-credential";
+    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
+        return;
+    };
+    let room = room(&a).await;
+    a.db()
+        .write(|tx| {
+            let agent: i64 =
+                tx.conn()
+                    .query_row("SELECT id FROM agents ORDER BY id LIMIT 1", [], |row| {
+                        row.get(0)
+                    })?;
+            let digest = format!("{:x}", Sha256::digest(SECRET));
+            AgentCredential::create(
+                tx,
+                NewCredential {
+                    agent_id: agent,
+                    created_by_id: DAVID,
+                    name: "coexistence".into(),
+                    token_last_four: digest[..4].into(),
+                    token_digest: digest,
+                    ..Default::default()
+                },
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let bearer = ["Bearer", SECRET].join(" ");
+    let mut requests = Vec::new();
+    for path in ["/".to_string(), format!("/rooms/{room}")] {
+        for method in [Method::GET, Method::HEAD] {
+            let keyed = format!("{path}?bot_key={BENDER_KEY}");
+            requests.push(Req::new(method.clone(), &keyed).header("accept", "text/html"));
+            requests.push(
+                Req::new(method, &path)
+                    .header("accept", "text/html")
+                    .header("sec-fetch-mode", "navigate")
+                    .header("authorization", &bearer),
+            );
+        }
+        requests.push(
+            Req::new(Method::POST, &path)
+                .header("accept", "text/html")
+                .header("authorization", &bearer),
+        );
+    }
+    for request in requests {
+        let label = format!("{} {} {:?}", request.method, request.path, request.headers);
+        let reply = a.anonymous().send(request).await;
+        assert!(
+            !redirected_to_spa(&reply),
+            "{label}: {:?}",
+            reply.location()
+        );
+    }
+
+    // A session's POST to a ported path isn't redirected either.
+    let mut david = a.sign_in(DAVID).await;
+    for path in ["/".to_string(), format!("/rooms/{room}")] {
+        let reply = david
+            .write(Req::new(Method::POST, &path).header("accept", "text/html"))
+            .await;
+        assert!(
+            !redirected_to_spa(&reply),
+            "POST {path}: {:?}",
+            reply.location()
+        );
+    }
+}
+
 #[tokio::test]
 async fn spa_default_next_moves_everyone_who_has_not_chosen_classic() {
     let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
