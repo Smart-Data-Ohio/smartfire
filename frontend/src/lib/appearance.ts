@@ -9,12 +9,14 @@ import { prefersReducedMotion } from "../motion/reduced-motion.ts";
  *
  * The theme on screen comes from, in order:
  * 1. a theme pinned on this device (Settings → Appearance → This device), when there is one;
- * 2. the account's theme, from the inline boot JSON before the first paint and from `/me` after;
- * 3. the account's theme as this device last saw it, until boot is read (the Vite page has none);
- * 4. the OS setting.
- * Text size is the account's alone. Density and motion are this device's alone. Everything is
- * remembered under one localStorage key; its `theme` is the theme on screen, which the classic
- * pages' script (crates/assets/auth/auth.js) applies too.
+ * 2. the account's theme, from the inline boot JSON and from `/me` after;
+ * 3. the OS setting.
+ * Text size is the account's alone. Density and motion are this device's alone.
+ *
+ * Only this device's own choices (the pin, density, motion) are stored, under one localStorage
+ * key: never the account's, so the next person to sign in on this browser doesn't inherit them.
+ * index.html's blocking script applies the stored choices and the inline boot's before the
+ * stylesheet paints; the classic pages' script (crates/assets/auth/auth.js) applies the pin.
  */
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -95,8 +97,10 @@ function writeAttributes(appearance: Appearance): void {
 }
 
 function store(appearance: Appearance): void {
+  const { themeOverride, density, motion } = appearance;
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appearance));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ themeOverride, density, motion }));
   } catch {
     // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
   }
@@ -152,7 +156,9 @@ function readInlineBoot(): Partial<AccountAppearance> {
       return {};
     }
 
-    const fields = new Map<string, string>(Object.entries(parsed).map(([key, field]) => [key, String(field)]));
+    const fields = new Map<string, string>(
+      Object.entries(parsed).map(([key, field]) => [key, String(field)]),
+    );
 
     return {
       theme: pick(THEMES, fields.get("theme")) ?? "system",
@@ -164,22 +170,19 @@ function readInlineBoot(): Partial<AccountAppearance> {
 }
 
 /**
- * Applies the appearance before the first render, so nothing flashes: the account's choices from
- * the inline boot JSON (else as last remembered), under this device's pinned theme. A device that
- * remembered only a bare `theme` (before themes followed the account) takes it as the account's
- * last known theme, which boot then replaces.
+ * Takes over what index.html's blocking script painted, before the first render: the account's
+ * choices from the inline boot JSON (the Vite page without one follows the OS until boot loads),
+ * under this device's pinned theme. Anything else an earlier version stored (a bare `theme`, an
+ * `accountTheme`) was some account's, so it is dropped rather than shown to whoever is here now.
  */
 export function restoreAppearance(): void {
   const saved = readStored();
   const boot = readInlineBoot();
-  // Every save since themes followed the account carries `accountTheme`.
-  const legacy = !saved.has("accountTheme");
-  const remembered = pick(THEMES, saved.get(legacy ? "theme" : "accountTheme"));
 
   commit({
-    themeOverride: legacy ? null : pick(THEMES, saved.get("themeOverride")),
-    accountTheme: boot.theme ?? remembered ?? "system",
-    textSize: boot.textSize ?? pick(TEXT_SIZES, saved.get("textSize")) ?? "default",
+    themeOverride: pick(THEMES, saved.get("themeOverride")),
+    accountTheme: boot.theme ?? "system",
+    textSize: boot.textSize ?? "default",
     density: pick(DENSITIES, saved.get("density")) ?? "comfortable",
     motion: pick(MOTIONS, saved.get("motion")) ?? "system",
   });

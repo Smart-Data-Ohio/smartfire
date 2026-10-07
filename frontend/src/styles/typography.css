@@ -101,6 +101,16 @@
   :root[data-text-size="larger"] {
     font-size: 112.5%;
   }
+
+  /*
+   * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
+   * use the composer size never drop below it at the smaller text sizes.
+   */
+  @media (pointer: coarse) {
+    :root {
+      --text-composer: max(1rem, 16px);
+    }
+  }
 }
 
 @layer base {

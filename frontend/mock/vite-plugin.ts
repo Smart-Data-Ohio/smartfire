@@ -270,6 +270,13 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
       );
     },
     transformIndexHtml: () => [
+      // As the Rust shell renders it, ahead of index.html's blocking appearance script.
+      {
+        tag: "script",
+        attrs: { type: "application/json", id: "boot" },
+        children: current().inlineBoot(),
+        injectTo: "head-prepend",
+      },
       {
         tag: "meta",
         attrs: { name: "csrf-param", content: "authenticity_token" },
