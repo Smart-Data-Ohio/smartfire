@@ -54,6 +54,13 @@ impl Account {
             .as_deref()
             .is_none_or(|s| s.chars().all(char::is_whitespace))
     }
+    /// Inspect the stored token without marking an unreadable connection disconnected.
+    pub fn decrypt_access_token(
+        &self,
+        crypto: &ArEncryption,
+    ) -> std::result::Result<Option<String>, rails_compat::ar_encryption::DecryptionError> {
+        crypto.decrypt(&self.access_token).map(|token| (!token.chars().all(char::is_whitespace)).then_some(token))
+    }
     pub fn usable_token(&self, tx: &Tx<'_>, crypto: &ArEncryption) -> Result<Option<String>> {
         let deactivated: bool = tx.conn().query_row(
             "SELECT EXISTS(SELECT 1 FROM users WHERE id=? AND status=1)", [self.user_id], |r| r.get(0),
@@ -65,8 +72,8 @@ impl Account {
         if !self.connected() {
             return Ok(None);
         }
-        match crypto.decrypt(&self.access_token) {
-            Ok(token) => Ok((!token.chars().all(char::is_whitespace)).then_some(token)),
+        match self.decrypt_access_token(crypto) {
+            Ok(token) => Ok(token),
             Err(_) => {
                 self.mark_disconnected(tx, UNREADABLE_TOKEN_REASON)?;
                 Ok(None)

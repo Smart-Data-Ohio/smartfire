@@ -1,14 +1,15 @@
 //! `/api/v1/settings` (S7): the signed-in person's settings, the SPA's twin of the classic
 //! profile page. Every write runs the classic controller's save path (`users/profiles#update`,
 //! `users/notification_settings#update`, `users/statuses#update`, `users/dnd_allowances`,
-//! `users/sessions`, `users/push_subscriptions`), so the rows, audit entries, jobs and
-//! broadcasts are the classic ones. Only the request (typed JSON instead of a form) and the
-//! answer (the settings again instead of a redirect) differ.
+//! `users/sessions`, `users/push_subscriptions`, and personal integration connections), so the
+//! rows, audit entries, jobs and broadcasts are the classic ones. Only the request (typed JSON
+//! instead of a form) and the answer (the settings or integrations instead of a redirect) differ.
 
 use axum::Router;
 use axum::routing::{get, patch, post, put};
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
+use campfire_controllers::controllers::{fizzy_connections, github, google_connections};
 use campfire_db::models::audit_log::{Actor, Context};
 use campfire_db::models::user::profile_settings::{self, INBOX_KEYS};
 use campfire_db::models::user_status_settings::clock_time_to_minutes;
@@ -16,7 +17,6 @@ use campfire_db::{
     DndAllowedUser, Errors, PushSubscription, Session, User, UserChanges, UserStatusSettings,
 };
 use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_views::users::ConnectionPanel;
 use campfire_web::authentication;
 use campfire_web::concerns::{self, Authentication, Before, current_session};
 use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
@@ -78,6 +78,18 @@ pub fn routes() -> Router<Kit> {
         .route(
             "/api/v1/settings/push_subscriptions/{id}",
             axum::routing::delete(action(remove_push_subscription)),
+        )
+        .route(
+            "/api/v1/settings/github_connection",
+            put(unparsed_action(connect_github)).delete(action(disconnect_github)),
+        )
+        .route(
+            "/api/v1/settings/fizzy_connection",
+            put(unparsed_action(connect_fizzy)).delete(action(disconnect_fizzy)),
+        )
+        .route(
+            "/api/v1/settings/google_connection",
+            axum::routing::delete(action(disconnect_google)),
         )
 }
 
@@ -153,6 +165,27 @@ endpoint!(
     remove_push_subscription => destroy_push_subscription
 );
 
+endpoint!(
+    /// `PUT /api/v1/settings/github_connection`
+    connect_github => link_github
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/github_connection`
+    disconnect_github => unlink_github
+);
+endpoint!(
+    /// `PUT /api/v1/settings/fizzy_connection`
+    connect_fizzy => link_fizzy
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/fizzy_connection`
+    disconnect_fizzy => unlink_fizzy
+);
+endpoint!(
+    /// `DELETE /api/v1/settings/google_connection`
+    disconnect_google => unlink_google
+);
+
 async fn before_actions(c: &mut Ctx) -> Result<()> {
     concerns::before_actions(
         c,
@@ -226,13 +259,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
         })
         .await
         .map_err(db_error)?;
-    let fizzy = presenters::fizzy_profile::connection(c.app(), id)
-        .await
-        .map_err(Error::internal)?;
-    let github = presenters::github::connection(c.app(), id)
-        .await
-        .map_err(Error::internal)?;
-    let google = &sections.google;
+    let integrations = integrations(c, id).await?;
     let now = campfire_db::Timestamp::from_jiff(now);
     Ok(api::Settings {
         profile: api::ProfileSettings {
@@ -321,50 +348,90 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
             },
             push_to_talk_key: sections.push_to_talk_key.clone(),
         },
-        integrations: api::IntegrationSettings {
-            google: api::GoogleIntegration {
-                sign_in_configured: c.app().google.sign_in().config.configured(),
-                identity_email: google.identity_email.clone(),
-                calendar_configured: c.app().google.api().config.configured(),
-                connected: google.connected,
-                calendar: google.calendar,
-                drive: google.drive,
-                email: google.account_exists.then(|| google.email.clone()),
-            },
-            github: if github.usable {
-                api::Connection::Connected {
-                    name: github.login.clone(),
-                    workspace: None,
-                    app_token: github.app_token,
-                }
-            } else if github.linked {
-                api::Connection::Rejected {
-                    reason: github.reason.clone(),
-                }
-            } else {
-                api::Connection::Missing
-            },
-            github_app_configured: github.app_configured,
-            fizzy: connection(fizzy),
-            manage_path: "/users/me/profile".into(),
-            slack_import_path: "/slack/imports".into(),
-        },
+        integrations,
     })
 }
 
-fn connection(panel: ConnectionPanel) -> api::Connection {
-    match panel {
-        ConnectionPanel::Missing => api::Connection::Missing,
-        ConnectionPanel::Rejected { reason } => api::Connection::Rejected { reason },
-        ConnectionPanel::Connected {
-            name,
-            workspace,
-            app_token,
-        } => api::Connection::Connected {
-            name,
-            workspace,
-            app_token,
+/// The integration state shown by both settings reads and connection replies. Classic profile
+/// presenters repair unreadable tokens; a JSON reply must not add those unrelated writes to an
+/// action, so inspect the same tokens without changing their rows.
+async fn integrations(c: &Ctx, id: i64) -> Result<api::IntegrationSettings> {
+    use campfire_app::integrations::{fizzy::accounts as fizzy, github::accounts as github};
+    let now = c.now();
+    let (google, github, fizzy) = c.app().db.read(move |conn| {
+        Ok((
+            profile_sections::load(conn, id, now)?.google,
+            github::Account::for_user(conn, id)?,
+            fizzy::Account::for_user(conn, id)?,
+        ))
+    }).await.map_err(db_error)?;
+    let crypto = rails_compat::ar_encryption::ArEncryption::new(&c.app().secrets);
+    let github = match github {
+        None => api::Connection::Missing,
+        Some(account) if !account.connected() => api::Connection::Rejected {
+            reason: account.disconnected_reason,
         },
+        Some(account) => {
+            let token = account.decrypt_access_token(&crypto);
+            usable_connection(
+                api::Connection::Connected {
+                    app_token: account.app_token(),
+                    name: account.github_login,
+                    workspace: None,
+                },
+                token,
+                account.disconnected_reason,
+                github::UNREADABLE_TOKEN_REASON,
+            )
+        }
+    };
+    let fizzy = match fizzy {
+        None => api::Connection::Missing,
+        Some(account) if !account.connected() => api::Connection::Rejected {
+            reason: account.disconnected_reason.filter(|s| !campfire_richtext::ruby::is_blank(s)),
+        },
+        Some(account) => {
+            let token = account.decrypt_access_token(&crypto);
+            usable_connection(
+                api::Connection::Connected {
+                    name: account.fizzy_user_name.unwrap_or_default(),
+                    workspace: account.account_name,
+                    app_token: false,
+                },
+                token,
+                account.disconnected_reason.filter(|s| !campfire_richtext::ruby::is_blank(s)),
+                fizzy::UNREADABLE_TOKEN_REASON,
+            )
+        }
+    };
+    Ok(api::IntegrationSettings {
+        google: api::GoogleIntegration {
+            sign_in_configured: c.app().google.sign_in().config.configured(),
+            identity_email: google.identity_email,
+            calendar_configured: c.app().google.api().config.configured(),
+            connected: google.connected,
+            calendar: google.calendar,
+            drive: google.drive,
+            email: google.account_exists.then_some(google.email),
+        },
+        github,
+        github_app_configured: c.app().github_app.configured(),
+        fizzy,
+        manage_path: "/users/me/profile".into(),
+        slack_import_path: "/slack/imports".into(),
+    })
+}
+
+fn usable_connection(
+    connected: api::Connection,
+    token: std::result::Result<Option<String>, rails_compat::ar_encryption::DecryptionError>,
+    reason: Option<String>,
+    unreadable: &str,
+) -> api::Connection {
+    match token {
+        Ok(Some(_)) => connected,
+        Ok(None) => api::Connection::Rejected { reason },
+        Err(_) => api::Connection::Rejected { reason: Some(unreadable.into()) },
     }
 }
 
@@ -951,4 +1018,61 @@ async fn destroy_push_subscription(c: &mut Ctx) -> Result {
             .map_err(Error::internal)?;
     }
     push_subscription_list(c, user_id).await
+}
+
+/// The shared settings reader also owns the integration connection presenters.
+async fn integration_reply(
+    c: &mut Ctx,
+    id: i64,
+    change: std::result::Result<String, String>,
+) -> Result {
+    let notice = change.map_err(|alert| crate::admin::refusal(c, &alert))?;
+    let integrations = integrations(c, id).await?;
+    c.json(StatusCode::OK, &api::IntegrationChange { integrations, notice })
+}
+
+async fn link_github(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    crate::admin::require_sudo(c)?;
+    let token: api::IntegrationToken = body(c).await?;
+    let id = user.id;
+    let change = github::connections::connect_token(c, user, &token.access_token, false).await?;
+    integration_reply(c, id, change).await
+}
+
+async fn unlink_github(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    crate::admin::require_sudo(c)?;
+    let id = user.id;
+    let notice = github::connections::disconnect_user(c, user, false).await?;
+    integration_reply(c, id, Ok(notice)).await
+}
+
+async fn link_fizzy(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    crate::admin::require_sudo(c)?;
+    let token: api::IntegrationToken = body(c).await?;
+    let id = user.id;
+    let change = fizzy_connections::connect_token(c, user, &token.access_token).await?;
+    integration_reply(c, id, change).await
+}
+
+async fn unlink_fizzy(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    crate::admin::require_sudo(c)?;
+    let id = user.id;
+    let notice = fizzy_connections::disconnect_user(c, user).await?;
+    integration_reply(c, id, Ok(notice)).await
+}
+
+async fn unlink_google(c: &mut Ctx) -> Result {
+    let user = viewer(c).await?;
+    google_connections::configured(c).map_err(|error| match error {
+        Error::Status(StatusCode::NOT_FOUND) => Error::NotFound,
+        error => error,
+    })?;
+    crate::admin::require_sudo(c)?;
+    let id = user.id;
+    let notice = google_connections::disconnect_user(c, user).await?;
+    integration_reply(c, id, Ok(notice)).await
 }

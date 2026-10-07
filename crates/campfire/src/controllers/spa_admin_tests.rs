@@ -186,6 +186,18 @@ pub(super) async fn dump(a: &TestApp) -> Value {
                                     rusqlite::types::Value::Text(text) if sqlite_now(&text) => {
                                         json!("<sqlite now>")
                                     }
+                                    rusqlite::types::Value::Text(text)
+                                        if table == "background_jobs" && name == "arguments"
+                                            && row.get::<_, String>("job_class")? == "Calendar::DisconnectCleanupJob" =>
+                                    {
+                                        let mut arguments: Value = serde_json::from_str(&text).unwrap();
+                                        // Only this encrypted credential snapshot is random. Keep
+                                        // the remote event IDs and account ID in the comparison.
+                                        if arguments[1].is_string() {
+                                            arguments[1] = json!("<encrypted snapshot>");
+                                        }
+                                        json!(arguments.to_string())
+                                    }
                                     rusqlite::types::Value::Text(text) => json!(unrandom(&text)),
                                     rusqlite::types::Value::Blob(bytes) => json!(bytes),
                                 },
@@ -239,21 +251,24 @@ pub(super) async fn upload(a: &TestApp, name: &str) -> String {
 
 /// What one write did: the database afterwards and everything it published.
 pub(super) struct Outcome {
+    pub(super) before: Value,
     pub(super) rows: Value,
     pub(super) frames: Vec<(String, String)>,
 }
 
 /// Signs David in (with sudo) on a fresh app, runs `prepare` (its answer goes to `exercise`),
 /// then records what `exercise` leaves behind.
-pub(super) async fn outcome<P, F>(prepare: P, exercise: F) -> Option<Outcome>
+async fn outcome_with_app<B, P, F>(boot: &B, prepare: P, exercise: F) -> Option<Outcome>
 where
+    B: AsyncFn() -> Option<TestApp>,
     P: AsyncFnOnce(&TestApp, &mut Browser<'_>) -> Value,
     F: AsyncFnOnce(&mut Browser<'_>, Value),
 {
-    let a = app().await?;
+    let a = boot().await?;
     let mut b = a.sign_in(DAVID).await;
     b.grant_sudo().await;
     let context = prepare(&a, &mut b).await;
+    let before = dump(&a).await;
     let capture = a.booted.app.cable.capture_every_publication();
     exercise(&mut b, context).await;
     let frames = settle(&capture)
@@ -262,6 +277,7 @@ where
         .map(|(stream, frame)| (stream, uuids_masked(&frame)))
         .collect();
     Some(Outcome {
+        before,
         rows: dump(&a).await,
         frames,
     })
@@ -274,8 +290,24 @@ where
     C: AsyncFnOnce(&mut Browser<'_>, Value),
     S: AsyncFnOnce(&mut Browser<'_>, Value),
 {
-    let classic = outcome(&prepare, classic).await?;
-    let spa = outcome(&prepare, spa).await?;
+    assert_parity_with_app(app, prepare, classic, spa).await
+}
+
+/// The same whole-database comparison with caller-owned service stubs installed at boot.
+pub(super) async fn assert_parity_with_app<B, P, C, S>(
+    boot: B,
+    prepare: P,
+    classic: C,
+    spa: S,
+) -> Option<Outcome>
+where
+    B: AsyncFn() -> Option<TestApp>,
+    P: AsyncFn(&TestApp, &mut Browser<'_>) -> Value,
+    C: AsyncFnOnce(&mut Browser<'_>, Value),
+    S: AsyncFnOnce(&mut Browser<'_>, Value),
+{
+    let classic = outcome_with_app(&boot, &prepare, classic).await?;
+    let spa = outcome_with_app(&boot, &prepare, spa).await?;
     for (table, rows) in classic.rows.as_object().unwrap() {
         if &spa.rows[table] != rows {
             let side = |rows: &Value| -> Vec<String> {
