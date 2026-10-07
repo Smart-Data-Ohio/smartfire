@@ -309,6 +309,6 @@ describe("switcher", () => {
     expect(switcher.people.find((person) => person.userId === users.sam)?.directRoomId).toBeNull();
     expect(switcher.people.map((person) => person.userId)).not.toContain(users.ember);
     expect(switcher.threads[0]).toMatchObject({ roomName: expect.any(String) });
-    expect(switcher.threads.map((thread) => thread.threadId).sort()).toEqual([1, 2, 3, 4]);
+    expect(switcher.threads.map((thread) => thread.threadId).sort()).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });

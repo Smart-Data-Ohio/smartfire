@@ -52,9 +52,20 @@ import {
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
-import { buildWorld, MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
+import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
+import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
+import { createServerInboxAmbient } from "./s3/ambient.ts";
+import { createSaved } from "./s3/saved.ts";
+import {
+  buildWorld,
+  DUE_REMINDER_DELAY_MS,
+  S3_MESSAGE_IDS,
+  S3_ROOM_IDS,
+  S3_SCHEDULED_IDS,
+  S3_THREAD_IDS,
+} from "./s3/seed.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -98,6 +109,13 @@ export const SEED_IDS = {
   threads: THREAD_IDS,
   messages: MESSAGE_IDS,
   scheduled: SCHEDULED_IDS,
+  s3: {
+    rooms: S3_ROOM_IDS,
+    threads: S3_THREAD_IDS,
+    scheduled: S3_SCHEDULED_IDS,
+    messages: S3_MESSAGE_IDS,
+    dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
+  },
 } as const;
 
 export interface MockServerOptions {
@@ -653,11 +671,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const threads = createThreads(ctx, uploads, whenReleased);
-  const messageActions = createMessages(ctx, threads);
+  const activity = createActivity(ctx);
+  const saved = createSaved(ctx, activity);
+  const messageActions = createMessages(ctx, threads, saved.savedChanged);
 
-  const composer = createComposer(ctx, threads, (messageId, remindAt) => {
-    messageActions.save(messageId, remindAt);
-  });
+  const composer = createComposer(
+    ctx,
+    threads,
+    (messageId, remindAt) => {
+      messageActions.save(messageId, remindAt);
+    },
+    scheduledInboxHooks(ctx, activity),
+  );
 
   const routes = [
     ...uploads.routes,
@@ -666,9 +691,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...composer.routes,
     ...createDirects(ctx).routes,
     ...createPanes(ctx).routes,
+    ...activity.routes,
+    ...saved.routes,
   ];
 
   composer.arm();
+  saved.arm();
 
   const threadPost = (threadId: number, userId: number, markdown: string): MessageDTO => {
     const thread = world.threads.get(threadId);
@@ -723,7 +751,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     createRandom(seed * 15_485_863 + 7),
   );
 
-  if (simulate) ambient.start();
+  const inboxAmbient = createServerInboxAmbient(
+    ctx,
+    activity,
+    () => simulation.paused(),
+    createRandom(seed * 32_452_843 + 5),
+  );
+
+  if (simulate) {
+    ambient.start();
+    inboxAmbient.start();
+  }
 
   // --- routing ---
 
@@ -843,6 +881,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         };
       case "schedule-due":
         return { status: 200, json: { sent: composer.fireScheduled(flag("all", false)).length } };
+      case "schedule-sending":
+        return { status: 200, json: composer.markSending(int("id"), flag("on", true)) };
+      case "remind-due":
+        return { status: 200, json: { reminded: saved.remindDue(flag("all", false)) } };
+      case "activity-arrival":
+        inboxAmbient.arrive();
+
+        return ok;
       case "hold-sends":
         holdSends(flag("on", true));
 
@@ -955,27 +1001,33 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       release();
       uploads.reset();
       composer.stop();
+      saved.stop();
       simulation.stop();
       ambient.stop();
+      inboxAmbient.stop();
       world = buildWorld(now(), seed);
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
       restarts += 1;
       hub.restart(epochFor());
       composer.arm();
+      saved.arm();
 
       if (simulate) {
         simulation.resume();
         simulation.start();
         ambient.start();
+        inboxAmbient.start();
       }
     },
     dispose() {
       release();
       uploads.reset();
       composer.stop();
+      saved.stop();
       simulation.stop();
       ambient.stop();
+      inboxAmbient.stop();
       hub.dropAll(false);
     },
     syncState: () => ({ epoch: hub.epoch(), seq: hub.seq(), connections: hub.connectionCount() }),

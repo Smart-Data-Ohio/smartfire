@@ -3,7 +3,8 @@
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
  */
 
-import { mergeSavedMarks, setPinState, setReactions, setSavedMark } from "./message-extras.ts";
+import { applyActivityItem, removeActivityItem } from "./activity.ts";
+import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
 import type {
   Me,
   MessageDTO,
@@ -18,6 +19,8 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
+import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
+import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
 import { removeThread, setThreadIndicator, setThreadUnread, upsertThread } from "./threads.ts";
 
@@ -731,7 +734,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = updateMessage(next, event.data);
         break;
       case "message.removed":
-        next = removeMessage(next, event.data.id, event.data.roomId, event.data.threadId, now);
+        next = dropSavedForMessage(
+          removeMessage(next, event.data.id, event.data.roomId, event.data.threadId, now),
+          event.data.id,
+        );
         break;
       case "message.reactions":
         next = setReactions(next, event.data);
@@ -740,7 +746,19 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = setPinState(next, event.data);
         break;
       case "saved.changed":
-        next = setSavedMark(next, event.data.messageId, event.data.item?.id ?? null);
+        next = applySavedChange(next, event.data.messageId, event.data.item);
+        break;
+      case "activity.item":
+        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        break;
+      case "activity.removed":
+        next = removeActivityItem(next, event.data.id, event.data.unreadCount);
+        break;
+      case "scheduled.changed":
+        next = applyScheduled(next, event.data);
+        break;
+      case "scheduled.removed":
+        next = removeScheduled(next, event.data.id);
         break;
       case "thread.indicator":
         next = setThreadIndicator(next, event.data);

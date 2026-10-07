@@ -159,7 +159,7 @@ export const save = Effect.fn("messages.save")(function* (
 ) {
   const item = yield* api.saveMessage(messageId, remindAt);
 
-  mutations.setSavedMark(messageId, item.id);
+  mutations.applySavedChange(messageId, item);
 
   return item;
 });
@@ -172,11 +172,21 @@ export const unsave = Effect.fn("messages.unsave")(function* (messageId: number)
     return;
   }
 
-  mutations.setSavedMark(messageId, null);
+  const item = store.getState().savedList.items[savedItemId];
+
+  mutations.applySavedChange(messageId, null);
 
   yield* api
     .unsave(savedItemId)
-    .pipe(Effect.tapError(() => Effect.sync(() => mutations.setSavedMark(messageId, savedItemId))));
+    .pipe(
+      Effect.tapError(() =>
+        Effect.sync(() =>
+          item === undefined
+            ? mutations.setSavedMark(messageId, savedItemId)
+            : mutations.applySavedChange(messageId, item),
+        ),
+      ),
+    );
 });
 
 /** Where the viewer may forward to. */
