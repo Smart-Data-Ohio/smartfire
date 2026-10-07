@@ -142,6 +142,26 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
   );
 }
 
+/**
+ * Focuses a room's row: its main entry when it shows twice, any entry otherwise, and the
+ * sidebar's list when the row is out of sight (moved into a folded category).
+ */
+function focusRoomRow(roomId: number): void {
+  const row =
+    document.querySelector<HTMLElement>(`[data-flip="room-${roomId}"] .sidebar-row`) ??
+    document.querySelector<HTMLElement>(`[data-room-id="${roomId}"] .sidebar-row`);
+
+  if (row !== null) {
+    row.focus({ preventScroll: true });
+
+    return;
+  }
+
+  const list = document.querySelector<HTMLElement>(".sidebar-scroll");
+
+  list?.focus({ preventScroll: true });
+}
+
 interface AnchorProps {
   readonly trigger: MenuTriggerProps;
   readonly request: RoomMenuRequest;
@@ -190,13 +210,19 @@ function Anchor({ trigger, request, onClosed }: AnchorProps) {
       return;
     }
 
+    // The menu hands focus back to this invisible anchor, which is about to go: put it on the
+    // room's row instead, found again now in case the action moved it to another section.
+    if (document.activeElement === ref.current) {
+      focusRoomRow(request.roomId);
+    }
+
     const timer = window.setTimeout(
       () => onClosedRef.current(),
       readDurationMs("--duration-small-exit"),
     );
 
     return () => window.clearTimeout(timer);
-  }, [expanded]);
+  }, [expanded, ref, request.roomId]);
 
   return (
     <button

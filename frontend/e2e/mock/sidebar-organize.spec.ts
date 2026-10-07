@@ -92,6 +92,14 @@ matrix("sidebar organisation", async ({ page, theme, phone }) => {
   await expect
     .poll(() => names(page, "category-1"))
     .toEqual(["design", "launch-planning", "quiet"]);
+  // Focus follows the row to its new section rather than dropping to the page.
+  await expect(row(section(page, "category-1"), "quiet")).toBeFocused();
+
+  // A key-opened menu hands focus back to its row when it closes.
+  await page.keyboard.press("Shift+F10");
+  await expect(page.getByRole("menu", { name: "quiet options" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(row(section(page, "category-1"), "quiet")).toBeFocused();
 
   // Muted: dimmed, with the bell.
   await row(list, "design").click({ button: "right" });

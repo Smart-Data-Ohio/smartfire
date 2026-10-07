@@ -780,6 +780,7 @@ export function Sidebar() {
       <JumpButton />
       <div
         className="sidebar-scroll"
+        tabIndex={-1}
         ref={scrollRef}
         data-dragging={drag === null ? undefined : drag.item.kind}
       >
