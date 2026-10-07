@@ -1252,6 +1252,69 @@ describe("room management refresh", () => {
     ),
   );
 
+  it.effect(
+    "a repair read's NotFound that beats a pending resync leaves the resync to clear the room",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const releaseSave = yield* Deferred.make<void>();
+          const releaseRepair = yield* Deferred.make<void>();
+          const releaseResync = yield* Deferred.make<void>();
+          const row = sidebarRowFixture(12, "general");
+          const stale = { room: row.room, detail: roomDetailFixture(12), row };
+          const gone = new NotFound({ message: "gone" });
+          let reads = 0;
+
+          yield* api.route("PATCH /rooms/12", () =>
+            Deferred.await(releaseSave).pipe(Effect.as(stale)),
+          );
+          // The save's repair read and the resync's read both find the room deleted, each held.
+          yield* api.route("GET /rooms/12", () => {
+            reads += 1;
+
+            if (reads === 1)
+              return Deferred.await(releaseRepair).pipe(Effect.andThen(Effect.fail(gone)));
+
+            if (reads === 2)
+              return Deferred.await(releaseResync).pipe(Effect.andThen(Effect.fail(gone)));
+
+            return Effect.fail(gone);
+          });
+
+          const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+          yield* settle;
+          invalidateRoom(12);
+          yield* Deferred.succeed(releaseSave, undefined);
+          yield* settle;
+          expect(reads).toBe(1);
+
+          // Reconnect: the sidebar no longer lists the room, and its resync read is on its way.
+          yield* api.reply("GET /sidebar", sidebarFixture([]));
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(1, false, "e2");
+          expect(reads).toBe(2);
+
+          // The repair's NotFound arrives first: it's older than the snapshot, so it's dropped.
+          yield* Deferred.succeed(releaseRepair, undefined);
+          yield* Fiber.join(saving);
+          yield* settle;
+
+          // The resync's own NotFound still counts, and clears the room.
+          yield* Deferred.succeed(releaseResync, undefined);
+          yield* settle;
+
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          expect(reads).toBe(2);
+        }),
+      ),
+  );
+
   it.effect("drops a repair read that was on its way during a resync", () =>
     withSync(
       Effect.gen(function* () {

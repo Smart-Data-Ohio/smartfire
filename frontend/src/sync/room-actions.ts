@@ -29,11 +29,11 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
     return;
   }
 
-  // A resync or snapshot rewrote the room while this read was on its way, so the read is older
-  // than the store. Readers are asked to read once more; this repair doesn't retry itself.
+  // A resync, snapshot or management change rewrote the room while this read was on its way, so
+  // the read is older than the store and is dropped. Whatever rewrote it owns the refresh: a
+  // resync's own read (which must keep its revision, so this doesn't invalidate), a sync event's
+  // guarded refresh, or another write's landing; a room nobody has open reloads when opened.
   if (changedSince(roomId, since)) {
-    invalidateRoom(roomId);
-
     return;
   }
 

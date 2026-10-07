@@ -13,6 +13,90 @@ const rowFor = (page: Page, name: string) =>
   sidebar(page).locator(".sidebar-row", { has: rowName(page, name) });
 
 /** Takes the shot once every finite animation (the dialog's entrance, a step's slide) is done. */
+declare global {
+  interface Window {
+    /** History calls recorded by `watchHistory`. */
+    smartfireHistoryCalls?: string[];
+  }
+}
+
+/** Holds room write requests of `method` until the returned release is called. */
+async function holdRooms(page: Page, method: "PATCH" | "DELETE"): Promise<() => void> {
+  let release: () => void = () => undefined;
+
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route("**/api/v1/rooms/*", async (route) => {
+    if (route.request().method() !== method) {
+      return route.continue();
+    }
+
+    await held;
+
+    return route.continue();
+  });
+
+  return release;
+}
+
+/**
+ * Records the history calls the app makes from now on (back, forward, go, pushState,
+ * replaceState). A completion that navigates has made its call by the time it settles, even
+ * when the traversal it asked for hasn't landed yet, so an empty list proves it stayed put.
+ */
+async function watchHistory(page: Page): Promise<() => Promise<readonly string[]>> {
+  await page.evaluate(() => {
+    const calls: string[] = [];
+    const history = window.history;
+    const back = history.back.bind(history);
+    const forward = history.forward.bind(history);
+    const go = history.go.bind(history);
+    const pushState = history.pushState.bind(history);
+    const replaceState = history.replaceState.bind(history);
+
+    window.smartfireHistoryCalls = calls;
+
+    history.back = () => {
+      calls.push("back");
+      back();
+    };
+
+    history.forward = () => {
+      calls.push("forward");
+      forward();
+    };
+
+    history.go = (delta) => {
+      calls.push("go");
+      go(delta);
+    };
+
+    history.pushState = (data, unused, url) => {
+      calls.push("pushState");
+      pushState(data, unused, url);
+    };
+
+    history.replaceState = (data, unused, url) => {
+      calls.push("replaceState");
+      replaceState(data, unused, url);
+    };
+  });
+
+  return () => page.evaluate(() => [...(window.smartfireHistoryCalls ?? [])]);
+}
+
+/** Lets a completion's navigation (which commits asynchronously) reach history. */
+async function settleHistory(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 250)));
+      }),
+  );
+}
+
 async function settledShot(page: Page, name: string, theme: Theme) {
   await page.waitForFunction(() =>
     document
@@ -390,30 +474,79 @@ test.describe("room settings", () => {
     await page.getByRole("menuitem", { name: "Channel settings" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Channel settings" });
-    let release: () => void = () => undefined;
+    const release = await holdRooms(page, "PATCH");
 
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    await page.route("**/api/v1/rooms/*", async (route) => {
-      if (route.request().method() !== "PATCH") {
-        return route.continue();
-      }
-
-      await held;
-
-      return route.continue();
-    });
     await dialog.getByLabel("Name", { exact: true }).fill("quiet-renamed");
     await dialog.getByRole("button", { name: "Save changes" }).click();
     await page.goBack();
     await expect(dialog).toBeHidden();
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
 
+    const historyCalls = await watchHistory(page);
+
     release();
     await expect(page.getByText("Changes saved")).toBeVisible();
+    await settleHistory(page);
+    expect(await historyCalls()).toEqual([]);
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+  });
+
+  test("a delete that lands after Back left the settings stays where Back went", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await rowFor(page, "general").click();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await rowFor(page, "quiet").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Channel settings" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    const release = await holdRooms(page, "DELETE");
+
+    await dialog.getByRole("button", { name: "Delete…" }).click();
+    await page
+      .getByRole("alertdialog", { name: "Delete #quiet?" })
+      .getByRole("button", { name: "Delete channel" })
+      .click();
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+
+    const historyCalls = await watchHistory(page);
+
+    release();
+    await expect(page.getByText(/Deleted .*quiet/)).toBeVisible();
+    await settleHistory(page);
+    expect(await historyCalls()).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await expect(rowFor(page, "quiet")).toHaveCount(0);
+  });
+
+  test("leaving a room by a save that lands after Back stays where Back went", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.design}`);
+    await rowFor(page, "general").click();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await rowFor(page, "launch-planning").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Channel settings" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+    const release = await holdRooms(page, "PATCH");
+
+    await dialog.getByRole("tab", { name: /Members/ }).click();
+    await dialog.getByRole("button", { name: "Leave (remove yourself)" }).click();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+
+    const historyCalls = await watchHistory(page);
+
+    release();
+    await expect(page.getByText(/You left .*launch-planning/)).toBeVisible();
+    await settleHistory(page);
+    expect(await historyCalls()).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
+    await expect(rowFor(page, "launch-planning")).toHaveCount(0);
   });
 
   test("settings opened as the first page close onto the room in place", async ({ page }) => {
