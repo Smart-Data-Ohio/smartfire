@@ -378,6 +378,9 @@ describe("events", () => {
     expect(going.textContent).toContain("2");
     expect(within(event).getByText("Repeats")).toBeTruthy();
     expect(
+      within(event).getByRole("link", { name: "Weekly product sync" }).getAttribute("href"),
+    ).toBe(`/rooms/${ROOM}/events/${events.recurring}`);
+    expect(
       within(event).getByRole("link", { name: "Join with Google Meet" }).getAttribute("href"),
     ).toBe("https://meet.google.com/abc-defg-hij");
 
