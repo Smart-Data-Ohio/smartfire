@@ -3,6 +3,8 @@ import { meFixture } from "../../api/testing.ts";
 import type { StageMember } from "../../gen/StageMember.ts";
 import { soundsMuted } from "./sounds.ts";
 import {
+  HAND_CHIME_DEBOUNCE_MS,
+  handsToAnnounce,
   SOLE_HOST_TITLE,
   type StageEntry,
   type StageViewer,
@@ -178,5 +180,24 @@ describe("sound gates", () => {
 
     expect(away(false)).toBe(true);
     expect(away(true)).toBe(false);
+  });
+});
+
+describe("hand announcements", () => {
+  const NOW = 1_000_000;
+
+  it("announces a hand that rises as another drops in the same update", () => {
+    expect(handsToAnnounce(new Set([1]), new Set([2]), new Map(), NOW)).toEqual([2]);
+  });
+
+  it("skips hands already up and hands announced within the minute", () => {
+    const chimed = new Map([[3, NOW - HAND_CHIME_DEBOUNCE_MS + 1]]);
+
+    expect(handsToAnnounce(new Set([1]), new Set([1, 3]), chimed, NOW)).toEqual([]);
+    expect(handsToAnnounce(new Set([1]), new Set([1, 3]), chimed, NOW + 1)).toEqual([3]);
+  });
+
+  it("says nothing when hands only drop", () => {
+    expect(handsToAnnounce(new Set([1, 2]), new Set([2]), new Map(), NOW)).toEqual([]);
   });
 });

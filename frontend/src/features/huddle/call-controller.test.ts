@@ -500,6 +500,52 @@ describe("the microphone", () => {
 });
 
 describe("call state", () => {
+  it("a double click on Go live posts one stream", async () => {
+    const started: number[] = [];
+
+    const { controller, transports } = harness({
+      startStream: async (roomId, quality) => {
+        started.push(roomId);
+
+        return {
+          id: 41,
+          membershipId: 70,
+          userId: 7,
+          identity: null,
+          quality,
+          startedAt: "2026-10-06T12:00:00.000Z",
+        };
+      },
+    });
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    transport.captureScreen = async () => ({ id: 1 });
+    transport.publishScreen = async () => undefined;
+
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      // Only its presence matters: the fake transport captures the screen itself.
+      value: { getDisplayMedia: () => undefined },
+    });
+
+    try {
+      await Promise.all([controller.goLive(ROOM, "720p15"), controller.goLive(ROOM, "720p15")]);
+    } finally {
+      Reflect.deleteProperty(navigator, "mediaDevices");
+    }
+
+    expect(started).toEqual([ROOM]);
+    expect(callStore.getState().streaming?.streamId).toBe(41);
+    await controller.leave();
+  });
+
   it("a toggle cut off by a reconnect doesn't leave its control busy", async () => {
     const { controller, transports } = harness();
 

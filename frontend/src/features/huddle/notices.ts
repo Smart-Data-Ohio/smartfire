@@ -92,6 +92,8 @@ export class CallNotices {
   readonly #pendingLeaves = new Map<string, Timer>();
   readonly #recentRejoins = new Map<string, Timer>();
   readonly #firedLeaves = new Map<string, { readonly at: number; readonly timer: Timer }>();
+  /** Each leave toast's dismissal, by toast id. */
+  readonly #toastTimers = new Map<number, Timer>();
   #batch: JoinBatch | null = null;
   #batchTimer: Timer | null = null;
   #nextToast = 1;
@@ -178,6 +180,11 @@ export class CallNotices {
       clearTimeout(fired.timer);
     }
 
+    for (const timer of this.#toastTimers.values()) {
+      clearTimeout(timer);
+    }
+
+    this.#toastTimers.clear();
     this.#pendingLeaves.clear();
     this.#recentRejoins.clear();
     this.#firedLeaves.clear();
@@ -306,7 +313,10 @@ export class CallNotices {
       this.#removeToast(old.id);
     }
 
-    setTimeout(() => this.#removeToast(id), LEAVE_TOAST_MS);
+    this.#toastTimers.set(
+      id,
+      setTimeout(() => this.#removeToast(id), LEAVE_TOAST_MS),
+    );
   }
 
   #cancelPendingLeave(roomId: number, userId: number): boolean {
@@ -437,6 +447,13 @@ export class CallNotices {
   }
 
   #removeToast(id: number): void {
+    const timer = this.#toastTimers.get(id);
+
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.#toastTimers.delete(id);
+    }
+
     const toasts = noticeStore.getState().toasts;
 
     if (toasts.some((toast) => toast.id === id)) {

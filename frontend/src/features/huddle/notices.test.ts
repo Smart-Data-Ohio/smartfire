@@ -110,6 +110,26 @@ describe("in the call", () => {
     expect(toasts()).toEqual([]);
   });
 
+  it("forgets a leave toast's dismissal when it goes early or on reset", () => {
+    for (const [id, name] of [
+      [1, "A"],
+      [2, "B"],
+      [3, "C"],
+      [4, "D"],
+    ] as const) {
+      notices.received(left(id, name));
+    }
+
+    vi.advanceTimersByTime(LEAVE_DELAY_MS);
+
+    // Three toasts dismiss themselves (A's went early) and four leaves remember they fired.
+    expect(vi.getTimerCount()).toBe(7);
+
+    notices.reset();
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("keeps at most three leave toasts", () => {
     for (const [id, name] of [
       [1, "A"],

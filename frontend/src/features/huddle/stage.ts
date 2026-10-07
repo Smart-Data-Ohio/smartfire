@@ -97,6 +97,24 @@ export interface StageViewer {
   readonly administrator: boolean;
 }
 
+/** A person's raised hand chimes at most once a minute. */
+export const HAND_CHIME_DEBOUNCE_MS = 60_000;
+
+/**
+ * The hands worth announcing: raised since the last roster and not announced in the last
+ * minute. A hand that rises as another drops in the same update still counts.
+ */
+export function handsToAnnounce(
+  before: ReadonlySet<number>,
+  after: ReadonlySet<number>,
+  chimedAt: ReadonlyMap<number, number>,
+  now: number,
+): number[] {
+  return [...after].filter(
+    (id) => !before.has(id) && now - (chimedAt.get(id) ?? 0) >= HAND_CHIME_DEBOUNCE_MS,
+  );
+}
+
 /** Hosts and administrators manage the stage. */
 export function canManageStage(viewer: StageViewer): boolean {
   return viewer.role === "host" || viewer.administrator;

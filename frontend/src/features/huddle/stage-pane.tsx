@@ -25,6 +25,7 @@ import { playHandChime, soundsMuted } from "./sounds.ts";
 import {
   canManageStage,
   DEFAULT_STREAM_QUALITY,
+  handsToAnnounce,
   STREAM_QUALITIES,
   type StageAction,
   type StageEntry,
@@ -32,8 +33,6 @@ import {
   stageActions,
   stageGroups,
 } from "./stage.ts";
-
-const HAND_CHIME_DEBOUNCE_MS = 60_000;
 
 type Load =
   | { readonly status: "loading" }
@@ -198,6 +197,7 @@ function StageControls({
   );
 
   const connected = useCall((state) => state.roomId === roomId && state.phase === "connected");
+
   const [quality, setQuality] = useState<StreamQuality>(DEFAULT_STREAM_QUALITY);
   const [busy, setBusy] = useState(false);
   const presenting = live !== null && live.membershipId === viewer.membershipId;
@@ -231,7 +231,8 @@ function StageControls({
             <Icon name="radio" size={12} /> Live
           </span>
           <span className="stage-live-name">{presenter}</span>
-          {presenting || viewer.role === "host" ? (
+          {/* The presenter, hosts and administrators may end a stream. */}
+          {presenting || canManageStage(viewer) ? (
             <Button
               variant="danger"
               size="sm"
@@ -275,9 +276,9 @@ function StageControls({
             variant="primary"
             size="sm"
             icon="radio"
-            disabled={!connected}
+            disabled={!connected || busy}
             title={connected ? undefined : "Join the stage to go live"}
-            onClick={() => void callController.goLive(roomId, quality)}
+            onClick={() => run(() => callController.goLive(roomId, quality))}
           >
             Go live
           </Button>
@@ -333,15 +334,12 @@ function useHandAnnouncements(roomId: number, manage: boolean): string {
     raised.current = ids;
 
     // The first roster is the baseline, not news.
-    if (before === null || !manage || ids.size <= before.size) {
+    if (before === null || !manage) {
       return;
     }
 
     const now = Date.now();
-
-    const due = [...ids].filter(
-      (id) => !before.has(id) && now - (chimedAt.current.get(id) ?? 0) >= HAND_CHIME_DEBOUNCE_MS,
-    );
+    const due = handsToAnnounce(before, ids, chimedAt.current, now);
 
     if (due.length === 0) {
       return;
@@ -376,6 +374,7 @@ export function StagePane({ roomId }: { readonly roomId: number }) {
   const manage = canManageStage(viewer);
   const announcement = useHandAnnouncements(roomId, manage);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: attempt is the Retry trigger, not an input
   useEffect(() => {
     if (kind !== "stage") {
       return;

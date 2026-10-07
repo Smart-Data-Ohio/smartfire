@@ -151,6 +151,27 @@ test("a host goes live from the stage and stops the stream", async ({ page }) =>
   await expect(page.locator(".call-share")).toHaveCount(0);
 });
 
+test("an administrator who isn't a host can stop someone's stream", async ({ page, request }) => {
+  await open(page, TOWN_HALL);
+  await openStage(page);
+  // Priya hosts and presents; the viewer (an administrator) sits in the audience.
+  await control(request, "stage-role", { roomId: TOWN_HALL, userId: USER_IDS.priya, role: "host" });
+  await control(request, "stage-role", {
+    roomId: TOWN_HALL,
+    userId: USER_IDS.riel,
+    role: "listener",
+  });
+  await control(request, "huddle-join", { roomId: TOWN_HALL, userId: USER_IDS.priya });
+  await control(request, "stage-live", { roomId: TOWN_HALL, userId: USER_IDS.priya });
+
+  const pane = stagePane(page);
+
+  await expect(pane.getByText("You are in the audience.")).toBeVisible();
+  await expect(pane.locator(".stage-live")).toContainText("Priya Raman");
+  await pane.getByRole("button", { name: "Stop stream" }).click();
+  await expect(pane.locator(".stage-live")).toHaveCount(0);
+});
+
 matrix("an incoming huddle rings, and Join takes you there", async ({ page, theme, phone }) => {
   await open(page, ROOM_IDS.general, theme);
   await control(page.request, "huddle-join", { roomId: ROOM_IDS.dmMaya, userId: USER_IDS.maya });
@@ -164,6 +185,27 @@ matrix("an incoming huddle rings, and Join takes you there", async ({ page, them
   await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.dmMaya}$`));
   await expect(dock(page, phone).getByRole("status")).toContainText("Huddle active");
   await expect(ring).toHaveCount(0);
+});
+
+test("Smartfire's reduced-motion setting stills the ring", async ({ page, request }) => {
+  await open(page, ROOM_IDS.general);
+  // The OS allows motion; the user asked Smartfire for less.
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.motion = "reduce";
+  });
+  await control(request, "huddle-ring", { roomId: ROOM_IDS.dmMaya, userId: USER_IDS.maya });
+
+  const ring = page.getByRole("alertdialog", { name: "Maya Okafor started a huddle" });
+
+  await expect(ring).toBeVisible();
+  expect(await ring.evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
+
+  const pulse = await page
+    .locator(".huddle-ring-icon")
+    .evaluate((element) => getComputedStyle(element, "::after").animationName);
+
+  expect(pulse).toBe("none");
 });
 
 test("a ring says the caller left when they hang up", async ({ page, request }) => {

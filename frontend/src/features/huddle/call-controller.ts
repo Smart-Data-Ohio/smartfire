@@ -246,6 +246,9 @@ export class CallController {
   /** The device check's microphone preview; the camera's has its own, so neither drops the other. */
   #previewOperation = 0;
   #previewVideoOperation = 0;
+
+  /** A Go live is between its click and its outcome. */
+  #goingLive = false;
   #transport: CallTransport | null = null;
   #unsubscribeTransport: (() => void) | null = null;
   #canPublishHint: boolean | null = null;
@@ -1726,9 +1729,24 @@ export class CallController {
    * Go live. Call this synchronously from the click: everything before the capture runs inside
    * the gesture (Safari denies a getDisplayMedia that starts after the POST round-trip). Then
    * the stream is posted and the captured tracks publish at its quality. Any failure stops the
-   * tracks, and one after the POST also ends the posted stream.
+   * tracks, and one after the POST also ends the posted stream. A second call while one is
+   * still going (a double click) does nothing.
    */
   async goLive(roomId: number, quality: StreamQuality): Promise<void> {
+    if (this.#goingLive) {
+      return;
+    }
+
+    this.#goingLive = true;
+
+    try {
+      await this.#goLive(roomId, quality);
+    } finally {
+      this.#goingLive = false;
+    }
+  }
+
+  async #goLive(roomId: number, quality: StreamQuality): Promise<void> {
     const transport = this.#transport;
     const state = this.#state;
 
