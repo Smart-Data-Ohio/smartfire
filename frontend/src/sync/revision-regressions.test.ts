@@ -133,7 +133,12 @@ describe("S4 revisions through held network responses", () => {
         yield* Deferred.succeed(writeGate, undefined);
         yield* Fiber.join(writing);
 
-        expect(store.getState().threads[THREAD]?.work).toEqual(confirmed);
+        // Eligibility comes from the newer GET's membership snapshot; the earlier status write
+        // confirms the work row without reasserting eligibility for its owner.
+        expect(store.getState().threads[THREAD]?.work).toEqual({
+          ...confirmed,
+          ownerActive: false,
+        });
         expect(store.getState().work.writes[THREAD]).toBeUndefined();
       }).pipe(Effect.provide(FakeApi.layerClient)),
   );

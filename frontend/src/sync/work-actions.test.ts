@@ -205,6 +205,78 @@ describe("work actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  for (const observed of ["previous owner", "tied deletion", "newer deletion"] as const) {
+    it.effect(`reconciles a handoff reply after a held GET observes ${observed}`, () =>
+      Effect.gen(function* () {
+        seed();
+
+        const fake = yield* FakeApi;
+        const handoffStarted = yield* Deferred.make<void>();
+        const readStarted = yield* Deferred.make<void>();
+        const handoffGate = yield* Deferred.make<void>();
+        const readGate = yield* Deferred.make<void>();
+
+        const assigned = factsFixture({
+          owner: agentFixture(),
+          updatedAt: "2026-10-06T09:01:00.000000Z",
+        });
+
+        const snapshot =
+          observed === "previous owner"
+            ? factsFixture()
+            : factsFixture({
+                owner: null,
+                ownerActive: false,
+                updatedAt:
+                  observed === "tied deletion" ? assigned.updatedAt : "2026-10-06T09:02:00.000000Z",
+              });
+
+        yield* fake.route(`POST /threads/${THREAD}/work/handoff`, () =>
+          Deferred.succeed(handoffStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(handoffGate)),
+            Effect.as(threadDetailFixture(THREAD, assigned, workDetailFixture())),
+          ),
+        );
+        yield* fake.route(`GET /threads/${THREAD}`, () =>
+          Deferred.succeed(readStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(readGate)),
+            Effect.as(threadDetailFixture(THREAD, snapshot, workDetailFixture())),
+          ),
+        );
+
+        const handingOff = yield* Effect.forkChild(
+          work.handOff(THREAD, {
+            receiverAgentId: 9,
+            summary: "Over to you",
+            links: [],
+            openQuestions: [],
+          }),
+        );
+
+        yield* Deferred.await(handoffStarted);
+
+        const reading = yield* Effect.forkChild(work.refresh(THREAD));
+
+        yield* Deferred.await(readStarted);
+        yield* Deferred.succeed(readGate, undefined);
+        yield* Fiber.join(reading);
+
+        expect(store.getState().work.overlays[THREAD]).toBeUndefined();
+        expect(factsOf()?.owner?.id ?? null).toBe(observed === "previous owner" ? 2 : null);
+
+        yield* Deferred.succeed(handoffGate, undefined);
+        yield* Fiber.join(handingOff);
+
+        expect(factsOf()?.owner?.id ?? null).toBe(observed === "previous owner" ? 9 : null);
+        expect(factsOf()?.ownerActive).toBe(observed === "previous owner");
+        expect(factsOf()?.updatedAt).toBe(
+          observed === "newer deletion" ? snapshot.updatedAt : assigned.updatedAt,
+        );
+        expect(store.getState().work.writes[THREAD]).toBeUndefined();
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
   it.effect("refetch once per burst when live facts move past the held ones", () =>
     Effect.gen(function* () {
       seed();
