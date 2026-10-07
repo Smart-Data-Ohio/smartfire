@@ -23,7 +23,7 @@ import type { UpdateWorkspace as GeneratedUpdateWorkspace } from "../../gen/Upda
 import type { Workspace as GeneratedWorkspace } from "../../gen/Workspace.ts";
 import type { WorkspaceIcon as GeneratedWorkspaceIcon } from "../../gen/WorkspaceIcon.ts";
 import type { WorkspaceIconList as GeneratedWorkspaceIconList } from "../../gen/WorkspaceIconList.ts";
-import { UserId } from "./ids.ts";
+import { AuditLogEntryId, UserId, WorkspaceIconId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 
@@ -120,7 +120,7 @@ export type CustomStylesPin = Assert<Pinned<typeof CustomStyles, GeneratedCustom
 
 /** A workspace icon members use as a `:shortcode:`. */
 export const WorkspaceIcon = Schema.Struct({
-  id: Schema.Int,
+  id: WorkspaceIconId,
   name: Schema.String,
   title: Schema.String,
   creatorName: Schema.String,
@@ -164,7 +164,7 @@ export type AuditLogFiltersPin = Assert<Pinned<typeof AuditLogFilters, Generated
 
 /** One audit log row. */
 export const AuditLogEntry = Schema.Struct({
-  id: Schema.Int,
+  id: AuditLogEntryId,
   createdAt: Timestamp,
   action: Schema.String,
   actor: Schema.NullOr(Schema.String),

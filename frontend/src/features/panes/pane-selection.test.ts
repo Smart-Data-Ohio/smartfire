@@ -3,6 +3,17 @@ import { closeStep, isPaneShowing, selectRightPaneView, viewKey } from "./pane-s
 import { clampPaneWidth } from "./right-pane.tsx";
 
 describe("selectRightPaneView", () => {
+  it("opens a URL pane ahead of a locally remembered pane", () => {
+    expect(
+      selectRightPaneView({
+        threadId: null,
+        newThreadParent: null,
+        routePane: "files",
+        openPane: "pins",
+      }),
+    ).toEqual({ kind: "pane", pane: "files" });
+  });
+
   it("shows the thread from the URL over everything else", () => {
     expect(selectRightPaneView({ threadId: 7, newThreadParent: 3, openPane: "pins" })).toEqual({
       kind: "thread",

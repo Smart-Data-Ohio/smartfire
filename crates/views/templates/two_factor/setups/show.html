@@ -1,32 +1,34 @@
-{% extends "layouts/application.html" %}
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
 {% block head %}{% endblock %}
+
 {% block content %}
-<section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %} flex flex-column gap">
-    <h1 class="margin-none">Set up two-step sign-in</h1>
-    <p class="margin-none">Everyone signs in with an authenticator app, on top of their password or Google sign-in.</p>
+<main class="auth-card" data-width="wide"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
+  <header class="auth-header">
+    <h1 class="auth-title">Set up two-step sign-in</h1>
+    <p class="auth-lede">Everyone signs in with an authenticator app, on top of their password or Google sign-in.</p>
+  </header>
 
-    <ol class="txt-align-start flex flex-column gap">
-      <li>Open your authenticator app (Google Authenticator, 1Password, or Authy) and add an account.</li>
-      <li>
-        Scan this code:
-        <div class="center pad-block two-factor-qr">{{ qr|safe }}</div>
-        <span class="txt-small">Can't scan? Enter this key manually:</span>
-        <div><code class="txt-medium" id="two_factor_manual_key">{{ key }}</code></div>
-      </li>
-      <li>Enter the 6-digit code from the app:</li>
-    </ol>
+  <ol class="auth-steps">
+    <li>Open your authenticator app (Google Authenticator, 1Password, or Authy) and add an account.</li>
+    <li>
+      Scan this code:
+      <div class="auth-qr">{{ qr|safe }}</div>
+      <span class="auth-note">Can't scan? Enter this key manually:</span>
+      <code class="auth-key" id="two_factor_manual_key">{{ key }}</code>
+    </li>
+    <li>Enter the 6-digit code from the app:</li>
+  </ol>
 
-{% let form = h::form_with("/two_factor_setup").class("flex flex-column gap center").data("turbo", false) %}    {% filter form_with(form) %}
-      <label class="flex align-center gap input input--actor txt-large">
-        {{ form.text_field("code", None, h::attrs().required(true).class("input center").autofocus().autocomplete("one-time-code").attr("inputmode", "numeric").attr("pattern", "[0-9 ]*").maxlength(10).placeholder("123 456").attr("aria-label", "Authenticator code")) }}
-      </label>
+{% let form = h::form_with("/two_factor_setup").class("auth-form").data("turbo", false) %}  {% filter form_with(form) %}
+    <div class="field">
+      {{ form.label("code", "Authenticator code", h::attrs().class("field-label")) }}
+      {{ form.text_field("code", None, h::rejected_field(ctx, h::attrs().required(true).class("input auth-code").autofocus().autocomplete("one-time-code").attr("inputmode", "numeric").attr("pattern", "[0-9 ]*").maxlength(10).placeholder("123 456"))) }}
+    </div>
 
-      {% filter button(h::attrs().class("btn btn--reversed center txt-large").type_("submit")) %}
-        {{ h::image_tag(ctx, "arrow-right.svg", h::attrs().aria_hidden()) }}
-        <span>Verify and continue</span>
-{% endfilter %}{% endfilter %}
-    {{ h::button_to_form("/session", h::attrs().method("delete").class("btn center"), h::attrs().class("center"), "Sign out") }}
-  </div>
-</section>
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit"), "Verify and continue") }}
+{% endfilter %}
+  {% filter button_to_form("/session", h::attrs().method("delete").class("button auth-centre").data("variant", "ghost"), h::attrs().class("auth-button-form")) %}{% call auth::log_out() %}Sign out{% endfilter %}
+</main>
 {% endblock %}

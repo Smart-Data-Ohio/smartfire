@@ -173,6 +173,10 @@ COPY web/public web/public
 COPY web/config/importmap.rb web/config/importmap.rb
 COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
 # crates/spa/build.rs embeds the SPA built above (and fails the build if SPA_DIST has none).
+COPY frontend/src/auth frontend/src/auth
+COPY frontend/src/styles frontend/src/styles
+COPY frontend/src/motion frontend/src/motion
+COPY frontend/src/ui/button.css frontend/src/ui/text-field.css frontend/src/ui/checkbox.css frontend/src/ui/
 COPY --from=spa /src/frontend/dist frontend/dist
 ENV SPA_DIST=/src/frontend/dist
 

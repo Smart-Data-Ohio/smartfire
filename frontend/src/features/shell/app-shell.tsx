@@ -9,6 +9,7 @@ import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
+import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
@@ -52,6 +53,7 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/saved" }) !== false ||
     matchRoute({ to: "/scheduled" }) !== false ||
     matchRoute({ to: "/search" }) !== false ||
+    matchRoute({ to: "/m/$messageId" }) !== false ||
     matchRoute({ to: "/work" }) !== false ||
     matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
@@ -90,6 +92,7 @@ export function AppShell() {
 
   useDocumentTitle(roomId, page);
   useClassicLinks();
+  useBootFlash();
 
   const view = usePhoneView(roomId);
 

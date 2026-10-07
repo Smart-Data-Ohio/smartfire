@@ -18,4 +18,11 @@ for path in app/assets app/javascript vendor/javascript public config/importmap.
     cp -a "web/$path" "$inputs/web/$path"
 done
 
+# crates/assets/build/auth.rs inlines the SPA's auth stylesheet sources, which the Dockerfile copies
+# from frontend/src (the same list; keep them in step).
+for path in src/auth src/styles src/motion src/ui/button.css src/ui/text-field.css src/ui/checkbox.css; do
+    mkdir -p "$inputs/frontend/$(dirname -- "$path")"
+    cp -a "frontend/$path" "$inputs/frontend/$path"
+done
+
 "$@" --manifest-path "$inputs/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-target}"

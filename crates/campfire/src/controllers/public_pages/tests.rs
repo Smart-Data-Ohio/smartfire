@@ -58,7 +58,6 @@ async fn public_pages_bypass_authentication_browser_and_private_state() {
                 "vapid-public-key",
                 "brand-icon-names",
                 "google-picker",
-                "<script",
                 "importmap",
                 "csrf-token",
                 "csrf-param",
@@ -126,7 +125,7 @@ async fn public_pages_are_html_only_and_allow_wildcard_accept() {
 }
 
 #[tokio::test]
-async fn public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding() {
+async fn public_policy_text_links_and_escaped_values_match_rails() {
     let vectors: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../vectors/users_public.json")).unwrap();
     for state in vectors["pages"].as_array().unwrap() {
@@ -150,20 +149,7 @@ async fn public_page_bodies_match_rails_with_operator_escaping_and_email_uri_enc
             assert_eq!(response.status, StatusCode::OK);
             let expected = state["bodies"][page].as_str().unwrap();
             let actual = response.text();
-            if actual != expected {
-                let first = actual
-                    .bytes()
-                    .zip(expected.bytes())
-                    .position(|(a, b)| a != b)
-                    .unwrap_or(actual.len().min(expected.len()));
-                if let Ok(dir) = std::env::var("WS8BR2_DIFF_DIR") {
-                    std::fs::write(format!("{dir}/actual-public-{page}.html"), &actual)
-                        .unwrap();
-                    std::fs::write(format!("{dir}/expected-public-{page}.html"), expected)
-                        .unwrap();
-                }
-                panic!("{} {page}: first differing byte {first}", state["state"]);
-            }
+            crate::form_contracts::assert_public_page(page, &actual, expected);
             assert_eq!(response.header("set-cookie"), None);
         }
     }
@@ -177,10 +163,9 @@ async fn public_page_bodies_match_rails_with_operator_escaping_and_email_uri_enc
         return;
     };
     for page in ["about", "privacy", "terms"] {
-        assert_eq!(
-            app.anonymous().get(&format!("/{page}")).await.text(),
-            vectors["pages"][0]["bodies"][page].as_str().unwrap()
-        );
+        crate::form_contracts::assert_public_page(page,
+            &app.anonymous().get(&format!("/{page}")).await.text(),
+            vectors["pages"][0]["bodies"][page].as_str().unwrap());
     }
 }
 #[tokio::test]

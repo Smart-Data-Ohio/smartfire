@@ -15,14 +15,6 @@ async fn app() -> TestApp {
     .await
     .expect("seed required")
 }
-fn assert_bytes(name: &str, actual: &str, expected: &str) {
-    if let Ok(dir) = std::env::var("WS8BR2_DIFF_DIR") {
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(format!("{dir}/{name}.actual"), actual).unwrap();
-        std::fs::write(format!("{dir}/{name}.expected"), expected).unwrap();
-    }
-    assert_eq!(actual, expected, "{name}: complete Rails bytes");
-}
 #[tokio::test]
 async fn signup_body_matches_rails_and_is_available_until_account_exists() {
     let app = app().await;
@@ -38,7 +30,7 @@ async fn signup_body_matches_rails_and_is_available_until_account_exists() {
                 .unwrap()
         },
     );
-    assert_bytes(
+    crate::form_contracts::assert_forms(
         "first-run-body",
         &actual,
         vectors()["page"]["html"].as_str().unwrap(),

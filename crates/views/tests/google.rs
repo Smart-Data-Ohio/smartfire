@@ -1,9 +1,11 @@
-//! Exact pinned Rails bytes, including the SVG, form token and whitespace.
+//! Google sign-in forms and domains keep Rails contracts; profile panels keep byte goldens.
 use askama::Template;
 use campfire_views::{
     helpers::request_forgery::{self, AuthenticityTokens, RequestSecrets},
     sessions::GoogleSignIn,
 };
+#[path = "../../../test-support/form_contracts.rs"]
+mod form_contracts;
 struct Tokens;
 impl AuthenticityTokens for Tokens {
     fn global(&self) -> String {
@@ -14,7 +16,7 @@ impl AuthenticityTokens for Tokens {
     }
 }
 #[test]
-fn sign_in_partial_matches_pinned_rails() {
+fn sign_in_partial_preserves_rails_form_and_domains() {
     let v: serde_json::Value =
         serde_json::from_str(include_str!("../../../vectors/google_sign_in_html.json")).unwrap();
     let html = request_forgery::rendering_with(
@@ -30,9 +32,11 @@ fn sign_in_partial_matches_pinned_rails() {
             .unwrap()
         },
     );
-    assert_eq!(html, v["html"].as_str().unwrap());
-    assert_ne!(html.replace("Sign in with Google", "Sign in"), v["html"]);
-    assert_ne!(html.replace("<svg ", "<svg  "), v["html"]);
+    form_contracts::assert_forms("Google sign-in", &html, v["html"].as_str().unwrap());
+    form_contracts::assert_text(&html, "Sign in with Google");
+    form_contracts::assert_text(&html, "Other email addresses can sign in with email and password.");
+    form_contracts::assert_text(&html, "Google sign-in for @smartdata.net, @cnbssoftware.com, and @other.test accounts.");
+
 }
 
 #[test]

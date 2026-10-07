@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="GLOBAL" />
+    <meta name="csp-nonce" content="NONCE" />
+
+    <title>Two-step sign-in</title>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==" type="image/png">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==">
+    <link rel="stylesheet" href="./auth.css">
+    <script src="./auth.js"></script>
+
+
+  </head>
+  <body class="auth">
+    <div class="auth-flash" id="auth-alert" data-tone="danger" role="alert"><span class="auth-flash-icon"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span><span>That code didn&#39;t work. Check your authenticator app or try a backup code.</span></div>
+
+<main class="auth-card" data-shake>
+  <header class="auth-header">
+    <h1 class="auth-title">Enter your code</h1>
+    <p class="auth-lede">Open your authenticator app and enter the 6-digit code. Lost your phone? Use one of your backup codes instead.</p>
+  </header>
+
+  <form class="auth-form" action="/two_factor_challenge" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="post:/two_factor_challenge" />
+    <div class="field">
+      <label class="field-label" for="code">Authenticator or backup code</label>
+      <input required="required" class="input auth-code" autofocus="autofocus" autocomplete="one-time-code" maxlength="20" placeholder="123 456" aria-describedby="auth-alert" aria-invalid="true" size="20" type="text" name="code" id="code" />
+    </div>
+
+    <label class="checkbox-row auth-check">
+      <span class="checkbox"><input name="remember_device" type="hidden" value="0" /><input class="checkbox-input" type="checkbox" value="1" name="remember_device" id="remember_device" /><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>
+      Remember this device for 30 days
+    </label>
+
+    <button name="button" type="submit" class="button auth-wide" data-variant="primary" data-size="lg">Sign in</button>
+</form>
+</main>
+
+  </body>
+</html>

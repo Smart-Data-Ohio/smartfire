@@ -33,13 +33,19 @@ export interface MenuTriggerProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
 }
 
-interface MenuProps {
+interface MenuBaseProps {
   readonly trigger: (props: MenuTriggerProps) => ReactElement;
   readonly placement?: Placement;
   /** An accessible name for the menu when the trigger's own name doesn't fit. */
   readonly label?: string;
   readonly children: ReactNode;
 }
+
+type MenuProps = MenuBaseProps &
+  (
+    | { readonly open?: never; readonly onOpenChange?: never }
+    | { readonly open: boolean; readonly onOpenChange: (open: boolean) => void }
+  );
 
 /** Where focus lands when a menu opens: an item, or the menu itself (pointer opens). */
 type FocusTarget = "first" | "last" | "menu" | "none";
@@ -72,13 +78,29 @@ function itemLabel(item: HTMLElement): string {
  * choose, Esc to close (back to the trigger), Tab to leave, and submenus on ArrowRight or hover.
  * It sits in the top layer as an auto popover, so an outside click dismisses it natively.
  */
-export function Menu({ trigger, placement = "bottom-start", label, children }: MenuProps) {
+export function Menu({
+  trigger,
+  placement = "bottom-start",
+  label,
+  children,
+  open: controlledOpen,
+  onOpenChange,
+}: MenuProps) {
   const id = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const [open, setOpen] = useState(false);
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
   const [focusOnOpen, setFocusOnOpen] = useState<FocusTarget>("first");
   const dismissedAt = useRef(Number.NEGATIVE_INFINITY);
   const presence = usePresence<HTMLDivElement>(open);
+
+  const setOpen = (next: boolean) => {
+    if (onOpenChange === undefined) {
+      setLocalOpen(next);
+    } else {
+      onOpenChange(next);
+    }
+  };
 
   const openWith = (target: FocusTarget) => {
     setFocusOnOpen(target);

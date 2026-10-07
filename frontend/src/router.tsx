@@ -20,6 +20,7 @@ import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
+import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
@@ -100,6 +101,28 @@ const permalinkRoute = createRoute({
   },
   component: () => null,
 });
+
+/** Bare classic message links resolve their conversation before opening its permalink. */
+const messageRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "m/$messageId",
+  params: {
+    parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
+    stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
+  },
+  component: lazyRouteComponent(
+    () => import("./features/room/message-resolver.tsx"),
+    "MessageResolver",
+  ),
+});
+
+/** Existing room controls, opened by their classic page's URL. */
+const roomControlRoutes = [
+  createRoute({ getParentRoute: () => roomRoute, path: "threads", component: () => null }),
+  createRoute({ getParentRoute: () => roomRoute, path: "files", component: () => null }),
+  createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
+  createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
+];
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -396,7 +419,8 @@ const routeTree = rootRoute.addChildren([
     searchRoute,
     peopleRoute,
     personRoute,
-    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
+    messageRoute,
+    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute, ...roomControlRoutes]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),
@@ -410,6 +434,8 @@ export const router = createRouter({
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
 });
+
+captureInitialMessageLink(router.history);
 
 declare module "@tanstack/react-router" {
   interface Register {

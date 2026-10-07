@@ -1,24 +1,27 @@
-{% extends "layouts/application.html" %}
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
 {% block head %}{% endblock %}
+
 {% block content %}
-<section class="txt-align-center">
-  <div class="panel {% if ctx.flash_alert().is_some() %}shake{% endif %} flex flex-column gap">
-    <h1 class="margin-none">Enter your code</h1>
-    <p class="margin-none">Open your authenticator app and enter the 6-digit code. Lost your phone? Use one of your backup codes instead.</p>
+<main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
+  <header class="auth-header">
+    <h1 class="auth-title">Enter your code</h1>
+    <p class="auth-lede">Open your authenticator app and enter the 6-digit code. Lost your phone? Use one of your backup codes instead.</p>
+  </header>
 
-{% let form = h::form_with("/two_factor_challenge").class("flex flex-column gap center") %}    {% filter form_with(form) %}
-      <label class="flex align-center gap input input--actor txt-large">
-        {{ form.text_field("code", None, h::attrs().required(true).class("input center").autofocus().autocomplete("one-time-code").maxlength(20).placeholder("Code or backup code").attr("aria-label", "Authenticator or backup code")) }}
-      </label>
+{% let form = h::form_with("/two_factor_challenge").class("auth-form") %}  {% filter form_with(form) %}
+    <div class="field">
+      {{ form.label("code", "Authenticator or backup code", h::attrs().class("field-label")) }}
+      {{ form.text_field("code", None, h::rejected_field(ctx, h::attrs().required(true).class("input auth-code").autofocus().autocomplete("one-time-code").maxlength(20).placeholder("123 456"))) }}
+    </div>
 
-      <label class="two-factor-remember flex align-center gap center txt-medium">
-        {{ form.check_box("remember_device", h::attrs().attr("checked", false), "1", "0", "0") }}
-        Remember this device for 30 days
-      </label>
+    <label class="checkbox-row auth-check">
+      <span class="checkbox">{{ form.check_box("remember_device", h::attrs().attr("checked", false).class("checkbox-input"), "1", "0", "0") }}{% call auth::check() %}</span>
+      Remember this device for 30 days
+    </label>
 
-      {% filter button(h::attrs().class("btn btn--reversed center txt-large").type_("submit")) %}
-        {{ h::image_tag(ctx, "arrow-right.svg", h::attrs().aria_hidden()) }}
-        <span>Sign in</span>
-{% endfilter %}{% endfilter %}  </div>
-</section>
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit"), "Sign in") }}
+{% endfilter %}
+</main>
 {% endblock %}
