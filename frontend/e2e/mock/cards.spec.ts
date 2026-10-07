@@ -373,35 +373,65 @@ test("a card arriving live while the chunk loads keeps the list and its place", 
   await expect(posted).toBeInViewport();
 });
 
-async function olderCardsScenario(page: Page, earlyScrolling: boolean) {
+/** Keep real row measurements changing until input, or until that row is removed. */
+async function keepPlacementMeasuring(page: Page, messageId: number | null = null) {
+  await page.addInitScript((messageId) => {
+    let body: HTMLElement | null = null;
+    let frame = 0;
+    let count = 0;
+
+    const stop = (event: Event) => {
+      if (!(event.target instanceof Element) || !event.target.closest('[role="log"]')) return;
+
+      cancelAnimationFrame(frame);
+
+      if (body) body.style.paddingBottom = "";
+    };
+
+    for (const input of ["wheel", "touchstart", "keydown", "pointerdown"])
+      document.addEventListener(input, stop, { capture: true, passive: true });
+
+    const measure = () => {
+      if (body && !body.isConnected) {
+        if (messageId !== null) return;
+
+        body = null;
+      }
+
+      if (body === null && messageId === null) {
+        const rows = document.querySelectorAll("[data-message-list] [data-message-row]");
+
+        body = rows.item(rows.length - 1)?.querySelector<HTMLElement>(".message-body") ?? null;
+      } else {
+        body ??= document.querySelector<HTMLElement>(
+          `[data-message-row][data-message-id="${messageId}"] .message-body`,
+        );
+      }
+
+      if (body) {
+        body.style.paddingBottom = `${(count++ % 2) * 4}px`;
+        const list = body.closest<HTMLElement>('[role="log"]');
+
+        if (list) list.dataset.measurementPending = "true";
+      }
+
+      frame = requestAnimationFrame(measure);
+    };
+
+    frame = requestAnimationFrame(measure);
+  }, messageId);
+}
+
+type ReaderInput = "wheel" | "PageUp" | "ArrowUp" | "touch" | "scrollbar";
+
+async function olderCardsScenario(page: Page, input: ReaderInput | null) {
   // Keep the welcome's refetch out of this pagination scenario.
   await holdSync(page);
 
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
 
-  if (earlyScrolling) {
-    // Keep the touch active through the reveal, so Virtua cannot debounce a scroll end.
-    await page.addInitScript(() => {
-      document.addEventListener(
-        "scroll",
-        (event) => {
-          const list = event.target;
-
-          if (
-            list instanceof HTMLElement &&
-            list.matches("[data-message-list]") &&
-            list.dataset.touching !== "true" &&
-            list.scrollHeight - list.clientHeight - list.scrollTop <= 3
-          ) {
-            list.dataset.touching = "true";
-            list.dispatchEvent(new Event("touchstart", { bubbles: true }));
-          }
-        },
-        true,
-      );
-    });
-  }
+  if (input !== null) await keepPlacementMeasuring(page);
 
   let markInjected: (id: number) => void = () => undefined;
 
@@ -448,7 +478,7 @@ async function olderCardsScenario(page: Page, earlyScrolling: boolean) {
   const anchorRow = row(page, Number(anchor));
 
   const anchorTop = () =>
-    anchorRow.evaluate(async (element, earlyScrolling) => {
+    anchorRow.evaluate(async (element) => {
       const list = element.closest("[data-message-list]");
 
       if (list === null) throw new Error("The anchor is outside the message list");
@@ -463,18 +493,35 @@ async function olderCardsScenario(page: Page, earlyScrolling: boolean) {
       return {
         before,
         after: measure(),
-        settled: earlyScrolling
-          ? list.getAttribute("data-touching") === "true"
-          : list.getAttribute("data-scroll-settled") === "true",
+        settled: list.getAttribute("data-scroll-settled") === "true",
       };
-    }, earlyScrolling);
+    });
 
   // Virtua's scroll end follows the placement measurements and their scroll event.
-  if (earlyScrolling) {
-    await expect(list).toHaveAttribute("data-touching", "true");
-    await expect(list).toHaveAttribute("data-scroll-settled", "false");
-    await list.hover();
-    await page.mouse.wheel(0, -10_000);
+  if (input !== null) {
+    await expect(list).toHaveAttribute("data-measurement-pending", "true");
+    await expect.poll(() => list.evaluate((element) => element.scrollTop > 0)).toBe(true);
+    await expect(list).toHaveAttribute("data-placement-settled", "false");
+
+    if (input === "wheel") {
+      await list.hover();
+      await page.mouse.wheel(0, -10_000);
+    } else {
+      if (input === "PageUp" || input === "ArrowUp") await list.press(input);
+      else if (input === "touch") await list.dispatchEvent("touchstart");
+      else await list.dispatchEvent("pointerdown", { pointerType: "mouse" });
+
+      await list.evaluate(async (element) => {
+        if (element.scrollTop === 0) return;
+
+        await new Promise<void>((resolve) => {
+          element.addEventListener("scroll", () => resolve(), { once: true });
+          element.scrollTop = 0;
+        });
+      });
+
+      if (input === "touch") await list.dispatchEvent("touchend");
+    }
   } else {
     await expect(list).toHaveAttribute("data-scroll-settled", "true");
     await list.evaluate(
@@ -523,24 +570,27 @@ async function olderCardsScenario(page: Page, earlyScrolling: boolean) {
   await expect(row(page, await injected).getByRole("region", { name: "Poll" })).toBeAttached();
   await expect(anchorRow).toBeInViewport();
   await expect.poll(anchorDelta).toBeLessThanOrEqual(3);
-
-  if (earlyScrolling) {
-    await expect(list).toHaveAttribute("data-scroll-settled", "false");
-    await list.dispatchEvent("touchend");
-  }
 }
 
 test("an older page with cards while the chunk loads keeps the list and its place", async ({
   page,
 }) => {
-  await olderCardsScenario(page, false);
+  await olderCardsScenario(page, null);
 });
 
 test("scrolling up before the first scroll end keeps its place when cards arrive", async ({
   page,
 }) => {
-  await olderCardsScenario(page, true);
+  await olderCardsScenario(page, "wheel");
 });
+
+for (const input of ["PageUp", "ArrowUp", "touch", "scrollbar"] as const) {
+  test(`${input} cancels placement and keeps the reader's place when cards arrive`, async ({
+    page,
+  }) => {
+    await olderCardsScenario(page, input);
+  });
+}
 
 test("reading a tall thread parent while the cards chunk loads keeps its place", async ({
   page,
@@ -634,7 +684,19 @@ async function shortThreadScenario(page: Page, permalink: boolean) {
   await mockThreadParent(page, {
     threadId,
     bodyHtml: Array.from({ length: 6 }, () => "<p>A short parent paragraph</p>").join(""),
-    poll,
+    poll:
+      permalink && poll !== undefined
+        ? {
+            ...poll,
+            options: poll.options.flatMap((option) =>
+              Array.from({ length: 4 }, (_, index) => ({
+                ...option,
+                id: option.id * 4 + index,
+                label: `${option.label} ${index + 1}`,
+              })),
+            ),
+          }
+        : poll,
   });
   await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
     const response = await route.fetch();
@@ -662,7 +724,18 @@ async function shortThreadScenario(page: Page, permalink: boolean) {
     .toBe(true);
   await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
 
-  if (permalink) await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await expect
+    .poll(() =>
+      reply.evaluate(async (element) => {
+        const before = element.getBoundingClientRect().top;
+
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+        return Math.abs(element.getBoundingClientRect().top - before);
+      }),
+    )
+    .toBeLessThanOrEqual(1);
 
   chunk.release();
   await expect(list.locator(".thread-parent").getByRole("region", { name: "Poll" })).toBeAttached();
@@ -679,6 +752,8 @@ async function shortThreadScenario(page: Page, permalink: boolean) {
   }
 
   await expect(reply).toBeInViewport();
+
+  if (permalink) await expect(list).toHaveAttribute("data-placement-settled", "true");
 }
 
 test("a short thread stays at the end when the cards chunk makes it overflow", async ({ page }) => {
@@ -689,6 +764,168 @@ test("a short thread permalink stays in view when the cards chunk makes it overf
   page,
 }) => {
   await shortThreadScenario(page, true);
+});
+
+test("an earlier reply permalink keeps its placed offset when a later card reveals", async ({
+  page,
+}) => {
+  await holdSync(page);
+
+  const poll = await seededPoll(page.request);
+  const chunk = await holdCardsChunk(page);
+  const threadId = THREAD_IDS.generalActive;
+  const messageId = MESSAGE_IDS.generalThreadFunnel;
+
+  expect(poll).toBeTruthy();
+  await mockThreadParent(page, { threadId, bodyHtml: "<p>A short parent</p>", poll: undefined });
+  await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    expect(body.messages.length).toBeGreaterThan(1);
+    body.messages = body.messages.slice(0, 3);
+    body.messages = body.messages.map((message, index) => ({
+      ...message,
+      bodyHtml: `<p>Short reply ${index + 1}</p>`,
+      attachment: null,
+      poll:
+        index === body.messages.length - 1 && poll !== undefined
+          ? {
+              ...poll,
+              options: poll.options.flatMap((option) =>
+                Array.from({ length: 8 }, (_, index) => ({
+                  ...option,
+                  id: option.id * 8 + index,
+                  label: `${option.label} ${index + 1}`,
+                })),
+              ),
+            }
+          : null,
+    }));
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}?m=${messageId}`);
+  await chunk.requested;
+
+  const list = page.getByRole("log", { name: "Replies" });
+  const target = list.locator(`[data-message-id="${messageId}"]`);
+
+  const position = () =>
+    target.evaluate(async (element) => {
+      const list = element.closest('[role="log"]');
+
+      if (list === null) throw new Error("The target is outside the replies list");
+
+      const measure = () => element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const before = measure();
+
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      return { before, after: measure() };
+    });
+
+  await expect(target).toBeInViewport();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight))
+    .toBe(true);
+
+  let top = 0;
+
+  await expect
+    .poll(async () => {
+      const measured = await position();
+
+      top = measured.after;
+
+      return Math.abs(measured.after - measured.before);
+    })
+    .toBeLessThanOrEqual(1);
+
+  chunk.release();
+  await expect(list.getByRole("region", { name: "Poll" })).toBeAttached();
+  await expect(target).toBeInViewport();
+  await expect
+    .poll(async () => {
+      const measured = await position();
+
+      return Math.max(Math.abs(measured.before - top), Math.abs(measured.after - top));
+    })
+    .toBeLessThanOrEqual(3);
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+});
+
+test("deleting a permalink during placement restores following new replies at the bottom", async ({
+  page,
+}) => {
+  const releaseSync = await holdSync(page);
+  const chunk = await holdCardsChunk(page);
+  const threadId = THREAD_IDS.generalActive;
+  const messageId = MESSAGE_IDS.generalThreadViewerReply;
+
+  await keepPlacementMeasuring(page, messageId);
+  await mockThreadParent(page, { threadId, bodyHtml: "<p>A short parent</p>", poll: undefined });
+  await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.messages = body.messages.slice(0, 3).map((message) => ({
+      ...message,
+      bodyHtml: "<p>A short reply</p>",
+      attachment: null,
+    }));
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+
+  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}?m=${messageId}`);
+  await chunk.requested;
+
+  const list = page.getByRole("log", { name: "Replies" });
+  const target = list.locator(`[data-message-id="${messageId}"]`);
+
+  await expect(target).toBeAttached();
+  await expect(list).toHaveAttribute("data-measurement-pending", "true");
+
+  // Welcome must see the thread subscription, and its refetch must finish before deletion.
+  const refreshed = page.waitForResponse((response) =>
+    response.url().endsWith(`/api/v1/threads/${threadId}/messages`),
+  );
+
+  releaseSync();
+  await (await refreshed).finished();
+  await expect(list).toHaveAttribute("data-placement-settled", "false");
+
+  const state = await (await page.request.get("/__mock/state")).json();
+  const headers = { "X-CSRF-Token": state.csrfToken };
+  const deleted = await page.request.delete(`/api/v1/messages/${messageId}`, { headers });
+
+  expect(deleted.ok()).toBe(true);
+  await expect(target).toHaveCount(0);
+  await expect
+    .poll(() =>
+      list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+    )
+    .toBeLessThanOrEqual(3);
+  await page.request.post("/__mock/thread-post", {
+    headers,
+    data: {
+      threadId,
+      userId: USER_IDS.jonah,
+      markdown: `${Array.from({ length: 30 }, () => "A new reply paragraph").join("\n\n")}\n\nThe new reply ends here`,
+    },
+  });
+  await expect(list.getByText("The new reply ends here")).toBeInViewport();
+  await expect
+    .poll(() =>
+      list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+    )
+    .toBeLessThanOrEqual(3);
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
 });
 
 matrix("answering an event, for every future occurrence", async ({ page, theme }) => {

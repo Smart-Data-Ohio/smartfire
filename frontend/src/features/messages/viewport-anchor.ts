@@ -1,4 +1,11 @@
-import { type RefObject, useEffectEvent, useLayoutEffect, useMemo, useRef } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import type { VListHandle } from "virtua";
 import type { TimelineItem } from "../room/timeline-items.ts";
 
@@ -12,12 +19,17 @@ type Anchor =
       readonly inset: number;
     };
 
-type PlacementTarget = {
-  readonly placement: string;
-  readonly key: string;
-  readonly align: "start" | "center" | "end";
-  readonly offset: number;
-};
+type PlacementState = { readonly placement: string } & (
+  | { readonly kind: "placing-at-end" }
+  | {
+      readonly kind: "placing-at-target";
+      readonly key: string;
+      readonly align: "start" | "center";
+      readonly offset: number;
+    }
+  | { readonly kind: "settled"; readonly messageId: number | null }
+  | { readonly kind: "cancelled" }
+);
 
 function wrapperOf(row: HTMLElement): HTMLElement | null {
   return row.closest(".thread-parent")?.parentElement ?? row.parentElement;
@@ -44,8 +56,7 @@ export function useViewportAnchor({
   const anchorRef = useRef<Anchor | null>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
-  const settledPlacementRef = useRef<string | null>(null);
-  const targetRef = useRef<PlacementTarget | null>(null);
+  const placementRef = useRef<PlacementState | null>(null);
 
   const { indices, itemIndices } = useMemo(() => {
     const indices = new Map<number, number>();
@@ -62,10 +73,27 @@ export function useViewportAnchor({
   }, [items, parentId]);
 
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
-  const isPlacing = () => targetRef.current?.placement === placement;
+
+  const isPlacing = useCallback(() => {
+    const state = placementRef.current;
+
+    return (
+      state?.placement === placement &&
+      (state.kind === "placing-at-target" || state.kind === "placing-at-end")
+    );
+  }, [placement]);
 
   const capture = (atBottom: boolean) => {
-    if (!placed || settledPlacementRef.current !== placement) return;
+    const state = placementRef.current;
+
+    if (!placed || state?.placement !== placement || isPlacing()) return;
+
+    let targetId = state.kind === "settled" ? state.messageId : null;
+
+    if (targetId !== null && !indices.has(targetId)) {
+      placementRef.current = { kind: "cancelled", placement };
+      targetId = null;
+    }
 
     const element = viewport();
     const corrected = correctedOffsetRef.current;
@@ -74,7 +102,17 @@ export function useViewportAnchor({
 
     correctedOffsetRef.current = null;
 
-    if (atBottom) {
+    // A fitting placeholder window says nothing about permalink intent. Keep its placed
+    // offset until reader input takes over, including scroll events caused by the reveal.
+    if (
+      targetId !== null &&
+      anchorRef.current?.kind === "message" &&
+      anchorRef.current.placement === placement &&
+      anchorRef.current.id === targetId
+    )
+      return;
+
+    if (atBottom && targetId === null) {
       anchorRef.current = { kind: "end", placement };
 
       return;
@@ -94,7 +132,7 @@ export function useViewportAnchor({
     for (const row of list.querySelectorAll<HTMLElement>("[data-message-row][data-message-id]")) {
       const id = Number(row.dataset.messageId);
 
-      if (!indices.has(id)) continue;
+      if (!indices.has(id) || (targetId !== null && id !== targetId)) continue;
 
       const rect = row.getBoundingClientRect();
       const wrapper = wrapperOf(row);
@@ -137,7 +175,7 @@ export function useViewportAnchor({
   };
 
   const seed = useEffectEvent(() => {
-    if (settledPlacementRef.current !== placement) return;
+    if (placementRef.current?.placement !== placement || isPlacing()) return;
 
     const list = listRef.current;
 
@@ -147,9 +185,11 @@ export function useViewportAnchor({
   });
 
   const settle = () => {
-    if (!placed || targetRef.current?.placement === placement) return;
+    if (!placed || isPlacing()) return;
 
-    settledPlacementRef.current = placement;
+    if (placementRef.current?.placement !== placement)
+      placementRef.current = { kind: "cancelled", placement };
+
     correctedOffsetRef.current = null;
     const element = viewport();
 
@@ -161,14 +201,16 @@ export function useViewportAnchor({
 
   const place = (
     index: number,
-    { align, offset = 0 }: { readonly align: PlacementTarget["align"]; readonly offset?: number },
+    { align, offset = 0 }: { readonly align: "start" | "center" | "end"; readonly offset?: number },
   ) => {
     const item = items[index];
 
     if (item === undefined) return;
 
-    targetRef.current = { placement, key: item.key, align, offset };
-    settledPlacementRef.current = null;
+    placementRef.current =
+      align === "end"
+        ? { kind: "placing-at-end", placement }
+        : { kind: "placing-at-target", placement, key: item.key, align, offset };
     anchorRef.current = null;
 
     const element = viewport();
@@ -176,21 +218,60 @@ export function useViewportAnchor({
     if (element) element.dataset.placementSettled = "false";
   };
 
+  const cancelPlacement = useEffectEvent(() => {
+    placementRef.current = { kind: "cancelled", placement };
+    anchorRef.current = null;
+    settle();
+  });
+
+  const finishPlacement = useEffectEvent(() => {
+    const state = placementRef.current;
+
+    if (state?.placement !== placement) return;
+
+    if (state.kind === "placing-at-target") {
+      const index = itemIndices.get(state.key);
+      const item = index === undefined ? undefined : items[index];
+
+      placementRef.current = {
+        kind: "settled",
+        placement,
+        messageId: item?.kind === "message" ? item.message.id : null,
+      };
+    } else if (state.kind === "placing-at-end") {
+      placementRef.current = { kind: "settled", placement, messageId: null };
+    }
+
+    settle();
+  });
+
   const measurePlacement = useEffectEvent(() => {
-    const target = targetRef.current;
+    const target = placementRef.current;
     const list = listRef.current;
     const element = viewport();
 
-    if (target === null || target.placement !== placement || list === null || !element) return null;
+    if (
+      target?.placement !== placement ||
+      (target.kind !== "placing-at-target" && target.kind !== "placing-at-end") ||
+      list === null ||
+      !element
+    )
+      return null;
 
-    const index = target.align === "end" ? items.length - 1 : itemIndices.get(target.key);
+    const index = target.kind === "placing-at-end" ? items.length - 1 : itemIndices.get(target.key);
 
-    if (index === undefined || list.viewportSize === 0) return null;
+    if (index === undefined || index < 0) {
+      cancelPlacement();
+
+      return null;
+    }
+
+    if (list.viewportSize === 0) return null;
 
     const size = list.getItemSize(index);
 
     const offset =
-      target.align === "end"
+      target.kind === "placing-at-end"
         ? element.scrollHeight - element.clientHeight
         : list.getItemOffset(index) +
           (target.align === "center" ? (size - list.viewportSize) / 2 : 0) +
@@ -223,10 +304,17 @@ export function useViewportAnchor({
       : null;
   });
 
-  const finishPlacement = useEffectEvent(() => {
-    targetRef.current = null;
-    settle();
-  });
+  useLayoutEffect(() => {
+    const state = placementRef.current;
+
+    if (
+      placed &&
+      state?.placement === placement &&
+      state.kind === "placing-at-target" &&
+      !itemIndices.has(state.key)
+    )
+      cancelPlacement();
+  }, [placed, placement, itemIndices]);
 
   useLayoutEffect(() => {
     if (!placed) return;
@@ -239,9 +327,11 @@ export function useViewportAnchor({
     let previous: ReturnType<typeof measurePlacement> = null;
 
     const tick = () => {
-      if (targetRef.current?.placement !== placement) return;
+      if (!isPlacing()) return;
 
       const current = measurePlacement();
+
+      if (!isPlacing()) return;
 
       if (
         current !== null &&
@@ -270,7 +360,7 @@ export function useViewportAnchor({
       // Cancel our placement before the input scrolls. No Virtua imperative target remains
       // to reassert the initial position when another row measurement arrives.
       cancelAnimationFrame(frame);
-      finishPlacement();
+      cancelPlacement();
     };
 
     const inputs = ["wheel", "touchstart", "keydown", "pointerdown"];
@@ -285,9 +375,9 @@ export function useViewportAnchor({
 
       for (const input of inputs) element.removeEventListener(input, takeControl, true);
 
-      if (targetRef.current?.placement === placement) targetRef.current = null;
+      if (placementRef.current?.placement === placement) placementRef.current = null;
     };
-  }, [placed, placement, containerRef]);
+  }, [placed, placement, containerRef, isPlacing]);
 
   const chunkLoaded = useEffectEvent(() => cardsLoaded);
 
@@ -328,7 +418,7 @@ export function useViewportAnchor({
   useLayoutEffect(() => {
     if (!placed || anchorRef.current?.placement !== placement) anchorRef.current = null;
 
-    if (!placed || settledPlacementRef.current !== placement) settledPlacementRef.current = null;
+    if (!placed || placementRef.current?.placement !== placement) placementRef.current = null;
 
     correctedOffsetRef.current = null;
 
