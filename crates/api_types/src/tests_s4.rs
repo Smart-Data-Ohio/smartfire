@@ -14,7 +14,7 @@ fn badge() -> AgentBadge {
     }
 }
 
-fn agent_user() -> User {
+pub(crate) fn agent_user() -> User {
     User {
         id: 40,
         name: "Scout".into(),
@@ -64,7 +64,7 @@ fn directory_row_wire() -> serde_json::Value {
     })
 }
 
-fn step() -> AgentStep {
+pub(crate) fn step() -> AgentStep {
     AgentStep {
         id: 11,
         message_id: Some(9001),
@@ -80,7 +80,7 @@ fn step() -> AgentStep {
     }
 }
 
-fn step_wire() -> serde_json::Value {
+pub(crate) fn step_wire() -> serde_json::Value {
     json!({
         "id": 11,
         "messageId": 9001,

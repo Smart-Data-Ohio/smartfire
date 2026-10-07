@@ -12,8 +12,8 @@ import type { User } from "./User";
  * - `before`: the previous page's `nextCursor`. A cursor that doesn't decode is a 422
  *   (`ApiError::Validation` on `before`).
  *
- * At most 50 a page. No live updates, as in the classic app: the ledger refetches its first
- * page when it's shown again.
+ * At most 50 a page, newest first (`created_at DESC, id DESC`). No live updates, as in the
+ * classic app: the ledger refetches its first page when it's shown again.
  */
 export type AgentLedgerPage = { events: Array<AgentLedgerEvent>, 
 /**
@@ -21,7 +21,9 @@ export type AgentLedgerPage = { events: Array<AgentLedgerEvent>,
  */
 users: Array<User>, 
 /**
- * Pass as `before` for the next page; `null` when this is the last. Opaque, as on
- * [`AgentApprovalPage`]. **New**: the classic page uses `?page=` offsets.
+ * Pass as `before` for the next page; `null` when this is the last. Opaque to clients, as on
+ * [`AgentApprovalPage`]: it encodes the page's last entry's `(created_at, id)`, and the next
+ * page holds the entries strictly before it in that order, so entries added meanwhile never
+ * shift a page. **New**: the classic page uses `?page=` offsets.
  */
 nextCursor: string | null, };

@@ -1,15 +1,25 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Schema } from "effect";
-import { AgentDeliveryOutcome, AgentLedgerEventType, AgentLedgerPage } from "./agents.ts";
-import { ThreadDetail } from "./thread.ts";
+import {
+  AgentDeliveryOutcome,
+  AgentLedgerEventType,
+  AgentLedgerPage,
+  AgentWebhookStatus,
+} from "./agents.ts";
+import { SyncEvent } from "./sync.ts";
+import { Thread, ThreadDetail } from "./thread.ts";
 import {
   CreateWorkHandoff,
+  isSafeWorkHref,
   UpdateWork,
   WorkDetail,
+  WorkFacts,
   WorkFilter,
   WorkHistoryKind,
   WorkLinkKind,
   WorkList,
+  WorkPullRequestState,
+  WorkStatusRead,
 } from "./work.ts";
 
 // Mirrors the wire JSON in crates/api_types/src/tests_s4b.rs.
@@ -25,6 +35,40 @@ const userJson = {
   avatarIcon: null,
   agent: null,
   createdAt: "2026-09-26T12:26:46.848Z",
+} as const;
+
+/** The agent owner and a thread's step, as in schema-s4.test.ts. */
+const agentUserJson = {
+  id: 40,
+  name: "Scout",
+  role: "bot",
+  status: "active",
+  bio: null,
+  avatarUrl: "/users/40/avatar?v=1700000001",
+  customStatus: null,
+  avatarIcon: {
+    name: "github",
+    title: "GitHub",
+    kind: "brand",
+    character: null,
+    imageUrl: "/assets/icons/github.svg",
+  },
+  agent: { agentId: 3, kind: "personal", status: "working", suspended: false },
+  createdAt: "2026-09-26T12:26:46.848Z",
+} as const;
+
+const threadStepJson = {
+  id: 11,
+  messageId: null,
+  threadId: 88,
+  name: "Search the docs",
+  status: "done",
+  inputSummary: "rate limits",
+  outputSummary: null,
+  durationMs: 1250,
+  position: 0,
+  createdAt: "2026-10-06T09:15:01.000Z",
+  updatedAt: "2026-10-06T09:15:02.250Z",
 } as const;
 
 const ledgerEventJson = {
@@ -48,7 +92,7 @@ const ledgerEventJson = {
 
 const workFactsJson = {
   status: "in_progress",
-  ownerId: 40,
+  owner: agentUserJson,
   ownerActive: true,
   runUrl: "https://ci.example.com/runs/7",
   resultUpdatedAt: null,
@@ -85,7 +129,7 @@ const workDetailJson = {
   resultMarkdown: "Shipped in **v2.1**",
   resultHtml: "<p>Shipped in <strong>v2.1</strong></p>",
   resultUpdatedById: 7,
-  steps: [],
+  steps: [threadStepJson],
   history: [
     {
       id: 71,
@@ -107,7 +151,7 @@ const workDetailJson = {
       fromStatus: null,
       toStatus: "planned",
       fromOwner: null,
-      toOwner: null,
+      toOwner: { userId: 7, name: null },
       note: "Picked up from triage",
       handoff: null,
     },
@@ -194,6 +238,99 @@ describe("S4 contract B schemas", () => {
       ],
       users: [userJson],
     });
+  });
+
+  it("read every webhook status and pull request state, and later ones as unknown", () => {
+    for (const status of ["none", "pending", "delivered", "failed"] as const) {
+      roundTrips(AgentWebhookStatus, status);
+    }
+
+    for (const state of ["open", "draft", "merged", "closed"] as const) {
+      roundTrips(WorkPullRequestState, state);
+    }
+
+    expect(Schema.decodeUnknownSync(AgentWebhookStatus)("retrying")).toBe("unknown");
+    expect(Schema.decodeUnknownSync(WorkPullRequestState)("queued")).toBe("unknown");
+
+    const page = Schema.decodeUnknownSync(AgentLedgerPage)({
+      events: [{ ...ledgerEventJson, webhookStatus: "retrying" }],
+      users: [],
+      nextCursor: null,
+    });
+
+    expect(page.events[0]?.webhookStatus).toBe("unknown");
+  });
+
+  it("read a work status added later as unknown on a thread, its list and its events", () => {
+    const later = { ...threadJson, work: { ...workFactsJson, status: "in_review" } };
+
+    expect(Schema.decodeUnknownSync(WorkStatusRead)("in_review")).toBe("unknown");
+    expect(Schema.decodeUnknownSync(Thread)(later).work?.status).toBe("unknown");
+
+    const list = Schema.decodeUnknownSync(WorkList)({
+      threads: [{ thread: later, roomName: "general", board: false, updatedAt: later.createdAt }],
+      users: [],
+    });
+
+    expect(list.threads[0]?.thread.work?.status).toBe("unknown");
+
+    const event = Schema.decodeUnknownSync(SyncEvent)({
+      seq: 4,
+      topic: "room:12",
+      type: "thread.updated",
+      data: later,
+    });
+
+    expect(event.type === "thread.updated" && event.data.work?.status).toBe("unknown");
+
+    const detail = Schema.decodeUnknownSync(WorkDetail)({
+      ...workDetailJson,
+      history: [{ ...workDetailJson.history[1], toStatus: "in_review" }],
+    });
+
+    expect(detail.history[0]?.toStatus).toBe("unknown");
+    // Writes stay strict: only the four statuses go out.
+    expect(() => Schema.decodeUnknownSync(UpdateWork)({ status: "in_review" })).toThrow();
+  });
+
+  it("keep only https run URLs and links safe in an href", () => {
+    const facts = Schema.decodeUnknownSync(WorkFacts)({
+      ...workFactsJson,
+      runUrl: "javascript:alert(1)",
+      links: [
+        workFactsJson.links[0],
+        { ...workFactsJson.links[0], id: 32, kind: "drive_file", url: "javascript:alert(1)" },
+        { ...workFactsJson.links[0], id: 33, kind: "event", url: "/rooms/12/events/5" },
+        { ...workFactsJson.links[0], id: 34, kind: "drive_file", url: "http://docs.example" },
+      ],
+    });
+
+    expect(facts.runUrl).toBeNull();
+    expect(facts.links.map((link) => link.id)).toEqual([31, 33]);
+    expect(Schema.decodeUnknownSync(WorkFacts)(workFactsJson).runUrl).toBe(
+      "https://ci.example.com/runs/7",
+    );
+
+    for (const url of ["https://github.com/x", "HTTPS://drive.google.com/y", "/rooms/1/events/2"]) {
+      expect(isSafeWorkHref(url), url).toBe(true);
+    }
+
+    for (const url of [
+      "javascript:alert(1)",
+      "//evil.example",
+      "/\\evil.example",
+      "http://a.b",
+      "data:x",
+    ]) {
+      expect(isSafeWorkHref(url), url).toBe(false);
+    }
+  });
+
+  it("read an unassigned thread's facts", () => {
+    const facts = Schema.decodeUnknownSync(WorkFacts)({ ...workFactsJson, owner: null });
+
+    expect(facts.owner).toBeNull();
+    roundTrips(WorkFacts, { ...workFactsJson, owner: null, links: [] });
   });
 
   it("read a link or history kind added later as unknown", () => {

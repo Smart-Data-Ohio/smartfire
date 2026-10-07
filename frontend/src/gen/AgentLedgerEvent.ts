@@ -13,7 +13,11 @@ export type AgentLedgerEvent = { id: number, eventType: AgentLedgerEventType,
  */
 outcome: AgentDeliveryOutcome | null, createdAt: string, roomId: number | null, 
 /**
- * The viewer-relative room name; `null` when `roomId` is or the room is gone.
+ * The viewer-relative room name; `null` when `roomId` is, when the room is gone, and when
+ * the viewer is neither an administrator nor a member of the room ("a room you're not in").
+ * This membership gate also covers `detail`, `external.message` and `handoffSummary`, and
+ * is **new**: the classic page shows them to the owner whatever the room. An entry with no
+ * room is never gated.
  */
 roomName: string | null, 
 /**
@@ -29,7 +33,7 @@ messageId: number | null,
  */
 hop: number, 
 /**
- * `null` when blank.
+ * `null` when blank, and when gated (see `roomName`).
  */
 detail: string | null, webhookStatus: AgentWebhookStatus, 
 /**
@@ -46,8 +50,9 @@ webhookLastError: string | null,
  */
 external: AgentExternalResult | null, 
 /**
- * `workHandedOff` entries: "Handoff: {summary}", cut to 140 characters (ending "..." when
- * cut) as the classic row shows it; `null` otherwise.
+ * `workHandedOff` entries: the handoff's summary alone, without the classic row's
+ * "Handoff: " prefix (the client labels it), cut to 140 characters (ending "..." when cut).
+ * `null` otherwise, and when gated (see `roomName`).
  */
 handoffSummary: string | null, 
 /**

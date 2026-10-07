@@ -3,6 +3,7 @@
 use serde_json::json;
 
 use crate::tests::{assert_wire, user};
+use crate::tests_s4::{agent_user, step, step_wire};
 use crate::*;
 
 fn ledger_event() -> AgentLedgerEvent {
@@ -130,6 +131,14 @@ fn ledger_enums_are_the_classic_strings() {
         assert_wire(&value, json!(wire));
     }
     for (value, wire) in [
+        (AgentWebhookStatus::None, "none"),
+        (AgentWebhookStatus::Pending, "pending"),
+        (AgentWebhookStatus::Delivered, "delivered"),
+        (AgentWebhookStatus::Failed, "failed"),
+    ] {
+        assert_wire(&value, json!(wire));
+    }
+    for (value, wire) in [
         (AgentDeliveryOutcome::Pending, "pending"),
         (AgentDeliveryOutcome::Delivered, "delivered"),
         (AgentDeliveryOutcome::Acknowledged, "acknowledged"),
@@ -156,7 +165,7 @@ fn pull_request_link() -> WorkLink {
 fn work_facts() -> WorkFacts {
     WorkFacts {
         status: WorkStatus::InProgress,
-        owner_id: Some(40),
+        owner: Some(agent_user()),
         owner_active: true,
         run_url: Some("https://ci.example.com/runs/7".into()),
         result_updated_at: None,
@@ -167,7 +176,7 @@ fn work_facts() -> WorkFacts {
 fn work_facts_wire() -> serde_json::Value {
     json!({
         "status": "in_progress",
-        "ownerId": 40,
+        "owner": serde_json::to_value(agent_user()).unwrap(),
         "ownerActive": true,
         "runUrl": "https://ci.example.com/runs/7",
         "resultUpdatedAt": null,
@@ -223,6 +232,36 @@ fn a_tracked_thread_carries_its_work_facts() {
     assert_eq!(wire["eventCancelled"], true);
     assert_wire(&event_link, wire);
     assert_wire(&WorkLinkKind::DriveFile, json!("drive_file"));
+    for (value, wire) in [
+        (WorkPullRequestState::Open, "open"),
+        (WorkPullRequestState::Draft, "draft"),
+        (WorkPullRequestState::Merged, "merged"),
+        (WorkPullRequestState::Closed, "closed"),
+    ] {
+        assert_wire(&value, json!(wire));
+    }
+}
+
+#[test]
+fn an_unassigned_thread_and_an_unnamed_owner_snapshot_are_nulls() {
+    let facts = WorkFacts {
+        owner: None,
+        owner_active: false,
+        run_url: None,
+        links: vec![],
+        ..work_facts()
+    };
+    let wire = serde_json::to_value(&facts).unwrap();
+    assert_eq!(wire["owner"], serde_json::Value::Null);
+    assert_eq!(wire["runUrl"], serde_json::Value::Null);
+    assert_wire(&facts, wire);
+    assert_wire(
+        &WorkOwnerSnapshot {
+            user_id: Some(40),
+            name: None,
+        },
+        json!({"userId": 40, "name": null}),
+    );
 }
 
 #[test]
@@ -231,7 +270,11 @@ fn work_detail_round_trips() {
         result_markdown: Some("Shipped in **v2.1**".into()),
         result_html: Some("<p>Shipped in <strong>v2.1</strong></p>".into()),
         result_updated_by_id: Some(7),
-        steps: vec![],
+        steps: vec![AgentStep {
+            message_id: None,
+            thread_id: Some(88),
+            ..step()
+        }],
         history: vec![
             WorkHistoryEntry {
                 id: 71,
@@ -242,11 +285,11 @@ fn work_detail_round_trips() {
                 to_status: Some(WorkStatus::InProgress),
                 from_owner: Some(WorkOwnerSnapshot {
                     user_id: Some(7),
-                    name: "Ada Lovelace".into(),
+                    name: Some("Ada Lovelace".into()),
                 }),
                 to_owner: Some(WorkOwnerSnapshot {
                     user_id: Some(40),
-                    name: "Scout".into(),
+                    name: Some("Scout".into()),
                 }),
                 note: None,
                 handoff: Some(WorkHistoryHandoff {
@@ -285,13 +328,16 @@ fn work_detail_round_trips() {
             user_id: 40,
         }],
     };
+    let mut thread_step = step_wire();
+    thread_step["messageId"] = json!(null);
+    thread_step["threadId"] = json!(88);
     assert_wire(
         &detail,
         json!({
             "resultMarkdown": "Shipped in **v2.1**",
             "resultHtml": "<p>Shipped in <strong>v2.1</strong></p>",
             "resultUpdatedById": 7,
-            "steps": [],
+            "steps": [thread_step],
             "history": [
                 {
                     "id": 71,

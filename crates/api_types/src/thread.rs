@@ -154,8 +154,9 @@ pub struct ThreadDetail {
     pub permissions: ThreadPermissions,
     /// The work section, for a tracked thread; `null` otherwise.
     pub work: Option<WorkDetail>,
-    /// The thread's creator and the parent's, once each; for a tracked thread also its owner,
-    /// the result's editor, every history actor, owner candidate and handoff receiver.
+    /// The thread's creator and the parent's, once each; for a tracked thread also the result's
+    /// editor, every history actor, owner candidate and handoff receiver. (The owner is whole
+    /// on [`crate::WorkFacts::owner`].)
     pub users: Vec<User>,
 }
 

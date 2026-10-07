@@ -13,7 +13,8 @@ export type WorkHistoryEntry = { id: number, kind: WorkHistoryKind, createdAt: s
  */
 actorId: number | null, 
 /**
- * `null` is an ordinary thread (not tracked): "Ordinary thread".
+ * `null` is an ordinary thread (not tracked): "Ordinary thread". Read tolerantly, as
+ * [`WorkFacts::status`] is.
  */
 fromStatus: WorkStatus | null, toStatus: WorkStatus | null, 
 /**

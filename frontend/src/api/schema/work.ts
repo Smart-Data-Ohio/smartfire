@@ -12,6 +12,7 @@ import { User } from "./user.ts";
 import { WorkStatus } from "./work-parts.ts";
 
 export {
+  isSafeWorkHref,
   WorkDetail,
   WorkFacts,
   WorkHandoffReceiver,
@@ -24,6 +25,7 @@ export {
   WorkOwnerSnapshot,
   WorkPullRequestState,
   WorkStatus,
+  WorkStatusRead,
 } from "./work-parts.ts";
 
 /** `GET /api/v1/work?state=`: `open` (the default) is everything not done. */

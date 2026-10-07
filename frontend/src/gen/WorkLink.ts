@@ -13,8 +13,9 @@ export type WorkLink = { id: number, kind: WorkLinkKind,
  */
 label: string, 
 /**
- * The pull request on GitHub, the Drive file, or the event's classic page
- * (`/rooms/:roomId/events/:id`).
+ * The pull request on GitHub or the Drive file, always an `https://` URL, or the event's
+ * classic page, a site-relative path (`/rooms/:roomId/events/:id`). The server leaves out a
+ * link whose stored URL is neither; clients check again before putting it in an `href`.
  */
 url: string, 
 /**

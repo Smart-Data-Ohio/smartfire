@@ -8,4 +8,8 @@ export type AgentExternalResult = {
  * The metadata's `action`, `status` and `message`; `null` when absent (the classic row
  * prints an empty string for the first two).
  */
-action: string | null, status: string | null, message: string | null, };
+action: string | null, status: string | null, 
+/**
+ * Also `null` when the ledger entry is gated (see [`AgentLedgerEvent::room_name`]).
+ */
+message: string | null, };

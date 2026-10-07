@@ -1,4 +1,4 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 import type { WorkDetail as GeneratedWorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkFacts as GeneratedWorkFacts } from "../../gen/WorkFacts.ts";
 import type { WorkHandoffReceiver as GeneratedWorkHandoffReceiver } from "../../gen/WorkHandoffReceiver.ts";
@@ -16,18 +16,48 @@ import { AgentId, UserId, WorkEventId, WorkLinkId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 import { tolerantLiterals } from "./tolerant.ts";
+import { User } from "./user.ts";
 
 /**
  * The work pieces a thread carries, kept apart from `work.ts` (whose list needs threads) so
  * `thread.ts` and the work module don't import each other.
  */
 
-/** `channel_threads.work_status`. */
+/** `channel_threads.work_status`, strict: what `UpdateWork.status` sends. */
 export const WorkStatus = Schema.Literals(["planned", "in_progress", "blocked", "done"]);
 
 export type WorkStatus = typeof WorkStatus.Type;
 
 export type WorkStatusPin = Assert<Pinned<typeof WorkStatus, GeneratedWorkStatus>>;
+
+/**
+ * A work status as read: on every thread list and thread event, so a status added after this
+ * build decodes to `"unknown"` instead of failing the whole list or sync batch.
+ */
+export const WorkStatusRead = tolerantLiterals(["planned", "in_progress", "blocked", "done"]);
+
+export type WorkStatusRead = typeof WorkStatusRead.Type;
+
+export type WorkStatusReadPin = Assert<Pinned<typeof WorkStatusRead, GeneratedWorkStatus>>;
+
+/**
+ * Whether `url` is safe in an `href`: an `https://` URL or a site-relative path (one leading
+ * slash, not `//` or `/\`, which browsers read as another host). The server sends only these
+ * for work URLs; this checks again so nothing else (a `javascript:` URL) reaches the DOM.
+ */
+export function isSafeWorkHref(url: string): boolean {
+  return /^https:\/\//i.test(url) || /^\/(?![/\\])/.test(url);
+}
+
+/** `runUrl` as read: `null` unless it's an `https://` URL, as the classic page shows it. */
+const RunUrl = Schema.NullOr(Schema.String).pipe(
+  Schema.decodeTo(Schema.NullOr(Schema.String), {
+    decode: SchemaGetter.transform((url) =>
+      url !== null && /^https:\/\//i.test(url) ? url : null,
+    ),
+    encode: SchemaGetter.transform((url) => url),
+  }),
+);
 
 /** Tolerant: a kind added after this build decodes to `"unknown"` (show the label and URL). */
 export const WorkLinkKind = tolerantLiterals(["pull_request", "event", "drive_file"]);
@@ -65,18 +95,27 @@ export type WorkLink = typeof WorkLink.Type;
 
 export type WorkLinkPin = Assert<Pinned<typeof WorkLink, GeneratedWorkLink>>;
 
+/** The links as read, less any whose URL isn't safe in an `href` (`isSafeWorkHref`). */
+const WorkLinks = Schema.Array(WorkLink).pipe(
+  Schema.decodeTo(Schema.toType(Schema.Array(WorkLink)), {
+    decode: SchemaGetter.transform((links) => links.filter((link) => isSafeWorkHref(link.url))),
+    encode: SchemaGetter.transform((links) => links),
+  }),
+);
+
 /**
  * A tracked thread's facts, on `Thread.work` for every room member. `thread.updated` brings new
  * facts on every work change; a client holding the `WorkDetail` refetches the thread when they
- * differ from the ones it holds.
+ * differ from the ones it holds. `owner` is the whole user, since thread events carry no
+ * `users`; `null` reads "Unassigned".
  */
 export const WorkFacts = Schema.Struct({
-  status: WorkStatus,
-  ownerId: Schema.NullOr(UserId),
+  status: WorkStatusRead,
+  owner: Schema.NullOr(User),
   ownerActive: Schema.Boolean,
-  runUrl: Schema.NullOr(Schema.String),
+  runUrl: RunUrl,
   resultUpdatedAt: Schema.NullOr(Timestamp),
-  links: Schema.Array(WorkLink),
+  links: WorkLinks,
 });
 
 export type WorkFacts = typeof WorkFacts.Type;
@@ -111,10 +150,13 @@ export type WorkHistoryKind = typeof WorkHistoryKind.Type;
 
 export type WorkHistoryKindPin = Assert<Pinned<typeof WorkHistoryKind, GeneratedWorkHistoryKind>>;
 
-/** An owner as recorded at the time; the name survives renames and deleted accounts. */
+/**
+ * An owner as recorded at the time; the name survives renames and deleted accounts. A `null`
+ * name reads "Unassigned", as in the classic history.
+ */
 export const WorkOwnerSnapshot = Schema.Struct({
   userId: Schema.NullOr(UserId),
-  name: Schema.String,
+  name: Schema.NullOr(Schema.String),
 });
 
 export type WorkOwnerSnapshot = typeof WorkOwnerSnapshot.Type;
@@ -144,8 +186,8 @@ export const WorkHistoryEntry = Schema.Struct({
   kind: WorkHistoryKind,
   createdAt: Timestamp,
   actorId: Schema.NullOr(UserId),
-  fromStatus: Schema.NullOr(WorkStatus),
-  toStatus: Schema.NullOr(WorkStatus),
+  fromStatus: Schema.NullOr(WorkStatusRead),
+  toStatus: Schema.NullOr(WorkStatusRead),
   fromOwner: Schema.NullOr(WorkOwnerSnapshot),
   toOwner: Schema.NullOr(WorkOwnerSnapshot),
   note: Schema.NullOr(Schema.String),

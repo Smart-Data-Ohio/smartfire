@@ -12,6 +12,10 @@
 //! work facts are these). Work is for active humans in the thread's room
 //! (`ChannelThread#work_viewable_by`); bots and agent tokens never use this API.
 //!
+//! Deferred, so not in this contract: managing links (classic `work_threads/links.rs` index,
+//! create and destroy, and its event candidates), which arrives with boards in S6, and tags,
+//! also S6. The links a thread has are on [`WorkFacts::links`].
+//!
 //! Every work change publishes `thread.updated` with the new [`WorkFacts`]: a status, owner,
 //! result, run URL or link change, and a handoff. **New**: the classic app broadcasts none of
 //! these (only board rows). A client holding the thread's [`WorkDetail`] refetches
@@ -29,14 +33,22 @@ use crate::{AgentStep, Thread, Timestamp, User, WorkStatus};
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct WorkFacts {
+    /// Clients read a status added later as unknown, since it rides on every thread list and
+    /// thread event; [`UpdateWork::status`] only takes these four.
     pub status: WorkStatus,
-    /// The person or agent who owns it; `null` reads "Unassigned".
-    pub owner_id: Option<i64>,
+    /// The person or agent who owns it, whole, so a client can show them from a `thread.created`
+    /// or `thread.updated`, which carry no `users`, and when they've left the room (an agent's
+    /// `agent` badge included). `null` reads "Unassigned". Send [`UpdateWork::owner_id`] to
+    /// change it.
+    pub owner: Option<User>,
     /// The owner can act on it: active, still a member of the room, and for an agent allowed to
     /// post there (`work_owner_active`). `false` when unassigned. Not republished when only the
     /// owner's membership or an agent's grants change, as in the classic app.
     pub owner_active: bool,
-    /// The agent's run (a CI job, a session), set through the agent API; `null` for none.
+    /// The agent's run (a CI job, a session), set through the agent API. Only an `https://` URL:
+    /// `null` for none and for any other stored value, as the classic page shows `run_url` only
+    /// when it starts with `https://` (`board_posts.rs`). The server filters it; clients check
+    /// again before putting it in an `href`.
     pub run_url: Option<String>,
     /// When the result was last edited; `null` while there's none. The result itself is on
     /// [`WorkDetail`].
@@ -77,8 +89,9 @@ pub struct WorkLink {
     /// `owner/repo#123` for a pull request, the event's title, or the Drive file's title (its
     /// URL when the title is unknown).
     pub label: String,
-    /// The pull request on GitHub, the Drive file, or the event's classic page
-    /// (`/rooms/:roomId/events/:id`).
+    /// The pull request on GitHub or the Drive file, always an `https://` URL, or the event's
+    /// classic page, a site-relative path (`/rooms/:roomId/events/:id`). The server leaves out a
+    /// link whose stored URL is neither; clients check again before putting it in an `href`.
     pub url: String,
     /// Pull requests only; `null` otherwise.
     pub pull_request_state: Option<WorkPullRequestState>,
@@ -143,30 +156,35 @@ pub struct WorkHandoffReceiver {
     pub user_id: i64,
 }
 
-/// `work_thread_events.event_type`.
+/// `work_thread_events.event_type` (`EVENT_TYPES`): `work_update` is `update`,
+/// `work_assignment` is `assignment`, `work_handoff` is `handoff` and `result_updated` is
+/// `result`. Clients read a kind added later as unknown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "lowercase")]
 #[ts(export)]
 pub enum WorkHistoryKind {
-    /// The status changed (and maybe the owner): tracking started, moved or stopped.
+    /// `work_update`: the status changed (and maybe the owner): tracking started, moved or
+    /// stopped.
     Update,
-    /// Only the owner changed.
+    /// `work_assignment`: only the owner changed.
     Assignment,
-    /// A person handed the work off to an agent.
+    /// `work_handoff`: a person handed the work off to an agent.
     Handoff,
-    /// The result was edited.
+    /// `result_updated`: the result was edited.
     Result,
 }
 
-/// An owner as it was at the time: the name is a snapshot, so it survives a rename or a deleted
-/// account.
+/// An owner as it was at the time (`from_owner_id`/`from_owner_name`, `to_owner_id`/
+/// `to_owner_name`): the name is a snapshot, so it survives a rename or a deleted account. An
+/// entry with neither is `null` on [`WorkHistoryEntry`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct WorkOwnerSnapshot {
     /// `null` when only the name was recorded.
     pub user_id: Option<i64>,
-    pub name: String,
+    /// `null` when no name was recorded; it reads "Unassigned", as in the classic history.
+    pub name: Option<String>,
 }
 
 /// The handoff an entry records: "· {summary} ({n} links, {m} open questions)".
@@ -190,7 +208,8 @@ pub struct WorkHistoryEntry {
     pub created_at: Timestamp,
     /// `null`, or no `users` entry, reads "Former member".
     pub actor_id: Option<i64>,
-    /// `null` is an ordinary thread (not tracked): "Ordinary thread".
+    /// `null` is an ordinary thread (not tracked): "Ordinary thread". Read tolerantly, as
+    /// [`WorkFacts::status`] is.
     pub from_status: Option<WorkStatus>,
     pub to_status: Option<WorkStatus>,
     /// `null` reads "Unassigned".
@@ -241,7 +260,7 @@ pub struct WorkListRow {
 #[ts(export)]
 pub struct WorkList {
     pub threads: Vec<WorkListRow>,
-    /// The threads' creators and owners, once each.
+    /// The threads' creators, once each. (Owners are whole on [`WorkFacts::owner`].)
     pub users: Vec<User>,
 }
 

@@ -10,6 +10,6 @@ import type { WorkListRow } from "./WorkListRow";
  */
 export type WorkList = { threads: Array<WorkListRow>, 
 /**
- * The threads' creators and owners, once each.
+ * The threads' creators, once each. (Owners are whole on [`WorkFacts::owner`].)
  */
 users: Array<User>, };

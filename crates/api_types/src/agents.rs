@@ -310,7 +310,9 @@ pub struct AgentApproval {
     pub agent_user_id: i64,
     /// `null` for a request outside a room.
     pub room_id: Option<i64>,
-    /// The viewer-relative room name ("in {room}"); `null` when `roomId` is.
+    /// The viewer-relative room name ("in {room}"); `null` when `roomId` is, and when the viewer
+    /// is neither an administrator nor a member of the room (an owner deciding for a room they
+    /// aren't in sees "in a room you're not in"). **New**: the classic card always names it.
     pub room_name: Option<String>,
     /// The action asked for, e.g. `github.merge_pull_request` (up to 60 characters of
     /// `[a-z0-9_.-]`).
@@ -486,6 +488,7 @@ pub struct AgentExternalResult {
     /// prints an empty string for the first two).
     pub action: Option<String>,
     pub status: Option<String>,
+    /// Also `null` when the ledger entry is gated (see [`AgentLedgerEvent::room_name`]).
     pub message: Option<String>,
 }
 
@@ -500,7 +503,11 @@ pub struct AgentLedgerEvent {
     pub outcome: Option<AgentDeliveryOutcome>,
     pub created_at: Timestamp,
     pub room_id: Option<i64>,
-    /// The viewer-relative room name; `null` when `roomId` is or the room is gone.
+    /// The viewer-relative room name; `null` when `roomId` is, when the room is gone, and when
+    /// the viewer is neither an administrator nor a member of the room ("a room you're not in").
+    /// This membership gate also covers `detail`, `external.message` and `handoffSummary`, and
+    /// is **new**: the classic page shows them to the owner whatever the room. An entry with no
+    /// room is never gated.
     pub room_name: Option<String>,
     /// "from {actor}"; `null` for none. No `users` entry when the account is gone.
     pub actor_id: Option<i64>,
@@ -508,7 +515,7 @@ pub struct AgentLedgerEvent {
     pub message_id: Option<i64>,
     /// How many agent-to-agent hops led here; 0 shows nothing.
     pub hop: i64,
-    /// `null` when blank.
+    /// `null` when blank, and when gated (see `roomName`).
     pub detail: Option<String>,
     pub webhook_status: AgentWebhookStatus,
     /// "{n} attempt(s)" when above 0.
@@ -518,8 +525,9 @@ pub struct AgentLedgerEvent {
     /// `githubActionCompleted` and `fizzyActionCompleted` entries that recorded a result;
     /// `null` otherwise.
     pub external: Option<AgentExternalResult>,
-    /// `workHandedOff` entries: "Handoff: {summary}", cut to 140 characters (ending "..." when
-    /// cut) as the classic row shows it; `null` otherwise.
+    /// `workHandedOff` entries: the handoff's summary alone, without the classic row's
+    /// "Handoff: " prefix (the client labels it), cut to 140 characters (ending "..." when cut).
+    /// `null` otherwise, and when gated (see `roomName`).
     pub handoff_summary: Option<String>,
     /// The message's plain text, cut as `handoffSummary` is, only when the agent is a member of
     /// its room with `read_messages` there and the viewer is an administrator or a member of
@@ -536,8 +544,8 @@ pub struct AgentLedgerEvent {
 /// - `before`: the previous page's `nextCursor`. A cursor that doesn't decode is a 422
 ///   (`ApiError::Validation` on `before`).
 ///
-/// At most 50 a page. No live updates, as in the classic app: the ledger refetches its first
-/// page when it's shown again.
+/// At most 50 a page, newest first (`created_at DESC, id DESC`). No live updates, as in the
+/// classic app: the ledger refetches its first page when it's shown again.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -545,7 +553,9 @@ pub struct AgentLedgerPage {
     pub events: Vec<AgentLedgerEvent>,
     /// The agent's bot user and every `actorId`, once each.
     pub users: Vec<User>,
-    /// Pass as `before` for the next page; `null` when this is the last. Opaque, as on
-    /// [`AgentApprovalPage`]. **New**: the classic page uses `?page=` offsets.
+    /// Pass as `before` for the next page; `null` when this is the last. Opaque to clients, as on
+    /// [`AgentApprovalPage`]: it encodes the page's last entry's `(created_at, id)`, and the next
+    /// page holds the entries strictly before it in that order, so entries added meanwhile never
+    /// shift a page. **New**: the classic page uses `?page=` offsets.
     pub next_cursor: Option<String>,
 }
