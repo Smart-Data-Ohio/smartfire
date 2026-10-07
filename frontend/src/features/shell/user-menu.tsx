@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { postClassicForm } from "../../lib/classic-form.ts";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 
 /**
@@ -10,35 +11,10 @@ import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 export function switchToClassic(
   location: Pick<Location, "pathname" | "search"> = window.location,
 ): void {
-  const form = document.createElement("form");
-
-  form.method = "post";
-  form.action = "/app/ui_preference";
-  form.hidden = true;
-
-  const fields = new Map([
+  postClassicForm("/app/ui_preference", [
     ["ui", "classic"],
     ["return_to", `${location.pathname}${location.search}`],
   ]);
-
-  const param = document.querySelector('meta[name="csrf-param"]')?.getAttribute("content");
-  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
-
-  if (param && token) {
-    fields.set(param, token);
-  }
-
-  for (const [name, value] of fields) {
-    const input = document.createElement("input");
-
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.append(input);
-  }
-
-  document.body.append(form);
-  form.submit();
 }
 
 /**

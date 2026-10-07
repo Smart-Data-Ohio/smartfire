@@ -278,6 +278,39 @@
     cursor: default;
   }
 
+  /* ── Integrations: pasted tokens ───────────────────────────────────────── */
+
+  .settings-token {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .settings-token > .field {
+    flex: 1;
+    min-width: 240px;
+    max-width: 420px;
+  }
+
+  /* Lines the button up with the input, under the field's label. */
+  .settings-token > .button {
+    margin-top: calc(var(--leading-ui) + var(--space-1-5));
+  }
+
+  .settings-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .settings-details summary {
+    align-self: flex-start;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
   /* ── Lists: DND exceptions, sessions, devices ──────────────────────────── */
 
   .settings-list {

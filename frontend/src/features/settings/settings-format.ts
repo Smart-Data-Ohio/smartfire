@@ -157,8 +157,14 @@ export function deviceName(subscription: PushSubscriptionInfo): string {
   return `${subscription.browser} ${subscription.version} on ${subscription.platform}`.trim();
 }
 
-/** A GitHub or Fizzy connection in words, as the classic panels put it. */
-export function connectionSummary(service: "GitHub" | "Fizzy", connection: Connection): string {
+/**
+ * Where a GitHub or Fizzy connection stands, as the classic panel's first line puts it; `null`
+ * when there's none (the panel explains what connecting does instead).
+ */
+export function connectionSummary(
+  service: "GitHub" | "Fizzy",
+  connection: Connection,
+): string | null {
   switch (connection.state) {
     case "connected": {
       const where = connection.workspace === null ? "" : ` (${connection.workspace})`;
@@ -169,12 +175,13 @@ export function connectionSummary(service: "GitHub" | "Fizzy", connection: Conne
 
     case "rejected": {
       const reason = connection.reason === null ? "" : ` (${connection.reason})`;
+      const next = service === "GitHub" ? "Reconnect below." : "Paste a new token to reconnect.";
 
-      return `${service} rejected the connection${reason}. Reconnect it on the classic page.`;
+      return `${service} rejected the connection${reason}. ${next}`;
     }
 
     case "missing":
-      return "Not connected.";
+      return null;
   }
 }
 

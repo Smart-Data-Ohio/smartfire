@@ -6,6 +6,8 @@
  */
 import { me } from "../api/endpoints.ts";
 import {
+  connectService,
+  disconnectService,
   settings as loadSettings,
   pushSubscriptions,
   removeAvatar,
@@ -14,6 +16,7 @@ import {
   revokeSession,
   sessions,
   setDndAllowance,
+  type TokenService,
   updateAppearance,
   updateAvatar,
   updateCalls,
@@ -21,6 +24,7 @@ import {
   updateProfile,
   updateStatus,
 } from "../api/settings-endpoints.ts";
+import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
@@ -89,6 +93,8 @@ async function write(run: Promise<Settings>): Promise<Settings> {
   return next;
 }
 
+export type { TokenService };
+
 export const settings = {
   load: (): Promise<Settings> => runAction(loadSettings()),
 
@@ -130,4 +136,12 @@ export const settings = {
 
   removePushSubscription: (subscriptionId: number): Promise<PushSubscriptionList> =>
     runAction(removePushSubscription(subscriptionId)),
+
+  /** Connects GitHub or Fizzy with a personal access token. */
+  connect: (service: TokenService, accessToken: string): Promise<IntegrationChange> =>
+    runAction(connectService(service, accessToken)),
+
+  /** Disconnects GitHub, Fizzy or Google Calendar. */
+  disconnect: (service: TokenService | "google"): Promise<IntegrationChange> =>
+    runAction(disconnectService(service)),
 };

@@ -98,9 +98,12 @@ describe("settings words", () => {
       }),
     ).toBe("Connected as ada (37s).");
     expect(connectionSummary("Fizzy", { state: "rejected", reason: "revoked" })).toBe(
-      "Fizzy rejected the connection (revoked). Reconnect it on the classic page.",
+      "Fizzy rejected the connection (revoked). Paste a new token to reconnect.",
     );
-    expect(connectionSummary("GitHub", { state: "missing" })).toBe("Not connected.");
+    expect(connectionSummary("GitHub", { state: "rejected", reason: null })).toBe(
+      "GitHub rejected the connection. Reconnect below.",
+    );
+    expect(connectionSummary("GitHub", { state: "missing" })).toBeNull();
   });
 
   it("keeps classic links on the classic page", () => {

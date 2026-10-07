@@ -3,12 +3,13 @@
  * subscriptions, kept per world so `reset()` starts them over. DND exceptions are the viewer's
  * stars, as on the server.
  */
+import type { IntegrationSettings } from "../../src/gen/IntegrationSettings.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionInfo } from "../../src/gen/SessionInfo.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
 import type { StatusExpiry } from "../../src/gen/StatusExpiry.ts";
-import { notFound, ok, plainError, validation } from "../http.ts";
+import { notFound, ok, plainError, refused, validation } from "../http.ts";
 import {
   booleanField,
   field,
@@ -216,7 +217,11 @@ function signedOutNotice(count: number): string {
 }
 
 /** Creates the settings module. */
-export function createSettings(ctx: S2Context, uploads: Uploads): SettingsModule {
+export function createSettings(
+  ctx: S2Context,
+  uploads: Uploads,
+  requireSudo: () => void,
+): SettingsModule {
   let state: State | null = null;
   let stateWorld: World | null = null;
 
@@ -522,6 +527,104 @@ export function createSettings(ctx: S2Context, uploads: Uploads): SettingsModule
     return ok(held.push);
   };
 
+  /**
+   * A connect or disconnect, as the classic profile's: the password confirmation first, then the
+   * change and its notice. `change` may refuse with the classic alert.
+   */
+  const integration = (
+    change: (held: Settings) => { readonly settings: Settings; readonly notice: string },
+  ) => {
+    requireSudo();
+
+    const held = current();
+    const next = change(held.settings);
+    const integrations: IntegrationSettings = next.settings.integrations;
+
+    held.settings = next.settings;
+
+    return ok({ integrations, notice: next.notice });
+  };
+
+  /**
+   * A pasted token as the services answer it in the mock: blank is refused, `bad…` is rejected,
+   * `offline…` can't be reached and (Fizzy) `none…` has no account; anything else connects.
+   */
+  const checkToken = (service: "GitHub" | "Fizzy", body: Json | undefined): void => {
+    const token = (stringField(body, "accessToken") ?? "").trim();
+
+    if (token === "") throw refused(`Paste a token to connect ${service}.`);
+
+    if (token.startsWith("bad"))
+      throw refused(`${service} rejected that token. Check it and try again.`);
+
+    if (token.startsWith("offline")) throw refused(`Could not reach ${service}. Try again.`);
+
+    if (service === "Fizzy" && token.startsWith("none")) {
+      throw refused("That token has no Fizzy account to use.");
+    }
+  };
+
+  const connectGithub = (body: Json | undefined) =>
+    integration((held) => {
+      checkToken("GitHub", body);
+
+      return {
+        settings: {
+          ...held,
+          profile: { ...held.profile, githubLogin: "riel", githubVerified: true },
+          integrations: {
+            ...held.integrations,
+            github: { state: "connected", name: "riel", workspace: null, appToken: false },
+          },
+        },
+        notice: "GitHub connected as riel.",
+      };
+    });
+
+  const connectFizzy = (body: Json | undefined) =>
+    integration((held) => {
+      checkToken("Fizzy", body);
+
+      return {
+        settings: {
+          ...held,
+          integrations: {
+            ...held.integrations,
+            fizzy: { state: "connected", name: "Riel", workspace: "Smart Data", appToken: false },
+          },
+        },
+        notice: "Fizzy connected as Riel (Smart Data).",
+      };
+    });
+
+  const disconnect = (service: "github" | "fizzy") =>
+    integration((held) => ({
+      settings: {
+        ...held,
+        profile: service === "github" ? { ...held.profile, githubVerified: false } : held.profile,
+        integrations: { ...held.integrations, [service]: { state: "missing" } },
+      },
+      notice: service === "github" ? "GitHub disconnected." : "Fizzy disconnected.",
+    }));
+
+  const disconnectGoogle = () =>
+    integration((held) => ({
+      settings: {
+        ...held,
+        integrations: {
+          ...held.integrations,
+          google: {
+            ...held.integrations.google,
+            connected: false,
+            calendar: false,
+            drive: false,
+            email: null,
+          },
+        },
+      },
+      notice: "Google Calendar disconnected.",
+    }));
+
   return {
     routes: [
       route("GET", /^\/settings$/, () => ok(page())),
@@ -547,6 +650,11 @@ export function createSettings(ctx: S2Context, uploads: Uploads): SettingsModule
       route("GET", /^\/settings\/sessions$/, () => ok(sessionList(null))),
       route("POST", /^\/settings\/sessions\/revoke_others$/, () => revokeOthers()),
       route("DELETE", /^\/settings\/sessions\/(\d+)$/, (request) => revoke(firstId(request))),
+      route("PUT", /^\/settings\/github_connection$/, ({ body }) => connectGithub(body)),
+      route("DELETE", /^\/settings\/github_connection$/, () => disconnect("github")),
+      route("PUT", /^\/settings\/fizzy_connection$/, ({ body }) => connectFizzy(body)),
+      route("DELETE", /^\/settings\/fizzy_connection$/, () => disconnect("fizzy")),
+      route("DELETE", /^\/settings\/google_connection$/, () => disconnectGoogle()),
       route("GET", /^\/settings\/push_subscriptions$/, () => ok(current().push)),
       route("DELETE", /^\/settings\/push_subscriptions\/(\d+)$/, (request) =>
         removePush(firstId(request)),
