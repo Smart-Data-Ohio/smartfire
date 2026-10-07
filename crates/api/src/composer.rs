@@ -71,6 +71,8 @@ endpoint!(
 
 /// The most people `GET /autocomplete/users` suggests (`autocompletable/users`' page size).
 const USER_SUGGESTIONS: i64 = 20;
+/// `send_now`'s 422 message for a message dropped with no reason: the author lost access.
+const ACCESS_LOST: &str = "channel access lost";
 /// `scheduled_messages_controller`'s refusal while the scheduler holds the row.
 const BUSY: &str = "That message is sending right now; try again in a moment.";
 
@@ -400,7 +402,7 @@ fn scheduled(
 }
 
 /// Rows as the wire carries them, with their sendability and sent messages read in one go.
-fn scheduled_rows(
+pub(crate) fn scheduled_rows(
     conn: &campfire_db::Connection,
     rows: &[ScheduledMessage],
     now: campfire_db::Timestamp,
@@ -434,25 +436,9 @@ async fn scheduled_reply(c: &Ctx, row: ScheduledMessage) -> Result<api::Schedule
         .map_err(db_error)
 }
 
-/// `GET /scheduled_messages`' `before`: the base64url `"<send_at>|<id>"` of the previous page's
-/// last row.
+/// `GET /scheduled_messages`' `before`: the previous page's last row's `(send_at, id)`.
 fn encode_cursor(row: &ScheduledMessage) -> String {
-    use base64::Engine as _;
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(format!(
-        "{}|{}",
-        row.send_at.to_db(),
-        row.id
-    ))
-}
-
-fn decode_cursor(raw: &str) -> Option<(campfire_db::Timestamp, i64)> {
-    use base64::Engine as _;
-    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
-        .decode(raw)
-        .ok()?;
-    let text = String::from_utf8(bytes).ok()?;
-    let (at, id) = text.rsplit_once('|')?;
-    Some((campfire_db::Timestamp::parse_db(at)?, id.parse().ok()?))
+    crate::cursor::encode(row.send_at, row.id)
 }
 
 /// `sendAt` as a timestamp; anything else is a 422.
@@ -492,7 +478,7 @@ async fn index_scheduled(c: &mut Ctx) -> Result {
     let past = c.param_str("status") == Some("past");
     let after = match c.param_str("before").filter(|raw| !raw.is_empty()) {
         None => None,
-        Some(raw) => match decode_cursor(raw) {
+        Some(raw) => match crate::cursor::decode(raw) {
             Some(key) => Some(key),
             None => return Err(fail(c, validation("before", "is invalid"))),
         },
@@ -676,14 +662,15 @@ async fn send_now(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     if !sent && row.dropped() {
+        // The drop reason itself, unwrapped (the classic flash wraps it in a sentence), or the
+        // classic page's "Not sent (channel access lost)" wording when there's none.
         let message = row
             .drop_reason
             .as_deref()
+            .map(str::trim)
             .filter(|reason| !reason.is_empty())
-            .map(|reason| format!("The scheduled message was not sent ({reason})."))
-            .unwrap_or_else(|| {
-                "You no longer have access to that room, so the message was not sent.".into()
-            });
+            .unwrap_or(ACCESS_LOST)
+            .to_owned();
         return Err(fail(
             c,
             api::ApiError::Validation {

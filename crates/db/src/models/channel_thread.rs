@@ -920,14 +920,15 @@ impl ChannelThread {
             }
         }
         // WorkThreadEvent's dependent inbox rows must be destroyed before its FK cascade.
-        tx.conn().execute_cached(
-            "DELETE FROM activity_items WHERE source_type='WorkThreadEvent' AND source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id=?)",
-            [self.id],
-        )?;
-        tx.conn().execute_cached(
-            "DELETE FROM activity_items WHERE source_type='BoardSlaNudge' AND source_id IN (SELECT id FROM board_sla_nudges WHERE channel_thread_id=?)",
-            [self.id],
-        )?;
+        for sql in [
+            "DELETE FROM activity_items WHERE source_type='WorkThreadEvent' AND source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id=?) RETURNING id, user_id",
+            "DELETE FROM activity_items WHERE source_type='BoardSlaNudge' AND source_id IN (SELECT id FROM board_sla_nudges WHERE channel_thread_id=?) RETURNING id, user_id",
+        ] {
+            let removed = crate::sql::query_all(tx.conn(), sql, [self.id], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?;
+            crate::ActivityItem::emit_removed(tx, removed);
+        }
         for sql in [
             r#"DELETE FROM "github_pull_request_threads" WHERE "channel_thread_id" = ?"#,
             r#"DELETE FROM "thread_memberships" WHERE "thread_id" = ?"#,

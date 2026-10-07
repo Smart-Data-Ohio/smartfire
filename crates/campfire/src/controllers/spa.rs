@@ -24,3 +24,6 @@ mod api_composer_tests;
 #[cfg(test)]
 #[path = "spa_api_directory_tests.rs"]
 mod api_directory_tests;
+#[cfg(test)]
+#[path = "spa_api_activity_tests.rs"]
+mod api_activity_tests;

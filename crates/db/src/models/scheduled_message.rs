@@ -34,6 +34,21 @@ pub struct ScheduledMessage {
     pub updated_at: Timestamp,
 }
 
+/// A scheduled message was created, edited, sent or dropped (`removed: false`), or cancelled
+/// (`removed: true`). The classic app has no broadcast for these; the cable sink publishes the
+/// single-page app's `scheduled.changed` / `scheduled.removed` to the author's other tabs.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ScheduledMessageChange {
+    pub id: i64,
+    pub user_id: i64,
+    pub room_id: i64,
+    pub removed: bool,
+}
+
+impl crate::events::Broadcast for ScheduledMessageChange {
+    const KIND: &'static str = "ScheduledMessage#sync_change";
+}
+
 #[derive(Debug, Clone)]
 pub struct NewScheduledMessage {
     pub user_id: i64,
@@ -207,7 +222,18 @@ impl ScheduledMessage {
         let id = tx.conn().query_row_cached(
             "INSERT INTO scheduled_messages (user_id, room_id, thread_id, reply_to_message_id, markdown_source, send_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id",
             params![attrs.user_id, attrs.room_id, attrs.thread_id, attrs.reply_to_message_id, attrs.markdown_source, attrs.send_at, tx.now(), tx.now()], |r| r.get(0))?;
-        Self::find(tx.conn(), id)
+        let created = Self::find(tx.conn(), id)?;
+        created.emit_change(tx, false);
+        Ok(created)
+    }
+
+    fn emit_change(&self, tx: &mut Tx<'_>, removed: bool) {
+        tx.emit_after_commit(Event::broadcast(&ScheduledMessageChange {
+            id: self.id,
+            user_id: self.user_id,
+            room_id: self.room_id,
+            removed,
+        }));
     }
 
     /// The draft's editable fields. Ownership and the controller's refusal to edit/cancel a
@@ -226,6 +252,7 @@ impl ScheduledMessage {
             tx.conn().execute_cached("UPDATE scheduled_messages SET markdown_source = ?, send_at = ?, updated_at = ? WHERE id = ?",
                 params![source, send_at, tx.now(), self.id])?;
             *self = Self::find(tx.conn(), self.id)?;
+            self.emit_change(tx, false);
         }
         Ok(())
     }
@@ -298,6 +325,7 @@ impl ScheduledMessage {
             "scheduled_message_dropped",
         )?;
         *self = Self::find(tx.conn(), self.id)?;
+        self.emit_change(tx, false);
         Ok(())
     }
 
@@ -305,6 +333,7 @@ impl ScheduledMessage {
         ActivityItem::destroy_for_source(tx, "ScheduledMessage", self.id)?;
         tx.conn()
             .execute_cached("DELETE FROM scheduled_messages WHERE id = ?", [self.id])?;
+        self.emit_change(tx, true);
         Ok(())
     }
 
@@ -396,6 +425,7 @@ impl ScheduledMessage {
         };
         tx.conn().execute_cached("UPDATE scheduled_messages SET sent_at = ?, sent_message_id = ?, updated_at = ? WHERE id = ?",
             params![now, message.id, tx.now(), id])?;
+        scheduled.emit_change(tx, false);
         let room = Room::find(tx.conn(), message.room_id)?;
         let target = match message.thread_id {
             Some(thread) => dom_id("channel_thread", thread, Some("messages")),

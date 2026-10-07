@@ -50,6 +50,12 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::huddle_effects::Presence::KIND => decode::<campfire_db::models::huddle_effects::Presence>(request).and_then(|effect| {
             app.map_or(Ok(()), |app| super::huddle_effects::presence(app, effect.room_id))
         }),
+        campfire_db::models::scheduled_message::ScheduledMessageChange::KIND => decode(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.sync_scheduled(change); }
+        }),
+        campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
+            if let Some(app) = app { app.broadcasts.sync_activity_removed(removed.items); }
+        }),
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
             if let Some(app) = app
@@ -267,6 +273,7 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
             Broadcast::Cable { .. } => {
                 cable.broadcast(&stream, &payload);
                 crate::cable::sync::cable_stream(cable, &stream, &payload);
+                if let Some(app) = app { app.broadcasts.sync_activity_stream(&stream, &payload); }
             }
             Broadcast::UnreadRoom { user_id, room_id, message_id } => {
                 cable.broadcast(&stream, &payload);

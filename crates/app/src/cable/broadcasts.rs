@@ -205,6 +205,25 @@ impl Broadcasts {
         sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(user_ids));
     }
 
+    /// `activity.item` for an `ActivityChannel` frame (`user_<id>_activity`) a broadcast point
+    /// outside this type sent: the item is read afresh later.
+    pub fn sync_activity_stream(&self, stream: &str, payload: &serde_json::Value) {
+        sync::activity_stream(&self.server, &self.sync, stream, payload);
+    }
+
+    /// `activity.removed` for items deleted with their source.
+    pub fn sync_activity_removed(&self, items: Vec<(i64, i64)>) {
+        sync::activity_removed_later(&self.server, &self.sync, items);
+    }
+
+    /// `scheduled.changed` or `scheduled.removed` for a scheduled message's change.
+    pub fn sync_scheduled(
+        &self,
+        change: campfire_db::models::scheduled_message::ScheduledMessageChange,
+    ) {
+        sync::scheduled_later(&self.server, &self.sync, change);
+    }
+
     /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
     /// broadcast point outside this type replaced (its members or name changed).
     pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {

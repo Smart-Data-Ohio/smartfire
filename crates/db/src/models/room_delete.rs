@@ -132,7 +132,7 @@ fn ids(tx: &Tx<'_>, table: &str, room_id: i64, limit: usize) -> Result<Vec<i64>>
         |r| r.get(0),
     )
 }
-pub(crate) fn destroy_grant(tx: &Tx<'_>, id: i64) -> Result<()> {
+pub(crate) fn destroy_grant(tx: &mut Tx<'_>, id: i64) -> Result<()> {
     ActivityItem::destroy_for_source(tx, "HuddleGrant", id)?;
     tx.conn()
         .execute_cached("DELETE FROM huddle_grants WHERE id=?", [id])?;

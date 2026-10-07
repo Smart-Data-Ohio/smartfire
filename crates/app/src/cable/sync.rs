@@ -45,6 +45,21 @@ pub trait SyncRenderer: Send + Sync + 'static {
         conn: &Connection,
         parent: &Message,
     ) -> campfire_db::Result<Option<ThreadIndicator>>;
+    /// The viewer's inbox item as `GET /api/v1/activity` lists it, with their unread count:
+    /// `Ok(None)` when they can't see it (any more).
+    fn activity_item(
+        &self,
+        conn: &Connection,
+        user_id: i64,
+        item_id: i64,
+    ) -> campfire_db::Result<Option<campfire_api_types::ActivityItemChanged>>;
+    /// The scheduled message as `GET /api/v1/scheduled_messages` lists it; `Ok(None)` when it's
+    /// gone.
+    fn scheduled_message(
+        &self,
+        conn: &Connection,
+        id: i64,
+    ) -> campfire_db::Result<Option<campfire_api_types::ScheduledMessage>>;
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
@@ -101,16 +116,24 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["sidebar.row.upserted", "sidebar.row.removed"],
     ),
     ("broadcasts::read_room", &["room.read"]),
+    // No classic frame: the sink publishes these for the single-page app only.
+    (
+        "scheduled_message::ScheduledMessageChange",
+        &["scheduled.changed", "scheduled.removed"],
+    ),
+    ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
     ("TypingNotificationsChannel", &["typing"]),
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
     // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
     // carries the thread's new count and activity), and a direct room's sidebar row
     // (`Partial::DirectSidebar`, with the member's row). Its other frames (message features, room
-    // headers, polls, board rows and the other directory partials) have no twin yet.
+    // headers, polls, board rows and the other directory partials) have no twin yet. Its
+    // `ActivityChannel` frames (`user_<id>_activity`) have `activity.item`.
     (
         "broadcasts::Broadcast",
         &[
+            "activity.item",
             "message.created",
             "message.updated",
             "room.unread",
@@ -159,10 +182,6 @@ pub const NOT_YET_TWINNED: &[&str] = &[
 /// endpoints and twins come with the S3 server work). The coverage test fails when an event is
 /// in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
-    "activity.item",
-    "activity.removed",
-    "scheduled.changed",
-    "scheduled.removed",
     "sidebar.category.upserted",
     "sidebar.category.removed",
     "poll.updated",
@@ -434,6 +453,133 @@ pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
             .unwrap_or(false);
         thread_unread(server, user_id, thread_id, room_id, refresh_only);
     }
+}
+
+/// `activity.item` on the owner's `user` topic: the twin of `ActivityChannel`'s
+/// `{activityItemId}` frame on `user_<id>_activity` (a huddle ring's frame carries the id too).
+/// The frame is sent after commit, so the item is read afresh; one the owner can't see (any
+/// more) publishes nothing.
+pub fn activity_stream(
+    server: &Cable,
+    slot: &RendererSlot,
+    stream: &str,
+    payload: &serde_json::Value,
+) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (Some(user_id), Some(item_id)) = (
+        stream
+            .strip_prefix("user_")
+            .and_then(|rest| rest.strip_suffix("_activity"))
+            .and_then(|id| id.parse::<i64>().ok()),
+        payload
+            .get("activityItemId")
+            .and_then(serde_json::Value::as_i64)
+            .filter(|id| *id != 0),
+    ) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        match renderer.activity_item(conn, user_id, item_id) {
+            Ok(Some(changed)) => send(
+                &server,
+                Audience::User(user_id),
+                &SyncPayload::ActivityItem(changed),
+                |publication| publication,
+            ),
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, item_id, "sync: activity item not read"),
+        }
+    }));
+}
+
+/// `activity.removed` on each owner's `user` topic, with their unread count afterwards.
+pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, items: Vec<(i64, i64)>) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    if items.is_empty() {
+        return;
+    }
+    let server = server.downgrade();
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        for (id, user_id) in items {
+            let count = campfire_db::User::find_by_id(conn, user_id).and_then(|user| match user {
+                Some(user) => campfire_db::ActivityItem::unread_count(conn, &user),
+                None => Ok(0),
+            });
+            match count {
+                Ok(unread_count) => send(
+                    &server,
+                    Audience::User(user_id),
+                    &SyncPayload::ActivityRemoved(campfire_api_types::ActivityItemRemoved {
+                        id,
+                        unread_count,
+                    }),
+                    |publication| publication,
+                ),
+                Err(error) => tracing::warn!(%error, id, "sync: activity count not read"),
+            }
+        }
+    }));
+}
+
+/// `scheduled.changed` (read afresh) or `scheduled.removed` on the author's `user` topic.
+pub fn scheduled_later(
+    server: &Cable,
+    slot: &RendererSlot,
+    change: campfire_db::models::scheduled_message::ScheduledMessageChange,
+) {
+    if !server.sync_wanted() {
+        return;
+    }
+    if change.removed {
+        send(
+            server,
+            Audience::User(change.user_id),
+            &SyncPayload::ScheduledRemoved(campfire_api_types::ScheduledMessageRemoved {
+                id: change.id,
+                room_id: change.room_id,
+            }),
+            |publication| publication,
+        );
+        return;
+    }
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        match renderer.scheduled_message(conn, change.id) {
+            Ok(Some(row)) => send(
+                &server,
+                Audience::User(change.user_id),
+                &SyncPayload::ScheduledChanged(row),
+                |publication| publication,
+            ),
+            Ok(None) => {}
+            Err(error) => {
+                tracing::warn!(%error, id = change.id, "sync: scheduled message not read")
+            }
+        }
+    }));
 }
 
 /// `thread.unread` on the member's `user` topic: the twin of `user_<id>_unread_threads`.

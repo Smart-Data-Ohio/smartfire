@@ -63,6 +63,14 @@ endpoint!(
     unsave => delete_saved
 );
 endpoint!(
+    /// `GET /api/v1/saved`
+    saved => index_saved
+);
+endpoint!(
+    /// `PATCH /api/v1/saved/:saved_id`
+    update_saved => patch_saved
+);
+endpoint!(
     /// `GET /api/v1/forward_destinations`
     forward_destinations => index_forward_destinations
 );
@@ -441,6 +449,114 @@ async fn delete_saved(c: &mut Ctx) -> Result {
         .map_err(db_error)?;
     campfire_app::cable::sync::saved_changed(&c.app().cable, user_id, message_id, None);
     Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+/// `saved_items#index`' S3 page size.
+const SAVED_PAGE: usize = 50;
+
+async fn index_saved(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    c.no_store();
+    c.set_header("pragma", "no-cache");
+    let viewer = concerns::require_current_user(c)?.clone();
+    // `saved_items#filter`: an unknown status reads as all.
+    let status = c
+        .param_str("status")
+        .filter(|status| campfire_db::models::saved_item::STATUSES.contains(status))
+        .map(str::to_owned);
+    let after = match c.param_str("before").filter(|raw| !raw.is_empty()) {
+        None => None,
+        Some(raw) => match crate::cursor::decode(raw) {
+            Some(key) => Some(key),
+            None => return Err(fail(c, validation("before", "is invalid"))),
+        },
+    };
+    let (app, now) = (c.app().clone(), now(c));
+    let list = c
+        .app()
+        .db
+        .read(move |conn| {
+            let mut rows = SavedItem::accessible_page(
+                conn,
+                viewer.id,
+                status.as_deref(),
+                after,
+                SAVED_PAGE + 1,
+            )?;
+            let more = rows.len() > SAVED_PAGE;
+            rows.truncate(SAVED_PAGE);
+            let next_cursor = rows
+                .last()
+                .filter(|_| more)
+                .map(|row| crate::cursor::encode(row.created_at, row.id));
+            let message_rows = Message::for_ids(
+                conn,
+                &rows.iter().map(|row| row.message_id).collect::<Vec<_>>(),
+            )?;
+            let conversations = dto::conversation_names(
+                conn,
+                &viewer,
+                message_rows
+                    .iter()
+                    .map(|message| (message.room_id, message.thread_id)),
+            )?;
+            let users = dto::users(
+                conn,
+                &app.secrets,
+                message_rows.iter().map(|message| message.creator_id),
+                now,
+            )?;
+            Ok(api::SavedItemList {
+                items: rows.iter().map(dto::saved_item).collect(),
+                messages: dto::messages(conn, &app, &message_rows)?,
+                users,
+                conversations,
+                next_cursor,
+            })
+        })
+        .await
+        .map_err(db_error)?;
+    c.json(StatusCode::OK, &list)
+}
+
+/// `saved_items#update`: only the status.
+async fn patch_saved(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let user_id = concerns::require_current_user(c)?.id;
+    let id = id_param(c, "saved_id")?;
+    let input: api::UpdateSavedItem = body(c).await?;
+    let status = match input.status {
+        api::SavedStatus::Done => "done",
+        api::SavedStatus::InProgress => "in_progress",
+    };
+    let item = c
+        .app()
+        .db
+        .write(move |tx| {
+            let mut item = SavedItem::accessible_to(tx.conn(), user_id)?
+                .into_iter()
+                .find(|item| item.id == id)
+                .ok_or(campfire_db::Error::RecordNotFound("SavedItem"))?;
+            item.update(
+                tx,
+                campfire_db::SavedItemChanges {
+                    status: Some(status.to_owned()),
+                    ..Default::default()
+                },
+            )?;
+            Ok(item)
+        })
+        .await
+        .map_err(db_error)?;
+    let message_id = item.message_id;
+    let item = dto::saved_item(&item);
+    campfire_app::cable::sync::saved_changed(
+        &c.app().cable,
+        user_id,
+        message_id,
+        Some(item.clone()),
+    );
+    c.json(StatusCode::OK, &item)
 }
 
 async fn index_forward_destinations(c: &mut Ctx) -> Result {

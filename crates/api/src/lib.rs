@@ -17,7 +17,9 @@ macro_rules! endpoint {
     };
 }
 
+pub mod activity;
 pub mod composer;
+mod cursor;
 pub mod directory;
 mod dto;
 pub mod endpoints;
@@ -99,10 +101,27 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/forward_destinations",
             get(action(message_actions::forward_destinations)),
         )
-        .route("/api/v1/saved", post(unparsed_action(message_actions::save)))
+        .route(
+            "/api/v1/saved",
+            get(action(message_actions::saved)).post(unparsed_action(message_actions::save)),
+        )
         .route(
             "/api/v1/saved/{saved_id}",
-            delete(action(message_actions::unsave)),
+            patch(unparsed_action(message_actions::update_saved))
+                .delete(action(message_actions::unsave)),
+        )
+        .route("/api/v1/activity", get(action(activity::index)))
+        .route(
+            "/api/v1/activity/unread_count",
+            get(action(activity::unread_count)),
+        )
+        .route(
+            "/api/v1/activity/{id}",
+            patch(unparsed_action(activity::update)),
+        )
+        .route(
+            "/api/v1/activity/{id}/open",
+            post(action(activity::open)),
         )
         .route(
             "/api/v1/rooms/{room_id}/threads",
