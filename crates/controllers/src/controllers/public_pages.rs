@@ -27,8 +27,7 @@ fn show(c: &mut Ctx, page: Page) -> Result {
     }
     c.respond_to(&[&format::HTML])?;
     let policy = &c.app().config.public_policy;
-    let stylesheet =
-        h::raw(campfire_assets::stylesheet_link_tag(&["public"], &[("media", "all")]).html);
+    let stylesheet = h::raw(format!("{}\n{}", h::auth_stylesheet_tag(), h::auth_script_tag()));
     let body = public_pages::render(
         page,
         &policy.operator_name,

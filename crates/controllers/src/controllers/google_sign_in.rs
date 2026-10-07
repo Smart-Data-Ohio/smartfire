@@ -211,6 +211,7 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         concerns::session_keys::clear_confirmations(c.session());
         concerns::authenticated_as(c, session, Some(user), true).await?;
         c.form_authenticity_token();
+        let return_url = concerns::post_authentication_destination(c, return_url).await?;
         c.redirect_to(&return_url)
     } else {
         let now = c.now();
@@ -220,6 +221,15 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         c.redirect_to(&c.url_for("/two_factor_challenge"))
     }
 }
+async fn step_up_profile(c: &Ctx, purpose: &str) -> campfire_kit::Result<&'static str> {
+    if purpose == "sudo" { return Ok("/users/me/profile"); }
+    if let Some(user) = concerns::current_user(c)
+        && concerns::next_ui(c, user).await?
+    {
+        return Ok(if purpose == "reauth" { "/app/settings/security" } else { "/app/settings/integrations" });
+    }
+    Ok("/users/me/profile")
+}
 async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
     let user = concerns::current_user(c).cloned();
     if user
@@ -227,7 +237,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
         .is_none_or(|u| Some(u.id) != flow["user_id"].as_i64())
     {
         let path = if user.is_some() {
-            "/users/me/profile"
+            step_up_profile(c, purpose).await?
         } else {
             "/session/new"
         };
@@ -242,7 +252,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
     let path = if purpose == "sudo" {
         "/sudo/new"
     } else {
-        "/users/me/profile"
+        step_up_profile(c, purpose).await?
     };
     if canceled(c) {
         return redirect(
@@ -341,9 +351,10 @@ pub async fn link(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?
         .is_some();
     if linked {
+        let path = step_up_profile(c, "link").await?;
         redirect(
             c,
-            "/users/me/profile",
+            path,
             "Google sign-in is already linked.",
             true,
         )

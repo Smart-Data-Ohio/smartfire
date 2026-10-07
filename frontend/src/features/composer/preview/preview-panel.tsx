@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { inlineMentions } from "../../../lib/body-html.ts";
 import { usePresence } from "../../../motion/presence.ts";
 import { composerActions } from "../../../sync/composer-actions.ts";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import { Icon } from "../../../ui/icons/icon.tsx";
 import { Skeleton } from "../../../ui/skeleton.tsx";
+import { BodyHtml } from "../../messages/body-html.tsx";
 import "./preview.css";
 
 /** Re-render this long after the last keystroke while the preview is open. */
@@ -118,11 +118,10 @@ function PreviewBody({ source, state }: { readonly source: string; readonly stat
   }
 
   return (
-    <div
+    <BodyHtml
+      html={state.html}
       className="message-body composer-preview-body"
       data-stale={state.status === "loading" || undefined}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: inlineMentions(state.html) }}
     />
   );
 }

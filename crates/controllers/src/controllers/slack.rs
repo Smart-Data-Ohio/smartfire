@@ -41,6 +41,17 @@ fn return_path(user: &User, path: &str) -> String {
         default_path(user).into()
     }
 }
+async fn oauth_return_path(c: &Ctx, user: &User, path: &str) -> campfire_kit::Result<String> {
+    let path = return_path(user, path);
+    if concerns::next_ui(c, user).await? {
+        Ok(match path.as_str() {
+            "/account/slack_import" => "/app/admin/slack",
+            _ => "/app/settings/slack",
+        }.into())
+    } else {
+        Ok(path)
+    }
+}
 fn audit(c: &Ctx, user: &User) -> Result<Context> {
     Ok(Context {
         actor: Some(Actor::from(user)),
@@ -67,9 +78,10 @@ pub async fn start(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?
     else {
+        let path = oauth_return_path(c, &user, default_path(&user)).await?;
         return redirect(
             c,
-            default_path(&user),
+            &path,
             None,
             Some("Set up the Slack app credentials first."),
         );
@@ -107,10 +119,10 @@ pub async fn callback(c: &mut Ctx) -> Result {
     let user = concerns::require_current_user(c)?.clone();
     let stored = c.session().remove("slack_oauth_state");
     let return_to = c.session().remove("slack_oauth_return_to");
-    let path = return_path(
-        &user,
+    let path = oauth_return_path(
+        c, &user,
         &return_to.as_ref().map(oauth::string).unwrap_or_default(),
-    );
+    ).await?;
     if !oauth::valid_state(
         &c.app().secrets,
         &param(c, "state"),

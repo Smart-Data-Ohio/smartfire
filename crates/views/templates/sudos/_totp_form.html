@@ -1,11 +1,9 @@
-{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("flex flex-column gap margin-block-start").data("turbo", false) %}{% filter form_with(form) %}
-  {{ h::hidden_field_tag("verifier", Some("totp"), h::attrs()) }}
-  <div class="flex align-center gap">
-    <label class="flex align-center gap input input--actor txt-large">
+{% let variant %}{% if password %}{% let variant = "secondary" %}{% else %}{% let variant = "primary" %}{% endif %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("auth-form").data("turbo", false) %}{% filter form_with(form) %}
+    {{ h::hidden_field_tag("verifier", Some("totp"), h::attrs()) }}
+    <div class="field">
+      {{ form.label("totp_code", "Authenticator code", h::attrs().class("field-label")) }}
       {{ form.text_field("totp_code", None, self.totp_options()) }}
-      {{ h::image_tag(ctx, "key.svg", h::attrs().aria_hidden().size(24).class("colorize--black")) }}
-    </label>
-  </div>
+    </div>
 
-  {{ h::button_tag(h::attrs().class("btn btn--reversed center txt-large").type_("submit").name("confirm"), "Confirm") }}
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", variant).data("size", "lg").type_("submit").name("confirm"), "Confirm") }}
 {% endfilter %}

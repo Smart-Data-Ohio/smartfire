@@ -7,7 +7,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/new.html",
         "accounts/_help_contact.html"
@@ -553,6 +553,46 @@
         "needle": "<label class=\"flex align-center gap flex-item-grow txt-large input input--actor\">"
       }
     },
+    "auth/_help_contact.html": {
+      "status": "covered",
+      "evidence": [
+        "auth_pages",
+        "user_join"
+      ],
+      "branch": "port-only accounts/_help_contact in the SPA's look: the first administrator's address and the version, on sign-in and join",
+      "render_chain": [
+        "sessions/new.html",
+        "auth/_help_contact.html"
+      ],
+      "proof": "The sign-in and join page tests assert the help contact and its mailto link."
+    },
+    "auth/_macros.html": {
+      "status": "covered",
+      "evidence": [
+        "auth_pages",
+        "user_join",
+        "first_run"
+      ],
+      "branch": "port-only icon and translation-list macros the reskinned auth pages call; no Rails template",
+      "render_chain": [
+        "sessions/new.html",
+        "auth/_macros.html"
+      ],
+      "proof": "The auth page, join and first-run tests render every page that imports these macros; auth_pages_screenshot_fixtures renders each one."
+    },
+    "auth/_signup_fields.html": {
+      "status": "covered",
+      "evidence": [
+        "user_join",
+        "first_run"
+      ],
+      "branch": "port-only fields joining and first run share: avatar, name, email address, password on the user model",
+      "render_chain": [
+        "users/new.html",
+        "auth/_signup_fields.html"
+      ],
+      "proof": "join and first-run form contracts compare these fields with the Rails oracles."
+    },
     "autocompletable/users/_prompt_item.html": {
       "status": "not_reachable",
       "branch": "Retired HTML autocomplete renderer: no production call site. Pinned Rails has only JSON picker templates; fresh HTML GET returns 406. users/autocompletables/template has no Rails render reference in controllers/helpers/views.",
@@ -864,6 +904,30 @@
         "layouts/application_wrapper.html"
       ],
       "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+    },
+    "layouts/auth.html": {
+      "status": "covered",
+      "evidence": [
+        "auth_shell"
+      ],
+      "branch": "minimal standalone auth document with title, account icons, custom CSS, notice precedence and alert escaping; frame blocks remain available",
+      "render_chain": [
+        "layouts/auth_wrapper.html",
+        "layouts/auth.html"
+      ],
+      "proof": "auth_shell_uses_standalone_assets_and_preserves_flash_precedence renders the real auth wrapper in signed-out and alert/notice states."
+    },
+    "layouts/auth_wrapper.html": {
+      "status": "covered",
+      "evidence": [
+        "auth_shell"
+      ],
+      "branch": "minimal standalone auth document with title, account icons, custom CSS, notice precedence and alert escaping; frame blocks remain available",
+      "render_chain": [
+        "layouts/auth_wrapper.html",
+        "layouts/auth.html"
+      ],
+      "proof": "auth_shell_uses_standalone_assets_and_preserves_flash_precedence renders the real auth wrapper in signed-out and alert/notice states."
     },
     "layouts/mailer.html": {
       "status": "covered",
@@ -3138,7 +3202,7 @@
       "evidence": [
         "google_sign_in"
       ],
-      "branch": "configured Google sign-in button with real form renderer and pinned fragment",
+      "branch": "configured Google sign-in button with real form renderer and pinned fragment; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/_google_sign_in.html"
       ],
@@ -3153,7 +3217,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/incompatible_browser.html"
       ],
@@ -3168,7 +3232,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/new.html"
       ],
@@ -3183,7 +3247,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/transfers/show.html"
       ],
@@ -3331,7 +3395,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/new.html",
         "sudos/_totp_form.html"
@@ -3347,7 +3411,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/continue.html"
       ],
@@ -3362,7 +3426,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/new.html"
       ],
@@ -3471,7 +3535,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/backup_codes/show.html"
       ],
@@ -3486,7 +3550,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/challenges/show.html"
       ],
@@ -3501,7 +3565,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/setups/show.html"
       ],
@@ -3903,7 +3967,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "users/sessions/index.html"
       ],
@@ -4414,7 +4478,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/new.html",
         "accounts/_help_contact.html"
@@ -7522,7 +7586,7 @@
       "evidence": [
         "google_sign_in"
       ],
-      "branch": "configured Google sign-in button with real form renderer and pinned fragment",
+      "branch": "configured Google sign-in button with real form renderer and pinned fragment; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/_google_sign_in.html"
       ],
@@ -7537,7 +7601,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/incompatible_browser.html"
       ],
@@ -7552,7 +7616,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/new.html"
       ],
@@ -7567,7 +7631,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sessions/transfers/show.html"
       ],
@@ -7679,7 +7743,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/new.html",
         "sudos/_totp_form.html"
@@ -7695,7 +7759,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/continue.html"
       ],
@@ -7710,7 +7774,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "sudos/new.html"
       ],
@@ -7875,7 +7939,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/backup_codes/show.html"
       ],
@@ -7890,7 +7954,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/challenges/show.html"
       ],
@@ -7905,7 +7969,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "two_factor/setups/show.html"
       ],
@@ -8303,7 +8367,7 @@
       "evidence": [
         "auth_pages"
       ],
-      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination",
+      "branch": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination; auth page assertions preserve Rails form fields and visible behavior independently of presentation",
       "render_chain": [
         "users/sessions/index.html"
       ],
@@ -8602,7 +8666,7 @@
     },
     "public_mail_layouts": {
       "test_file": "crates/views/tests/core.rs",
-      "test": "public_and_mailer_layouts_match_rails",
+      "test": "public_layout_preserves_policy_contract_and_mailer_matches_rails",
       "oracles": [
         "crates/views/tests/golden/core/layouts/public.html",
         "crates/views/tests/golden/core/layouts/public_described.html",
@@ -8851,7 +8915,7 @@
     },
     "google_sign_in": {
       "test_file": "crates/views/tests/google.rs",
-      "test": "sign_in_partial_matches_pinned_rails",
+      "test": "sign_in_partial_preserves_rails_form_and_domains",
       "oracles": [
         "vectors/google_sign_in_html.json"
       ],
@@ -8875,7 +8939,7 @@
     },
     "auth_pages": {
       "test_file": "crates/campfire/src/app/full_page_tests.rs",
-      "test": "complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks",
+      "test": "complete_auth_templates_preserve_rails_forms_and_visible_behaviour",
       "oracles": [
         "vectors/auth_full_pages.json"
       ],
@@ -9107,7 +9171,7 @@
     },
     "user_join": {
       "test_file": "crates/campfire/src/controllers/users/joining_tests.rs",
-      "test": "join_page_matches_complete_rails_body_and_access_checks",
+      "test": "join_page_preserves_rails_form_and_access_checks",
       "oracles": [
         "vectors/users_joining.json"
       ],
@@ -9155,7 +9219,7 @@
     },
     "public_pages": {
       "test_file": "crates/campfire/src/controllers/public_pages/tests.rs",
-      "test": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
+      "test": "public_policy_text_links_and_escaped_values_match_rails",
       "oracles": [
         "vectors/users_public.json"
       ],
@@ -9348,7 +9412,7 @@
     },
     "two_factor_profile": {
       "test_file": "crates/campfire/src/app/two_factor_tests.rs",
-      "test": "two_factor_views_match_rails_seed_bytes_including_inline_qr",
+      "test": "two_factor_views_preserve_rails_forms_codes_and_inline_qr",
       "oracles": [
         "vectors/two_factor_views.json"
       ],
@@ -9457,6 +9521,14 @@
         "crates/campfire/src/controllers/rooms/full_room_vectors.json"
       ],
       "scenario": "38 complete Rails room pages explicitly rendered by composition_page::Show: room kinds, viewers, configured/unconfigured huddle, populated DB presenters and unread/OOO branches"
+    },
+    "auth_shell": {
+      "test_file": "crates/views/tests/core/auth_shell.rs",
+      "test": "auth_shell_uses_standalone_assets_and_preserves_flash_precedence",
+      "oracles": [
+        "crates/views/templates/layouts/auth.html",
+        "vectors/auth_full_pages.json"
+      ]
     }
   },
   "cutover_gap": {

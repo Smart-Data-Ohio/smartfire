@@ -21,6 +21,11 @@ export function NotFound() {
     return null;
   }
 
+  return <PageNotFound />;
+}
+
+/** A reached route whose record doesn't exist or isn't accessible; never forwards to classic. */
+export function PageNotFound() {
   return (
     <section className="room room-error enter-fade" aria-label="Page not found">
       <p className="text-title">This page doesn't exist</p>

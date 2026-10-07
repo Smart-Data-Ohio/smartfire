@@ -3,8 +3,8 @@
 //! and the `SPA_ENABLED` / `SPA_DEFAULT` gates.
 
 use axum::http::{Method, StatusCode};
-use campfire_db::Room;
 use campfire_db::models::user::ui_preference::{self, UiPreference};
+use campfire_db::{Message, NewMessage, Room};
 
 use crate::controllers::presenters::test_support::{
     Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock,
@@ -45,6 +45,80 @@ async fn room(a: &TestApp) -> i64 {
         })
         .await
         .unwrap()
+}
+
+async fn message(a: &TestApp, room_id: i64, creator_id: i64, content: &str) -> Message {
+    let content = content.to_string();
+    a.db()
+        .write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id,
+                    creator_id,
+                    markdown_source: Some(content),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap()
+}
+
+fn gap_pages(room: i64, message: i64) -> [(String, String, StatusCode); 10] {
+    [
+        (
+            format!("/rooms/{room}/messages/{message}"),
+            format!("/app/r/{room}/m/{message}"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/rooms/{room}/messages/{message}/edit"),
+            format!("/app/r/{room}/m/{message}"),
+            StatusCode::OK,
+        ),
+        // The bare classic actions have no room_id; keep their existing 404 on opt-out.
+        (
+            format!("/messages/{message}"),
+            format!("/app/m/{message}"),
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            format!("/messages/{message}/edit"),
+            format!("/app/m/{message}"),
+            StatusCode::NOT_FOUND,
+        ),
+        (
+            format!("/messages/{message}/boosts"),
+            format!("/app/m/{message}"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/messages/{message}/boosts/new"),
+            format!("/app/m/{message}"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/rooms/{room}/threads"),
+            format!("/app/r/{room}/threads"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/rooms/{room}/files"),
+            format!("/app/r/{room}/files"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/rooms/{room}/pins"),
+            format!("/app/r/{room}/pins"),
+            StatusCode::OK,
+        ),
+        (
+            format!("/rooms/{room}/involvement"),
+            format!("/app/r/{room}/notifications"),
+            StatusCode::OK,
+        ),
+    ]
 }
 
 fn to(path: &str) -> String {
@@ -101,6 +175,126 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
     let mut jason = a.sign_in(JASON).await;
     let page = jason.get(&format!("/rooms/{room}")).await;
     assert!(!redirected_to_spa(&page), "{:?}", page.location());
+}
+
+#[tokio::test]
+async fn message_aliases_and_room_tools_redirect_to_the_new_ui() {
+    let a = enabled()
+        .await
+        .expect("the default frozen seed is required");
+    let room = crate::controllers::presenters::test_support::ALL_TALK;
+    let message = message(&a, room, DAVID, "coexistence gap message").await;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    for (classic, spa, _) in gap_pages(room, message.id) {
+        let reply = david.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+    }
+}
+
+#[tokio::test]
+async fn message_aliases_and_room_tools_keep_the_classic_behavior_on_opt_out() {
+    let a = enabled()
+        .await
+        .expect("the default frozen seed is required");
+    let room = crate::controllers::presenters::test_support::ALL_TALK;
+    let message = message(&a, room, DAVID, "coexistence gap message").await;
+    let mut david = a.sign_in(DAVID).await;
+    for preference in [UiPreference::Classic, UiPreference::Next] {
+        choose(&a, DAVID, preference).await;
+        for (classic, _, status) in gap_pages(room, message.id) {
+            let path = if preference == UiPreference::Next {
+                format!("{classic}?classic=1")
+            } else {
+                classic.clone()
+            };
+            let reply = david.get(&path).await;
+            assert_eq!(reply.status, status, "{path}");
+            assert!(!redirected_to_spa(&reply), "{path}");
+            assert!(
+                reply
+                    .content_type()
+                    .is_some_and(|kind| kind.starts_with("text/html")),
+                "{path}"
+            );
+            if classic == format!("/rooms/{room}/messages/{}", message.id) {
+                assert!(reply.text().contains("coexistence gap message"), "{path}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn message_aliases_and_room_tools_never_reveal_another_rooms_content() {
+    use campfire_api_types as api;
+
+    use super::api_tests::{get, parse};
+    use crate::controllers::presenters::test_support::{DIRECT_KEVIN_BENDER, KEVIN};
+
+    const SECRET: &str = "private coexistence gap message";
+    let a = enabled()
+        .await
+        .expect("the default frozen seed is required");
+    let message = message(&a, DIRECT_KEVIN_BENDER, KEVIN, SECRET).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let member_read = kevin
+        .send(get(&format!("/api/v1/messages/{}", message.id)))
+        .await;
+    assert_eq!(member_read.status, StatusCode::OK, "{}", member_read.text());
+    let read: api::MessageRead = parse(&member_read);
+    assert_eq!(read.message.id, message.id);
+    assert_eq!(
+        (read.conversation.room_id, read.conversation.thread_id),
+        (DIRECT_KEVIN_BENDER, None)
+    );
+    assert!(read.message.body_html.contains(SECRET));
+
+    let mut david = a.sign_in(DAVID).await;
+    for preference in [UiPreference::Classic, UiPreference::Next] {
+        choose(&a, DAVID, preference).await;
+        for (classic, spa, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
+            let reply = david.get(&classic).await;
+            if preference == UiPreference::Next {
+                assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+                assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+            } else {
+                assert_eq!(reply.status, StatusCode::NOT_FOUND, "{classic}");
+            }
+            assert!(!reply.text().contains(SECRET), "{classic}");
+            let bypass = david.get(&format!("{classic}?classic=1")).await;
+            assert_eq!(bypass.status, StatusCode::NOT_FOUND, "{classic}");
+            assert!(!bypass.text().contains(SECRET), "{classic}");
+        }
+    }
+    // After redirecting, the resolver and room tools still authorize their data reads.
+    for path in [
+        format!("/api/v1/messages/{}", message.id),
+        "/api/v1/messages/999999999".to_string(),
+        format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}"),
+        format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/threads"),
+        format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/files"),
+        format!("/api/v1/rooms/{DIRECT_KEVIN_BENDER}/pins"),
+    ] {
+        let reply = david.send(get(&path)).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}");
+        let envelope: api::ApiErrorResponse = parse(&reply);
+        assert!(
+            matches!(envelope.error, api::ApiError::NotFound { .. }),
+            "{path}"
+        );
+        assert!(!reply.text().contains(SECRET), "{path}");
+    }
+    let mut anonymous = a.anonymous();
+    for (classic, _, _) in gap_pages(DIRECT_KEVIN_BENDER, message.id) {
+        let reply = anonymous.get(&classic).await;
+        assert_eq!(
+            reply.location(),
+            Some(to("/session/new").as_str()),
+            "{classic}"
+        );
+        assert!(!reply.text().contains(SECRET), "{classic}");
+    }
 }
 
 #[tokio::test]
@@ -512,3 +706,6 @@ async fn the_shell_loads_in_full_from_a_turbo_visit() {
         "{shell}"
     );
 }
+
+#[path = "spa_coexistence_tests/auth_return.rs"]
+mod auth_return;

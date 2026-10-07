@@ -123,7 +123,7 @@ pub async fn setup_create(c: &mut Ctx) -> Result {
                 })
                 .await
                 .map_err(Error::internal)?;
-            let continue_url = concerns::post_authenticating_url(c);
+            let continue_url = concerns::post_authenticating_url(c).await?;
             render_backups(c, codes, signed_out, continue_url).await
         }
     }
@@ -195,7 +195,7 @@ async fn render_backups(
 
 /// Shared password/transfer/WS14 Google first-factor seam. Pending state grants no session.
 pub async fn begin_session_for(c: &mut Ctx, user: User, method: &str) -> Result {
-    let return_url = concerns::post_authenticating_url(c);
+    let return_url = concerns::post_authenticating_url(c).await?;
     let user_id = user.id;
     let enabled = c
         .app()
@@ -228,6 +228,7 @@ pub async fn begin_session_for(c: &mut Ctx, user: User, method: &str) -> Result 
         concerns::start_new_session_for(c, user.clone()).await?;
         sign_in_audit(c, user, method.into(), None).await?;
     }
+    let return_url = concerns::post_authentication_destination(c, return_url).await?;
     c.redirect_to(&return_url)
 }
 fn user_enabled(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<bool> {
@@ -341,7 +342,7 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
                 remember_device(c, user_id).await?;
             }
             sign_in_audit(c, user, method, Some(factor)).await?;
-            let location = concerns::post_authenticating_url(c);
+            let location = concerns::post_authenticating_url(c).await?;
             c.redirect_to(&location)
         }
         crate::authentication::Challenge::Wrong => {
@@ -618,18 +619,22 @@ async fn management_reply(c: &mut Ctx, outcome: ManagementOutcome, disabling: bo
     }
 }
 
+fn reauth_alert(c: &mut Ctx, alert: &str) -> Result {
+    c.redirect_to_with(&c.url_for("/users/me/profile"), Redirect { alert: Some(alert.into()), ..Default::default() })
+}
+
 pub async fn reauthentication_create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let id = require_current_user(c)?.id;
     if limited(c, "two_factor/reauthentications", "per-user", Some(id))? {
-        return rate_rejection(c);
+        return google_reauth_alert(c, RATE_ALERT).await;
     }
     if let Some(adapter) = c.app().two_factor.google()
         && linked_subject(c, id).await?.is_some()
     {
         return adapter.start(c, id);
     }
-    reauth_alert(c, "Google confirmation needs a linked Google account.")
+    google_reauth_alert(c, "Google confirmation needs a linked Google account.").await
 }
 async fn linked_subject(c: &Ctx, id: i64) -> Result<Option<String>> {
     use rusqlite::OptionalExtension;
@@ -647,9 +652,18 @@ async fn linked_subject(c: &Ctx, id: i64) -> Result<Option<String>> {
         .await
         .map_err(Error::internal)
 }
-fn reauth_alert(c: &mut Ctx, alert: &str) -> Result {
+async fn reauth_profile(c: &Ctx) -> campfire_kit::Result<&'static str> {
+    if let Some(user) = concerns::current_user(c)
+        && concerns::next_ui(c, user).await?
+    {
+        return Ok("/app/settings/security");
+    }
+    Ok("/users/me/profile")
+}
+async fn google_reauth_alert(c: &mut Ctx, alert: &str) -> Result {
+    let path = reauth_profile(c).await?;
     c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
+        &c.url_for(path),
         Redirect {
             alert: Some(alert.into()),
             ..Default::default()
@@ -670,7 +684,7 @@ pub async fn finish_google_reauthentication(
         .filter(|user| user.id == flow_user_id)
     else {
         let path = if concerns::signed_in(c) {
-            "/users/me/profile"
+            reauth_profile(c).await?
         } else {
             "/session/new"
         };
@@ -683,13 +697,13 @@ pub async fn finish_google_reauthentication(
         );
     };
     if !auth_time.is_some_and(|at| at > (c.now().as_second() - 330) as f64) {
-        return reauth_alert(c, "Google confirmation failed. Try again.");
+        return google_reauth_alert(c, "Google confirmation failed. Try again.").await;
     }
     if linked_subject(c, user.id).await?.as_deref() != Some(verified_subject) {
-        return reauth_alert(
+        return google_reauth_alert(
             c,
             "That Google account is not linked here. Confirm with the Google account you sign in with.",
-        );
+        ).await;
     }
     let now = c.now();
     concerns::session_keys::mark_reauthenticated(c.session(), now);
@@ -710,8 +724,9 @@ pub async fn finish_google_reauthentication(
         })
         .await
         .map_err(Error::internal)?;
+    let path = reauth_profile(c).await?;
     c.redirect_to_with(
-        &c.url_for("/users/me/profile"),
+        &c.url_for(path),
         Redirect {
             notice: Some("Confirmed with Google. Continue with what you were doing.".into()),
             ..Default::default()

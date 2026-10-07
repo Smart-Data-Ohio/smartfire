@@ -5,7 +5,7 @@ use campfire_views::sessions;
 use serde_json::Value;
 
 #[tokio::test]
-async fn configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies() {
+async fn configured_sign_in_keeps_public_links_and_rails_form_contracts() {
     let vectors: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/users_sign_in_google.json"
     ))
@@ -51,12 +51,8 @@ async fn configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies
                 .unwrap()
             },
         );
-        assert_eq!(
-            actual,
-            case["body"].as_str().unwrap(),
-            "{}: complete sign-in content",
-            case["name"]
-        );
+        crate::form_contracts::assert_forms(case["name"].as_str().unwrap(), &actual, case["body"].as_str().unwrap());
+        crate::form_contracts::assert_text(&actual, &account.as_ref().unwrap().name);
         let page = app.anonymous().get("/session/new").await;
         assert_eq!(page.status, axum::http::StatusCode::OK);
         let body = page.text();
@@ -69,7 +65,6 @@ async fn configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies
         );
         if configured {
             assert!(body.contains("action=\"/session/google\""));
-            assert!(body.contains("data-turbo=\"false\""));
             for domain in case["domains"].as_array().unwrap() {
                 assert!(body.contains(&format!("@{}", domain.as_str().unwrap())));
             }
