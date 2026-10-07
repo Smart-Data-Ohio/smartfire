@@ -1,5 +1,5 @@
 import { Link, notFound, useNavigate, useParams } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { type Ref, useCallback, useEffect, useRef, useState } from "react";
 import type { SlackIssue } from "../../gen/SlackIssue.ts";
 import type { SlackRun } from "../../gen/SlackRun.ts";
 import type { SlackRunChange } from "../../gen/SlackRunChange.ts";
@@ -12,7 +12,8 @@ import { auditTime } from "../admin/admin-format.ts";
 import { adminFailure, Confirm } from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { CONFIRM, countLines, POLL_MS, peopleLine } from "./slack-format.ts";
+import { CONFIRM, countLines, peopleLine } from "./slack-format.ts";
+import { newestOnly, usePoll } from "./slack-poll.ts";
 import "../admin/admin.css";
 import "./slack.css";
 
@@ -28,6 +29,14 @@ export function useRunId(): number {
   return id;
 }
 
+/** Where focus waits while a confirmation closes: it isn't lost there yet. */
+const OVERLAY = "dialog, [role='alertdialog'], [role='menu'], [popover]";
+
+/** How often, and how long, focus is checked while a closing confirmation still holds it. */
+const FOCUS_POLL_MS = 50;
+
+const FOCUS_LIMIT_MS = 2000;
+
 /** A confirmation waiting to be answered. */
 interface Ask {
   readonly title: string;
@@ -37,24 +46,44 @@ interface Ask {
   readonly run: () => void;
 }
 
-/** One fact on the status section. */
-function Fact({ label, children }: { readonly label: string; readonly children: string }) {
+/** One fact on the status section; `live` announces its changes. */
+function Fact({
+  label,
+  live = false,
+  children,
+}: {
+  readonly label: string;
+  readonly live?: boolean;
+  readonly children: string;
+}) {
   return (
     <div className="slack-fact">
       <dt>{label}</dt>
-      <dd>{children}</dd>
+      <dd aria-live={live ? "polite" : undefined}>{children}</dd>
     </div>
   );
 }
 
-/** The classic status section: where the run stands, read again while it is active. */
-export function RunStatus({ run }: { readonly run: SlackRun }) {
+/**
+ * The classic status section: where the run stands, read again while it is active. Only the
+ * status itself is announced as it changes, not every step the run works through. `focusRef`
+ * takes focus when the button someone used goes away.
+ */
+export function RunStatus({
+  run,
+  focusRef,
+}: {
+  readonly run: SlackRun;
+  readonly focusRef?: Ref<HTMLElement>;
+}) {
   const counts = run.counts === null ? null : countLines(run.counts);
 
   return (
-    <div aria-live="polite">
+    <section ref={focusRef} tabIndex={-1} aria-label="Run status">
       <dl className="slack-facts">
-        <Fact label="Status">{run.status}</Fact>
+        <Fact label="Status" live>
+          {run.status}
+        </Fact>
         {run.phase === null ? null : <Fact label="Phase">{run.phase}</Fact>}
         {run.current === null ? null : <Fact label="Working on">{run.current}</Fact>}
         {run.queuedBehind ? <Fact label="Queue">Queued behind another import.</Fact> : null}
@@ -76,54 +105,8 @@ export function RunStatus({ run }: { readonly run: SlackRun }) {
           <strong>Error:</strong> {run.error}
         </p>
       )}
-    </div>
+    </section>
   );
-}
-
-/**
- * Reads the run again every few seconds while it is active, as the classic page's frame poll
- * does; `onSettled` hears when it stops being active. A missed read waits for the next one, the
- * last known status staying on the page.
- */
-function usePoll(
-  admin: boolean,
-  run: SlackRun | null,
-  replace: (run: SlackRun) => void,
-  onSettled: () => void,
-) {
-  const [tick, setTick] = useState(0);
-  const id = run?.id ?? null;
-  const active = run?.active ?? false;
-
-  useEffect(() => {
-    if (id === null || !active) {
-      return;
-    }
-
-    let live = true;
-    const again = () => setTick((count) => count + 1);
-
-    const timer = window.setTimeout(() => {
-      slack.status(admin, id).then(
-        (fresh) => {
-          if (!live) return;
-
-          replace(fresh);
-
-          if (fresh.active) again();
-          else onSettled();
-        },
-        () => {
-          if (live) again();
-        },
-      );
-    }, POLL_MS);
-
-    return () => {
-      live = false;
-      window.clearTimeout(timer);
-    };
-  }, [admin, id, active, tick, replace, onSettled]);
 }
 
 /** The run's buttons, as the classic page offers them. */
@@ -282,7 +265,7 @@ function PreviewPlan({ run }: { readonly run: SlackRun }) {
           Select none
         </Button>
       </div>
-      <div className="admin-audit-wrap">
+      <section className="admin-audit-wrap" aria-label="Conversations in the preview">
         <table className="admin-audit-table">
           <thead>
             <tr>
@@ -315,12 +298,12 @@ function PreviewPlan({ run }: { readonly run: SlackRun }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </section>
       <div className="settings-actions">
         <Button
           variant="primary"
           loading={busy("import")}
-          disabled={busy()}
+          disabled={busy() || checked.size === 0}
           onClick={() =>
             setAsk({
               title: "Import checked",
@@ -340,7 +323,7 @@ function PreviewPlan({ run }: { readonly run: SlackRun }) {
 }
 
 /** The run's issues, a page at a time (the administrator's page only). */
-function Issues({
+export function Issues({
   count,
   issues,
   more,
@@ -352,16 +335,37 @@ function Issues({
   readonly onMore: () => Promise<void>;
 }) {
   const { busy, track } = useBusy();
+  const list = useRef<HTMLUListElement>(null);
+  // Where the older issues start, while they load: once the last page is in and its button
+  // gone, focus goes to the first of them.
+  const [landing, setLanding] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (landing === null || issues.length <= landing) {
+      return;
+    }
+
+    if (!more) {
+      list.current?.querySelectorAll<HTMLElement>(":scope > li")[landing]?.focus();
+    }
+
+    setLanding(null);
+  }, [landing, more, issues.length]);
+
+  const older = () => {
+    setLanding(issues.length);
+    void track("more", onMore());
+  };
 
   return (
     <SettingsGroup title={`Issues (${count})`}>
       {issues.length === 0 ? (
         <p className="text-muted">No issues recorded.</p>
       ) : (
-        <ul className="slack-issues">
+        <ul className="slack-issues" ref={list}>
           {issues.map((issue, index) => (
             // Issues have no id on the wire; a page only ever grows at its end.
-            <li key={index}>
+            <li key={index} tabIndex={-1}>
               <strong>{issue.level}</strong>
               {issue.slackRef === null ? null : (
                 <>
@@ -376,11 +380,7 @@ function Issues({
       )}
       {more ? (
         <div className="settings-actions">
-          <Button
-            loading={busy("more")}
-            disabled={busy()}
-            onClick={() => void track("more", onMore())}
-          >
+          <Button loading={busy("more")} disabled={busy()} onClick={older}>
             Older issues
           </Button>
         </div>
@@ -413,17 +413,27 @@ export function SlackRunView({
 }) {
   const navigate = useNavigate();
   const [load, setLoad] = useState<Load>({ status: "loading" });
+  const status = useRef<HTMLElement>(null);
+  const [focusAsked, setFocusAsked] = useState(0);
+  // A read that started before an undo must not put back the status the undo replaced.
+  const [tickets] = useState(newestOnly);
 
   const fetchRun = useCallback(() => {
+    const latest = tickets.take();
+
     const work = admin
       ? slack.runPage(runId)
       : slack.status(false, runId).then((run) => ({ run, issues: [], nextPage: null }));
 
     work.then(
-      (page) => setLoad({ status: "ready", ...page }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (page) => {
+        if (latest()) setLoad({ status: "ready", ...page });
+      },
+      (error: Error) => {
+        if (latest()) setLoad({ status: "error", message: error.message });
+      },
     );
-  }, [admin, runId]);
+  }, [admin, runId, tickets]);
 
   useEffect(fetchRun, [fetchRun]);
 
@@ -433,10 +443,62 @@ export function SlackRunView({
     [],
   );
 
+  const read = useCallback(
+    (id: number) => {
+      const latest = tickets.take();
+
+      return slack.status(admin, id).then((fresh) => {
+        if (!latest()) return null;
+
+        replace(fresh);
+
+        return fresh;
+      });
+    },
+    [admin, replace, tickets],
+  );
+
+  // When the button someone used is gone after their write, focus goes to the status: once the
+  // confirmation has let go of focus and it has fallen to the page. Focus someone moved elsewhere
+  // stays put.
+  useEffect(() => {
+    if (focusAsked === 0) {
+      return;
+    }
+
+    const land = (): boolean => {
+      const active = document.activeElement;
+
+      if (active !== null && active !== document.body) {
+        return active.closest(OVERLAY) === null;
+      }
+
+      status.current?.focus();
+
+      return true;
+    };
+
+    if (land()) {
+      return;
+    }
+
+    let waited = 0;
+
+    const timer = window.setInterval(() => {
+      waited += FOCUS_POLL_MS;
+
+      if (land() || waited >= FOCUS_LIMIT_MS) {
+        window.clearInterval(timer);
+      }
+    }, FOCUS_POLL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [focusAsked]);
+
   const run = load.status === "ready" ? load.run : null;
 
   // Once the run settles its issues are final: read the page again for them.
-  usePoll(admin, run, replace, fetchRun);
+  const trouble = usePoll(run, read, fetchRun);
 
   const reload = () => {
     setLoad({ status: "loading" });
@@ -456,7 +518,9 @@ export function SlackRunView({
       return;
     }
 
+    tickets.take();
     replace(change.run);
+    setFocusAsked((count) => count + 1);
   };
 
   const more = async () => {
@@ -499,7 +563,14 @@ export function SlackRunView({
       {load.status === "ready" ? (
         <>
           <SettingsGroup title="Progress">
-            <RunStatus run={load.run} />
+            <RunStatus run={load.run} focusRef={status} />
+            {trouble === null ? null : (
+              <p className="settings-hint text-faint" role="status">
+                {trouble === "stopped"
+                  ? "Can't refresh this run any more. Reload the page to see where it stands."
+                  : "Can't refresh right now. Trying again…"}
+              </p>
+            )}
             <RunActions admin={admin} run={load.run} onChange={changed} />
           </SettingsGroup>
           {!admin && load.run.conversations.length > 0 ? <PreviewPlan run={load.run} /> : null}

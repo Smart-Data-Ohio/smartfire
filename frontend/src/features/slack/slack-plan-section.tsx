@@ -166,7 +166,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
         {plan.samples.length === 0 ? (
           <p className="text-muted">No samples in this dry run.</p>
         ) : (
-          <div className="admin-audit-wrap">
+          <section className="admin-audit-wrap" aria-label="Converted samples">
             <table className="admin-audit-table slack-samples">
               <thead>
                 <tr>
@@ -186,7 +186,7 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </section>
         )}
       </SettingsGroup>
       <SettingsGroup title="Start the import">
@@ -208,12 +208,16 @@ function PlanForm({ plan }: { readonly plan: SlackPlan }) {
           <Button
             variant="primary"
             loading={busy("test")}
-            disabled={busy()}
+            disabled={busy() || checked.size === 0}
             onClick={() => confirm("test")}
           >
             Test import
           </Button>
-          <Button loading={busy("full")} disabled={busy()} onClick={() => confirm("full")}>
+          <Button
+            loading={busy("full")}
+            disabled={busy() || checked.size === 0}
+            onClick={() => confirm("full")}
+          >
             Full import
           </Button>
         </div>

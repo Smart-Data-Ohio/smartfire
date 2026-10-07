@@ -93,19 +93,44 @@ test("a full import from the plan, then undoing it", async ({ page }) => {
   await confirm(page, "Undo import");
 
   await expect(page.getByText("Undo started.")).toBeVisible();
+  // The button went away, so focus goes to the run's status.
+  await expect(page.getByRole("region", { name: "Run status" })).toBeFocused();
   await expect(facts(page)).toContainText("undone", SETTLED);
   await expect(page.getByRole("button", { name: "Undo import" })).toHaveCount(0);
 });
 
-test("an empty selection is refused with the classic alert", async ({ page }) => {
+test("an import needs a checked conversation", async ({ page }) => {
   await open(page, "admin/slack/runs/1/plan");
 
   await page.getByRole("button", { name: "Select none" }).click();
+
+  await expect(page.getByRole("button", { name: "Full import" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Test import" })).toBeDisabled();
+
+  await page.getByRole("checkbox", { name: "Import design" }).check();
+  await expect(page.getByRole("button", { name: "Full import" })).toBeEnabled();
+});
+
+test("an undo waits for a later import of the same conversations", async ({ page }) => {
+  await open(page, "admin/slack/runs/1/plan");
   await page.getByRole("button", { name: "Full import" }).click();
   await confirm(page, "Full import");
+  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/2$/);
+  await expect(facts(page)).toContainText("completed", SETTLED);
 
-  await expect(page.getByText("Check at least one conversation to import.")).toBeVisible();
-  await expect(page).toHaveURL(/\/plan$/);
+  await page.getByRole("button", { name: "Run catch-up import" }).click();
+  await confirm(page, "Run catch-up import");
+  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/3$/);
+  await expect(facts(page)).toContainText("completed", SETTLED);
+
+  await open(page, "admin/slack/runs/2");
+
+  const undo = page.getByRole("button", { name: "Undo import" });
+
+  await expect(undo).toBeDisabled();
+  await expect(undo).toHaveAccessibleDescription(
+    "A later import (#3) also imported some of these conversations; undo that one first.",
+  );
 });
 
 test("a person previews their conversations and imports the checked ones", async ({ page }) => {

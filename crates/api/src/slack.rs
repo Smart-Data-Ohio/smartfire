@@ -301,8 +301,10 @@ fn row(data: &RunData) -> Result<api::SlackRunRow> {
     })
 }
 
-/// A run as its classic page's status section and buttons show it.
-fn run_wire(data: &RunData) -> Result<api::SlackRun> {
+/// A run as its classic page's status section and buttons show it. A completed preview's
+/// conversations are the person's own page's alone (`slack/imports#show`): the administrator's
+/// run page (`accounts/slack_import_runs#show`) never lists them, so `admin` leaves them out.
+fn run_wire(data: &RunData, admin: bool) -> Result<api::SlackRun> {
     let stats = &data.stats;
     let users = &stats["users"];
     let people = users
@@ -336,7 +338,7 @@ fn run_wire(data: &RunData) -> Result<api::SlackRun> {
     } else {
         count(&stats["issues_count"])
     };
-    let personal_preview = data.kind == "personal" && data.preview();
+    let personal_preview = !admin && data.kind == "personal" && data.preview();
     Ok(api::SlackRun {
         id: data.id,
         kind: kind(&data.kind)?,
@@ -390,8 +392,8 @@ async fn run_data(c: &Ctx, id: i64) -> Result<RunData> {
 }
 
 /// A run and the classic page's notice, as a run write answers.
-async fn reply_run(c: &mut Ctx, id: i64, notice: &str) -> Result {
-    let run = run_wire(&run_data(c, id).await?)?;
+async fn reply_run(c: &mut Ctx, id: i64, admin: bool, notice: &str) -> Result {
+    let run = run_wire(&run_data(c, id).await?, admin)?;
     c.json(
         StatusCode::OK,
         &api::SlackRunChange {
@@ -402,9 +404,9 @@ async fn reply_run(c: &mut Ctx, id: i64, notice: &str) -> Result {
 }
 
 /// A start's answer: the new run with its notice, or the classic alert as a 422.
-async fn reply_started(c: &mut Ctx, started: Started) -> Result {
+async fn reply_started(c: &mut Ctx, admin: bool, started: Started) -> Result {
     match started {
-        Started::Run { run, notice } => reply_run(c, run.id, notice).await,
+        Started::Run { run, notice } => reply_run(c, run.id, admin, notice).await,
         Started::Refused { alert, .. } => Err(refusal(c, alert)),
     }
 }
@@ -509,7 +511,7 @@ async fn dry_run(c: &mut Ctx) -> Result {
         latest: day(form.latest),
     };
     let started = runs::start_dry_run(c, &user, form).await?;
-    reply_started(c, started).await
+    reply_started(c, true, started).await
 }
 
 /// `accounts/slack_import_runs#show`: the run and a page of its issues.
@@ -526,7 +528,7 @@ async fn show_admin_run(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     let page = api::SlackRunPage {
-        run: run_wire(&data)?,
+        run: run_wire(&data, true)?,
         issues: issues
             .into_iter()
             .map(|issue| api::SlackIssue {
@@ -546,7 +548,7 @@ async fn show_admin_run(c: &mut Ctx) -> Result {
 async fn show_admin_status(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
     let run = runs::find(c, &user, true).await?;
-    let run = run_wire(&run_data(c, run.id).await?)?;
+    let run = run_wire(&run_data(c, run.id).await?, true)?;
     c.json(StatusCode::OK, &run)
 }
 
@@ -608,7 +610,7 @@ async fn import(c: &mut Ctx) -> Result {
         latest: day(form.latest),
     };
     let started = runs::start_workspace_import(c, &user, run, form).await?;
-    reply_started(c, started).await
+    reply_started(c, true, started).await
 }
 
 /// `accounts/slack_import_runs#catch_up`.
@@ -616,14 +618,14 @@ async fn start_catch_up(c: &mut Ctx) -> Result {
     let user = administrator(c).await?;
     let run = runs::find(c, &user, true).await?;
     let started = runs::start_catch_up(c, &user, run).await?;
-    reply_started(c, started).await
+    reply_started(c, true, started).await
 }
 
 /// `cancel` and `undo` on either page.
 async fn change(c: &mut Ctx, user: User, admin: bool, undo: bool) -> Result {
     let run = runs::find(c, &user, admin).await?;
     match runs::change(c, &user, run.id, undo).await? {
-        Ok(notice) => reply_run(c, run.id, notice).await,
+        Ok(notice) => reply_run(c, run.id, admin, notice).await,
         Err(reason) => Err(refusal(c, &reason)),
     }
 }
@@ -668,14 +670,14 @@ async fn personal_start(c: &mut Ctx) -> Result {
         conversation_ids: conversation_ids(form.conversation_ids),
     };
     let started = runs::start_personal(c, &user, form).await?;
-    reply_started(c, started).await
+    reply_started(c, false, started).await
 }
 
 /// `slack/imports#show` and `#status`: one of the person's own runs.
 async fn show_personal_run(c: &mut Ctx) -> Result {
     let user = viewer(c).await?;
     let run = runs::find(c, &user, false).await?;
-    let run = run_wire(&run_data(c, run.id).await?)?;
+    let run = run_wire(&run_data(c, run.id).await?, false)?;
     c.json(StatusCode::OK, &run)
 }
 

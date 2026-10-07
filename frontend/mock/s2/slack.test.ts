@@ -153,6 +153,40 @@ describe("the mock's Slack import pages", () => {
     expect(await settle(server, `/admin/slack/runs/${run.id}/status`)).toEqual(["undone"]);
   });
 
+  it("block an undo behind a later import of the same conversations", async () => {
+    const { server } = harness();
+
+    const body = {
+      conversationIds: ["C100"],
+      roomTargets: {},
+      preset: "full",
+      oldest: null,
+      latest: null,
+    };
+
+    const first = await started(server, "/admin/slack/runs/1/import", body, "Full import started.");
+
+    await settle(server, `/admin/slack/runs/${first.id}/status`);
+
+    const later = await started(
+      server,
+      `/admin/slack/runs/${first.id}/catch_up`,
+      null,
+      "Catch-up import started.",
+    );
+
+    await settle(server, `/admin/slack/runs/${later.id}/status`);
+
+    const blocked = await get<SlackRun>(server, `${API}/admin/slack/runs/${first.id}/status`);
+    const reason = `A later import (#${later.id}) also imported some of these conversations; undo that one first.`;
+
+    expect(blocked.undoable).toBe(false);
+    expect(blocked.undoBlockedReason).toBe(reason);
+    expect(
+      (await refused(server, "POST", `/admin/slack/runs/${first.id}/undo`, null)).message,
+    ).toBe(reason);
+  });
+
   it("guard the credentials with the password confirmation", async () => {
     const { server } = harness();
 

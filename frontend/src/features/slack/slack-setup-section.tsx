@@ -64,9 +64,15 @@ function Manifest({ manifest }: { readonly manifest: string }) {
       <p className="settings-label">
         App manifest <span className="text-faint">(user scopes only — no bot user, no events)</span>
       </p>
-      <pre className="slack-manifest">
-        <code ref={shown}>{manifest}</code>
-      </pre>
+      <section aria-label="App manifest">
+        <pre
+          className="slack-manifest"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: the manifest scrolls; focus lets a keyboard scroll it
+          tabIndex={0}
+        >
+          <code ref={shown}>{manifest}</code>
+        </pre>
+      </section>
       <div className="settings-actions">
         <Button icon="copy" onClick={() => copy(manifest, "Manifest", shown.current)}>
           Copy manifest

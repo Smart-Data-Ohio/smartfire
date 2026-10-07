@@ -211,6 +211,32 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
   const finished = (record: RunRecord) =>
     record.status === "completed" || record.status === "failed" || record.status === "cancelled";
 
+  /**
+   * Why an import can't be undone yet, in the classic page's words: a later import of some of the
+   * same conversations comes off first, and nothing else may be running.
+   */
+  const undoBlocked = (record: RunRecord): string | null => {
+    if (record.mode !== "import" || !finished(record)) return null;
+
+    const mine = new Set(record.conversations.map((each) => each.id));
+
+    const later = [...current().runs.values()].find(
+      (other) =>
+        other.id > record.id &&
+        other.mode === "import" &&
+        other.status !== "undone" &&
+        other.conversations.some((each) => mine.has(each.id)),
+    );
+
+    if (later !== undefined) {
+      return `A later import (#${later.id}) also imported some of these conversations; undo that one first.`;
+    }
+
+    return activeRun() === null
+      ? null
+      : "Another import is queued or running. Wait for it to finish, then undo.";
+  };
+
   const wire = (record: RunRecord): SlackRun => {
     const done = record.status === "completed" || record.status === "undone";
     const kind = record.kind === "workspace" ? "Workspace" : "Personal";
@@ -253,8 +279,8 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
       error: null,
       active: isActive(record),
       cancellable: record.status === "queued" || record.status === "running",
-      undoable: importing && finished(record),
-      undoBlockedReason: null,
+      undoable: importing && finished(record) && undoBlocked(record) === null,
+      undoBlockedReason: undoBlocked(record),
       planReady:
         record.kind === "workspace" && record.mode === "dry_run" && record.status === "completed",
       catchUp:
@@ -365,7 +391,7 @@ export function createSlack(ctx: S2Context, requireSudo: () => void): SlackModul
     const view = wire(record);
 
     if (undo) {
-      if (!view.undoable) throw refusal("That run cannot be undone.");
+      if (!view.undoable) throw refusal(view.undoBlockedReason ?? "That run cannot be undone.");
 
       record.status = "undoing";
 

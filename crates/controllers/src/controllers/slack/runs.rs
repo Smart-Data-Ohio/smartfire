@@ -87,8 +87,12 @@ async fn connection(c: &Ctx, uid: i64) -> Result<Option<SlackConnection>> {
         .await
         .map_err(Error::internal)
 }
+/// Whether a run is queued, running or undoing: anyone's (`None`), or the person's own.
+fn any_active(conn: &rusqlite::Connection, uid: Option<i64>) -> campfire_db::Result<bool> {
+    Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing') AND (? IS NULL OR user_id=?))",params![uid,uid],|r|r.get(0))?)
+}
 async fn active(c: &Ctx, uid: Option<i64>) -> Result<bool> {
-    c.app().db.read(move |conn| Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM slack_imports WHERE status IN ('queued','running','undoing') AND (? IS NULL OR user_id=?))",params![uid,uid],|r|r.get(0))?)).await.map_err(Error::internal)
+    c.app().db.read(move |conn| any_active(conn, uid)).await.map_err(Error::internal)
 }
 async fn blocker(c: &Ctx, uid: i64) -> Result<Option<&'static str>> {
     if connection(c, uid).await?.is_none() {
@@ -145,6 +149,9 @@ fn bound(zone: &campfire_views::time::Zone, value: &str, latest: bool) -> Option
     let zoned = date.to_datetime(time).to_zoned(zone.tz().clone()).ok()?;
     Some(zone.iso8601(zoned.timestamp()))
 }
+/// Creates the run, unless one is active by then (anyone's for a workspace run, the person's own
+/// for a personal one): the check and the insert share one write, so two starts racing past the
+/// callers' earlier check can't both begin. `None` is the lost race, refused as the check is.
 async fn start(
     c: &Ctx,
     user: &User,
@@ -153,7 +160,11 @@ async fn start(
     kind: Kind,
     mode: Mode,
     options: Value,
-) -> Result<SlackImport> {
+) -> Result<Option<SlackImport>> {
+    let scope = match kind {
+        Kind::Workspace => None,
+        Kind::Personal => Some(user.id),
+    };
     let options = crate::integrations::slack::options::normalize(&options)
         .map_err(|s| Error::internal(campfire_db::Error::Other(s)))?;
     let user_id = user.id;
@@ -169,6 +180,9 @@ async fn start(
     c.app()
         .db
         .write(move |tx| {
+            if any_active(tx.conn(), scope)? {
+                return Ok(None);
+            }
             SlackImport::create_with_enqueued_at(
                 tx,
                 NewImport {
@@ -181,6 +195,7 @@ async fn start(
                 },
                 Some(&stamp),
             )
+            .map(Some)
         })
         .await
         .map_err(Error::internal)
@@ -290,7 +305,7 @@ pub async fn start_dry_run(c: &Ctx, user: &User, form: DryRunForm) -> Result<Sta
     }
     let zone = zone(c, user.id).await?;
     let options = json!({"include_private":form.include_private,"oldest":bound(&zone,&form.oldest,false),"latest":bound(&zone,&form.latest,true)});
-    let run = start(
+    let Some(run) = start(
         c,
         user,
         workspace.unwrap().id,
@@ -299,7 +314,13 @@ pub async fn start_dry_run(c: &Ctx, user: &User, form: DryRunForm) -> Result<Sta
         Mode::DryRun,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            base(true),
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
         user,
@@ -393,7 +414,7 @@ pub async fn start_personal(c: &Ctx, user: &User, form: PersonalForm) -> Result<
     } else {
         Mode::DryRun
     };
-    let run = start(
+    let Some(run) = start(
         c,
         user,
         workspace.unwrap().id,
@@ -402,7 +423,13 @@ pub async fn start_personal(c: &Ctx, user: &User, form: PersonalForm) -> Result<
         mode,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            base(false),
+            "You already have an import running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
         user,
@@ -509,7 +536,7 @@ pub async fn start_workspace_import(
         options["latest"] = json!(bound(&zone, &form.latest, true));
     }
     let connection = connection(c, user.id).await?.ok_or(Error::NotFound)?;
-    let created = start(
+    let Some(created) = start(
         c,
         user,
         run.slack_workspace_id,
@@ -518,7 +545,13 @@ pub async fn start_workspace_import(
         Mode::Import,
         options,
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            plan_path,
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
         user,
@@ -567,7 +600,7 @@ pub async fn start_catch_up(c: &Ctx, user: &User, run: SlackImport) -> Result<St
         }
     }
     let connection = connection(c, user.id).await?.ok_or(Error::NotFound)?;
-    let created = start(
+    let Some(created) = start(
         c,
         user,
         run.slack_workspace_id,
@@ -576,7 +609,13 @@ pub async fn start_catch_up(c: &Ctx, user: &User, run: SlackImport) -> Result<St
         Mode::Import,
         json!(options),
     )
-    .await?;
+    .await?
+    else {
+        return Ok(refused(
+            path(true, run.id),
+            "Another import is already running. Wait for it to finish.",
+        ));
+    };
     log(
         c,
         user,

@@ -393,6 +393,21 @@ async fn a_preview_reads_with_its_conversations() {
         .map(|each| each.id.as_str())
         .collect();
     assert_eq!(ids, ["C1", "G2", "D3"]);
+
+    // The administrator's run page never lists a person's conversations, as classic's doesn't.
+    let page: api::SlackRunPage = parse(
+        &david
+            .send(get(&format!("/api/v1/admin/slack/runs/{id}")))
+            .await,
+    );
+    assert_eq!(page.run.conversations, []);
+    let status: api::SlackRun = parse(
+        &david
+            .send(get(&format!("/api/v1/admin/slack/runs/{id}/status")))
+            .await,
+    );
+    assert_eq!(status.conversations, []);
+
     let personal: api::SlackPersonal = parse(&david.send(get("/api/v1/slack/imports")).await);
     assert_eq!(personal.connection, api::SlackConnectionState::Connected);
     assert_eq!(
@@ -1244,8 +1259,10 @@ async fn a_personal_import_undoes_as_the_classic_button_undoes_it() {
     .await;
 }
 
-/// Someone who uses the new UI lands on the SPA's Slack pages from the classic URLs (Slack's OAuth
-/// comes back to them), while the classic forms still post and redirect as before.
+/// Someone who uses the new UI lands on the SPA's Slack pages from the classic URLs, while the
+/// classic forms still post and redirect as before. A page a classic write left a notice for
+/// stays classic once so the notice shows (so does Slack's OAuth return, "Slack connected."); the
+/// next visit goes to the SPA. Someone who hasn't opted in keeps the classic pages.
 #[tokio::test]
 async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
     use campfire_db::models::user::ui_preference::{self, UiPreference};
@@ -1305,10 +1322,261 @@ async fn the_slack_pages_redirect_but_their_forms_stay_classic() {
         )
         .await;
     assert!(save.status.is_redirection(), "{:?}", save.status);
+    let location = save.location().expect("the classic redirect").to_owned();
+    assert!(!location.contains("/app/"), "{location}");
+
+    // The page the notice waits for shows it, classic; the next visit goes to the SPA.
+    let shown = david.get(&location).await;
+    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
+    assert!(shown.text().contains("Dry run started."));
+    let again = david.get(&location).await;
+    assert_eq!(again.status, StatusCode::FOUND);
     assert!(
-        save.location()
-            .is_some_and(|location| !location.contains("/app/")),
+        again
+            .location()
+            .is_some_and(|spa| spa.starts_with("http://campfire.test/app/admin/slack/runs/")),
         "{:?}",
-        save.location()
+        again.location()
     );
+
+    // A HEAD navigation redirects as a GET does.
+    let head = david
+        .send(Req::new(Method::HEAD, "/slack/imports").header("accept", "text/html"))
+        .await;
+    assert_eq!(head.status, StatusCode::FOUND);
+    assert_eq!(
+        head.location(),
+        Some("http://campfire.test/app/settings/slack")
+    );
+
+    // Kevin hasn't opted in: the classic page.
+    let mut kevin = a.sign_in(KEVIN).await;
+    assert_eq!(kevin.get("/slack/imports").await.status, StatusCode::OK);
+}
+
+// --- Undo blocked, credentials of agents, racing starts ---------------------------------------
+
+/// A finished workspace import of `C1` by `user`, started at `started` (database time text).
+async fn an_import_of_c1(a: &TestApp, user: i64, started: &str, state: Value) -> i64 {
+    let started = started.to_owned();
+    a.db()
+        .write(move |tx| {
+            let workspace: i64 =
+                tx.conn()
+                    .query_row("SELECT id FROM slack_workspaces", [], |row| row.get(0))?;
+            let stats = json!({"conversations": [
+                {"id": "C1", "name": "general", "type": "public_channel", "target": {"action": "create"}}
+            ]});
+            tx.conn().execute(
+                "INSERT INTO slack_imports(slack_workspace_id,user_id,kind,mode,status,options,stats,state,started_at,finished_at,created_at,updated_at) VALUES(?,?,'workspace','import','completed',?,?,?,?,?,?,?)",
+                params![workspace, user, json!({"conversation_ids": ["C1"]}).to_string(), stats.to_string(), state.to_string(), started, started, started, started],
+            )?;
+            Ok(tx.conn().last_insert_rowid())
+        })
+        .await
+        .unwrap()
+}
+
+/// Why the run can't be undone, as its page says, and the undo the API refuses with it.
+async fn blocked(b: &mut Browser<'_>, id: i64) -> String {
+    let run: api::SlackRun = parse(
+        &b.send(get(&format!("/api/v1/admin/slack/runs/{id}/status")))
+            .await,
+    );
+    assert!(!run.undoable, "a blocked undo isn't offered");
+    let reason = run.undo_blocked_reason.expect("a reason");
+    let reply = write(
+        b,
+        Method::POST,
+        &format!("/api/v1/admin/slack/runs/{id}/undo"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(
+        reply.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        reply.text()
+    );
+    assert_eq!(error(&reply)["_tag"], "Validation");
+    reason
+}
+
+#[tokio::test]
+async fn an_undo_waits_for_a_later_import_of_the_same_conversations() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let first = an_import_of_c1(&a, DAVID, "2026-01-01 10:00:00", json!({})).await;
+    let later = an_import_of_c1(&a, DAVID, "2026-01-02 10:00:00", json!({})).await;
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(
+        blocked(&mut david, first).await,
+        format!(
+            "A later import (#{later}) also imported some of these conversations; undo that one first."
+        )
+    );
+}
+
+#[tokio::test]
+async fn an_undo_names_who_ran_the_later_import() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let first = an_import_of_c1(&a, DAVID, "2026-01-01 10:00:00", json!({})).await;
+    an_import_of_c1(&a, KEVIN, "2026-01-02 10:00:00", json!({})).await;
+    let kevin: String = a
+        .db()
+        .read(|conn| {
+            Ok(
+                conn.query_row("SELECT name FROM users WHERE id = ?", [KEVIN], |row| {
+                    row.get(0)
+                })?,
+            )
+        })
+        .await
+        .unwrap();
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(
+        blocked(&mut david, first).await,
+        format!(
+            "A later import by {kevin} also imported some of these conversations. It has to be undone first; ask them or an administrator."
+        )
+    );
+}
+
+#[tokio::test]
+async fn an_undo_waits_for_the_import_to_finish_its_last_step() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let stamp: String = a
+        .db()
+        .write(|tx| Ok(campfire_db::models::slack_import::lease_stamp(tx.now())))
+        .await
+        .unwrap();
+    let id = an_import_of_c1(
+        &a,
+        DAVID,
+        "2026-01-01 10:00:00",
+        json!({"step_started_at": stamp}),
+    )
+    .await;
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(
+        blocked(&mut david, id).await,
+        "This import is still finishing. Wait for it to finish, then undo."
+    );
+}
+
+#[tokio::test]
+async fn an_undo_waits_for_a_queued_run() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let id = an_import_of_c1(&a, DAVID, "2026-01-01 10:00:00", json!({})).await;
+    run(&a, "workspace", "dry_run", "queued", json!({})).await;
+    let mut david = a.sign_in(DAVID).await;
+    assert_eq!(
+        blocked(&mut david, id).await,
+        "Another import is queued or running. Wait for it to finish, then undo."
+    );
+}
+
+#[tokio::test]
+async fn bot_keys_and_agent_tokens_are_refused() {
+    use crate::controllers::agent_http_tests::{SECRET, initialize};
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    initialize(&a).await;
+    let id = run(&a, "personal", "dry_run", "completed", json!({})).await;
+    let token = |method: Method, path: &str| {
+        Req::new(method, path)
+            .header("accept", "application/json")
+            .header("content-type", "application/json")
+            .header("authorization", &format!("Bearer {SECRET}"))
+    };
+    // Authenticating stamps the credential's last use; the snapshot starts after that.
+    a.anonymous()
+        .send(token(Method::GET, "/api/v1/slack/imports"))
+        .await;
+    let before = dump(&a).await;
+    let paths = [
+        (Method::GET, "/api/v1/admin/slack".to_string()),
+        (Method::GET, "/api/v1/admin/slack/runs".to_string()),
+        (Method::GET, format!("/api/v1/admin/slack/runs/{id}/status")),
+        (Method::POST, "/api/v1/admin/slack/runs".to_string()),
+        (Method::GET, "/api/v1/slack/imports".to_string()),
+        (Method::GET, format!("/api/v1/slack/imports/{id}")),
+        (Method::POST, "/api/v1/slack/imports".to_string()),
+        (Method::DELETE, "/api/v1/slack/connection".to_string()),
+    ];
+    for (method, path) in paths {
+        let keyed = a
+            .anonymous()
+            .send(
+                Req::new(method.clone(), &format!("{path}?bot_key={BENDER_KEY}"))
+                    .header("accept", "application/json"),
+            )
+            .await;
+        assert_eq!(
+            keyed.status,
+            StatusCode::FORBIDDEN,
+            "bot key {method} {path}"
+        );
+        let bearer = a.anonymous().send(token(method.clone(), &path)).await;
+        assert_eq!(
+            bearer.status,
+            StatusCode::FORBIDDEN,
+            "agent token {method} {path}"
+        );
+    }
+    assert_eq!(dump(&a).await, before, "nothing changed");
+}
+
+#[tokio::test]
+async fn two_racing_starts_begin_one_run() {
+    let Some(a) = app().await else { return };
+    set_up(&a, true).await;
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    let body = json!({"includePrivate": true, "oldest": null, "latest": null});
+    let (one, two) = tokio::join!(
+        write(
+            &mut first,
+            Method::POST,
+            "/api/v1/admin/slack/runs",
+            body.clone()
+        ),
+        write(
+            &mut second,
+            Method::POST,
+            "/api/v1/admin/slack/runs",
+            body.clone()
+        ),
+    );
+    let mut statuses = [one.status, two.status];
+    statuses.sort();
+    assert_eq!(
+        statuses,
+        [StatusCode::OK, StatusCode::UNPROCESSABLE_ENTITY],
+        "{} / {}",
+        one.text(),
+        two.text()
+    );
+    let refusal = if one.status == StatusCode::OK {
+        &two
+    } else {
+        &one
+    };
+    assert_eq!(
+        error(refusal)["message"],
+        "Another import is already running. Wait for it to finish."
+    );
+    let runs: i64 = a
+        .db()
+        .read(
+            |conn| Ok(conn.query_row("SELECT COUNT(*) FROM slack_imports", [], |row| row.get(0))?),
+        )
+        .await
+        .unwrap();
+    assert_eq!(runs, 1);
 }
