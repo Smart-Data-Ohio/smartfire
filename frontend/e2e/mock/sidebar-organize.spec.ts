@@ -273,6 +273,24 @@ test("favourites: star from the menu, reorder by drag, drop a channel back", asy
   await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
 });
 
+test("the drag's floating copy only fades in when motion is reduced", async ({ page }) => {
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  await page.evaluate(() => {
+    document.documentElement.dataset.motion = "reduce";
+  });
+
+  const list = sidebar(page);
+
+  await drag(page, row(list, "random"), section(page, "category-2"), { drop: false });
+
+  const ghost = page.locator(".sidebar-drag-ghost");
+
+  await expect(ghost).toHaveCSS("rotate", "none");
+  await expect(ghost).toHaveCSS("animation-name", "sidebar-ghost-fade");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+});
+
 test("a keyboard drag: Space picks up, arrows move, Enter drops", async ({ page }) => {
   await openApp(page, `r/${ROOM_IDS.general}`);
 

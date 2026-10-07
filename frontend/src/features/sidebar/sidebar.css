@@ -640,11 +640,24 @@
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .sidebar-drag-ghost {
-      rotate: none;
-      animation: none;
+  @keyframes sidebar-ghost-fade {
+    from {
+      opacity: 0;
     }
+  }
+
+  /* Reduced motion (the OS setting, unless the app says full, or the app's own "reduce"): no
+     tilt or lift, just a fade in. */
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .sidebar-drag-ghost {
+      rotate: none;
+      animation-name: sidebar-ghost-fade;
+    }
+  }
+
+  :root[data-motion="reduce"] .sidebar-drag-ghost {
+    rotate: none;
+    animation-name: sidebar-ghost-fade;
   }
 
   /* The invisible button a row's menu hangs from. */
