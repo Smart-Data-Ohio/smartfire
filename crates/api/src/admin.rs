@@ -168,7 +168,7 @@ endpoint!(
     integrations_health => show_integrations_health
 );
 
-async fn before_actions(c: &mut Ctx) -> Result<()> {
+pub(crate) async fn before_actions(c: &mut Ctx) -> Result<()> {
     concerns::before_actions(
         c,
         Before {
@@ -180,13 +180,13 @@ async fn before_actions(c: &mut Ctx) -> Result<()> {
 }
 
 /// The signed-in person, as the before-actions loaded them.
-async fn viewer(c: &mut Ctx) -> Result<User> {
+pub(crate) async fn viewer(c: &mut Ctx) -> Result<User> {
     before_actions(c).await?;
     Ok(concerns::require_current_user(c)?.clone())
 }
 
 /// `ensure_can_administer` after the before-actions: `Forbidden` for everyone else.
-async fn administrator(c: &mut Ctx) -> Result<User> {
+pub(crate) async fn administrator(c: &mut Ctx) -> Result<User> {
     let user = viewer(c).await?;
     concerns::ensure_can_administer(c)?;
     Ok(user)
@@ -194,7 +194,7 @@ async fn administrator(c: &mut Ctx) -> Result<User> {
 
 /// `require_sudo_mode`, for a JSON request: `SudoRequired`, with a visit to the SPA page that
 /// asked stashed for `/sudo` to come back to.
-fn require_sudo(c: &mut Ctx) -> Result<()> {
+pub(crate) fn require_sudo(c: &mut Ctx) -> Result<()> {
     let now = c.now();
     if session_keys::sudo_verified(c.session(), now) {
         return Ok(());
@@ -224,7 +224,7 @@ fn require_sudo(c: &mut Ctx) -> Result<()> {
 }
 
 /// The JSON body as `T`; anything else is a 422.
-async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
+pub(crate) async fn body<T: DeserializeOwned>(c: &mut Ctx) -> Result<T> {
     let bytes = c.read_body(BODY_LIMIT).await;
     serde_json::from_slice(&bytes).map_err(|error| {
         fail(
@@ -607,7 +607,7 @@ async fn create_two_factor_reset(c: &mut Ctx) -> Result {
 }
 
 /// The classic page's alert, as a 422 naming no field.
-fn refusal(c: &mut Ctx, message: &str) -> Error {
+pub(crate) fn refusal(c: &mut Ctx, message: &str) -> Error {
     fail(
         c,
         api::ApiError::Validation {

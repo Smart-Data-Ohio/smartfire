@@ -318,6 +318,45 @@ async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
 }
 
 #[tokio::test]
+async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
+    let Some(a) = enabled().await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    let bender = crate::controllers::presenters::test_support::BENDER;
+    for (classic, spa) in [
+        ("/account/bots".to_string(), "/app/admin/bots".to_string()),
+        ("/account/bots/new".into(), "/app/admin/bots/new".into()),
+        (
+            format!("/account/bots/{bender}/edit"),
+            format!("/app/admin/bots/{bender}"),
+        ),
+        (
+            format!("/account/bots/{bender}/credentials"),
+            format!("/app/admin/bots/{bender}/credentials"),
+        ),
+        (
+            format!("/account/bots/{bender}/grants"),
+            format!("/app/admin/bots/{bender}/grants"),
+        ),
+    ] {
+        let reply = david.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+    }
+
+    // The classic form's save runs as before and answers with the classic redirect.
+    let save = david
+        .write(
+            Req::new(Method::PATCH, &format!("/account/bots/{bender}"))
+                .header("accept", "text/html")
+                .form(&[("user[name]", "Bender")]),
+        )
+        .await;
+    assert!(save.status.is_redirection(), "{:?}", save.status);
+    assert!(!redirected_to_spa(&save), "{:?}", save.location());
+}
+
+#[tokio::test]
 async fn spa_default_next_moves_everyone_who_has_not_chosen_classic() {
     let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
         return;

@@ -14,45 +14,45 @@ use crate::controllers::presenters::test_support::{
 };
 
 /// David's password in the seed.
-const PASSWORD: &str = "secret123456";
+pub(super) const PASSWORD: &str = "secret123456";
 /// A deactivated member in the seed.
 const RITA: i64 = 773523954;
 /// A banned member in the seed.
 const MALLORY: i64 = 773523955;
 
-async fn app() -> Option<TestApp> {
+pub(super) async fn app() -> Option<TestApp> {
     let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
     ));
     TestApp::boot_seed_with_env("default", clock, &[("SPA_ENABLED", "1")]).await
 }
 
-fn get(path: &str) -> Req {
+pub(super) fn get(path: &str) -> Req {
     Req::new(Method::GET, path).header("accept", "application/json")
 }
 
-fn json_body(method: Method, path: &str, body: &Value) -> Req {
+pub(super) fn json_body(method: Method, path: &str, body: &Value) -> Req {
     Req::new(method, path)
         .header("accept", "application/json")
         .header("content-type", "application/json")
         .body(body.to_string())
 }
 
-fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
+pub(super) fn parse<T: serde::de::DeserializeOwned>(reply: &Reply) -> T {
     serde_json::from_slice(&reply.body).unwrap_or_else(|error| panic!("{error}: {}", reply.text()))
 }
 
-fn error(reply: &Reply) -> Value {
+pub(super) fn error(reply: &Reply) -> Value {
     let envelope: api::ApiErrorResponse = parse(reply);
     serde_json::to_value(&envelope.error).unwrap()
 }
 
-async fn write(b: &mut Browser<'_>, method: Method, path: &str, body: Value) -> Reply {
+pub(super) async fn write(b: &mut Browser<'_>, method: Method, path: &str, body: Value) -> Reply {
     b.write(json_body(method, path, &body)).await
 }
 
 /// An API write that must succeed, as `T`.
-async fn spa<T: serde::de::DeserializeOwned>(
+pub(super) async fn spa<T: serde::de::DeserializeOwned>(
     b: &mut Browser<'_>,
     method: Method,
     path: &str,
@@ -64,7 +64,7 @@ async fn spa<T: serde::de::DeserializeOwned>(
 }
 
 /// A classic form post that must redirect, as the admin pages' writes do.
-async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&str, &str)]) {
+pub(super) async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&str, &str)]) {
     let reply = b.write(Req::new(method, path).form(fields)).await;
     assert!(
         reply.status.is_redirection(),
@@ -75,29 +75,48 @@ async fn classic(b: &mut Browser<'_>, method: Method, path: &str, fields: &[(&st
 }
 
 /// Columns that differ between two runs by design: secrets drawn afresh (session tokens, storage
-/// keys, the join code), the digest salted afresh, and a system note's random client id.
+/// keys, the join code, bot keys, signing secrets, credentials and the ciphertext of stored
+/// tokens), the digests salted afresh, and a system note's random client id.
 const VOLATILE: &[&str] = &[
     "token",
     "key",
     "join_code",
     "password_digest",
     "client_message_id",
+    "bot_token",
+    "bot_token_digest",
+    "webhook_signing_secret",
+    "signing_secret",
+    "token_digest",
+    "token_last_four",
+    "access_token",
+    "refresh_token",
 ];
 
-/// `text` with the random part of a deactivated address (`kevin-deactivated-<uuid>@...`) masked.
-fn unrandom(text: &str) -> String {
+/// `text` with the random part of a deactivated address (`kevin-deactivated-<uuid>@...`) and a
+/// new credential's last four characters masked.
+pub(super) fn unrandom(text: &str) -> String {
     const MARK: &str = "-deactivated-";
-    match text.find(MARK) {
+    let text = match text.find(MARK) {
         Some(at) if text.len() >= at + MARK.len() + 36 => {
             let start = at + MARK.len();
             format!("{}<uuid>{}", &text[..start], &text[start + 36..])
         }
         _ => text.to_string(),
+    };
+    // A new credential's audit names the last four characters of its fresh secret.
+    const LAST_FOUR: &str = "\"last_four\":\"";
+    match text.find(LAST_FOUR) {
+        Some(at) if text.len() >= at + LAST_FOUR.len() + 4 => {
+            let start = at + LAST_FOUR.len();
+            format!("{}<four>{}", &text[..start], &text[start + 4..])
+        }
+        _ => text,
     }
 }
 
 /// `text` with every UUID (a system note's random client id in its DOM id) masked.
-fn uuids_masked(text: &str) -> String {
+pub(super) fn uuids_masked(text: &str) -> String {
     let shape = |window: &[u8]| {
         window.len() == 36
             && window.iter().enumerate().all(|(index, byte)| match index {
@@ -121,8 +140,18 @@ fn uuids_masked(text: &str) -> String {
     out
 }
 
-/// Every row of every table, as JSON, each table's rows sorted.
-async fn dump(a: &TestApp) -> Value {
+/// A time SQLite's own clock stamped (`insert_all` writes `CURRENT_TIMESTAMP`, as Rails does, not
+/// the app's frozen clock): within the hour of the real now.
+fn sqlite_now(text: &str) -> bool {
+    campfire_db::Timestamp::parse_db(text).is_some_and(|at| {
+        let gap = jiff::Timestamp::now().as_second() - at.jiff().as_second();
+        gap.abs() < 3600
+    })
+}
+
+/// Every row of every table, as JSON, each table's rows sorted (with times SQLite stamped
+/// masked).
+pub(super) async fn dump(a: &TestApp) -> Value {
     a.db()
         .read(|conn| {
             let tables: Vec<String> = conn
@@ -153,6 +182,9 @@ async fn dump(a: &TestApp) -> Value {
                                     rusqlite::types::Value::Null => Value::Null,
                                     rusqlite::types::Value::Integer(number) => json!(number),
                                     rusqlite::types::Value::Real(number) => json!(number),
+                                    rusqlite::types::Value::Text(text) if sqlite_now(&text) => {
+                                        json!("<sqlite now>")
+                                    }
                                     rusqlite::types::Value::Text(text) => json!(unrandom(&text)),
                                     rusqlite::types::Value::Blob(bytes) => json!(bytes),
                                 },
@@ -171,7 +203,7 @@ async fn dump(a: &TestApp) -> Value {
 }
 
 /// Every publication until they stop coming (some go out after the response).
-async fn settle(capture: &campfire_cable::pubsub::PublicationCapture) -> Vec<(String, String)> {
+pub(super) async fn settle(capture: &campfire_cable::pubsub::PublicationCapture) -> Vec<(String, String)> {
     let mut frames = Vec::new();
     let mut quiet = 0;
     while quiet < 10 {
@@ -184,7 +216,7 @@ async fn settle(capture: &campfire_cable::pubsub::PublicationCapture) -> Vec<(St
 }
 
 /// A PNG uploaded the way the browser's direct upload leaves it: its signed blob id.
-async fn upload(a: &TestApp, name: &str) -> String {
+pub(super) async fn upload(a: &TestApp, name: &str) -> String {
     let png = include_bytes!("../../../../fixtures/files/workspace_icons/square_64.png");
     let staged = a
         .booted
@@ -205,14 +237,14 @@ async fn upload(a: &TestApp, name: &str) -> String {
 }
 
 /// What one write did: the database afterwards and everything it published.
-struct Outcome {
-    rows: Value,
-    frames: Vec<(String, String)>,
+pub(super) struct Outcome {
+    pub(super) rows: Value,
+    pub(super) frames: Vec<(String, String)>,
 }
 
 /// Signs David in (with sudo) on a fresh app, runs `prepare` (its answer goes to `exercise`),
 /// then records what `exercise` leaves behind.
-async fn outcome<P, F>(prepare: P, exercise: F) -> Option<Outcome>
+pub(super) async fn outcome<P, F>(prepare: P, exercise: F) -> Option<Outcome>
 where
     P: AsyncFnOnce(&TestApp, &mut Browser<'_>) -> Value,
     F: AsyncFnOnce(&mut Browser<'_>, Value),
@@ -235,7 +267,7 @@ where
 }
 
 /// The classic form and the API write leave the same database and publish the same frames.
-async fn assert_parity<P, C, S>(prepare: P, classic: C, spa: S) -> Option<Outcome>
+pub(super) async fn assert_parity<P, C, S>(prepare: P, classic: C, spa: S) -> Option<Outcome>
 where
     P: AsyncFn(&TestApp, &mut Browser<'_>) -> Value,
     C: AsyncFnOnce(&mut Browser<'_>, Value),
@@ -267,12 +299,12 @@ where
     Some(spa)
 }
 
-async fn nothing(_: &TestApp, _: &mut Browser<'_>) -> Value {
+pub(super) async fn nothing(_: &TestApp, _: &mut Browser<'_>) -> Value {
     Value::Null
 }
 
 /// The audit rows a write left, as `[action, details]`.
-fn audits(outcome: &Outcome) -> String {
+pub(super) fn audits(outcome: &Outcome) -> String {
     outcome.rows["audit_logs"].to_string()
 }
 

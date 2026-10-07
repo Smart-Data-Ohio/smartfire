@@ -55,7 +55,7 @@ const HEALTH: IntegrationsHealth = {
 describe("the admin sections", () => {
   it("show members only the workspace and its people", () => {
     expect(visibleSections(false).map((section) => section.key)).toEqual(["workspace", "people"]);
-    expect(visibleSections(true)).toHaveLength(6);
+    expect(visibleSections(true)).toHaveLength(7);
   });
 });
 

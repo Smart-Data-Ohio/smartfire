@@ -201,7 +201,8 @@ pub struct BotPartial<'a> {
 }
 
 impl Bot {
-    fn ownership_line(&self) -> String {
+    /// "Workspace agent · Owned by Grace", as the list reads under the bot's name.
+    pub fn ownership_line(&self) -> String {
         match &self.kind {
             Some(kind) => format!(
                 "{} agent · {}",

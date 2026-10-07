@@ -30,3 +30,6 @@ mod coexistence_tests;
 #[cfg(test)]
 #[path = "spa_admin_tests.rs"]
 mod admin_tests;
+#[cfg(test)]
+#[path = "spa_bots_tests.rs"]
+mod bots_tests;

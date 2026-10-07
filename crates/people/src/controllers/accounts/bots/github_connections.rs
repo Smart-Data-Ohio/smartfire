@@ -9,7 +9,7 @@ use crate::{
     },
 };
 use campfire_db::{
-    Agent,
+    Agent, User,
     models::audit_log::{AuditLog, NewAuditLog},
 };
 use campfire_kit::{Ctx, Error, Result};
@@ -26,10 +26,20 @@ pub async fn create(c: &mut Ctx) -> Result {
         .get("access_token")
         .map(super::input_casts::token_string)
         .unwrap_or_default();
+    let id = bot.id;
+    let (message, notice) = connect(c, bot, &token).await?;
+    redirect(c, id, &message, notice)
+}
+
+/// `create`'s work once the gates passed: GitHub names the token's login, the account is
+/// relinked to the bot, then the audit. Answers the flash: its message, and whether it's a
+/// notice (else an alert).
+pub async fn connect(c: &Ctx, bot: User, token: &str) -> Result<(String, bool)> {
+    let refusal = |message: &str| Ok((message.to_string(), false));
     let token =
         token.trim_matches(|ch| matches!(ch, '\0' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' '));
     if campfire_richtext::ruby::is_blank(token) {
-        return redirect(c, bot.id, "Paste a token to connect GitHub.", false);
+        return refusal("Paste a token to connect GitHub.");
     }
     let login = match c
         .app()
@@ -41,14 +51,11 @@ pub async fn create(c: &mut Ctx) -> Result {
         Ok(login) => login,
         Err(error) => {
             return match error.kind {
-                ErrorKind::Unauthorized => redirect(
-                    c,
-                    bot.id,
-                    "GitHub rejected that token. Check it and try again.",
-                    false,
-                ),
+                ErrorKind::Unauthorized => {
+                    refusal("GitHub rejected that token. Check it and try again.")
+                }
                 ErrorKind::Refused | ErrorKind::Other => {
-                    redirect(c, bot.id, "Could not reach GitHub. Try again.", false)
+                    refusal("Could not reach GitHub. Try again.")
                 }
                 _ => Err(Error::internal(error)),
             };
@@ -91,7 +98,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .write(move |tx| AuditLog::record(tx, audit, &context).map(|_| ()))
         .await
         .map_err(Error::internal)?;
-    redirect(c, bot_id, &notice, true)
+    Ok((notice, true))
 }
 
 pub async fn destroy(c: &mut Ctx) -> Result {
@@ -99,6 +106,14 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::ensure_can_administer(c)?;
     let bot = super::find_active_bot(c, "bot_id").await?;
     concerns::sudo::require_sudo_mode(c)?;
+    let bot_id = bot.id;
+    disconnect(c, bot).await?;
+    redirect(c, bot_id, "GitHub disconnected.", true)
+}
+
+/// `destroy`'s work once the gates passed: the remote grant revoked, the account deleted, then
+/// the audit. Nothing happens for a bot without an account.
+pub async fn disconnect(c: &Ctx, bot: User) -> Result<()> {
     let bot_id = bot.id;
     let account = c
         .app()
@@ -141,7 +156,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
             .await
             .map_err(Error::internal)?;
     }
-    redirect(c, bot_id, "GitHub disconnected.", true)
+    Ok(())
 }
 
 fn redirect(c: &mut Ctx, bot_id: i64, message: &str, notice: bool) -> Result {

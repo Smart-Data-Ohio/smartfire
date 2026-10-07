@@ -126,6 +126,8 @@ export interface AdminModule {
   readonly routes: readonly Route[];
   /** While on, the writes the classic pages guard with the password answer `SudoRequired`. */
   lapseSudo(on: boolean): void;
+  /** Throws `SudoRequired` while the confirmation has lapsed, for the bot pages' guarded writes. */
+  readonly requireSudo: () => void;
 }
 
 /** Creates the admin module. */
@@ -466,6 +468,7 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     lapseSudo: (on) => {
       sudoLapsed = on;
     },
+    requireSudo,
     routes: [
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),

@@ -11,7 +11,14 @@ import { Button } from "../../ui/button.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { SettingsPage, useBusy } from "../settings/settings-parts.tsx";
-import { AdministratorsOnly, adminFailure, needsSudo, useAdmin } from "./admin-parts.tsx";
+import {
+  AdministratorsOnly,
+  adminFailure,
+  keepDraft,
+  needsSudo,
+  takeDraft,
+  useAdmin,
+} from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -20,28 +27,6 @@ type Load =
 
 /** Where an unsaved edit waits while the classic page confirms the password. */
 const DRAFT_KEY = "smartfire.draft.admin-styles";
-
-/** The edit kept across the password round trip, taken (and forgotten) once; `null` when none. */
-function takeDraft(): string | null {
-  try {
-    const draft = sessionStorage.getItem(DRAFT_KEY);
-
-    sessionStorage.removeItem(DRAFT_KEY);
-
-    return draft;
-  } catch {
-    return null;
-  }
-}
-
-/** Keeps `css` for the page to restore after the password round trip's full page load. */
-function keepDraft(css: string): void {
-  try {
-    sessionStorage.setItem(DRAFT_KEY, css);
-  } catch {
-    // Without storage the edit is lost with the page, as on the classic form.
-  }
-}
 
 /**
  * Custom styles: the workspace's custom CSS, as the classic page edits it. Saving asks for the
@@ -60,7 +45,7 @@ export function StylesSection() {
     admin.customStyles().then(
       (styles) => {
         if (kept.current === undefined) {
-          kept.current = takeDraft();
+          kept.current = takeDraft(DRAFT_KEY);
 
           if (kept.current !== null) {
             toast({ title: "Your unsaved CSS is back", description: "Save it to keep it." });
@@ -97,7 +82,7 @@ export function StylesSection() {
           toast({ title: "Custom styles saved", tone: "success" });
         },
         (error: Error) => {
-          if (needsSudo(error)) keepDraft(css);
+          if (needsSudo(error)) keepDraft(DRAFT_KEY, css);
 
           adminFailure("Couldn't save the custom styles", error);
         },

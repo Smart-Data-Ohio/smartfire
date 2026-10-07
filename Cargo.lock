@@ -449,6 +449,7 @@ dependencies = [
  "axum",
  "campfire_api_types",
  "campfire_app",
+ "campfire_assets",
  "campfire_cable",
  "campfire_channels",
  "campfire_db",

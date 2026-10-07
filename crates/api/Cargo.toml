@@ -16,6 +16,7 @@ test-support = []
 [dependencies]
 campfire_api_types.workspace = true
 campfire_app.workspace = true
+campfire_assets.workspace = true
 campfire_people.workspace = true
 campfire_routes.workspace = true
 campfire_cable.workspace = true

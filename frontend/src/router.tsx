@@ -8,6 +8,11 @@ import {
 } from "@tanstack/react-router";
 import { AdminView } from "./features/admin/admin-view.tsx";
 import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
+import { BotCredentialsSection } from "./features/admin/bot-credentials-section.tsx";
+import { BotGrantsSection } from "./features/admin/bot-grants-section.tsx";
+import { BotNewSection } from "./features/admin/bot-new-section.tsx";
+import { BotSection } from "./features/admin/bot-section.tsx";
+import { BotsSection } from "./features/admin/bots-section.tsx";
 import { IconsSection } from "./features/admin/icons-section.tsx";
 import { IntegrationsSection as AdminIntegrationsSection } from "./features/admin/integrations-section.tsx";
 import { PeopleSection } from "./features/admin/people-section.tsx";
@@ -185,6 +190,19 @@ const adminSections = [
     getParentRoute: () => adminRoute,
     path: "integrations",
     component: AdminIntegrationsSection,
+  }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots", component: BotsSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots/new", component: BotNewSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots/$botId", component: BotSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "bots/$botId/credentials",
+    component: BotCredentialsSection,
+  }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "bots/$botId/grants",
+    component: BotGrantsSection,
   }),
 ] as const;
 

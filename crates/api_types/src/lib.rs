@@ -19,6 +19,7 @@ mod actions;
 mod activity;
 mod admin;
 mod attachment;
+mod bots;
 mod cards;
 mod composer;
 mod conversation;
@@ -59,6 +60,12 @@ pub use admin::{
     WorkspaceIconList,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use bots::{
+    Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
+    BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
+    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, UpdateBot,
+    UpdateBotAgent,
+};
 pub use cards::{
     AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
     FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
@@ -131,3 +138,5 @@ mod tests_s3;
 mod tests_s7;
 #[cfg(test)]
 mod tests_s7_admin;
+#[cfg(test)]
+mod tests_s7_bots;

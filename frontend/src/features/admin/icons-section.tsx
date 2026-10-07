@@ -1,8 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { WorkspaceIcon } from "../../gen/WorkspaceIcon.ts";
-import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
 import { admin } from "../../sync/admin.ts";
-import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -16,7 +14,13 @@ import {
   useBusy,
 } from "../settings/settings-parts.tsx";
 import { ICON_NAME_HINT, neighbour } from "./admin-format.ts";
-import { AdministratorsOnly, adminFailure, useAdmin, useFocusAfter } from "./admin-parts.tsx";
+import {
+  AdministratorsOnly,
+  adminFailure,
+  uploaded,
+  useAdmin,
+  useFocusAfter,
+} from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -35,21 +39,6 @@ function elsewhere(fields: Fields): string | undefined {
     .flatMap(([, each]) => each);
 
   return messages.length === 0 ? undefined : messages.join(" ");
-}
-
-/** Uploads `file` and answers its signed id. */
-async function uploaded(file: File): Promise<string> {
-  const task = new UploadTask(file, browserDeps(actions.messages.startUpload), () => undefined);
-
-  await task.start();
-
-  const { phase, signedId, error } = task.snapshot;
-
-  if (phase !== "done" || signedId === null) {
-    throw new Error(error ?? "The upload didn't finish.");
-  }
-
-  return signedId;
 }
 
 /** The upload form: name, title and the file, saved together as the classic form does. */

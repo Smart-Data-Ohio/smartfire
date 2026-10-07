@@ -1,6 +1,10 @@
 import { createContext, use, useEffect, useRef, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
+import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
 import { ActionError } from "../../sync/run.ts";
+import { actions } from "../../sync/runtime.ts";
+import { Button } from "../../ui/button.tsx";
+import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
 
 /** The loaded workspace and the way a section hands back the server's answer to a write. */
@@ -42,6 +46,98 @@ export function adminFailure(title: string, error: Error): void {
   }
 
   toast({ title, description: error.message, tone: "danger" });
+}
+
+/** Uploads `file` directly and answers its signed id, for a write that attaches it. */
+export async function uploaded(file: File): Promise<string> {
+  const task = new UploadTask(file, browserDeps(actions.messages.startUpload), () => undefined);
+
+  await task.start();
+
+  const { phase, signedId, error } = task.snapshot;
+
+  if (phase !== "done" || signedId === null) {
+    throw new Error(error ?? "The upload didn't finish.");
+  }
+
+  return signedId;
+}
+
+/**
+ * The unsaved edit kept under `key` across the password round trip, taken (and forgotten) once;
+ * `null` when there's none.
+ */
+export function takeDraft(key: string): string | null {
+  try {
+    const draft = sessionStorage.getItem(key);
+
+    sessionStorage.removeItem(key);
+
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+/** Keeps `draft` under `key` for the page to restore after the password round trip. */
+export function keepDraft(key: string, draft: string): void {
+  try {
+    sessionStorage.setItem(key, draft);
+  } catch {
+    // Without storage the edit is lost with the page, as on the classic form.
+  }
+}
+
+/** Copies `text`, saying so (or that the clipboard refused). */
+export function copy(text: string, what: string): void {
+  void navigator.clipboard.writeText(text).then(
+    () => toast({ title: `${what} copied`, tone: "success" }),
+    () => toast({ title: "Couldn't copy to the clipboard", tone: "danger" }),
+  );
+}
+
+/** A confirmation, as the classic pages' `turbo_confirm` asks it. */
+export function Confirm({
+  ask,
+  onCancel,
+}: {
+  readonly ask: {
+    readonly title: string;
+    readonly message: string;
+    readonly label: string;
+    readonly danger: boolean;
+    readonly run: () => void;
+  } | null;
+  readonly onCancel: () => void;
+}) {
+  return (
+    <Dialog
+      open={ask !== null}
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+      role="alertdialog"
+      size="sm"
+      title={ask?.title ?? ""}
+      description={ask?.message}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} data-autofocus>
+            Cancel
+          </Button>
+          <Button
+            variant={ask?.danger === true ? "danger" : "primary"}
+            onClick={() => {
+              onCancel();
+              ask?.run();
+            }}
+          >
+            {ask?.label ?? "OK"}
+          </Button>
+        </>
+      }
+    />
+  );
 }
 
 /** A section only administrators may open, for anyone else who lands on its URL. */

@@ -21,5 +21,10 @@
   { "endpoint": "accounts/icons#index", "classic": "/account/icons", "spa": "/app/admin/icons", "ported": true },
   { "endpoint": "accounts/custom_styles#edit", "classic": "/account/custom_styles/edit", "spa": "/app/admin/styles", "ported": true },
   { "endpoint": "accounts/audit_logs#show", "classic": "/account/audit_log", "spa": "/app/admin/audit-log", "ported": true },
-  { "endpoint": "accounts/integrations_health#show", "classic": "/account/integrations_health", "spa": "/app/admin/integrations", "ported": true }
+  { "endpoint": "accounts/integrations_health#show", "classic": "/account/integrations_health", "spa": "/app/admin/integrations", "ported": true },
+  { "endpoint": "accounts/bots#index", "classic": "/account/bots", "spa": "/app/admin/bots", "ported": true },
+  { "endpoint": "accounts/bots#new", "classic": "/account/bots/new", "spa": "/app/admin/bots/new", "ported": true },
+  { "endpoint": "accounts/bots#edit", "classic": "/account/bots/:id/edit", "spa": "/app/admin/bots/:id", "ported": true },
+  { "endpoint": "accounts/bots/credentials#index", "classic": "/account/bots/:bot_id/credentials", "spa": "/app/admin/bots/:bot_id/credentials", "ported": true },
+  { "endpoint": "accounts/bots/grants#index", "classic": "/account/bots/:bot_id/grants", "spa": "/app/admin/bots/:bot_id/grants", "ported": true }
 ]

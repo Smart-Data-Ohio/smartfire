@@ -38,6 +38,7 @@ import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
 import { createAdmin } from "./s2/admin.ts";
 import { createAmbient } from "./s2/ambient.ts";
+import { createBots } from "./s2/bots.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
@@ -671,6 +672,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...createSettings(ctx, uploads).routes,
     ...admin.routes,
+    ...createBots(ctx, uploads, admin.requireSudo).routes,
   ];
 
   composer.arm();

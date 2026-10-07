@@ -149,6 +149,27 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/integrations",
         true,
     ),
+    // S7: the chat bot pages. Their writes stay classic; only the pages move.
+    screen("accounts/bots#index", "/account/bots", "/app/admin/bots", true),
+    screen("accounts/bots#new", "/account/bots/new", "/app/admin/bots/new", true),
+    screen(
+        "accounts/bots#edit",
+        "/account/bots/:id/edit",
+        "/app/admin/bots/:id",
+        true,
+    ),
+    screen(
+        "accounts/bots/credentials#index",
+        "/account/bots/:bot_id/credentials",
+        "/app/admin/bots/:bot_id/credentials",
+        true,
+    ),
+    screen(
+        "accounts/bots/grants#index",
+        "/account/bots/:bot_id/grants",
+        "/app/admin/bots/:bot_id/grants",
+        true,
+    ),
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.
