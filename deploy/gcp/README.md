@@ -127,6 +127,48 @@ registry credentials. Inspect the protected diagnostics before retrying.
 Run its local checks with
 `python3 -m unittest discover -s deploy/gcp -p 'test_google_configuration.py'`.
 
+## Switch the new UI mode
+
+Dispatch **Deploy to GCP** from `main` with `spa_mode` set to one of these values:
+
+| `spa_mode` | `SPA_ENABLED` | `SPA_DEFAULT` | Result |
+| --- | --- | --- | --- |
+| `unchanged` (default) | preserved | preserved | Keep the current UI settings. |
+| `off` | `0` | `classic` | Disable `/app/` and use the classic UI. |
+| `opt-in` | `1` | `classic` | Serve the SPA; members choose it from their classic profile. |
+| `default-next` | `1` | `next` | Use the SPA for members who have not chosen a UI. |
+
+To switch production to opt-in without changing its code, use
+`environment=production`, `git_sha=<currently deployed full SHA>`,
+`spa_mode=opt-in`, and `configure_google=false`. Run first with `dry_run=true`,
+then repeat with `dry_run=false`. Leave `image_digest` empty to resolve the SHA's
+immutable tag, or supply the currently deployed digest to require an exact match.
+Leave `resume=false` and `release_label` empty to get a fresh release label.
+
+The release script accepts the current image. This settings-only operation
+re-releases that same image through the normal preflight, write freeze, backups,
+snapshot, migration rehearsal, cutover verification, and finish phases. It does
+not skip release checks. The SPA settings step runs after successful cutover and
+optional Google configuration, before registry logout. A dry run validates the
+mode and prints the two proposed non-secret values without updating ONCE or
+creating a settings backup.
+
+`configure-spa.py` shares the protected merge routine with `configure-google.py`.
+It allows exactly `SPA_ENABLED` and `SPA_DEFAULT`, preserves every other runtime
+and persistent environment value and ONCE setting, and requires automatic image
+updates to already be disabled. It keeps the same pinned image and storage,
+checks `/up`, and records private diagnostics under the root-only
+`/var/backups/smartfire-spa-config-<timestamp>/` directory. Its JSON receipt
+contains only non-secret verification results. A failed settings check fails the
+workflow and retains diagnostics; it does not restore the database or downgrade
+a healthy image. Registry cleanup still runs. Inspect diagnostics and the feed
+timer state before retrying.
+
+To roll back the UI switch, repeat with `spa_mode=off` and the currently deployed
+SHA. This sets `SPA_ENABLED=0` and `SPA_DEFAULT=classic` while preserving secrets
+and member preferences. Run the local checks with
+`python3 -m unittest discover -s deploy/gcp -p 'test_*.py' -v`.
+
 ## Repository tags are immutable
 
 Artifact Registry rejects moving an existing tag. `publish-image.yml` therefore
