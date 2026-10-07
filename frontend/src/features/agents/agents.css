@@ -1,0 +1,588 @@
+/* Agents (S4): steps under agent messages, the directory and the profile. */
+@layer app {
+  /* ── Links to a profile ─────────────────────────────────────────────── */
+
+  .agent-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .agent-link:hover .message-author {
+    text-decoration: underline;
+  }
+
+  /* ── Steps under an agent's message ─────────────────────────────────── */
+
+  .steps {
+    margin-top: var(--space-1);
+    max-width: 640px;
+  }
+
+  .steps-toggle.button {
+    height: auto;
+    min-height: 24px;
+    max-width: 100%;
+    padding: 2px var(--space-1-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-regular);
+  }
+
+  .steps-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+  }
+
+  .steps-count {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+
+  .steps-current {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--agent-text);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .steps-failed {
+    color: var(--danger-text);
+    white-space: nowrap;
+  }
+
+  .steps-total {
+    color: var(--text-faint);
+  }
+
+  .steps-chevron {
+    color: var(--text-faint);
+  }
+
+  .steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    margin: var(--space-1-5) 0 0;
+    padding: var(--space-1-5) var(--space-3);
+    border-left: 2px solid var(--agent-soft);
+    list-style: none;
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--text-meta);
+  }
+
+  .step-icon {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    height: 18px;
+    color: var(--text-faint);
+  }
+
+  .step-icon[data-status="running"] {
+    color: var(--agent);
+  }
+
+  .step-icon[data-status="done"] {
+    color: var(--success-text);
+  }
+
+  .step-icon[data-status="failed"] {
+    color: var(--danger-text);
+  }
+
+  /* A running step's ring turns slowly; a transform only, and still under reduced motion. */
+  .step-icon[data-status="running"] svg {
+    animation: step-turn calc(var(--duration-spin) * 2) linear infinite;
+  }
+
+  @keyframes step-turn {
+    to {
+      rotate: 1turn;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .step-icon[data-status="running"] svg {
+      animation: none;
+    }
+  }
+
+  :root[data-motion="reduce"] .step-icon[data-status="running"] svg {
+    animation: none;
+  }
+
+  .step-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .step-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    line-height: 18px;
+  }
+
+  .step-name {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .step-status,
+  .step-duration {
+    color: var(--text-faint);
+  }
+
+  .step[data-status="failed"] .step-status {
+    color: var(--danger-text);
+  }
+
+  .step[data-status="running"] .step-status {
+    color: var(--agent-text);
+  }
+
+  .step-io {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  .step-io > div {
+    display: flex;
+    gap: var(--space-1-5);
+  }
+
+  .step-io dt {
+    flex-shrink: 0;
+    width: 28px;
+    color: var(--text-faint);
+    font-weight: var(--weight-medium);
+  }
+
+  .step-io dd {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  /* ── Directory ──────────────────────────────────────────────────────── */
+
+  .agents-toolbar {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-3);
+    min-width: 0;
+  }
+
+  .agents-toolbar .pane-search {
+    flex: 0 1 280px;
+    min-width: 180px;
+  }
+
+  .agents-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .agents-lede {
+    max-width: 880px;
+    margin: 0;
+    padding: var(--space-1) var(--space-5) var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .agent-list {
+    display: flex;
+    flex-direction: column;
+    max-width: 880px;
+    margin: 0;
+    padding: 0 var(--space-3) var(--space-6);
+    list-style: none;
+  }
+
+  .agent-row-open {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .agent-row-open:hover {
+    background: var(--bg-hover);
+  }
+
+  .agent-row-open:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .agent-row-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .agent-row-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .agent-row-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-row[data-suspended] .agent-row-name {
+    color: var(--text-muted);
+  }
+
+  .agent-row-meta,
+  .agent-row-status {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agent-row-status-label,
+  .agent-hero-status-label {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  [data-status="working"] > :is(.agent-row-status-label, .agent-hero-status-label),
+  .agent-row-presence {
+    color: var(--agent-text);
+  }
+
+  [data-status="failed"] > :is(.agent-row-status-label, .agent-hero-status-label) {
+    color: var(--danger-text);
+  }
+
+  [data-status="waiting"] > :is(.agent-row-status-label, .agent-hero-status-label) {
+    color: var(--warning-text);
+  }
+
+  .agent-row-faint {
+    color: var(--text-faint);
+  }
+
+  /* ── Profile ────────────────────────────────────────────────────────── */
+
+  .agent-profile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    max-width: 880px;
+    padding: var(--space-5) var(--space-5) var(--space-8);
+  }
+
+  .agent-profile-skeleton {
+    display: flex;
+    gap: var(--space-4);
+    max-width: 880px;
+    padding: var(--space-5);
+  }
+
+  .agent-profile-skeleton-lines {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .agent-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .agent-hero-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .agent-hero-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .agent-hero-name {
+    margin: 0;
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-title);
+    overflow-wrap: anywhere;
+  }
+
+  .agent-hero-kind,
+  .agent-hero-status,
+  .agent-hero-facts {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .agent-hero-status[data-status="suspended"] {
+    color: var(--danger-text);
+  }
+
+  .agent-hero-description {
+    max-width: 64ch;
+    margin: var(--space-1) 0 0;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .agent-hero-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-1);
+    color: var(--text-faint);
+  }
+
+  .agent-hero-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-2);
+  }
+
+  .agent-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .agent-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+  }
+
+  .agent-section-title {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+  }
+
+  .agent-section-empty,
+  .agent-section-note {
+    margin: 0;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .agent-section-note {
+    grid-column: 1 / -1;
+  }
+
+  .agent-rooms {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  .agent-room {
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text);
+    font-size: var(--text-meta);
+    text-decoration: none;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .agent-room::before {
+    content: "# ";
+    color: var(--text-faint);
+  }
+
+  .agent-room:hover {
+    background: var(--bg-active);
+  }
+
+  .agent-rooms-more {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .agent-grants,
+  .agent-budgets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-meta);
+  }
+
+  .agent-budget {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .agent-budget-uncapped {
+    color: var(--text-faint);
+    font-size: 11px;
+  }
+
+  .agent-budget-meter {
+    width: 100%;
+    height: 6px;
+    appearance: none;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+  }
+
+  .agent-budget-meter::-webkit-meter-bar {
+    height: 6px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+  }
+
+  .agent-budget-meter::-webkit-meter-optimum-value,
+  .agent-budget-meter::-webkit-meter-suboptimum-value,
+  .agent-budget-meter::-webkit-meter-even-less-good-value {
+    border-radius: var(--radius-pill);
+    background: var(--agent);
+  }
+
+  .agent-budget[data-tone="high"] .agent-budget-meter::-webkit-meter-suboptimum-value {
+    background: var(--warning);
+  }
+
+  .agent-budget[data-tone="full"] .agent-budget-meter::-webkit-meter-even-less-good-value {
+    background: var(--danger-solid);
+  }
+
+  .agent-budget-meter::-moz-meter-bar {
+    border-radius: var(--radius-pill);
+    background: var(--agent);
+  }
+
+  .agent-budget[data-tone="full"] .agent-budget-text {
+    color: var(--danger-text);
+  }
+
+  .agent-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+  }
+
+  .agent-stat {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0;
+  }
+
+  .agent-stat dt {
+    color: var(--text-faint);
+    font-size: 11px;
+  }
+
+  .agent-stat dd {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: 1.2;
+  }
+
+  .agent-stat[data-stat="suppressed"] dd {
+    color: var(--text-muted);
+  }
+
+  .agent-missing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .agent-missing-link {
+    color: var(--accent);
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 720px) {
+    .agents-lede,
+    .agent-profile {
+      padding-inline: var(--space-4);
+    }
+
+    .agent-list {
+      padding-inline: var(--space-2);
+    }
+
+    .agents-toolbar .pane-search {
+      flex-basis: 100%;
+    }
+
+    .agent-hero {
+      flex-wrap: wrap;
+    }
+
+    .agent-hero-actions {
+      width: 100%;
+    }
+  }
+}

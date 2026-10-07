@@ -66,6 +66,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { AGENT_IDS, createAgents, statusControl } from "./s4/agents.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -116,6 +117,7 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
+  s4: { agents: AGENT_IDS },
 } as const;
 
 export interface MockServerOptions {
@@ -684,7 +686,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());
+
+  agents.seed();
+
   const routes = [
+    ...agents.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -761,6 +768,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   if (simulate) {
     ambient.start();
     inboxAmbient.start();
+    agents.start();
   }
 
   // --- routing ---
@@ -932,6 +940,28 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "agent-status":
+        return {
+          status: 200,
+          json: agents.setStatus(
+            int("agentId"),
+            statusControl(
+              query.get("status") ?? stringField(body, "status"),
+              booleanField(body, "suspended"),
+              stringField(body, "presence") ?? query.get("presence"),
+            ),
+          ),
+        };
+
+      case "agent-steps": {
+        const messageId =
+          intField(body, "messageId") ??
+          agents.latestBy(int("roomId"), intField(body, "userId") ?? BOT_ID)?.id ??
+          0;
+
+        return { status: 200, json: { steps: [...agents.setSteps(messageId, int("stage"))] } };
+      }
+
       case "reset":
         server.reset();
 
@@ -1005,7 +1035,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       simulation.stop();
       ambient.stop();
       inboxAmbient.stop();
+      agents.stop();
       world = buildWorld(now(), seed);
+      agents.seed();
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
       restarts += 1;
@@ -1018,9 +1050,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         simulation.start();
         ambient.start();
         inboxAmbient.start();
+        agents.start();
       }
     },
     dispose() {
+      agents.stop();
       release();
       uploads.reset();
       composer.stop();

@@ -1,5 +1,6 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import { type AgentsSlice, emptyAgents } from "./agents.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -63,6 +64,8 @@ export interface State {
   readonly scheduled: ScheduledSlice;
   /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
+  /** Agents: the directory, profiles and working presence (S4). */
+  readonly agents: AgentsSlice;
 }
 
 export interface SidebarState {
@@ -107,6 +110,7 @@ export const initialState: State = {
   savedList: emptySavedList,
   scheduled: emptyScheduled,
   conversationNames: {},
+  agents: emptyAgents,
 };
 
 export const emptyTimeline: Timeline = {

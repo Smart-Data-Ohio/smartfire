@@ -22,6 +22,7 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
+import * as agentActions from "./agent-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -200,6 +201,14 @@ const scheduled = {
   cancel: (id: number): Promise<void> => runAction(scheduledActions.cancel(id)),
 };
 
+/** The agent screens (S4). Loads land in the store (failures as its error) and never reject. */
+const agents = {
+  /** Loads (or reloads) the directory. */
+  loadDirectory: (): Promise<void> => runAction(agentActions.loadDirectory()),
+  /** Loads (or reloads) an agent's profile. */
+  loadProfile: (agentId: number): Promise<void> => runAction(agentActions.loadProfile(agentId)),
+};
+
 /** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
 export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
@@ -212,6 +221,7 @@ export const actions = {
   activity,
   saved,
   scheduled,
+  agents,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

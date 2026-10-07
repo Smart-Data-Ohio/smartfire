@@ -147,6 +147,30 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** `/app/agents`: every agent in the workspace, with live status (S4). */
+const agentsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents",
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-directory-page.tsx"),
+    "AgentDirectoryPage",
+  ),
+});
+
+/** `/app/agents/$agentId`: an agent's profile (S4). */
+const agentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents/$agentId",
+  params: {
+    parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
+    stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
+  },
+  component: lazyRouteComponent(
+    () => import("./features/agents/agent-profile-route.tsx"),
+    "AgentProfileRoute",
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
   shellRoute.addChildren([
@@ -154,6 +178,8 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    agentsRoute,
+    agentRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
   ]),
 ]);

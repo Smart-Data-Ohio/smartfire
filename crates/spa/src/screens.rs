@@ -68,6 +68,8 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
+    // S4: agents.
+    screen("agents/directory#index", "/agents", "/app/agents", true),
     screen("searches#index", "/searches", "/app/search", false),
     screen("work_threads#index", "/work", "/app/work", false),
 ];

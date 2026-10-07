@@ -103,6 +103,22 @@
     font-weight: var(--weight-medium);
   }
 
+  a.room-header-agent {
+    text-decoration: none;
+  }
+
+  a.room-header-agent:hover {
+    text-decoration: underline;
+  }
+
+  .room-header-agent:is([data-tone="suspended"], [data-tone="inactive"]) {
+    color: var(--text-muted);
+  }
+
+  .room-header-agent[data-tone="failed"] {
+    color: var(--danger-text);
+  }
+
   .room-header-tools {
     display: flex;
     flex-shrink: 0;
@@ -419,19 +435,6 @@
   .message-edited {
     color: var(--text-faint);
     font-size: 11px;
-  }
-
-  .message-agent-tag {
-    align-self: center;
-    padding: 0 var(--space-1);
-    border-radius: var(--radius-xs);
-    background: var(--agent-soft);
-    color: var(--agent-text);
-    font-size: 10px;
-    font-weight: var(--weight-semibold);
-    letter-spacing: 0.04em;
-    line-height: 16px;
-    text-transform: uppercase;
   }
 
   .message-body-row {

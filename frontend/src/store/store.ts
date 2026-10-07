@@ -5,6 +5,8 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AgentDirectory } from "../gen/AgentDirectory.ts";
+import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
@@ -16,6 +18,7 @@ import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import * as activity from "./activity.ts";
+import * as agents from "./agents.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
@@ -214,6 +217,17 @@ export const mutations = {
     apply((state) =>
       scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
     ),
+  // --- S4: agents ---
+  setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
+  landAgentDirectory: (page: AgentDirectory, generation: number) =>
+    apply((state) => agents.landDirectory(state, page, generation)),
+  setAgentDirectoryFailed: (error: string, generation: number) =>
+    apply((state) => agents.setDirectoryFailed(state, error, generation)),
+  setAgentProfileLoading: (agentId: number) =>
+    apply((state) => agents.setProfileLoading(state, agentId)),
+  landAgentProfile: (profile: AgentProfile) => apply((state) => agents.landProfile(state, profile)),
+  setAgentProfileFailed: (agentId: number, error: string, missing: boolean) =>
+    apply((state) => agents.setProfileFailed(state, agentId, error, missing)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };
