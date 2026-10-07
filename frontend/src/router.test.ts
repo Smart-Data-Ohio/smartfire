@@ -26,4 +26,27 @@ describe("the screen map and the router", () => {
       expect(routed(sample(screen.spa)), screen.spa).toBe(screen.ported);
     }
   });
+
+  it("names every built classic-backed route in the screen map", () => {
+    const mapped = new Set(
+      SCREENS.filter((screen) => screen.ported).map(
+        (screen) =>
+          screen.spa
+            .replace(/^\/app/, "")
+            .replace(/:[^/]+/g, ":id")
+            .replace(/\/$/, "") || "/",
+      ),
+    );
+
+    for (const route of Object.values(router.routesById)) {
+      // The gallery has no classic page; a thread draft needs its parent query, not just a path.
+      if (route.fullPath === "/_kitchen-sink" || route.fullPath === "/r/$roomId/t/new") {
+        continue;
+      }
+
+      const path = route.fullPath.replace(/\$[^/]+/g, ":id").replace(/\/$/, "") || "/";
+
+      expect(mapped.has(path), route.fullPath).toBe(true);
+    }
+  });
 });
