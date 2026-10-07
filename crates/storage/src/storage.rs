@@ -79,6 +79,19 @@ impl Storage {
         Self { service, verifier }
     }
 
+    /// GIF and WebP loaders report the frame count without decoding the whole animation.
+    /// Variants load page 0, so callers must serve the source to retain animation.
+    pub fn is_animated(&self, blob: &Blob) -> Result<bool> {
+        if !matches!(blob.content_type(), "image/gif" | "image/webp") {
+            return Ok(false);
+        }
+        let image = crate::vips::Image::open_sequential(&self.service.path_for(&blob.key))?;
+        Ok(image
+            .get_string("n-pages")
+            .and_then(|pages| pages.parse::<u32>().ok())
+            .is_some_and(|pages| pages > 1))
+    }
+
     /// `Blob#identify_without_saving`, called by signed-ID assignment before validation.
     /// Rails reads at most 4 KB from the service, and saves these changes with the attachment.
     pub fn identify_blob(&self, mut blob: Blob) -> Result<Blob> {

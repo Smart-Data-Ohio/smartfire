@@ -106,6 +106,9 @@ pub struct SyncEvent {
 #[serde(tag = "type", content = "data")]
 #[ts(export)]
 pub enum SyncPayload {
+    /// On everyone's `user` topic: the workspace name or images changed.
+    #[serde(rename = "workspace.updated")]
+    WorkspaceUpdated(WorkspaceBranding),
     /// On `room:<id>` (or `thread:<id>` for a reply): a message was posted. Carries the same
     /// [`MessageDTO`] the `POST` returns, so `clientMessageId` reconciles a pending send.
     #[serde(rename = "message.created")]
@@ -237,6 +240,18 @@ pub enum SyncPayload {
     /// On the presenter's `user` topic: someone else ended their stream.
     #[serde(rename = "stage.stream.stopped")]
     StageStreamStopped(StageStreamStopped),
+}
+
+/// Workspace images as the SPA uses them; animated sources have a PNG still URL too.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceBranding {
+    pub name: String,
+    pub logo_url: Option<String>,
+    pub logo_still_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub banner_still_url: Option<String>,
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

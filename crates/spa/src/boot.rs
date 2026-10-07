@@ -52,6 +52,10 @@ pub struct BootUser {
 pub struct BootAccount {
     /// `None` only before first run.
     pub name: Option<String>,
+    pub logo_url: Option<String>,
+    pub logo_still_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub banner_still_url: Option<String>,
 }
 
 /// `GET /api/v1/boot`: the boot JSON with the masked CSRF token the shell's meta tag carries.

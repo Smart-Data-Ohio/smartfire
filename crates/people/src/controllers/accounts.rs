@@ -1,6 +1,7 @@
 //! `AccountsController` (reference/app/controllers/accounts_controller.rb): account settings.
 
 pub mod audit_logs;
+pub mod banners;
 pub mod icons;
 pub mod bots;
 pub mod integrations_health;
@@ -82,9 +83,10 @@ pub async fn update(c: &mut Ctx) -> Result {
     // Rails record_settings_changes runs only after update! and its after_commit callbacks
     // return. In particular, failed NullAnalyzer metadata leaves the logo saved and no audit.
     c.app().db.write(move |tx| {
-        crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)
+        crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, None, &audit)
     }).await.map_err(Error::internal)?;
 
+    presenters::workspace_branding::publish(c.app()).await;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to_with(&location, Redirect { notice: Some("✓".into()), ..Redirect::default() })
 }

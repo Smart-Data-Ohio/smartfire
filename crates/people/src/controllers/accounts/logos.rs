@@ -19,6 +19,12 @@ const STALE_WHILE_REVALIDATE: u64 = 7 * 24 * 60 * 60;
 pub async fn show(c: &mut Ctx) -> Result {
     c.use_live_response(); // `include ActiveStorage::Streaming`
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    if c.param_str("animated") == Some("1")
+        || c.param_str("still") == Some("1")
+        || c.param_str("blob").is_some()
+    {
+        return super::banners::show_image(c, "logo").await;
+    }
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
 
     // `stale?(etag: Current.account)`; there's no accounts/logos/show template to digest.
@@ -71,6 +77,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
     // Rails destroys the attachment before its separate audit write.
     c.app().db.write(move |tx| crate::account_security::logo_removed(tx, &account, &audit)).await.map_err(Error::internal)?;
+    crate::controllers::presenters::workspace_branding::publish(c.app()).await;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }

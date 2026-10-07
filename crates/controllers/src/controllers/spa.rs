@@ -139,9 +139,19 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         })
         .await
         .map_err(Error::internal)?;
+    let branding = match &account {
+        Some(account) => Some(presenters::workspace_branding::for_account(app, account).await?),
+        None => None,
+    };
     Ok(Boot {
         user: BootUser { id: user.id, name: user.name, avatar_url },
-        account: BootAccount { name: account.map(|account| account.name) },
+        account: BootAccount {
+            name: account.map(|account| account.name),
+            logo_url: branding.as_ref().and_then(|branding| branding.logo_url.clone()),
+            logo_still_url: branding.as_ref().and_then(|branding| branding.logo_still_url.clone()),
+            banner_url: branding.as_ref().and_then(|branding| branding.banner_url.clone()),
+            banner_still_url: branding.and_then(|branding| branding.banner_still_url),
+        },
         theme: campfire_spa::theme(settings.as_ref().map(|s| s.theme.as_str())),
         text_size: campfire_spa::text_size(settings.as_ref().map(|s| s.text_size.as_str())),
         cable_url: campfire_cable::protocol::DEFAULT_MOUNT_PATH.to_string(),

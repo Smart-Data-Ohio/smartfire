@@ -52,6 +52,10 @@ pub fn routes() -> Router<Kit> {
             put(unparsed_action(update_logo)).delete(action(remove_logo)),
         )
         .route(
+            "/api/v1/admin/workspace/banner",
+            put(unparsed_action(update_banner)).delete(action(remove_banner)),
+        )
+        .route(
             "/api/v1/admin/workspace/join_code",
             post(action(reset_join_code)),
         )
@@ -110,6 +114,14 @@ endpoint!(
 endpoint!(
     /// `DELETE /api/v1/admin/workspace/logo`
     remove_logo => detach_logo
+);
+endpoint!(
+    /// `PUT /api/v1/admin/workspace/banner`
+    update_banner => attach_banner
+);
+endpoint!(
+    /// `DELETE /api/v1/admin/workspace/banner`
+    remove_banner => detach_banner
 );
 endpoint!(
     /// `POST /api/v1/admin/workspace/join_code`
@@ -269,18 +281,16 @@ async fn show_workspace(c: &mut Ctx) -> Result {
 /// The answer to a read and to every workspace write.
 async fn reply_workspace(c: &mut Ctx) -> Result {
     let account = account(c).await?;
-    let id = account.id;
-    let logo_attached = c
-        .app()
-        .db
-        .read(move |conn| Ok(attachments::attached_blob(conn, "Account", id, "logo")?.is_some()))
-        .await
-        .map_err(Error::internal)?;
+    let branding = presenters::workspace_branding::for_account(c.app(), &account).await?;
+    let logo_attached = branding.logo_url.is_some();
     let can_administer =
         concerns::current_user(c).is_some_and(|user| user.can_administer(None, false));
     let workspace = api::Workspace {
         name: account.name.clone(),
-        logo_url: account_presenters::fresh_account_logo_path(Some(&account), None),
+        logo_url: branding.logo_url.unwrap_or_else(|| account_presenters::fresh_account_logo_path(Some(&account), None)),
+        logo_still_url: branding.logo_still_url,
+        banner_url: branding.banner_url,
+        banner_still_url: branding.banner_still_url,
         logo_attached,
         join_url: c.url_for(&campfire_routes::join(&account.join_code)),
         can_administer,
@@ -303,23 +313,62 @@ async fn save_workspace(c: &mut Ctx) -> Result {
                 restrict.to_string(),
             )]
         });
-    write_workspace(c, update.name, settings, Assignment::Unchanged).await?;
+    write_workspace(
+        c,
+        update.name,
+        settings,
+        Assignment::Unchanged,
+        Assignment::Unchanged,
+    )
+    .await?;
     reply_workspace(c).await
 }
 
 async fn attach_logo(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let update: api::UpdateLogo = body(c).await?;
-    let verified = campfire_storage::paths::verify_signed_blob_id(
-        &*c.app().storage.verifier,
-        &update.signed_id,
-        c.app().clock.now(),
-    );
-    if verified.is_none() {
-        return Err(fail(c, validation("signedId", "isn't an uploaded file")));
-    }
-    write_workspace(c, None, None, Assignment::Signed(update.signed_id)).await?;
+    let logo = branding_image(c, &update.signed_id).await?;
+    write_workspace(c, None, None, logo, Assignment::Unchanged).await?;
     reply_workspace(c).await
+}
+
+async fn attach_banner(c: &mut Ctx) -> Result {
+    administrator(c).await?;
+    let update: api::UpdateBanner = body(c).await?;
+    let banner = branding_image(c, &update.signed_id).await?;
+    write_workspace(c, None, None, Assignment::Unchanged, banner).await?;
+    reply_workspace(c).await
+}
+
+async fn branding_image(c: &mut Ctx, signed_id: &str) -> Result<Assignment> {
+    let id = campfire_storage::paths::verify_signed_blob_id(
+        &*c.app().storage.verifier,
+        signed_id,
+        c.app().clock.now(),
+    )
+    .ok_or_else(|| fail(c, validation("signedId", "isn't an uploaded file")))?;
+    let blob = c
+        .app()
+        .db
+        .read(move |conn| {
+            campfire_storage::Blob::find(conn, id).map_err(attachments::storage_error)
+        })
+        .await
+        .map_err(Error::internal)?
+        .ok_or_else(|| fail(c, validation("signedId", "isn't an uploaded file")))?;
+    if !matches!(
+        blob.content_type(),
+        "image/png" | "image/jpeg" | "image/gif" | "image/webp"
+    ) {
+        return Err(fail(
+            c,
+            validation("signedId", "must be a PNG, JPEG, GIF or WebP image"),
+        ));
+    }
+    if blob.byte_size > 10 * 1024 * 1024 {
+        return Err(fail(c, validation("signedId", "must be 10 MB or smaller")));
+    }
+    Ok(Assignment::Signed(signed_id.to_owned()))
 }
 
 /// `accounts#update`: the account, its logo, then the audit of what changed.
@@ -328,17 +377,20 @@ async fn write_workspace(
     name: Option<String>,
     settings: Option<Vec<(String, String)>>,
     logo: Assignment,
+    banner: Assignment,
 ) -> Result<()> {
     let mut account = account(c).await?;
     let logo = logo.stage(c.app()).await?;
+    let banner = banner.stage(c.app()).await?;
     let audit = audit_context(c)?;
-    let (before, account, before_logo, after_logo) = c
+    let (before, account, before_logo, after_logo, banner_change) = c
         .app()
         .db
         .write(move |tx| {
             let before = account.clone();
             let before_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
+            let before_banner = attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?.map(|blob| blob.id);
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|settings| {
                 settings
                     .iter()
@@ -347,9 +399,11 @@ async fn write_workspace(
             });
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
             attachments::assign(tx, Record::account(account.id), "logo", logo)?;
+            attachments::assign(tx, Record::account(account.id), "banner", banner)?;
             let after_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
-            Ok((before, account, before_logo, after_logo))
+            let after_banner = attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?.map(|blob| blob.id);
+            Ok((before, account, before_logo, after_logo, Some((before_banner, after_banner))))
         })
         .await
         .map_err(Error::internal)?;
@@ -362,11 +416,13 @@ async fn write_workspace(
                 &account,
                 before_logo,
                 after_logo,
+                banner_change,
                 &audit,
             )
         })
         .await
         .map_err(Error::internal)?;
+    presenters::workspace_branding::publish(c.app()).await;
     Ok(())
 }
 
@@ -389,6 +445,28 @@ async fn detach_logo(c: &mut Ctx) -> Result {
         .write(move |tx| account_security::logo_removed(tx, &account, &audit))
         .await
         .map_err(Error::internal)?;
+    presenters::workspace_branding::publish(c.app()).await;
+    reply_workspace(c).await
+}
+
+async fn detach_banner(c: &mut Ctx) -> Result {
+    administrator(c).await?;
+    let account = account(c).await?;
+    let audit = audit_context(c)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            attachments::destroy(tx, Record::account(account.id), "banner")?;
+            Ok(())
+        })
+        .await
+        .map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| account_security::banner_removed(tx, &account, &audit))
+        .await
+        .map_err(Error::internal)?;
+    presenters::workspace_branding::publish(c.app()).await;
     reply_workspace(c).await
 }
 

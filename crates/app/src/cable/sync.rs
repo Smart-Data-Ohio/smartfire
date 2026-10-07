@@ -13,6 +13,7 @@
 //! a test in the server crate fails when a broadcast is in neither.
 use std::sync::{Arc, OnceLock};
 
+pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
     MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload,
@@ -136,6 +137,7 @@ impl RendererSlot {
 /// cable sink handles (its type's path, as the sink names it, without `campfire_db::models::`,
 /// `campfire_db::` or `crate::integrations::`).
 pub const TWINS: &[(&str, &[&str])] = &[
+    ("workspace_branding::publish", &["workspace.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -1143,6 +1145,22 @@ pub fn presence(server: &Cable, presence: UserPresence) {
         &SyncPayload::Presence(presence),
         |publication| SyncPublication {
             coalesce: Some(format!("presence:{user_id}")),
+            ..publication
+        },
+    );
+}
+
+/// Latest workspace name and images on everyone's `user` topic.
+pub fn workspace_updated(server: &Cable, branding: WorkspaceBranding) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::Everyone,
+        &SyncPayload::WorkspaceUpdated(branding),
+        |publication| SyncPublication {
+            coalesce: Some("workspace".into()),
             ..publication
         },
     );
