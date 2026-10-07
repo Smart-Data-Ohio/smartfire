@@ -58,8 +58,10 @@ export interface ActivitySlice {
   readonly unreadCount: number | null;
   /** The `updatedAt` of the newest server copy of each item (optimistic copies don't count). */
   readonly versions: Readonly<Record<number, string>>;
-  /** The server's latest unread count, before the changes still on their way. */
+  /** The server count used as the base for changes still on their way. */
   readonly serverUnread: ActivityUnreadCount | null;
+  /** A count-only snapshot waiting for item confirmations to resolve its pending overlap. */
+  readonly deferredUnread: ActivityUnreadCount | null;
   /** Local fence for replies started before a new websocket boot epoch. */
   readonly generation: number;
   /** The generation the held count belongs to; an older one is only a display fallback. */
@@ -74,6 +76,7 @@ export const emptyActivity: ActivitySlice = {
   unreadCount: null,
   versions: {},
   serverUnread: null,
+  deferredUnread: null,
   generation: 0,
   serverUnreadGeneration: 0,
   pendingUnread: {},
@@ -110,20 +113,38 @@ function withCounts(
   pendingUnread: ActivitySlice["pendingUnread"] = activity.pendingUnread,
 ): ActivitySlice {
   const held = activity.serverUnread;
+  const deferred = activity.deferredUnread;
+  const waiting = Object.values(pendingUnread).some((change) => change.delta !== 0);
+
+  const snapshot =
+    !waiting &&
+    deferred !== null &&
+    (unread === null || deferred.unreadRevision > unread.unreadRevision)
+      ? deferred
+      : unread;
 
   const serverUnread =
-    unread !== null &&
+    snapshot !== null &&
     (held === null ||
       activity.serverUnreadGeneration !== activity.generation ||
-      unread.unreadRevision > held.unreadRevision)
-      ? { unreadCount: unread.unreadCount, unreadRevision: unread.unreadRevision }
+      snapshot.unreadRevision > held.unreadRevision)
+      ? { unreadCount: snapshot.unreadCount, unreadRevision: snapshot.unreadRevision }
       : held;
+
+  const serverUnreadGeneration =
+    serverUnread !== held ? activity.generation : activity.serverUnreadGeneration;
 
   return {
     ...activity,
     serverUnread,
-    serverUnreadGeneration:
-      serverUnread !== held ? activity.generation : activity.serverUnreadGeneration,
+    serverUnreadGeneration,
+    deferredUnread:
+      serverUnread !== null &&
+      serverUnreadGeneration === activity.generation &&
+      deferred !== null &&
+      serverUnread.unreadRevision >= deferred.unreadRevision
+        ? null
+        : deferred,
     pendingUnread,
     unreadCount: shownCount(serverUnread?.unreadCount ?? null, pendingUnread),
   };
@@ -185,6 +206,7 @@ export function beginActivityGeneration(state: State): State {
   return withActivity(state, {
     ...state.activity,
     generation: state.activity.generation + 1,
+    deferredUnread: null,
     versions: {},
     pendingUnread: {},
     unreadCount: state.activity.serverUnread?.unreadCount ?? null,
@@ -568,9 +590,27 @@ export function setActivityUnreadCount(
   unread: ActivityUnreadCount,
   generation = state.activity.generation,
 ): State {
-  return generation === state.activity.generation
-    ? withActivity(state, withCounts(state.activity, unread))
-    : state;
+  const activity = state.activity;
+
+  if (generation !== activity.generation) {
+    return state;
+  }
+
+  if (Object.values(activity.pendingUnread).some((change) => change.delta !== 0)) {
+    // A count alone cannot tell which pending changes it includes. Keep the optimistic
+    // projection until their items or replies confirm them, then use the newest snapshot.
+    const held = activity.serverUnread;
+    const deferred = activity.deferredUnread;
+
+    return (held === null ||
+      activity.serverUnreadGeneration !== generation ||
+      unread.unreadRevision > held.unreadRevision) &&
+      (deferred === null || unread.unreadRevision > deferred.unreadRevision)
+      ? withActivity(state, { ...activity, deferredUnread: unread })
+      : state;
+  }
+
+  return withActivity(state, withCounts(activity, unread));
 }
 
 /** The server couldn't replay what was missed: every loaded list reloads when next shown. */

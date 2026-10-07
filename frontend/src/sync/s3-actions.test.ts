@@ -422,7 +422,13 @@ describe("activity actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  for (const confirmation of ["websocket", "same-time websocket", "page", "removal"] as const) {
+  for (const confirmation of [
+    "websocket",
+    "same-time websocket",
+    "page",
+    "count-only snapshot",
+    "removal",
+  ] as const) {
     it.effect(`counts an optimistic read only once when a ${confirmation} confirms it`, () =>
       Effect.gen(function* () {
         seedInbox();
@@ -444,7 +450,10 @@ describe("activity actions", () => {
         yield* Deferred.await(started);
         expect(store.getState().activity.unreadCount).toBe(4);
 
-        if (confirmation === "page") {
+        if (confirmation === "count-only snapshot") {
+          yield* fake.reply("GET /activity/unread_count", snapshot);
+          yield* activity.loadUnreadCount();
+        } else if (confirmation === "page") {
           yield* fake.reply("GET /activity", {
             items: [read],
             users: [],
@@ -476,6 +485,47 @@ describe("activity actions", () => {
         if (confirmation === "removal") {
           expect(store.getState().activity.items[3]).toBeUndefined();
         }
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
+
+  for (const outcome of ["reply", "failure"] as const) {
+    it.effect(`keeps the newest count-only increase after a pending read's ${outcome}`, () =>
+      Effect.gen(function* () {
+        seedInbox();
+        const fake = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        const counts = [store.getState().activity.unreadCount];
+
+        yield* fake.route("PATCH /activity/3", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.andThen(
+              outcome === "failure"
+                ? refuse()
+                : Effect.succeed({ item: item(3, 40, "read"), unreadCount: 4, unreadRevision: 2 }),
+            ),
+          ),
+        );
+        const changing = yield* Effect.forkChild(Effect.exit(activity.setState(3, "read")));
+
+        yield* Deferred.await(started);
+        counts.push(store.getState().activity.unreadCount);
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 4 });
+        yield* activity.loadUnreadCount();
+        counts.push(store.getState().activity.unreadCount);
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 3 });
+        yield* activity.loadUnreadCount();
+        counts.push(store.getState().activity.unreadCount);
+        yield* Deferred.succeed(release, undefined);
+        const result = yield* Fiber.join(changing);
+
+        counts.push(store.getState().activity.unreadCount);
+        expect(result._tag).toBe(outcome === "reply" ? "Success" : "Failure");
+        expect(counts).toEqual([5, 4, 4, 4, 6]);
+        expect(store.getState().activity.serverUnread?.unreadRevision).toBe(4);
+        expect(store.getState().activity.deferredUnread).toBeNull();
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
   }
@@ -531,6 +581,9 @@ describe("activity actions", () => {
 
       yield* Deferred.await(secondStarted);
       expect(store.getState().activity.unreadCount).toBe(3);
+      yield* fake.reply("GET /activity/unread_count", { unreadCount: 3, unreadRevision: 4 });
+      yield* activity.loadUnreadCount();
+      expect(store.getState().activity.unreadCount).toBe(3);
       // This page's item predates the pending read, although its count is newer.
       yield* fake.reply("GET /activity", {
         items: [item(3, 20, "read")],
@@ -543,12 +596,14 @@ describe("activity actions", () => {
       expect(store.getState().activity.unreadCount).toBe(3);
       mutations.applyActivityItem(item(3, 40, "read"), { unreadCount: 4, unreadRevision: 3 });
       expect(store.getState().activity.unreadCount).toBe(3);
+      expect(store.getState().activity.deferredUnread?.unreadRevision).toBe(4);
       yield* Deferred.succeed(firstRelease, undefined);
       yield* Fiber.join(first);
       expect(store.getState().activity.unreadCount).toBe(3);
       yield* Deferred.succeed(secondRelease, undefined);
       yield* Fiber.join(second);
       expect(store.getState().activity.unreadCount).toBe(3);
+      expect(store.getState().activity.deferredUnread).toBeNull();
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

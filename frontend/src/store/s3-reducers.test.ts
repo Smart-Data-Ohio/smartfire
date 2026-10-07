@@ -14,12 +14,15 @@ import {
   activityListOf,
   activityLoadStart,
   applyActivityItem,
+  beginActivityGeneration,
+  endActivityChange,
   landActivityPage,
   markActivityStale,
   nextActivityItem,
   removeActivityItem,
   setActivityListLoading,
   setActivityUnreadCount,
+  showActivityChange,
   unreadDelta,
 } from "./activity.ts";
 import { conversationNameOf } from "./conversations.ts";
@@ -456,6 +459,36 @@ describe("the activity inbox", () => {
     expect(
       setActivityUnreadCount(newer, { unreadCount: 9, unreadRevision: 2 }).activity.unreadCount,
     ).toBe(4);
+  });
+
+  it("discards deferred counts at a generation fence and accepts a lower new count", () => {
+    const before = item(3, 30);
+
+    const optimistic = nextActivityItem(before, "read", at(55));
+    const held = setActivityUnreadCount(inbox(), { unreadCount: 8, unreadRevision: 100 });
+    const pending = showActivityChange(held, optimistic, 1, -1);
+    const queued = setActivityUnreadCount(pending, { unreadCount: 7, unreadRevision: 101 });
+
+    expect(queued.activity.unreadCount).toBe(7);
+
+    const restored = beginActivityGeneration(queued);
+
+    expect(restored.activity.deferredUnread).toBeNull();
+
+    const nextPending = showActivityChange(restored, optimistic, 2, -1);
+    const nextQueued = setActivityUnreadCount(nextPending, { unreadCount: 2, unreadRevision: 50 });
+
+    const settled = endActivityChange(nextQueued, {
+      generation: restored.activity.generation,
+      token: 2,
+      optimistic,
+      settled: optimistic,
+      unread: { unreadCount: 1, unreadRevision: 49 },
+    });
+
+    expect(settled.activity.unreadCount).toBe(2);
+    expect(settled.activity.serverUnread?.unreadRevision).toBe(50);
+    expect(settled.activity.deferredUnread).toBeNull();
   });
 
   it("keeps a newer count when an old page lands, without invalidating a newer GET", () => {

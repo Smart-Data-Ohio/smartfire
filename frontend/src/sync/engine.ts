@@ -329,6 +329,7 @@ export class Engine extends Context.Service<
         const afterReload = yield* Ref.getAndSet(restored, false);
 
         if (point?.epoch !== frame.epoch) {
+          // This fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
           mutations.beginActivityGeneration();
         }
 

@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import type { ActivityList } from "../../src/gen/ActivityList.ts";
 import { expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
 
 /** Calls one of the mock's `/__mock/*` controls. */
@@ -64,8 +65,29 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
   await expect(activity).toHaveAttribute("aria-pressed", "true");
 });
 
-test("clearing Activity survives a delayed boot count and reopening the app", async ({ page }) => {
-  test.setTimeout(90_000);
+test("clearing Activity survives a delayed boot count and reopening the app", async ({
+  page,
+  request,
+}) => {
+  // Two unread items exercise both the decrement and zero, without clearing the whole seed.
+  const state = await (await request.get("/__mock/state")).json();
+  const inbox: ActivityList = await (await request.get("/api/v1/activity")).json();
+
+  expect(inbox.nextCursor).toBeNull();
+  expect(inbox.items.length).toBeGreaterThan(2);
+
+  for (const item of inbox.items.slice(2)) {
+    const response = await request.patch(`/api/v1/activity/${item.id}`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: { action: "handled" },
+    });
+
+    expect(response.ok()).toBe(true);
+  }
+
+  expect(await (await request.get("/api/v1/activity/unread_count")).json()).toMatchObject({
+    unreadCount: 2,
+  });
 
   const captured = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
@@ -83,11 +105,8 @@ test("clearing Activity survives a delayed boot count and reopening the app", as
 
   const activity = page.getByRole("button", { name: "Activity" });
 
-  for (let cleared = 0; cleared < 100; cleared++) {
-    if (await page.getByText("You're all caught up").isVisible()) {
-      break;
-    }
-
+  for (let cleared = 0; cleared < 2; cleared++) {
+    await expect(activity.locator(".badge > .visually-hidden")).toHaveText(`${2 - cleared} unread`);
     await expect(rows(page).first()).toBeVisible();
 
     const opening = rows(page).first().locator(".list-row-open");
@@ -106,11 +125,8 @@ test("clearing Activity survives a delayed boot count and reopening the app", as
     const { unreadCount } = await response.json();
 
     expect(response.ok()).toBe(true);
+    expect(unreadCount).toBe(1 - cleared);
     await expect(rows(page).locator(`[aria-describedby="${description}"]`)).toHaveCount(0);
-
-    if (unreadCount === 0) {
-      break;
-    }
   }
 
   await expect(page.getByText("You're all caught up")).toBeVisible();
