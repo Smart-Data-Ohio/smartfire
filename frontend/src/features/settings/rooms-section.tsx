@@ -74,7 +74,10 @@ export function RoomsSection() {
       () => accepted.current.set(row.roomId, level),
       (error: Error) => {
         if (latest.current.get(row.roomId) === ticket) {
-          const restored = accepted.current.get(row.roomId) ?? previous;
+          // An accepted level may be null (never set), so ask whether there is one at all.
+          const restored = accepted.current.has(row.roomId)
+            ? (accepted.current.get(row.roomId) ?? null)
+            : previous;
 
           setLevels((current) => ({ ...current, [row.roomId]: restored }));
         }
