@@ -330,11 +330,13 @@ export const mutations = {
     mode: "replace" | "more",
     generation?: number,
     ticket?: number,
-  ) => apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket)),
-  applyApproval: (approval: AgentApproval) =>
-    apply((state) => approvals.applyApproval(state, approval)),
-  settleApproval: (approval: AgentApproval) =>
-    apply((state) => approvals.settleApproval(state, approval)),
+    read?: approvals.ApprovalRead,
+  ) =>
+    apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket, read)),
+  applyApproval: (approval: AgentApproval, read?: approvals.ApprovalRead) =>
+    apply((state) => approvals.applyApproval(state, approval, undefined, read)),
+  settleApproval: (approval: AgentApproval, read?: approvals.ApprovalRead) =>
+    apply((state) => approvals.settleApproval(state, approval, read)),
   showApproval: (approval: AgentApproval) =>
     apply((state) => approvals.showApproval(state, approval)),
   rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>

@@ -53,6 +53,91 @@ function pendingIds(): readonly number[] {
 describe("approval actions", () => {
   afterEach(() => mutations.reset());
 
+  it.effect("keeps an event's presentation fields after a delayed tied page", () =>
+    Effect.gen(function* () {
+      const fake = yield* withPending;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      yield* fake.route(`GET /agents/${AGENT}/approvals`, () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as({ approvals: [pending], users: [], nextCursor: null }),
+        ),
+      );
+
+      const loading = yield* Effect.forkChild(approvals.load(AGENT, "pending"));
+
+      yield* Deferred.await(started);
+      mutations.applyEvents(
+        [
+          {
+            seq: 1,
+            topic: "user:7",
+            type: "approval.updated",
+            data: {
+              approval: { ...pending, roomName: null, approvable: false, deniable: false },
+              users: [],
+            },
+          },
+        ],
+        0,
+      );
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(loading);
+
+      expect(store.getState().approvals.items[100]).toMatchObject({
+        roomName: null,
+        approvable: false,
+        deniable: false,
+      });
+      expect(store.getState().freshness.reads).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keeps freshly read presentation when a delayed decision reply lands", () =>
+    Effect.gen(function* () {
+      const fake = yield* withPending;
+      const started = yield* Deferred.make<void>();
+      const gate = yield* Deferred.make<void>();
+
+      const reply = {
+        ...pending,
+        status: "approved" as const,
+        decidedById: 7,
+        decidedAt: "2026-10-06T16:31:00.000Z",
+        updatedAt: "2026-10-06T16:31:00.000000Z",
+      };
+
+      yield* fake.route("PATCH /agent_approvals/100", () =>
+        Deferred.succeed(started, undefined).pipe(
+          Effect.andThen(Deferred.await(gate)),
+          Effect.as(reply),
+        ),
+      );
+
+      const deciding = yield* Effect.forkChild(approvals.decide(100, "approved", null));
+
+      yield* Deferred.await(started);
+      yield* fake.reply(`GET /agents/${AGENT}/approvals`, {
+        approvals: [{ ...pending, roomName: null, approvable: false, deniable: false }],
+        users: [],
+        nextCursor: null,
+      });
+      yield* approvals.load(AGENT, "all");
+      yield* Deferred.succeed(gate, undefined);
+      yield* Fiber.join(deciding);
+
+      expect(store.getState().approvals.items[100]).toMatchObject({
+        status: "approved",
+        roomName: null,
+        approvable: false,
+        deniable: false,
+      });
+      expect(store.getState().approvals.overlays[100]).toBeUndefined();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("keep a live Approved member after a late empty reload without another GET", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;

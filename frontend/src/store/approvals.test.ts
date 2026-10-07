@@ -9,6 +9,7 @@ import {
   applyApprovalUpdated,
   approvalListKey,
   approvalListOf,
+  captureApprovalRead,
   decidedLocally,
   landApprovalPage,
   markApprovalsStale,
@@ -17,6 +18,7 @@ import {
   settleApproval,
   showApproval,
 } from "./approvals.ts";
+import { retireReads, startRead } from "./freshness.ts";
 import {
   isLedgerForbidden,
   landLedgerPage,
@@ -122,6 +124,157 @@ function requestItem(approvalStatus: AgentApprovalStatus): ActivityItem {
 }
 
 describe("approval requests in the store", () => {
+  it.each(["older first", "newer first"])(
+    "keeps the newest overlapping approval presentation when replies land %s",
+    (order) => {
+      const before = loaded();
+      const older = captureApprovalRead(before);
+      const newer = captureApprovalRead(before);
+
+      const fresh = {
+        ...approval(2),
+        roomId: null,
+        roomName: null,
+        approvable: false,
+        deniable: false,
+      };
+
+      const landed =
+        order === "older first"
+          ? applyApproval(
+              applyApproval(before, approval(2), undefined, older),
+              fresh,
+              undefined,
+              newer,
+            )
+          : applyApproval(
+              applyApproval(before, fresh, undefined, newer),
+              approval(2),
+              undefined,
+              older,
+            );
+
+      expect(landed.approvals.items[2]).toMatchObject({
+        roomId: null,
+        roomName: null,
+        approvable: false,
+        deniable: false,
+      });
+    },
+  );
+
+  it.each(["equal", "newer"])(
+    "keeps newer presentation fields when a delayed %s-revision page lands",
+    (version) => {
+      const before = loaded();
+      const read = captureApprovalRead(before);
+
+      const fresh = {
+        ...approval(2),
+        roomId: null,
+        roomName: null,
+        approvable: false,
+        deniable: false,
+      };
+
+      const observed = applyApproval(before, fresh, undefined, read);
+
+      const captured = {
+        ...approval(2),
+        updatedAt: version === "equal" ? approval(2).updatedAt : revision(1),
+      };
+
+      const landed = landApprovalPage(
+        observed,
+        approvalListKey(AGENT, "all"),
+        { approvals: [captured], users: [], nextCursor: null },
+        "replace",
+        undefined,
+        undefined,
+        read,
+      );
+
+      expect(landed.approvals.items[2]).toMatchObject({
+        roomId: null,
+        roomName: null,
+        approvable: false,
+        deniable: false,
+        updatedAt: captured.updatedAt,
+      });
+    },
+  );
+
+  it("keeps an equal presentation observation against a delayed tied ABA page", () => {
+    const before = loaded();
+    const read = captureApprovalRead(before);
+    const echoed = applyApproval(before, approval(2), undefined, read);
+
+    const landed = applyApproval(
+      echoed,
+      { ...approval(2), roomName: "Stale", approvable: false, deniable: false },
+      undefined,
+      read,
+    );
+
+    expect(landed.approvals.items[2]).toMatchObject({
+      roomName: "engineering",
+      approvable: true,
+      deniable: true,
+    });
+  });
+
+  it("merges newly read presentation fields without replacing a newer decision", () => {
+    const decided = applyApproval(loaded(), approval(2, "approved"));
+    const read = captureApprovalRead(decided);
+
+    const landed = applyApproval(
+      decided,
+      { ...approval(2), roomName: null, approvable: false, deniable: false },
+      undefined,
+      read,
+    );
+
+    expect(landed.approvals.items[2]).toMatchObject({
+      status: "approved",
+      updatedAt: revision(1),
+      roomName: null,
+      approvable: false,
+      deniable: false,
+    });
+  });
+
+  it("keeps live membership when a page from a retired view lands", () => {
+    const key = approvalListKey(AGENT, "approved");
+    const loading = setApprovalListLoading(initialState, key, false);
+    const read = startRead(loading.freshness, `approvals:${key}`);
+
+    const observed = applyApprovalUpdated(
+      { ...loading, freshness: read.freshness },
+      {
+        approval: approval(2, "approved"),
+        users: [],
+      },
+    );
+
+    const retired = {
+      ...observed,
+      freshness: retireReads(observed.freshness, `approvals:${key}`).freshness,
+    };
+
+    const landed = landApprovalPage(
+      retired,
+      key,
+      { approvals: [], users: [], nextCursor: null },
+      "replace",
+      approvalListOf(loading, key).generation,
+      read.ticket,
+    );
+
+    expect(approvalListOf(landed, key).ids).toEqual([2]);
+    expect(landed.freshness.reads).toEqual({});
+    expect(landed.freshness.deltas).toEqual([]);
+  });
+
   it("removes an item from a decided-status list when a newer copy changes its status", () => {
     const key = approvalListKey(AGENT, "approved");
     const loading = setApprovalListLoading(loaded(), key, false);

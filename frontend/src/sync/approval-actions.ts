@@ -14,6 +14,7 @@ import {
   type ApprovalListKey,
   approvalListKey,
   approvalListOf,
+  captureApprovalRead,
   decidedLocally,
 } from "../store/approvals.ts";
 import { mutations, store } from "../store/store.ts";
@@ -49,11 +50,15 @@ export const load = Effect.fn("approvals.load")(function* (
       Effect.gen(function* () {
         mutations.setApprovalListLoading(key, false);
 
-        const { generation } = approvalListOf(store.getState(), key);
+        const state = store.getState();
+        const { generation } = approvalListOf(state, key);
+        const read = captureApprovalRead(state);
 
         yield* api.agentApprovals(agentId, statusOf(filter), null).pipe(
           Effect.tap((page) =>
-            Effect.sync(() => mutations.landApprovalPage(key, page, "replace", generation, ticket)),
+            Effect.sync(() =>
+              mutations.landApprovalPage(key, page, "replace", generation, ticket, read),
+            ),
           ),
           Effect.catch(failLoad(key, generation)),
         );
@@ -68,7 +73,9 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
   filter: ApprovalFilter,
 ) {
   const key = approvalListKey(agentId, filter);
-  const list = approvalListOf(store.getState(), key);
+  const state = store.getState();
+  const list = approvalListOf(state, key);
+  const read = captureApprovalRead(state);
 
   if (list.nextCursor === null || list.loadingMore || list.status !== "ready") {
     return;
@@ -80,7 +87,9 @@ export const loadMore = Effect.fn("approvals.loadMore")(function* (
     (ticket) =>
       api.agentApprovals(agentId, statusOf(filter), list.nextCursor).pipe(
         Effect.tap((page) =>
-          Effect.sync(() => mutations.landApprovalPage(key, page, "more", list.generation, ticket)),
+          Effect.sync(() =>
+            mutations.landApprovalPage(key, page, "more", list.generation, ticket, read),
+          ),
         ),
         Effect.catch(failLoad(key, list.generation)),
       ),
@@ -99,6 +108,7 @@ export const decide = Effect.fn("approvals.decide")(function* (
 ) {
   const state = store.getState();
   const before = state.approvals.items[approvalId];
+  const read = captureApprovalRead(state);
   const deciderId = state.me?.user.id ?? state.boot?.user.id ?? null;
 
   const shown =
@@ -120,7 +130,7 @@ export const decide = Effect.fn("approvals.decide")(function* (
   const decided = yield* api
     .decideApproval(approvalId, note === null ? { decision } : { decision, note })
     .pipe(
-      Effect.tap((decided) => Effect.sync(() => mutations.settleApproval(decided))),
+      Effect.tap((decided) => Effect.sync(() => mutations.settleApproval(decided, read))),
       Effect.tapError((error) =>
         Effect.gen(function* () {
           rollBack();

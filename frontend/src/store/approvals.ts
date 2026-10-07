@@ -15,6 +15,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentApprovalStatus } from "../gen/AgentApprovalStatus.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { ApprovalUpdated } from "../gen/ApprovalUpdated.ts";
+import { nextObservation, observationOf } from "../lib/request-observation.ts";
 import { membership, observeMembership, placeId, replay } from "./freshness.ts";
 import { mergeUserList } from "./ordering.ts";
 import {
@@ -41,6 +42,8 @@ export type ApprovalListKey = `${number}:${ApprovalFilter}`;
 export interface ApprovalsSlice {
   /** By approval id. */
   readonly items: Readonly<Record<number, AgentApproval>>;
+  /** Read observations for viewer-relative room labels and decision permissions. */
+  readonly observations: Readonly<Record<number, number>>;
   /** By `ApprovalListKey`. */
   readonly lists: Readonly<Record<string, PagedList>>;
   readonly overlays: Readonly<
@@ -55,7 +58,20 @@ export interface ApprovalsSlice {
   >;
 }
 
-export const emptyApprovals: ApprovalsSlice = { items: {}, lists: {}, overlays: {} };
+export interface ApprovalRead {
+  readonly at: number;
+}
+
+export const emptyApprovals: ApprovalsSlice = {
+  items: {},
+  lists: {},
+  overlays: {},
+  observations: {},
+};
+
+export function captureApprovalRead(_state: State): ApprovalRead {
+  return { at: nextObservation() };
+}
 
 /** The key of `agentId`'s list in `filter`. */
 export function approvalListKey(agentId: number, filter: ApprovalFilter): ApprovalListKey {
@@ -116,6 +132,7 @@ export function landApprovalPage(
   mode: "replace" | "more",
   generation?: number,
   ticket?: number,
+  read?: ApprovalRead,
 ): State {
   const current =
     pagedCurrent(approvalListOf(state, key), generation) &&
@@ -124,7 +141,7 @@ export function landApprovalPage(
   let next = state;
 
   for (const approval of page.approvals) {
-    next = applyApproval(next, approval, key);
+    next = applyApproval(next, approval, key, read);
   }
 
   if (!current) {
@@ -228,17 +245,36 @@ export function applyApproval(
   state: State,
   approval: AgentApproval,
   sourceList?: ApprovalListKey,
+  read?: ApprovalRead,
 ): State {
   const overlay = state.approvals.overlays[approval.id];
   const stored = overlay?.confirmed ?? state.approvals.items[approval.id];
 
-  if (!landsOver(stored, approval)) {
-    return state;
+  const observed = state.approvals.observations[approval.id] ?? 0;
+  const at = read?.at ?? observationOf(approval) ?? nextObservation();
+  const presentationCurrent = at > observed;
+  const revision = mergeRevision(stored, approval);
+  const presentation = presentationCurrent ? approval : (stored ?? approval);
+
+  const confirmed = {
+    ...revision,
+    roomId: presentation.roomId,
+    roomName: presentation.roomName,
+    approvable: presentation.approvable,
+    deniable: presentation.deniable,
+  };
+
+  if (presentationCurrent) {
+    state = {
+      ...state,
+      approvals: {
+        ...state.approvals,
+        observations: { ...state.approvals.observations, [approval.id]: at },
+      },
+    };
   }
 
-  if (overlay !== undefined && approval.updatedAt <= overlay.before.updatedAt) {
-    const confirmed = mergeRevision(overlay.confirmed, approval);
-
+  if (overlay !== undefined && confirmed.updatedAt <= overlay.before.updatedAt) {
     const shown = {
       ...confirmed,
       status: overlay.shown.status,
@@ -264,7 +300,7 @@ export function applyApproval(
     );
   }
 
-  return placeApproval(dropOverlay(state, approval.id), approval, sourceList);
+  return placeApproval(dropOverlay(state, approval.id), confirmed, sourceList);
 }
 
 /**
@@ -305,14 +341,14 @@ export function rollbackApproval(
 }
 
 /** The write reply confirms ties too; an outdated reply leaves the unresolved overlay. */
-export function settleApproval(state: State, approval: AgentApproval): State {
+export function settleApproval(state: State, approval: AgentApproval, read?: ApprovalRead): State {
   const overlay = state.approvals.overlays[approval.id];
 
   if (overlay !== undefined && landsOver(overlay.before, approval)) {
     state = placeApproval(dropOverlay(state, approval.id), overlay.confirmed);
   }
 
-  return applyApproval(state, approval);
+  return applyApproval(state, approval, undefined, read);
 }
 
 /** `approval.updated`: the request with its agent's and decider's users. */
