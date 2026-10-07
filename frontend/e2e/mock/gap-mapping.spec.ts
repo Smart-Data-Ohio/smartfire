@@ -184,8 +184,12 @@ test.describe("phone", () => {
     await expect(pane(page)).toHaveCount(0);
     await expect(conversation).not.toHaveAttribute("inert");
 
-    // The menu works: a level can be chosen, and choosing it leaves the URL.
-    await menu.getByRole("menuitemradio", { name: "No notifications" }).click();
+    // Focus lands in the menu, and the keyboard alone chooses a level, which leaves the URL.
+    await expect(menu.getByRole("menuitemradio", { name: "All messages" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(menu.getByRole("menuitemradio", { name: "No notifications" })).toBeFocused();
+    await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
     await expect(
       page.locator(".room-header").getByRole("button", { name: "Notifications: No notifications" }),

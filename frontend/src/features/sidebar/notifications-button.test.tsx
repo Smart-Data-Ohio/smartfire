@@ -9,10 +9,11 @@ import {
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { roomDetailFixture } from "../../api/testing.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
 import { NotificationsButton } from "./notifications-button.tsx";
 
 function Probe() {
@@ -58,22 +59,11 @@ async function mount() {
   return router;
 }
 
-/** Every request the menu makes that isn't a read: choosing a level is the only write. */
-let writes: string[] = [];
+/** The notification-level change itself: any write the menu makes goes through it. */
+let setInvolvement: MockInstance<typeof actions.organize.setInvolvement>;
 
 beforeEach(() => {
-  writes = [];
-  vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
-    const method = (
-      init?.method ?? (input instanceof Request ? input.method : "GET")
-    ).toUpperCase();
-
-    if (method !== "GET") {
-      writes.push(`${method} ${String(input instanceof Request ? input.url : input)}`);
-    }
-
-    return Promise.resolve(new Response("{}", { status: 200 }));
-  });
+  setInvolvement = vi.spyOn(actions.organize, "setInvolvement").mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -94,12 +84,12 @@ describe("the notification menu URL", () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(within(menu).getAllByRole("menuitemradio")[0]),
     );
-    expect(writes).toEqual([]);
+    expect(setInvolvement).not.toHaveBeenCalled();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger()));
-    expect(writes).toEqual([]);
+    expect(setInvolvement).not.toHaveBeenCalled();
   });
 
   it("closes on outside dismissal and clears the menu URL", async () => {
@@ -109,7 +99,7 @@ describe("the notification menu URL", () => {
     await user.click(screen.getByRole("button", { name: "Outside control" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-    expect(writes).toEqual([]);
+    expect(setInvolvement).not.toHaveBeenCalled();
   });
 
   it("does not latch the routed menu open when its trigger receives an arrow key", async () => {
@@ -121,6 +111,16 @@ describe("the notification menu URL", () => {
     await act(async () => router.history.back());
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-    expect(writes).toEqual([]);
+    expect(setInvolvement).not.toHaveBeenCalled();
+  });
+
+  it("records a level chosen from the routed menu (the control for the no-write checks)", async () => {
+    const router = await mount();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("menuitemradio", { name: /^No notifications/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
+    expect(setInvolvement).toHaveBeenCalledTimes(1);
+    expect(setInvolvement).toHaveBeenCalledWith(4, "nothing");
   });
 });

@@ -41,12 +41,15 @@ export function useRightPaneView(): RightPaneView | null {
   const pane = useOpenPane(params.roomId ?? 0);
   const routePane = useRoutePane();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+  // The notification URL is the room with its header menu open, never under a side pane. Read
+  // at render, so the conversation is not inert when the menu mounts and takes focus.
+  const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   return selectRightPaneView({
     threadId: params.threadId ?? null,
     newThreadParent: drafting ? (search.parent ?? null) : null,
     routePane,
-    openPane: pane,
+    openPane: notifying ? null : pane,
   });
 }
 
@@ -79,9 +82,9 @@ export function useRoomPaneLifecycle(roomId: number): void {
     }
   }, [params.threadId, drafting, routePane, roomId]);
 
-  // The notification URL is the room with its header menu open. A side pane left open locally
-  // (say, opened after Escape and before Back) would cover the conversation on phones and leave
-  // that menu inert, so arriving at the URL closes it.
+  // A side pane left open locally (say, opened after Escape and before Back) is hidden at once
+  // on the notification URL (see useRightPaneView); this forgets it, so it doesn't reappear when
+  // the menu closes.
   useEffect(() => {
     if (notifying) {
       openPane(null);
