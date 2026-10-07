@@ -224,13 +224,24 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
 
+  let markInjected: (id: number) => void = () => undefined;
+
+  const injected = new Promise<number>((resolve) => {
+    markInjected = resolve;
+  });
+
   expect(poll).toBeTruthy();
   // The page before the first window carries a poll on its newest message.
   await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages?before=*`, async (route) => {
     const response = await route.fetch();
-    const body = await response.json();
+    const body: MessagePage = await response.json();
+    const newest = body.messages[body.messages.length - 1];
 
-    body.messages[body.messages.length - 1].poll = poll;
+    if (newest !== undefined && poll !== undefined) {
+      body.messages[body.messages.length - 1] = { ...newest, poll };
+      markInjected(newest.id);
+    }
+
     await route.fulfill({ response, json: body });
   });
   await openApp(page, `r/${ROOM_IDS.engineering}`);
@@ -247,7 +258,9 @@ test("an older page with cards while the chunk loads keeps the list and its plac
   const anchor = await page.locator("[data-message-row]").first().getAttribute("data-message-id");
 
   await older;
-  // The older rows go in above; the row that was at the top stays in view, list still up.
+  // The older rows are in (the injected one mounted above), the row that was at the top stays in
+  // view, and the list is still up.
+  await expect(row(page, await injected)).toBeAttached();
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
   await expect(row(page, Number(anchor))).toBeInViewport();
   chunk.release();
