@@ -296,6 +296,11 @@ impl<U: Send + Sync + 'static> Server<U> {
         self.inner.hub.capture_publications()
     }
 
+    #[cfg(feature = "test-support")]
+    pub fn capture_every_publication(&self) -> crate::pubsub::PublicationCapture {
+        self.inner.hub.capture_every_publication()
+    }
+
     /// Starts the sync engine: from here on [`Server::sync_publish`] records events and
     /// [`Server::sync_call`] accepts sockets. Only the first call takes effect.
     pub fn install_sync(&self, handler: impl SyncHandler<U>, config: SyncConfig) {

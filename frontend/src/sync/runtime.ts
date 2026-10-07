@@ -37,7 +37,7 @@ import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { ActionError, asAction } from "./run.ts";
+import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
@@ -74,7 +74,7 @@ let started: Promise<void> | null = null;
 type AppServices = ManagedRuntime.ManagedRuntime.Services<typeof runtime>;
 
 /** Runs an action; failures reject with an `ActionError` whose message is fit to show. */
-export const runAction = <A, E extends { readonly _tag: string; readonly message: string }>(
+export const runAction = <A, E extends ActionFailure>(
   effect: Effect.Effect<A, E, AppServices>,
 ): Promise<A> => runtime.runPromise(asAction(effect));
 

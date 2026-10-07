@@ -20,7 +20,10 @@ macro_rules! endpoint {
 mod dto;
 pub mod endpoints;
 mod error;
+pub mod admin;
+pub mod bots;
 pub mod message_actions;
+pub mod settings;
 pub mod sync;
 pub mod threads;
 #[cfg(feature = "test-support")]
@@ -125,5 +128,8 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         )
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))
+        .merge(settings::routes())
+        .merge(admin::routes())
+        .merge(bots::routes())
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }

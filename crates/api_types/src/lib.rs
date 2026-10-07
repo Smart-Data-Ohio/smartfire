@@ -17,8 +17,10 @@
 
 mod actions;
 mod activity;
+mod admin;
 mod agents;
 mod attachment;
+mod bots;
 mod cards;
 mod composer;
 mod conversation;
@@ -34,6 +36,7 @@ mod read;
 mod room;
 mod saved;
 mod search;
+mod settings;
 mod sidebar;
 mod switcher;
 mod sync;
@@ -50,6 +53,13 @@ pub use activity::{
     ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
     ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
+pub use admin::{
+    AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
+    EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
+    IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
+    PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    WorkspaceIconList,
+};
 pub use agents::{
     AgentActivitySummary, AgentApproval, AgentApprovalPage, AgentBadge, AgentBudgetUsage,
     AgentCapability, AgentDirectory, AgentDirectoryRow, AgentGrant, AgentGrants, AgentKind,
@@ -57,6 +67,12 @@ pub use agents::{
     AgentStepStatus, AgentStepsChanged, ApprovalDecision, ApprovalUpdated, DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use bots::{
+    Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
+    BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
+    CredentialCreated, CredentialList, CredentialState, Grant, GrantList, GrantRoom, UpdateBot,
+    UpdateBotAgent,
+};
 pub use cards::{
     AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
     FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
@@ -97,6 +113,13 @@ pub use search::{
     RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
+pub use settings::{
+    AppearanceSettings, CallSettings, Connection, DndAllowedPerson, GoogleIntegration, InboxSwitch,
+    IntegrationSettings, NotificationSettings, OooPreset, ProfileSettings, PushSubscriptionInfo,
+    PushSubscriptionList, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings,
+    TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile,
+    UpdateStatus,
+};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
@@ -120,3 +143,9 @@ mod tests_s2;
 mod tests_s3;
 #[cfg(test)]
 mod tests_s4;
+#[cfg(test)]
+mod tests_s7;
+#[cfg(test)]
+mod tests_s7_admin;
+#[cfg(test)]
+mod tests_s7_bots;

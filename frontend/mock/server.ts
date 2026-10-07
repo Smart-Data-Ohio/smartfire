@@ -36,7 +36,9 @@ import {
 import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
+import { createAdmin } from "./s2/admin.ts";
 import { createAmbient } from "./s2/ambient.ts";
+import { createBots } from "./s2/bots.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
@@ -53,6 +55,7 @@ import {
 import { createPanes } from "./s2/panes.ts";
 import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
+import { createSettings } from "./s2/settings.ts";
 import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
@@ -674,6 +677,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const uploads = createUploads(ctx);
+  const admin = createAdmin(ctx, uploads);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
@@ -700,6 +704,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
+    ...createSettings(ctx, uploads).routes,
+    ...admin.routes,
+    ...createBots(ctx, uploads, admin.requireSudo).routes,
     ...createOrganize(ctx).routes,
   ];
 
@@ -908,6 +915,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         release();
 
         return ok;
+      case "lapse-sudo":
+        admin.lapseSudo(flag("on", true));
+
+        return ok;
       case "hold-uploads":
         uploads.hold(flag("on", true));
 
@@ -1013,6 +1024,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     reset() {
       release();
       uploads.reset();
+      admin.lapseSudo(false);
       composer.stop();
       saved.stop();
       simulation.stop();

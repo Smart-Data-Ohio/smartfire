@@ -7,8 +7,29 @@ import {
   Outlet,
 } from "@tanstack/react-router";
 import { parseActivitySearch } from "./features/activity/activity-search.ts";
+import { AdminView } from "./features/admin/admin-view.tsx";
+import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
+import { BotCredentialsSection } from "./features/admin/bot-credentials-section.tsx";
+import { BotGrantsSection } from "./features/admin/bot-grants-section.tsx";
+import { BotNewSection } from "./features/admin/bot-new-section.tsx";
+import { BotSection } from "./features/admin/bot-section.tsx";
+import { BotsSection } from "./features/admin/bots-section.tsx";
+import { IconsSection } from "./features/admin/icons-section.tsx";
+import { IntegrationsSection as AdminIntegrationsSection } from "./features/admin/integrations-section.tsx";
+import { PeopleSection } from "./features/admin/people-section.tsx";
+import { StylesSection } from "./features/admin/styles-section.tsx";
+import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
+import { AppearanceSection } from "./features/settings/appearance-section.tsx";
+import { CallsSection } from "./features/settings/calls-section.tsx";
+import { DevicesSection } from "./features/settings/devices-section.tsx";
+import { IntegrationsSection } from "./features/settings/integrations-section.tsx";
+import { NotificationsSection } from "./features/settings/notifications-section.tsx";
+import { ProfileSection } from "./features/settings/profile-section.tsx";
+import { SessionsSection } from "./features/settings/sessions-section.tsx";
+import { SettingsView } from "./features/settings/settings-view.tsx";
+import { StatusSection } from "./features/settings/status-section.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
@@ -118,6 +139,75 @@ const threadRoute = createRoute({
   component: () => null,
 });
 
+/** `/app/settings`: the classic profile page's sections, the profile first. */
+const settingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "settings",
+  component: SettingsView,
+});
+
+/** The settings sections, each at `/app/settings/<path>` (the profile at `/app/settings`). */
+const settingsSections = [
+  createRoute({ getParentRoute: () => settingsRoute, path: "/", component: ProfileSection }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "status", component: StatusSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "notifications",
+    component: NotificationsSection,
+  }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "appearance",
+    component: AppearanceSection,
+  }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "calls", component: CallsSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "sessions",
+    component: SessionsSection,
+  }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "devices", component: DevicesSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "integrations",
+    component: IntegrationsSection,
+  }),
+] as const;
+
+/** `/app/admin`: the classic account pages, the workspace first. */
+const adminRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "admin",
+  component: AdminView,
+});
+
+/** The admin sections, each at `/app/admin/<path>` (the workspace at `/app/admin`). */
+const adminSections = [
+  createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "audit-log", component: AuditLogSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "integrations",
+    component: AdminIntegrationsSection,
+  }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots", component: BotsSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots/new", component: BotNewSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "bots/$botId", component: BotSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "bots/$botId/credentials",
+    component: BotCredentialsSection,
+  }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "bots/$botId/grants",
+    component: BotGrantsSection,
+  }),
+] as const;
+
 /** `/app/activity?tab=&status=`: the activity inbox (its own chunk). */
 const activityRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -175,6 +265,8 @@ const routeTree = rootRoute.addChildren([
     scheduledRoute,
     searchRoute,
     roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
+    settingsRoute.addChildren(settingsSections),
+    adminRoute.addChildren(adminSections),
   ]),
 ]);
 

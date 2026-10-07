@@ -40,6 +40,9 @@ struct State {
     sequence: u64,
     #[cfg(feature = "test-support")]
     publications: Option<std::sync::Weak<Publications>>,
+    /// Record publications to broadcastings nobody follows too.
+    #[cfg(feature = "test-support")]
+    capture_unfollowed: bool,
 }
 
 /// Explicit test observer of real publications, before asynchronous socket delivery.
@@ -91,7 +94,7 @@ impl Hub {
         state.sequence += 1;
         let sequence = state.sequence;
         #[cfg(feature = "test-support")]
-        if state.streams.contains_key(broadcasting)
+        if (state.capture_unfollowed || state.streams.contains_key(broadcasting))
             && let Some(capture) = state.publications.as_ref().and_then(std::sync::Weak::upgrade)
         {
             // The same lock assigns sequence and sends to subscribers. Never sort this log.
@@ -148,6 +151,15 @@ impl Hub {
         let capture = Arc::new(Mutex::new(Vec::new()));
         self.state.lock().unwrap().publications = Some(Arc::downgrade(&capture));
         PublicationCapture(capture)
+    }
+
+    /// Like [`Hub::capture_publications`], but every publication, followed or not: for tests
+    /// that compare everything two paths broadcast.
+    #[cfg(feature = "test-support")]
+    pub fn capture_every_publication(&self) -> PublicationCapture {
+        let capture = self.capture_publications();
+        self.state.lock().unwrap().capture_unfollowed = true;
+        capture
     }
 
     fn release(&self, broadcasting: &str, identifier: &Option<Arc<str>>) {

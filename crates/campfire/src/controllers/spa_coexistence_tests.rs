@@ -134,7 +134,8 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, &room_path).header("x-requested-with", "XMLHttpRequest"),
         Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
         // Unported pages, and paths a ported pattern doesn't cover.
-        Req::new(Method::GET, "/users/me/profile"),
+        Req::new(Method::GET, "/users/7/profile"),
+        Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
         Req::new(Method::GET, "/work"),
         Req::new(Method::GET, &format!("{room_path}/messages")),
@@ -288,6 +289,74 @@ async fn keys_tokens_and_posts_are_never_redirected() {
 }
 
 #[tokio::test]
+async fn the_admin_pages_redirect_but_their_saves_stay_classic() {
+    let Some(a) = enabled().await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    for (classic, spa) in [
+        ("/account/edit", "/app/admin"),
+        ("/account/icons", "/app/admin/icons"),
+        ("/account/custom_styles/edit", "/app/admin/styles"),
+        ("/account/audit_log", "/app/admin/audit-log"),
+        ("/account/integrations_health", "/app/admin/integrations"),
+    ] {
+        let reply = david.get(classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(spa).as_str()), "{classic}");
+    }
+
+    // The classic form's save runs as before and answers with the classic redirect.
+    let save = david
+        .write(
+            Req::new(Method::PATCH, "/account/custom_styles")
+                .header("accept", "text/html")
+                .form(&[("account[custom_styles]", "body { color: red; }")]),
+        )
+        .await;
+    assert!(save.status.is_redirection(), "{:?}", save.status);
+    assert!(!redirected_to_spa(&save), "{:?}", save.location());
+}
+
+#[tokio::test]
+async fn the_bot_pages_redirect_but_their_saves_stay_classic() {
+    let Some(a) = enabled().await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    let bender = crate::controllers::presenters::test_support::BENDER;
+    for (classic, spa) in [
+        ("/account/bots".to_string(), "/app/admin/bots".to_string()),
+        ("/account/bots/new".into(), "/app/admin/bots/new".into()),
+        (
+            format!("/account/bots/{bender}/edit"),
+            format!("/app/admin/bots/{bender}"),
+        ),
+        (
+            format!("/account/bots/{bender}/credentials"),
+            format!("/app/admin/bots/{bender}/credentials"),
+        ),
+        (
+            format!("/account/bots/{bender}/grants"),
+            format!("/app/admin/bots/{bender}/grants"),
+        ),
+    ] {
+        let reply = david.get(&classic).await;
+        assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
+        assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+    }
+
+    // The classic form's save runs as before and answers with the classic redirect.
+    let save = david
+        .write(
+            Req::new(Method::PATCH, &format!("/account/bots/{bender}"))
+                .header("accept", "text/html")
+                .form(&[("user[name]", "Bender")]),
+        )
+        .await;
+    assert!(save.status.is_redirection(), "{:?}", save.status);
+    assert!(!redirected_to_spa(&save), "{:?}", save.location());
+}
+
+#[tokio::test]
 async fn spa_default_next_moves_everyone_who_has_not_chosen_classic() {
     let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else {
         return;
@@ -346,8 +415,12 @@ async fn the_profile_switch_opts_in_and_back_out() {
     assert_eq!(opted_in.location(), Some(to("/app/").as_str()));
     assert_eq!(stored(&a, DAVID).await, Some(UiPreference::Next));
 
-    // The profile isn't ported, so it opens here, with the way back.
-    let profile = b.get("/users/me/profile").await;
+    // The profile is the SPA's settings now; `?classic=1` keeps it here, with the way back.
+    assert_eq!(
+        b.get("/users/me/profile").await.location(),
+        Some(to("/app/settings").as_str())
+    );
+    let profile = b.get("/users/me/profile?classic=1").await;
     assert_eq!(profile.status, StatusCode::OK);
     let profile = profile.text();
     assert!(
