@@ -516,15 +516,24 @@ impl ChannelThread {
 
     // Called only after validation under this same writer lock. Tag writes between
     // validation and this save cannot change room, agent or membership authority.
-    fn save_validated(&mut self, tx: &mut Tx<'_>, changed: ChannelThread, room: &Room) -> Result<()> {
-        if changed == *self { return Ok(()); }
+    fn save_validated(
+        &mut self,
+        tx: &mut Tx<'_>,
+        changed: ChannelThread,
+        room: &Room,
+    ) -> Result<()> {
+        if changed == *self {
+            return Ok(());
+        }
         let now = tx.now();
+        let stored = Self::find(tx.conn(), self.id)?;
+        let revision = tx.revision_after(stored.updated_at);
         let mut changed = changed;
         // WS12: `stamp_work_status_changed_at` on an update that changes the work status.
         if changed.work_status != self.work_status {
             changed.work_status_changed_at = Some(now);
         }
-        changed.updated_at = now;
+        changed.updated_at = revision;
         // Active Record writes dirty columns only. In particular, a stale settings
         // instance must not overwrite an owner, result or status saved by another caller.
         let mut fields: Vec<(&str, &dyn rusqlite::ToSql)> = Vec::new();
@@ -545,7 +554,7 @@ impl ChannelThread {
             result_updated_by_id,
             run_url
         );
-        fields.push(("updated_at", &now));
+        fields.push(("updated_at", &revision));
         let assignments = fields
             .iter()
             .map(|(column, _)| format!("\"{column}\"=?"))
@@ -565,7 +574,7 @@ impl ChannelThread {
         if changed.work_changed_from(self) {
             ThreadWorkChange::emit(tx, self.id);
         }
-        *self = changed;
+        *self = Self::find(tx.conn(), self.id)?;
         self.register_board_update(tx, room, row_changed, status_changed)?;
         Ok(())
     }
@@ -665,8 +674,8 @@ impl ChannelThread {
             .is_some_and(|status| !status.is_empty())
     }
 
-    /// `ChannelThread.close_stale_in(room:)`: one `UPDATE` closing every stale thread outside
-    /// boards (in the room, or everywhere), stamping `closed_at` and `updated_at`.
+    /// `ChannelThread.close_stale_in(room:)`: closes every stale thread outside boards
+    /// (in the room, or everywhere), stamping `closed_at` and advancing each row's version.
     pub fn close_stale_in(tx: &Tx<'_>, room_id: Option<i64>) -> Result<usize> {
         let now = tx.now();
         let room_filter = if room_id.is_some() {
@@ -675,16 +684,24 @@ impl ChannelThread {
             ""
         };
         let sql = format!(
-            r#"UPDATE "channel_threads" SET "closed_at" = ?, "updated_at" = ? WHERE {room_filter}"channel_threads"."room_id" NOT IN (SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = 'Rooms::Board') AND "channel_threads"."closed_at" IS NULL AND "channel_threads"."locked_at" IS NULL AND ({STALE_SQL})"#
+            r#"SELECT "channel_threads"."id", "channel_threads"."updated_at" FROM "channel_threads" WHERE {room_filter}"channel_threads"."room_id" NOT IN (SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = 'Rooms::Board') AND "channel_threads"."closed_at" IS NULL AND "channel_threads"."locked_at" IS NULL AND ({STALE_SQL})"#
         );
-        let mut values: Vec<rusqlite::types::Value> = vec![now.to_db().into(), now.to_db().into()];
+        let mut values: Vec<rusqlite::types::Value> = vec![];
         if let Some(room_id) = room_id {
             values.push(room_id.into());
         }
         values.push(now.to_db().into());
-        Ok(tx
-            .conn()
-            .execute(&sql, rusqlite::params_from_iter(values))?)
+        let rows: Vec<(i64, Timestamp)> =
+            query_all(tx.conn(), &sql, rusqlite::params_from_iter(values), |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?;
+        for &(id, previous) in &rows {
+            tx.conn().execute_cached(
+                "UPDATE channel_threads SET closed_at=?,updated_at=? WHERE id=?",
+                params![now, tx.revision_after(previous), id],
+            )?;
+        }
+        Ok(rows.len())
     }
 
     /// `close_if_stale!(expected_last_activity_at:)`

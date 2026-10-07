@@ -119,6 +119,7 @@ mod user_test;
 mod user_star_test;
 mod user_device_test;
 mod unicode_casing_parity_test;
+mod revision_write_test;
 
 use std::sync::Arc;
 

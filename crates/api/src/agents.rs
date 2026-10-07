@@ -92,12 +92,18 @@ fn directory_row(record: &DirectoryRecord) -> api::AgentDirectoryRow {
 }
 
 /// The directory row of one agent, whatever its user's state (as `directory_agent` reads it).
-fn agent_row(agent: &Agent) -> api::AgentDirectoryRow {
-    api::AgentDirectoryRow {
+fn agent_row(conn: &Connection, agent: &Agent) -> campfire_db::Result<api::AgentDirectoryRow> {
+    let owner_id = agent
+        .owner_id
+        .map(|id| User::find_by_id(conn, id))
+        .transpose()?
+        .flatten()
+        .map(|owner| owner.id);
+    Ok(api::AgentDirectoryRow {
         agent_id: agent.id,
         user_id: agent.user_id,
         kind: dto::agent_kind(agent.kind.name()),
-        owner_id: agent.owner_id,
+        owner_id,
         status: dto::agent_status(&agent.status),
         status_note: agent.status_note.clone(),
         suspended: agent.suspended_at.is_some(),
@@ -105,7 +111,7 @@ fn agent_row(agent: &Agent) -> api::AgentDirectoryRow {
         updated_at: dto::row_version(agent.updated_at),
         status_changed_at: agent.status_changed_at.map(dto::time),
         last_seen_at: agent.last_seen_at.map(dto::time),
-    }
+    })
 }
 
 async fn list_agents(c: &mut Ctx) -> Result {
@@ -248,7 +254,7 @@ async fn show_agent(c: &mut Ctx) -> Result {
             let manages = viewer.is_administrator() || agent.owner_id == Some(viewer.id);
             let (rooms, hidden_room_count) = profile_rooms(conn, &agent, &viewer)?;
             Ok(Some(api::AgentProfile {
-                agent: agent_row(&agent),
+                agent: agent_row(conn, &agent)?,
                 provider: present(agent.provider.as_deref()),
                 runtime: present(agent.runtime.as_deref()),
                 description: present(agent.description.as_deref()),
@@ -354,7 +360,10 @@ impl<'a> ApprovalCards<'a> {
             created_at: dto::time(approval.created_at),
             updated_at: dto::row_version(
                 if approval.status == "pending" && approval.expires_at <= now {
-                    approval.updated_at.max(approval.expires_at)
+                    approval
+                        .updated_at
+                        .since(jiff::SignedDuration::from_micros(1))
+                        .max(approval.expires_at)
                 } else {
                     approval.updated_at
                 },
@@ -423,6 +432,8 @@ async fn list_approvals(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_approval_page_read(id).await;
     let more = rows.len() > PAGE;
     rows.truncate(PAGE);
     let next_cursor = rows
@@ -449,7 +460,9 @@ async fn list_approvals(c: &mut Ctx) -> Result {
             .await
             .map_err(db_error)?;
     }
-    let now = now(c);
+    // This timestamp preceded the row read. A pending snapshot must not acquire an expiry
+    // revision from a later clock after another request has already decided that row.
+    let now = selected_at;
     if let Some(status) = filter
         .as_deref()
         .filter(|status| matches!(*status, "pending" | "expired"))

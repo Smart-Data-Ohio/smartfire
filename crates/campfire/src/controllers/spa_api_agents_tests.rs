@@ -428,6 +428,176 @@ fn revision(value: &str) -> jiff::Timestamp {
 }
 
 #[tokio::test]
+async fn an_approval_page_read_before_a_decision_cannot_invent_a_later_expiry_revision() {
+    const SNAPSHOT_AGENT: i64 = 900320003;
+    let Some((a, clock)) = revision_app().await else {
+        return;
+    };
+    let written = a
+        .db()
+        .write(|tx| {
+            let user = campfire_db::User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: "Approval snapshot agent".into(),
+                    role: campfire_db::Role::Bot,
+                    ..Default::default()
+                },
+            )?;
+            let agent = Agent::create(
+                tx,
+                campfire_db::NewAgent {
+                    user_id: user.id,
+                    owner_id: Some(DAVID),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE agents SET id=? WHERE id=?",
+                [SNAPSHOT_AGENT, agent.id],
+            )?;
+            AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: SNAPSHOT_AGENT,
+                    room_id: Some(ALL_TALK),
+                    action: "deploy.snapshot_revision".into(),
+                    summary: "Check approval snapshot".into(),
+                    expires_at: Some(tx.now().since(jiff::SignedDuration::from_mins(5))),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let id = written.id;
+    let mut reader = a.sign_in(DAVID).await;
+    let mut decider = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/agents/{SNAPSHOT_AGENT}/approvals");
+    let hold = campfire_api::test_hooks::hold_after_approval_page_read(SNAPSHOT_AGENT);
+    let (stale, decided) = tokio::join!(reader.send(get(&path)), async {
+        hold.reached.wait().await;
+        clock.advance(jiff::SignedDuration::from_mins(4));
+        let response = decider
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/agent_approvals/{id}"),
+                &json!({"decision": "approved"}),
+            ))
+            .await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        let decided: api::AgentApproval = parse(&response);
+        clock.advance(jiff::SignedDuration::from_mins(2));
+        hold.release.wait().await;
+        decided
+    });
+    assert_eq!(stale.status, StatusCode::OK, "{}", stale.text());
+    let page: api::AgentApprovalPage = parse(&stale);
+    let stale = page.approvals.iter().find(|row| row.id == id).unwrap();
+    assert_eq!(stale.status, api::AgentApprovalStatus::Pending);
+    assert_eq!(revision(&stale.updated_at), written.updated_at.jiff());
+    assert!(revision(&stale.updated_at) < revision(&decided.updated_at));
+    let current: api::AgentApprovalPage = parse(
+        &reader
+            .send(get(&format!("/api/v1/agents/{SNAPSHOT_AGENT}/approvals")))
+            .await,
+    );
+    assert_eq!(
+        current.approvals.iter().find(|row| row.id == id).unwrap(),
+        &decided
+    );
+}
+
+#[tokio::test]
+async fn directory_and_profile_revisions_agree_after_an_agent_owner_is_deleted() {
+    let Some((a, _)) = revision_app().await else {
+        return;
+    };
+    a.db()
+        .write(|tx| {
+            let owner = campfire_db::User::create(
+                tx,
+                campfire_db::NewUser {
+                    name: "Deleted agent owner".into(),
+                    email_address: Some("deleted-agent-owner@example.com".into()),
+                    ..Default::default()
+                },
+            )?;
+            let mut agent = Agent::find(tx.conn(), AGENT)?.unwrap();
+            agent.owner_id = Some(owner.id);
+            agent.save(tx)?;
+            owner.destroy(tx)?;
+            assert_eq!(
+                Agent::find(tx.conn(), AGENT)?.unwrap().owner_id,
+                Some(owner.id)
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut jason = a.sign_in(JASON).await;
+    let profile: api::AgentProfile =
+        parse(&jason.send(get(&format!("/api/v1/agents/{AGENT}"))).await);
+    let directory: api::AgentDirectory = parse(&jason.send(get("/api/v1/agents")).await);
+    let row = directory
+        .agents
+        .iter()
+        .find(|row| row.agent_id == AGENT)
+        .unwrap();
+    assert_eq!(row.owner_id, None);
+    assert_eq!(profile.agent.owner_id, row.owner_id);
+    assert_eq!(profile.agent.updated_at, row.updated_at);
+}
+
+#[tokio::test]
+async fn effective_approval_expiry_revision_sorts_after_even_an_equal_pending_revision() {
+    use campfire_app::cable::sync::SyncRenderer;
+    let Some((a, _)) = revision_app().await else {
+        return;
+    };
+    let written = a
+        .db()
+        .write(|tx| {
+            let approval = AgentApproval::create(
+                tx,
+                NewApproval {
+                    agent_id: AGENT,
+                    action: "deploy.expiry_equal_revision".into(),
+                    summary: "Check tied effective expiry".into(),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "UPDATE agent_approvals SET expires_at=updated_at WHERE id=?",
+                [approval.id],
+            )?;
+            Ok(approval)
+        })
+        .await
+        .unwrap();
+    let renderer =
+        campfire_api::sync::Renderer::new(&a.booted.app, tokio::runtime::Handle::current());
+    let effective = a
+        .db()
+        .read(move |conn| {
+            Ok(renderer
+                .approval_updated(conn, written.id, DAVID)?
+                .unwrap()
+                .approval)
+        })
+        .await
+        .unwrap();
+    assert_eq!(effective.status, api::AgentApprovalStatus::Expired);
+    assert_eq!(
+        revision(&effective.updated_at),
+        written
+            .updated_at
+            .since(jiff::SignedDuration::from_micros(1))
+            .jiff()
+    );
+}
+
+#[tokio::test]
 async fn agent_status_revisions_cover_each_change_and_change_back_on_every_read() {
     let Some((a, clock)) = revision_app().await else {
         return;

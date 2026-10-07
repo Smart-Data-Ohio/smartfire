@@ -428,7 +428,7 @@ fn agent_step(row: &rusqlite::Row<'_>) -> rusqlite::Result<api::AgentStep> {
         duration_ms: row.get(7)?,
         position: row.get(8)?,
         created_at: time(row.get(9)?),
-        updated_at: time(row.get(10)?),
+        updated_at: row_version(row.get(10)?),
     })
 }
 
@@ -1473,6 +1473,24 @@ mod tests {
             let stamp = Timestamp::from_jiff(input.parse().unwrap());
             assert_eq!(row_version(stamp), version);
             assert_eq!(time(stamp), milliseconds);
+        }
+    }
+
+    #[test]
+    fn agent_step_revisions_pad_seconds_and_preserve_microseconds() {
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        for (input, expected) in [
+            ("2026-10-07 10:15:00", "2026-10-07T10:15:00.000000Z"),
+            ("2026-10-07 10:15:00.123456", "2026-10-07T10:15:00.123456Z"),
+        ] {
+            let step = conn
+                .query_row(
+                    "SELECT 1,NULL,NULL,'Check','done',NULL,NULL,NULL,0,?1,?1",
+                    [input],
+                    super::agent_step,
+                )
+                .unwrap();
+            assert_eq!(step.updated_at, expected);
         }
     }
 
