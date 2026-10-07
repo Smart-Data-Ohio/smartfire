@@ -1,5 +1,7 @@
 import { Schema } from "effect";
+import type { AccountSettings as GeneratedAccountSettings } from "../../gen/AccountSettings.ts";
 import type { AppearanceSettings as GeneratedAppearanceSettings } from "../../gen/AppearanceSettings.ts";
+import type { BackupCodes as GeneratedBackupCodes } from "../../gen/BackupCodes.ts";
 import type { CallSettings as GeneratedCallSettings } from "../../gen/CallSettings.ts";
 import type { Connection as GeneratedConnection } from "../../gen/Connection.ts";
 import type { DndAllowedPerson as GeneratedDndAllowedPerson } from "../../gen/DndAllowedPerson.ts";
@@ -13,21 +15,27 @@ import type { OooPreset as GeneratedOooPreset } from "../../gen/OooPreset.ts";
 import type { ProfileSettings as GeneratedProfileSettings } from "../../gen/ProfileSettings.ts";
 import type { PushSubscriptionInfo as GeneratedPushSubscriptionInfo } from "../../gen/PushSubscriptionInfo.ts";
 import type { PushSubscriptionList as GeneratedPushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
+import type { Reauthentication as GeneratedReauthentication } from "../../gen/Reauthentication.ts";
+import type { RememberedDevice as GeneratedRememberedDevice } from "../../gen/RememberedDevice.ts";
+import type { RoomMembershipRow as GeneratedRoomMembershipRow } from "../../gen/RoomMembershipRow.ts";
 import type { SessionInfo as GeneratedSessionInfo } from "../../gen/SessionInfo.ts";
 import type { SessionList as GeneratedSessionList } from "../../gen/SessionList.ts";
 import type { Settings as GeneratedSettings } from "../../gen/Settings.ts";
 import type { StatusExpiry as GeneratedStatusExpiry } from "../../gen/StatusExpiry.ts";
 import type { StatusSettings as GeneratedStatusSettings } from "../../gen/StatusSettings.ts";
 import type { TimeZoneChoice as GeneratedTimeZoneChoice } from "../../gen/TimeZoneChoice.ts";
+import type { TwoFactorChange as GeneratedTwoFactorChange } from "../../gen/TwoFactorChange.ts";
+import type { TwoFactorSettings as GeneratedTwoFactorSettings } from "../../gen/TwoFactorSettings.ts";
 import type { UpdateAppearance as GeneratedUpdateAppearance } from "../../gen/UpdateAppearance.ts";
 import type { UpdateAvatar as GeneratedUpdateAvatar } from "../../gen/UpdateAvatar.ts";
 import type { UpdateCalls as GeneratedUpdateCalls } from "../../gen/UpdateCalls.ts";
 import type { UpdateNotifications as GeneratedUpdateNotifications } from "../../gen/UpdateNotifications.ts";
 import type { UpdateProfile as GeneratedUpdateProfile } from "../../gen/UpdateProfile.ts";
 import type { UpdateStatus as GeneratedUpdateStatus } from "../../gen/UpdateStatus.ts";
-import { UserId } from "./ids.ts";
+import { RoomId, UserId } from "./ids.ts";
 import { PresenceSetting, TextSize, Theme, VoiceMode } from "./me.ts";
 import type { Assert, Pinned } from "./pin.ts";
+import { Involvement } from "./room.ts";
 import { Timestamp } from "./time.ts";
 
 /** One time zone the appearance form offers. */
@@ -362,3 +370,73 @@ export type PushSubscriptionList = typeof PushSubscriptionList.Type;
 export type PushSubscriptionListPin = Assert<
   Pinned<typeof PushSubscriptionList, GeneratedPushSubscriptionList>
 >;
+
+/** A room on the profile's "Rooms you're in" list, with the viewer's notification level. */
+export const RoomMembershipRow = Schema.Struct({
+  roomId: RoomId,
+  name: Schema.String,
+  involvement: Involvement,
+  direct: Schema.Boolean,
+});
+
+export type RoomMembershipRow = typeof RoomMembershipRow.Type;
+
+export type RoomMembershipRowPin = Assert<
+  Pinned<typeof RoomMembershipRow, GeneratedRoomMembershipRow>
+>;
+
+/** A browser that skips the two-step code for 30 days. */
+export const RememberedDevice = Schema.Struct({
+  id: Schema.Int,
+  description: Schema.String,
+  ipAddress: Schema.NullOr(Schema.String),
+  lastUsedAt: Schema.NullOr(Timestamp),
+});
+
+export type RememberedDevicePin = Assert<
+  Pinned<typeof RememberedDevice, GeneratedRememberedDevice>
+>;
+
+/** The two-step sign-in panel: whether it is on, how to confirm, the remembered browsers. */
+export const TwoFactorSettings = Schema.Struct({
+  confirmedAt: Schema.NullOr(Timestamp),
+  google: Schema.Boolean,
+  hasPassword: Schema.Boolean,
+  devices: Schema.Array(RememberedDevice),
+});
+
+export type TwoFactorSettingsPin = Assert<
+  Pinned<typeof TwoFactorSettings, GeneratedTwoFactorSettings>
+>;
+
+/** `GET /api/v1/settings/account`: rooms, two-step sign-in and the sign-in link. */
+export const AccountSettings = Schema.Struct({
+  sharedRooms: Schema.Array(RoomMembershipRow),
+  directRooms: Schema.Array(RoomMembershipRow),
+  twoFactor: Schema.NullOr(TwoFactorSettings),
+  transferUrl: Schema.String,
+});
+
+export type AccountSettings = typeof AccountSettings.Type;
+
+export type AccountSettingsPin = Assert<Pinned<typeof AccountSettings, GeneratedAccountSettings>>;
+
+/** The body of each two-step write: a code or password, or empty after "Confirm with Google". */
+export const Reauthentication = Schema.Struct({ reauth: Schema.String });
+
+export type ReauthenticationPin = Assert<
+  Pinned<typeof Reauthentication, GeneratedReauthentication>
+>;
+
+/** New backup codes, shown once. */
+export const BackupCodes = Schema.Struct({ codes: Schema.Array(Schema.String) });
+
+export type BackupCodesPin = Assert<Pinned<typeof BackupCodes, GeneratedBackupCodes>>;
+
+/** A two-step write that changed the account: the classic notice and the panel as it stands. */
+export const TwoFactorChange = Schema.Struct({
+  notice: Schema.String,
+  twoFactor: TwoFactorSettings,
+});
+
+export type TwoFactorChangePin = Assert<Pinned<typeof TwoFactorChange, GeneratedTwoFactorChange>>;

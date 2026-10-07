@@ -39,7 +39,9 @@ matrix("the settings sections", async ({ page, theme }) => {
   for (const [link, heading, name] of [
     ["Status", "Status", "settings-status"],
     ["Notifications", "Notifications", "settings-notifications"],
+    ["Rooms", "Rooms", "settings-rooms"],
     ["Appearance", "Appearance", "settings-appearance"],
+    ["Security", "Security", "settings-security"],
     ["Sessions", "Sessions", "settings-sessions"],
     ["Push devices", "Push devices", "settings-devices"],
     ["Integrations", "Integrations", "settings-integrations"],
@@ -397,4 +399,117 @@ test("saving one status setting keeps what's typed in the others", async ({ page
 
   await expect(page.getByRole("textbox", { name: "Status text" })).toHaveValue("On the train");
   await expect(page.getByRole("textbox", { name: "Note" })).toHaveValue("Back Monday");
+});
+
+test("a room's notification level changes from the rooms list and stays", async ({ page }) => {
+  await openSettings(page, "rooms");
+
+  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
+  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
+  const label = (await level.getAttribute("aria-label")) ?? "";
+  const room = label.replace(/^Notifications for /, "").replace(/: .*$/, "");
+
+  await level.click();
+  await page.getByRole("menuitemradio", { name: /No notifications/ }).click();
+  await expect(level).toHaveAccessibleName(`Notifications for ${room}: No notifications`);
+
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: `Notifications for ${room}: No notifications` }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".settings-page").getByRole("region", { name: "Direct messages" }),
+  ).toBeVisible();
+});
+
+test("new backup codes ask for a code first, then show once", async ({ page }) => {
+  await openSettings(page, "security");
+
+  await page.getByRole("button", { name: "New backup codes" }).click();
+
+  const ask = page.getByRole("dialog", { name: "New backup codes?" });
+  const field = ask.getByLabel("Authenticator code or password");
+
+  await field.fill("000000");
+  await ask.getByRole("button", { name: "Make new codes" }).click();
+  await expect(
+    ask.getByText("Enter your authenticator code or password to continue."),
+  ).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
+
+  await field.fill("123456");
+  await ask.getByRole("button", { name: "Make new codes" }).click();
+
+  const codes = page.getByRole("dialog", { name: "Your new backup codes" });
+
+  await expect(codes.getByRole("list", { name: "Backup codes" }).getByRole("listitem")).toHaveCount(
+    10,
+  );
+  await codes.getByRole("button", { name: "Done" }).click();
+  await expect(codes).toBeHidden();
+});
+
+test("too many tries are refused in place", async ({ page }) => {
+  await openSettings(page, "security");
+
+  await page.getByRole("button", { name: "Forget all browsers" }).click();
+
+  const ask = page.getByRole("dialog", { name: "Forget every browser?" });
+
+  await ask.getByLabel("Authenticator code or password").fill("limit");
+  await ask.getByRole("button", { name: "Forget all" }).click();
+  await expect(ask.getByText("Too many attempts. Try again in a few minutes.")).toBeVisible();
+});
+
+test("forgetting one remembered browser", async ({ page }) => {
+  await openSettings(page, "security");
+
+  const rows = page.getByRole("region", { name: "Two-step sign-in" }).getByRole("listitem");
+
+  await expect(rows).toHaveCount(2);
+  await rows.first().getByRole("button", { name: "Forget" }).click();
+
+  const ask = page.getByRole("dialog", { name: "Forget this browser?" });
+
+  await ask.getByLabel("Authenticator code or password").fill("123456");
+  await ask.getByRole("button", { name: "Forget" }).click();
+  await expect(
+    page.getByText("Device forgotten. It will ask for a code at next sign-in."),
+  ).toBeVisible();
+  await expect(rows).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Forget all browsers" })).toBeHidden();
+});
+
+test("turning two-step sign-in off goes to the setup page", async ({ page }) => {
+  await page.route("**/two_factor_setup", (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<h1>Set up two-step</h1>" }),
+  );
+  await openSettings(page, "security");
+
+  await page.getByRole("button", { name: "Turn off" }).click();
+
+  const ask = page.getByRole("dialog", { name: "Turn off two-step sign-in?" });
+
+  await ask.getByLabel("Authenticator code or password").fill("123456");
+  await ask.getByRole("button", { name: "Turn off" }).click();
+  await expect(page.getByRole("heading", { name: "Set up two-step" })).toBeVisible();
+});
+
+test("the sign-in link shows its QR code from the classic image", async ({ page }) => {
+  await openSettings(page, "security");
+
+  const link = page.getByRole("region", { name: "Sign in on another device" });
+
+  await expect(link.getByLabel("Your sign-in link")).toHaveValue(/\/session\/transfers\//);
+  await link.getByRole("button", { name: "Show QR code" }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Scan to sign in" }).getByRole("img"),
+  ).toHaveAttribute("src", /^\/qr_code\/[A-Za-z0-9_-]+=*$/);
+});
+
+test("a push device gets a test notification", async ({ page }) => {
+  await openSettings(page, "devices");
+
+  await page.getByRole("button", { name: "Send a test" }).first().click();
+  await expect(page.getByText("Test notification sent")).toBeVisible();
 });

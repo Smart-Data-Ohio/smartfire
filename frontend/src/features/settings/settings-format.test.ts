@@ -10,9 +10,13 @@ import {
   fieldError,
   keywordLines,
   oooSummary,
+  qrCodePath,
+  reauthLabel,
+  rememberedMeta,
   SECTIONS,
   sessionMeta,
   statusExpiry,
+  twoFactorSince,
   withConnection,
   withDependents,
 } from "./settings-format.ts";
@@ -157,5 +161,35 @@ describe("settings words", () => {
     expect(merged.profile.githubLogin).toBeNull();
     expect(merged.status.oooUntil).toBeNull();
     expect(merged.integrations).toBe(next.integrations);
+  });
+
+  it("words the two-step panel as the classic profile does", () => {
+    const now = Date.parse("2026-10-06T12:00:00Z");
+
+    expect(twoFactorSince("2026-07-08T12:00:00Z")).toMatch(/^On since July 8, 2026\.$/);
+    const device = { id: 1, description: "Firefox", ipAddress: null, lastUsedAt: null };
+
+    expect(rememberedMeta(device, now)).toBeNull();
+    expect(rememberedMeta({ ...device, lastUsedAt: "2026-10-06T09:00:00Z" }, now)).toBe(
+      "last used 3 hours ago",
+    );
+    expect(
+      rememberedMeta(
+        { ...device, ipAddress: "203.0.113.9", lastUsedAt: "2026-10-06T09:00:00Z" },
+        now,
+      ),
+    ).toBe("203.0.113.9 · last used 3 hours ago");
+    expect(rememberedMeta({ ...device, ipAddress: "203.0.113.9" }, now)).toBe("203.0.113.9");
+    expect(reauthLabel(true)).toBe("Authenticator code or password");
+    expect(reauthLabel(false)).toBe("Authenticator code");
+  });
+
+  it("points the QR code at the classic image, URL-safe base64 with padding", () => {
+    // Ruby: Base64.urlsafe_encode64("https://a.example/s?x=1>") == "aHR0cHM6Ly9hLmV4YW1wbGUvcz94PTE-"
+    expect(qrCodePath("https://a.example/s?x=1>")).toBe(
+      "/qr_code/aHR0cHM6Ly9hLmV4YW1wbGUvcz94PTE-",
+    );
+    expect(qrCodePath("ab?")).toBe("/qr_code/YWI_");
+    expect(qrCodePath("a")).toBe("/qr_code/YQ==");
   });
 });

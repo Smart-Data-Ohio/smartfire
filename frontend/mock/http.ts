@@ -95,6 +95,12 @@ export const validation = (field: string, message: string) =>
 export const refused = (message: string) =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
 
+const RATE_LIMITED: ApiError["_tag"] = "RateLimited";
+
+/** 429 `RateLimited` with the classic alert (`retryAfter` 0: the classic limit names no time). */
+export const rateLimited = (message: string) =>
+  new HttpError(429, { _tag: RATE_LIMITED, message, retryAfter: 0 });
+
 /** The query string of a request, from `query` or the path's own `?…`. */
 export function queryOf(request: MockRequest): URLSearchParams {
   const inline = request.path.includes("?") ? request.path.slice(request.path.indexOf("?")) : "";
