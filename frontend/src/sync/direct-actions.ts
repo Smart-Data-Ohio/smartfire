@@ -7,6 +7,7 @@ import { Clock, Effect } from "effect";
 import * as api from "../api/direct-endpoints.ts";
 import type { RoomDetail, SidebarRow } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
+import { invalidateRoom } from "./room-refresh.ts";
 
 /** Upserts `row` through the same reducer the `sidebar.row.upserted` event uses. */
 const upsertRow = Effect.fn("directs.upsertRow")(function* (row: SidebarRow) {
@@ -33,6 +34,8 @@ const landDetail = Effect.fn("directs.landDetail")(function* (detail: RoomDetail
       directMemberIds: detail.directMemberIds,
     });
   }
+
+  invalidateRoom(detail.room.id);
 
   return detail;
 });

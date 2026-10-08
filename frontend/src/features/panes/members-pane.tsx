@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MemberList } from "../../gen/MemberList.ts";
 import { useStore } from "../../store/store.ts";
 import { directs } from "../../sync/directs.ts";
@@ -78,22 +78,37 @@ export function MembersPane({ roomId }: { readonly roomId: number }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [query, setQuery] = useState("");
   const [stars, setStars] = useState<Readonly<Record<number, boolean>>>({});
+  const requestId = useRef(0);
   const users = useStore((state) => state.users);
   const presence = useStore((state) => state.presence);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
 
   const reload = useCallback(() => {
+    const request = ++requestId.current;
+
     setLoad({ status: "loading" });
     panes.members(roomId).then(
       (list) => {
+        if (request !== requestId.current) return;
+
         setStars({});
         setLoad({ status: "ready", list });
       },
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (error: Error) => {
+        if (request === requestId.current) setLoad({ status: "error", message: error.message });
+      },
     );
   }, [roomId]);
 
-  useEffect(reload, [reload]);
+  useEffect(() => {
+    reload();
+    const unsubscribe = panes.onRoomRefresh(roomId, reload);
+
+    return () => {
+      requestId.current++;
+      unsubscribe();
+    };
+  }, [reload, roomId]);
 
   const star = (member: MemberEntry) => {
     const next = !member.starred;

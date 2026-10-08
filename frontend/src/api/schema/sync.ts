@@ -11,6 +11,7 @@ import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents
 import { BoardAutomationsChanged } from "./board-automations.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
+import { EventsChanged } from "./events.ts";
 import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
@@ -95,6 +96,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({ type: Schema.Literal("events.changed"), data: EventsChanged }),
   Schema.Struct({ type: Schema.Literal("agent.status"), data: AgentStatusChanged }),
   Schema.Struct({ type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
   Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
@@ -185,6 +187,7 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("events.changed"), data: EventsChanged }),
   Schema.Struct({
     ...eventFields,
     type: Schema.Literal("agent.status"),

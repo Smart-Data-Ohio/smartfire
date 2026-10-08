@@ -23,6 +23,7 @@ pub mod involvements;
 pub mod members;
 pub mod message_links;
 pub mod opens;
+pub mod operations;
 pub mod pins;
 pub mod polls;
 pub mod reads;
@@ -154,20 +155,7 @@ pub async fn destroy_without_room(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
-    let destroyed = room.clone();
-    c.app()
-        .db
-        .write(move |tx| destroyed.begin_destroy(tx))
-        .await
-        .map_err(db_error)?;
-    audit_room(
-        c,
-        &room,
-        "room.destroy",
-        serde_json::json!({"name": room.name}),
-    )
-    .await?;
-    c.app().broadcasts.room_remove(&room);
+    destroy_operation(c, &room).await?;
     match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
         f if *f == campfire_kit::format::JSON => c.json(
             StatusCode::OK,
@@ -191,6 +179,25 @@ pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
     }
 }
 
+pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
+    if room.voice() || room.stage() { return call_channels::destroy_operation(c, room).await; }
+    let destroyed = room.clone();
+    c.app()
+        .db
+        .write(move |tx| destroyed.begin_destroy(tx))
+        .await
+        .map_err(db_error)?;
+    audit_room(
+        c,
+        room,
+        "room.destroy",
+        serde_json::json!({"name": room.name}),
+    )
+    .await?;
+    c.app().broadcasts.room_remove(room);
+    Ok(())
+}
+
 pub async fn leave(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
@@ -198,6 +205,17 @@ pub async fn leave(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn leave_room(c: &mut Ctx, room: Room) -> Result {
+    leave_operation(c, &room).await?;
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => c.json(
+            StatusCode::OK,
+            &serde_json::json!({"left":true,"room_id":room.id}),
+        ),
+        _ => c.redirect_to(&c.url_for(&campfire_routes::root())),
+    }
+}
+
+pub async fn leave_operation(c: &Ctx, room: &Room) -> Result<bool> {
     let user = require_current_user(c)?.clone();
     let left = room.clone();
     let destroyed = c
@@ -220,28 +238,22 @@ pub(crate) async fn leave_room(c: &mut Ctx, room: Room) -> Result {
     if destroyed {
         audit_room(
             c,
-            &room,
+            room,
             "room.destroy",
             serde_json::json!({"name":room.name}),
         )
         .await?;
-        c.app().broadcasts.room_remove(&room);
+        c.app().broadcasts.room_remove(room);
     } else {
         audit_room(
             c,
-            &room,
+            room,
             "room.membership.change",
             serde_json::json!({"revoked":[require_current_user(c)?.name]}),
         )
         .await?;
     }
-    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
-        f if *f == campfire_kit::format::JSON => c.json(
-            StatusCode::OK,
-            &serde_json::json!({"left":true,"room_id":room.id}),
-        ),
-        _ => c.redirect_to(&c.url_for(&campfire_routes::root())),
-    }
+    Ok(destroyed)
 }
 
 // --- Shared before-actions ----------------------------------------------------------------------

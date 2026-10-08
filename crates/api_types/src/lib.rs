@@ -28,6 +28,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod events;
 mod fizzy;
 mod huddle;
 mod me;
@@ -39,6 +40,7 @@ mod presence;
 mod reaction;
 mod read;
 mod room;
+mod room_management;
 mod saved;
 mod search;
 mod settings;
@@ -111,6 +113,11 @@ pub use direct::{
 };
 pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};
+pub use events::{
+    CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,
+    EventLimits, EventList, EventRecurrenceRule, EventRepeatOption, EventScope, EventValues,
+    EventVenue, EventVenueOption, EventsChanged, UpdateEvent,
+};
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
@@ -134,6 +141,7 @@ pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
 pub use room::{Involvement, Membership, Room, RoomDetail, RoomKind, StageRole, UnreadDivider};
+pub use room_management::{CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom};
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{
     RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,

@@ -4,7 +4,7 @@ import type { VoiceMode } from "./VoiceMode";
 /**
  * `PATCH /api/v1/settings/calls`.
  */
-export type UpdateCalls = { voiceMode: VoiceMode | null, 
+export type UpdateCalls = { voiceMode: VoiceMode | null,
 /**
  * Up to 20 characters; `""` restores the default.
  */

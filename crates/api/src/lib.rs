@@ -26,6 +26,7 @@ mod cursor;
 pub mod directory;
 mod dto;
 pub mod endpoints;
+pub mod events;
 mod error;
 pub mod admin;
 pub mod bots;
@@ -34,6 +35,7 @@ pub mod board_automations;
 pub mod huddles;
 pub mod message_actions;
 pub mod organize;
+pub mod room_management;
 pub mod people;
 pub mod search;
 pub mod settings;
@@ -88,7 +90,11 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(fizzy::create)),
         )
         .route("/api/v1/sidebar", get(action(endpoints::sidebar)))
-        .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)))
+        .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
+        .route("/api/v1/rooms/new", get(action(room_management::new)))
+        .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))
+        .route("/api/v1/rooms/{room_id}/membership", delete(action(room_management::leave)))
+        .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)).patch(unparsed_action(room_management::update)).delete(action(room_management::destroy)))
         .route(
             "/api/v1/rooms/{room_id}/messages",
             get(action(endpoints::messages)).post(unparsed_action(endpoints::create_message)),
@@ -179,6 +185,26 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route(
             "/api/v1/rooms/{room_id}/polls/{poll_id}/vote",
             post(unparsed_action(cards::vote)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events",
+            get(action(events::index)).post(unparsed_action(events::create)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/new",
+            get(action(events::new)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/{event_id}",
+            get(action(events::show)).patch(unparsed_action(events::update)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/{event_id}/edit",
+            get(action(events::edit)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/events/{event_id}/cancel",
+            patch(unparsed_action(events::cancel)),
         )
         .route(
             "/api/v1/rooms/{room_id}/events/{event_id}/attendance",

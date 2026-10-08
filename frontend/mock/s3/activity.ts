@@ -12,6 +12,7 @@ import type { ActivityList } from "../../src/gen/ActivityList.ts";
 import type { ActivitySource } from "../../src/gen/ActivitySource.ts";
 import type { ActivityState } from "../../src/gen/ActivityState.ts";
 import type { ActivityTab } from "../../src/gen/ActivityTab.ts";
+import type { ActivityUnreadCount } from "../../src/gen/ActivityUnreadCount.ts";
 import { notFound, ok, validation } from "../http.ts";
 import { type Json, stringField } from "../json.ts";
 import type { ScheduledHooks } from "../s2/composer.ts";
@@ -134,6 +135,11 @@ export function createActivity(ctx: S2Context): Activity {
     return count;
   };
 
+  const unreadSnapshot = (): ActivityUnreadCount => ({
+    unreadCount: unreadCount(),
+    unreadRevision: ctx.world().activityRevision,
+  });
+
   const itemOr404 = (id: number): ActivityItem => {
     const item = items().get(id);
 
@@ -143,7 +149,7 @@ export function createActivity(ctx: S2Context): Activity {
   };
 
   const publish = (item: ActivityItem) => {
-    const data: ActivityItemChanged = { item, unreadCount: unreadCount() };
+    const data: ActivityItemChanged = { item, ...unreadSnapshot() };
 
     ctx.publish([{ topic: "user", type: "activity.item", data }]);
   };
@@ -169,7 +175,7 @@ export function createActivity(ctx: S2Context): Activity {
     return {
       items: [...page.rows],
       users: ctx.usersFor(creators),
-      unreadCount: unreadCount(),
+      ...unreadSnapshot(),
       nextCursor: page.nextCursor,
     };
   };
@@ -180,10 +186,11 @@ export function createActivity(ctx: S2Context): Activity {
 
     if (next !== current) {
       items().set(id, next);
+      ctx.world().activityRevision++;
       publish(next);
     }
 
-    return { item: next, unreadCount: unreadCount() };
+    return { item: next, ...unreadSnapshot() };
   };
 
   const record = (draft: ActivityDraft): ActivityItem => {
@@ -219,6 +226,7 @@ export function createActivity(ctx: S2Context): Activity {
           };
 
     items().set(item.id, item);
+    world.activityRevision++;
     publish(item);
 
     return item;
@@ -229,11 +237,12 @@ export function createActivity(ctx: S2Context): Activity {
       if (!matches(item)) continue;
 
       items().delete(item.id);
+      ctx.world().activityRevision++;
       ctx.publish([
         {
           topic: "user",
           type: "activity.removed",
-          data: { id: item.id, unreadCount: unreadCount() },
+          data: { id: item.id, ...unreadSnapshot() },
         },
       ]);
     }
@@ -242,7 +251,7 @@ export function createActivity(ctx: S2Context): Activity {
   return {
     routes: [
       route("GET", /^\/activity$/, (request) => ok(list(request.query))),
-      route("GET", /^\/activity\/unread_count$/, () => ok({ unreadCount: unreadCount() })),
+      route("GET", /^\/activity\/unread_count$/, () => ok(unreadSnapshot())),
       route("PATCH", /^\/activity\/(\d+)$/, (request) => {
         const id = firstId(request);
 

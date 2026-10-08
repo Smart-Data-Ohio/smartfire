@@ -880,6 +880,7 @@ fn sidebar_row_with(
         direct_member_ids,
         unread_count,
         mention_count,
+        refresh_room: None,
     })
 }
 

@@ -120,9 +120,9 @@ no app translations; `TranslationsHelper` and Rails' English date-helper default
 
 ## Worked examples
 
-1. **PWA manifest:** `pwa::Manifest` carries the account name, both logo paths, base URL and
-   asset resolver. `templates/pwa/manifest.json` mirrors the ERB interpolation and text.
-   `pwa_endpoints_match_rails` compares the endpoint body with Rails' actual HTTP response;
+1. **PWA manifest (now owned by `crates/spa`):** `campfire_spa::pwa::Manifest` carries the account name, both logo paths, base URL and
+   asset resolver. `crates/spa/templates/pwa/manifest.json` mirrors the ERB interpolation and text.
+   `pwa_endpoints_match_recorded_rails_before_and_after_first_run` compares the endpoint body with Rails' actual HTTP response;
    it also compares the service worker's complete source bytes. These are the two smallest
    endpoint examples, with no database types in the templates.
 2. **Multi-select bar:** `shared::MultiSelectBar { exit_button }` ports the actual shared form.

@@ -154,6 +154,14 @@ describe("saved item changes", () => {
       }),
     );
 
+    const removed = events.find(
+      (event) => event.type === "activity.removed" && event.data.id === reminder?.item.id,
+    );
+
+    expect(removed?.type === "activity.removed" ? removed.data.unreadRevision : null).toBe(
+      (reminder?.unreadRevision ?? 0) + 1,
+    );
+
     const reminders = await get<ActivityList>(
       server,
       "/api/v1/activity?status=unread&type=reminders",

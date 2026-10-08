@@ -78,7 +78,9 @@ import {
 import { createHuddles } from "./s5/huddles.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
+import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
+import { createRoomManagement } from "./s8/rooms.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -131,6 +133,7 @@ export const SEED_IDS = {
   },
   cards: CARD_IDS,
   boards: { roomId: BOARD_ROOM_ID, posts: BOARD_POST_IDS },
+  events: EVENT_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -153,6 +156,11 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /**
+   * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
+   * without its CSRF token, which the meta tag carries), escaped for a script element.
+   */
+  inlineBoot(): string;
   /** Stops the ambient simulation (the bot still answers). */
   pause(): void;
   resume(): void;
@@ -249,7 +257,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const roomOr404 = (roomId: number): RoomRecord => {
     const record = world.rooms.get(roomId);
 
-    if (record === undefined || record.membership.involvement === "invisible") {
+    if (record === undefined || !record.memberIds.includes(VIEWER_ID)) {
       throw notFound("Room not found");
     }
 
@@ -310,7 +318,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const sidebarRow = (record: RoomRecord): SidebarRow => ({
-    room: record.room,
+    room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
     membership: record.membership,
     displayName: displayName(record),
     directMemberIds: directMemberIds(record),
@@ -320,7 +328,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const visibleRooms = (): RoomRecord[] =>
     [...world.rooms.values()]
-      .filter((record) => record.membership.involvement !== "invisible")
+      .filter(
+        (record) =>
+          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
+      )
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
@@ -336,8 +347,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
       account: { name: "Smart Data" },
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       cableUrl: "/cable",
       serviceWorkerUrl: null,
       version: "mock",
@@ -350,8 +360,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
@@ -402,7 +411,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const preview = record.memberIds.slice(0, 5);
 
     return {
-      room: record.room,
+      room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
       memberCount: record.memberIds.length,
@@ -692,6 +701,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
+  // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
+  const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
   const boards = createBoards(ctx, threads, uploads);
   const activity = createActivity(ctx);
@@ -708,10 +719,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   );
 
   const huddles = createHuddles(ctx, simulate);
-  const cards = createCards(ctx);
+  const events = createEvents(ctx);
+  const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);
 
   const routes = [
+    ...createRoomManagement(ctx, admin, huddles).routes,
+    ...events.routes,
     ...huddles.routes,
     ...cards.routes,
     ...fizzy.routes,
@@ -724,7 +738,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...settings.routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...createPeople(ctx, admin.requireSudo).routes,
@@ -1036,6 +1050,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    inlineBoot: () => {
+      const { csrfToken: _meta, ...inline } = boot();
+
+      return JSON.stringify(inline).replaceAll("<", "\\u003c");
+    },
     pause: () => simulation.pause(),
     resume: () => simulation.resume(),
     typing,

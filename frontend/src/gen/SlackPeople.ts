@@ -3,11 +3,11 @@
 /**
  * The people a run found in Slack.
  */
-export type SlackPeople = { total: number, 
+export type SlackPeople = { total: number,
 /**
  * Matched to an account here by email.
  */
-matched: number, 
+matched: number,
 /**
  * Given a claimable placeholder account.
  */

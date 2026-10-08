@@ -4,7 +4,7 @@
  * A bot's key, shown once: the answer to a new bot and to `PUT .../key` (a new key; the
  * old one stops working).
  */
-export type BotKey = { id: number, name: string, key: string, 
+export type BotKey = { id: number, name: string, key: string,
 /**
  * `curl -d 'Hello!' <url>`, `ROOM_ID` standing for the room.
  */

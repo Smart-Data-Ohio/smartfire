@@ -2,6 +2,7 @@
 //! the board opener caller may bypass the source check after authorizing its roster.
 use crate::{ActivityItem, Error, Result, Tx, User, WorkThreadEvent};
 use rusqlite::params;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ActivitySource {
@@ -99,7 +100,8 @@ impl ActivityItem {
         Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
     }
 
-    /// Batch source authorization and active-human facts in this writer transaction.
+    /// Batch source authorization, active-human facts and ungrouped items in this
+    /// writer transaction.
     /// Returned items follow the requested recipient order, including idempotent repeats.
     /// Owning-domain writers keep their own callback/failure boundaries.
     pub fn record_source_for_recipients(
@@ -115,17 +117,84 @@ impl ActivityItem {
         let users = User::where_ids(tx.conn(), recipient_ids)?
             .into_iter()
             .map(|user| (user.id, user))
-            .collect::<std::collections::HashMap<_, _>>();
+            .collect::<HashMap<_, _>>();
+        let recipients = recipient_ids
+            .iter()
+            .filter_map(|id| users.get(id))
+            .filter(|user| Self::can_record_for_recipient(user, &facts, authorization))
+            .collect::<Vec<_>>();
+        // Grouped thread items still need each recipient's current unhandled row.
+        if facts.thread_id.is_none()
+            || !matches!(facts.source_type, "Message" | "WorkThreadEvent")
+            || !matches!(event_type.as_str(), "thread_activity" | "work_update")
+        {
+            return Self::record_ungrouped_for_recipients(tx, &recipients, &facts, event_type);
+        }
         let mut items = Vec::new();
-        for id in recipient_ids {
-            if let Some(user) = users.get(id)
-                && let Some(item) =
-                    Self::record_with_facts(tx, user, &facts, event_type, authorization)?
+        for user in recipients {
+            if let Some(item) =
+                Self::record_with_facts(tx, user, &facts, event_type, authorization)?
             {
                 items.push(item);
             }
         }
         Ok(items)
+    }
+
+    fn record_ungrouped_for_recipients(
+        tx: &mut Tx<'_>,
+        recipients: &[&User],
+        facts: &super::ActivityRecordingFacts,
+        event_type: super::ActivityEventType,
+    ) -> Result<Vec<Self>> {
+        if recipients.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows = serde_json::json!(
+            recipients.iter()
+                .map(|user| (user.id, tx.now().to_db(), tx.now().to_db()))
+                .collect::<Vec<_>>()
+        ).to_string();
+        let mut inserted = crate::sql::query_all(
+            tx.conn(),
+            "INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) SELECT json_extract(value,'$[0]'),?2,?3,?4,json_extract(value,'$[1]'),json_extract(value,'$[2]') FROM json_each(?1) WHERE true ORDER BY key ON CONFLICT(user_id,source_type,source_id) DO NOTHING RETURNING user_id",
+            params![rows, facts.source_type, facts.source_id, event_type.as_str()],
+            |row| row.get::<_, i64>(0),
+        )?
+        .into_iter()
+        .collect::<HashSet<_>>();
+        let saved = crate::sql::query_all(
+            tx.conn(),
+            "SELECT * FROM activity_items WHERE source_type=?2 AND source_id=?3 AND user_id IN (SELECT json_extract(value,'$[0]') FROM json_each(?1))",
+            params![rows, facts.source_type, facts.source_id],
+            Self::from_row,
+        )?
+        .into_iter()
+        .map(|item| (item.user_id, item))
+        .collect::<HashMap<_, _>>();
+        let mut items = Vec::with_capacity(recipients.len());
+        for user in recipients {
+            let item = saved
+                .get(&user.id)
+                .ok_or(Error::RecordNotFound("ActivityItem"))?;
+            if inserted.remove(&user.id) {
+                Self::broadcast_item_for_user(tx, user, item)?;
+            }
+            items.push(item.clone());
+        }
+        Ok(items)
+    }
+
+    fn can_record_for_recipient(
+        user: &User,
+        facts: &super::ActivityRecordingFacts,
+        authorization: super::SourceAuthorization,
+    ) -> bool {
+        user.is_active()
+            && !user.is_bot()
+            && facts.creator_id != Some(user.id)
+            && (authorization == super::SourceAuthorization::CallerAuthorized
+                || facts.recipient_ids.contains(&user.id))
     }
 
     fn record_for_current_recipient(
@@ -148,12 +217,7 @@ impl ActivityItem {
         event_type: super::ActivityEventType,
         authorization: super::SourceAuthorization,
     ) -> Result<Option<Self>> {
-        if !user.is_active()
-            || user.is_bot()
-            || facts.creator_id == Some(user.id)
-            || (authorization == super::SourceAuthorization::SourceRecipients
-                && !facts.recipient_ids.contains(&user.id))
-        {
+        if !Self::can_record_for_recipient(user, facts, authorization) {
             return Ok(None);
         }
         // Only these two Rails classes participate in grouping, even for custom readers.

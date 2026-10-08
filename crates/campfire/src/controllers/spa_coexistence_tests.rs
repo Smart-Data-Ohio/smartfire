@@ -158,6 +158,10 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
             format!("/rooms/{room}?message_id=9"),
             format!("/app/r/{room}?message_id=9"),
         ),
+        (
+            format!("/rooms/{room}/events"),
+            format!("/app/r/{room}/events"),
+        ),
     ] {
         let reply = david.get(&classic).await;
         assert_eq!(reply.status, StatusCode::FOUND, "{classic}");
@@ -175,6 +179,63 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
     let mut jason = a.sign_in(JASON).await;
     let page = jason.get(&format!("/rooms/{room}")).await;
     assert!(!redirected_to_spa(&page), "{:?}", page.location());
+}
+
+// The composer opens the `/event` command's classic URL in a new tab. For someone on the new
+// UI that lands on the SPA's new-event form with the command's query intact: Rails' sorted,
+// form-encoded `event[...]` keys, of which the form's prefill (`newEventPrefill`) reads
+// `event[title]` and `event[starts_at]` (an ISO time in UTC).
+#[tokio::test]
+async fn the_event_commands_link_opens_the_spa_form_with_its_prefill() {
+    let a = enabled()
+        .await
+        .expect("the default frozen seed is required");
+    let room = crate::controllers::presenters::test_support::ALL_TALK;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david
+        .write(super::api_tests::json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/slash_commands"),
+            &serde_json::json!({"text": "/event Launch party tomorrow at 3pm", "threadId": null}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let campfire_api_types::SlashCommandResult::OpenUrl { url } = super::api_tests::parse(&reply)
+    else {
+        panic!("/event opens a URL: {}", reply.text())
+    };
+    let query = url
+        .strip_prefix(&format!("/rooms/{room}/events/new?"))
+        .unwrap_or_else(|| panic!("the classic new-event URL with a query: {url}"));
+
+    let classic = david.get(&url).await;
+    assert_eq!(classic.status, StatusCode::FOUND, "{url}");
+    assert_eq!(
+        classic.location(),
+        Some(to(&format!("/app/r/{room}/events/new?{query}")).as_str())
+    );
+    let pairs: Vec<(&str, &str)> = query
+        .split('&')
+        .map(|pair| pair.split_once('=').expect("a key and a value"))
+        .collect();
+    let keys: Vec<&str> = pairs.iter().map(|(key, _)| *key).collect();
+    assert_eq!(
+        keys,
+        [
+            "event%5Bstarts_at%5D",
+            "event%5Btime_zone%5D",
+            "event%5Btitle%5D"
+        ]
+    );
+    assert_eq!(pairs[2].1, "Launch+party");
+    let starts_at = pairs[0].1.replace("%3A", ":");
+    assert!(
+        starts_at.len() == "2026-03-03T20:00:00Z".len()
+            && starts_at.ends_with('Z')
+            && starts_at.as_bytes()[10] == b'T',
+        "{starts_at}"
+    );
 }
 
 #[tokio::test]
@@ -385,11 +446,11 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, &room_path).header("turbo-frame", "messages"),
         Req::new(Method::GET, &room_path).header("x-requested-with", "XMLHttpRequest"),
         Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
+        Req::new(Method::GET, &format!("{room_path}/events")).header("accept", "application/json"),
         // Unported pages, and paths a ported pattern doesn't cover.
         Req::new(Method::GET, "/users/7/profile"),
         Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
-        Req::new(Method::GET, &format!("{room_path}/events")),
         Req::new(Method::GET, &format!("{room_path}/messages")),
     ];
     for request in requests {

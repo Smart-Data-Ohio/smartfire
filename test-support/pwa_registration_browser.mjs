@@ -1,7 +1,8 @@
 // Real Rust pages, vendored Turbo/classic overrides and the production SPA entry.
-// The Rust test owns the private seed/server; registration always comes from application code.
+// The Rust test owns the private seed/server. After seeding a legacy registration,
+// sign-in and UI switches reconcile it through application code.
 import assert from "node:assert/strict"
-import { createHmac } from "node:crypto"
+import { createHmac, ECDH } from "node:crypto"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
@@ -36,7 +37,7 @@ try {
   const disabledPage = await disabled.newPage()
   await disabledPage.goto(`${origin}/session/new`, { waitUntil: "load" })
   assert.equal(await disabledPage.getAttribute("html", "data-service-worker"), "false")
-  assert.equal(await disabledPage.locator('meta[name="service-worker-url"]').getAttribute("content"), "/app/service-worker.js")
+  assert.equal(await disabledPage.locator('meta[name="service-worker-url"]').getAttribute("content"), "/service-worker.js")
   assert.equal(await disabledPage.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), 0)
   await disabled.close()
   await browser.close()
@@ -105,13 +106,13 @@ try {
     })
   }
 
-  await page.goto(`${origin}/session/new`)
-  assert.equal(await page.locator('meta[name="service-worker-url"]').getAttribute("content"), "/app/service-worker.js")
-  await activeWorker("/app/service-worker.js")
-  await page.evaluate(() => {
-    window.pwaOriginalDocument = document.documentElement
+  // A legacy SPA bundle used the /app script at the same root scope. Seed that registration
+  // before application startup to prove the canonical update preserves its native identity.
+  await page.goto(`${origin}/offline.html`)
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/app/service-worker.js", { scope: "/", updateViaCache: "none" })
   })
-
+  await activeWorker("/app/service-worker.js")
   // This is an explicit test subscription, using the application's real VAPID key and browser API.
   // Record any native failure exactly; an unsuccessful attempt never proves subscription survival.
   const enrollment = await page.evaluate(async (encoded) => {
@@ -172,6 +173,22 @@ try {
       process.env.PWA_ALLOW_PUSH_UNAVAILABLE === "1",
       `Chromium could not create a push subscription, so preservation is unproven: ${JSON.stringify(enrollment)}`,
     )
+    // Only a missing push service may be skipped: a hang, no push support, or Chromium's
+    // connection/push service errors. Chromium also reports a rejected key as a push service
+    // error, so that one counts only for a key that is a valid uncompressed P-256 point.
+    let validKey = false
+    try {
+      const key = Buffer.from(process.env.PWA_BROWSER_VAPID_KEY ?? "", "base64url")
+      validKey = key.length === 65 && key[0] === 4
+        && ECDH.convertKey(key, "prime256v1", undefined, undefined, "uncompressed").equals(key)
+    } catch {
+      validKey = false
+    }
+    const unavailable = enrollment.name === "Pending"
+      || enrollment.name === "NotSupportedError"
+      || (enrollment.name === "AbortError" && enrollment.message === "Registration failed - could not connect to push server")
+      || (enrollment.name === "AbortError" && enrollment.message === "Registration failed - push service error" && validKey)
+    assert.ok(unavailable, `push subscription failed for a reason other than a missing push service: ${JSON.stringify(enrollment)}`)
     await activeWorker("/app/service-worker.js")
     console.log(`PWA_PUSH_PRESERVATION_SKIPPED ${JSON.stringify(enrollment)}`)
   }
@@ -189,10 +206,20 @@ try {
     assert.deepEqual(current, initialSubscription, message)
   }
 
+  await page.goto(`${origin}/session/new`)
+  assert.equal(await page.locator('meta[name="service-worker-url"]').getAttribute("content"), "/service-worker.js")
+  await activeWorker("/service-worker.js")
+  assert.equal(registrationIds.size, 1, "canonical update keeps the legacy root registration identity")
+  assert.equal(deletedIds.size, 0, "canonical update never deletes the legacy root registration")
+  await assertPreserved("canonical worker update preserves the legacy subscription")
+  await page.evaluate(() => {
+    window.pwaOriginalDocument = document.documentElement
+  })
+
   // Password sign-in is a plain form submission: the auth pages have no Turbo, so the page it
   // lands on (a classic page, or two-step setup, itself an auth page) loads afresh. Its head
-  // names the worker for the stored classic choice, replacing the signed-out next default, and
-  // its load registers that script over the same root registration.
+  // keeps the canonical root worker for the stored classic choice, and
+  // its load reconciles that script over the same root registration.
   await page.locator('input[name="email_address"]').fill(process.env.PWA_BROWSER_EMAIL)
   await page.locator('input[name="password"]').fill("secret123456")
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
@@ -221,7 +248,7 @@ try {
   await page.getByRole("button", { name: "Try the new Smartfire", exact: true }).click()
   await page.waitForURL((url) => url.pathname.startsWith("/app/"))
   await page.getByRole("button", { name: "Your account", exact: true }).waitFor()
-  await activeWorker("/app/service-worker.js")
+  await activeWorker("/service-worker.js")
   await assertPreserved("classic to SPA preserves endpoint and keys")
 
   await page.getByRole("button", { name: "Your account", exact: true }).click()
@@ -232,7 +259,7 @@ try {
   assert.equal(registrationIds.size, 1, "Chromium's root registration identity survives every script swap")
   assert.equal(deletedIds.size, 0, "application code never deletes the root registration")
   console.log(`PWA_REGISTRATION_RECEIPT ${JSON.stringify({
-    scripts: ["/app/service-worker.js", "/service-worker.js", "/app/service-worker.js", "/service-worker.js"],
+    scripts: ["/app/service-worker.js", "/service-worker.js", "/service-worker.js", "/service-worker.js"],
     rootRegistrationIds: [...registrationIds],
     subscription: skipPreservation ? "preservation-skipped-push-unavailable" : "endpoint-and-keys-preserved",
     enrollment: enrollment.subscribed ? { subscribed: true, before: enrollment.before, after: enrollment.after } : enrollment,

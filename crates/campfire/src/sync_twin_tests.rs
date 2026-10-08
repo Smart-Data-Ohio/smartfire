@@ -27,6 +27,7 @@ const PRIMITIVES: &[&str] = &[
     "sync_agent_steps",
     "sync_approval",
     "sync_poll",
+    "sync_events_changed",
     "sync_message_cards",
     "turbo",
     "append",

@@ -234,11 +234,13 @@ describe("Create Fizzy card", () => {
     expect(screen.queryByLabelText("Board")).toBeNull();
   });
 
-  it("links the card a failed reply left behind, and only offers to close", async () => {
+  it.each([
+    ["the source thread became locked", "This thread is locked"],
+    ["saving the local reply failed", "A local error prevented posting the reply"],
+    ["reply validation failed", "Body is too long"],
+  ])("links the card when %s, and never submits it again", async (_case, details) => {
     const user = userEvent.setup();
-
-    const message =
-      "Fizzy card #580 created, but the reply could not be posted (Body is too long).";
+    const message = `Fizzy card #580 created, but the reply could not be posted (${details}).`;
 
     const { sent, closes } = await mount({
       create: async () => {
@@ -254,7 +256,12 @@ describe("Create Fizzy card", () => {
       },
     });
 
-    await user.selectOptions(await screen.findByLabelText("Board"), "engineering");
+    const board = await screen.findByLabelText("Board");
+    const formElement = board.closest("form");
+
+    if (!(formElement instanceof HTMLFormElement)) throw new Error("the fields have no form");
+
+    await user.selectOptions(board, "engineering");
     await user.click(screen.getByRole("button", { name: "Create card" }));
 
     expect(await screen.findByText(message)).toBeTruthy();
@@ -263,6 +270,11 @@ describe("Create Fizzy card", () => {
     );
     expect(screen.queryByRole("button", { name: "Create card" })).toBeNull();
 
+    // The fields stay in the DOM to preserve what was sent. A stale Enter/requestSubmit must not
+    // create the external card a second time after the response says it already exists.
+    await act(() => formElement.requestSubmit());
+    expect(sent).toHaveLength(1);
+
     const close = within(dialog()).getAllByRole("button", { name: "Close" }).at(-1);
 
     if (close === undefined) throw new Error("the dialog has no Close button");
@@ -270,7 +282,6 @@ describe("Create Fizzy card", () => {
     await waitFor(() => expect(document.activeElement).toBe(close));
     await user.click(close);
     expect(closes()).toBe(1);
-    expect(sent).toHaveLength(1);
   });
 
   it("says when the form can't load, and reads it again on request", async () => {

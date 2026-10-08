@@ -128,7 +128,7 @@ Each group lists every declaration it covers, paired with its endpoint. These ar
 - No screen-map row was added and no existing row or ported flag changed. Existing `/work` remains unported; conditional board-room fallback remains in the room route.
 - `/users` and `/users/:id` map to `/app/people` and `/app/people/:id` since #329, so `/users/:id` push clicks open the person page. Bot/agent profiles retain the requested classic decision until PR #320 lands.
 - Slack issues are **already ported here**: the classic administrator run page `/account/slack_import/runs/:id?page=N` is the `accounts/slack_import_runs#show` row, routed to `/app/admin/slack/runs/:id?page=N`. `frontend/src/features/slack/slack-run.tsx:326` implements issues with “Older issues” pagination, and the run router validates `page`. There is no separate classic issue-page GET declaration. The administrator and personal `/status` endpoints remain classic polling fragments and are grouped above; they do not need screen rows. No Slack behavior was changed by this audit.
-- `classicToSpaUrl(path, origin)` reads the same generated screen map through `spaUrlFor`; it maps only ported same-origin paths and appends the original parsed query and fragment without URLSearchParams rewriting. It returns null for unported/unknown/foreign/malformed paths, so the worker can keep them as given. Existing regular classic-link mapping still removes the `classic` parameter as before.
+- Notification clicks preserve the payload's path, query and fragment. Server aliases consult the same screen map and honor the person's effective UI; the worker does not rewrite destinations. Regular classic-link mapping still removes the `classic` parameter as before.
 
 ## Gaps (undecided)
 

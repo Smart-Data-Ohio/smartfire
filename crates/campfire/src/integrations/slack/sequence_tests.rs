@@ -71,9 +71,18 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                 .query_map([], |row| {
                     let mut value = json!({});
                     for (i, column) in columns.iter().enumerate() {
+                        // The API's per-attempt creation key is port-only; Slack imports leave it null.
                         if crate::controllers::presenters::test_support::rust_only_column(
                             table, column,
                         ) {
+                            assert!(
+                                matches!(row.get::<_, SqlValue>(i)?, SqlValue::Null),
+                                "Slack imports never set API creation keys"
+                            );
+                            continue;
+                        }
+                        // Port-only counter for the SPA activity badge that Rails doesn't have.
+                        if table == "users" && column == "activity_revision" {
                             continue;
                         }
                         let v = match row.get::<_, SqlValue>(i)? {

@@ -3,7 +3,7 @@
 /**
  * A room on the profile that the viewer is also a member of.
  */
-export type AgentProfileRoom = { roomId: number, 
+export type AgentProfileRoom = { roomId: number,
 /**
  * The viewer-relative name (`room_display_name`).
  */
