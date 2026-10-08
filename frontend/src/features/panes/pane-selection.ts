@@ -58,6 +58,7 @@ export function paneRoute(
       return "/r/$roomId/pins";
     case "members":
     case "stage":
+    case "details":
       return null;
   }
 }
@@ -100,4 +101,5 @@ export const PANE_TITLES = {
   files: "Files",
   threads: "Threads",
   stage: "Stage",
+  details: "Details",
 } as const satisfies Record<PaneKind, string>;

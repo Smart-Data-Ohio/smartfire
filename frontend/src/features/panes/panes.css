@@ -132,28 +132,24 @@
     min-height: 0;
   }
 
+  /* A PageHeader: tighter than a page's, so the tools sit closer, under the content above. */
   .pane-header {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-1);
-    height: var(--pane-header-height);
-    padding: 0 var(--space-2) 0 var(--space-4);
-    box-shadow: 0 1px 0 var(--border);
     z-index: 1;
   }
 
-  .pane-header[data-back] {
-    padding-left: var(--space-2);
-  }
+  @media (width >= 720px) {
+    .pane-header {
+      gap: var(--space-1);
+      padding: 0 var(--space-2) 0 var(--space-4);
+    }
 
-  /* Title over a muted subtitle (the room, a status), as Slack's thread header has it. */
-  .pane-heading {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    justify-content: center;
-    min-width: 0;
+    .pane-header[data-back] {
+      padding-left: var(--space-2);
+    }
+
+    .pane-header .page-header-actions {
+      gap: var(--space-0-5);
+    }
   }
 
   .pane-title {
@@ -163,18 +159,6 @@
     font-weight: var(--weight-semibold);
     line-height: 20px;
     text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .pane-subtitle {
-    display: flex;
-    align-items: center;
-    gap: var(--space-1-5);
-    min-width: 0;
-    overflow: hidden;
-    color: var(--text-muted);
-    font-size: var(--text-meta);
-    line-height: 16px;
     white-space: nowrap;
   }
 
@@ -190,13 +174,6 @@
   .pane-room-name .icon {
     flex-shrink: 0;
     color: var(--text-faint);
-  }
-
-  .pane-header-tools {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-0-5);
   }
 
   .pane-toolbar {

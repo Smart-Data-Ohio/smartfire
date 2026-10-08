@@ -8,27 +8,7 @@
     background: var(--bg-pane);
   }
 
-  .settings-header {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-2);
-    height: var(--pane-header-height);
-    padding: 0 var(--space-3) 0 var(--space-5);
-    box-shadow: 0 1px 0 var(--border);
-    z-index: 2;
-  }
-
-  .settings-back {
-    display: none;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    margin-left: calc(var(--space-2) * -1);
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-  }
-
+  /* The header is a PageHeader (src/ui/page-header.css). */
   .settings-header-icon {
     color: var(--text-muted);
   }
@@ -678,14 +658,6 @@
   /* ── Phones: the nav is a strip above the page ─────────────────────────── */
 
   @media (width < 720px) {
-    .settings-header {
-      padding: 0 var(--space-2);
-    }
-
-    .settings-back {
-      display: grid;
-    }
-
     .settings-body {
       flex-direction: column;
     }
