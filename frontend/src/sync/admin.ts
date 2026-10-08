@@ -11,11 +11,13 @@ import {
   icons,
   integrationsHealth,
   people,
+  removeBanner,
   removeLogo,
   removePerson,
   resetJoinCode,
   resetTwoFactor,
   setGoogleLink,
+  updateBanner,
   updateCustomStyles,
   updateLogo,
   updatePerson,
@@ -96,20 +98,40 @@ import type { UpdateBot } from "../gen/UpdateBot.ts";
 import type { UpdateWorkspace } from "../gen/UpdateWorkspace.ts";
 import type { Workspace } from "../gen/Workspace.ts";
 import type { WorkspaceIconList } from "../gen/WorkspaceIconList.ts";
+import { mutations } from "../store/store.ts";
+import { brandingOf } from "../store/workspace.ts";
 import { peoplePagesOver } from "./people-pages.ts";
 import { runAction } from "./runtime.ts";
 
+/**
+ * A workspace reply, with its name, logo and banner applied to the rail and sidebar at once (the
+ * `workspace.updated` event that follows for every tab then changes nothing here).
+ */
+function branded(reply: Promise<Workspace>): Promise<Workspace> {
+  return reply.then((next) => {
+    mutations.setWorkspaceBranding(brandingOf(next));
+
+    return next;
+  });
+}
+
 export const admin = {
-  workspace: (): Promise<Workspace> => runAction(workspace()),
+  workspace: (): Promise<Workspace> => branded(runAction(workspace())),
 
   updateWorkspace: (change: Partial<UpdateWorkspace>): Promise<Workspace> =>
-    runAction(
-      updateWorkspace({ name: null, restrictRoomCreationToAdministrators: null, ...change }),
+    branded(
+      runAction(
+        updateWorkspace({ name: null, restrictRoomCreationToAdministrators: null, ...change }),
+      ),
     ),
 
-  setLogo: (signedId: string): Promise<Workspace> => runAction(updateLogo(signedId)),
+  setLogo: (signedId: string): Promise<Workspace> => branded(runAction(updateLogo(signedId))),
 
-  removeLogo: (): Promise<Workspace> => runAction(removeLogo()),
+  removeLogo: (): Promise<Workspace> => branded(runAction(removeLogo())),
+
+  setBanner: (signedId: string): Promise<Workspace> => branded(runAction(updateBanner(signedId))),
+
+  removeBanner: (): Promise<Workspace> => branded(runAction(removeBanner())),
 
   resetJoinCode: (): Promise<Workspace> => runAction(resetJoinCode()),
 

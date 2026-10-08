@@ -2,7 +2,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useId } from "react";
 import type { WorkFilter } from "../../gen/WorkFilter.ts";
 import type { WorkListRow } from "../../gen/WorkListRow.ts";
-import { withClassicBypass } from "../../lib/screens.ts";
 import { useStore } from "../../store/store.ts";
 import { WORK_FILTERS, workListOf } from "../../store/work.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -23,11 +22,6 @@ export const WORK_TABS = WORK_FILTERS.map((filter) => ({
 
 function isWorkFilter(value: string): value is WorkFilter {
   return WORK_FILTERS.some((filter) => filter === value);
-}
-
-/** Leaves the SPA for a board post's classic page, which the SPA doesn't have. */
-function openBoardPost(row: WorkListRow): void {
-  window.location.assign(withClassicBypass(`/rooms/${row.thread.roomId}/threads/${row.thread.id}`));
 }
 
 interface WorkPageProps {
@@ -66,12 +60,6 @@ export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
   };
 
   const open = (row: WorkListRow) => {
-    if (row.board) {
-      openBoardPost(row);
-
-      return;
-    }
-
     void navigate({
       to: "/r/$roomId/t/$threadId",
       params: { roomId: row.thread.roomId, threadId: row.thread.id },

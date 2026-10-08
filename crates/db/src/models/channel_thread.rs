@@ -37,8 +37,8 @@ pub use board::{BOARD_POSTS_MAX_PAGE, BOARD_POSTS_PER_PAGE, WorkOwners, board_pa
 pub use work::{WORK_UPDATE_FORBIDDEN, WorkChanges, normalize_owner_id};
 pub use work_listing::{WorkReadFacts, WorkReadPermissions};
 
-/// A tracked thread's work facts changed: its status, owner, result or run URL, or a link was
-/// added or removed. The classic app has no broadcast for it (only the board rows, which
+/// A tracked thread's work facts changed, a link changed, or a board post's row changed.
+/// The classic app has no broadcast for it (only the board rows, which
 /// `register_board_update` emits as before); the cable sink publishes the single-page app's
 /// `thread.updated` with the new facts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -53,6 +53,19 @@ impl ThreadWorkChange {
         // Include tag auto-assignment's after-commit write before publishing the final facts.
         tx.broadcast_after_commit_settled_once(&ThreadWorkChange { thread_id });
     }
+
+    pub fn pending(tx: &Tx<'_>, thread_id: i64) -> bool {
+        tx.has_settled_broadcast(&Self { thread_id })
+    }
+}
+
+/// The JSON twin of a board post's list and column prepends, including all committed facts.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ThreadBoardCreation {
+    pub thread_id: i64,
+}
+impl crate::events::Broadcast for ThreadBoardCreation {
+    const KIND: &'static str = "ChannelThread#sync_board_creation";
 }
 
 /// `ChannelThread::AUTO_ARCHIVE_OPTIONS`, in minutes.
@@ -115,6 +128,9 @@ pub struct NewChannelThread {
     pub tag_names: Option<Vec<String>>,
     pub work_owner_id: Option<i64>,
     pub run_url: Option<String>,
+    /// The SPA's retry identity for a board post (`CreateBoardPost.clientPostId`): unique per
+    /// room and creator, so a retried creation finds the post the first attempt made.
+    pub client_post_id: Option<String>,
 }
 
 /// `ChannelThread::LockedError`, raised by `post_message!` into a locked thread.
@@ -232,6 +248,21 @@ impl ChannelThread {
         )
     }
 
+    /// The post `creator_id` made in `room_id` with this [`NewChannelThread::client_post_id`].
+    pub fn find_by_client_post_id(
+        conn: &Connection,
+        room_id: i64,
+        creator_id: i64,
+        client_post_id: &str,
+    ) -> Result<Option<Self>> {
+        query_one(
+            conn,
+            r#"SELECT * FROM "channel_threads" WHERE "channel_threads"."room_id" = ? AND "channel_threads"."creator_id" = ? AND "channel_threads"."client_post_id" = ? LIMIT 1"#,
+            params![room_id, creator_id, client_post_id],
+            Self::from_row,
+        )
+    }
+
     /// `room.channel_threads.ordered`: most recently active first.
     pub fn for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
         query_all(
@@ -304,6 +335,7 @@ impl ChannelThread {
     /// Added tags register the Rails after-commit auto-assignment callback.
     pub fn create(tx: &mut Tx<'_>, attributes: NewChannelThread) -> Result<Self> {
         let now = tx.now();
+        let client_post_id = attributes.client_post_id.clone();
         let room = Room::find(tx.conn(), attributes.room_id)?;
         let name = match attributes.name.filter(|name| !name.trim().is_empty()) {
             Some(name) => Some(name),
@@ -346,7 +378,7 @@ impl ChannelThread {
             .into_result()?;
 
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at", "work_owner_id", "run_url") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            r#"INSERT INTO "channel_threads" ("auto_archive_after_minutes", "created_at", "creator_id", "last_activity_at", "name", "parent_message_id", "room_id", "updated_at", "work_status", "work_status_changed_at", "work_owner_id", "run_url", "client_post_id") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
             params![
                 thread.auto_archive_after_minutes,
                 now,
@@ -359,7 +391,8 @@ impl ChannelThread {
                 thread.work_status,
                 thread.work_status_changed_at,
                 thread.work_owner_id,
-                thread.run_url
+                thread.run_url,
+                client_post_id
             ],
             |r| r.get(0),
         )?;
@@ -937,6 +970,11 @@ impl ChannelThread {
     pub(crate) fn broadcast_thread_indicators(tx: &mut Tx<'_>, thread_ids: &[i64]) -> Result<()> {
         for &thread_id in thread_ids {
             if let Some(thread) = Self::find_by_id(tx.conn(), thread_id)? {
+                if thread.board_post(tx.conn())?
+                    && !tx.has_settled_broadcast(&ThreadBoardCreation { thread_id })
+                {
+                    ThreadWorkChange::emit(tx, thread_id);
+                }
                 Self::broadcast_thread_indicator_change(
                     tx,
                     thread.parent_message_id,

@@ -204,6 +204,28 @@ fn ported_classic_pages_map_to_their_spa_urls() {
 }
 
 #[test]
+fn board_pages_and_workspace_work_are_ported() {
+    for (endpoint, classic, spa) in [
+        ("rooms#show", "/rooms/12", "/app/r/12"),
+        (
+            "channel_threads#show",
+            "/rooms/12/threads/9",
+            "/app/r/12/t/9",
+        ),
+        (
+            "channel_threads#new",
+            "/rooms/12/threads/new",
+            "/app/r/12/posts/new",
+        ),
+    ] {
+        assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
+    }
+    assert_eq!(spa_url("work_threads#index", "/work", None).as_deref(), Some("/app/work"));
+    assert_eq!(classic_url("/app/work", None).as_deref(), Some("/work"));
+}
+
+#[test]
 fn message_aliases_and_room_tools_map_to_their_ported_screens() {
     for (endpoint, classic, spa, fallback) in [
         (

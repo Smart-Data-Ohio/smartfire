@@ -1,97 +1,13 @@
-import { type FormEvent, useRef, useState } from "react";
+import { type FormEvent, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
-import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
 import { admin } from "../../sync/admin.ts";
-import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { adminFailure, useAdmin } from "./admin-parts.tsx";
-
-/** The logo, with Upload and (when one is attached) Remove for administrators. */
-function Logo() {
-  const { workspace, replace } = useAdmin();
-  const input = useRef<HTMLInputElement | null>(null);
-  const { busy, track } = useBusy();
-
-  const upload = (file: File) => {
-    const task = new UploadTask(file, browserDeps(actions.messages.startUpload), () => undefined);
-
-    void track(
-      "logo",
-      task
-        .start()
-        .then(() => {
-          const { phase, signedId, error } = task.snapshot;
-
-          if (phase !== "done" || signedId === null) {
-            throw new Error(error ?? "The upload didn't finish.");
-          }
-
-          return admin.setLogo(signedId);
-        })
-        .then(replace, (error: Error) => adminFailure("Couldn't update the logo", error)),
-    );
-  };
-
-  const remove = () => {
-    void track(
-      "logo",
-      admin
-        .removeLogo()
-        .then(replace, (error: Error) => adminFailure("Couldn't remove the logo", error)),
-    );
-  };
-
-  return (
-    <div className="settings-avatar">
-      <img
-        className="admin-logo"
-        src={workspace.logoUrl}
-        alt={`${workspace.name} logo`}
-        width={80}
-        height={80}
-      />
-      {workspace.canAdminister ? (
-        <div className="settings-avatar-actions">
-          <input
-            ref={input}
-            type="file"
-            accept="image/*"
-            hidden
-            aria-label="Upload logo"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-
-              event.target.value = "";
-
-              if (file !== undefined) {
-                upload(file);
-              }
-            }}
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            icon="cloud-upload"
-            loading={busy("logo")}
-            disabled={busy("logo")}
-            onClick={() => input.current?.click()}
-          >
-            Upload logo
-          </Button>
-          {workspace.logoAttached ? (
-            <Button variant="ghost" size="sm" icon="trash" disabled={busy("logo")} onClick={remove}>
-              Remove
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+import { WorkspaceProfile } from "./workspace-profile.tsx";
 
 /** The name, saved on submit as the classic form saves it. */
 function NameForm({ workspace }: { readonly workspace: Workspace }) {
@@ -184,9 +100,9 @@ function JoinLink() {
 }
 
 /**
- * Workspace: the classic account page's top half. Everyone sees the logo, the name and the join
- * link; administrators also rename the workspace, change its logo, decide who may create rooms
- * and swap the join link for a new one.
+ * Workspace: the classic account page's top half. Everyone sees the profile (icon and banner),
+ * the name and the join link; administrators also rename the workspace, change its icon and
+ * banner, decide who may create rooms and swap the join link for a new one.
  */
 export function WorkspaceSection() {
   const { workspace, replace } = useAdmin();
@@ -206,8 +122,11 @@ export function WorkspaceSection() {
       title={workspace.canAdminister ? "Workspace" : workspace.name}
       description={`Smartfire™ version ${workspace.version}`}
     >
-      <SettingsGroup title="Logo">
-        <Logo />
+      <SettingsGroup
+        title="Workspace profile"
+        description="The icon and banner everyone sees in the rail and at the top of the sidebar."
+      >
+        <WorkspaceProfile />
       </SettingsGroup>
       {workspace.canAdminister ? (
         <SettingsGroup title="Name">

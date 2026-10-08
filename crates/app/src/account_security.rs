@@ -30,6 +30,7 @@ pub fn settings_changed(
     after: &Account,
     before_logo: bool,
     after_logo: bool,
+    banner: Option<(Option<i64>, Option<i64>)>,
     context: &Context,
 ) -> Result<()> {
     let mut changes = Map::new();
@@ -52,6 +53,9 @@ pub fn settings_changed(
             "logo".into(),
             json!({"before":before_logo,"after":after_logo}),
         );
+    }
+    if let Some((before, after)) = banner.filter(|(before, after)| before != after) {
+        changes.insert("banner".into(), json!({"before": before, "after": after}));
     }
     if !changes.is_empty() {
         record(
@@ -102,6 +106,16 @@ pub fn logo_removed(tx: &Tx<'_>, account: &Account, context: &Context) -> Result
         account,
         "account.settings.change",
         json!({"logo":{"before":true,"after":false}}),
+        context,
+    )
+}
+
+pub fn banner_removed(tx: &Tx<'_>, account: &Account, context: &Context) -> Result<()> {
+    record(
+        tx,
+        account,
+        "account.settings.change",
+        json!({"banner":{"before":true,"after":false}}),
         context,
     )
 }

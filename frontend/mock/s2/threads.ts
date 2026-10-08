@@ -21,7 +21,8 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
-import { workDetail, workPermissions, workUserIds } from "../s4/work-model.ts";
+import { workDetail, workUserIds } from "../s4/work-model.ts";
+import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -52,7 +53,7 @@ export interface Threads {
   /** The thread, if the viewer belongs to its room; 404 otherwise. */
   threadOr404(threadId: number): ThreadRecord;
   /** Posts a reply with everything that follows: indicator, thread events, unread. */
-  postReply(thread: ThreadRecord, draft: MessageDraft): MessageDTO;
+  postReply(thread: ThreadRecord, draft: MessageDraft, fresh?: boolean): MessageDTO;
   /** After a reply was deleted: the recount and the refresh events. */
   replyRemoved(thread: ThreadRecord): void;
   /** After a root message was deleted: a thread it started stays, with no parent. */
@@ -81,25 +82,7 @@ export function createThreads(
     return thread;
   };
 
-  const moderator = (roomId: number): boolean =>
-    ctx.world().users.get(VIEWER_ID)?.role === "administrator" ||
-    ctx.world().rooms.get(roomId)?.room.creatorId === VIEWER_ID;
-
-  const permissions = (thread: ThreadRecord): ThreadPermissions => {
-    const status = threadStatus(thread, ctx.now());
-    const moderates = moderator(thread.roomId);
-    const manages = moderates || thread.creatorId === VIEWER_ID;
-
-    return {
-      canRename: manages,
-      canClose: manages && status === "active",
-      canReopen: status === "closed",
-      canLock: moderates && status !== "locked",
-      canUnlock: moderates && status === "locked",
-      canDelete: moderates,
-      ...workPermissions(thread, manages, VIEWER_ID),
-    };
-  };
+  const permissions = (thread: ThreadRecord): ThreadPermissions => threadPermissions(ctx, thread);
 
   const parentOf = (thread: ThreadRecord): MessageDTO | null => {
     if (thread.parentMessageId === null) return null;
@@ -195,6 +178,7 @@ export function createThreads(
     join(thread, draft.creatorId, null);
     thread.closed = false;
     thread.lastActivityAt = createdAt;
+    thread.updatedAt = createdAt;
 
     const message = buildMessage(
       world.nextMessageId++,
@@ -278,6 +262,8 @@ export function createThreads(
   const create = (roomId: number, body: Json | undefined): MockResponse => {
     const world = ctx.world();
     const record = ctx.roomOr404(roomId);
+
+    if (record.room.kind === "board") throw forbidden("Board rooms take posts, not threads");
 
     if (record.room.kind === "direct") throw forbidden("Direct messages don't have threads");
 
@@ -541,7 +527,7 @@ export function createThreads(
       route("POST", /^\/threads\/(\d+)\/read$/, (request) => ok(read(firstId(request)))),
     ],
     threadOr404,
-    postReply: (thread, draft) => postReply(thread, draft),
+    postReply: (thread, draft, fresh) => postReply(thread, draft, fresh),
     replyRemoved(thread) {
       const events = [...syncIndicator(thread), ...updated(thread)];
 

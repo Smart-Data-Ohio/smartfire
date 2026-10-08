@@ -243,7 +243,7 @@ async fn create_thread(c: &mut Ctx) -> Result {
     if room.direct() {
         return Err(forbidden(c, "Direct rooms cannot contain channel threads"));
     }
-    // `channel_threads#create` makes a board post in a board room; posts come with S6.
+    // Boards use the post endpoint, which accepts work fields and an optional brief.
     if room.board() {
         return Err(forbidden(c, "Board rooms take posts, not threads"));
     }
@@ -383,17 +383,17 @@ async fn update_thread(c: &mut Ctx) -> Result {
                 Some(api::ThreadStatus::Active) => thread.reopen(tx)?,
                 None => {}
             }
-            Ok(())
+            Ok(campfire_db::models::channel_thread::ThreadWorkChange::pending(tx, thread_id))
         })
         .await;
-    match result {
-        Ok(()) => {}
+    let model_published = match result {
+        Ok(model_published) => model_published,
         Err(campfire_db::Error::Other(text)) if text == FORBIDDEN_UPDATE => {
             return Err(forbidden(c, FORBIDDEN_UPDATE));
         }
         Err(error) => return Err(db_error(error)),
-    }
-    if changes {
+    };
+    if changes && !model_published {
         c.app().broadcasts.thread_updated(thread_id);
     }
     let detail = detail(c, viewer, thread_id).await?;

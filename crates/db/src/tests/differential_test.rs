@@ -161,7 +161,9 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
                 continue;
             }
             let value: rusqlite::types::Value = row.get(i).unwrap();
-            if table == "rooms" && name == "client_room_id" {
+            if (table == "rooms" && name == "client_room_id")
+                || (table == "channel_threads" && name == "client_post_id")
+            {
                 assert_eq!(
                     value,
                     rusqlite::types::Value::Null,

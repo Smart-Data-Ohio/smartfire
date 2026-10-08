@@ -1,8 +1,8 @@
 /**
  * Global search (S3): `GET /search` over the seeded messages with the server's operator parser
  * (`SearchQuery::parse`), the sections above the hits, and the viewer's recent searches. The
- * board posts, work statuses and events the sections list live here, beside the world rather
- * than in it, so the seeded rooms, threads and the specs that count them don't change.
+ * board posts come from the live world; the non-board work statuses and event search fixtures
+ * remain local to this module.
  */
 import type { ConversationName } from "../../src/gen/ConversationName.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
@@ -34,11 +34,11 @@ const SECTION_LIMIT = 10;
 
 /** The search-only seeds, for tests and screenshots. */
 export const SEARCH_SEED = {
-  /** A board the viewer belongs to. It isn't in the world, so the sidebar doesn't list it. */
+  /** The real seeded board, also listed in the sidebar. */
   boardRoomId: 900,
   boardRoomName: "Roadmap",
   /** Who belongs to the board: its posts are found only for them. */
-  boardMemberIds: [VIEWER_ID],
+  boardMemberIds: [VIEWER_ID, 2, 4, 6, 9],
   /** Board posts on it (thread ids, clear of the world's). */
   boardPostIds: { onboardingChecklist: 9001, launchWeek: 9002, pricingPage: 9003 },
   /** Events in seeded rooms. */
@@ -53,34 +53,6 @@ const WORK_STATUSES: ReadonlyMap<number, WorkStatus> = new Map([
   [THREAD_IDS.design, "planned"],
   [THREAD_IDS.generalClosed, "done"],
 ]);
-
-interface BoardPost {
-  readonly id: number;
-  readonly name: string;
-  readonly hoursAgo: number;
-  readonly workStatus: WorkStatus | null;
-}
-
-const BOARD_POSTS: readonly BoardPost[] = [
-  {
-    id: SEARCH_SEED.boardPostIds.onboardingChecklist,
-    name: "Onboarding checklist in the sidebar",
-    hoursAgo: 3,
-    workStatus: "in_progress",
-  },
-  {
-    id: SEARCH_SEED.boardPostIds.launchWeek,
-    name: "Launch week plan",
-    hoursAgo: 20,
-    workStatus: "planned",
-  },
-  {
-    id: SEARCH_SEED.boardPostIds.pricingPage,
-    name: "Pricing page refresh",
-    hoursAgo: 72,
-    workStatus: null,
-  },
-];
 
 interface EventSeed {
   readonly id: number;
@@ -509,25 +481,28 @@ export function createSearch(ctx: S2Context): Search {
 
     const rooms = new Map(searchedRooms().map((record) => [record.room.id, record]));
 
-    const onBoard = SEARCH_SEED.boardMemberIds.includes(VIEWER_ID);
+    const onBoard =
+      world.rooms.get(SEARCH_SEED.boardRoomId)?.memberIds.includes(VIEWER_ID) ?? false;
 
     const boardPosts: SearchSectionRow[] =
       onBoard && inRoom(SEARCH_SEED.boardRoomName, "board")
-        ? BOARD_POSTS.flatMap((post) =>
-            named(post.name)
-              ? [
-                  {
-                    id: post.id,
-                    roomId: SEARCH_SEED.boardRoomId,
-                    roomKind: "board",
-                    title: post.name,
-                    time: timestamp(builtAt - post.hoursAgo * 3_600_000),
-                    workStatus: post.workStatus,
-                    cancelled: false,
-                  },
-                ]
-              : [],
-          )
+        ? [...world.threads.values()]
+            .filter((post) => post.roomId === SEARCH_SEED.boardRoomId)
+            .flatMap((post) =>
+              named(post.name)
+                ? [
+                    {
+                      id: post.id,
+                      roomId: SEARCH_SEED.boardRoomId,
+                      roomKind: "board",
+                      title: post.name,
+                      time: post.lastActivityAt,
+                      workStatus: post.work?.status ?? null,
+                      cancelled: false,
+                    },
+                  ]
+                : [],
+            )
         : [];
 
     const workThreads: SearchSectionRow[] = [...world.threads.values()].flatMap((thread) => {
@@ -600,7 +575,6 @@ export function createSearch(ctx: S2Context): Search {
 
       const record = world.rooms.get(roomId);
       const board = roomId === SEARCH_SEED.boardRoomId;
-      const post = BOARD_POSTS.find((candidate) => candidate.id === threadId);
       const roomKind: RoomKind = board ? "board" : (record?.room.kind ?? "open");
 
       names.set(key, {
@@ -613,8 +587,7 @@ export function createSearch(ctx: S2Context): Search {
             ? "Unknown room"
             : ctx.displayName(record),
         roomIconName: record?.room.iconName ?? null,
-        threadName:
-          threadId === null ? null : (post?.name ?? world.threads.get(threadId)?.name ?? null),
+        threadName: threadId === null ? null : (world.threads.get(threadId)?.name ?? null),
       });
     };
 

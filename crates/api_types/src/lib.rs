@@ -20,6 +20,7 @@ mod activity;
 mod admin;
 mod agents;
 mod attachment;
+mod board;
 mod bots;
 mod cards;
 mod composer;
@@ -65,7 +66,7 @@ pub use admin::{
     AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
-    PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
 };
 pub use agents::{
@@ -77,6 +78,10 @@ pub use agents::{
     DecideApproval,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use board::{
+    BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
+    CreateBoardPost,
+};
 pub use bots::{
     Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
     BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
@@ -159,7 +164,7 @@ pub use stage::{
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
-pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
+pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing, WorkspaceBranding};
 pub use thread::{
     CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
     ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,
@@ -200,3 +205,5 @@ mod tests_s7_slack;
 
 #[cfg(test)]
 mod tests_s7_people;
+#[cfg(test)]
+mod tests_s6;

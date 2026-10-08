@@ -24,9 +24,10 @@ import { renderMarkdown } from "../markdown.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso, type ThreadRecord, threadDto } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
+import { tagsOf } from "../s6/work.ts";
 import { rowTimestamp, touchedRow, VIEWER_ID } from "../seed.ts";
 import { invalid, invalidBody, sentence } from "./http.ts";
-import { S4_BOARD, workStateOf } from "./seed.ts";
+import { workStateOf } from "./seed.ts";
 import {
   emptyWork,
   HANDOFF_COLLECTION_LIMIT,
@@ -55,11 +56,13 @@ interface WorkChange {
   readonly status: WorkStatus | null | undefined;
   readonly ownerId: number | null | undefined;
   readonly resultMarkdown: string | null | undefined;
+  readonly tags: string[] | undefined;
 }
 
 /** The work module. */
 export interface Work {
   readonly routes: readonly Route[];
+  updateAs(threadId: number, body: Json | undefined, actorId: number): ThreadDetail;
   /**
    * Someone else moves a thread's work (`status: null` stops tracking it), skipping the
    * viewer's permissions: the mock control behind live-update tests.
@@ -134,10 +137,8 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
 
       if (record === undefined || !record.memberIds.includes(VIEWER_ID)) continue;
 
-      add(thread, ctx.displayName(record), false);
+      add(thread, ctx.displayName(record), record.room.kind === "board");
     }
-
-    for (const post of workStateOf(world).boardPosts) add(post, S4_BOARD.name, true);
 
     rows.sort(
       (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || b.thread.id - a.thread.id,
@@ -203,7 +204,10 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     const statusChanged = status !== work.status;
     const resultChanged = result !== undefined && result !== work.resultMarkdown;
 
-    if (!statusChanged && !ownerChanged && !resultChanged) return false;
+    const tagsChanged =
+      change.tags !== undefined && JSON.stringify(change.tags) !== JSON.stringify(work.tags);
+
+    if (!statusChanged && !ownerChanged && !resultChanged && !tagsChanged) return false;
 
     thread.work = work;
 
@@ -251,7 +255,10 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       );
     }
 
-    work.updatedAt = touchedRow(ctx.now(), work.updatedAt);
+    if (change.tags !== undefined) work.tags = change.tags;
+
+    if (statusChanged || ownerChanged || resultChanged)
+      work.updatedAt = touchedRow(ctx.now(), work.updatedAt);
     ctx.publish(threads.updated(thread));
 
     return true;
@@ -284,6 +291,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
       status: rawStatus === undefined ? undefined : (status ?? null),
       ownerId: rawOwner === undefined ? undefined : ownerId,
       resultMarkdown: rawResult === undefined ? undefined : stringField(body, "resultMarkdown"),
+      tags: field(body, "tags") === undefined ? undefined : tagsOf(body),
     };
   };
 
@@ -296,6 +304,7 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
 
     if (
       (change.resultMarkdown !== undefined && !manager) ||
+      (change.tags !== undefined && !(thread.isBoard ? manager : assignment)) ||
       ((change.status !== undefined || change.ownerId !== undefined) && !manager) ||
       (change.ownerId !== undefined && !assignment) ||
       (change.status !== undefined && (change.status !== null) !== isTracked(thread) && !assignment)
@@ -421,12 +430,24 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
         handoff(firstId(request), request.body),
       ),
     ],
+    updateAs(threadId, body, actorId) {
+      const thread = threads.threadOr404(threadId);
+
+      apply(thread, parseChange(body), actorId);
+
+      return threads.detail(thread);
+    },
     setStatusAs(threadId, status, actorId) {
       const thread = threads.threadOr404(threadId);
 
       apply(
         thread,
-        { status, ownerId: status === null ? null : undefined, resultMarkdown: undefined },
+        {
+          status,
+          ownerId: status === null ? null : undefined,
+          resultMarkdown: undefined,
+          tags: undefined,
+        },
         actorId,
       );
 
