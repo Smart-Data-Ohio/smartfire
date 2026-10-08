@@ -105,10 +105,12 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
     out
 }
 
+/// Every table but `ar_internal_metadata` and `sidebar_revisions`, the Rust-only counter the
+/// sidebar triggers bump, which the Rails reference never had.
 fn tables(conn: &Connection) -> Vec<String> {
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'ar_internal_metadata' ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'sidebar_revisions') ORDER BY name",
         [],
         |r| r.get(0),
     )
@@ -169,7 +171,7 @@ pub(super) fn assert_frozen_rows(name: &str, actual: &BTreeMap<String, Vec<Strin
 
 /// `fixtures_match_ruby_row_for_row` without the reference: the rows the reference's
 /// `db:fixtures:load` wrote at `FROZEN_FIXTURES_NOW` (pinned Rails, recorded 2026-10-05 when
-/// that test last passed), every table but `ar_internal_metadata`.
+/// that test last passed), every table `tables` lists.
 #[test]
 fn fixtures_match_frozen_rails_rows() {
     let now = crate::Timestamp::parse_db(FROZEN_FIXTURES_NOW).unwrap();

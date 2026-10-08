@@ -807,6 +807,9 @@ fn direct_members(
 /// A room's counts for the viewer, from [`notification_counts`].
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub(crate) struct RoomCounts {
+    /// Root messages in the room's unread range (`unreadCount`), as `room_shell::first_unread`
+    /// counts them.
+    pub(crate) unread: i64,
     /// Unread `mention` inbox items about messages in the room (`mentionCount`).
     pub(crate) mentions: i64,
     /// The red pill (`notificationCount`).
@@ -825,17 +828,21 @@ const IN_UNREAD_RANGE: &str = r#""b"."unread_at" IS NOT NULL AND "m"."created_at
 /// Each room's [`RoomCounts`] for the viewer, in one statement (so one read snapshot) over all
 /// their rooms, or only `room_id`. Rooms with nothing to count are left out.
 ///
-/// The red number is what would have notified the viewer under the classic rules
-/// (`Notifications::Policy`, `crates/db/src/models/notification_policy.rs`) and is still unread,
-/// counted once per message:
+/// `unread` is every root message in the room's unread range, as the timeline's divider counts.
 ///
-/// - root messages count while they're in the room's unread range, so reading the room clears
-///   them: in an `everything` room every one but system notes and the viewer's own; in a
-///   `mentions` room those with an unread mention, reply, thread activity or keyword alert inbox
-///   item; in a `muted` room those with an unread mention;
-/// - thread messages with such an inbox item count while their thread is unread for the viewer
+/// The red number is what would have notified the viewer under the classic rules
+/// (`Notifications::Policy`, `crates/db/src/models/notification_policy.rs`) and is still unread:
+///
+/// - root messages count while they're in the room's unread range, once per message, so reading
+///   the room clears them: in an `everything` room every one but system notes and the viewer's
+///   own; in a `mentions` room those with an unread mention, reply, thread activity or keyword
+///   alert inbox item; in a `muted` room those with an unread mention;
+/// - in threads the unit is the unread inbox item, while the thread is unread for the viewer
 ///   (`thread_memberships.unread_at`): classic reads a thread apart from its room, so reading
-///   the room leaves them and reading the thread clears them;
+///   the room leaves them and reading the thread clears them. Thread activity is grouped, one
+///   item per followed thread that moves to the newest reply (`ActivityItem` recorder), so any
+///   number of ordinary replies in a thread count 1; a mention or reply to you there is its own
+///   item and counts on its own;
 /// - `nothing` and `invisible` rooms count none, as the policy never pushes them.
 ///
 /// Reading the inbox item clears a ping too, since a ping counts only while it's unread both in
@@ -850,7 +857,7 @@ pub(crate) fn notification_counts(
         None => String::new(),
     };
     let sql = format!(
-        r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted'){bounds_only}), "pinged" AS (SELECT "m"."room_id", "m"."id", "m"."thread_id", "m"."created_at", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity', 'keyword_alert'){pinged_only}), "notifying" AS (SELECT "m"."room_id", "m"."id", 0 AS "thread" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AND {IN_UNREAD_RANGE} UNION SELECT "m"."room_id", "m"."id", "m"."thread_id" IS NOT NULL FROM "pinged" "m" INNER JOIN "bounds" "b" ON "b"."room_id" = "m"."room_id" WHERE ("b"."involvement" != 'muted' OR "m"."mention") AND CASE WHEN "m"."thread_id" IS NULL THEN {IN_UNREAD_RANGE} ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "m"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL) END) SELECT "room_id", SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", "mention" AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "pinged" UNION ALL SELECT "room_id", 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
+        r#"WITH "bounds" AS (SELECT "ms"."room_id", "ms"."involvement", "ms"."unread_at", "ms"."last_read_message_id" AS "read_id", "read"."created_at" AS "read_created_at" FROM "memberships" "ms" LEFT JOIN "messages" "read" ON "read"."id" = "ms"."last_read_message_id" AND "read"."room_id" = "ms"."room_id" AND "read"."thread_id" IS NULL WHERE "ms"."user_id" = ?1 AND "ms"."involvement" IN ('everything', 'mentions', 'muted', 'nothing') AND "ms"."unread_at" IS NOT NULL{bounds_only}), "roots" AS (SELECT "m"."room_id", "m"."id", "b"."involvement" = 'everything' AND NOT "m"."system_note" AND "m"."creator_id" != ?1 AS "notifies" FROM "bounds" "b" INNER JOIN "messages" "m" ON "m"."room_id" = "b"."room_id" AND "m"."thread_id" IS NULL WHERE {IN_UNREAD_RANGE}), "pinged" AS (SELECT "m"."room_id", "m"."id", "m"."thread_id", "activity_items"."event_type" = 'mention' AS "mention" FROM "activity_items" INNER JOIN "messages" "m" ON "m"."id" = "activity_items"."source_id" WHERE "activity_items"."user_id" = ?1 AND "activity_items"."source_type" = 'Message' AND "activity_items"."read_at" IS NULL AND "activity_items"."event_type" IN ('mention', 'reply', 'thread_activity', 'keyword_alert'){pinged_only}), "notifying" AS (SELECT "room_id", "id", 0 AS "thread" FROM "roots" WHERE "notifies" UNION SELECT "p"."room_id", "p"."id", "p"."thread_id" IS NOT NULL FROM "pinged" "p" INNER JOIN "memberships" "ms" ON "ms"."room_id" = "p"."room_id" AND "ms"."user_id" = ?1 WHERE ("ms"."involvement" IN ('everything', 'mentions') OR ("ms"."involvement" = 'muted' AND "p"."mention")) AND CASE WHEN "p"."thread_id" IS NULL THEN "p"."id" IN (SELECT "id" FROM "roots") ELSE EXISTS (SELECT 1 FROM "thread_memberships" "tm" WHERE "tm"."thread_id" = "p"."thread_id" AND "tm"."user_id" = ?1 AND "tm"."unread_at" IS NOT NULL) END) SELECT "room_id", SUM("unread"), SUM("mentions"), SUM("notifications"), SUM("threads") FROM (SELECT "room_id", 1 AS "unread", 0 AS "mentions", 0 AS "notifications", 0 AS "threads" FROM "roots" UNION ALL SELECT "room_id", 0, "mention", 0, 0 FROM "pinged" UNION ALL SELECT "room_id", 0, 0, 1, "thread" FROM "notifying") GROUP BY "room_id""#,
         bounds_only = only(r#""ms"."room_id""#),
         pinged_only = only(r#""m"."room_id""#),
     );
@@ -859,9 +866,10 @@ pub(crate) fn notification_counts(
         Ok((
             row.get::<_, i64>(0)?,
             RoomCounts {
-                mentions: row.get(1)?,
-                notifications: row.get(2)?,
-                thread_notifications: row.get(3)?,
+                unread: row.get(1)?,
+                mentions: row.get(2)?,
+                notifications: row.get(3)?,
+                thread_notifications: row.get(4)?,
             },
         ))
     };
@@ -894,14 +902,13 @@ fn visible(room: &Room, membership: &Membership) -> bool {
 }
 
 fn sidebar_row_with(
-    conn: &Connection,
     room: &Room,
     membership: &Membership,
     viewer_name: &str,
     members: Option<&[(i64, String)]>,
     counts: RoomCounts,
-    revision: Timestamp,
-) -> Result<api::SidebarRow> {
+    revision: i64,
+) -> api::SidebarRow {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
             let direct = direct_members(members, membership.user_id, viewer_name);
@@ -913,87 +920,107 @@ fn sidebar_row_with(
         }
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
-    let unread_count = room_shell::first_unread(conn, membership)?.map_or(0, |(_, count)| count);
-    Ok(api::SidebarRow {
+    api::SidebarRow {
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
         direct_member_ids,
-        unread_count,
+        unread_count: counts.unread,
         mention_count: counts.mentions,
         notification_count: counts.notifications,
         thread_notification_count: counts.thread_notifications,
-        revision: revision.as_microsecond(),
-    })
+        revision,
+    }
 }
 
-/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar.
-/// `revision` is the clock read before this read begins (see `SidebarRow::revision`).
-pub fn sidebar_row(
-    conn: &Connection,
-    room: &Room,
-    membership: &Membership,
-    revision: Timestamp,
-) -> Result<Option<api::SidebarRow>> {
-    if !visible(room, membership) {
-        return Ok(None);
-    }
-    membership_row(conn, room, membership, revision).map(Some)
+/// The sidebar's revision as of the open snapshot: a counter the `sidebar_revision_*` triggers
+/// bump in every write transaction that changes something a sidebar row is made from, so it
+/// follows commit order (see `SidebarRow::revision`). 0 until the first such write.
+fn sidebar_revision(conn: &Connection) -> Result<i64> {
+    Ok(conn.query_row_cached(
+        r#"SELECT COALESCE((SELECT "value" FROM "sidebar_revisions" WHERE "id" = 1), 0)"#,
+        [],
+        |row| row.get(0),
+    )?)
+}
+
+/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar (or the
+/// membership is gone). Everything is read afresh inside one snapshot with its revision.
+pub fn sidebar_row(conn: &Connection, membership_id: i64) -> Result<Option<api::SidebarRow>> {
+    in_snapshot(conn, || {
+        let revision = sidebar_revision(conn)?;
+        let membership = match Membership::find(conn, membership_id) {
+            Ok(membership) => membership,
+            Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+            Err(error) => return Err(error),
+        };
+        let room = membership.room(conn)?;
+        if !visible(&room, &membership) {
+            return Ok(None);
+        }
+        row_in_snapshot(conn, &room, &membership, revision).map(Some)
+    })
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
-/// answer to an organising call on a hidden room.
-pub fn membership_row(
-    conn: &Connection,
-    room: &Room,
-    membership: &Membership,
-    revision: Timestamp,
-) -> Result<api::SidebarRow> {
+/// answer to an organising call on a hidden room. Read in one snapshot, as [`sidebar_row`].
+pub fn membership_row(conn: &Connection, membership_id: i64) -> Result<api::SidebarRow> {
     in_snapshot(conn, || {
-        // Read afresh inside the snapshot, so the counts and the read position agree.
-        let membership = Membership::find(conn, membership.id)?;
-        let viewer = User::find(conn, membership.user_id)?;
-        let members = if room.direct() {
-            Some(members(conn, room.id)?)
-        } else {
-            None
-        };
-        let counts = notification_counts(conn, membership.user_id, Some(room.id))?
-            .remove(&room.id)
-            .unwrap_or_default();
-        sidebar_row_with(
-            conn,
-            room,
-            &membership,
-            &viewer.name,
-            members.as_deref(),
-            counts,
-            revision,
-        )
+        let revision = sidebar_revision(conn)?;
+        let membership = Membership::find(conn, membership_id)?;
+        let room = membership.room(conn)?;
+        row_in_snapshot(conn, &room, &membership, revision)
     })
 }
 
-/// The viewer's sidebar, read in one snapshot. `now` is read before the read begins, and stamps
-/// each row's `revision`.
+fn row_in_snapshot(
+    conn: &Connection,
+    room: &Room,
+    membership: &Membership,
+    revision: i64,
+) -> Result<api::SidebarRow> {
+    let viewer = User::find(conn, membership.user_id)?;
+    let members = if room.direct() {
+        Some(members(conn, room.id)?)
+    } else {
+        None
+    };
+    let counts = notification_counts(conn, membership.user_id, Some(room.id))?
+        .remove(&room.id)
+        .unwrap_or_default();
+    Ok(sidebar_row_with(
+        room,
+        membership,
+        &viewer.name,
+        members.as_deref(),
+        counts,
+        revision,
+    ))
+}
+
+/// The viewer's sidebar, read in one snapshot: its rows, their counts (one statement for every
+/// room) and the revision they all carry.
 pub fn sidebar(
     conn: &Connection,
     secrets: &Secrets,
-    viewer: &User,
+    viewer_id: i64,
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
     in_snapshot(conn, || {
-        sidebar_in_snapshot(conn, secrets, viewer, can_create_rooms, now)
+        sidebar_in_snapshot(conn, secrets, viewer_id, can_create_rooms, now)
     })
 }
 
 fn sidebar_in_snapshot(
     conn: &Connection,
     secrets: &Secrets,
-    viewer: &User,
+    viewer_id: i64,
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
+    let revision = sidebar_revision(conn)?;
+    let viewer = User::find(conn, viewer_id)?;
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
     let counts = notification_counts(conn, viewer.id, None)?;
     let mut user_ids = BTreeSet::new();
@@ -1005,18 +1032,17 @@ fn sidebar_in_snapshot(
             None
         };
         let row = sidebar_row_with(
-            conn,
             room,
             membership,
             &viewer.name,
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
-            now,
-        )?;
+            revision,
+        );
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
     }
-    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
+    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, &viewer)?
         .iter()
         .map(|user| user.id)
         .collect();

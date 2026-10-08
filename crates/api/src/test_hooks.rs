@@ -44,6 +44,7 @@ static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
 static BEFORE_POLL_VOTE_WRITE: Holds = Mutex::new(None);
 static BEFORE_ATTENDANCE_WRITE: Holds = Mutex::new(None);
 static BEFORE_PROFILE_READ: Holds = Mutex::new(None);
+static BEFORE_SIDEBAR_READ: Holds = Mutex::new(None);
 
 fn hold(holds: &Holds, id: i64) -> WriteHold {
     let held = WriteHold {
@@ -121,4 +122,14 @@ pub fn hold_before_profile_read(user_id: i64) -> WriteHold {
 
 pub(crate) async fn before_profile_read(user_id: i64) {
     wait(&BEFORE_PROFILE_READ, user_id).await;
+}
+
+/// Holds the person's next `GET /api/v1/sidebar` after its request-time setup, just before it
+/// reads the sidebar, until the test has waited on both barriers.
+pub fn hold_before_sidebar_read(user_id: i64) -> WriteHold {
+    hold(&BEFORE_SIDEBAR_READ, user_id)
+}
+
+pub(crate) async fn before_sidebar_read(user_id: i64) {
+    wait(&BEFORE_SIDEBAR_READ, user_id).await;
 }

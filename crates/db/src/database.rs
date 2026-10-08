@@ -1195,7 +1195,12 @@ struct QueryTrace<'a>(&'a Connection, Option<QueryLog>);
 impl<'a> QueryTrace<'a> {
     fn enter(conn: &'a Connection, log: Arc<Mutex<Vec<String>>>) -> Self {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
-            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
+            // SQLite also reports what runs inside a trigger, as `-- `-prefixed comments (each
+            // statement of the body, or `-- TRIGGER name`). The app didn't issue those, and Rails'
+            // query log never shows them, so skip them.
+            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event
+                && !sql.starts_with("-- ")
+            {
                 READ_QUERIES.with(|log| {
                     if let Some(log) = log.borrow().as_ref() {
                         log.lock().unwrap().push(sql.into());

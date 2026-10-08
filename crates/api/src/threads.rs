@@ -513,7 +513,7 @@ async fn create_join(c: &mut Ctx) -> Result {
 async fn destroy_join(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (thread, _, viewer) = scope(c).await?;
-    let (thread_id, user_id) = (thread.id, viewer.id);
+    let (thread_id, room_id, user_id) = (thread.id, thread.room_id, viewer.id);
     c.app()
         .db
         .write(move |tx| {
@@ -526,6 +526,8 @@ async fn destroy_join(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
+    // Its pings no longer count once the thread is left.
+    c.app().broadcasts.sync_read_row(user_id, room_id);
     Ok(c.head(StatusCode::NO_CONTENT))
 }
 

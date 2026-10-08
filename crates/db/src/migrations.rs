@@ -134,6 +134,9 @@ fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planne
     if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
         return Err(Error::Concurrent);
     }
+    // Rows that already break a foreign key (an orphan from before enforcement) aren't the
+    // migrations' doing, so only new violations refuse them.
+    let before = foreign_key_violations(&tx)?;
     for migration in migrations {
         let failed = |source| Error::Migration {
             version: migration.version.clone(),
@@ -146,16 +149,22 @@ fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planne
         tx.execute(r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#, [&migration.version])
             .map_err(failed)?;
     }
-    let violation: Option<String> = {
-        let mut stmt = tx.prepare("PRAGMA foreign_key_check")?;
-        let mut rows = stmt.query([])?;
-        rows.next()?.map(|row| row.get(0)).transpose()?
-    };
-    if let Some(table) = violation {
+    let introduced = foreign_key_violations(&tx)?.into_iter().find(|violation| !before.contains(violation));
+    if let Some((table, ..)) = introduced {
         return Err(Error::ForeignKeys(table));
     }
     tx.commit()?;
     Ok(())
+}
+
+/// A row breaking a foreign key: (table, rowid, parent table, key index).
+type Violation = (String, Option<i64>, String, i64);
+
+/// `PRAGMA foreign_key_check`, as a set.
+fn foreign_key_violations(conn: &Connection) -> rusqlite::Result<BTreeSet<Violation>> {
+    let mut stmt = conn.prepare("PRAGMA foreign_key_check")?;
+    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
+    rows.collect()
 }
 
 fn validate(manifest: &[&str], catalog: &[Migration]) -> Result<(), Error> {
@@ -383,6 +392,29 @@ mod tests {
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
         assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
         assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"));
+    }
+
+    #[test]
+    fn a_violation_already_there_does_not_refuse_a_migration_that_adds_none() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "PRAGMA foreign_keys = OFF; \
+             CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(parent_id INTEGER REFERENCES ws18_parent(id)); \
+             INSERT INTO ws18_child VALUES (42); \
+             PRAGMA foreign_keys = ON;",
+        )
+        .unwrap();
+        let catalog = [migration("29990101000000", "CREATE TABLE ws18_new(id INTEGER);")];
+        migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap();
+        assert!(exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_new'"));
+        // A second orphan in the same table is new, and refused.
+        let catalog = [
+            migration("29990101000000", "CREATE TABLE ws18_new(id INTEGER);"),
+            migration("29990101000001", "INSERT INTO ws18_child VALUES (43);"),
+        ];
+        let error = migrate_with(&mut conn, &manifest(&["29990101000000", "29990101000001"]), &catalog).unwrap_err();
+        assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
     }
 
     #[test]

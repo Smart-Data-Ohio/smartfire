@@ -116,6 +116,8 @@ async fn show_sidebar(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.clone();
     let (secrets, now) = (c.app().secrets.clone(), now(c));
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::before_sidebar_read(viewer.id).await;
     let sidebar = c
         .app()
         .db
@@ -129,7 +131,7 @@ async fn show_sidebar(c: &mut Ctx) -> Result {
             dto::sidebar(
                 conn,
                 &secrets,
-                &viewer,
+                viewer.id,
                 viewer.is_administrator() || !restricted,
                 now,
             )

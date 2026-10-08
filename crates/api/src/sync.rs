@@ -96,15 +96,11 @@ impl SyncRenderer for Renderer {
     fn sidebar_row(
         &self,
         conn: &Connection,
-        room: &Room,
+        _room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {
-        // The clock before the read, so a row read later never carries an older revision.
-        let revision = match self.app.upgrade() {
-            Some(app) => app.db.env().now(),
-            None => campfire_db::Timestamp::from_jiff(jiff::Timestamp::now()),
-        };
-        dto::sidebar_row(conn, room, membership, revision)
+        // Read afresh in its own snapshot, so the row and its revision agree.
+        dto::sidebar_row(conn, membership.id)
     }
 
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {

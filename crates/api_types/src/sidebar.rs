@@ -57,20 +57,22 @@ pub struct SidebarRow {
     /// The viewer's unread `mention` activity items for messages in this room
     /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`).
     pub mention_count: i64,
-    /// The red pill: the messages here that would have notified the viewer under the classic
-    /// rules (`Notifications::Policy`) and are still unread, one per message. Root messages count
-    /// while they're in the room's unread range (every one but system notes in an `everything`
-    /// room; those with a mention, reply, thread activity or keyword alert inbox item in a
-    /// `mentions` room; mentions in a `muted` room), so reading the room clears them. Thread
-    /// messages with such an item count while their thread is unread, since classic reads a
-    /// thread apart from its room. A ping also stops counting once its inbox item is read.
-    /// None for `nothing`.
+    /// The red pill: what would have notified the viewer under the classic rules
+    /// (`Notifications::Policy`) and is still unread. Root messages count once each while
+    /// they're in the room's unread range (every one but system notes and your own in an
+    /// `everything` room; those with a mention, reply, thread activity or keyword alert inbox
+    /// item in a `mentions` room; mentions in a `muted` room), so reading the room clears them.
+    /// In threads the unit is the unread inbox item while the thread is unread, since classic
+    /// reads a thread apart from its room: ordinary replies in a followed thread are grouped
+    /// into one item, so they count 1, and a mention or reply to you there counts on its own. A
+    /// ping also stops counting once its inbox item is read. None for `nothing`.
     pub notification_count: i64,
     /// The part of `notification_count` in threads: what's left of it once the room is read.
     pub thread_notification_count: i64,
-    /// When the server began reading this row (microseconds since the epoch, the clock read
-    /// before the read snapshot opens). A row with a smaller revision than the one held is
-    /// older and is ignored; equal ones replace it.
+    /// The sidebar revision the row was read at: a database counter bumped in every write
+    /// transaction that changes something rows are made from, read in the same snapshot as the
+    /// row, so it follows commit order. A row with a smaller revision than the one held was read
+    /// from older data and is ignored; an equal one was read from the same data and replaces it.
     pub revision: i64,
 }
 

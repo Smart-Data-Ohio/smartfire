@@ -322,8 +322,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     }
   };
 
-  // The server stamps each row with the clock before reading it; the mock counts rows instead,
-  // which orders them the same way.
+  // The server stamps each row with a counter that every relevant write bumps; the mock counts
+  // rows instead, which orders them the same way.
   let rowRevision = 0;
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {

@@ -381,7 +381,7 @@ impl Broadcasts {
     }
 
     /// `sidebar.row.upserted` for the person's own row after they read the room or one of its
-    /// threads, or marked it unread, read afresh later: the server's count agrees with the
+    /// threads, left a thread, or marked it unread, read afresh later: the server's count agrees with the
     /// read (and with the client's own clearing of it), so a reload doesn't bring a badge back.
     pub fn sync_read_row(&self, user_id: i64, room_id: i64) {
         sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(vec![user_id]));

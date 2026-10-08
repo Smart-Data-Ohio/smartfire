@@ -144,8 +144,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
         "Broadcasts::unread_room",
         &["room.unread", "sidebar.row.upserted"],
     ),
-    ("Broadcasts::mark_room_unread", &["room.unread"]),
-    ("Broadcasts::message_remove", &["message.removed"]),
+    ("Broadcasts::mark_room_unread", &["room.unread", "sidebar.row.upserted"]),
+    ("Broadcasts::message_remove", &["message.removed", "sidebar.row.upserted"]),
     ("Broadcasts::message_replace", &["message.updated"]),
     ("Broadcasts::message_part_replace", &["message.updated"]),
     (
@@ -159,8 +159,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::thread_refresh", &["thread.unread"]),
     ("Broadcasts::thread_created", &["thread.created"]),
     ("Broadcasts::thread_updated", &["thread.updated"]),
-    ("Broadcasts::thread_removed", &["thread.removed"]),
-    ("Broadcasts::thread_read", &["thread.read"]),
+    ("Broadcasts::thread_removed", &["thread.removed", "sidebar.row.upserted"]),
+    ("Broadcasts::thread_read", &["thread.read", "sidebar.row.upserted"]),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
     ("Broadcasts::open_room_update", &["sidebar.row.upserted"]),
@@ -182,6 +182,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("agent_approval::ApprovalChange", &["approval.updated"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("activity_item::ActivityItemTouched", &["activity.item"]),
+    ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",
         &[

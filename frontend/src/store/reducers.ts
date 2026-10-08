@@ -63,9 +63,10 @@ function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly 
 }
 
 /**
- * Whether a server row may replace the one held: rows carry the server's `revision` (the clock
- * read before the row was read), so a slower response or a late event can't put an older row
- * over a newer one. Equal revisions replace, so the later arrival of a tie wins.
+ * Whether a server row may replace the one held: rows carry the server's sidebar `revision`, a
+ * database counter read in the same snapshot as the row and bumped by every write that changes
+ * rows, so a slower response or a late event read from older data can't put its row over a
+ * newer one. An equal revision was read from the same data, so it replaces the held row.
  */
 export function rowLandsOver(held: SidebarRow | undefined, incoming: SidebarRow): boolean {
   return held === undefined || incoming.revision >= held.revision;

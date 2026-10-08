@@ -1571,3 +1571,148 @@ async fn the_sidebar_reads_its_counts_in_one_snapshot() {
         }
     }
 }
+
+#[tokio::test]
+async fn ordinary_replies_in_a_followed_thread_count_once() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    quiet_designers(&a, "everything").await;
+    exec(
+        &a,
+        "UPDATE thread_memberships SET involvement = 'everything' WHERE thread_id = ? AND user_id = ?",
+        vec![THREAD.into(), DAVID.into()],
+    )
+    .await;
+    let path = format!("/api/v1/threads/{THREAD}/messages");
+    for n in 0..2 {
+        let body = json!({"clientMessageId": format!("0199b3c4-1c-grouped-{n}"), "markdownSource": format!("Reply {n}"), "replyToMessageId": null, "replyNotifyAuthor": null});
+        let reply = jason.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    }
+
+    // Both replies would have pushed, but thread activity is one inbox item per thread, and the
+    // unit for thread pings is the unread item.
+    let items: i64 = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM activity_items WHERE user_id = ? AND event_type = 'thread_activity' AND read_at IS NULL",
+                [DAVID],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(items, 1);
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+}
+
+/// David's Designers row with one unread thread ping, and his socket.
+async fn thread_ping(a: &TestApp, addr: std::net::SocketAddr) -> (crate::controllers::presenters::test_support::Browser<'_>, Sync) {
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(a, "mentions").await;
+    item(a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    thread_unread(a, true).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    (david, sync)
+}
+
+#[tokio::test]
+async fn leaving_a_thread_republishes_the_row() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let (mut david, mut sync) = thread_ping(&a, addr).await;
+    let path = format!("/api/v1/threads/{THREAD}/join");
+    let response = david.write(json_body(Method::DELETE, &path, &json!({}))).await;
+    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+    server.abort();
+}
+
+#[tokio::test]
+async fn leaving_a_thread_in_the_classic_app_republishes_the_row() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let (mut david, mut sync) = thread_ping(&a, addr).await;
+    let path = format!("/rooms/{DESIGNERS}/threads/{THREAD}/leave");
+    let response = david
+        .write(Req::new(Method::DELETE, &path).header("accept", "application/json"))
+        .await;
+    assert_eq!(response.status, StatusCode::NO_CONTENT, "{}", response.text());
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+    server.abort();
+}
+
+/// A classic app socket (`/cable`) signed in with `cookie`, past its welcome.
+async fn classic_cable(addr: std::net::SocketAddr, cookie: &str) -> crate::channels::tests::support::Client {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+    let headers = request.headers_mut();
+    headers.insert("origin", format!("http://{addr}").parse().unwrap());
+    headers.insert("cookie", cookie.parse().unwrap());
+    headers.insert("sec-websocket-protocol", "actioncable-v1-json".parse().unwrap());
+    let (socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    let mut client = crate::channels::tests::support::Client { socket };
+    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+    client
+}
+
+#[tokio::test]
+async fn being_present_in_the_classic_app_republishes_the_read_row() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "everything").await;
+    let message = designers_message(&a, None, false, 10).await;
+    unread_from(&a, message).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (1, 1, 0));
+
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let mut cable = classic_cable(addr, &david.cookie_header()).await;
+    cable
+        .confirm(&crate::channels::tests::support::room_identifier("PresenceChannel", DESIGNERS))
+        .await;
+    // `present` reads the room: an authoritative row follows, so a row read before the read
+    // can't leave the badge up.
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_sidebar_read_from_newer_data_carries_the_higher_revision() {
+    let Some(a) = app(true).await else { return };
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    quiet_designers(&a, "everything").await;
+    let designers = |sidebar: &api::Sidebar| {
+        sidebar.rows.iter().find(|row| row.room.id == DESIGNERS).cloned().expect("Designers")
+    };
+
+    // The first read is held before it reads; the second starts after it but reads before a
+    // write; then the first reads, after the write.
+    let hold = campfire_api::test_hooks::hold_before_sidebar_read(DAVID);
+    let (held, stale) = tokio::join!(first.send(get("/api/v1/sidebar")), async {
+        hold.reached.wait().await;
+        let stale: api::Sidebar = parse(&second.send(get("/api/v1/sidebar")).await);
+        let message = designers_message(&a, None, false, 10).await;
+        unread_from(&a, message).await;
+        hold.release.wait().await;
+        stale
+    });
+    let (fresh, stale) = (designers(&parse(&held)), designers(&stale));
+    assert_eq!((counts(&stale), counts(&fresh)), ((0, 0, 0), (1, 1, 0)));
+    assert!(
+        fresh.revision > stale.revision,
+        "the row read from newer data must win: fresh {} vs stale {}",
+        fresh.revision,
+        stale.revision
+    );
+
+    // Read again with nothing written since: the same revision, and the very same row.
+    let again = designers(&parse(&second.send(get("/api/v1/sidebar")).await));
+    assert_eq!(again, fresh);
+}

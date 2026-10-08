@@ -7,7 +7,7 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_db::{Involvement, Membership, Room, RoomCategory, RoomType};
+use campfire_db::{Involvement, Membership, RoomCategory, RoomType};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_rooms::controllers::rooms::involvements;
 use campfire_web::concerns::{self, cast_integer};
@@ -151,14 +151,10 @@ async fn put_order(c: &mut Ctx) -> Result {
 }
 
 /// The membership's row as it is now, hidden or not.
-async fn row(c: &Ctx, room: Room, membership_id: i64) -> Result<api::SidebarRow> {
-    let revision = c.app().db.env().now();
+async fn row(c: &Ctx, membership_id: i64) -> Result<api::SidebarRow> {
     c.app()
         .db
-        .read(move |conn| {
-            let membership = Membership::find(conn, membership_id)?;
-            dto::membership_row(conn, &room, &membership, revision)
-        })
+        .read(move |conn| dto::membership_row(conn, membership_id))
         .await
         .map_err(db_error)
 }
@@ -186,7 +182,7 @@ async fn put_category(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let row = row(c, room, membership_id).await?;
+    let row = row(c, membership_id).await?;
     c.json(StatusCode::OK, &row)
 }
 
@@ -200,7 +196,7 @@ async fn delete_favorite(c: &mut Ctx) -> Result {
 
 async fn toggle_favorite(c: &mut Ctx, favorite: bool) -> Result {
     before_actions(c).await?;
-    let (mut membership, room) = set_room(c).await?;
+    let (mut membership, _) = set_room(c).await?;
     let membership_id = membership.id;
     c.app()
         .db
@@ -213,7 +209,7 @@ async fn toggle_favorite(c: &mut Ctx, favorite: bool) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let row = row(c, room, membership_id).await?;
+    let row = row(c, membership_id).await?;
     c.json(StatusCode::OK, &row)
 }
 
@@ -227,8 +223,7 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             membership.move_favorite_to(tx, position)?;
-            let revision = tx.now();
-            shown_favorites(tx.conn(), user_id, revision)
+            shown_favorites(tx.conn(), user_id)
         })
         .await
         .map_err(db_error)?;
@@ -239,12 +234,10 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
 fn shown_favorites(
     conn: &campfire_db::Connection,
     user_id: i64,
-    revision: campfire_db::Timestamp,
 ) -> campfire_db::Result<Vec<api::SidebarRow>> {
     let mut rows = Vec::new();
     for membership in Membership::favorites_for_user(conn, user_id)? {
-        let room = membership.room(conn)?;
-        rows.extend(dto::sidebar_row(conn, &room, &membership, revision)?);
+        rows.extend(dto::sidebar_row(conn, membership.id)?);
     }
     Ok(rows)
 }
