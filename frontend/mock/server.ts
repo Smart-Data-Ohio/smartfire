@@ -152,6 +152,11 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /**
+   * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
+   * without its CSRF token, which the meta tag carries), escaped for a script element.
+   */
+  inlineBoot(): string;
   /** Stops the ambient simulation (the bot still answers). */
   pause(): void;
   resume(): void;
@@ -335,8 +340,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
       account: { name: "Smart Data" },
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       cableUrl: "/cable",
       serviceWorkerUrl: null,
       version: "mock",
@@ -349,8 +353,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
@@ -691,6 +694,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
+  // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
+  const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
@@ -723,7 +728,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...settings.routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...createPeople(ctx, admin.requireSudo).routes,
@@ -1031,6 +1036,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    inlineBoot: () => {
+      const { csrfToken: _meta, ...inline } = boot();
+
+      return JSON.stringify(inline).replaceAll("<", "\\u003c");
+    },
     pause: () => simulation.pause(),
     resume: () => simulation.resume(),
     typing,
