@@ -4,7 +4,7 @@
  * can't tell a thread removed meanwhile from one that wasn't (`uncertainSince`), so it's asked
  * for again with a fresh `since`, which is past every forgotten removal.
  */
-import { Effect, Predicate } from "effect";
+import { Effect, Predicate, Result } from "effect";
 import { thread } from "../api/thread-endpoints.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import { store } from "../store/store.ts";
@@ -18,6 +18,9 @@ export const UNAVAILABLE =
   "This thread isn't available. It may have been deleted, or you may no longer have access.";
 
 /** How many replies are asked for before giving up on telling (each one past 500 removals). */
+/** When removals kept outrunning the thread's replies (see `settled`); Try again asks afresh. */
+export const UNSETTLED = "This thread couldn't be loaded. Try again.";
+
 export const MAX_SETTLE_ATTEMPTS = 3;
 
 /**
@@ -92,3 +95,15 @@ export const settledDetail = <E, R>(
     (detail) => [detail.thread.id],
     install,
   );
+
+/** What the pane says when its header didn't settle: the failure, a 404 on asking again, or giving up. */
+export const paneProblem = <A>(
+  detail: Result.Result<Settled<A>, { readonly message: string }>,
+): string | null =>
+  Result.isFailure(detail)
+    ? detail.failure.message
+    : detail.success.outcome === "gone"
+      ? UNAVAILABLE
+      : detail.success.outcome === "unsettled"
+        ? UNSETTLED
+        : null;
