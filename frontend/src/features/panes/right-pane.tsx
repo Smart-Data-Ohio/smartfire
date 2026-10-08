@@ -12,6 +12,7 @@ import { usePresence } from "../../motion/presence.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
+import { usePendingVisible } from "../shell/route-pending.tsx";
 import { type PaneChrome, PaneChromeContext, PaneFrame } from "./pane-frame.tsx";
 import { PANE_TITLES, type RightPaneView, viewKey } from "./pane-selection.ts";
 import { PaneListSkeleton } from "./pane-states.tsx";
@@ -189,6 +190,11 @@ function fallbackTitle(view: RightPaneView): string {
 
 function PaneFallback({ view }: { readonly view: RightPaneView }) {
   const title = fallbackTitle(view);
+  const visible = usePendingVisible();
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <PaneFrame title={title}>

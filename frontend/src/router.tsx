@@ -38,6 +38,7 @@ import { StatusSection } from "./features/settings/status-section.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
+import { RoutePending } from "./features/shell/route-pending.tsx";
 import {
   PersonalSlackRunSection,
   PersonalSlackSection,
@@ -543,6 +544,13 @@ export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL,
   defaultPreload: false,
+  // A pending component makes TanStack wrap every match in Suspense and use this as the
+  // fallback. Lazy route chunks suspend there, inside the shell's outlet (and inside settings,
+  // admin and an agent's profile), instead of at the root where the whole app would unmount.
+  // Hover preloads (`preload={false}` on links, and the events button's own import) are
+  // untouched: they fill the module cache before the match renders. `pendingMs` only delays
+  // loader pending, which these routes don't use; the placeholder waits itself.
+  defaultPendingComponent: RoutePending,
   // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
