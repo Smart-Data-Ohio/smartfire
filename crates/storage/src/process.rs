@@ -77,14 +77,27 @@ fn blank(value: &Value) -> bool {
     }
 }
 
-/// `VideoPreviewer.accept?`: `system(ffmpeg, "-version")`, memoized.
+/// `VideoPreviewer.accept?`: `system(ffmpeg, "-version")`, memoized once the binary has run
+/// or is missing. A timed-out probe is not remembered, so a later call can try again.
 pub fn ffmpeg_exists() -> bool {
     static EXISTS: OnceLock<bool> = OnceLock::new();
-    *EXISTS.get_or_init(|| {
-        let mut command = Command::new(ffmpeg_path());
-        command.arg("-version").stderr(Stdio::null());
-        output_within(&mut command, Duration::from_secs(5)).is_ok_and(|output| output.status.success())
-    })
+    if let Some(exists) = EXISTS.get() {
+        return *exists;
+    }
+    let mut command = Command::new(ffmpeg_path());
+    command.arg("-version").stderr(Stdio::null());
+    let found = match output_within(&mut command, Duration::from_secs(5)) {
+        Ok(output) => Some(output.status.success()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Some(false),
+        Err(_) => None,
+    };
+    match found {
+        Some(found) => {
+            let _ = EXISTS.set(found);
+            found
+        }
+        None => false,
+    }
 }
 
 /// `draw_relevant_frame_from`: `ffmpeg -i <input> <video_preview_arguments> -`, capturing stdout.
@@ -129,8 +142,7 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
         Some(status) => status,
         None => {
             stop_child(&mut child);
-            let _ = reap(&mut child);
-            let _ = take_pipes(stdout, stderr, Instant::now() + REAP_GRACE);
+            release(child, stdout, stderr);
             return Err(stuck(&program, timeout));
         }
     };
@@ -138,8 +150,7 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
         Ok((stdout, stderr)) => Ok(Output { status, stdout, stderr }),
         Err((stdout, stderr)) => {
             stop_child(&mut child);
-            let _ = reap(&mut child);
-            let _ = take_pipes(stdout, stderr, Instant::now() + REAP_GRACE);
+            release(child, stdout, stderr);
             Err(stuck(&program, timeout))
         }
     }
@@ -169,12 +180,45 @@ unsafe extern "C" {
     fn kill(pid: i32, sig: i32) -> i32;
 }
 
-fn reap(child: &mut Child) -> std::io::Result<()> {
-    if wait_until(child, Instant::now() + REAP_GRACE)?.is_none() {
-        let _ = child.kill();
-        let _ = child.try_wait();
+/// After the caller's kill: reap and join pipes within the grace period. A child still
+/// running (uninterruptible I/O can outlive SIGKILL) and any reader a descendant is still
+/// holding move to a detached thread, so this returns while `wait` and the joins finish.
+fn release(mut child: Child, stdout: Pipe, stderr: Pipe) {
+    let child = if child_reaped(&mut child) { None } else { Some(child) };
+    let (stdout, stderr) = match take_pipes(stdout, stderr, Instant::now() + REAP_GRACE) {
+        Ok(_) => (None, None),
+        Err(pipes) => (Some(pipes.0), Some(pipes.1)),
+    };
+    detach_unfinished(child, stdout, stderr);
+}
+
+fn child_reaped(child: &mut Child) -> bool {
+    match wait_until(child, Instant::now() + REAP_GRACE) {
+        Ok(Some(_)) => true,
+        Ok(None) => {
+            let _ = child.kill();
+            matches!(child.try_wait(), Ok(Some(_)))
+        }
+        Err(_) => false,
     }
-    Ok(())
+}
+
+fn detach_unfinished(child: Option<Child>, stdout: Option<Pipe>, stderr: Option<Pipe>) {
+    if child.is_none() && stdout.is_none() && stderr.is_none() {
+        return;
+    }
+    // Detach the reaper. It ends when the child exits and the pipes close.
+    let _ = std::thread::Builder::new().name("media-process-reaper".into()).spawn(move || {
+        if let Some(mut child) = child {
+            let _ = child.wait();
+        }
+        if let Some(stdout) = stdout {
+            let _ = stdout.join();
+        }
+        if let Some(stderr) = stderr {
+            let _ = stderr.join();
+        }
+    });
 }
 
 type Pipe = std::thread::JoinHandle<Vec<u8>>;
@@ -261,5 +305,45 @@ mod tests {
         assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
         assert!(error.to_string().contains("sh"), "{error}");
         assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn detach_reaps_a_child_that_ignores_sigterm() {
+        const SIGTERM: i32 = 15;
+        let mut command = Command::new("sh");
+        command.arg("-c").arg("trap '' TERM; echo ready; exec sleep 30");
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
+        let pid = child.id();
+        struct Kill(u32);
+        impl Drop for Kill {
+            fn drop(&mut self) {
+                // SAFETY: this pid is the child's process group, started with `process_group(0)`.
+                unsafe { kill(-(self.0 as i32), SIGKILL) };
+            }
+        }
+        let kill_group = Kill(pid);
+        let mut stdout = child.stdout.take().unwrap();
+        let mut ready = [0u8; 6];
+        std::io::Read::read_exact(&mut stdout, &mut ready).unwrap();
+        assert_eq!(&ready, b"ready\n");
+        // SAFETY: `pid` is the child we just spawned.
+        unsafe { kill(pid as i32, SIGTERM) };
+        assert!(child.try_wait().unwrap().is_none(), "the child ignored SIGTERM");
+        let stdout = drain(Some(stdout));
+        let stderr = drain(child.stderr.take());
+        let started = Instant::now();
+        detach_unfinished(Some(child), Some(stdout), Some(stderr));
+        assert!(started.elapsed() < Duration::from_millis(500), "detach blocked for {:?}", started.elapsed());
+        drop(kill_group);
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Path::new(&format!("/proc/{pid}")).exists() {
+            assert!(Instant::now() < deadline, "pid {pid} was not reaped");
+            std::thread::sleep(Duration::from_millis(20));
+        }
     }
 }
