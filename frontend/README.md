@@ -90,8 +90,13 @@ Authenticated integration cases use private fixture profiles and optional `befor
 HTTP steps to establish OAuth state or verify a successful mutation. Machine requests specify
 `csrf: false` so browser-session bootstrap cannot hide an accidental CSRF dependency. CSRF
 tokens come from the session cookie, with the retained sign-in page as a fallback. Successful
-file responses can pin their bytes with `body_sha256`; redirects compare both origin and path. The
-`browser_cases` array pins fragments and query strings through actual browser navigation,
+file responses can pin their bytes with `body_sha256`; redirects compare both origin and path.
+The `follow_location` expectation fetches the returned same-origin URL and checks its response,
+including signatures and file bytes. `expect.json` parses the body, matches object fields
+recursively, and requires each declared array element to appear (array order is immaterial).
+Use nonempty objects or arrays with representative identities and values.
+
+The `browser_cases` array pins fragments and query strings through actual browser navigation,
 so later routing changes update these expectations in the same JSON file.
 
 Restore the frozen seeds before running the contract tests from the repository root:

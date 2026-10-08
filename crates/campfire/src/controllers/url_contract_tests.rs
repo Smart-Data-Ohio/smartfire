@@ -220,6 +220,10 @@ struct Expect {
     session: Option<serde_json::Value>,
     #[serde(default)]
     body_sha256: Option<String>,
+    #[serde(default)]
+    json: Option<serde_json::Value>,
+    #[serde(default)]
+    follow_location: Option<Box<Expect>>,
 }
 
 /// Every entry has runnable cases, and the contract only says things the runner understands.
@@ -691,10 +695,21 @@ fn matches_location(location: &str, expected: &str, prefix: bool) -> bool {
 
 fn subset(actual: &serde_json::Value, expected: &serde_json::Value) -> bool {
     match expected {
-        serde_json::Value::Object(fields) => fields.iter().all(|(key, expected)| {
-            actual
-                .get(key)
-                .is_some_and(|actual| subset(actual, expected))
+        serde_json::Value::Object(fields) => actual.as_object().is_some_and(|actual| {
+            fields.iter().all(|(key, expected)| {
+                actual
+                    .get(key)
+                    .is_some_and(|actual| subset(actual, expected))
+            })
+        }),
+        serde_json::Value::Array(expected) => actual.as_array().is_some_and(|actual| {
+            if expected.is_empty() {
+                actual.is_empty()
+            } else {
+                expected
+                    .iter()
+                    .all(|expected| actual.iter().any(|actual| subset(actual, expected)))
+            }
         }),
         _ => actual == expected,
     }
@@ -765,6 +780,61 @@ fn mismatches(
     {
         errors.push(format!("session does not contain {expected}"));
     }
+    if let Some(expected) = &expect.json {
+        match serde_json::from_slice::<serde_json::Value>(&reply.body) {
+            Ok(actual) if subset(&actual, expected) => {}
+            Ok(actual) => errors.push(format!(
+                "JSON body does not contain {expected}: {}",
+                snippet(&actual.to_string())
+            )),
+            Err(error) => errors.push(format!("invalid JSON: {error}")),
+        }
+    }
+    errors
+}
+
+async fn check_response(
+    client: &mut Live,
+    app: &TestApp,
+    path: &str,
+    reply: &Reply,
+    expect: &Expect,
+    values: &BTreeMap<String, String>,
+) -> Vec<String> {
+    let mut errors = mismatches(reply, expect, values, client.session(app).as_ref());
+    let mut location = reply.header("location").map(str::to_owned);
+    let mut follow = expect.follow_location.as_deref();
+    let origin = url::Url::parse(ORIGIN).unwrap();
+    let mut current_url = origin.join(path).expect("the request URL");
+    while let Some(expect) = follow {
+        let Some(next_location) = location else {
+            errors.push("follow_location needs a Location".into());
+            break;
+        };
+        let target = match current_url.join(&next_location) {
+            Ok(target) if target.origin() == origin.origin() => target,
+            _ => {
+                errors.push(format!(
+                    "follow_location is not same-origin: {next_location}"
+                ));
+                break;
+            }
+        };
+        let path = format!(
+            "{}{}",
+            target.path(),
+            target.query().map(|q| format!("?{q}")).unwrap_or_default()
+        );
+        let reply = client.request("GET", &path, &BTreeMap::new(), &[]).await;
+        errors.extend(
+            mismatches(&reply, expect, values, client.session(app).as_ref())
+                .into_iter()
+                .map(|error| format!("follow_location GET {path}: {error}")),
+        );
+        location = reply.header("location").map(str::to_owned);
+        follow = expect.follow_location.as_deref();
+        current_url = target;
+    }
     errors
 }
 
@@ -776,7 +846,7 @@ async fn run_steps(
 ) -> std::result::Result<usize, String> {
     for (index, step) in steps.iter().enumerate() {
         let (path, reply) = client.send(app, step.into(), values).await?;
-        let errors = mismatches(&reply, &step.expect, values, client.session(app).as_ref());
+        let errors = check_response(client, app, &path, &reply, &step.expect, values).await;
         if !errors.is_empty() {
             return Err(format!(
                 "step {index} ({} {path}): {}",
@@ -1047,7 +1117,7 @@ async fn url_contract_matches_over_real_http() {
             ran += 1;
             *ran_per_entry.entry(entry.id.as_str()).or_default() += 1;
             let mut mismatches =
-                mismatches(&reply, expect, &values, client.session(&group.app).as_ref());
+                check_response(&mut client, &group.app, &path, &reply, expect, &values).await;
             if let Err(error) = run_steps(&mut client, &group.app, &case.after, &mut values).await {
                 mismatches.push(format!("after: {error}"));
             }

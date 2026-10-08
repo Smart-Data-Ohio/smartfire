@@ -103,18 +103,41 @@ try {
     await page.getByRole("button", { name: "Your account", exact: true }).waitFor()
     const timeline = page.getByRole("log", { name: "Messages" })
     await timeline.waitFor()
+    // A history page can move the virtual window; use its visible jump control when needed.
+    async function showInTimeline(row) {
+      const present = page.locator('.timeline-jump[data-open="true"]').getByRole("button")
+      const deadline = Date.now() + 30000
+      let lastError
+      // Late history pages can replace the window between locating and scrolling a row.
+      while (Date.now() < deadline) {
+        try {
+          await row.or(present).first().waitFor({ timeout: 3000 })
+          if (!(await row.isVisible())) await present.click({ timeout: 3000 })
+          await row.click({ trial: true, timeout: 3000 })
+          return
+        } catch (error) {
+          if (error.name !== "TimeoutError" && !error.message.includes("Element is not attached")) throw error
+          lastError = error
+        }
+      }
+      throw lastError ?? new Error("the timeline never displayed the requested message")
+    }
+    await showInTimeline(timeline.locator(`article[data-message-row][data-message-id="${contract.placeholders.MSG_JZ}"]`))
     const composer = page.getByRole("textbox", { name: /Message/ })
     await composer.waitFor()
     step("room-opened", `/app/r/${room}`)
 
     const body = `smoke ${Date.now().toString(36)} ${Math.floor(Math.random() * 1e6).toString(36)}`
     await composer.fill(body)
+    const posted = page.waitForResponse((response) => response.request().method() === "POST"
+      && new URL(response.url()).pathname === `/api/v1/rooms/${room}/messages`)
     await page.getByRole("button", { name: "Send message", exact: true }).click()
-    await timeline.locator("article[data-message-row][data-message-id]").filter({ hasText: body }).waitFor()
+    assert.equal((await posted).status(), 201, "the actual server accepted the message")
+    await showInTimeline(timeline.locator("article[data-message-row][data-message-id]").filter({ hasText: body }))
     step("message-sent", body)
 
     await page.reload({ waitUntil: "load" })
-    await page.getByRole("log", { name: "Messages" }).getByText(body).first().waitFor()
+    await showInTimeline(page.getByRole("log", { name: "Messages" }).locator("article[data-message-row][data-message-id]").filter({ hasText: body }))
     step("message-persisted", body)
     step("timeline-asserted", "role=log name=Messages after reload")
 

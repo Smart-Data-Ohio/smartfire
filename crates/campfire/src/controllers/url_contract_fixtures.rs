@@ -9,9 +9,11 @@
 //! `"slack_personal"` each hold one mutation chain on its own runs (an `undoing`/`queued`
 //! run blocks every other mutation, so the undos cannot share a group); `"retained"` holds
 //! the blob/disk/proxy/representation/avatar successes; `"oauth"` holds the configured
-//! Google and GitHub callbacks (classic + SPA return destinations).
+//! Google and GitHub callbacks (classic + SPA return destinations); `"oauth_slack_r3"`
+//! and `"oauth_google_r3"` separately hold Slack linking and Google sign-in successes.
 //!
-//! GitHub's network is fixed at boot; Google's recorded client is installed after boot.
+//! GitHub's and Slack's networks are fixed at boot; Google's transport doubles are installed
+//! after boot.
 
 use std::collections::BTreeMap;
 
@@ -36,6 +38,21 @@ const SLACK_TEAM: &str = "TCONTRACT-R2";
 const GITHUB_LOGIN: &str = "contract-octocat";
 /// The mock Google account email the `"oauth"` fake `/token` answers with.
 const GOOGLE_EMAIL: &str = "david.contract@gmail.test";
+/// The `"oauth_slack_r3"` app and team: the fake `POST /api/oauth.v2.access` answers with
+/// this team, and the workspace row is pre-named to match so no `team.info` fetch is needed.
+const SLACK_TEAM_R3: &str = "TCONTRACT-R3";
+const SLACK_TEAM_NAME_R3: &str = "URL contract R3";
+const SLACK_CLIENT_ID_R3: &str = "url-contract-slack-client-r3";
+const SLACK_CLIENT_SECRET_R3: &str = "url-contract-slack-secret-r3";
+const SLACK_USER_R3: &str = "UCONTRACTR3";
+const SLACK_GRANT_R3: &str = "xoxe-url-contract-r3-grant";
+/// The `"oauth_google_r3"` identity: David's seeded address (so the verified claims
+/// resolve to his row) under a fixed subject, in the fixture's allowed domain.
+const GOOGLE_SIGNIN_SUB: &str = "url-contract-david-sub";
+const GOOGLE_SIGNIN_EMAIL: &str = "david@37signals.com";
+const GOOGLE_SIGNIN_DOMAIN: &str = "37signals.com";
+const GOOGLE_SIGNIN_CLIENT_ID: &str = "test-client-id";
+const GOOGLE_SIGNIN_CLIENT_SECRET: &str = "FAKE-google-client-secret";
 
 /// How many queued Google `/token` answers the `"oauth"` profile stages: two callbacks run
 /// (classic + SPA return), the rest is margin. `Recorded` panics on any unrecorded Google
@@ -45,23 +62,24 @@ const GOOGLE_TOKEN_ANSWERS: usize = 6;
 pub struct FixtureContext {
     profile: String,
     env: Vec<(String, String)>,
-    github: Option<GithubMock>,
+    fixed: Option<FixedNetwork>,
 }
 
-/// The existing TLS fake-GitHub harness (`integrations::github::tests::fake`): canned
-/// `POST /login/oauth/access_token` + `GET /user` answers over a `Network` whose resolver
-/// and dialer send both GitHub hosts to the local server. Holding the server keeps its
-/// listener alive for the group's lifetime.
-struct GithubMock {
+/// A TLS fake-provider harness (`integrations::github::tests::fake` for `"oauth"`,
+/// `integrations::slack::client::tests::fake` for `"oauth_slack_r3"`): canned answers over a
+/// `Network` whose resolver and dialer send the provider hosts to the local server. Holding
+/// the server keeps its listener alive for the group's lifetime.
+struct FixedNetwork {
     _server: crate::integrations::test_support::FakeServer,
     network: crate::net::Network,
 }
 
 impl FixtureContext {
-    /// Start the profile's provider doubles. Only `"oauth"` starts a server (the GitHub
-    /// App exchange); Google is a post-boot `Recorded` client installed in [`Self::prepare`].
+    /// Start the profile's provider doubles. `"oauth"` starts the fake GitHub App server;
+    /// `"oauth_slack_r3"` starts the fake Slack server; Google clients are post-boot installs in
+    /// [`Self::prepare`].
     pub async fn boot(profile: &str) -> Self {
-        let github = if profile == "oauth" {
+        let fixed = if profile == "oauth" {
             let routes = vec![
                 crate::integrations::test_support::Route::new(
                     "POST",
@@ -86,7 +104,41 @@ impl FixtureContext {
                 )),
             ];
             let (server, network) = crate::integrations::github::tests::fake(routes).await;
-            Some(GithubMock {
+            Some(FixedNetwork {
+                _server: server,
+                network,
+            })
+        } else if profile == "oauth_slack_r3" {
+            let scopes = crate::integrations::slack::oauth::USER_SCOPES.join(",");
+            let exchange = serde_json::json!({
+                "ok": true,
+                "team": {"id": SLACK_TEAM_R3, "name": SLACK_TEAM_NAME_R3},
+                "authed_user": {"id": SLACK_USER_R3, "access_token": SLACK_GRANT_R3, "scope": scopes},
+            });
+            let team = serde_json::json!({
+                "ok": true,
+                "team": {"id": SLACK_TEAM_R3, "name": SLACK_TEAM_NAME_R3, "domain": "contract-r3"},
+            });
+            let routes = vec![
+                crate::integrations::test_support::Route::new(
+                    "POST",
+                    "slack.com",
+                    "/api/oauth.v2.access",
+                    200,
+                )
+                .header("Content-Type", "application/json")
+                .body(exchange.to_string()),
+                crate::integrations::test_support::Route::new(
+                    "GET",
+                    "slack.com",
+                    "/api/team.info",
+                    200,
+                )
+                .header("Content-Type", "application/json")
+                .body(team.to_string()),
+            ];
+            let (server, network) = crate::integrations::slack::client::tests::fake(routes).await;
+            Some(FixedNetwork {
                 _server: server,
                 network,
             })
@@ -103,7 +155,7 @@ impl FixtureContext {
         Self {
             profile: profile.to_string(),
             env,
-            github,
+            fixed,
         }
     }
 
@@ -116,10 +168,11 @@ impl FixtureContext {
             .collect()
     }
 
-    /// Interface addition (see module docs): the fake GitHub network, when the profile
-    /// boots through `TestApp::boot_with_github_network_and_env`.
+    /// Interface addition (see module docs): the profile's fixed provider network
+    /// (GitHub for `"oauth"`, Slack for `"oauth_slack_r3"`), when the profile boots through
+    /// `TestApp::boot_with_github_network_and_env`.
     pub fn github_network(&self) -> Option<crate::net::Network> {
-        self.github.as_ref().map(|mock| mock.network.clone())
+        self.fixed.as_ref().map(|mock| mock.network.clone())
     }
 
     /// Stage the profile's rows, blobs and provider doubles; returns the runtime
@@ -134,6 +187,8 @@ impl FixtureContext {
             "slack_personal" => self.prepare_slack_personal(app, &mut out).await,
             "retained" => self.prepare_retained(app, &mut out).await,
             "oauth" => self.prepare_oauth(app).await,
+            "oauth_slack_r3" => self.prepare_slack_oauth(app).await,
+            "oauth_google_r3" => self.prepare_google_signin(app, &mut out).await,
             _ => {}
         }
         out
@@ -379,6 +434,103 @@ impl FixtureContext {
         }
         crate::app::google_api_tests::install(app, recorded).await;
     }
+
+    /// App credentials let the real start handler issue signed state and the callback
+    /// exchange it against the fake Slack server.
+    async fn prepare_slack_oauth(&self, app: &TestApp) {
+        let cipher = encryption(app);
+        app.db()
+            .write(move |tx| {
+                let workspace = campfire_db::models::slack::SlackWorkspace::create(
+                    tx,
+                    &cipher,
+                    SLACK_CLIENT_ID_R3,
+                    SLACK_CLIENT_SECRET_R3,
+                    Some(DAVID),
+                )?;
+                workspace.name_team(tx, &cipher, SLACK_TEAM_R3, Some(SLACK_TEAM_NAME_R3), None)?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+
+    /// The transport signs RS256 tokens and serves matching JWKS; production verifies
+    /// signature, issuer, audience and nonce. Keep David's seeded second factor and
+    /// supply its current code for the real challenge after the callback.
+    async fn prepare_google_signin(&self, app: &TestApp, out: &mut BTreeMap<String, String>) {
+        let cipher = encryption(app);
+        let secret = app
+            .db()
+            .write(move |tx| {
+                tx.conn().execute("DELETE FROM google_identities", [])?;
+                let claims = serde_json::json!({
+                    "sub": GOOGLE_SIGNIN_SUB,
+                    "email": GOOGLE_SIGNIN_EMAIL,
+                    "hd": GOOGLE_SIGNIN_DOMAIN,
+                });
+                campfire_db::models::google_identity::GoogleIdentity::link_to_user(
+                    tx,
+                    claims.as_object().unwrap(),
+                    DAVID,
+                )?;
+                campfire_db::TwoFactorCredential::for_user(tx.conn(), DAVID)?
+                    .expect("David's frozen second factor")
+                    .secret(&cipher)
+            })
+            .await
+            .unwrap();
+        let code = rails_compat::totp::at(&secret, app.booted.app.clock.now().as_second()).unwrap();
+        out.insert("GOOGLE_SIGNIN_TOTP".into(), code);
+        let sign_in = crate::integrations::google::sign_in::SignIn::with_client(
+            crate::integrations::google::sign_in::Config {
+                client_id: GOOGLE_SIGNIN_CLIENT_ID.into(),
+                client_secret: GOOGLE_SIGNIN_CLIENT_SECRET.into(),
+                domains: vec![GOOGLE_SIGNIN_DOMAIN.into()],
+            },
+            std::sync::Arc::new(GoogleSignInMock),
+        );
+        app.booted.app.google.install(sign_in);
+    }
+}
+
+/// The `google_tests` transport double, signing on demand: `POST /token` answers with a
+/// fresh RS256 id token whose `nonce` is the posted `code`, and `GET /oauth2/v3/certs`
+/// serves the matching JWKS. The cases pass the before step's captured `nonce` as the
+/// callback's `code`, so production verification sees the flow's own nonce. Any other
+/// Google call panics instead of touching the network.
+struct GoogleSignInMock;
+
+impl crate::integrations::google::client::Client for GoogleSignInMock {
+    fn request<'a>(
+        &'a self,
+        host: &'a str,
+        method: hyper::Method,
+        target: &'a str,
+        _headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    ) -> crate::integrations::net::BoxFuture<
+        'a,
+        Result<(u16, Vec<u8>), crate::integrations::google::client::Unavailable>,
+    > {
+        Box::pin(async move {
+            if host == "www.googleapis.com" && target == "/oauth2/v3/certs" {
+                return Ok((
+                    200,
+                    include_bytes!("../integrations/google/test-jwks.json").to_vec(),
+                ));
+            }
+            assert_eq!(
+                (host, method, target),
+                ("oauth2.googleapis.com", hyper::Method::POST, "/token")
+            );
+            let form: std::collections::BTreeMap<_, _> =
+                url::form_urlencoded::parse(&body).collect();
+            let nonce: &str = form.get("code").map(|value| value.as_ref()).unwrap_or("");
+            let tokens = serde_json::json!({"id_token": google_signin_token(nonce)});
+            Ok((200, serde_json::to_vec(&tokens).unwrap()))
+        })
+    }
 }
 
 /// Insert a staged upload's blob row and keep its bytes, as `attachments::attach`
@@ -516,4 +668,42 @@ fn google_id_token() -> String {
         encode.encode(payload.to_string()),
         encode.encode("url-contract-signature")
     )
+}
+
+/// An RS256 JWT over the house fixture key (`kid: fixture`, as `google_tests` signs),
+/// whose claims pass production `SignIn::verify` against the installed config when the
+/// caller echoes the flow's `nonce`.
+fn google_signin_token(nonce: &str) -> String {
+    use base64::Engine as _;
+    use ring::signature::{RSA_PKCS1_SHA256, RsaKeyPair};
+    let key = RsaKeyPair::from_pkcs8(include_bytes!("../integrations/google/signing.der")).unwrap();
+    let encode = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    let header = serde_json::json!({"alg": "RS256", "kid": "fixture"});
+    let payload = serde_json::json!({
+        "iss": "https://accounts.google.com",
+        "aud": GOOGLE_SIGNIN_CLIENT_ID,
+        "sub": GOOGLE_SIGNIN_SUB,
+        "email": GOOGLE_SIGNIN_EMAIL,
+        "email_verified": true,
+        "hd": GOOGLE_SIGNIN_DOMAIN,
+        "name": "David",
+        "nonce": nonce,
+        "exp": 1893456000,
+        "iat": 1772467200,
+        "auth_time": 1772467200,
+    });
+    let input = format!(
+        "{}.{}",
+        encode.encode(serde_json::to_vec(&header).unwrap()),
+        encode.encode(serde_json::to_vec(&payload).unwrap()),
+    );
+    let mut signature = vec![0; key.public().modulus_len()];
+    key.sign(
+        &RSA_PKCS1_SHA256,
+        &ring::rand::SystemRandom::new(),
+        input.as_bytes(),
+        &mut signature,
+    )
+    .unwrap();
+    format!("{input}.{}", encode.encode(signature))
 }
