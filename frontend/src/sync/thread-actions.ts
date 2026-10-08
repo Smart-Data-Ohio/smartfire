@@ -17,6 +17,7 @@ import {
   finishThreadLoad,
   isGoneFocus,
   isLatestThreadLoad,
+  loadThreadHeader,
   openAtNewest,
 } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
@@ -37,18 +38,9 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
-  // The header installs as soon as it's settled, not after the replies: a removal landing
-  // while they load would otherwise make it uncertain again with nobody left to ask.
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(
-        settled(
-          api.thread(threadId),
-          () => refetchThread(threadId),
-          (answer) => [answer.thread.id],
-          (answer, since) => mutations.loadThreadDetail(answer, since),
-        ),
-      ),
+      loadThreadHeader(threadId, load),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
