@@ -20,6 +20,7 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
+import { hasUnfinishedJoin } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import * as activity from "./activity-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
@@ -27,7 +28,7 @@ import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
-import { invalidateRoom, onRoomRefresh } from "./room-refresh.ts";
+import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
 import { onResync } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
@@ -2492,11 +2493,23 @@ describe("joining an open room", () => {
         const api = yield* FakeApi;
         const socket = yield* MemorySocket;
         const release = yield* Deferred.make<void>();
+        let member = false;
 
         yield* serve([]);
-        yield* previewRoutes;
+        yield* api.reply("GET /rooms/90/preview", preview);
+        yield* api.route("GET /rooms/90", () =>
+          member
+            ? Effect.succeed(roomDetailFixture(90))
+            : Effect.fail(new NotFound({ message: "Room not found" })),
+        );
         yield* api.route("POST /rooms/90/join", () =>
-          Deferred.await(release).pipe(Effect.as(joined())),
+          Deferred.await(release).pipe(
+            Effect.map(() => {
+              member = true;
+
+              return joined();
+            }),
+          ),
         );
         yield* api.reply("GET /rooms/90/messages", pageFixture([messageFixture(1, 90)]));
         yield* startEngine;
@@ -2510,6 +2523,13 @@ describe("joining an open room", () => {
 
         const afterClose = (yield* socket.sent).length;
 
+        // The join broadcast lands before the held body. The body itself must not paint the room.
+        yield* pushEvents({
+          seq: 2,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: { ...sidebarRowFixture(90, "campfire"), refreshRoom: true },
+        });
         yield* Deferred.succeed(release, undefined);
         yield* Fiber.join(joining);
 
@@ -2564,6 +2584,11 @@ describe("joining an open room", () => {
         expect(store.getState().sidebar.rows[90]).toBeUndefined();
         expect(store.getState().rooms[90]?.detail).toBeNull();
         expect(store.getState().rooms[90]?.status).toBe("error");
+        expect(
+          (yield* api.requests).filter(
+            (request) => request.method === "GET" && request.path === "/rooms/90",
+          ),
+        ).toHaveLength(2);
       }),
     ),
   );
@@ -2621,10 +2646,13 @@ describe("joining an open room", () => {
         const releaseJoin = yield* Deferred.make<void>();
         const releasePreview = yield* Deferred.make<void>();
         let previews = 0;
+        let member = false;
 
         yield* serve([]);
         yield* api.route("GET /rooms/90", () =>
-          Effect.fail(new NotFound({ message: "Room not found" })),
+          member
+            ? Effect.succeed(roomDetailFixture(90))
+            : Effect.fail(new NotFound({ message: "Room not found" })),
         );
         yield* api.route("GET /rooms/90/preview", () => {
           previews += 1;
@@ -2636,7 +2664,13 @@ describe("joining an open room", () => {
           return Deferred.await(releasePreview).pipe(Effect.as(preview));
         });
         yield* api.route("POST /rooms/90/join", () =>
-          Deferred.await(releaseJoin).pipe(Effect.as(joined())),
+          Deferred.await(releaseJoin).pipe(
+            Effect.map(() => {
+              member = true;
+
+              return joined();
+            }),
+          ),
         );
         yield* api.reply("GET /rooms/90/messages", pageFixture([messageFixture(9, 90)]));
         yield* startEngine;
@@ -2747,6 +2781,7 @@ describe("joining an open room", () => {
         });
         yield* settle;
         yield* Deferred.succeed(releaseRead, undefined);
+        yield* TestClock.adjust("1 second");
         yield* Fiber.join(joining);
         yield* settle;
 
@@ -2837,6 +2872,291 @@ describe("joining an open room", () => {
           detail: null,
           preview: null,
         });
+      }),
+    ),
+  );
+
+  it.effect("a cached membership does not stand in for a 404, so the join preview loads", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(12, null);
+
+        expect(store.getState().rooms[12]?.detail?.membership.userId).toBe(7);
+
+        yield* session.closeRoom(12);
+        mutations.loadSidebar(sidebarFixture([]));
+        markSidebarSnapshot();
+
+        expect(store.getState().rooms[12]?.detail).not.toBeNull();
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+
+        yield* api.route("GET /rooms/12", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* api.reply("GET /rooms/12/preview", { id: 12, name: "general" });
+
+        const before = (yield* api.requests).length;
+
+        yield* session.openRoom(12, null);
+
+        const opened = (yield* api.requests).slice(before);
+
+        expect(opened.some((request) => request.path === "/rooms/12/messages")).toBe(false);
+        expect(opened).toContainEqual({ method: "GET", path: "/rooms/12/preview" });
+        expect(store.getState().rooms[12]).toMatchObject({
+          status: "ready",
+          detail: null,
+          preview: { id: 12, name: "general" },
+        });
+
+        const again = (yield* api.requests).length;
+
+        yield* session.reloadRoom(12, null);
+
+        const retried = (yield* api.requests).slice(again);
+
+        expect(retried).toContainEqual({ method: "GET", path: "/rooms/12" });
+        expect(retried).toContainEqual({ method: "GET", path: "/rooms/12/preview" });
+        expect(store.getState().rooms[12]).toMatchObject({
+          status: "ready",
+          detail: null,
+          preview: { id: 12, name: "general" },
+        });
+      }),
+    ),
+  );
+
+  it.effect("a room read that started before the join does not drop that join", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* api.reply("GET /rooms/90/preview", preview);
+        yield* api.route("GET /rooms/90", () =>
+          Deferred.await(release).pipe(
+            Effect.andThen(Effect.fail(new NotFound({ message: "Room not found" }))),
+          ),
+        );
+        yield* api.reply("POST /rooms/90/join", joined());
+        yield* api.reply("GET /rooms/90/messages", pageFixture([messageFixture(1, 90)]));
+        yield* startEngine;
+        yield* welcome(1, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(90, null));
+
+        yield* settle;
+        yield* session.joinOpenRoom(90);
+
+        expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
+        expect(timelineIds(90)).toEqual([1]);
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
+        expect(store.getState().rooms[90]?.preview).toBeNull();
+        expect(timelineIds(90)).toEqual([1]);
+        expect((yield* api.requests).some((request) => request.path === "/rooms/90/preview")).toBe(
+          false,
+        );
+      }),
+    ),
+  );
+
+  it.effect("a failed recovery does not restore a join the server already revoked", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+        let reads = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /rooms/90/preview", preview);
+        yield* api.route("GET /rooms/90", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Effect.fail(new NotFound({ message: "Room not found" }))
+            : Effect.fail(new ServerError({ status: 500, message: "unavailable" }));
+        });
+        yield* api.route("POST /rooms/90/join", () =>
+          Deferred.await(release).pipe(Effect.as(joined())),
+        );
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, null);
+
+        const joining = yield* Effect.forkChild(session.joinOpenRoom(90));
+
+        yield* settle;
+        yield* pushEvents({
+          seq: 2,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 90, refreshRoom: true },
+        });
+        yield* Deferred.succeed(release, undefined);
+        yield* TestClock.adjust("1 second");
+        yield* Fiber.join(joining);
+        yield* settle;
+
+        expect(reads).toBe(4);
+        expect(store.getState().sidebar.rows[90]).toBeUndefined();
+        expect(store.getState().rooms[90]?.detail).toBeNull();
+        expect(store.getState().rooms[90]?.status).toBe("error");
+        expect(store.getState().rooms[90]?.error).toBe("unavailable");
+
+        yield* api.route("GET /rooms/90", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* api.reply("GET /rooms/90/preview", { id: 90, name: "again" });
+
+        const before = (yield* api.requests).filter(
+          (request) => request.path === "/rooms/90/preview",
+        ).length;
+
+        yield* session.reloadRoom(90, null);
+
+        expect(store.getState().sidebar.rows[90]).toBeUndefined();
+        expect(store.getState().rooms[90]).toMatchObject({
+          status: "ready",
+          detail: null,
+          preview: { id: 90, name: "again" },
+        });
+        expect(
+          (yield* api.requests).filter((request) => request.path === "/rooms/90/preview").length,
+        ).toBe(before + 1);
+      }),
+    ),
+  );
+
+  it.effect("a superseded join is re-read at most three times", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+
+        const gates = [
+          yield* Deferred.make<void>(),
+          yield* Deferred.make<void>(),
+          yield* Deferred.make<void>(),
+        ];
+
+        let reads = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /rooms/90/preview", preview);
+        yield* api.route("GET /rooms/90", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Effect.fail(new NotFound({ message: "Room not found" }));
+          }
+
+          const gate = gates[reads - 2];
+
+          if (gate === undefined) {
+            return Effect.die("join recovery did not stop");
+          }
+
+          return Deferred.await(gate).pipe(Effect.as(roomDetailFixture(90)));
+        });
+        yield* api.route("POST /rooms/90/join", () =>
+          Deferred.await(release).pipe(Effect.as(joined())),
+        );
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, null);
+
+        const joining = yield* Effect.forkChild(session.joinOpenRoom(90));
+
+        yield* settle;
+        yield* pushEvents({
+          seq: 2,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: { ...sidebarRowFixture(90, "campfire"), refreshRoom: true },
+        });
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        for (const [index, gate] of gates.entries()) {
+          yield* pushEvents({
+            seq: 3 + index,
+            topic: "user",
+            type: "sidebar.row.upserted",
+            data: { ...sidebarRowFixture(90, "campfire"), refreshRoom: true },
+          });
+          yield* Deferred.succeed(gate, undefined);
+          yield* TestClock.adjust(index === 0 ? "200 millis" : "800 millis");
+        }
+
+        yield* Fiber.join(joining);
+        yield* settle;
+
+        expect(reads).toBe(4);
+        expect(store.getState().rooms[90]?.detail).toBeNull();
+        expect(store.getState().rooms[90]?.status).toBe("error");
+      }),
+    ),
+  );
+
+  it.effect("leaving or losing the room forgets a join that never finished opening", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        let member = false;
+
+        yield* serve([]);
+        yield* api.reply("GET /rooms/90/preview", preview);
+        yield* api.route("GET /rooms/90", () =>
+          member
+            ? Effect.succeed(roomDetailFixture(90))
+            : Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* api.route("POST /rooms/90/join", () =>
+          Effect.sync(() => {
+            member = true;
+
+            return joined();
+          }),
+        );
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, null);
+        yield* session.closeRoom(90);
+        yield* session.joinOpenRoom(90);
+
+        expect(hasUnfinishedJoin(90)).toBe(true);
+
+        yield* session.closeRoom(90);
+
+        expect(hasUnfinishedJoin(90)).toBe(true);
+
+        mutations.setRoomUnavailable(90);
+
+        expect(hasUnfinishedJoin(90)).toBe(false);
+
+        yield* session.joinOpenRoom(90);
+
+        expect(hasUnfinishedJoin(90)).toBe(true);
+
+        yield* pushEvents({
+          seq: 2,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 90, refreshRoom: true },
+        });
+
+        expect(hasUnfinishedJoin(90)).toBe(false);
       }),
     ),
   );

@@ -18,6 +18,15 @@ import {
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
+import {
+  clearRoomJoin,
+  finishUnfinishedJoin,
+  hasUnfinishedJoin,
+  joinedAtEpoch,
+  markUnfinishedJoin,
+  noteJoined,
+  resetJoinState,
+} from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
@@ -44,13 +53,6 @@ let nextVisitToken = 0;
 
 const visits = new Map<number, RoomVisit>();
 
-/**
- * The server accepted a join and the membership is stored, but this visit still has to subscribe
- * and load. The next `openRoom` does that. A hot topic left over from the refused preview sub
- * does not count.
- */
-const unfinishedJoins = new Set<number>();
-
 function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
   const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId };
 
@@ -66,7 +68,7 @@ function sameVisit(roomId: number, token: number): boolean {
 /** Test isolation. Visit tokens and unfinished joins outlive the store. */
 export function resetRoomVisits(): void {
   visits.clear();
-  unfinishedJoins.clear();
+  resetJoinState();
   nextVisitToken = 0;
 }
 
@@ -155,11 +157,25 @@ const loadFirstPage = Effect.fnUntraced(function* (
   );
 });
 
+/** How many times a superseded join re-reads the room before it gives up and shows the load error. */
+const RECOVERY_ATTEMPTS = 3;
+
+/** Detail a join installed, and only while that join's epoch is still current. */
+function currentJoinDetail(roomId: number): RoomDetail | null {
+  const at = joinedAtEpoch(roomId);
+
+  if (at === undefined || changedSince(roomId, at)) {
+    return null;
+  }
+
+  return store.getState().rooms[roomId]?.detail ?? null;
+}
+
 /**
- * The room's detail, then its first page. A 404 on an open room the viewer may join lands the
- * preview instead of an error; every other failure stays an error. A result applies only while
- * `token` is still this room's visit, and a preview never clears a membership a join installed
- * while it was in flight.
+ * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
+ * room is unavailable. A result applies only while `token` is still this room's visit. Cached
+ * membership never overrides a 404 — the one exception is detail this session's join installed
+ * while that join's epoch is still current.
  */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   mutations.setRoomLoading(roomId);
@@ -172,19 +188,19 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   if (Result.isSuccess(loaded)) {
-    unfinishedJoins.delete(roomId);
+    clearRoomJoin(roomId);
     mutations.setRoomDetail(loaded.success);
     yield* loadFirstPage(roomId, token, loaded.success.unread);
 
     return;
   }
 
-  const held = store.getState().rooms[roomId]?.detail ?? null;
+  const kept = currentJoinDetail(roomId);
 
-  if (Predicate.isTagged(loaded.failure, "NotFound") && held !== null) {
-    unfinishedJoins.delete(roomId);
-    mutations.setRoomDetail(held);
-    yield* loadFirstPage(roomId, token, held.unread);
+  if (kept !== null) {
+    finishUnfinishedJoin(roomId);
+    mutations.setRoomDetail(kept);
+    yield* loadFirstPage(roomId, token, kept.unread);
 
     return;
   }
@@ -194,32 +210,55 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (Predicate.isTagged(loaded.failure, "NotFound")) {
     const preview = yield* Effect.result(openRoomPreview(roomId));
 
-    if (!sameVisit(roomId, token) || store.getState().rooms[roomId]?.detail != null) {
+    if (!sameVisit(roomId, token) || currentJoinDetail(roomId) !== null) {
       return;
     }
 
     if (Result.isSuccess(preview)) {
-      unfinishedJoins.delete(roomId);
+      clearRoomJoin(roomId);
       mutations.setRoomPreview(roomId, preview.success);
 
       return;
     }
+
+    if (Predicate.isTagged(preview.failure, "NotFound")) {
+      mutations.setRoomUnavailable(roomId);
+
+      return;
+    }
+
+    mutations.setRoomError(roomId, preview.failure.message);
+
+    return;
   }
 
-  if (!sameVisit(roomId, token) || store.getState().rooms[roomId]?.detail != null) {
+  if (!sameVisit(roomId, token) || currentJoinDetail(roomId) !== null) {
     return;
   }
 
   mutations.setRoomError(roomId, loaded.failure.message);
 });
 
+/** The sidebar row's facts win over a room read that raced a rename or a membership change. */
+function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined): RoomDetail {
+  if (row === undefined) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    room: row.room,
+    membership: row.membership,
+    displayName: row.displayName,
+    directMemberIds: row.directMemberIds,
+  };
+}
+
 /**
- * Lands a join: the membership, and the sidebar row when the membership is visible. Presence and
- * the timeline follow only for the visit on screen now, around that visit's focus. A reply that
- * arrives after the viewer has left records the membership and leaves presence and the page to
- * the next open.
+ * Lands a join the server just confirmed. The visit on screen, if any, loads around its own
+ * focus. No visit records the membership and leaves the timeline to the next open.
  */
-const applyJoinedRoom = Effect.fnUntraced(function* (
+const installJoined = Effect.fnUntraced(function* (
   roomId: number,
   detail: RoomDetail,
   row: SidebarRow | null,
@@ -236,7 +275,9 @@ const applyJoinedRoom = Effect.fnUntraced(function* (
   }
 
   invalidateRoom(roomId);
+  noteJoined(roomId, managementEpoch());
 
+  // The preview's `present` was refused. Say it again only while this visit is still open.
   const visitBefore = visits.get(roomId);
 
   if (visitBefore !== undefined) {
@@ -254,93 +295,82 @@ const applyJoinedRoom = Effect.fnUntraced(function* (
       yield* presenceService.leave(roomId);
     }
 
-    unfinishedJoins.add(roomId);
+    markUnfinishedJoin(roomId);
 
     return;
   }
 
-  unfinishedJoins.delete(roomId);
+  finishUnfinishedJoin(roomId);
   mutations.setPageReplacing(roomId);
   yield* loadFirstPage(roomId, visit.token, detail.unread);
 });
 
 /**
- * The join reply is older than a management change that landed while it was in flight (its own
- * sidebar broadcast, a rename, a delete). Read the room again. Another change during that read
- * starts the read over: dropping it would leave the preview spinning and the refused subscription
- * cached. A 404 still means the room is gone. Any other failure lands the join body and lets the
- * next open refresh it.
+ * The join body is stale: the epoch moved, or the visit changed, while the POST was in flight.
+ * Re-read the room. A 404 whose revision stays put is final. Anything else, including a read a
+ * newer change superseded, tries again — three times, then the room's ordinary load error.
+ * Try again repeats this read. The stale body is never installed.
  */
-const recoverSupersededJoin = Effect.fnUntraced(function* (
-  roomId: number,
-  fallback: { readonly detail: RoomDetail; readonly row: SidebarRow | null },
-) {
-  let reading = true;
+const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
+  let failure = "Couldn't load this room";
 
-  while (reading) {
+  for (let attempt = 0; attempt < RECOVERY_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      yield* Effect.sleep(attempt === 1 ? "200 millis" : "800 millis");
+    }
+
     const revision = invalidateRoom(roomId);
     const since = managementEpoch();
     const fetched = yield* Effect.result(room(roomId));
+    const superseded = roomRevision(roomId) !== revision || changedSince(roomId, since);
 
-    reading = roomRevision(roomId) !== revision || changedSince(roomId, since);
+    if (Result.isSuccess(fetched) && !superseded) {
+      const row = store.getState().sidebar.rows[roomId];
 
-    if (reading) {
-      continue;
-    }
-
-    if (Result.isFailure(fetched)) {
-      if (Predicate.isTagged(fetched.failure, "NotFound")) {
-        unfinishedJoins.delete(roomId);
-        mutations.setRoomUnavailable(roomId);
-
-        return;
-      }
-
-      unfinishedJoins.add(roomId);
-      yield* applyJoinedRoom(roomId, fallback.detail, fallback.row);
+      yield* installJoined(roomId, withSidebarRow(fetched.success, row), null);
 
       return;
     }
 
-    const row = store.getState().sidebar.rows[roomId];
+    if (
+      Result.isFailure(fetched) &&
+      Predicate.isTagged(fetched.failure, "NotFound") &&
+      !superseded
+    ) {
+      mutations.setRoomUnavailable(roomId);
 
-    yield* applyJoinedRoom(
-      roomId,
-      row === undefined
-        ? fetched.success
-        : {
-            ...fetched.success,
-            room: row.room,
-            membership: row.membership,
-            displayName: row.displayName,
-            directMemberIds: row.directMemberIds,
-          },
-      null,
-    );
+      return;
+    }
 
-    return;
+    if (Result.isFailure(fetched)) {
+      failure = fetched.failure.message;
+    }
   }
+
+  clearRoomJoin(roomId);
+  mutations.setPageFailed(roomId);
+  mutations.setRoomError(roomId, failure);
 });
 
 /**
- * Joins an open room. The membership always lands. The visit on screen, if any, subscribes,
- * says present, and loads around its own focus. A management change during the request re-reads
- * the room instead of restoring a stale reply.
+ * Joins an open room. The POST body is a hint: it lands only when the epoch and the visit are
+ * still the ones the request started with. Otherwise the room is read from the server.
  */
 export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
   const since = managementEpoch();
+  const token = visits.get(roomId)?.token ?? null;
   const joined = yield* postJoin(roomId);
   const topics = yield* Topics;
 
   yield* topics.forgetRejected(roomTopic(roomId));
 
-  if (changedSince(roomId, since)) {
-    yield* recoverSupersededJoin(roomId, joined);
+  if (changedSince(roomId, since) || (visits.get(roomId)?.token ?? null) !== token) {
+    yield* recoverJoin(roomId);
 
     return;
   }
 
-  yield* applyJoinedRoom(roomId, joined.detail, joined.row);
+  yield* installJoined(roomId, joined.detail, joined.row);
 });
 
 /**
@@ -355,7 +385,7 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
   const topics = yield* Topics;
   const presenceService = yield* Presence;
 
-  if (unfinishedJoins.has(roomId)) {
+  if (hasUnfinishedJoin(roomId)) {
     yield* topics.forgetRejected(roomTopic(roomId));
   }
 

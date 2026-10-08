@@ -33,6 +33,7 @@ import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
+import { clearRoomJoin } from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -140,8 +141,10 @@ export const mutations = {
   setRoomPreview: (roomId: number, preview: OpenRoomPreview) =>
     apply((state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail) => apply((state) => reduce.setRoomDetail(state, detail)),
-  setRoomUnavailable: (roomId: number) =>
-    apply((state) => reduce.setRoomUnavailable(state, roomId)),
+  setRoomUnavailable: (roomId: number) => {
+    clearRoomJoin(roomId);
+    apply((state) => reduce.setRoomUnavailable(state, roomId));
+  },
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode)),
   setPageLoading: (roomId: number, direction: "older" | "newer") =>
@@ -163,8 +166,15 @@ export const mutations = {
   ) => apply((state) => reduce.setPendingState(state, clientMessageId, status, error)),
   discardPending: (clientMessageId: string) =>
     apply((state) => reduce.discardPending(state, clientMessageId)),
-  applyEvents: (events: readonly SyncEvent[], now: number) =>
-    apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now))),
+  applyEvents: (events: readonly SyncEvent[], now: number) => {
+    for (const event of events) {
+      if (event.type === "sidebar.row.removed") {
+        clearRoomJoin(event.data.roomId);
+      }
+    }
+
+    apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now)));
+  },
   prune: (now: number) => apply((state) => reduce.prune(state, now)),
   /** An edit's reply (the `message.updated` event may beat it; the newer copy wins). */
   updateMessage: (message: MessageDTO) => apply((state) => reduce.updateMessage(state, message)),
