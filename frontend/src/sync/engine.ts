@@ -32,7 +32,9 @@ import { SyncSocket, SyncSocketError } from "./socket.ts";
 import {
   beginThreadLoad,
   finishThreadLoad,
+  isGoneFocus,
   isLatestThreadLoad,
+  openAtNewest,
   pendingThreadFocus,
 } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
@@ -265,6 +267,11 @@ export class Engine extends Context.Service<
         }
 
         if (Result.isFailure(newest)) {
+          // The permalink's reply is gone while the thread is still there: open at the newest.
+          if (focus !== null && problem === null && isGoneFocus(newest.failure)) {
+            return yield* openAtNewest(threadId, load);
+          }
+
           return yield* Effect.fail(newest.failure);
         }
 

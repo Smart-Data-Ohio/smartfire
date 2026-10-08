@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
-import { NetworkError, ServerError, Validation } from "../api/errors.ts";
+import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
 import {
   FakeApi,
@@ -760,9 +760,95 @@ describe("resync", () => {
           .slice(before)
           .filter((request) => request.path === "/threads/1/messages");
 
+        expect(pages.length).toBeGreaterThan(0);
         expect(pages[0]?.query).toBeUndefined();
       }),
     ),
+  );
+
+  it.effect("opens at the newest replies when a permalink's reply is gone", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1", boardDetail());
+        yield* api.route("GET /threads/1/messages", (request) =>
+          request.query?.around === "7"
+            ? Effect.fail(new NotFound({ message: "Not found" }))
+            : Effect.succeed(threadReplies([20, 21])),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(1, 7);
+
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([20, 21]);
+        expect(store.getState().threadTimelines[1]?.status).toBe("ready");
+        expect(store.getState().threadPanes[1]?.status).toBe("ready");
+
+        // The gone reply isn't asked for again.
+        const before = (yield* api.requests).length;
+
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+
+        const pages = (yield* api.requests)
+          .slice(before)
+          .filter((request) => request.path === "/threads/1/messages");
+
+        expect(pages.length).toBeGreaterThan(0);
+        expect(pages.every((request) => request.query?.around !== "7")).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect(
+    "opens at the newest replies when a resync finds a superseded permalink's reply gone",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const socket = yield* MemorySocket;
+          const api = yield* FakeApi;
+          const entered = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+          let focused = 0;
+
+          yield* serve([]);
+          yield* api.reply("GET /threads/1", boardDetail());
+          yield* api.route("GET /threads/1/messages", (request) => {
+            if (request.query?.around !== "7") {
+              return Effect.succeed(threadReplies([20, 21]));
+            }
+
+            focused += 1;
+
+            return focused === 1
+              ? Effect.andThen(
+                  Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+                  Effect.fail(new NotFound({ message: "Not found" })),
+                )
+              : Effect.fail(new NotFound({ message: "Not found" }));
+          });
+          yield* startEngine;
+          yield* welcome(5, false);
+
+          const open = yield* Effect.forkChild(threadActions.open(1, 7));
+
+          yield* Deferred.await(entered);
+          yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+          yield* settle;
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(open);
+
+          expect(store.getState().threadTimelines[1]?.ids).toEqual([20, 21]);
+          expect(store.getState().threadTimelines[1]?.status).toBe("ready");
+
+          yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+          yield* settle;
+          expect(focused).toBe(2);
+        }),
+      ),
   );
 
   it.effect("keeps a permalink's reply pending through a resync that fails to load it", () =>
