@@ -32,11 +32,9 @@ export function JoinPreview({ preview, joining, joinError, onJoin }: JoinPreview
 export function JoinRoom({
   roomId,
   preview,
-  focusMessageId,
 }: {
   readonly roomId: number;
   readonly preview: OpenRoomPreview;
-  readonly focusMessageId: number | null;
 }) {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -50,7 +48,7 @@ export function JoinRoom({
         setJoining(true);
         setJoinError(null);
 
-        void actions.joinOpenRoom(roomId, focusMessageId).then(
+        void actions.joinOpenRoom(roomId).then(
           () => undefined,
           (failure: Error) => {
             setJoining(false);

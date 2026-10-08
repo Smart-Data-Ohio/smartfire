@@ -194,6 +194,83 @@ describe("topics", () => {
     expect(after.json).toMatchObject({ presentRoomIds: [JOINABLE_OPEN_ROOM.id] });
   });
 
+  it("creates the membership before releasing a held join response", async () => {
+    const { server } = setup();
+    const client = open(server, []);
+    const headers = { "x-csrf-token": server.csrfToken() };
+
+    expect(
+      (
+        await server.handle({
+          method: "POST",
+          path: "/__mock/hold-join",
+          headers,
+          body: { on: true },
+        })
+      ).status,
+    ).toBe(200);
+
+    const pending = server.handle({
+      method: "POST",
+      path: `/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}/join`,
+      headers,
+      body: {},
+    });
+
+    try {
+      const detail = await server.handle({
+        method: "GET",
+        path: `/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}`,
+      });
+
+      expect(detail.status).toBe(200);
+      expect(client.events().some((event) => event.type === "sidebar.row.upserted")).toBe(true);
+
+      const renamed = await server.handle({
+        method: "PATCH",
+        path: `/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}`,
+        headers,
+        body: { type: "open", name: "bonfire" },
+      });
+
+      expect(renamed.status).toBe(200);
+
+      const preview = await server.handle({
+        method: "GET",
+        path: `/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}/preview`,
+      });
+
+      expect(preview.status).toBe(200);
+      expect(preview.json).toMatchObject({ id: JOINABLE_OPEN_ROOM.id, name: "bonfire" });
+
+      const held = await server.handle({ method: "GET", path: "/__mock/state" });
+
+      expect(held.json).toMatchObject({ pendingJoins: 1 });
+    } finally {
+      await server.handle({
+        method: "POST",
+        path: "/__mock/hold-join",
+        headers,
+        body: { on: false },
+      });
+    }
+
+    const joined = await pending;
+
+    expect(joined.status).toBe(200);
+    expect(joined.json).toMatchObject({
+      detail: { displayName: "campfire" },
+      row: { displayName: "campfire" },
+    });
+
+    const after = await server.handle({
+      method: "GET",
+      path: `/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}`,
+    });
+
+    expect(after.json).toMatchObject({ displayName: "bonfire" });
+  });
+
   it("gives every event a strictly increasing sequence number", () => {
     const { server } = setup();
     const client = open(server, [`room:${rooms.general}`]);

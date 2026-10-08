@@ -86,7 +86,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   }
 
   if (preview !== null && detail === null) {
-    return <JoinRoom roomId={roomId} preview={preview} focusMessageId={focusMessageId} />;
+    return <JoinRoom roomId={roomId} preview={preview} />;
   }
 
   if (status === "error") {

@@ -139,6 +139,70 @@ test("joining from a permalink stays on that message", async ({ page }) => {
   await expect(page.getByText("campfire-newest")).toHaveCount(0);
 });
 
+test("a held join still opens the room you returned to after a rename", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, `r/${JOINABLE_OPEN_ROOM.id}/m/${JOINABLE_OLDEST_MESSAGE_ID}`);
+  await welcomed;
+  await page.evaluate(() => {
+    document.documentElement.dataset.roomJoin = "1";
+  });
+
+  const preview = page.getByRole("region", { name: "Join #campfire" });
+
+  await expect(preview).toBeVisible();
+  await control(page, "hold-join");
+  await preview.getByRole("button", { name: "Join channel" }).click();
+  await expect.poll(async () => (await mockState(page)).pendingJoins).toBe(1);
+
+  const state = await mockState(page);
+
+  const renamed = await page.request.patch(`/api/v1/rooms/${JOINABLE_OPEN_ROOM.id}`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { type: "open", name: "bonfire" },
+  });
+
+  expect(renamed.ok()).toBeTruthy();
+  await expect(sidebar(page).locator(".sidebar-row-name", { hasText: /^bonfire$/ })).toBeVisible();
+
+  await sidebar(page)
+    .locator(".sidebar-row-name", { hasText: /^general$/ })
+    .click();
+  await expect(page).toHaveURL(/\/r\/1$/);
+
+  await sidebar(page)
+    .locator(".sidebar-row-name", { hasText: /^bonfire$/ })
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/r/${JOINABLE_OPEN_ROOM.id}$`));
+  await expect(page.getByText("campfire-newest")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.dataset.roomJoin)).toBe("1");
+
+  const joined = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/rooms/${JOINABLE_OPEN_ROOM.id}/join`) &&
+      response.request().method() === "POST",
+  );
+
+  await control(page, "hold-join", { on: false });
+  await joined;
+  await expect(page.getByRole("link", { name: "bonfire, room settings" })).toBeVisible();
+  await expect(page.getByText("campfire-newest")).toBeVisible();
+  await expect(page.getByText("campfire-oldest")).toHaveCount(0);
+
+  const after = await mockState(page);
+
+  expect(after.presentRoomIds).toContain(JOINABLE_OPEN_ROOM.id);
+
+  await postMessage(page.request, {
+    roomId: JOINABLE_OPEN_ROOM.id,
+    userId: USER_IDS.maya,
+    markdown: "still here",
+  });
+  await expect(page.getByText("still here")).toBeVisible();
+});
+
 test("a missing room stays unavailable", async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await openApp(page, "r/999999");

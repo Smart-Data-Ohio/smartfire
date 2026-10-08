@@ -1008,12 +1008,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       }
 
       if (method === "POST" && joining[2] === "join") {
-        const answer = () => ({ status: 200 as const, json: joinOpen(id) });
+        // Membership (and its sidebar broadcast) exist before a held response is released, so a
+        // rename or a return can land while the client is still waiting on this body.
+        const created = joinOpen(id);
 
-        if (!holdingJoins) return answer();
+        if (!holdingJoins) return { status: 200, json: created };
 
         return new Promise<MockResponse>((resolve) => {
-          heldJoins.push(() => resolve(respond(answer)));
+          heldJoins.push(() => resolve({ status: 200, json: created }));
         });
       }
     }
@@ -1359,6 +1361,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     setPresence,
     reset() {
       release();
+      holdingJoins = false;
+
+      const waitingJoins = heldJoins;
+
+      heldJoins = [];
+
+      for (const run of waitingJoins) run();
+
       uploads.reset();
       admin.lapseSudo(false);
       composer.stop();

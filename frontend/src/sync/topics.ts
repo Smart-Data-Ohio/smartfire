@@ -72,6 +72,12 @@ export class Topics extends Context.Service<
      * membership exists, so the first `sub` from opening the preview does not stick.
      */
     readonly resubscribe: (topic: string) => Effect.Effect<void>;
+    /**
+     * Forgets a room topic the server refused before the membership existed. A hot entry would
+     * otherwise count as subscribed, so coming back would not send `sub` again. A view that
+     * still holds the topic subscribes now.
+     */
+    readonly forgetRejected: (topic: string) => Effect.Effect<void>;
     /** Every subscribed topic: held ones, then hot ones. */
     readonly subscribed: Effect.Effect<readonly string[]>;
   }
@@ -97,10 +103,27 @@ export class Topics extends Context.Service<
           return held ? link.send({ t: "sub", topics: [topic] }) : Effect.void;
         });
 
+      const forgetRejected = (topic: string) =>
+        Effect.flatMap(
+          Ref.modify(interest, (current) => {
+            const held = (current.holders.get(topic) ?? 0) > 0;
+            const frame: ClientFrame | null = held ? { t: "sub", topics: [topic] } : null;
+
+            const next: Interest = {
+              holders: current.holders,
+              hot: current.hot.filter((hot) => hot !== topic),
+            };
+
+            return [frame, next] as const;
+          }),
+          (frame) => (frame === null ? Effect.void : link.send(frame)),
+        );
+
       return Topics.of({
         acquire: change(acquireIn),
         release: change(releaseIn),
         resubscribe,
+        forgetRejected,
         subscribed: Effect.map(Ref.get(interest), (current) => [
           ...current.holders.keys(),
           ...current.hot,

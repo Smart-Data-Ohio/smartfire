@@ -236,7 +236,10 @@ export class Engine extends Context.Service<
             }
 
             if (Result.isSuccess(preview)) {
-              mutations.setRoomPreview(roomId, preview.success);
+              // A join can install the membership while this refetch is in flight.
+              if (store.getState().rooms[roomId]?.detail == null) {
+                mutations.setRoomPreview(roomId, preview.success);
+              }
 
               return;
             }
