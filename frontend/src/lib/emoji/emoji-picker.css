@@ -202,4 +202,82 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /*
+   * As an action sheet (a touch phone): the screen's full width in eight columns of finger-sized
+   * cells (44 px at 360), finger-sized category tabs that scroll sideways, and no preview footer.
+   */
+  .popover.action-sheet:has(> .emoji-picker) {
+    max-width: none;
+    padding: 0 max(var(--space-1), var(--safe-right)) var(--safe-bottom)
+      max(var(--space-1), var(--safe-left));
+  }
+
+  .action-sheet .emoji-picker {
+    width: auto;
+  }
+
+  .action-sheet .emoji-picker-search {
+    padding: 0 var(--space-2) var(--space-2);
+  }
+
+  /* The search box has no top padding here (the handle is above it): centre the icon on it. */
+  .action-sheet .emoji-picker-search-icon {
+    left: calc(var(--space-2) + 10px);
+    margin-top: calc(var(--space-1) * -1);
+  }
+
+  .action-sheet .emoji-picker-input {
+    height: var(--touch-target);
+  }
+
+  .action-sheet .emoji-picker-tabs {
+    padding-inline: 0;
+  }
+
+  .action-sheet .emoji-picker-tab {
+    --button-height: var(--touch-target);
+
+    flex: 1 0 var(--touch-target);
+    font-size: 20px;
+  }
+
+  .action-sheet .emoji-picker-grid {
+    padding-inline: 0;
+  }
+
+  .action-sheet .emoji-picker-section {
+    padding-inline: var(--space-2);
+  }
+
+  .action-sheet .emoji-picker-row {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .action-sheet .emoji-picker-cell {
+    width: auto;
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  /* The active cell is the keyboard's: it shows only while the search box drives the grid. */
+  .action-sheet .emoji-picker:not(:has(.emoji-picker-input:focus)) .emoji-picker-cell[data-active] {
+    background: transparent;
+  }
+
+  .action-sheet
+    .emoji-picker:not(:has(.emoji-picker-input:focus))
+    .emoji-picker-cell[data-active]
+    :is(.emoji-glyph-cell, .emoji-image-cell) {
+    scale: 1;
+  }
+
+  .action-sheet .emoji-picker-cell .emoji-glyph-cell {
+    font-size: 28px;
+  }
+
+  .action-sheet .emoji-picker-cell .emoji-image-cell {
+    width: 28px;
+    height: 28px;
+  }
 }

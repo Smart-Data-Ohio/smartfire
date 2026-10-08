@@ -12,6 +12,7 @@ import {
 import type { Placement } from "../lib/anchor.ts";
 import { showPopover, supportsPopover } from "../lib/popover.ts";
 import { usePresence } from "../motion/presence.ts";
+import { SheetHandle, useActionSheet, useSheetScrim } from "./action-sheet.tsx";
 import { originFor, useFloating } from "./floating.ts";
 import "./floating.css";
 import "./popover.css";
@@ -32,10 +33,16 @@ interface PopoverProps {
   readonly children: ReactNode | ((close: () => void) => ReactNode);
 }
 
+/** A text field, which a touch phone's keyboard would rise for the moment it took focus. */
+const TEXT_FIELD =
+  'input:not([type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="range"], [type="color"]), textarea, [contenteditable="true"]';
+
 /**
  * A non-modal floating panel (emoji picker, profile card, quick settings). It opens beside its
  * trigger in the top layer, moves focus inside, and closes on Esc (focus back to the trigger) or
- * an outside click (focus stays where the click put it).
+ * an outside click (focus stays where the click put it). On a touch phone it opens as a bottom
+ * action sheet over a scrim (src/ui/action-sheet.tsx), and a text field inside waits for a tap
+ * instead of taking focus, so the keyboard doesn't cover the sheet straight away.
  */
 export function Popover({ trigger, label, placement = "bottom-start", children }: PopoverProps) {
   const id = useId();
@@ -43,9 +50,15 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
   const [open, setOpen] = useState(false);
   const dismissedAt = useRef(Number.NEGATIVE_INFINITY);
   const presence = usePresence<HTMLDivElement>(open);
+  const sheet = useActionSheet();
 
-  useFloating(id, triggerRef, presence.ref, placement, presence.mounted);
+  useFloating(id, triggerRef, presence.ref, placement, presence.mounted && !sheet);
+  useSheetScrim(sheet && open, presence.ref, () => {
+    dismissedAt.current = performance.now();
+    setOpen(false);
+  });
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: where focus lands is settled on opening
   useLayoutEffect(() => {
     const surface = presence.ref.current;
 
@@ -59,7 +72,9 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
       "[data-autofocus], button, input, select, textarea, a[href], [tabindex]:not([tabindex='-1'])",
     );
 
-    (first ?? surface).focus({ preventScroll: true });
+    (first === null || (sheet && first.matches(TEXT_FIELD)) ? surface : first).focus({
+      preventScroll: true,
+    });
   }, [open, presence.ref]);
 
   useEffect(() => {
@@ -141,12 +156,13 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
           aria-label={label}
           tabIndex={-1}
           popover="auto"
-          className="popover floating t-dropdown"
+          className={sheet ? "popover action-sheet" : "popover floating t-dropdown"}
           data-state={presence.state}
-          data-placement={placement}
-          data-origin={originFor(placement)}
+          data-placement={sheet ? undefined : placement}
+          data-origin={sheet ? undefined : originFor(placement)}
           onKeyDown={onKeyDown}
         >
+          {sheet ? <SheetHandle onDismiss={() => setOpen(false)} /> : null}
           {children instanceof Function ? children(close) : children}
         </div>
       ) : null}
