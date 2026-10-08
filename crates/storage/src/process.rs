@@ -3,7 +3,9 @@
 
 use std::io::Read;
 use std::path::Path;
-use std::process::{Child, Command, ExitStatus, Output, Stdio};
+#[cfg(not(unix))]
+use std::process::ExitStatus;
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::{OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
@@ -146,7 +148,7 @@ pub fn video_preview(input: &Path) -> Result<Vec<u8>> {
 ///
 /// On Unix the leader is observed with `waitid(WNOWAIT)`, which does not reap. `wait()` runs
 /// only after that observation, so it cannot block, and `killpg` happens while the pid is
-/// still unreaped and therefore not reusable.
+/// still unreaped and therefore not reusable. `ECHILD` means the leader was already collected.
 pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Result<Output> {
     let program = command.get_program().to_string_lossy().into_owned();
     #[cfg(unix)]
@@ -162,28 +164,19 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
     let stdout = drain(child.stdout.take());
     let stderr = drain(child.stderr.take());
     let deadline = Instant::now() + timeout;
-    #[cfg(unix)]
-    let reaped = None;
-    #[cfg(not(unix))]
-    let mut reaped = None;
     let mut pause = Duration::from_millis(1);
     let saw_exit = loop {
-        let seen = match poll_exit(&mut child) {
-            Ok(seen) => seen,
+        match poll_exit(&mut child) {
+            Ok(true) => break true,
+            Ok(false) => {}
+            Err(err) if child_collected(&err) => {
+                release(child, stdout, stderr);
+                return Err(err);
+            }
             Err(err) => {
                 stop_child(&mut child);
                 release(child, stdout, stderr);
                 return Err(err);
-            }
-        };
-        match seen {
-            ExitSeen::Running => {}
-            #[cfg(unix)]
-            ExitSeen::ExitedUnreaped => break true,
-            #[cfg(not(unix))]
-            ExitSeen::Reaped(status) => {
-                reaped = Some(status);
-                break true;
             }
         }
         let now = Instant::now();
@@ -199,32 +192,19 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
         return Err(stuck(&program, timeout));
     }
     match take_pipes(stdout, stderr, deadline) {
-        Ok((stdout, stderr)) => {
-            let status = if let Some(status) = reaped {
-                status
-            } else {
-                match reap_observed(&mut child) {
-                    Ok(Some(status)) => status,
-                    Ok(None) => {
-                        // Another thread can keep the leader unwaitable after its main thread
-                        // has exited. Kill the group, still unreaped, and let the reaper collect it.
-                        stop_child(&mut child);
-                        handoff(Some(child), None, None);
-                        return Err(stuck(&program, timeout));
-                    }
-                    Err(err) => {
-                        stop_child(&mut child);
-                        handoff(Some(child), None, None);
-                        return Err(err);
-                    }
-                }
-            };
-            Ok(Output {
+        Ok((stdout, stderr)) => match child.wait() {
+            Ok(status) => Ok(Output {
                 status,
                 stdout,
                 stderr,
-            })
-        }
+            }),
+            Err(err) if child_collected(&err) => Err(err),
+            Err(err) => {
+                stop_child(&mut child);
+                handoff(Some(child), None, None);
+                Err(err)
+            }
+        },
         Err((stdout, stderr)) => {
             stop_child(&mut child);
             release(child, stdout, stderr);
@@ -245,11 +225,13 @@ fn stuck(program: &str, timeout: Duration) -> std::io::Error {
 fn stop_child(child: &mut Child) {
     #[cfg(unix)]
     {
-        let pid = child.id() as libc::pid_t;
+        let pid = child.id();
+        #[cfg(test)]
+        SIGNALED_PIDS.lock().expect("signaled pids").push(pid);
         // SAFETY: this child was spawned with `process_group(0)` and has not been waited,
         // so `pid` is still that process group and cannot have been reused. `killpg` takes
         // the positive group id.
-        let _ = unsafe { libc::killpg(pid, libc::SIGKILL) };
+        let _ = unsafe { libc::killpg(pid as libc::pid_t, libc::SIGKILL) };
     }
     let _ = child.kill();
 }
@@ -349,14 +331,8 @@ fn fallback_wait(mut job: ReapJob) {
         return;
     };
     #[cfg(unix)]
-    {
-        // `wait()` only after the exit was observed. Otherwise dropping `Child` would block in
-        // its own wait, so keep the process unreaped when no reaper is running.
-        if matches!(leader_waitable(child.id()), Ok(true)) {
-            let _ = child.wait();
-        } else {
-            std::mem::forget(child);
-        }
+    if matches!(leader_waitable(child.id()), Ok(true)) {
+        let _ = child.wait();
     }
     #[cfg(not(unix))]
     {
@@ -365,16 +341,22 @@ fn fallback_wait(mut job: ReapJob) {
 }
 
 fn reaper_sender() -> Option<&'static mpsc::Sender<ReapJob>> {
-    static REAPER: OnceLock<Option<mpsc::Sender<ReapJob>>> = OnceLock::new();
-    REAPER
-        .get_or_init(|| {
-            let (sender, receiver) = mpsc::channel();
-            let spawned = std::thread::Builder::new()
-                .name("media-process-reaper".into())
-                .spawn(move || reap_loop(receiver));
-            spawned.ok().map(|_| sender)
-        })
-        .as_ref()
+    static REAPER: OnceLock<mpsc::Sender<ReapJob>> = OnceLock::new();
+    static START: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    if let Some(sender) = REAPER.get() {
+        return Some(sender);
+    }
+    // A failed spawn is not stored, so a later call can try again. The mutex keeps a single reaper.
+    let _guard = START.lock().unwrap_or_else(|err| err.into_inner());
+    if let Some(sender) = REAPER.get() {
+        return Some(sender);
+    }
+    let (sender, receiver) = mpsc::channel();
+    std::thread::Builder::new()
+        .name("media-process-reaper".into())
+        .spawn(move || reap_loop(receiver))
+        .ok()?;
+    Some(REAPER.get_or_init(|| sender))
 }
 
 fn reap_loop(receiver: mpsc::Receiver<ReapJob>) {
@@ -502,44 +484,25 @@ fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Ve
     })
 }
 
-enum ExitSeen {
-    Running,
-    /// Unix: `waitid` reported the exit and the child is still unreaped, so `wait()` will not block.
-    #[cfg(unix)]
-    ExitedUnreaped,
-    /// Non-Unix: `try_wait` already collected the status.
-    #[cfg(not(unix))]
-    Reaped(ExitStatus),
-}
-
-fn poll_exit(child: &mut Child) -> std::io::Result<ExitSeen> {
+fn poll_exit(child: &mut Child) -> std::io::Result<bool> {
     #[cfg(unix)]
     {
-        Ok(if leader_waitable(child.id())? {
-            ExitSeen::ExitedUnreaped
-        } else {
-            ExitSeen::Running
-        })
+        leader_waitable(child.id())
     }
     #[cfg(not(unix))]
     {
-        Ok(match child.try_wait()? {
-            Some(status) => ExitSeen::Reaped(status),
-            None => ExitSeen::Running,
-        })
+        Ok(child.try_wait()?.is_some())
     }
 }
 
-/// Collect the status only when a non-reaping `waitid` has just reported the exit.
-/// `Ok(None)` means the leader is not waitable yet; the caller must not block in `wait()`.
-fn reap_observed(child: &mut Child) -> std::io::Result<Option<ExitStatus>> {
-    #[cfg(unix)]
-    {
-        if !leader_waitable(child.id())? {
-            return Ok(None);
-        }
-    }
-    child.wait().map(Some)
+#[cfg(unix)]
+fn child_collected(err: &std::io::Error) -> bool {
+    err.raw_os_error() == Some(libc::ECHILD)
+}
+
+#[cfg(not(unix))]
+fn child_collected(_err: &std::io::Error) -> bool {
+    false
 }
 
 /// `true` when `waitid` reports an exited child and leaves it unreaped (`WNOWAIT`).
@@ -574,6 +537,9 @@ fn leader_waitable(pid: u32) -> std::io::Result<bool> {
 
 #[cfg(test)]
 static REAPED_BY_REAPER: std::sync::Mutex<Vec<u32>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(all(unix, test))]
+static SIGNALED_PIDS: std::sync::Mutex<Vec<u32>> = std::sync::Mutex::new(Vec::new());
 
 fn note_reaped(pid: u32) {
     #[cfg(test)]
@@ -738,5 +704,37 @@ mod tests {
             );
             std::thread::sleep(Duration::from_millis(20));
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn output_within_does_not_signal_after_echild() {
+        SIGNALED_PIDS.lock().expect("signaled pids").clear();
+        // SAFETY: SIG_IGN auto-reaps this test process's children, so `waitid` returns ECHILD.
+        // The previous disposition is restored when the guard drops.
+        let previous = unsafe { libc::signal(libc::SIGCHLD, libc::SIG_IGN) };
+        assert_ne!(previous, libc::SIG_ERR);
+        struct Restore(libc::sighandler_t);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                // SAFETY: `self.0` is the disposition `signal` returned for SIGCHLD.
+                unsafe { libc::signal(libc::SIGCHLD, self.0) };
+            }
+        }
+        let _restore = Restore(previous);
+        let mut command = Command::new("sh");
+        command.args(["-c", "echo out"]);
+        let started = Instant::now();
+        let error = output_within(&mut command, Duration::from_secs(5)).unwrap_err();
+        assert_eq!(error.raw_os_error(), Some(libc::ECHILD), "{error}");
+        assert!(
+            started.elapsed() < Duration::from_secs(2),
+            "took {:?}",
+            started.elapsed()
+        );
+        assert!(
+            SIGNALED_PIDS.lock().expect("signaled pids").is_empty(),
+            "signaled after ECHILD"
+        );
     }
 }
