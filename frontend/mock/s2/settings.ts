@@ -3,7 +3,10 @@
  * subscriptions, kept per world so `reset()` starts them over. DND exceptions live in their own
  * set, apart from the stars, as the server keeps them in their own table.
  */
+
+import type { CreatePushSubscription } from "../../src/gen/CreatePushSubscription.ts";
 import type { IntegrationSettings } from "../../src/gen/IntegrationSettings.ts";
+import type { PushPublicKey } from "../../src/gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionInfo } from "../../src/gen/SessionInfo.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
@@ -32,6 +35,10 @@ const DAY_MS = 24 * HOUR_MS;
 
 /** The viewer's password in the mock, for the email change check. */
 export const MOCK_PASSWORD = "secret123456";
+
+/** A public P-256 test key; the mock never sends real push notifications. */
+export const MOCK_PUSH_PUBLIC_KEY =
+  "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ=";
 
 /** The time zone choices the mock offers (the server lists every zone). */
 const TIME_ZONES = [
@@ -75,6 +82,7 @@ interface State {
   settings: Settings;
   sessions: SessionInfo[];
   push: PushSubscriptionList;
+  pushKeys: Map<number, CreatePushSubscription>;
 }
 
 function initialState(world: World, now: number): State {
@@ -185,6 +193,7 @@ function initialState(world: World, now: number): State {
         },
       ],
     },
+    pushKeys: new Map(),
   };
 }
 
@@ -520,10 +529,68 @@ export function createSettings(
   const removePush = (id: number) => {
     const held = current();
 
+    held.pushKeys.delete(id);
+
     held.push = {
       pushSubscriptions: held.push.pushSubscriptions.filter(
         (subscription) => subscription.id !== id,
       ),
+    };
+
+    return ok(held.push);
+  };
+
+  const createPush = (body: Json | undefined) => {
+    const endpoint = stringField(body, "endpoint");
+    const p256dhKey = stringField(body, "p256dhKey");
+    const authKey = stringField(body, "authKey");
+
+    if (endpoint === null || p256dhKey === null || authKey === null) {
+      throw validation("endpoint", "The push endpoint and keys must be strings.");
+    }
+
+    let url: URL;
+
+    try {
+      url = new URL(endpoint);
+    } catch {
+      throw validation("endpoint", "The push endpoint is not valid.");
+    }
+
+    const permitted = [
+      "jmt17.google.com",
+      "fcm.googleapis.com",
+      "updates.push.services.mozilla.com",
+      "web.push.apple.com",
+      "notify.windows.com",
+    ];
+
+    if (
+      url.protocol !== "https:" ||
+      url.port !== "" ||
+      !permitted.some((host) => url.hostname === host || url.hostname.endsWith(`.${host}`))
+    ) {
+      throw validation("endpoint", "The push endpoint is not a permitted push service.");
+    }
+
+    const held = current();
+
+    const existing = [...held.pushKeys].find(
+      ([, keys]) =>
+        keys.endpoint === endpoint && keys.p256dhKey === p256dhKey && keys.authKey === authKey,
+    );
+
+    if (existing !== undefined) return ok(held.push);
+
+    const id =
+      Math.max(0, ...held.push.pushSubscriptions.map((subscription) => subscription.id)) + 1;
+
+    held.pushKeys.set(id, { endpoint, p256dhKey, authKey });
+    held.push = {
+      pushSubscriptions: [
+        ...held.push.pushSubscriptions,
+        { id, endpoint, browser: "Chrome", version: "144", platform: "Linux" },
+      ],
     };
 
     return ok(held.push);
@@ -661,6 +728,10 @@ export function createSettings(
       route("DELETE", /^\/settings\/fizzy_connection$/, () => disconnect("fizzy")),
       route("DELETE", /^\/settings\/google_connection$/, () => disconnectGoogle()),
       route("GET", /^\/settings\/push_subscriptions$/, () => ok(current().push)),
+      route("GET", /^\/settings\/push_subscriptions\/key$/, () =>
+        ok({ publicKey: MOCK_PUSH_PUBLIC_KEY } satisfies PushPublicKey),
+      ),
+      route("POST", /^\/settings\/push_subscriptions$/, ({ body }) => createPush(body)),
       route("POST", /^\/settings\/push_subscriptions\/(\d+)\/test$/, (request) => {
         const id = firstId(request);
 

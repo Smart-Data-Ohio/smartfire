@@ -1,5 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useReducedMotion } from "../../../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../../../service-worker/lazy.ts";
+import {
+  ignoreModuleResourceLoadError,
+  loadForUpdate,
+} from "../../../service-worker/update-required.ts";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import type { IconName } from "../../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../../ui/menu.tsx";
@@ -24,7 +29,7 @@ export interface PlusMenuProps {
 const TRIGGER_LABEL = "Attach and more";
 
 /** Loaded on idle after the composer mounts, so the first open is already liquid. */
-const loadGooey = () => import("./gooey-plus-menu.tsx");
+const loadGooey = () => loadForUpdate(() => import("./gooey-plus-menu.tsx"));
 
 const GooeyPlusMenu = lazy(loadGooey);
 
@@ -105,7 +110,7 @@ export function PlusMenu({ actions }: PlusMenuProps) {
       return;
     }
 
-    return whenIdle(() => void loadGooey());
+    return whenIdle(() => void loadGooey().catch(ignoreModuleResourceLoadError));
   }, [reduced, plain]);
 
   if (reduced || plain) {

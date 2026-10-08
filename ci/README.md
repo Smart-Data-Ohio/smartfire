@@ -104,6 +104,7 @@ it under the pinned toolchain with `CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1`.
 | browsers (3 shards) | Pinned Playwright image, gateway `ws` lockfile, shared normal `campfire` binary (`WS11UI_BROWSER_BINARY`) and archived test harness, then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | drive | The pinned Chromium image, then exactly the 45 ignored Drive attachment, share, sudo and event-card declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
+| pwa | The production SPA from the Dockerfile's `spa` stage, frozen Rust seed and pinned Chromium image, then the real sign-in/UI-switch registration test; attempts a real push subscription and records the browser's exact outcome. Builds its own harness: the SPA is embedded at compile time, so it can't use the shared archive. |
 | messaging behaviour (4 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/4`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
@@ -140,7 +141,7 @@ docker build --target toolchain -t campfire-toolchain .
 docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
 RUNNER_TEMP=/tmp/campfire-ci bash ci/verify-ignored.sh
 RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
-# Repeat the last command for browsers, drive, livekit, messaging, and agents-ui.
+# Repeat the last command for browsers, drive, pwa, livekit, messaging, and agents-ui.
 # CI's slices: CORRECTNESS_SHARD=2/3 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
@@ -153,7 +154,7 @@ sequence and writer-control receipts. The first test shard additionally runs `ne
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(66 correctness tests + 6 compiled utilities). This covers expanded conditional
+(67 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the

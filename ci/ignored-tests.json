@@ -1,4 +1,12 @@
 {
+  "pwa": [
+    {
+      "path": "crates/campfire/src/controllers/spa_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::spa::tests::pwa_browser_reconciles_sign_in_and_preserves_root_registration"
+    }
+  ],
   "acme": [
     {
       "path": "crates/kit/tests/front.rs",
