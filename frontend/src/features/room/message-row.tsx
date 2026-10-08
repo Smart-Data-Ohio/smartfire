@@ -85,6 +85,7 @@ interface MessageRowProps {
   readonly live: boolean;
   /** Set when the row renders inside a thread pane: no thread indicator, no "reply in thread". */
   readonly inThread?: boolean;
+  readonly onNavigate?: (allowEnd: boolean) => void;
 }
 
 /**
@@ -100,11 +101,12 @@ export function MessageRow({
   focused,
   live,
   inThread = false,
+  onNavigate,
 }: MessageRowProps) {
   const creator = useUser(message.creatorId);
   const viewerId = useViewerId();
   const streaming = message.streaming && isAgent(creator);
-  const row = useRowInteractions(message, inThread);
+  const row = useRowInteractions(message, inThread, onNavigate);
   const edited = message.editedAt !== null;
   const name = creator?.name ?? UNKNOWN_NAME;
   // A pinned message or a reply always shows who wrote it, under its flag or quote line.

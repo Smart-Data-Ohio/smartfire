@@ -5,6 +5,7 @@ import {
   notFound,
   Outlet,
 } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 import { parseActivitySearch } from "./features/activity/activity-search.ts";
 import { AdminView } from "./features/admin/admin-view.tsx";
 import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
@@ -39,6 +40,11 @@ import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
 import {
+  ROUTE_PENDING_DELAY_MS,
+  ROUTE_PENDING_MIN_MS,
+  RoutePending,
+} from "./features/shell/route-pending.tsx";
+import {
   PersonalSlackRunSection,
   PersonalSlackSection,
 } from "./features/slack/personal-slack-section.tsx";
@@ -48,7 +54,7 @@ import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-s
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
 import { parseBoardSearch } from "./lib/board-search.ts";
-import { lazyForUpdate as lazy } from "./service-worker/lazy.ts";
+import { isModuleResourceLoadError, loadForUpdate } from "./service-worker/update-required.ts";
 
 export type { BoardSearch } from "./lib/board-search.ts";
 
@@ -63,13 +69,36 @@ function parseId(segment: string): number {
   return id;
 }
 
+/** A screen in its own chunk: the loader fetches it, and the component renders without suspending. */
+function chunked(load: () => Promise<{ default: ComponentType }>) {
+  let View: ComponentType | null = null;
+
+  const loader = async () => {
+    try {
+      const module = await loadForUpdate(load);
+
+      View = module.default;
+    } catch (error) {
+      if (!isModuleResourceLoadError(error)) {
+        throw error;
+      }
+
+      View = () => null;
+    }
+  };
+
+  const component = () => (View === null ? null : <View />);
+
+  return { loader, component };
+}
+
 const rootRoute = createRootRoute({ component: Outlet });
 
 /** The design-system gallery, its own chunk so none of it ships in the entry. */
 const kitchenSinkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "_kitchen-sink",
-  component: lazy(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
+  ...chunked(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
 });
 
 const shellRoute = createRoute({
@@ -116,7 +145,7 @@ const messageRoute = createRoute({
     parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
     stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/room/message-resolver.tsx").then((module) => ({
       default: module.MessageResolver,
     })),
@@ -331,7 +360,7 @@ const activityRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "activity",
   validateSearch: parseActivitySearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/activity/activity-route.tsx").then((module) => ({
       default: module.ActivityRoute,
     })),
@@ -343,7 +372,7 @@ const savedRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "saved",
   validateSearch: parseSavedSearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/saved/saved-route.tsx").then((module) => ({ default: module.SavedRoute })),
   ),
 });
@@ -352,7 +381,7 @@ const savedRoute = createRoute({
 const scheduledRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "scheduled",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/scheduled/scheduled-page.tsx").then((module) => ({
       default: module.ScheduledPage,
     })),
@@ -364,7 +393,7 @@ const workRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "work",
   validateSearch: parseWorkSearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/work/work-route.tsx").then((module) => ({
       default: module.WorkRoute,
     })),
@@ -375,7 +404,7 @@ const workRoute = createRoute({
 const agentsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "agents",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/agents/agent-directory-page.tsx").then((module) => ({
       default: module.AgentDirectoryPage,
     })),
@@ -390,7 +419,7 @@ const agentRoute = createRoute({
     parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
     stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/agents/agent-profile-route.tsx").then((module) => ({
       default: module.AgentProfileRoute,
     })),
@@ -401,7 +430,7 @@ const agentRoute = createRoute({
 const agentOverviewRoute = createRoute({
   getParentRoute: () => agentRoute,
   path: "/",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/agents/agent-profile-page.tsx").then((module) => ({
       default: module.AgentOverviewRoute,
     })),
@@ -413,7 +442,7 @@ const agentApprovalsRoute = createRoute({
   getParentRoute: () => agentRoute,
   path: "approvals",
   validateSearch: parseApprovalsSearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/agents/agent-approvals-tab.tsx").then((module) => ({
       default: module.AgentApprovalsRoute,
     })),
@@ -425,7 +454,7 @@ const agentEventsRoute = createRoute({
   getParentRoute: () => agentRoute,
   path: "events",
   validateSearch: parseLedgerSearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/agents/agent-ledger-tab.tsx").then((module) => ({
       default: module.AgentLedgerRoute,
     })),
@@ -436,7 +465,7 @@ const agentEventsRoute = createRoute({
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "people",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/people/people-page.tsx").then((module) => ({ default: module.PeoplePage })),
   ),
 });
@@ -449,7 +478,7 @@ const personRoute = createRoute({
     parse: ({ userId }) => ({ userId: parseId(userId) }),
     stringify: ({ userId }) => ({ userId: `${userId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/people/person-page.tsx").then((module) => ({
       default: module.PersonRoute,
     })),
@@ -464,7 +493,7 @@ const eventsRoute = createRoute({
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/events/events-page.tsx").then((module) => ({
       default: module.EventsRoute,
     })),
@@ -488,7 +517,7 @@ const eventRoute = createRoute({
     parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
     stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/events/event-page.tsx").then((module) => ({
       default: module.EventRoute,
     })),
@@ -516,7 +545,7 @@ const searchRoute = createRoute({
   path: "search",
   validateSearch: (search: RawSearchPageSearch): SearchPageSearch =>
     search.q === undefined || search.q === null || search.q === "" ? {} : { q: String(search.q) },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/search/search-page.tsx").then((module) => ({ default: module.SearchPage })),
   ),
 });
@@ -555,6 +584,12 @@ export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL,
   defaultPreload: false,
+  // Loaders fetch the chunk. Until `pendingMs`, the current screen stays; Suspense then hides
+  // only the incoming pane. Hover preloads still warm the module cache.
+  defaultPendingMs: ROUTE_PENDING_DELAY_MS,
+  // 0, not TanStack's 500ms, including reduced motion: the 150ms wait and the ~300ms reveal already stop a flash.
+  defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
+  defaultPendingComponent: RoutePending,
   // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,

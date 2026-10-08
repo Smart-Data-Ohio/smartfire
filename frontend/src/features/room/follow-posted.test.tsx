@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
 import { notePosted, useFollowPosted } from "./follow-posted.ts";
 import type { TimelineItem } from "./timeline-items.ts";
@@ -44,22 +44,26 @@ function recordingList(): RecordingList {
 describe("useFollowPosted", () => {
   it("goes to the message a command posted once it lands in the window, then forgets it", () => {
     const list = recordingList();
+    const beforeFollow = vi.fn();
 
     const view = renderHook(
       ({ ids }: { readonly ids: readonly number[] }) =>
-        useFollowPosted("room:12", items(ids), list.ref),
+        useFollowPosted("room:12", items(ids), list.ref, beforeFollow),
       { initialProps: { ids: [1, 2] } },
     );
 
     act(() => notePosted("room:12", 9));
     expect(list.scrolls).toEqual([]);
+    expect(beforeFollow).not.toHaveBeenCalled();
 
     view.rerender({ ids: [1, 2, 9] });
     expect(list.scrolls).toEqual([{ index: 2, align: "end" }]);
+    expect(beforeFollow).toHaveBeenCalledOnce();
 
     // Forgotten: the window moving on doesn't pull the reader back to it.
     view.rerender({ ids: [2, 9, 10] });
     expect(list.scrolls).toEqual([{ index: 2, align: "end" }]);
+    expect(beforeFollow).toHaveBeenCalledOnce();
   });
 
   it("ignores messages that arrive without a post from this composer", () => {
