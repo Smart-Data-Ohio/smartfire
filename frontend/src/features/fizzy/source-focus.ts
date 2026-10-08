@@ -29,8 +29,6 @@ export function followSourceRow(
   let frame: number | null = null;
 
   const follow = () => {
-    frame = null;
-
     if (stopped) {
       return;
     }
@@ -51,10 +49,15 @@ export function followSourceRow(
   };
 
   // Focus moving lands its focusin before the move settles (a pane focusing itself after a
-  // reload, say), so the follower looks on the next frame.
+  // reload, say), so the follower looks on the next frame. The handle is cleared only when that
+  // frame runs: the observer calls `follow` directly, and clearing it there would forget a frame
+  // still scheduled, so a later stop cancels a different one or none.
   const onFocusIn = () => {
     if (frame === null) {
-      frame = requestAnimationFrame(follow);
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        follow();
+      });
     }
   };
 

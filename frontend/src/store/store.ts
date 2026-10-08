@@ -190,11 +190,17 @@ export const mutations = {
     clearRoomJoin(roomId);
     apply((state) => reduce.setRoomUnavailable(state, roomId));
   },
-  applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode) =>
-    apply((state) => reduce.applyPage(state, roomId, page, mode)),
-  setPageLoading: (roomId: number, direction: "older" | "newer") =>
-    apply((state) => reduce.setPageLoading(state, roomId, direction)),
-  setPageFailed: (roomId: number) => apply((state) => reduce.setPageFailed(state, roomId)),
+  applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
+    apply((state) => reduce.applyPage(state, roomId, page, mode, request)),
+  setPageLoading: (roomId: number, direction: "older" | "newer") => {
+    apply((state) => reduce.setPageLoading(state, roomId, direction));
+
+    const timeline = store.getState().timelines[roomId];
+
+    return direction === "older" ? (timeline?.olderRequest ?? 0) : (timeline?.newerRequest ?? 0);
+  },
+  setPageFailed: (roomId: number, direction?: "older" | "newer", request?: number) =>
+    apply((state) => reduce.setPageFailed(state, roomId, direction, request)),
   setPageReplacing: (roomId: number) => apply((state) => reduce.setPageReplacing(state, roomId)),
   clearUnreadDivider: (roomId: number) =>
     apply((state) => reduce.clearUnreadDivider(state, roomId)),
@@ -232,12 +238,22 @@ export const mutations = {
   setPinState: (change: PinState) => apply((state) => extras.setPinState(state, change)),
   setSavedMark: (messageId: number, savedItemId: number | null) =>
     apply((state) => extras.setSavedMark(state, messageId, savedItemId)),
-  applyThreadPage: (threadId: number, page: MessagePage, mode: reduce.PageMode) =>
-    apply((state) => reduce.applyThreadPage(state, threadId, page, mode)),
-  setThreadPageLoading: (threadId: number, direction: "older" | "newer") =>
-    apply((state) => reduce.setThreadPageLoading(state, threadId, direction)),
-  setThreadPageFailed: (threadId: number) =>
-    apply((state) => reduce.setThreadPageFailed(state, threadId)),
+  applyThreadPage: (threadId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
+    apply((state) => reduce.applyThreadPage(state, threadId, page, mode, request)),
+  setThreadPageLoading: (threadId: number, direction: "older" | "newer") => {
+    apply((state) => reduce.setThreadPageLoading(state, threadId, direction));
+
+    const timeline = store.getState().threadTimelines[threadId];
+
+    return direction === "older" ? (timeline?.olderRequest ?? 0) : (timeline?.newerRequest ?? 0);
+  },
+  setThreadPageFailed: (threadId: number, direction?: "older" | "newer", request?: number) =>
+    apply((state) => reduce.setThreadPageFailed(state, threadId, direction, request)),
+  clearThreadPageLoading: (
+    threadId: number,
+    direction: "older" | "newer" | "replace",
+    request?: number,
+  ) => apply((state) => reduce.clearThreadPageLoading(state, threadId, direction, request)),
   setThreadPageReplacing: (threadId: number) =>
     apply((state) => reduce.setThreadPageReplacing(state, threadId)),
   setThreadPaneLoading: (threadId: number) =>

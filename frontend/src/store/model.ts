@@ -124,6 +124,12 @@ export interface Timeline {
   /** A page in one direction is on its way. */
   readonly loadingOlder: boolean;
   readonly loadingNewer: boolean;
+  /**
+   * Identity of the latest page request in each direction. A replace bumps both. A page, its
+   * error, or its interrupt applies only while the id it captured is still current.
+   */
+  readonly olderRequest: number;
+  readonly newerRequest: number;
   /** Where the unread divider sits for this visit; fixed until the room is left. */
   readonly unreadFromId: number | null;
   readonly unreadCount: number;
