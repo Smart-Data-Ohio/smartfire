@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
-import { settings as settingsActions } from "../../sync/settings.ts";
+import { settings as settingsActions, unsubscribePushEndpoint } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
+import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { deviceName } from "./settings-format.ts";
 import { SettingsGroup, SettingsPage, toastFailure } from "./settings-parts.tsx";
+import { type PushEnrollment, usePushEnrollment } from "./use-push-enrollment.ts";
 
 type Load =
   | { readonly status: "loading" }
@@ -20,15 +22,34 @@ type Load =
 export function DevicesSection() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [busy, setBusy] = useState<number | null>(null);
+  const listRevision = useRef(0);
 
   const fetchList = useCallback(() => {
+    const revision = ++listRevision.current;
+
     settingsActions.pushSubscriptions().then(
-      (list) => setLoad({ status: "ready", list }),
-      (error: Error) => setLoad({ status: "error", message: error.message }),
+      (list) => {
+        if (revision !== listRevision.current) return;
+
+        setLoad({ status: "ready", list });
+      },
+      (error: Error) => {
+        if (revision !== listRevision.current) return;
+
+        setLoad({ status: "error", message: error.message });
+      },
     );
   }, []);
 
   useEffect(fetchList, [fetchList]);
+
+  const replaceList = useCallback((list: PushSubscriptionList) => {
+    listRevision.current += 1;
+
+    setLoad({ status: "ready", list });
+  }, []);
+
+  const enrollment = usePushEnrollment(replaceList);
 
   const reload = () => {
     setLoad({ status: "loading" });
@@ -58,11 +79,27 @@ export function DevicesSection() {
   };
 
   const remove = (id: number) => {
+    const endpoint =
+      load.status === "ready"
+        ? load.list.pushSubscriptions.find((subscription) => subscription.id === id)?.endpoint
+        : undefined;
+
     setBusy(id);
     settingsActions
       .removePushSubscription(id)
       .then(
-        (list) => setLoad({ status: "ready", list }),
+        (list) => {
+          replaceList(list);
+
+          if (
+            endpoint !== undefined &&
+            !list.pushSubscriptions.some((subscription) => subscription.endpoint === endpoint)
+          ) {
+            void unsubscribePushEndpoint(endpoint)
+              .finally(enrollment.refresh)
+              .catch(() => undefined);
+          }
+        },
         (error: Error) => toastFailure("Couldn't remove that device", error),
       )
       .finally(() => setBusy(null));
@@ -73,6 +110,9 @@ export function DevicesSection() {
       title="Push devices"
       description="Browsers and phones that get push notifications for your account."
     >
+      <SettingsGroup title="This browser">
+        <ThisBrowser enrollment={enrollment} saved={savedHere(enrollment, load)} />
+      </SettingsGroup>
       {load.status === "loading" ? <PaneListSkeleton rows={2} /> : null}
       {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
       {load.status === "ready" && load.list.pushSubscriptions.length === 0 ? (
@@ -113,5 +153,138 @@ export function DevicesSection() {
         </SettingsGroup>
       ) : null}
     </SettingsPage>
+  );
+}
+
+/**
+ * Whether the server has this browser's subscription: push only reaches it then. `null` while the
+ * device list is still loading (or failed), when it can't be told yet.
+ */
+function savedHere(enrollment: PushEnrollment, load: Load): boolean | null {
+  if (enrollment.endpoint === null) return false;
+
+  if (load.status !== "ready") return null;
+
+  return load.list.pushSubscriptions.some(
+    (subscription) => subscription.endpoint === enrollment.endpoint,
+  );
+}
+
+interface BrowserPushState {
+  readonly key: "unsupported" | "blocked" | "checking" | "unsaved" | "on" | "off";
+  readonly icon: IconName;
+  readonly title: string;
+  readonly text: string;
+  /** The button's label when this state offers one. */
+  readonly action: string | null;
+}
+
+/** What this browser can do about push, and the one control that asks for permission. */
+function browserState(enrollment: PushEnrollment, saved: boolean | null): BrowserPushState {
+  if (enrollment.permission === "unsupported") {
+    return {
+      key: "unsupported",
+      icon: "bell-off",
+      title: "Push isn't available here",
+      text: "This browser can't show push notifications. On an iPhone or iPad, add Smartfire to your Home Screen first.",
+      action: null,
+    };
+  }
+
+  if (enrollment.permission === "denied") {
+    return {
+      key: "blocked",
+      icon: "bell-off",
+      title: "Notifications are blocked",
+      text: "Allow notifications for this site in your browser's settings, then come back here.",
+      action: null,
+    };
+  }
+
+  if (enrollment.permission === "granted" && enrollment.subscribed && saved === true) {
+    return {
+      key: "on",
+      icon: "bell-ring",
+      title: "Notifications are on",
+      text: "This browser gets push notifications, even when Smartfire isn't open.",
+      action: null,
+    };
+  }
+
+  if (enrollment.permission === "granted" && enrollment.subscribed && saved === null) {
+    return {
+      key: "checking",
+      icon: "bell",
+      title: "Notifications",
+      text: "Checking whether this browser is set up…",
+      action: null,
+    };
+  }
+
+  // The browser subscribed but the save never reached Smartfire: nothing arrives until it does.
+  if (enrollment.permission === "granted" && enrollment.subscribed) {
+    return {
+      key: "unsaved",
+      icon: "bell-off",
+      title: "Notifications aren't set up yet",
+      text: "This browser agreed to notifications, but Smartfire couldn't save it. Try again to finish.",
+      action: "Finish setting up",
+    };
+  }
+
+  return {
+    key: "off",
+    icon: "bell",
+    title: "Notifications are off",
+    text: "Get push notifications in this browser, even when Smartfire isn't open.",
+    action: "Enable notifications",
+  };
+}
+
+function ThisBrowser({
+  enrollment,
+  saved,
+}: {
+  readonly enrollment: PushEnrollment;
+  readonly saved: boolean | null;
+}) {
+  const state = browserState(enrollment, saved);
+
+  // The permission prompt starts inside this click and nowhere else.
+  const enable = () => {
+    void enrollment.enable().then((outcome) => {
+      if (outcome.kind === "enabled") {
+        toast({ title: "Notifications are on for this browser", tone: "success" });
+      } else if (outcome.kind === "denied") {
+        toast({
+          title: "Notifications stay off",
+          description:
+            outcome.permission === "denied"
+              ? "This browser blocked them. You can allow them in its site settings."
+              : "You can turn them on here whenever you like.",
+        });
+      } else if (outcome.kind === "unsupported") {
+        toast({ title: "This browser can't show push notifications" });
+      } else {
+        toastFailure("Couldn't turn on notifications", new Error(outcome.message));
+      }
+    });
+  };
+
+  return (
+    <div className="settings-list-row settings-push-row" data-state={state.key}>
+      <span className="settings-push-icon" aria-hidden="true">
+        <Icon name={state.icon} size={16} />
+      </span>
+      <span className="settings-list-main">
+        <strong>{state.title}</strong>
+        <span className="text-muted">{state.text}</span>
+      </span>
+      {state.action === null ? null : (
+        <Button variant="primary" size="sm" loading={enrollment.busy} onClick={enable}>
+          {state.action}
+        </Button>
+      )}
+    </div>
   );
 }

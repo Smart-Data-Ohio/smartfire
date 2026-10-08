@@ -4,6 +4,7 @@ import type { AppearanceSettings as GeneratedAppearanceSettings } from "../../ge
 import type { BackupCodes as GeneratedBackupCodes } from "../../gen/BackupCodes.ts";
 import type { CallSettings as GeneratedCallSettings } from "../../gen/CallSettings.ts";
 import type { Connection as GeneratedConnection } from "../../gen/Connection.ts";
+import type { CreatePushSubscription as GeneratedCreatePushSubscription } from "../../gen/CreatePushSubscription.ts";
 import type { DndAllowedPerson as GeneratedDndAllowedPerson } from "../../gen/DndAllowedPerson.ts";
 import type { GoogleIntegration as GeneratedGoogleIntegration } from "../../gen/GoogleIntegration.ts";
 import type { InboxSwitch as GeneratedInboxSwitch } from "../../gen/InboxSwitch.ts";
@@ -13,6 +14,7 @@ import type { IntegrationToken as GeneratedIntegrationToken } from "../../gen/In
 import type { NotificationSettings as GeneratedNotificationSettings } from "../../gen/NotificationSettings.ts";
 import type { OooPreset as GeneratedOooPreset } from "../../gen/OooPreset.ts";
 import type { ProfileSettings as GeneratedProfileSettings } from "../../gen/ProfileSettings.ts";
+import type { PushPublicKey as GeneratedPushPublicKey } from "../../gen/PushPublicKey.ts";
 import type { PushSubscriptionInfo as GeneratedPushSubscriptionInfo } from "../../gen/PushSubscriptionInfo.ts";
 import type { PushSubscriptionList as GeneratedPushSubscriptionList } from "../../gen/PushSubscriptionList.ts";
 import type { Reauthentication as GeneratedReauthentication } from "../../gen/Reauthentication.ts";
@@ -369,6 +371,22 @@ export type PushSubscriptionList = typeof PushSubscriptionList.Type;
 
 export type PushSubscriptionListPin = Assert<
   Pinned<typeof PushSubscriptionList, GeneratedPushSubscriptionList>
+>;
+
+/** The classic page's public VAPID key, or `null` when push is not configured. */
+export const PushPublicKey = Schema.Struct({ publicKey: Schema.NullOr(Schema.String) });
+
+export type PushPublicKeyPin = Assert<Pinned<typeof PushPublicKey, GeneratedPushPublicKey>>;
+
+/** Only the browser's endpoint and keys; identity comes from the authenticated session. */
+export const CreatePushSubscription = Schema.Struct({
+  endpoint: Schema.String,
+  p256dhKey: Schema.String,
+  authKey: Schema.String,
+});
+
+export type CreatePushSubscriptionPin = Assert<
+  Pinned<typeof CreatePushSubscription, GeneratedCreatePushSubscription>
 >;
 
 /** A room on the profile's "Rooms you're in" list, with the viewer's notification level. */

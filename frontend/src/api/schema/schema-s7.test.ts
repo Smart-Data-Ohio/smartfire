@@ -4,8 +4,10 @@ import {
   AccountSettings,
   BackupCodes,
   Connection,
+  CreatePushSubscription,
   IntegrationChange,
   IntegrationToken,
+  PushPublicKey,
   PushSubscriptionList,
   Reauthentication,
   SessionList,
@@ -93,6 +95,22 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
   expect(Schema.encodeSync(schema)(Schema.decodeUnknownSync(schema)(wire))).toEqual(wire);
 
 describe("S7 settings schemas", () => {
+  it("pins the push key and enrollment body to the Rust wire contract", () => {
+    roundTrips(PushPublicKey, { publicKey: null });
+    roundTrips(PushPublicKey, { publicKey: "public-key" });
+    roundTrips(CreatePushSubscription, {
+      endpoint: "https://fcm.googleapis.com/push",
+      p256dhKey: "p256",
+      authKey: "auth",
+    });
+    expect(() =>
+      Schema.decodeUnknownSync(CreatePushSubscription)({
+        endpoint: "https://fcm.googleapis.com/push",
+        p256dhKey: 2,
+        authKey: "auth",
+      }),
+    ).toThrow();
+  });
   it("decode the settings page", () => {
     const settings = Schema.decodeUnknownSync(Settings)(settingsJson);
 

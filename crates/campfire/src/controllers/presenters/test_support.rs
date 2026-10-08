@@ -502,7 +502,7 @@ impl TestApp {
     fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
-        Config::from_lookup(|name| match name {
+        let mut config = Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some(secret.clone()),
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
@@ -512,7 +512,10 @@ impl TestApp {
                 .find(|(key, _)| *key == name)
                 .map(|(_, value)| (*value).into()),
         })
-        .unwrap()
+        .unwrap();
+        // Every environment uses this private seed copy, not an empty environment-named database.
+        config.storage.database = dir.path().join("db/production.sqlite3");
+        config
     }
 
     /// Boots a new app on this one's database and files, as a restart does: nothing the old

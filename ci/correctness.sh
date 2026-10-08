@@ -2,7 +2,7 @@
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo"
-suite=${1:?Expected acme, browsers, drive, livekit, messaging, or agents-ui}
+suite=${1:?Expected acme, browsers, drive, livekit, messaging, agents-ui, or pwa}
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
 # deterministic slice; ci/correctness_gate.py then requires the slices' receipts to
 # cover every selected test exactly once.
@@ -122,6 +122,21 @@ run_suite() {
       cargo build --locked -j 4 -p campfire --bin campfire
       python3 reference-tools/views/agents_ui/system_behavior.py \
         --binary "$repo/target/debug/campfire" --scenario all
+      ;;
+    pwa)
+      # Reuse the production frontend stage so application registration is tested against the
+      # embedded real SPA, alongside the real Rust layout and classic asset overrides.
+      local pwa_image="campfire-pwa-spa:$$" pwa_container
+      docker build --target spa -t "$pwa_image" .
+      pwa_container=$(docker create "$pwa_image")
+      trap "docker rm -f '$pwa_container' >/dev/null 2>&1 || true" EXIT
+      docker cp "$pwa_container:/src/frontend/dist" frontend/
+      docker rm "$pwa_container"
+      trap - EXIT
+      export SPA_DIST="$repo/frontend/dist"
+      browser_images
+      export PWA_PLAYWRIGHT_IMAGE="$WS13_PLAYWRIGHT_IMAGE"
+      ignored
       ;;
     *) echo "Unknown correctness suite: $suite" >&2; return 1 ;;
   esac
