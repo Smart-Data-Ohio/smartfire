@@ -303,6 +303,15 @@ jobs:
           PLAYWRIGHT_HTML_OPEN: never
         run: pnpm exec playwright test -c playwright.mock.config.ts --fully-parallel --shard="$SHARD" --reporter=line,html
 
+      # The production build can order CSS differently from the dev server (shared chunks' sheets
+      # link ahead of the entry's), so the layout checks run against `vite build` too.
+      - name: Playwright (mock backend, production build)
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 }}
+        env:
+          SMARTFIRE_E2E_BUILD: "1"
+          PLAYWRIGHT_HTML_OPEN: never
+        run: pnpm exec playwright test -c playwright.mock.config.ts e2e/mock/inline-layout.spec.ts --reporter=line,html
+
       # The HTML report carries each failed test's trace (trace: retain-on-failure).
       - name: Keep the report of a failed run
         if: ${{ failure() && steps.scope.outputs.run == 'true' }}

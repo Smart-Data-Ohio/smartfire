@@ -220,3 +220,26 @@ describe("design tokens", () => {
     },
   );
 });
+
+/** The `@layer a, b, c;` order statement in `text`, as a list of names. */
+function layerOrder(text: string): readonly string[] {
+  const match = /@layer\s+([\w\s,-]+);/.exec(text);
+
+  return (match?.[1] ?? "").split(",").map((name) => name.trim());
+}
+
+describe("cascade layers", () => {
+  // The production build links shared chunks' stylesheets before the entry's and minifies the
+  // order statement out of tokens.css, so index.html declares the order ahead of every sheet.
+  it("index.html declares the same layer order as tokens.css, ahead of any stylesheet", () => {
+    const tokens = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
+    const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
+    const style = /<style>([^<]*)<\/style>/.exec(html);
+
+    expect(layerOrder(tokens)).toEqual(["tokens", "base", "motion", "recipes", "ui", "app"]);
+    expect(style).not.toBeNull();
+    expect(layerOrder(style?.[1] ?? "")).toEqual(layerOrder(tokens));
+    expect(html.indexOf("<style>")).toBeLessThan(html.indexOf("<!--boot-->"));
+    expect(html).not.toMatch(/<link[^>]+stylesheet/);
+  });
+});

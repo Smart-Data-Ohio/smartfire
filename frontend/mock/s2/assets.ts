@@ -437,16 +437,8 @@ mod tests {
 
 // --- icons ---
 
-/** Each icon's background and ink colours. */
+/** Each workspace icon's background and ink colours. */
 const ICON_COLORS = new Map<string, readonly [string, string]>([
-  ["anthropic", ["#d4a27f", "#191919"]],
-  ["claude", ["#d97757", "#ffffff"]],
-  ["docker", ["#2496ed", "#ffffff"]],
-  ["figma", ["#a259ff", "#ffffff"]],
-  ["github", ["#181717", "#ffffff"]],
-  ["linear", ["#5e6ad2", "#ffffff"]],
-  ["openai", ["#10a37f", "#ffffff"]],
-  ["slack", ["#4a154b", "#ffffff"]],
   ["lgtm", ["#2cb67d", "#ffffff"]],
   ["ohio", ["#bb0000", "#ffffff"]],
   ["partyparrot", ["#ff6b35", "#ffffff"]],
@@ -454,7 +446,7 @@ const ICON_COLORS = new Map<string, readonly [string, string]>([
   ["smartfire", ["#f97316", "#fff7ed"]],
 ]);
 
-/** What a workspace icon's badge says (brands show their initial). */
+/** What a workspace icon's badge says (anything else shows its initial). */
 const ICON_GLYPHS = new Map([
   ["lgtm", "LGTM"],
   ["shipit", "🚢"],
@@ -463,8 +455,30 @@ const ICON_GLYPHS = new Map([
   ["ohio", "OH"],
 ]);
 
-/** A 64×64 badge for a brand or workspace icon. */
+/** The brand icons: vendor/icons.yml's are Simple Icons, one black glyph on transparency. */
+const BRAND_NAMES = new Set([
+  "anthropic",
+  "claude",
+  "docker",
+  "figma",
+  "github",
+  "linear",
+  "openai",
+  "slack",
+]);
+
+/**
+ * A brand icon as the real ones are drawn: a 24×24 viewBox, no width or height, a black glyph on
+ * transparency (so it vanishes on a dark surface unless the UI inverts it), or a 64×64 colour
+ * badge for a workspace icon.
+ */
 export function iconSvg(name: string): Uint8Array {
+  if (BRAND_NAMES.has(name)) {
+    return utf8(
+      `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>${name}</title><circle cx="12" cy="12" r="10.5" fill="none" stroke="#000" stroke-width="2.5"/><text x="12" y="16.6" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="13" fill="#000">${name.charAt(0).toUpperCase()}</text></svg>`,
+    );
+  }
+
   const [fill, ink] = ICON_COLORS.get(name) ?? ["#57534e", "#ffffff"];
   const glyph = ICON_GLYPHS.get(name) ?? name.charAt(0).toUpperCase();
   const size = [...glyph].length > 2 ? 18 : [...glyph].length > 1 ? 24 : 32;

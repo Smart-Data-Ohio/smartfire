@@ -26,7 +26,8 @@ interface ImageIcon {
   readonly title: string;
 }
 
-/** Built-in brand logos (a few of `vendor/icons.yml`), served at `/icons/brands/:name.svg`. */
+/** Built-in brand logos (a few of `vendor/icons.yml`), served at `/assets/icons/brands/:name.svg` as the server's asset
+ * pipeline does (crates/app/src/icons.rs, less the digest). */
 export const BRAND_ICONS: readonly ImageIcon[] = [
   { name: "anthropic", title: "Anthropic" },
   { name: "claude", title: "Claude" },
@@ -49,7 +50,7 @@ export const CUSTOM_ICONS: readonly ImageIcon[] = [
 
 /** The image URL of a brand or workspace icon. */
 export function iconImageUrl(kind: "brand" | "custom", name: string): string {
-  return kind === "brand" ? `/icons/brands/${name}.svg` : `/icons/${name}`;
+  return kind === "brand" ? `/assets/icons/brands/${name}.svg` : `/icons/${name}`;
 }
 
 const VARIATION_SELECTOR = /️/g;

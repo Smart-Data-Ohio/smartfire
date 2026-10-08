@@ -102,6 +102,10 @@
     --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
     --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
     --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+    /* Behind an inline image: only its transparent pixels show it, so a dark logo on a
+       transparent ground still reads in the dark theme while a photo covers it entirely. */
+    --image-backdrop-a: light-dark(var(--neutral-0), var(--neutral-250));
+    --image-backdrop-b: light-dark(var(--neutral-100), var(--neutral-300));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
     --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
@@ -193,6 +197,10 @@
     --message-group-gap: var(--space-2);
     --sidebar-row-height: 28px;
     --sidebar-row-gap: 1px;
+
+    /* Brand icons (vendor/icons.yml) are one black glyph on transparency: inverted in the dark
+       theme, as the classic UI's --icon-filter does. A filter isn't a colour, so no light-dark(). */
+    --brand-icon-filter: none;
   }
 
   :root[data-theme="light"] {
@@ -201,6 +209,13 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
+    --brand-icon-filter: invert(1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand-icon-filter: invert(1);
+    }
   }
 
   /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
@@ -436,6 +451,15 @@
   video {
     display: block;
     max-width: 100%;
+  }
+
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from its own /assets/icons/brands/ and marks body ones `icon--brand`.
+     Anchored to that local prefix, so a remote image whose URL merely contains the path (a
+     full-colour link preview, say) is never inverted. */
+  img.icon--brand,
+  img[src^="/assets/icons/brands/"] {
+    filter: var(--brand-icon-filter);
   }
 
   input,
