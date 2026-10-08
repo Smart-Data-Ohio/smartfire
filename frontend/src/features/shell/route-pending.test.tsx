@@ -7,7 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { lazy, StrictMode } from "react";
+import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { router as appRouter } from "../../router.tsx";
 import { mutations } from "../../store/store.ts";
@@ -15,11 +15,7 @@ import { actions } from "../../sync/runtime.ts";
 import { AppShell } from "./app-shell.tsx";
 import { ROUTE_PENDING_DELAY_MS, RoutePending } from "./route-pending.tsx";
 
-const held = new Promise<{ default: () => null }>(() => {});
-
-const HeldRoute = lazy(() => held);
-
-/** The shell around a lazy route whose chunk never arrives. */
+/** The shell around a route whose chunk never arrives, starting on a screen that is already up. */
 function renderHeldRoute() {
   const root = createRootRoute({ component: Outlet });
 
@@ -29,16 +25,24 @@ function renderHeldRoute() {
     component: AppShell,
   });
 
-  const route = createRoute({
+  const home = createRoute({
+    getParentRoute: () => shell,
+    path: "/",
+    component: () => <h1>Home</h1>,
+  });
+
+  const held = createRoute({
     getParentRoute: () => shell,
     path: "held",
-    component: HeldRoute,
+    loader: () => new Promise<void>(() => {}),
+    component: () => <h1>Held</h1>,
   });
 
   const router = createRouter({
-    routeTree: root.addChildren([shell.addChildren([route])]),
-    history: createMemoryHistory({ initialEntries: ["/held"] }),
+    routeTree: root.addChildren([shell.addChildren([home, held])]),
+    history: createMemoryHistory({ initialEntries: ["/"] }),
     defaultPendingComponent: RoutePending,
+    defaultPendingMs: ROUTE_PENDING_DELAY_MS,
     defaultPreload: false,
   });
 
@@ -72,9 +76,10 @@ describe("a lazy route's chunk", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps the router's hover preload off and catches the chunk in the pane", () => {
+  it("keeps hover preload off and waits before hiding the current screen", () => {
     expect(appRouter.options.defaultPreload).toBe(false);
     expect(appRouter.options.defaultPendingComponent).toBe(RoutePending);
+    expect(appRouter.options.defaultPendingMs).toBe(ROUTE_PENDING_DELAY_MS);
   });
 
   it("keeps the shell up and shows the pane placeholder only after a short wait", async () => {
@@ -85,11 +90,19 @@ describe("a lazy route's chunk", () => {
     await act(() => router.load());
 
     expect(screen.getByRole("complementary", { name: "Conversations" })).toBeTruthy();
-    expect(screen.getByRole("navigation", { name: "Destinations" })).toBeTruthy();
-    expect(document.querySelector(".app-shell")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
     expect(screen.queryByRole("status", { name: "Loading page" })).toBeNull();
 
-    await act(() => vi.advanceTimersByTimeAsync(ROUTE_PENDING_DELAY_MS));
+    await act(() => {
+      void router.history.push("/held");
+    });
+
+    await act(() => vi.advanceTimersByTimeAsync(ROUTE_PENDING_DELAY_MS - 1));
+
+    expect(screen.queryByRole("status", { name: "Loading page" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Home" })).toBeTruthy();
+
+    await act(() => vi.advanceTimersByTimeAsync(1));
 
     expect(screen.getByRole("status", { name: "Loading page" })).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "Conversations" })).toBeTruthy();
@@ -102,6 +115,10 @@ describe("a lazy route's chunk", () => {
     const router = renderHeldRoute();
 
     await act(() => router.load());
+
+    await act(() => {
+      void router.history.push("/held");
+    });
 
     expect(screen.getByRole("status", { name: "Loading page" })).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "Conversations" })).toBeTruthy();

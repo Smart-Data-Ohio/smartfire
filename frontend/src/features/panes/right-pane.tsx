@@ -192,15 +192,7 @@ function PaneFallback({ view }: { readonly view: RightPaneView }) {
   const title = fallbackTitle(view);
   const visible = usePendingVisible();
 
-  if (!visible) {
-    return null;
-  }
-
-  return (
-    <PaneFrame title={title}>
-      <PaneListSkeleton rows={4} />
-    </PaneFrame>
-  );
+  return <PaneFrame title={title}>{visible ? <PaneListSkeleton rows={4} /> : null}</PaneFrame>;
 }
 
 function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: RightPaneView }) {
