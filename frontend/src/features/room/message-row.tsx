@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { formatFull, formatTime } from "../../lib/time.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { actions } from "../../sync/runtime.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
@@ -20,9 +21,11 @@ import { InlineMarkdown } from "./inline-markdown.tsx";
 import "../messages/messages.css";
 
 /** The inline editor, loaded the first time someone edits; the row keeps its text meanwhile. */
-const MessageEditor = lazy(() =>
-  import("../messages/message-editor.tsx").then((module) => ({ default: module.MessageEditor })),
-);
+const MessageEditor = lazy(async () => {
+  const module = await import("../messages/message-editor.tsx");
+
+  return { default: module.MessageEditor };
+});
 
 interface HeaderProps {
   readonly creatorId: number;

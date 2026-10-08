@@ -16,8 +16,11 @@ use campfire_db::models::user_status_settings::clock_time_to_minutes;
 use campfire_db::{
     DndAllowedUser, Errors, PushSubscription, Session, User, UserChanges, UserStatusSettings,
 };
-use campfire_kit::{Ctx, Error, Kit, Result, StatusCode, action, unparsed_action};
-use campfire_people::controllers::{qr_code, two_factor, users::push_subscriptions::test_notifications};
+use campfire_kit::{Ctx, Error, Kit, Param, Result, StatusCode, action, unparsed_action};
+use campfire_people::controllers::{
+    qr_code, two_factor,
+    users::push_subscriptions::{self, test_notifications},
+};
 use campfire_web::authentication;
 use campfire_web::concerns::{self, Authentication, Before, current_session};
 use campfire_web::controllers::presenters::attachments::{self, Assignment, Record};
@@ -74,7 +77,11 @@ pub fn routes() -> Router<Kit> {
         )
         .route(
             "/api/v1/settings/push_subscriptions",
-            get(action(push_subscriptions)),
+            get(action(push_subscriptions)).post(unparsed_action(create_push_subscription)),
+        )
+        .route(
+            "/api/v1/settings/push_subscriptions/key",
+            get(action(push_public_key)),
         )
         .route(
             "/api/v1/settings/push_subscriptions/{id}",
@@ -181,6 +188,14 @@ endpoint!(
 endpoint!(
     /// `GET /api/v1/settings/push_subscriptions`
     push_subscriptions => index_push_subscriptions
+);
+endpoint!(
+    /// `GET /api/v1/settings/push_subscriptions/key`
+    push_public_key => show_push_public_key
+);
+endpoint!(
+    /// `POST /api/v1/settings/push_subscriptions`
+    create_push_subscription => enroll_push_subscription
 );
 endpoint!(
     /// `DELETE /api/v1/settings/push_subscriptions/:id`
@@ -1045,13 +1060,47 @@ async fn push_subscription_list(c: &mut Ctx, user_id: i64) -> Result {
 }
 
 async fn index_push_subscriptions(c: &mut Ctx) -> Result {
-    let user = viewer(c).await?;
+    let user = human_viewer(c).await?;
+    push_subscription_list(c, user.id).await
+}
+
+async fn show_push_public_key(c: &mut Ctx) -> Result {
+    human_viewer(c).await?;
+    c.json(
+        StatusCode::OK,
+        &api::PushPublicKey {
+            public_key: c.app().vapid_public_key(),
+        },
+    )
+}
+
+/// Run the classic controller: exact-key matches are revalidated and touched, and a changed
+/// key creates a distinct row. Its DNS guard, user agent, timestamps and lack of side effects
+/// remain the classic ones.
+async fn enroll_push_subscription(c: &mut Ctx) -> Result {
+    let user = human_viewer(c).await?;
+    let input: api::CreatePushSubscription = body(c).await?;
+    let params = [
+        ("endpoint".into(), Param::Str(input.endpoint)),
+        ("p256dh_key".into(), Param::Str(input.p256dh_key)),
+        ("auth_key".into(), Param::Str(input.auth_key)),
+    ]
+    .into_iter()
+    .collect();
+    c.params.insert("push_subscription", Param::Hash(params));
+    let response = push_subscriptions::enroll(c, user.id).await?;
+    if response.status == StatusCode::UNPROCESSABLE_ENTITY {
+        return Err(fail(
+            c,
+            validation("endpoint", "was rejected by the push service validation"),
+        ));
+    }
     push_subscription_list(c, user.id).await
 }
 
 /// `@push_subscriptions.destroy_by(id: params[:id])`: someone else's or a gone one is a no-op.
 async fn destroy_push_subscription(c: &mut Ctx) -> Result {
-    let user_id = viewer(c).await?.id;
+    let user_id = human_viewer(c).await?.id;
     if let Some(id) = c.param_str("id").and_then(concerns::cast_integer) {
         c.app()
             .db

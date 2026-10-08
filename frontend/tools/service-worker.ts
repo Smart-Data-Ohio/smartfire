@@ -1,0 +1,272 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { build, type Plugin } from "vite";
+
+export function contentHash(content: string | Uint8Array): string {
+  return createHash("sha256").update(content).digest("hex").slice(0, 16);
+}
+
+/** Match Vite's eight-character asset fingerprints and the embedder's immutable-file rule. */
+export function assetHash(content: string | Uint8Array): string {
+  return createHash("sha256").update(content).digest("base64url").slice(0, 8);
+}
+
+export function precacheFiles(names: readonly string[], base: string): string[] {
+  const paths: string[] = [];
+
+  for (const name of names) {
+    if (/^assets\/.+-[\w-]{8,}\.[^/]+$/.test(name)) {
+      paths.push(`${base}${name}`);
+    }
+  }
+
+  return [...paths, `${base}offline.html`].sort();
+}
+
+export function buildVersion(precache: readonly string[]): string {
+  return contentHash([...precache].sort().join("\n"));
+}
+
+/** Stable bootstrap, content-hashed TS runtime, and a build-derived precache with no hash cycle. */
+export function smartfireServiceWorker(): Plugin {
+  let root = "";
+  let base = "/";
+  let dist = "";
+
+  return {
+    name: "smartfire-service-worker",
+    enforce: "post",
+    configResolved(config) {
+      root = config.root;
+      base = config.base;
+      dist = resolve(root, config.build.outDir);
+    },
+    async generateBundle(_options, bundle) {
+      const workerBuild = await build({
+        configFile: false,
+        root,
+        base,
+        logLevel: "silent",
+        build: {
+          write: false,
+          minify: true,
+          lib: {
+            entry: resolve(root, "src/service-worker/worker.ts"),
+            formats: ["iife"],
+            name: "SmartfireWorker",
+          },
+        },
+      });
+
+      const outputs = Array.isArray(workerBuild)
+        ? workerBuild
+        : "output" in workerBuild
+          ? [workerBuild]
+          : [];
+
+      if (outputs.length !== 1) {
+        throw new Error("Expected one service worker build output");
+      }
+
+      const chunk = outputs[0]?.output.find((output) => output.type === "chunk");
+      const offline = bundle["offline.html"];
+
+      const page = Object.values(bundle).find(
+        (output) => output.type === "chunk" && output.isEntry && output.name === "index",
+      );
+
+      if (chunk === undefined || offline?.type !== "asset" || page === undefined) {
+        throw new Error("The production build must emit an app entry, worker and offline.html");
+      }
+
+      const runtimeName = `assets/service-worker-${assetHash(chunk.code)}.js`;
+      const offlineName = `assets/offline-page-${assetHash(offline.source)}.html`;
+
+      this.emitFile({ type: "asset", fileName: runtimeName, source: chunk.code });
+      // offline.html is stable. Its tiny hashed copy makes an HTML-only change alter the list's
+      // names and version too, without rewriting the page the user designed.
+      this.emitFile({ type: "asset", fileName: offlineName, source: offline.source });
+
+      const precache = precacheFiles([...Object.keys(bundle), runtimeName, offlineName], base);
+
+      const config = {
+        version: buildVersion(precache),
+        precache,
+        offline: `${base}offline.html`,
+        page: `${base}${page.fileName}`,
+      };
+
+      this.emitFile({
+        type: "asset",
+        fileName: "service-worker.js",
+        source: `self.smartfireBuild=${JSON.stringify(config)};\nimportScripts(${JSON.stringify(`${base}${runtimeName}`)});\n`,
+      });
+    },
+    configurePreviewServer(server) {
+      // Browser tests update real service-worker requests at the HTTP server. Playwright's
+      // context.route cannot intercept the browser's update-script requests reliably.
+      let revision = "";
+      let noStoreReads = 0;
+      const retired = new Set<string>();
+      const testing = process.env.SMARTFIRE_PWA_E2E === "1";
+
+      server.middlewares.use(async (request, response, next) => {
+        const requested = new URL(request.url ?? "/", "http://preview");
+        const moduleRevision = requested.searchParams.get("pwa");
+
+        if (testing && requested.pathname === "/__pwa/retire" && request.method === "POST") {
+          const path = requested.searchParams.get("path");
+
+          if (path === null) {
+            retired.clear();
+          } else {
+            retired.add(path);
+          }
+
+          response.statusCode = 204;
+          response.end();
+
+          return;
+        }
+
+        if (testing && retired.has(requested.pathname)) {
+          response.statusCode = 404;
+          response.setHeader("Cache-Control", "no-store");
+          response.end("This build's asset has retired");
+
+          return;
+        }
+
+        if (
+          testing &&
+          moduleRevision !== null &&
+          requested.pathname.startsWith(`${base}assets/`) &&
+          /^\/[^/]+-[\w-]{8,}\.js$/.test(requested.pathname.slice(`${base}assets`.length))
+        ) {
+          try {
+            const code = await readFile(
+              resolve(dist, requested.pathname.slice(base.length)),
+              "utf8",
+            );
+
+            response.setHeader("Content-Type", "text/javascript; charset=utf-8");
+            response.setHeader("Cache-Control", "no-cache");
+            // Tag the whole module graph. Dynamic chunks can import the entry, so changing
+            // only its script URL would execute the untagged entry and mount the app twice.
+            response.end(
+              code.replace(
+                /(["'`])(\.\/[^"'`]+-[\w-]{8,}\.js)\1/g,
+                `$1$2?pwa=${encodeURIComponent(moduleRevision)}$1`,
+              ),
+            );
+          } catch (error) {
+            next(error);
+          }
+
+          return;
+        }
+
+        // Give each simulated deployment its own real page entry URL. The page reports that
+        // URL from import.meta.url; changing only the controller version cannot identify a page.
+        if (
+          testing &&
+          revision !== "" &&
+          requested.pathname.startsWith(base) &&
+          !requested.pathname.includes(".") &&
+          request.headers.accept?.includes("text/html")
+        ) {
+          try {
+            const html = await readFile(resolve(dist, "index.html"), "utf8");
+
+            for (const [name, value] of Object.entries(server.config.preview.headers ?? {})) {
+              if (value !== undefined) response.setHeader(name, value);
+            }
+
+            response.setHeader("Content-Type", "text/html; charset=utf-8");
+            response.setHeader("Cache-Control", "no-store");
+            response.end(
+              html.replace(
+                /(src="[^"]*\/assets\/index-[\w-]+\.js)(")/,
+                `$1?pwa=${encodeURIComponent(revision)}$2`,
+              ),
+            );
+          } catch (error) {
+            next(error);
+          }
+
+          return;
+        }
+
+        if (testing && request.url === "/assets/pwa-no-store-0123456789abcdef.txt") {
+          noStoreReads += 1;
+          response.setHeader("Content-Type", "text/plain; charset=utf-8");
+          response.setHeader("Cache-Control", "no-store");
+          response.end(String(noStoreReads));
+
+          return;
+        }
+
+        // The real classic worker (served verbatim by the Rust app) and the page it precaches, so
+        // switching tests exercise its activation against the SPA's caches.
+        if (testing && request.url === "/service-worker.js") {
+          response.setHeader("Content-Type", "text/javascript; charset=utf-8");
+          response.setHeader("Cache-Control", "no-cache");
+          response.end(
+            await readFile(
+              resolve(root, "../crates/views/templates/pwa/service_worker.js"),
+              "utf8",
+            ),
+          );
+
+          return;
+        }
+
+        if (testing && request.url === "/offline.html") {
+          response.setHeader("Content-Type", "text/html; charset=utf-8");
+          response.end("<!doctype html><title>Offline</title>");
+
+          return;
+        }
+
+        if (testing && request.url?.startsWith("/__pwa/version?") && request.method === "POST") {
+          revision = new URL(request.url, "http://preview").searchParams.get("value") ?? "";
+          response.statusCode = 204;
+          response.end();
+
+          return;
+        }
+
+        if (request.url?.split("?")[0] !== `${base}service-worker.js`) {
+          next();
+
+          return;
+        }
+
+        try {
+          let script = await readFile(resolve(dist, "service-worker.js"), "utf8");
+
+          if (testing && revision !== "") {
+            script = script.replace(/("version":")[^"]+("\s*,)/, `$1${revision}$2`);
+            // Changed module bytes need distinct cache keys, just like real build hashes.
+            script = script.replace(
+              /("[^"\n]*\/assets\/[^"\n]+-[\w-]{8,}\.js)(")/g,
+              `$1?pwa=${encodeURIComponent(revision)}$2`,
+            );
+          }
+
+          for (const [name, value] of Object.entries(server.config.preview.headers ?? {})) {
+            if (value !== undefined) response.setHeader(name, value);
+          }
+
+          response.setHeader("Content-Type", "text/javascript; charset=utf-8");
+          response.setHeader("Cache-Control", "no-cache");
+          response.setHeader("Service-Worker-Allowed", "/");
+          response.end(script);
+        } catch (error) {
+          next(error);
+        }
+      });
+    },
+  };
+}

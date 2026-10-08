@@ -170,6 +170,40 @@ fn approved_status_assets_are_served_byte_identically_and_stay_in_strict_baselin
 }
 
 #[test]
+fn spa_worker_selection_import_map_differs_only_in_the_smartfire_modules() {
+    let rails = campfire_assets::javascript_importmap_tags();
+    let selecting = campfire_assets::javascript_importmap_tags_selecting_worker();
+    assert_ne!(rails, selecting);
+    let import_map = |tags: &str| -> Value {
+        let json = tags.split_once('>').unwrap().1.split_once("</script>").unwrap().0;
+        serde_json::from_str(json).unwrap()
+    };
+    let rails_map = import_map(rails);
+    let selecting_map = import_map(selecting);
+    for logical in [
+        "initializers/service_worker",
+        "controllers/notifications_controller",
+        "controllers/turbo_frame_controller",
+    ] {
+        assert_eq!(rails_map["imports"][logical], campfire_assets::asset_path(&format!("{logical}.js")));
+        assert_eq!(selecting_map["imports"][logical], campfire_assets::asset_path(&format!("smartfire/{logical}.js")));
+    }
+    assert_eq!(
+        get(&campfire_assets::asset_path("smartfire/controllers/turbo_frame_controller.js")).body.as_ref(),
+        include_bytes!("../overrides/smartfire/controllers/turbo_frame_controller.js").as_slice(),
+        "selected frame controller serves the startup completion implementation",
+    );
+    let mut restored = selecting.to_string();
+    for (theirs, ours) in campfire_assets::WORKER_SELECTION_MODULES {
+        let ours = campfire_assets::asset_path(ours);
+        assert!(selecting.contains(&ours), "{ours} is mapped");
+        assert!(added().iter().any(|logical| ours.contains(logical.trim_end_matches(".js"))), "{ours} is an added asset");
+        restored = restored.replace(&ours, &campfire_assets::asset_path(theirs));
+    }
+    assert_eq!(restored, rails);
+}
+
+#[test]
 fn stylesheet_link_tag_all_matches_the_reference() {
     let tags = campfire_assets::stylesheet_link_tag_all(&[("data-turbo-track", "reload")]);
     assert_eq!(tags.html, fixture("stylesheet_link_tag_all.html"));

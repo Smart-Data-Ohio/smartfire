@@ -223,22 +223,28 @@ test("an older page with cards while the chunk loads keeps the list and its plac
 }) => {
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
+  const welcomed = syncWelcomed(page);
 
   let markInjected: (id: number) => void = () => undefined;
+  let markOlderRequested: (firstId: number) => void = () => undefined;
+  let releaseOlder: () => void = () => undefined;
 
   const injected = new Promise<number>((resolve) => {
     markInjected = resolve;
   });
 
-  let releaseOlder: () => void = () => undefined;
+  const olderRequested = new Promise<number>((resolve) => {
+    markOlderRequested = resolve;
+  });
 
-  const anchorCaptured = new Promise<void>((resolve) => {
+  const olderReleased = new Promise<void>((resolve) => {
     releaseOlder = resolve;
   });
 
   expect(poll).toBeTruthy();
   // The page before the first window carries a poll on its newest message.
   await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages?before=*`, async (route) => {
+    markOlderRequested(Number(new URL(route.request().url()).searchParams.get("before")));
     const response = await route.fetch();
     const body: MessagePage = await response.json();
     const newest = body.messages[body.messages.length - 1];
@@ -248,11 +254,12 @@ test("an older page with cards while the chunk loads keeps the list and its plac
       markInjected(newest.id);
     }
 
-    await anchorCaptured;
+    await olderReleased;
     await route.fulfill({ response, json: body });
   });
   await openApp(page, `r/${ROOM_IDS.engineering}`);
   await chunk.requested;
+  await welcomed;
   await expect(timelineBusy(page)).toHaveAttribute("aria-busy", "false");
 
   const list = page.locator("[data-message-list]");
@@ -262,11 +269,40 @@ test("an older page with cards while the chunk loads keeps the list and its plac
     element.scrollTop = 0;
   });
 
-  await expect(page.locator("[data-message-row]").first()).toBeInViewport();
+  // The DOM can still contain the previous bottom window just after scrollTop changes. Hold
+  // the prepend until virtua has drawn the original first row inside the list's visible area.
+  const firstId = await olderRequested;
 
-  const anchor = await page.locator("[data-message-row]").first().getAttribute("data-message-id");
+  await expect
+    .poll(() =>
+      list.evaluate((element, id) => {
+        const bounds = element.getBoundingClientRect();
+        const first = element.querySelector(`[data-message-row][data-message-id="${id}"]`);
+        const rowBounds = first?.getBoundingClientRect();
 
+        return (
+          rowBounds !== undefined && rowBounds.bottom > bounds.top && rowBounds.top < bounds.bottom
+        );
+      }, firstId),
+    )
+    .toBe(true);
+
+  const anchor = await list.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+
+    return Array.from(element.querySelectorAll<HTMLElement>("[data-message-row]")).find(
+      (message) => {
+        const rect = message.getBoundingClientRect();
+
+        return rect.bottom > bounds.top && rect.top < bounds.bottom;
+      },
+    )?.dataset.messageId;
+  });
+
+  expect(anchor).toBeDefined();
+  await expect(row(page, Number(anchor))).toBeInViewport();
   releaseOlder();
+
   await older;
   // The older rows are in (the injected one mounted above), the row that was at the top stays in
   // view, and the list is still up.

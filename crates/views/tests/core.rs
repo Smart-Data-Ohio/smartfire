@@ -176,6 +176,30 @@ fn application_test_environment_matches_rails_motion_attribute() {
 }
 
 #[test]
+fn application_worker_selection_is_provisional_head_metadata() {
+    let signer = |_: &[&str]| String::new();
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let mut ctx = context(None, &asset, &signer, "");
+    for (auto_register, url) in [
+        (false, "/service-worker.js"),
+        (true, "/app/service-worker.js"),
+    ] {
+        ctx.chrome.service_worker_auto_register = auto_register;
+        ctx.chrome.service_worker_url = Some(url.into());
+        let actual = render(&layouts::Application::new(&ctx, h::empty()));
+        let head = actual.split("<head>").nth(1).unwrap()
+            .split("</head>").next().unwrap();
+        assert!(head.contains(&format!(r#"<meta name="service-worker-url" content="{url}">"#)));
+        assert!(!actual.contains("data-service-worker-url="));
+        assert!(actual.lines().nth(1).unwrap()
+            .contains(&format!(r#"data-service-worker="{auto_register}""#)));
+        // Neither permanent nor reload-tracked: vendored Turbo replaces this provisional meta.
+        let metadata = head.lines().find(|line| line.contains("service-worker-url")).unwrap();
+        assert!(!metadata.contains("data-turbo-"));
+    }
+}
+
+#[test]
 fn application_layout_matches_rails_in_every_state() {
     let env = include_str!("../../../parity/.env.reference");
     let secrets = rails_compat::Secrets::new(
@@ -327,6 +351,9 @@ fn pwa_endpoints_match_rails() {
         logo_path_small: logo.replace("?v=", "?size=small&v="),
         logo_path: logo,
         base_url: "https://campfire.test".into(),
+        root: "/",
+        new_room_url: "rooms/opens/new".into(),
+        profile_url: "/users/me/profile".into(),
         asset_path: &asset,
     };
     assert!(compare(
@@ -338,7 +365,9 @@ fn pwa_endpoints_match_rails() {
     assert!(compare(
         "pwa_service_worker",
         campfire_views::pwa::SERVICE_WORKER_JS,
-        &fixture("pages/pwa_service_worker.js")
+        &campfire_views::pwa::rails_service_worker_with_spa_patch(&fixture(
+            "pages/pwa_service_worker.js"
+        ))
     ));
 }
 

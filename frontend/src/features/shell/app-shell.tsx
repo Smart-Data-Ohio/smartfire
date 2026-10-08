@@ -1,5 +1,6 @@
 import { Outlet, useMatches, useMatchRoute, useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
@@ -13,6 +14,7 @@ import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
+import { UpdateBanner } from "./update-banner.tsx";
 import "./app-shell.css";
 
 /** A full-column page that isn't a conversation: its tab title, or `null` for a room. */
@@ -97,9 +99,14 @@ export function AppShell() {
   const view = usePhoneView(roomId);
 
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
+  const updateRequired = useAppUpdateRequired();
 
   return (
-    <div className="app-shell" data-view={page === null ? view : "room"}>
+    <div
+      className="app-shell"
+      data-view={page === null ? view : "room"}
+      data-update-required={updateRequired}
+    >
       <Rail />
       <Sidebar />
       {viewerId === null ? null : (
@@ -107,6 +114,7 @@ export function AppShell() {
         <style>{`.message-body .mention--user-${viewerId} .profile-card-name{background:var(--mention-chip-bg);color:var(--mention-text)}`}</style>
       )}
       <main className="app-main">
+        <UpdateBanner />
         <ConnectionBanner />
         <div className="app-main-dock">
           <HuddleDock compact />
