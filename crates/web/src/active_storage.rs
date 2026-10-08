@@ -49,6 +49,33 @@ pub fn branding_permits() -> (usize, usize) {
     (BRANDING_PERMITS.available_permits(), MAX_BRANDING_JOBS)
 }
 
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::sync::Mutex;
+
+    type Hook = Box<dyn FnOnce() + Send>;
+
+    static BETWEEN_ANALYSIS_READS: Mutex<Vec<(i64, Hook)>> = Mutex::new(Vec::new());
+
+    /// Run `hook` once on the reader, after analysis loads blob `blob_id` and before it decides
+    /// whether the blob is branding.
+    pub fn between_analysis_reads(blob_id: i64, hook: impl FnOnce() + Send + 'static) {
+        BETWEEN_ANALYSIS_READS.lock().unwrap().push((blob_id, Box::new(hook)));
+    }
+
+    pub(super) fn reached_analysis_classification(blob_id: i64) {
+        let hook = {
+            let mut hooks = BETWEEN_ANALYSIS_READS.lock().unwrap();
+            let found = hooks.iter().position(|(id, _)| *id == blob_id);
+            found.map(|index| hooks.swap_remove(index).1)
+        };
+
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
+}
+
 // --- Blobs -----------------------------------------------------------------------------------------
 
 /// `ActiveStorage::Blobs::RedirectController#show`
@@ -350,6 +377,8 @@ async fn analyze_with(
         .db
         .read(move |conn| {
             let blob = Blob::find(conn, blob_id).map_err(storage_db_error)?;
+            #[cfg(feature = "test-support")]
+            test_hooks::reached_analysis_classification(blob_id);
             let branding = match &blob {
                 Some(blob) if !(skip_analyzed && blob.is_analyzed()) => {
                     branding_blob(conn, marker, blob)?
@@ -402,11 +431,11 @@ fn branding_blob(
     marker: rails_compat::blob_branding::Marker,
     blob: &Blob,
 ) -> campfire_db::Result<bool> {
-    if verified_branding_mark(marker, blob) {
-        return Ok(true);
-    }
+    // One statement reads one snapshot. A replacement or removal marks the tree and deletes the
+    // Account association in one write transaction, so this sees the association or the mark,
+    // never neither; `blob` may have been loaded before that commit and lack the mark.
     // Untagged legacy variants still belong to the Account through their source tree.
-    Ok(conn.query_row_cached(
+    let current = conn.query_row_cached(
         "WITH RECURSIVE sources(id) AS (
             VALUES (?1)
             UNION
@@ -414,19 +443,31 @@ fn branding_blob(
             JOIN active_storage_variant_records variants ON variants.id = images.record_id
             JOIN sources ON sources.id = images.blob_id
             WHERE images.record_type = 'ActiveStorage::VariantRecord' AND images.name = 'image'
-         ) SELECT EXISTS (
+         ) SELECT blobs.metadata, EXISTS (
             SELECT 1 FROM active_storage_attachments attachments JOIN sources ON sources.id = attachments.blob_id
             WHERE attachments.record_type = 'Account' AND attachments.name IN ('logo', 'banner')
-         )",
-        [blob.id], |row| row.get(0),
-    )?)
+         ) FROM active_storage_blobs blobs WHERE blobs.id = ?1",
+        [blob.id],
+        |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, bool>(1)?)),
+    );
+    let (metadata, attached) = match current {
+        Ok(current) => current,
+        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(false),
+        Err(error) => return Err(error.into()),
+    };
+    let metadata = metadata.and_then(|text| Json::parse(&text).ok());
+    Ok(attached || metadata.is_some_and(|metadata| mark_verifies(marker, &blob.key, &metadata)))
 }
 
 fn verified_branding_mark(marker: rails_compat::blob_branding::Marker, blob: &Blob) -> bool {
-    blob.metadata
+    mark_verifies(marker, &blob.key, &blob.metadata)
+}
+
+fn mark_verifies(marker: rails_compat::blob_branding::Marker, key: &str, metadata: &Json) -> bool {
+    metadata
         .get(campfire_storage::branding::MARK_KEY)
         .and_then(Json::as_str)
-        .is_some_and(|mark| marker.verifies(&blob.key, mark))
+        .is_some_and(|mark| marker.verifies(key, mark))
 }
 
 pub fn mark_branding_blob(

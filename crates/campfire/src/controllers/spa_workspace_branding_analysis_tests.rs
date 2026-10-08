@@ -610,3 +610,57 @@ async fn spa_workspace_branding_removed_legacy_analysis_stays_bounded() {
     }
     detached_legacy_analysis("logo", false, true).await;
 }
+
+#[tokio::test]
+async fn spa_workspace_branding_replacement_between_analysis_reads_stays_bounded() {
+    let _branding = BRANDING_TESTS.lock().await;
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let (_, id) = upload_bytes(&a, &png(7, 3, false), "legacy.png", "image/png").await;
+    let (replacement, _) = upload_bytes(&a, &png(2, 2, false), "replacement.png", "image/png").await;
+    attach_legacy(&a, id, "logo").await;
+    let source = blob(&a, id).await;
+    assert!(source.metadata.get(branding::MARK_KEY).is_none());
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(a.booted.app.storage.service.path_for(&source.key))
+        .unwrap()
+        .set_len(branding::MAX_BYTES + 1)
+        .unwrap();
+    let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
+    let (reached, reached_here) = std::sync::mpsc::channel();
+    let (go, go_here) = std::sync::mpsc::channel::<()>();
+    // Analysis has loaded the unmarked blob; the replacement commits before it classifies it.
+    campfire_web::active_storage::test_hooks::between_analysis_reads(id, move || {
+        reached.send(()).unwrap();
+        go_here.recv().unwrap();
+    });
+    let (result, full) = with_media_observation(async {
+        let app = a.booted.app.clone();
+        let analysis =
+            tokio::spawn(async move { campfire_web::active_storage::analyze(&app, id).await });
+        tokio::task::spawn_blocking(move || reached_here.recv().unwrap())
+            .await
+            .unwrap();
+        let _: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            "/api/v1/admin/workspace/logo",
+            json!({"signedId": replacement}),
+        )
+        .await;
+        go.send(()).unwrap();
+        analysis.await.unwrap()
+    })
+    .await;
+    branding_slots_are_free().await;
+    assert!(full, "the detached logo's analysis must leave MEDIA_PERMITS full");
+    assert_eq!(opens.count(), 0, "oversized branding must not create a copy tempfile");
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("10 MB byte budget")
+    );
+    assert_server_mark(&a, &blob(&a, id).await);
+}
