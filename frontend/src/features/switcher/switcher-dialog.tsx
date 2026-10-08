@@ -237,7 +237,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
   const trimmed = query.trim();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} title="Jump to a conversation">
+    <Dialog open={open} onOpenChange={onOpenChange} title="Jump to a conversation" dirty={false}>
       <div className="switcher">
         <div className="switcher-search">
           <Icon name="search" size={18} className="switcher-search-icon" />

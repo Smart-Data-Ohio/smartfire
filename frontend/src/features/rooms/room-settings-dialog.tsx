@@ -472,6 +472,7 @@ export default function RoomSettingsDialog({
         title={title}
         description={description}
         footer={footer}
+        dirty={dirty}
       >
         {body}
       </Dialog>

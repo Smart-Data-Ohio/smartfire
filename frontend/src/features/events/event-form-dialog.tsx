@@ -196,6 +196,7 @@ export function EventFormDialog({
       }
       size="md"
       footer={footer}
+      dirty={dirty}
     >
       {form === null ? (
         <FormPending load={load} onRetry={retry} />

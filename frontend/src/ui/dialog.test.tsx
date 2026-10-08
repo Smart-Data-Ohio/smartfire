@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { COARSE_QUERY } from "../lib/breakpoints.ts";
+import { COARSE_QUERY, PHONE_QUERY } from "../lib/breakpoints.ts";
 import { Button } from "./button.tsx";
 import { Dialog, focusOnOpen } from "./dialog.tsx";
 
@@ -127,10 +127,10 @@ describe("Dialog", () => {
   });
 });
 
-/** A touch screen: (pointer: coarse) matches. */
+/** A touch phone: (pointer: coarse) and the phone width match. */
 function stubTouch() {
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query === COARSE_QUERY,
+    matches: query === COARSE_QUERY || query === PHONE_QUERY,
     media: query,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
@@ -140,6 +140,8 @@ function stubTouch() {
 describe("Dialog on a touch screen", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(Element.prototype, "setPointerCapture");
+    Reflect.deleteProperty(Element.prototype, "hasPointerCapture");
   });
 
   it("focuses itself rather than raise the keyboard for its first field", async () => {
@@ -182,5 +184,31 @@ describe("Dialog on a touch screen", () => {
     focusOnOpen(field);
     expect(document.activeElement).not.toBe(field);
     field.remove();
+  });
+
+  it("springs back from a swipe whose close its owner refuses", async () => {
+    stubTouch();
+    // jsdom has no pointer capture (afterEach takes these off again).
+    Element.prototype.setPointerCapture = () => undefined;
+    Element.prototype.hasPointerCapture = () => false;
+
+    render(
+      <Dialog open onOpenChange={() => undefined} title="Sending">
+        <p>Still sending</p>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Sending" });
+    const header = screen.getByRole("heading", { name: "Sending" });
+    const touch = { pointerId: 1, pointerType: "touch", isPrimary: true, clientX: 100 };
+
+    fireEvent.pointerDown(header, { ...touch, clientY: 40 });
+    fireEvent.pointerMove(header, { ...touch, clientY: 60 });
+    fireEvent.pointerMove(header, { ...touch, clientY: 240 });
+    expect(dialog.style.translate).toBe("0 200px");
+
+    fireEvent.pointerUp(header, { ...touch, clientY: 240 });
+    await waitFor(() => expect(dialog.style.translate).toBe(""));
+    expect(dialog.hasAttribute("data-dragging")).toBe(false);
   });
 });

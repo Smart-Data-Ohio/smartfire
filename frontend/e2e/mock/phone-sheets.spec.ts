@@ -146,10 +146,16 @@ async function box(locator: Locator) {
 
 /**
  * Drags a real touch (CDP touch events, so the pointer is active) from `from` down by `distance`
- * in `steps` moves. Each move lands about a frame after the last, so a few big steps make a flick
- * and many small ones a slow drag.
+ * (and across by `sideways`) in `steps` moves. Each move lands about a frame after the last, so a
+ * few big steps make a flick and many small ones a slow drag.
  */
-async function swipeDown(page: Page, from: Locator, distance: number, steps: number) {
+async function swipeDown(
+  page: Page,
+  from: Locator,
+  distance: number,
+  steps: number,
+  sideways = 0,
+): Promise<void> {
   const start = await box(from);
   const x = start.x + start.width / 2;
   const y = start.y + start.height / 2;
@@ -160,7 +166,7 @@ async function swipeDown(page: Page, from: Locator, distance: number, steps: num
   for (let step = 1; step <= steps; step += 1) {
     await cdp.send("Input.dispatchTouchEvent", {
       type: "touchMove",
-      touchPoints: [{ x, y: y + (distance * step) / steps }],
+      touchPoints: [{ x: x + (sideways * step) / steps, y: y + (distance * step) / steps }],
     });
   }
 
@@ -277,6 +283,71 @@ test.describe("on a 360 px touch phone", () => {
     await sheet("New message").open(page, dialog);
     await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
     await expect(dialog).toBeHidden();
+  });
+
+  test("a swipe while the form is scrolled is the form's, not the sheet's", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+
+    await sheet("Schedule an event").open(page, dialog);
+    await dialog.locator(".dialog-body").evaluate((body) => {
+      body.scrollTop = 200;
+    });
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeVisible();
+    expect((await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+  });
+
+  test("a sideways drag on the header doesn't close the sheet", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "New message" });
+
+    await sheet("New message").open(page, dialog);
+    // Far enough down to close, were it a swipe down; but mostly across.
+    await swipeDown(page, dialog.locator(".dialog-title"), 120, 40, -200);
+
+    await expect(dialog).toBeVisible();
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+  });
+
+  test("a poll with a question typed springs back from a swipe", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Create a poll" });
+
+    await sheet("Create a poll").open(page, dialog);
+    await dialog.getByLabel("Question").fill("Lunch?");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeVisible();
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+    await expect(dialog.getByLabel("Question")).toHaveValue("Lunch?");
+
+    // The close button still closes it.
+    await dialog.getByRole("button", { name: "Close" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a sheet that won't close while sending springs back with its footer", async ({ page }) => {
+    let release: () => void = () => undefined;
+
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await page.route("**/fizzy_cards", async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    const dialog = page.getByRole("dialog", { name: "Create Fizzy card" });
+
+    await sheet("Create Fizzy card").open(page, dialog);
+    await dialog.getByLabel("Board").selectOption({ index: 1 });
+    await dialog.getByRole("button", { name: "Create card" }).click();
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeVisible();
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+    await expect(dialog.locator(".dialog-footer")).toBeInViewport({ ratio: 1 });
+    release();
   });
 
   test("the switcher still opens ready to type", async ({ page }) => {

@@ -33,6 +33,12 @@ interface DialogProps {
   readonly returnFocusFirst?: boolean;
   /** Called once the dialog has finished closing (its exit animation done): drop what it showed. */
   readonly onExited?: () => void;
+  /**
+   * Whether the form holds unsaved input. A phone sheet's swipe down then springs back instead of
+   * closing; Esc and the close button still ask `onOpenChange`. Left out, anything typed or
+   * chosen in the dialog since it opened counts.
+   */
+  readonly dirty?: boolean;
 }
 
 const FOCUSABLE = [
@@ -67,41 +73,35 @@ function takesText(element: HTMLElement): boolean {
 }
 
 /**
+ * Whether `element` may take a dialog's opening focus. Anything may, with a mouse or a keyboard.
  * On a touch screen a focused field raises the keyboard over the dialog before anyone has read
- * it, so no field takes the opening focus there unless it's the whole point
- * (`data-autofocus="always"`: a search to type in).
+ * it, and nobody needs a ring on whatever happens to come first, so only an element marked
+ * `data-autofocus` may: one that raises no keyboard (a confirmation's Cancel), or a field that's
+ * the whole point (`data-autofocus="always"`: a search to type in).
  */
-function raisesKeyboardUnasked(element: HTMLElement): boolean {
-  return takesText(element) && element.dataset.autofocus !== "always" && matches(COARSE_QUERY);
+function mayTakeOpeningFocus(element: HTMLElement): boolean {
+  if (!matches(COARSE_QUERY)) {
+    return true;
+  }
+
+  const mark = element.dataset.autofocus;
+
+  return mark === "always" || (mark !== undefined && !takesText(element));
 }
 
-/**
- * The `data-autofocus` element, else the first control. On a touch screen only a `data-autofocus`
- * that raises no keyboard (a confirmation's Cancel) takes it; otherwise the dialog itself does.
- */
+/** The `data-autofocus` element, else the first control; the dialog itself where that may not. */
 function initialFocus(dialog: HTMLElement): HTMLElement {
   const preferred = dialog.querySelector<HTMLElement>("[data-autofocus]");
-
-  if (matches(COARSE_QUERY)) {
-    return preferred === null || raisesKeyboardUnasked(preferred) ? dialog : preferred;
-  }
-
-  if (preferred !== null) {
-    return preferred;
-  }
-
   const content = dialog.querySelector<HTMLElement>(".dialog-body, .dialog-footer");
   const inContent = content === null ? undefined : focusables(content)[0];
+  const target = preferred ?? inContent ?? focusables(dialog)[0] ?? dialog;
 
-  return inContent ?? focusables(dialog)[0] ?? dialog;
+  return mayTakeOpeningFocus(target) ? target : dialog;
 }
 
-/**
- * Gives `field` the opening focus, for a form that loads after its dialog has opened. On a touch
- * screen, where the dialog kept focus itself, a field takes it only with `data-autofocus="always"`.
- */
+/** Gives `field` the opening focus, by initialFocus's rule: for a form that loads late. */
 export function focusOnOpen(field: HTMLElement): void {
-  if (field.dataset.autofocus === "always" || !matches(COARSE_QUERY)) {
+  if (mayTakeOpeningFocus(field)) {
     field.focus();
   }
 }
@@ -115,58 +115,102 @@ const SWIPE_VELOCITY = 0.5;
 /** The flick's speed is measured over the drag's last this-many ms, not between two moves. */
 const SWIPE_WINDOW = 100;
 
+/** How far (px) the finger moves before the drag is judged a swipe down, or not one. */
+const SWIPE_SLOP = 8;
+
+/** How much of the finger's travel a sheet that won't close (unsaved input) follows. */
+const SWIPE_RESISTANCE = 0.3;
+
 interface Drag {
   readonly pointerId: number;
+  readonly startX: number;
   readonly startY: number;
+  /** Unsaved input when the drag began: the sheet follows reluctantly and springs back. */
+  readonly held: boolean;
+  /** Past the slop, mostly down: the sheet follows. Until then it may still turn out a sideways drag. */
+  engaged: boolean;
   /** Where the finger was and when, over the last SWIPE_WINDOW ms (and the start). */
   samples: { readonly y: number; readonly time: number }[];
 }
 
+/** Whether the sheet's content is scrolled: a swipe down then belongs to the content, not the sheet. */
+function scrolled(sheet: HTMLElement): boolean {
+  return [...sheet.querySelectorAll<HTMLElement>(".dialog-body, .dialog-body *")].some(
+    (element) => element.scrollTop > 0,
+  );
+}
+
 /**
- * Swipe down to dismiss a phone sheet, from its grabber and header: the sheet follows the finger
- * (the CSS `translate`, so the modal recipe's transform stays free for the exit), and a drag past
- * SWIPE_DISTANCE or a downward flick closes it; anything less springs back.
+ * Swipe down to dismiss a phone sheet, from its grabber and header. It starts only with the
+ * content at its top and no text selected, and only as a drag that is mostly downward. The sheet
+ * follows the finger (the CSS `translate`, so the modal recipe's transform stays free for the
+ * exit); a drag past SWIPE_DISTANCE or a downward flick asks to close it. A sheet with unsaved
+ * input (`held`), a short drag, or a close the owner refuses (a form still sending) springs back.
  */
-function useSwipeDown(onClose: () => void) {
+function useSwipeDown(onClose: () => void, held: () => boolean) {
   const drag = useRef<Drag | null>(null);
 
   const sheetOf = (event: PointerEvent<HTMLElement>) =>
     event.currentTarget.closest<HTMLElement>(".dialog");
 
-  const settle = (event: PointerEvent<HTMLElement>, close: boolean) => {
+  const springBack = (sheet: HTMLElement) => {
+    delete sheet.dataset.dragging;
+    sheet.style.removeProperty("translate");
+  };
+
+  const end = (event: PointerEvent<HTMLElement>, close: boolean) => {
     const sheet = sheetOf(event);
 
     drag.current = null;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
 
     if (sheet === null) {
       return;
     }
 
-    delete sheet.dataset.dragging;
+    if (!close) {
+      springBack(sheet);
 
-    if (close) {
-      onClose();
-    } else {
-      sheet.style.removeProperty("translate");
+      return;
     }
+
+    delete sheet.dataset.dragging;
+    onClose();
+    // The close plays its exit from where the finger let go. The owner may refuse it (a form
+    // still sending): then the dialog is still open by the next frame, and the sheet goes back.
+    requestAnimationFrame(() => {
+      if (sheet.isConnected && sheet.dataset.state !== "closing") {
+        springBack(sheet);
+      }
+    });
   };
 
   return {
     onPointerDown: (event: PointerEvent<HTMLElement>) => {
       const target = event.target instanceof Element ? event.target : null;
+      const sheet = sheetOf(event);
 
       if (
         event.pointerType === "mouse" ||
         !event.isPrimary ||
+        sheet === null ||
         target?.closest("button, a, input, select, textarea") ||
-        !matches(PHONE_QUERY)
+        !matches(PHONE_QUERY) ||
+        window.getSelection()?.isCollapsed === false ||
+        scrolled(sheet)
       ) {
         return;
       }
 
       drag.current = {
         pointerId: event.pointerId,
+        startX: event.clientX,
         startY: event.clientY,
+        held: held(),
+        engaged: false,
         samples: [{ y: event.clientY, time: event.timeStamp }],
       };
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -179,12 +223,30 @@ function useSwipeDown(onClose: () => void) {
         return;
       }
 
+      const dx = event.clientX - current.startX;
+      const dy = event.clientY - current.startY;
+
+      if (!current.engaged) {
+        if (Math.hypot(dx, dy) < SWIPE_SLOP) {
+          return;
+        }
+
+        // Sideways or upward: not a swipe to dismiss, whatever the finger does next.
+        if (dy <= Math.abs(dx)) {
+          end(event, false);
+
+          return;
+        }
+
+        current.engaged = true;
+      }
+
       current.samples = [
         ...current.samples.filter((sample) => sample.time >= event.timeStamp - SWIPE_WINDOW),
         { y: event.clientY, time: event.timeStamp },
       ];
       sheet.dataset.dragging = "";
-      sheet.style.translate = `0 ${Math.max(0, event.clientY - current.startY)}px`;
+      sheet.style.translate = `0 ${Math.max(0, dy) * (current.held ? SWIPE_RESISTANCE : 1)}px`;
     },
     onPointerUp: (event: PointerEvent<HTMLElement>) => {
       const current = drag.current;
@@ -197,12 +259,13 @@ function useSwipeDown(onClose: () => void) {
       const from = current.samples[0] ?? { y: current.startY, time: event.timeStamp };
       // At least a frame: two moves a millisecond apart aren't a flick.
       const speed = (event.clientY - from.y) / Math.max(16, event.timeStamp - from.time);
+      const far = distance >= SWIPE_DISTANCE || (distance > 0 && speed >= SWIPE_VELOCITY);
 
-      settle(event, distance >= SWIPE_DISTANCE || (distance > 0 && speed >= SWIPE_VELOCITY));
+      end(event, current.engaged && !current.held && far);
     },
     onPointerCancel: (event: PointerEvent<HTMLElement>) => {
       if (drag.current?.pointerId === event.pointerId) {
-        settle(event, false);
+        end(event, false);
       }
     },
   };
@@ -231,11 +294,15 @@ export function Dialog({
   returnFocus,
   returnFocusFirst = false,
   onExited,
+  dirty,
 }: DialogProps) {
   const id = useId();
   const returnFocusRef = useRef(returnFocus);
   const returnFocusFirstRef = useRef(returnFocusFirst);
   const onExitedRef = useRef(onExited);
+  const dirtyRef = useRef(dirty);
+  // Typed or chosen since the dialog opened: the unsaved input `dirty` stands for when left out.
+  const editedRef = useRef(false);
   const presence = usePresence<HTMLDialogElement>(open);
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
@@ -244,6 +311,7 @@ export function Dialog({
     returnFocusRef.current = returnFocus;
     returnFocusFirstRef.current = returnFocusFirst;
     onExitedRef.current = onExited;
+    dirtyRef.current = dirty;
   });
 
   useLayoutEffect(() => {
@@ -261,6 +329,7 @@ export function Dialog({
       dialog.setAttribute("open", "");
     }
 
+    editedRef.current = false;
     initialFocus(dialog).focus();
 
     return () => {
@@ -282,7 +351,7 @@ export function Dialog({
   }, [presence.mounted, presence.ref]);
 
   const close = () => onOpenChange(false);
-  const swipe = useSwipeDown(close);
+  const swipe = useSwipeDown(close, () => dirtyRef.current ?? editedRef.current);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === "Escape") {
@@ -348,6 +417,9 @@ export function Dialog({
       data-size={size}
       tabIndex={-1}
       onKeyDown={onKeyDown}
+      onInput={() => {
+        editedRef.current = true;
+      }}
       onCancel={onCancel}
       onClick={onClick}
     >
