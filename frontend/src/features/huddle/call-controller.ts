@@ -10,6 +10,7 @@ import type { HuddleCredentials } from "../../gen/HuddleCredentials.ts";
 import type { StageRole } from "../../gen/StageRole.ts";
 import type { StageStream } from "../../gen/StageStream.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
+import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
 import { ActionError } from "../../sync/run.ts";
@@ -118,18 +119,18 @@ export const browserEnvironment: CallEnvironment = {
   },
   preload: async () => {
     // The SDK is large; it loads alongside the credentials request, as the classic join did.
-    await import("./engine/livekit.ts")
+    await loadForUpdate(() => import("./engine/livekit.ts"))
       .then((module) => module.loadLiveKit())
       .catch(() => undefined);
   },
   transport: async (url, roomId) => {
     if (isMock(url)) {
-      const { FakeTransport } = await import("./engine/fake.ts");
+      const { FakeTransport } = await loadForUpdate(() => import("./engine/fake.ts"));
 
       return new FakeTransport(roomId);
     }
 
-    const { createLiveKitTransport } = await import("./engine/livekit.ts");
+    const { createLiveKitTransport } = await loadForUpdate(() => import("./engine/livekit.ts"));
 
     return createLiveKitTransport();
   },
@@ -483,7 +484,7 @@ export class CallController {
   }
 
   async #noiseSupported(): Promise<boolean> {
-    const { noiseSuppressionSupported } = await import("./engine/noise.ts");
+    const { noiseSuppressionSupported } = await loadForUpdate(() => import("./engine/noise.ts"));
 
     return noiseSuppressionSupported();
   }

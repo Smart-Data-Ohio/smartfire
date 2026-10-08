@@ -14,7 +14,8 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    {{ h::csrf_meta_tags() }}
+{% if let Some(url) = ctx.chrome.service_worker_url %}    <meta name="service-worker-url" content="{{ url }}">
+{% endif %}    {{ h::csrf_meta_tags() }}
     {{ h::csp_meta_tag() }}
     {{ h::current_user_meta_tags(ctx) }}
     {{ h::script_aware_action_cable_meta_tag(ctx) }}
