@@ -15,6 +15,7 @@ import { cardMutations } from "../store/card-mutations.ts";
 import {
   attendanceKey,
   fizzyKey,
+  githubActionsKey,
   githubKey,
   type PendingAnswer,
   type PreviewKind,
@@ -176,6 +177,43 @@ export const githubActions = Effect.fn("cards.githubActions")(function* (
   pullRequestId: number,
 ) {
   return yield* api.githubActions(roomId, pullRequestId);
+});
+
+/**
+ * One `/actions` read per room and pull request. Copies that ask for the same `reason` while it
+ * is in flight share it. A later reason replaces it, and the earlier response is ignored.
+ * A refusal (no discussion, or the account can't be read) lands as no value.
+ */
+export const loadGithubActions = Effect.fn("cards.loadGithubActions")(function* (
+  roomId: number,
+  pullRequestId: number,
+  reason: string,
+) {
+  const key = githubActionsKey(roomId, pullRequestId);
+  const token = cardMutations.beginGithubActions(key, reason);
+
+  if (token === null) {
+    return;
+  }
+
+  const value = yield* api
+    .githubActions(roomId, pullRequestId)
+    .pipe(Effect.catch(() => Effect.succeed(null)));
+
+  cardMutations.settleGithubActions(key, token, value);
+});
+
+/** Starts the room's discussion of this pull request (`discuss`), then reloads its card. */
+export const discussGithub = Effect.fn("cards.discussGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  messageId: number,
+) {
+  const created = yield* api.discussGithub(roomId, pullRequestId, messageId);
+
+  cardMutations.invalidateGithub(pullRequestId);
+
+  return created;
 });
 
 /**

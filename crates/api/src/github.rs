@@ -12,7 +12,7 @@ use campfire_app::integrations::github::{
     accounts::Account,
     client::PullRequestKey,
     pull_requests::PullRequest,
-    threads::PullRequestThread,
+    threads::{PullRequestThread, discuss},
     writes::{self, Action},
 };
 use campfire_kit::{Ctx, Error, Result, StatusCode};
@@ -37,6 +37,10 @@ endpoint!(
 endpoint!(
     /// `POST /api/v1/rooms/:room_id/github/pull_requests/:id/review_requests`
     github_review_request => post_review_request
+);
+endpoint!(
+    /// `POST /api/v1/rooms/:room_id/github/pull_requests/:id/discussion`
+    github_discussion => post_discussion
 );
 
 struct Scope {
@@ -219,6 +223,40 @@ async fn write(
         "Connect GitHub to comment and review from here as yourself."
     };
     Err(fail(c, refusal("account", message)))
+}
+
+/// `github/pull_request_threads#create`: [`discuss`] creates the thread, the membership and the
+/// `PullRequestThread` row. A thread that already maps this pull request is returned as it is.
+async fn post_discussion(c: &mut Ctx) -> Result {
+    before_actions(c).await?;
+    let (_, room) = set_room(c).await?;
+    let user_id = concerns::require_current_user(c)?.id;
+    let id = path_id(c, "id")?;
+    let input: api::CreateGithubDiscussion = body(c).await?;
+    let room_id = room.id;
+    let parent = input.message_id;
+    let (mapping, created) = c
+        .app()
+        .db
+        .write(move |tx| {
+            let existed = PullRequestThread::for_room_pr(tx.conn(), room_id, id)?.is_some();
+            discuss(tx, room_id, user_id, id, parent).map(|mapping| (mapping, !existed))
+        })
+        .await
+        .map_err(db_error)?;
+    if created {
+        c.app().broadcasts.thread_created(mapping.channel_thread_id);
+    }
+    c.json(
+        if created {
+            StatusCode::CREATED
+        } else {
+            StatusCode::OK
+        },
+        &api::GithubDiscussion {
+            thread_id: mapping.channel_thread_id,
+        },
+    )
 }
 
 fn refusal(field: &str, message: &str) -> api::ApiError {

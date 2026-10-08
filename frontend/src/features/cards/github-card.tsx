@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import type { GithubCardRef } from "../../gen/GithubCardRef.ts";
 import type { GithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks } from "../../gen/GithubChecks.ts";
@@ -13,6 +13,7 @@ import { Button } from "../../ui/button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { useNow } from "../threads/use-now.ts";
 import { BrandMark } from "./brand-marks.tsx";
 import { ago } from "./format.ts";
@@ -113,6 +114,57 @@ function ChangedFiles({ files }: { readonly files: GithubChangedFiles }) {
   );
 }
 
+/** Classic Discuss: `discuss` creates the mapping, then this card reloads and the thread opens. */
+function DiscussButton({
+  roomId,
+  pullRequestId,
+  messageId,
+}: {
+  readonly roomId: number;
+  readonly pullRequestId: number;
+  readonly messageId: number;
+}) {
+  const navigate = useNavigate();
+  const [pending, setPending] = useState(false);
+
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      className="github-discuss"
+      icon="message-circle"
+      loading={pending}
+      loadingLabel="Starting"
+      onClick={() => {
+        if (pending) {
+          return;
+        }
+
+        setPending(true);
+
+        actions.cards.discussGithub(roomId, pullRequestId, messageId).then(
+          (created) => {
+            void navigate({
+              to: "/r/$roomId/t/$threadId",
+              params: { roomId, threadId: created.threadId },
+            });
+          },
+          (error: Error) => {
+            setPending(false);
+            toast({
+              title: "Couldn't start the discussion",
+              description: error.message,
+              tone: "danger",
+            });
+          },
+        );
+      }}
+    >
+      Discuss
+    </Button>
+  );
+}
+
 interface LoadedProps {
   readonly message: MessageDTO;
   readonly pull: GithubPullRequest;
@@ -120,8 +172,11 @@ interface LoadedProps {
   readonly scope: GithubCardScope;
   /** It heads the pull request's discussion thread: files instead of "Discuss". */
   readonly header: boolean;
-  /** Bumps when this preview is invalidated or fetched, so write actions are asked for again. */
-  readonly previewGeneration: number;
+  /**
+   * The generation of a preview load that has finished. `null` while a refresh is still on its
+   * way, so write actions are asked for once per completed load.
+   */
+  readonly loadedGeneration: number | null;
   /** A refresh failed; the pull request above is the last one that loaded. */
   readonly refreshError: string | null;
   readonly onRetry: () => void;
@@ -133,7 +188,7 @@ function Loaded({
   pullRequestId,
   scope,
   header,
-  previewGeneration,
+  loadedGeneration,
   refreshError,
   onRetry,
 }: LoadedProps) {
@@ -201,16 +256,11 @@ function Loaded({
           </span>
         )}
         {header ? null : pull.discussionThreadId === null ? (
-          <Link
-            to="/r/$roomId/t/new"
-            params={{ roomId: message.roomId }}
-            search={{ parent: message.id }}
-            className="card-link github-discuss"
-            preload={false}
-          >
-            <Icon name="message-circle" size={14} />
-            Discuss
-          </Link>
+          <DiscussButton
+            roomId={message.roomId}
+            pullRequestId={pullRequestId}
+            messageId={message.id}
+          />
         ) : (
           <Link
             to="/r/$roomId/t/$threadId"
@@ -239,7 +289,7 @@ function Loaded({
         roomId={message.roomId}
         pullRequestId={pullRequestId}
         scope={scope}
-        previewGeneration={previewGeneration}
+        loadedGeneration={loadedGeneration}
       />
     </section>
   );
@@ -336,7 +386,11 @@ function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
           pullRequestId={card.pullRequestId}
           scope={scope}
           header={threadId !== null}
-          previewGeneration={preview?.generation ?? 0}
+          loadedGeneration={
+            preview !== undefined && preview.status === "ready" && preview.fetchedAt > 0
+              ? preview.generation
+              : null
+          }
           refreshError={preview?.status === "error" ? (preview.error ?? "") : null}
           onRetry={retry}
         />

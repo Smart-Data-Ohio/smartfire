@@ -27,6 +27,7 @@ import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
+import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
 import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
 import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
@@ -397,6 +398,19 @@ const cards = {
   /** What this viewer can post. The card shows a control only when its flag is set. */
   githubActions: (roomId: number, pullRequestId: number): Promise<GithubPullRequestActions> =>
     runAction(cardActions.githubActions(roomId, pullRequestId)),
+  /**
+   * One shared `/actions` read for this room and pull request. `reason` names the completed
+   * preview load (and a retry); a read already in flight for that reason is joined.
+   */
+  loadGithubActions: (roomId: number, pullRequestId: number, reason: string): Promise<void> =>
+    runAction(cardActions.loadGithubActions(roomId, pullRequestId, reason)),
+  /** Classic Discuss: the mapping row, then the card reloads so `/actions` can answer. */
+  discussGithub: (
+    roomId: number,
+    pullRequestId: number,
+    messageId: number,
+  ): Promise<GithubDiscussion> =>
+    runAction(cardActions.discussGithub(roomId, pullRequestId, messageId)),
   /** Posts an issue comment as the viewer; the card refetches when it lands. */
   commentOnGithub: (
     roomId: number,

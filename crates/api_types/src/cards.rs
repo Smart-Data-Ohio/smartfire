@@ -624,6 +624,24 @@ pub struct GithubWriteResult {
     pub notice: String,
 }
 
+/// `POST /api/v1/rooms/:roomId/github/pull_requests/:id/discussion`
+/// (`github/pull_request_threads#create`). The message that links this pull request.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateGithubDiscussion {
+    pub message_id: i64,
+}
+
+/// The room's discussion thread for the pull request, created or reused by
+/// [`CreateGithubDiscussion`]. `threadId` is that thread.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GithubDiscussion {
+    pub thread_id: i64,
+}
+
 /// A LinkedIn post (a `link_embeds` row for a LinkedIn URL;
 /// `crates/app/src/integrations/linkedin.rs`). Unlike [`LinkCard`] it's always shown: without
 /// a title or description it's the classic "View post on LinkedIn" chip.

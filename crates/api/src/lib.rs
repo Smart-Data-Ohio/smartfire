@@ -230,6 +230,10 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(github::github_review_request)),
         )
         .route(
+            "/api/v1/rooms/{room_id}/github/pull_requests/{id}/discussion",
+            post(unparsed_action(github::github_discussion)),
+        )
+        .route(
             "/api/v1/rooms/{room_id}/fizzy/cards/{id}/card",
             get(action(cards::fizzy_card)),
         )

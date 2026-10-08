@@ -12,11 +12,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { forbidden } from "../../../mock/http.ts";
 import { CARD_IDS } from "../../../mock/s3/cards.ts";
 import { USER_IDS } from "../../../mock/seed.ts";
+import type { GithubDiscussion } from "../../gen/GithubDiscussion.ts";
 import type { Me } from "../../gen/Me.ts";
 import type { MessageCard } from "../../gen/MessageCard.ts";
 import type { MessagePage } from "../../gen/MessagePage.ts";
 import type { PollResults } from "../../gen/PollResults.ts";
-import type { ThreadCreated } from "../../gen/ThreadCreated.ts";
 import { githubKey } from "../../store/cards.ts";
 import type { MessageDTO, SyncEvent } from "../../store/model.ts";
 import { mutations, store, useStore } from "../../store/store.ts";
@@ -201,31 +201,20 @@ beforeEach(async () => {
   mutations.applyPage(ROOM, page, "replace");
 });
 
-/** Starts the pull request's discussion, which is what makes its write actions available. */
+/** Classic Discuss: the mapping row, which is what makes write actions available. */
 async function discuss(parentMessageId: number): Promise<number> {
-  const response = await fetch(`/api/v1/rooms/${ROOM}/threads`, {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify({
-      parentMessageId,
-      name: null,
-      message: {
-        clientMessageId: `github-discuss-${parentMessageId}`,
-        markdownSource: "On it",
-        replyToMessageId: null,
-        replyNotifyAuthor: null,
-      },
-    }),
-  });
+  const response = await fetch(
+    `/api/v1/rooms/${ROOM}/github/pull_requests/${CARD_IDS.pullRequests.open}/discussion`,
+    {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ messageId: parentMessageId }),
+    },
+  );
 
-  const created: ThreadCreated = await response.json();
-  const threadId = created.message.threadId;
+  const created: GithubDiscussion = await response.json();
 
-  if (threadId === null) {
-    throw new Error("expected a discussion thread");
-  }
-
-  return threadId;
+  return created.threadId;
 }
 
 /** A checks-style `message.cards`: the preview stays up and is fetched again. */
@@ -510,9 +499,7 @@ describe("GitHub pull requests", () => {
     expect(within(card).getByText("Open")).toBeTruthy();
     expect(within(card).getByText("Approved")).toBeTruthy();
     expect(within(card).getByText("Checks passing")).toBeTruthy();
-    expect(within(card).getByRole("link", { name: "Discuss" }).getAttribute("href")).toBe(
-      `/r/${ROOM}/t/new?parent=${messages.githubOpen}`,
-    );
+    expect(within(card).getByRole("button", { name: "Discuss" })).toBeTruthy();
   });
 
   it("shows a draft, and keeps a frame while GitHub is still fetching", async () => {
@@ -558,6 +545,7 @@ describe("GitHub pull requests", () => {
     expect((await within(card).findByRole("status")).textContent).toBe(
       "Comment posted on GitHub as @maya.",
     );
+    expect(githubDraftCount()).toBe(0);
 
     await user.click(within(card).getByRole("button", { name: "Review" }));
     await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
@@ -705,6 +693,7 @@ describe("GitHub pull requests", () => {
         toastSnapshot().some((item) => item.title === "Requested changes on GitHub as @maya."),
       ).toBe(true),
     );
+    expect(githubDraftCount()).toBe(0);
   });
 
   it("keeps the comment draft and retries after the server refuses", async () => {
@@ -751,19 +740,15 @@ describe("GitHub pull requests", () => {
     expect(readGithubDraft(ROOM, pullRequestId).comment).toBe("");
   });
 
-  it("shows write actions after a discussion is created on a mounted card", async () => {
+  it("shows write actions after Discuss on a mounted card", async () => {
+    const user = userEvent.setup();
+
     await renderCards(messages.githubOpen);
 
     const card = await screen.findByRole("region", { name: OPEN });
 
     expect(within(card).queryByRole("button", { name: "Comment" })).toBeNull();
-
-    await discuss(messages.githubOpen);
-
-    act(() => {
-      refreshPreview(messages.githubOpen);
-    });
-
+    await user.click(within(card).getByRole("button", { name: "Discuss" }));
     expect(await within(card).findByRole("button", { name: "Comment" })).toBeTruthy();
   });
 
@@ -847,6 +832,115 @@ describe("GitHub pull requests", () => {
     expect(draft.reviewNote).toBe("Keep the note.");
   });
 
+  it("closes the reviewers dialog when the copy that opened it unmounts", async () => {
+    const user = userEvent.setup();
+    const threadId = await discuss(messages.githubOpen);
+
+    function Pair() {
+      const [timeline, setTimeline] = useState(true);
+
+      return (
+        <>
+          <button type="button" onClick={() => setTimeline(false)}>
+            Hide timeline
+          </button>
+          {timeline ? <LiveRow id={messages.githubOpen} /> : null}
+          <LiveRow id={messages.githubOpen} threadId={threadId} />
+        </>
+      );
+    }
+
+    await inRouter(() => <Pair />);
+
+    const cards = await screen.findAllByRole("region", { name: OPEN });
+    const timeline = cards[0];
+
+    if (timeline === undefined) {
+      throw new Error("expected the timeline card");
+    }
+
+    await user.click(within(timeline).getByRole("button", { name: "Request reviewers" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request reviewers" });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Reviewers" }), "alice");
+    await user.click(screen.getByRole("button", { name: "Hide timeline" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const draft = readGithubDraft(ROOM, CARD_IDS.pullRequests.open);
+
+    expect(draft.reviewersOpen).toBe(false);
+    expect(draft.reviewersOwner).toBeNull();
+    expect(draft.reviewers).toBe("alice");
+  });
+
+  it("closes the reviewers dialog when the card's key changes", async () => {
+    const user = userEvent.setup();
+
+    await discuss(messages.githubOpen);
+
+    function Keyed() {
+      const [generation, setGeneration] = useState(0);
+
+      return (
+        <>
+          <button type="button" onClick={() => setGeneration((count) => count + 1)}>
+            Remount
+          </button>
+          <LiveRow key={generation} id={messages.githubOpen} />
+        </>
+      );
+    }
+
+    await inRouter(() => <Keyed />);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    await user.click(within(card).getByRole("button", { name: "Request reviewers" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request reviewers" });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Reviewers" }), "bob");
+    await user.click(screen.getByRole("button", { name: "Remount" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const draft = readGithubDraft(ROOM, CARD_IDS.pullRequests.open);
+
+    expect(draft.reviewersOwner).toBeNull();
+    expect(draft.reviewers).toBe("bob");
+  });
+
+  async function actionFetches(): Promise<number> {
+    const response = await fetch("/__mock/cards", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ op: "fetches", roomId: ROOM }),
+    });
+
+    const fetches: Record<string, number> = await response.json();
+
+    return fetches[`github-actions:${CARD_IDS.pullRequests.open}`] ?? 0;
+  }
+
+  it("asks for actions once when two copies finish loading", async () => {
+    const threadId = await discuss(messages.githubOpen);
+
+    function Both() {
+      return (
+        <>
+          <LiveRow id={messages.githubOpen} />
+          <LiveRow id={messages.githubOpen} threadId={threadId} />
+        </>
+      );
+    }
+
+    await inRouter(() => <Both />);
+    expect(await screen.findAllByRole("button", { name: "Comment" })).toHaveLength(2);
+    expect(await actionFetches()).toBe(1);
+  });
+
   async function cardFetches(): Promise<number> {
     const response = await fetch("/__mock/cards", {
       method: "POST",
@@ -858,6 +952,25 @@ describe("GitHub pull requests", () => {
 
     return fetches[`github:${CARD_IDS.pullRequests.open}`] ?? 0;
   }
+
+  it("asks for actions once when a refresh finishes", async () => {
+    await discuss(messages.githubOpen);
+    await renderCards(messages.githubOpen);
+    await screen.findByRole("button", { name: "Comment" });
+
+    const before = await actionFetches();
+    const cardsBefore = await cardFetches();
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    await waitFor(async () => {
+      expect(await cardFetches()).toBeGreaterThan(cardsBefore);
+      expect(await actionFetches()).toBe(before + 1);
+    });
+    expect(await actionFetches()).toBe(before + 1);
+  });
 
   it("keeps the pull request and offers Retry when a refresh fails", async () => {
     const user = userEvent.setup();

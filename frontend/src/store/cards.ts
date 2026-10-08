@@ -13,6 +13,7 @@
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
 import type { MessageCard } from "../gen/MessageCard.ts";
 import type { MessageCards } from "../gen/MessageCards.ts";
@@ -68,6 +69,18 @@ export interface Preview<T> {
   readonly generation: number;
 }
 
+/**
+ * One `/actions` read for a room and pull request, shared by every mounted copy. `token` drops a
+ * response that a later read has already replaced. `reason` is the completed preview generation
+ * (and a retry), so two copies of the same load share the request in flight.
+ */
+export interface GithubActionsEntry {
+  readonly token: number;
+  readonly reason: string;
+  readonly status: "loading" | "ready" | "error";
+  readonly value: GithubPullRequestActions | null;
+}
+
 /** Previews by key (see `githubKey`, `fizzyKey`, `quoteKey`, `attendanceKey`). */
 export type PreviewTables = {
   readonly [Kind in PreviewKind]: Readonly<Record<string, Preview<PreviewValues[Kind]>>>;
@@ -84,6 +97,8 @@ export interface CardsState {
   /** Event answers on their way per event id (see `PendingAnswer`). */
   readonly pendingAnswers: Readonly<Record<number, PendingAnswer>>;
   readonly previews: PreviewTables;
+  /** `/actions` by `githubActionsKey`, so mounted copies share one request. */
+  readonly githubActions: Readonly<Record<string, GithubActionsEntry>>;
 }
 
 export const emptyCards: CardsState = {
@@ -92,6 +107,7 @@ export const emptyCards: CardsState = {
   pollLoads: {},
   pendingAnswers: {},
   previews: { github: {}, fizzy: {}, quotes: {}, attendance: {} },
+  githubActions: {},
 };
 
 /** A ready preview older than this is fetched again when its card mounts. */
@@ -118,6 +134,11 @@ export function quoteKey(roomId: number, referenceId: number): string {
 
 export function attendanceKey(eventId: number): string {
   return String(eventId);
+}
+
+/** The shared `/actions` read for this room and pull request. */
+export function githubActionsKey(roomId: number, pullRequestId: number): string {
+  return `${roomId}:${pullRequestId}`;
 }
 
 // --- ordering ---------------------------------------------------------------------------------
@@ -460,6 +481,65 @@ export function previewFailed<Kind extends PreviewKind>(
     ref,
     fetchedAt: held?.fetchedAt ?? 0,
     generation,
+  });
+}
+
+/** A shared `/actions` read started. The previous value stays until this one settles. */
+export function beginGithubActions(
+  state: State,
+  key: string,
+  reason: string,
+  token: number,
+): State {
+  const held = state.cards.githubActions[key];
+
+  return withCards(state, {
+    ...state.cards,
+    githubActions: {
+      ...state.cards.githubActions,
+      [key]: { token, reason, status: "loading", value: held?.value ?? null },
+    },
+  });
+}
+
+/**
+ * The read `token` answered. A newer read (`token` moved on) is left alone. `null` is a refusal
+ * (no discussion yet, or the account can't be read): the controls hide.
+ */
+export function settleGithubActions(
+  state: State,
+  key: string,
+  token: number,
+  value: GithubPullRequestActions | null,
+): State {
+  const held = state.cards.githubActions[key];
+
+  if (held === undefined || held.token !== token) {
+    return state;
+  }
+
+  return withCards(state, {
+    ...state.cards,
+    githubActions: {
+      ...state.cards.githubActions,
+      [key]: {
+        token,
+        reason: held.reason,
+        status: value === null ? "error" : "ready",
+        value,
+      },
+    },
+  });
+}
+
+/** Mark every mounted preview of this pull request stale, so each one loads again. */
+export function invalidateGithub(state: State, pullRequestId: number): State {
+  return withCards(state, {
+    ...state.cards,
+    previews: {
+      ...state.cards.previews,
+      github: restaleGithub(state.cards.previews.github, new Set([pullRequestId])),
+    },
   });
 }
 

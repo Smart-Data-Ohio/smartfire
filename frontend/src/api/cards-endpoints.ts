@@ -9,6 +9,7 @@ import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
+import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
 import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
 import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
@@ -20,6 +21,7 @@ import { call, get } from "./call.ts";
 import {
   EventAttendance as EventAttendanceSchema,
   FizzyCardPreview as FizzyCardPreviewSchema,
+  GithubDiscussion as GithubDiscussionSchema,
   GithubPullRequestActions as GithubPullRequestActionsSchema,
   GithubPullRequestCard as GithubPullRequestCardSchema,
   GithubWriteResult as GithubWriteResultSchema,
@@ -114,6 +116,25 @@ export const githubCard = Effect.fn("api.githubCard")(function* (
   return yield* call(
     get(`/rooms/${roomId}/github/pull_requests/${pullRequestId}/card`, githubScopeQuery(scope)),
     wire<GithubPullRequestCard>(GithubPullRequestCardSchema),
+  );
+});
+
+/**
+ * `POST /rooms/:roomId/github/pull_requests/:id/discussion`: the classic Discuss action.
+ * Creates the thread and the pull-request mapping, or returns the thread already mapped.
+ */
+export const discussGithub = Effect.fn("api.discussGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  messageId: number,
+) {
+  return yield* call(
+    {
+      method: "POST",
+      path: `/rooms/${roomId}/github/pull_requests/${pullRequestId}/discussion`,
+      body: { messageId },
+    },
+    wire<GithubDiscussion>(GithubDiscussionSchema),
   );
 });
 

@@ -17,7 +17,15 @@ import type { Poll } from "../../src/gen/Poll.ts";
 import type { PollResults } from "../../src/gen/PollResults.ts";
 import type { QuotePreview } from "../../src/gen/QuotePreview.ts";
 import type { QuotePreviewResult } from "../../src/gen/QuotePreviewResult.ts";
-import { forbidden, type MockResponse, notFound, ok, refusal, validation } from "../http.ts";
+import {
+  conflict,
+  forbidden,
+  type MockResponse,
+  notFound,
+  ok,
+  refusal,
+  validation,
+} from "../http.ts";
 import {
   booleanField,
   field,
@@ -29,7 +37,17 @@ import {
 import type { Mentionable } from "../markdown.ts";
 import { createRandom } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { buildMessage, plainDraft } from "../s2/model.ts";
+import {
+  buildMessage,
+  DEFAULT_AUTO_ARCHIVE_MINUTES,
+  defaultThreadName,
+  indicatorOf,
+  iso,
+  plainDraft,
+  type ThreadRecord,
+  threadDto,
+  touched,
+} from "../s2/model.ts";
 import { clientMessageIdOf } from "../s2/posting.ts";
 import {
   BOT_ID,
@@ -125,6 +143,11 @@ interface CardsWorld {
   readonly pullRequests: Map<number, GithubPullRequestCard>;
   /** The viewer's linked GitHub account can post. Off: the actions answer with every flag false. */
   githubWrites: boolean;
+  /**
+   * `roomId:pullRequestId` to the discussion thread. Only Discuss writes this; an ordinary
+   * thread on the linking message is not a mapping.
+   */
+  readonly discussions: Map<string, number>;
   readonly fizzy: Map<number, FizzyCardPreview>;
   readonly quotes: Map<number, QuotePreviewResult>;
   /** Fetches served per preview (`github:412`), for tests. */
@@ -141,6 +164,7 @@ function emptyCardsWorld(): CardsWorld {
     events: new Map(),
     pullRequests: new Map(),
     githubWrites: true,
+    discussions: new Map(),
     fizzy: new Map(),
     quotes: new Map(),
     fetches: new Map(),
@@ -1160,14 +1184,88 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
       (held) => held.kind === "github" && held.data.pullRequestId === pullRequestId,
     ) ?? false;
 
-  /** The pull request's discussion: the thread started on a message that links it. */
-  const discussionOf = (roomId: number, pullRequestId: number) =>
-    [...ctx.world().threads.values()].find(
-      (thread) =>
-        thread.roomId === roomId &&
-        thread.parentMessageId !== null &&
-        linksPullRequest(roomId, thread.parentMessageId, pullRequestId),
-    ) ?? null;
+  const discussionKey = (roomId: number, pullRequestId: number) => `${roomId}:${pullRequestId}`;
+
+  /** The pull request's discussion: the thread Discuss mapped, not an ordinary thread. */
+  const discussionOf = (roomId: number, pullRequestId: number) => {
+    const threadId = state().discussions.get(discussionKey(roomId, pullRequestId));
+
+    if (threadId === undefined) return null;
+
+    return ctx.world().threads.get(threadId) ?? null;
+  };
+
+  /**
+   * Classic Discuss (`discuss`): a thread on the linking message plus the mapping row. An
+   * ordinary `POST /threads` does not write the mapping, so writes stay 404 until this runs.
+   */
+  const githubDiscussion = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    const messageId = intField(body, "messageId");
+
+    if (messageId === null || !linksPullRequest(roomId, messageId, pullRequestId)) {
+      throw notFound("Message not found");
+    }
+
+    const located = findMessage(roomId, messageId);
+
+    if (located === null || located.message.threadId !== null) throw notFound("Message not found");
+
+    const existing = discussionOf(roomId, pullRequestId);
+
+    if (existing !== null) return ok({ threadId: existing.id });
+
+    const world = ctx.world();
+
+    if ([...world.threads.values()].some((thread) => thread.parentMessageId === messageId)) {
+      throw conflict("That message already has a thread");
+    }
+
+    const createdAt = iso(Math.max(ctx.now(), Date.parse(located.message.createdAt) + 1));
+    const id = world.nextThreadId++;
+
+    const thread: ThreadRecord = {
+      id,
+      roomId,
+      parentMessageId: messageId,
+      creatorId: VIEWER_ID,
+      name: defaultThreadName(located.message),
+      closed: false,
+      locked: false,
+      lastActivityAt: createdAt,
+      autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      createdAt,
+      messages: [],
+      memberIds: new Set([VIEWER_ID]),
+      viewerMembership: {
+        threadId: id,
+        involvement: "everything",
+        unreadAt: null,
+        joinedAt: createdAt,
+      },
+    };
+
+    world.threads.set(id, thread);
+    state().discussions.set(discussionKey(roomId, pullRequestId), id);
+
+    const indicator = indicatorOf(thread);
+
+    located.replace({
+      ...located.message,
+      thread: indicator,
+      updatedAt: touched(ctx.now(), located.message.updatedAt),
+    });
+
+    ctx.publish([
+      { topic: `room:${roomId}`, type: "thread.created", data: threadDto(thread, ctx.now()) },
+      {
+        topic: `room:${roomId}`,
+        type: "thread.indicator",
+        data: { roomId, parentMessageId: messageId, thread: indicator },
+      },
+    ]);
+
+    return ok({ threadId: id }, 201);
+  };
 
   const github = (roomId: number, pullRequestId: number, query: URLSearchParams) => {
     const threadId = Number(query.get("threadId") ?? Number.NaN);
@@ -1203,9 +1301,8 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
   };
 
   /**
-   * The real API 404s a write until this room has a discussion thread for the pull request
-   * (`PullRequestThread`). The open pull request is seeded without one; a test that posts
-   * starts that thread first.
+   * The real API 404s a write until this room has a `PullRequestThread` row. An ordinary thread
+   * on the linking message is not one; Discuss (`POST .../discussion`) creates the mapping.
    */
   const requireDiscussion = (roomId: number, pullRequestId: number) => {
     ctx.roomOr404(roomId);
@@ -1420,6 +1517,12 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
       "GET",
       /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/actions$/,
       ({ ids: [roomId = 0, pullRequestId = 0] }) => githubActionFlags(roomId, pullRequestId),
+    ),
+    route(
+      "POST",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/discussion$/,
+      ({ ids: [roomId = 0, pullRequestId = 0], body }) =>
+        githubDiscussion(roomId, pullRequestId, body),
     ),
     route(
       "POST",

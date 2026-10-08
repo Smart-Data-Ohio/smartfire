@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useId, useState } from "react";
-import type { GithubPullRequestActions } from "../../gen/GithubPullRequestActions.ts";
 import type { GithubReviewKind } from "../../gen/GithubReviewKind.ts";
+import { githubActionsKey } from "../../store/cards.ts";
+import { useStore } from "../../store/store.ts";
 import { actions, type GithubCardScope } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
@@ -94,6 +95,7 @@ function posted(notice: string): void {
 
 function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & FailureProps) {
   const draft = useGithubDraft(roomId, pullRequestId);
+  const [notice, setNotice] = useState<string | undefined>();
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,8 +122,9 @@ function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & F
         patchGithubDraft(roomId, pullRequestId, {
           commentPending: false,
           comment: "",
-          commentNotice: result.notice,
+          commentNotice: undefined,
         });
+        setNotice(result.notice);
         posted(result.notice);
       },
       (failure: Error) => {
@@ -142,7 +145,12 @@ function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & F
         value={draft.comment}
         error={draft.commentError}
         onChange={(value) => {
-          patchGithubDraft(roomId, pullRequestId, { comment: value, commentError: undefined });
+          setNotice(undefined);
+          patchGithubDraft(roomId, pullRequestId, {
+            comment: value,
+            commentError: undefined,
+            commentNotice: undefined,
+          });
         }}
       />
       <Button
@@ -154,9 +162,9 @@ function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & F
       >
         Comment
       </Button>
-      {draft.commentNotice === undefined ? null : (
+      {notice === undefined ? null : (
         <p className="github-notice" role="status">
-          {draft.commentNotice}
+          {notice}
         </p>
       )}
     </form>
@@ -199,6 +207,7 @@ function ReviewDialog({
         patchGithubDraft(roomId, pullRequestId, {
           reviewPending: false,
           review: null,
+          reviewOwner: null,
           reviewNote: "",
           reviewError: undefined,
         });
@@ -332,6 +341,7 @@ function ReviewersDialog({
         patchGithubDraft(roomId, pullRequestId, {
           reviewersPending: false,
           reviewersOpen: false,
+          reviewersOwner: null,
           reviewers: "",
           reviewersError: undefined,
         });
@@ -445,11 +455,14 @@ export function GithubActions({
   roomId,
   pullRequestId,
   scope,
-  previewGeneration,
-}: ScopeProps & { readonly previewGeneration: number }) {
+  loadedGeneration,
+}: ScopeProps & { readonly loadedGeneration: number | null }) {
   const instanceId = useId();
-  const [capabilities, setCapabilities] = useState<GithubPullRequestActions | null>(null);
   const [generation, setGeneration] = useState(0);
+
+  const capabilities = useStore(
+    (state) => state.cards.githubActions[githubActionsKey(roomId, pullRequestId)]?.value ?? null,
+  );
 
   // The copy that opened a dialog unmounts: close it here, and leave the typed draft.
   useEffect(() => {
@@ -469,29 +482,18 @@ export function GithubActions({
     };
   }, [instanceId, roomId, pullRequestId]);
 
-  // generation retries after a refused write. previewGeneration moves when the preview is
-  // invalidated or fetched again, so a discussion created under a mounted card shows its controls.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: both counts are retry triggers, not inputs
+  // `generation` retries after a refused write. `loadedGeneration` is the generation of a preview
+  // load that has finished, so an invalidation (which bumps generation before the fetch) does not
+  // ask twice. Mounted copies share the in-flight read.
   useEffect(() => {
-    let live = true;
+    if (loadedGeneration === null) {
+      return;
+    }
 
-    actions.cards.githubActions(roomId, pullRequestId).then(
-      (next) => {
-        if (live) {
-          setCapabilities(next);
-        }
-      },
-      () => {
-        if (live) {
-          setCapabilities(null);
-        }
-      },
-    );
+    const reason = `${loadedGeneration}:${generation}`;
 
-    return () => {
-      live = false;
-    };
-  }, [roomId, pullRequestId, generation, previewGeneration]);
+    void actions.cards.loadGithubActions(roomId, pullRequestId, reason);
+  }, [roomId, pullRequestId, generation, loadedGeneration]);
 
   if (
     capabilities === null ||

@@ -2,6 +2,7 @@ import { Schema, SchemaGetter } from "effect";
 import type { AttendanceResponse as GeneratedAttendanceResponse } from "../../gen/AttendanceResponse.ts";
 import type { CardFetch as GeneratedCardFetch } from "../../gen/CardFetch.ts";
 import type { CreateGithubComment as GeneratedCreateGithubComment } from "../../gen/CreateGithubComment.ts";
+import type { CreateGithubDiscussion as GeneratedCreateGithubDiscussion } from "../../gen/CreateGithubDiscussion.ts";
 import type { CreateGithubReview as GeneratedCreateGithubReview } from "../../gen/CreateGithubReview.ts";
 import type { CreateGithubReviewRequest as GeneratedCreateGithubReviewRequest } from "../../gen/CreateGithubReviewRequest.ts";
 import type { CreatePoll as GeneratedCreatePoll } from "../../gen/CreatePoll.ts";
@@ -18,6 +19,7 @@ import type { GithubCardRef as GeneratedGithubCardRef } from "../../gen/GithubCa
 import type { GithubChangedFile as GeneratedGithubChangedFile } from "../../gen/GithubChangedFile.ts";
 import type { GithubChangedFiles as GeneratedGithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks as GeneratedGithubChecks } from "../../gen/GithubChecks.ts";
+import type { GithubDiscussion as GeneratedGithubDiscussion } from "../../gen/GithubDiscussion.ts";
 import type { GithubPullRequest as GeneratedGithubPullRequest } from "../../gen/GithubPullRequest.ts";
 import type { GithubPullRequestActions as GeneratedGithubPullRequestActions } from "../../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard as GeneratedGithubPullRequestCard } from "../../gen/GithubPullRequestCard.ts";
@@ -435,6 +437,24 @@ export type CreateGithubReviewRequest = typeof CreateGithubReviewRequest.Type;
 
 export type CreateGithubReviewRequestPin = Assert<
   Pinned<typeof CreateGithubReviewRequest, GeneratedCreateGithubReviewRequest>
+>;
+
+/** The body of `POST .../github/pull_requests/:id/discussion`. */
+export const CreateGithubDiscussion = Schema.Struct({ messageId: MessageId });
+
+export type CreateGithubDiscussion = typeof CreateGithubDiscussion.Type;
+
+export type CreateGithubDiscussionPin = Assert<
+  Pinned<typeof CreateGithubDiscussion, GeneratedCreateGithubDiscussion>
+>;
+
+/** The thread Discuss created or reused. */
+export const GithubDiscussion = Schema.Struct({ threadId: ThreadId });
+
+export type GithubDiscussion = typeof GithubDiscussion.Type;
+
+export type GithubDiscussionPin = Assert<
+  Pinned<typeof GithubDiscussion, GeneratedGithubDiscussion>
 >;
 
 /** A write's confirmation. The card itself updates from `message.cards` and a refetch. */

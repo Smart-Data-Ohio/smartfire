@@ -17,23 +17,17 @@ async function control(
   return request.post("/__mock/cards", { headers: { "X-CSRF-Token": state.csrfToken }, data });
 }
 
-/** The write API 404s until the pull request has a discussion thread in the room. */
+/** The write API 404s until Discuss has mapped a discussion thread in the room. */
 async function discuss(request: APIRequestContext) {
   const state = await (await request.get("/__mock/state")).json();
 
-  const response = await request.post(`/api/v1/rooms/${ROOM}/threads`, {
-    headers: { "X-CSRF-Token": state.csrfToken },
-    data: {
-      parentMessageId: messages.githubOpen,
-      name: null,
-      message: {
-        clientMessageId: "github-actions-e2e",
-        markdownSource: "On it",
-        replyToMessageId: null,
-        replyNotifyAuthor: null,
-      },
+  const response = await request.post(
+    `/api/v1/rooms/${ROOM}/github/pull_requests/${CARD_IDS.pullRequests.open}/discussion`,
+    {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: { messageId: messages.githubOpen },
     },
-  });
+  );
 
   expect(response.ok()).toBeTruthy();
 }
@@ -49,6 +43,16 @@ async function openCard(page: Page) {
 
   return card;
 }
+
+test("shows the write actions after Discuss on a fresh pull request", async ({ page }) => {
+  const card = await openCard(page);
+
+  await expect(card.getByRole("button", { name: "Comment" })).toHaveCount(0);
+  await card.getByRole("button", { name: "Discuss" }).click();
+  await expect(page.getByRole("button", { name: "Comment" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Review", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request reviewers" })).toBeVisible();
+});
 
 test("comments, reviews and requests reviewers from the pull request card", async ({
   page,

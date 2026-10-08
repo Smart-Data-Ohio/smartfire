@@ -9,6 +9,7 @@ use crate::integrations::test_support::Route;
 use serde_json::{Value, json};
 
 const ACTIONS: &str = "/api/v1/rooms/815/github/pull_requests/816/actions";
+const DISCUSS: &str = "/api/v1/rooms/815/github/pull_requests/816/discussion";
 const COMMENTS: &str = "/api/v1/rooms/815/github/pull_requests/816/comments";
 const REVIEWS: &str = "/api/v1/rooms/815/github/pull_requests/816/reviews";
 const REVIEWERS: &str = "/api/v1/rooms/815/github/pull_requests/816/review_requests";
@@ -375,6 +376,49 @@ async fn an_unknown_review_event_is_authorized_before_the_body_is_parsed() {
     .await;
     assert_eq!(status, 422, "{body}");
     assert!(fresh.server.received().is_empty());
+}
+
+#[tokio::test]
+async fn discussing_a_pull_request_creates_the_mapping_and_actions_then_answer() {
+    let fresh = Fresh::with_routes(&spa(json!({"mapping": false, "linked": true})), vec![]).await;
+    fresh
+        .app
+        .db
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM channel_threads WHERE id=817", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (missing, _) = call(&fresh, "GET", ACTIONS, json!({})).await;
+    assert_eq!(missing, 404);
+
+    let (status, body) = call(&fresh, "POST", DISCUSS, json!({"messageId": 818})).await;
+    assert_eq!(status, 201, "{body}");
+    let thread_id = body["threadId"].as_i64().unwrap();
+    let mapping = fresh
+        .app
+        .db
+        .read(|conn| {
+            Ok(
+                crate::integrations::github::threads::PullRequestThread::for_room_pr(
+                    conn, 815, 816,
+                )?
+                .unwrap(),
+            )
+        })
+        .await
+        .unwrap();
+    assert_eq!(mapping.channel_thread_id, thread_id);
+
+    let (actions, flags) = call(&fresh, "GET", ACTIONS, json!({})).await;
+    assert_eq!(actions, 200);
+    assert_eq!(flags["canComment"], true);
+
+    let (again, same) = call(&fresh, "POST", DISCUSS, json!({"messageId": 818})).await;
+    assert_eq!(again, 200, "{same}");
+    assert_eq!(same["threadId"], thread_id);
 }
 
 async fn message_count(fresh: &Fresh) -> i64 {
