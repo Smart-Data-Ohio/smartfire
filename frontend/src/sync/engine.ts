@@ -25,7 +25,7 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { emitSyncEvents } from "./signals.ts";
+import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
@@ -221,6 +221,9 @@ export class Engine extends Context.Service<
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
+        // What the store doesn't hold (an open calendar's events) reads itself again meanwhile.
+        emitResync(topicList);
+
         for (const topic of topicList) {
           const roomId = roomIdOf(topic);
           const threadId = threadIdOf(topic);

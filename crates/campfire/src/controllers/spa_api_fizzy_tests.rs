@@ -3,13 +3,16 @@ use crate::{
     controllers::presenters::test_support::*,
     integrations::{
         fizzy::accounts::{Account, Input},
-        test_support::{FakeServer, Route, ws15e_http_case, ws15e_http_case_listener},
+        test_support::{
+            FakeServer, ResponseGate, Route, ws15e_http_case, ws15e_http_case_listener,
+        },
     },
 };
 use axum::http::{Method, StatusCode};
 use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn spa_api_fizzy_message_creation_http_matrix() {
@@ -36,6 +39,11 @@ async fn spa_api_fizzy_message_creation_http_matrix() {
                 );
             }
             assert!(!api.1.is_empty(), "must compare real broadcasts");
+        } else if matches!(case.as_str(), "enqueue_rollback" | "locked_after_create") {
+            let classic = run(&case, false).await;
+            assert_eq!(api.0, classic.0, "failed replies must leave the same rows");
+            assert!(api.1.is_empty());
+            assert!(classic.1.is_empty());
         }
         return;
     }
@@ -66,6 +74,7 @@ async fn spa_api_fizzy_message_creation_http_matrix() {
         "revoked",
         "probe_failure",
         "locked",
+        "locked_after_create",
         "long_reply",
         "nonmember",
         "scope",
@@ -118,6 +127,7 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
             | "thread_new"
             | "locked_new"
             | "locked"
+            | "locked_after_create"
             | "scope"
             | "scope_post"
             | "wrong_room_thread"
@@ -251,6 +261,22 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
         None
     };
     drop(listener);
+    let gate = (case == "locked_after_create").then(|| Arc::new(ResponseGate::default()));
+    let mut create_route = Route::new(
+        "POST",
+        "127.0.0.1",
+        "/897362094/boards/03board1/cards.json",
+        create_status,
+    )
+    .body(
+        match case {
+            "refused" => json!({"error":"Board denied"}),
+            "fallback_url" => json!({"number":"580"}),
+            _ => json!({"number":580,"url":url}),
+        }
+        .to_string(),
+    );
+    create_route.response_gate = gate.clone();
     let server = if case == "create_unreachable" {
         None
     } else {
@@ -261,17 +287,7 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
                 json!([{"id":"03board1","name":"Engineering"},{"id":"03board2","name":"Support"}])
                     .to_string(),
             ),
-            Route::new(
-                "POST",
-                "127.0.0.1",
-                "/897362094/boards/03board1/cards.json",
-                create_status,
-            )
-            .body(match case {
-                "refused" => json!({"error":"Board denied"}),
-                "fallback_url" => json!({"number":"580"}),
-                _ => json!({"number":580,"url":url}),
-            }.to_string()),
+            create_route,
             Route::new("GET", "127.0.0.1", "/my/identity.json", probe_status).body("{}"),
         ],
                 None,
@@ -344,6 +360,23 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
         "title": if matches!(case, "missing_title" | "both_missing") { "  " } else { "  The deploy is broken  " },
         "description": "Fix it\n\nSource: x",
     });
+    let locker = gate.map(|gate| {
+        let db = app.db().clone();
+        let id = thread.as_ref().unwrap().id;
+        tokio::spawn(async move {
+            gate.entered.notified().await;
+            db.write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE channel_threads SET locked_at=? WHERE id=?",
+                    rusqlite::params![tx.now(), id],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+            gate.released.notify_one();
+        })
+    });
     let response = if get {
         browser.send(super::api_tests::get(&(path + "/new"))).await
     } else if api_mode {
@@ -359,8 +392,15 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
             ]))
             .await
     };
+    if let Some(locker) = locker {
+        locker.await.unwrap();
+    }
     let expected = if !api_mode {
-        StatusCode::FOUND
+        if case == "enqueue_rollback" {
+            StatusCode::INTERNAL_SERVER_ERROR
+        } else {
+            StatusCode::FOUND
+        }
     } else {
         match case {
             "new" | "thread_new" | "locked_new" | "long_new" | "no_account" => StatusCode::OK,
@@ -370,7 +410,6 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
             | "scope_post"
             | "wrong_room_thread"
             | "wrong_room_thread_post" => StatusCode::NOT_FOUND,
-            "enqueue_rollback" => StatusCode::INTERNAL_SERVER_ERROR,
             "locked" => StatusCode::CONFLICT,
             "new_failure" | "probe_failure" | "create_unreachable" | "invalid_unreachable" => {
                 StatusCode::SERVICE_UNAVAILABLE
@@ -434,7 +473,7 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
                 "Kevin"
             }
         );
-    } else if api_mode && !success && case != "enqueue_rollback" {
+    } else if api_mode && !success {
         let error: campfire_api_types::ApiErrorResponse = super::api_tests::parse(&response);
         let tag = super::api_tests::tag(&response);
         let expected_tag = match case {
@@ -452,7 +491,7 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
             "readonly" => "FizzyReadOnly",
             "no_connection" => "FizzyNotConnected",
             "locked" => "FizzyThreadLocked",
-            "long_reply" => "FizzyReplyFailed",
+            "long_reply" | "enqueue_rollback" | "locked_after_create" => "FizzyReplyFailed",
             "refused" | "create_failure" => "FizzyRefused",
             _ => panic!("unexpected case: {case}"),
         };
@@ -487,7 +526,7 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
             "create_unreachable" => {
                 assert!(message.starts_with("Fizzy refused the new card (Could not reach Fizzy ("))
             }
-            "long_reply" => {
+            "long_reply" | "enqueue_rollback" | "locked_after_create" => {
                 assert!(
                     message.starts_with(
                         "Fizzy card #580 created, but the reply could not be posted ("
@@ -495,6 +534,22 @@ async fn run(case: &str, api_mode: bool) -> (serde_json::Value, Vec<(String, Str
                 );
                 assert_eq!(json["number"], "580");
                 assert_eq!(json["url"], url);
+                if case != "long_reply" {
+                    let details = if case == "locked_after_create" {
+                        "This thread is locked"
+                    } else {
+                        "A local error prevented posting the reply"
+                    };
+                    assert_eq!(
+                        message,
+                        format!(
+                            "Fizzy card #580 created, but the reply could not be posted ({details})."
+                        )
+                    );
+                    let received = server.as_ref().unwrap().received.lock().unwrap();
+                    assert_eq!(received.len(), 1, "the remote card must exist");
+                    assert_eq!(received[0].method, "POST");
+                }
             }
             _ => {}
         }

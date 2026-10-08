@@ -284,10 +284,21 @@ fn finish_destroy(tx: &mut Tx<'_>, room: &Room, config: &HuddleConfig) -> Result
             [room.id],
         )?;
     }
+    // Events in other rooms that met here lose their venue: their rooms' open calendar screens
+    // must stop showing it. This room's own events go with it.
+    let rooms: Vec<i64> = query_all(
+        tx.conn(),
+        "SELECT DISTINCT room_id FROM events WHERE venue_room_id=? AND room_id!=? ORDER BY room_id",
+        [room.id, room.id],
+        |r| r.get(0),
+    )?;
     tx.conn().execute_cached(
         "UPDATE events SET venue_room_id=NULL WHERE venue_room_id=?",
         [room.id],
     )?;
+    for room_id in rooms {
+        super::calendar_event::broadcast_room_events(tx, room_id);
+    }
     // RepositorySubscription#remove_bot_from_room_unless_subscribed is satisfied by the
     // room membership delete_all; notification records have no destruction callbacks.
     tx.conn().execute_cached("DELETE FROM github_notifications WHERE subscription_id IN (SELECT id FROM github_repository_subscriptions WHERE room_id=?)",[room.id])?;

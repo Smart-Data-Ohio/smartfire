@@ -143,6 +143,15 @@ pub enum Failure {
     },
 }
 impl Failure {
+    pub fn reply_failed(number: String, url: String, error: Error) -> Self {
+        tracing::error!(%error, %number, %url, "Fizzy card created, but its local reply failed");
+        Self::ReplyFailed {
+            number,
+            url,
+            details: "A local error prevented posting the reply".into(),
+        }
+    }
+
     pub fn message(&self) -> String {
         match self {
             Self::NotConnected => "Connect Fizzy on your profile first.".into(),
@@ -283,6 +292,44 @@ pub struct Created {
     pub reply: Message,
 }
 
+/// Retains the remote card even when posting or broadcasting its local reply fails.
+pub struct CardCreation {
+    number: String,
+    url: String,
+    reply: Outcome<Message>,
+}
+
+impl CardCreation {
+    pub fn into_classic(self) -> Outcome<Created> {
+        Ok(self.reply?.map(|reply| Created {
+            number: self.number,
+            url: self.url,
+            reply,
+        }))
+    }
+
+    pub fn into_spa(self) -> std::result::Result<Created, Failure> {
+        let details = match self.reply {
+            Ok(Ok(reply)) => {
+                return Ok(Created {
+                    number: self.number,
+                    url: self.url,
+                    reply,
+                });
+            }
+            Ok(Err(Failure::ReplyFailed { details, .. })) => details,
+            Ok(Err(failure)) => failure.message(),
+            Err(error) => return Err(Failure::reply_failed(self.number, self.url, error)),
+        };
+        tracing::error!(%details, number = %self.number, url = %self.url, "Fizzy card created, but its local reply failed");
+        Err(Failure::ReplyFailed {
+            number: self.number,
+            url: self.url,
+            details,
+        })
+    }
+}
+
 /// Creates in Fizzy and posts through the classic room/thread write, webhook and broadcast path.
 pub async fn create_card(
     c: &mut Ctx,
@@ -290,7 +337,7 @@ pub async fn create_card(
     board: String,
     title: String,
     description: String,
-) -> Outcome<Created> {
+) -> Outcome<CardCreation> {
     if source.token.is_none() {
         return Ok(Err(Failure::NotConnected));
     }
@@ -363,6 +410,11 @@ pub async fn create_card(
                 source.account.as_ref().unwrap().account_id
             )
         });
+    let reply = post_reply(c, source, &number, &url).await;
+    Ok(Ok(CardCreation { number, url, reply }))
+}
+
+async fn post_reply(c: &Ctx, source: &Source, number: &str, url: &str) -> Outcome<Message> {
     let markdown = format!("Created from {}:\n{url}", source.link(c));
     let creator_id = require_current_user(c)?.id;
     let room = source.room.clone();
@@ -394,8 +446,8 @@ pub async fn create_card(
         Ok(reply) => reply,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             return Ok(Err(Failure::ReplyFailed {
-                number,
-                url,
+                number: number.into(),
+                url: url.into(),
                 details: errors.full_messages().join(", "),
             }));
         }
@@ -408,7 +460,7 @@ pub async fn create_card(
     if reply.thread_id.is_none() {
         messages::release_webhooks(c, &reply).await;
     }
-    Ok(Ok(Created { number, url, reply }))
+    Ok(Ok(reply))
 }
 
 pub async fn create(c: &mut Ctx) -> Result {
@@ -416,7 +468,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     let board = c.param_str("board_id").unwrap_or("").to_owned();
     let title = c.param_str("title").unwrap_or("").to_owned();
     let description = c.param_str("description").unwrap_or("").to_owned();
-    match create_card(c, &source, board, title, description).await? {
+    let outcome = match create_card(c, &source, board, title, description).await? {
+        Ok(creation) => creation.into_classic()?,
+        Err(failure) => Err(failure),
+    };
+    match outcome {
         Ok(created) => redirect(
             c,
             &source,
@@ -428,5 +484,55 @@ pub async fn create(c: &mut Ctx) -> Result {
             render(c, source, boards, StatusCode::UNPROCESSABLE_ENTITY).await
         }
         Err(failure) => classic_failure(c, &source, &failure),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fizzy_locked_reply_keeps_classic_failure_and_spa_card() {
+        let creation = || CardCreation {
+            number: "580".into(),
+            url: "https://fizzy.test/cards/580".into(),
+            reply: Ok(Err(Failure::Locked)),
+        };
+        assert!(matches!(
+            creation().into_classic(),
+            Ok(Err(Failure::Locked))
+        ));
+        let Failure::ReplyFailed {
+            number,
+            url,
+            details,
+        } = creation().into_spa().err().unwrap()
+        else {
+            panic!("a created card must be terminal");
+        };
+        assert_eq!(number, "580");
+        assert_eq!(url, "https://fizzy.test/cards/580");
+        assert_eq!(details, "This thread is locked");
+    }
+
+    #[test]
+    fn fizzy_internal_reply_error_keeps_classic_error_and_spa_card() {
+        let creation = || CardCreation {
+            number: "580".into(),
+            url: "https://fizzy.test/cards/580".into(),
+            reply: Err(Error::internal(std::io::Error::other("queue rejected"))),
+        };
+        assert!(matches!(creation().into_classic(), Err(Error::Internal(_))));
+        let Failure::ReplyFailed {
+            number,
+            url,
+            details,
+        } = creation().into_spa().err().unwrap()
+        else {
+            panic!("a created card must be terminal");
+        };
+        assert_eq!(number, "580");
+        assert_eq!(url, "https://fizzy.test/cards/580");
+        assert_eq!(details, "A local error prevented posting the reply");
     }
 }
