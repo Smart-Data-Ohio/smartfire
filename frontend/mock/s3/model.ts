@@ -12,11 +12,12 @@ export interface S3World {
   /** The viewer's inbox, by item id. */
   readonly activity: Map<number, ActivityItem>;
   nextActivityId: number;
+  activityRevision: number;
 }
 
 /** A fresh, empty S3 world. */
 export function emptyS3World(): S3World {
-  return { activity: new Map(), nextActivityId: 1 };
+  return { activity: new Map(), nextActivityId: 1, activityRevision: 0 };
 }
 
 /** `ActivityItem#state`: handled when `handledAt` is set, else read when `readAt` is. */

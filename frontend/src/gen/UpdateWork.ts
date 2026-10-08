@@ -25,15 +25,15 @@ import type { WorkStatus } from "./WorkStatus";
  *   no status: stopping tracking a thread with an owner needs `ownerId: null` too;
  * - `Validation` on `resultMarkdown` past 20,000 characters.
  */
-export type UpdateWork = { 
+export type UpdateWork = {
 /**
  * Omit to leave alone; `null` stops tracking.
  */
-status?: WorkStatus | null, 
+status?: WorkStatus | null,
 /**
  * Omit to leave alone; `null` unassigns.
  */
-ownerId?: number | null, 
+ownerId?: number | null,
 /**
  * Omit to leave alone; `null` or blank clears the result.
  */

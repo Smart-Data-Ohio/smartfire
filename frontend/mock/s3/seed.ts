@@ -1191,6 +1191,7 @@ export function seedS3(world: World, now: number, random: Random): void {
     });
 
     world.activity.set(item.id, item);
+    world.activityRevision++;
   }
 }
 

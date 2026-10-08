@@ -1,5 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import type { ActivityList } from "../../src/gen/ActivityList.ts";
+import { expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
 
 /** Calls one of the mock's `/__mock/*` controls. */
 async function control(request: APIRequestContext, action: string): Promise<void> {
@@ -42,9 +43,12 @@ matrix("the activity inbox", async ({ page, theme, phone }) => {
   await shot(page, "activity-mentions", theme);
 
   // A tab with nothing in it: the seed fills every tab, so the empty answer is stubbed.
-  await page.route("**/api/v1/activity?*", (route) =>
-    route.fulfill({ json: { items: [], users: [], unreadCount: 0, nextCursor: null } }),
-  );
+  await page.route("**/api/v1/activity?*", async (route) => {
+    const response = await route.fetch();
+    const snapshot = await response.json();
+
+    await route.fulfill({ json: { ...snapshot, items: [], users: [], nextCursor: null } });
+  });
   await openApp(page, "activity?tab=github&status=handled", theme);
   await expect(page.getByText("No handled review requests")).toBeVisible();
   await shot(page, "activity-empty", theme);
@@ -59,6 +63,132 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
   await activity.click();
   await expect(page).toHaveURL(/\/app\/activity$/);
   await expect(activity).toHaveAttribute("aria-pressed", "true");
+});
+
+test("clearing Activity survives a delayed boot count and reopening the app", async ({
+  page,
+  request,
+}) => {
+  // Two unread items exercise both the decrement and zero, without clearing the whole seed.
+  const state = await (await request.get("/__mock/state")).json();
+  const inbox: ActivityList = await (await request.get("/api/v1/activity")).json();
+
+  expect(inbox.nextCursor).toBeNull();
+  expect(inbox.items.length).toBeGreaterThan(2);
+
+  for (const item of inbox.items.slice(2)) {
+    const response = await request.patch(`/api/v1/activity/${item.id}`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: { action: "handled" },
+    });
+
+    expect(response.ok()).toBe(true);
+  }
+
+  expect(await (await request.get("/api/v1/activity/unread_count")).json()).toMatchObject({
+    unreadCount: 2,
+  });
+
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+
+  await page.route("**/api/v1/activity/unread_count", async (route) => {
+    const response = await route.fetch();
+
+    captured.resolve();
+    await release.promise;
+    await route.fulfill({ response });
+  });
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await captured.promise;
+
+  const activity = page.getByRole("button", { name: "Activity" });
+
+  for (let cleared = 0; cleared < 2; cleared++) {
+    await expect(activity.locator(".badge > .visually-hidden")).toHaveText(`${2 - cleared} unread`);
+    await expect(rows(page).first()).toBeVisible();
+
+    const opening = rows(page).first().locator(".list-row-open");
+    const description = await opening.getAttribute("aria-describedby");
+
+    await opening.focus();
+
+    const changed = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
+    );
+
+    await page.keyboard.press("e");
+
+    const response = await changed;
+    const { unreadCount } = await response.json();
+
+    expect(response.ok()).toBe(true);
+    expect(unreadCount).toBe(1 - cleared);
+    await expect(rows(page).locator(`[aria-describedby="${description}"]`)).toHaveCount(0);
+  }
+
+  await expect(page.getByText("You're all caught up")).toBeVisible();
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  const bootCount = page.waitForResponse("**/api/v1/activity/unread_count");
+
+  release.resolve();
+  await (await bootCount).finished();
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  await page.reload();
+  await expect(page.getByText("You're all caught up")).toBeVisible();
+  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
+});
+
+test("a notification arriving during a clear survives its delayed reply", async ({
+  page,
+  request,
+}) => {
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, "activity");
+  await ready(page, "Activity");
+  await welcomed;
+
+  const before = await unreadCount(page);
+  const captured = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+
+  await page.route(/\/api\/v1\/activity\/\d+$/, async (route) => {
+    const response = await route.fetch();
+
+    captured.resolve();
+    await release.promise;
+    await route.fulfill({ response });
+  });
+
+  const changed = page.waitForResponse(
+    (response) =>
+      response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
+  );
+
+  await openButton(page).focus();
+  await page.keyboard.press("e");
+  await captured.promise;
+
+  try {
+    const afterClear = await body(page).textContent();
+
+    await control(request, "activity-arrival");
+    await expect(body(page)).not.toHaveText(afterClear ?? "");
+  } finally {
+    release.resolve();
+  }
+
+  await (await changed).finished();
+  await expect(page.locator(".page-count [aria-hidden='true']")).toHaveText(`${before}`);
+  await expect(
+    page.getByRole("button", { name: "Activity" }).locator(".badge > .visually-hidden"),
+  ).toHaveText(`${before} unread`);
 });
 
 /** The header's unread count. */

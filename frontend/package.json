@@ -12,7 +12,7 @@
     "dev:mock": "vite --mode mock",
     "build": "vite build",
     "preview": "vite preview",
-    "gen": "rm -f src/gen/*.ts && cargo test -p campfire_api_types export_bindings -j 4 && UPDATE_SCREENS=1 cargo test -p campfire_spa export_screens -j 4",
+    "gen": "rm -f src/gen/*.ts && cargo test -p campfire_api_types export_bindings -j 4 && UPDATE_SCREENS=1 cargo test -p campfire_spa export_screens -j 4 && node tools/trim-generated.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tools/oxlint-anti-slop",
     "lint": "biome check",
     "lint:anti-slop": "oxlint",

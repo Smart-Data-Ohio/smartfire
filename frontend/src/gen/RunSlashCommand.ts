@@ -7,11 +7,11 @@
  * The client's routing, as the classic composer's: `//text` posts `/text` as a message; a known
  * command comes here; an unknown `/word` is posted as an ordinary message.
  */
-export type RunSlashCommand = { 
+export type RunSlashCommand = {
 /**
  * The whole line, starting with `/`.
  */
-text: string, 
+text: string,
 /**
  * Run in this thread of the room; `null` for the root timeline.
  */

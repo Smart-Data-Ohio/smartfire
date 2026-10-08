@@ -3,11 +3,11 @@
 /**
  * One signed-in browser or device (`GET /api/v1/settings/sessions`).
  */
-export type SessionInfo = { id: number, 
+export type SessionInfo = { id: number,
 /**
  * This browser.
  */
-current: boolean, 
+current: boolean,
 /**
  * "Firefox on macOS", as the classic sessions page words it.
  */
