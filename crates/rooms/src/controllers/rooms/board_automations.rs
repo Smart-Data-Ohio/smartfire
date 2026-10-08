@@ -199,6 +199,7 @@ pub async fn create_tag_assignment(c: &mut Ctx) -> Result {
         }
         Err(error) => return Err(db_error(error)),
     };
+    c.app().broadcasts.board_automations_changed(room.id);
     let id = saved.assignee_id;
     let name = c
         .app()
@@ -245,6 +246,7 @@ pub async fn destroy_tag_assignment(c: &mut Ctx) -> Result {
         .write(move |tx| assignment.destroy(tx))
         .await
         .map_err(db_error)?;
+    c.app().broadcasts.board_automations_changed(room.id);
     super::audit_room(
         c,
         &room,

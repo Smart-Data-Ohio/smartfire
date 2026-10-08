@@ -16,11 +16,10 @@ use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
-    BoardAutomationsChanged,
-    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
-    Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload,
-    Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
-    Typing, UserPresence,
+    BoardAutomationsChanged, MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState,
+    PollBallot, PollUpdated, Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow,
+    SidebarRowRemoved, SyncPayload, Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead,
+    ThreadRemoved, ThreadUnread, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room};
@@ -135,7 +134,10 @@ impl RendererSlot {
     }
 
     fn get(&self, server: &Cable) -> Option<&Arc<dyn SyncRenderer>> {
-        server.sync_wanted().then(|| self.0.renderer.get()).flatten()
+        server
+            .sync_wanted()
+            .then(|| self.0.renderer.get())
+            .flatten()
     }
 
     fn thread_lock(&self, thread_id: i64) -> Arc<Mutex<()>> {
@@ -185,6 +187,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::thread_created", &["thread.created"]),
     ("Broadcasts::thread_updated", &["thread.updated"]),
     ("Broadcasts::thread_removed", &["thread.removed"]),
+    (
+        "Broadcasts::board_automations_changed",
+        &["board.automations.changed"],
+    ),
     ("Broadcasts::thread_read", &["thread.read"]),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
@@ -1503,7 +1509,10 @@ mod tests {
         let concurrent = slot.clone().thread_lock(1);
         assert!(Arc::ptr_eq(&first, &concurrent));
         assert!(!Arc::ptr_eq(&first, &slot.thread_lock(2)));
-        assert!(!Arc::ptr_eq(&first, &RendererSlot::default().thread_lock(1)));
+        assert!(!Arc::ptr_eq(
+            &first,
+            &RendererSlot::default().thread_lock(1)
+        ));
         drop(first);
         assert!(Arc::ptr_eq(&concurrent, &slot.thread_lock(1)));
         drop(concurrent);
