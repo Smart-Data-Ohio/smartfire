@@ -317,7 +317,7 @@ describe("switcher", () => {
       name: "Roadmap",
     });
     expect(switcher.threads.map((thread) => thread.threadId).sort((a, b) => a - b)).toEqual([
-      1, 4, 5, 6, 9001, 9002, 9004, 9005, 9006, 9007, 9008, 9009, 9010, 9011, 9012,
+      1, 4, 5, 6, 901, 9001, 9002, 9004, 9005, 9006, 9008, 9009, 9010, 9011, 9012,
     ]);
   });
 });

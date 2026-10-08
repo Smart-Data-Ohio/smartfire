@@ -38,8 +38,9 @@ describe("the screen map and the router", () => {
       SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
 
-    // These are SPA-only tools, without a classic page of their own.
-    const internal = new Set(["/app/_kitchen-sink", "/app/r/:id/t/new"]);
+    // These are SPA-only tools, without a classic page of their own. Classic has no agent
+    // profile page (only /agents/:id/approvals and /agents/:id/events), so the profile is one.
+    const internal = new Set(["/app/_kitchen-sink", "/app/r/:id/t/new", "/app/agents/:id"]);
 
     for (const route of Object.values(router.routesById)) {
       if (route.id === "__root__" || route.id === "/shell") {

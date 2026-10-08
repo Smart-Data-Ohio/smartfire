@@ -167,7 +167,7 @@ export const create = Effect.fn("threads.create")(function* (
         Effect.map((detail) => (detail === null ? null : { ...previous, detail })),
       ),
     (answer) => [answer.detail.thread.id],
-    (answer, since) => mutations.threadCreated(answer, since),
+    (answer, since, read) => mutations.threadCreated(answer, since, read),
   );
 
   return reply.answer.detail.thread.id;
@@ -175,8 +175,8 @@ export const create = Effect.fn("threads.create")(function* (
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  yield* settledDetail(api.updateThread(threadId, body), (detail, since) =>
-    mutations.loadThreadDetail(detail, since),
+  yield* settledDetail(api.updateThread(threadId, body), (detail, since, read) =>
+    mutations.loadThreadDetail(detail, since, read),
   );
 });
 
@@ -222,7 +222,7 @@ export const list = Effect.fn("threads.list")(function* (roomId: number, filter:
     ask,
     () => ask,
     (list) => list.threads.map(({ thread }) => thread.id),
-    (list, since) => mutations.loadThreadList(roomId, filter, list, since),
+    (list, since, read) => mutations.loadThreadList(roomId, filter, list, since, read),
   ).pipe(
     Effect.tap((reply) =>
       Effect.sync(() => {

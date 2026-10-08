@@ -15,6 +15,7 @@ import { PostWork } from "../boards/post-work.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
@@ -124,7 +125,7 @@ interface ThreadMenuProps {
 
 /**
  * Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock,
- * and delete.
+ * delete, and track as work.
  */
 function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
@@ -138,9 +139,16 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
   const canUnlock = permissions?.canUnlock === true && status === "locked";
 
   const canDelete = permissions?.canDelete === true;
+  const canConvert = permissions?.canConvertWork === true;
 
   const moderates =
-    permissions?.canRename === true || canClose || canReopen || canLock || canUnlock || canDelete;
+    permissions?.canRename === true ||
+    canClose ||
+    canReopen ||
+    canLock ||
+    canUnlock ||
+    canDelete ||
+    canConvert;
 
   return (
     <Menu
@@ -202,6 +210,7 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
           Delete {noun}…
         </MenuItem>
       ) : null}
+      {canConvert ? <TrackAsWorkItem threadId={threadId} /> : null}
     </Menu>
   );
 }
@@ -440,6 +449,7 @@ export function ThreadPane({
     parentId === null ? null : (state.messages[parentId] ?? null),
   );
 
+  const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const noun = useNoun(roomId);
@@ -514,6 +524,11 @@ export function ThreadPane({
           </>
         ) : null
       }
+      toolbar={
+        status === "ready" && tracked && noun !== "post" ? (
+          <WorkBar threadId={threadId} />
+        ) : undefined
+      }
       footer={<ThreadFooter roomId={roomId} threadId={threadId} noun={noun} />}
     >
       <ThreadTimeline
@@ -532,6 +547,7 @@ export function ThreadPane({
         open={deleting}
         onOpenChange={setDeleting}
       />
+      <WorkLive threadId={threadId} />
     </PaneFrame>
   );
 }

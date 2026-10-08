@@ -37,6 +37,7 @@ pub fn directory_agent(
         status_note: agent.status_note,
         suspended: agent.suspended_at.is_some(),
         created_at: agent.created_at,
+        updated_at: agent.updated_at,
         status_changed_at: agent.status_changed_at,
         last_seen_at: agent.last_seen_at,
     };

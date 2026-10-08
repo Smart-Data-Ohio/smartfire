@@ -131,9 +131,14 @@ export function timestamp(ms: number): string {
   return new Date(ms).toISOString();
 }
 
-/** A user's row version (`updatedAt`): RFC 3339 with six fraction digits and `Z`. */
+/** A server row version (`updatedAt`): RFC 3339 with six fractional digits and `Z`. */
 export function rowTimestamp(ms: number): string {
   return timestamp(ms).replace(/Z$/, "000Z");
+}
+
+/** A row version at now, or a millisecond past the previous version, whichever is later. */
+export function touchedRow(now: number, previous: string): string {
+  return rowTimestamp(Math.max(now, Date.parse(previous) + 1));
 }
 
 /** A random UUID-formatted id from the seeded PRNG (the client's ids are UUID v7). */

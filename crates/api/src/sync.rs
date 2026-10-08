@@ -175,6 +175,7 @@ impl SyncRenderer for Renderer {
             status: dto::agent_status(&agent.status),
             status_note: agent.status_note.clone(),
             status_changed_at: agent.status_changed_at.map(dto::time),
+            updated_at: dto::row_version(agent.updated_at),
             suspended: agent.suspended_at.is_some(),
             working_presence_expires_at: working_presence
                 .as_ref()

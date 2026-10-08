@@ -476,6 +476,8 @@ interface MenuRadioItemProps {
   /** A faint second line under the label. */
   readonly description?: string;
   readonly onSelect: () => void;
+  /** Read by typeahead when the children aren't plain text. */
+  readonly label?: string;
   readonly children: ReactNode;
 }
 
@@ -488,6 +490,7 @@ export function MenuRadioItem({
   icon,
   description,
   onSelect,
+  label,
   children,
 }: MenuRadioItemProps) {
   const { closeAll } = use(MenuContext);
@@ -499,6 +502,7 @@ export function MenuRadioItem({
       aria-checked={checked}
       tabIndex={-1}
       className="menu-item"
+      data-label={label}
       onPointerMove={focusOnPointer}
       onClick={() => {
         onSelect();

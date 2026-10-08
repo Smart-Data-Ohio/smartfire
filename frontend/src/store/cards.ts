@@ -20,6 +20,7 @@ import type { Poll } from "../gen/Poll.ts";
 import type { PollBallot } from "../gen/PollBallot.ts";
 import type { PollResults } from "../gen/PollResults.ts";
 import type { QuotePreviewResult } from "../gen/QuotePreviewResult.ts";
+import { mergeMessageCopies } from "./agents.ts";
 import type { LoadStatus, MessageDTO } from "./model.ts";
 import type { State } from "./state.ts";
 
@@ -129,7 +130,8 @@ export function newerPoll(held: Poll | null, incoming: Poll | null): Poll | null
 /**
  * The message to keep when `incoming` arrives and `held` is in the store: its fields from the
  * copy with the later `updatedAt` (`incomingWinsTie` says who keeps a tie, as each caller did
- * before), its poll and its cards each from the copy with the later `asOf`. Returns `held` itself
+ * before), its agent steps merged from both, its poll and its cards each from the copy with the
+ * later `asOf`. Returns `held` itself
  * when nothing changes, so selectors don't re-render.
  */
 export function reconcileMessage(
@@ -141,11 +143,8 @@ export function reconcileMessage(
     return incoming;
   }
 
-  const incomingNewer = incomingWinsTie
-    ? held.updatedAt <= incoming.updatedAt
-    : held.updatedAt < incoming.updatedAt;
-
-  const base = incomingNewer ? incoming : held;
+  // The newer copy's fields, with the agent steps of both merged step by step.
+  const base = mergeMessageCopies(held, incoming, incomingWinsTie ? "incoming" : "held");
   const poll = newerPoll(held.poll, incoming.poll);
   const cardsFrom = incoming.cardsAsOf >= held.cardsAsOf ? incoming : held;
 

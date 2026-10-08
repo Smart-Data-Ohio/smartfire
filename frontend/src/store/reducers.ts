@@ -1,10 +1,12 @@
-import { addBoardPost, mergeWorkSteps } from "./boards.ts";
+import { addBoardPost } from "./boards.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
  */
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
+import { applyAgentStatus, applyAgentSteps } from "./agents.ts";
+import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
 import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
@@ -26,7 +28,8 @@ import { removeCategory, upsertCategory } from "./organize.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
-import { removeThread, setThreadIndicator, setThreadUnread, upsertThread } from "./threads.ts";
+import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
+import { receiveWorkThread } from "./work.ts";
 
 export { compareMessages };
 
@@ -811,7 +814,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data);
+        next = approvalRequested(
+          applyActivityItem(next, event.data.item, event.data),
+          event.data.item,
+        );
         break;
       case "activity.removed":
         next = removeActivityItem(next, event.data.id, event.data);
@@ -826,10 +832,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = setThreadIndicator(next, event.data);
         break;
       case "thread.created":
-        next = addBoardPost(upsertThread(next, event.data), event.data);
+        next = addBoardPost(receiveWorkThread(next, event.data), event.data);
         break;
       case "thread.updated":
-        next = upsertThread(next, event.data);
+        next = receiveWorkThread(next, event.data);
         break;
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId);
@@ -869,6 +875,15 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
       case "presence":
         next = setPresence(next, [event.data]);
         break;
+      case "agent.status":
+        next = applyAgentStatus(next, event.data);
+        break;
+      case "agent.steps":
+        next = applyAgentSteps(next, event.data);
+        break;
+      case "approval.updated":
+        next = applyApprovalUpdated(next, event.data);
+        break;
       case "huddle.presence":
         next = setHuddlePresence(next, event.data);
         break;
@@ -883,9 +898,6 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "message.cards":
         next = applyMessageCards(next, event.data);
-        break;
-      case "agent.steps":
-        next = mergeWorkSteps(next, event.data);
         break;
     }
   }

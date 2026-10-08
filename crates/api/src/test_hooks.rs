@@ -46,6 +46,7 @@ static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
 static BEFORE_POLL_VOTE_WRITE: Holds = Mutex::new(None);
 static BEFORE_ATTENDANCE_WRITE: Holds = Mutex::new(None);
 static BEFORE_PROFILE_READ: Holds = Mutex::new(None);
+static AFTER_APPROVAL_PAGE_READ: Holds = Mutex::new(None);
 
 fn hold(holds: &Holds, id: i64) -> WriteHold {
     let held = WriteHold {
@@ -123,6 +124,15 @@ pub fn hold_before_profile_read(user_id: i64) -> WriteHold {
 
 pub(crate) async fn before_profile_read(user_id: i64) {
     wait(&BEFORE_PROFILE_READ, user_id).await;
+}
+
+/// Holds the next approvals page for this agent after its row read, before expiry/presentation.
+pub fn hold_after_approval_page_read(agent_id: i64) -> WriteHold {
+    hold(&AFTER_APPROVAL_PAGE_READ, agent_id)
+}
+
+pub(crate) async fn after_approval_page_read(agent_id: i64) {
+    wait(&AFTER_APPROVAL_PAGE_READ, agent_id).await;
 }
 
 /// Holds one rendered sync snapshot before publication, scoped to this app's database.

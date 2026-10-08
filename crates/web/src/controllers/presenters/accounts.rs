@@ -82,8 +82,26 @@ pub fn no_users(conn: &Connection) -> campfire_db::Result<bool> {
 
 /// `record.touch`: bumps `updated_at` (what `belongs_to :record, touch: true` does to an
 /// attachment's record, and `Blob#touch_attachments` after analysis).
-pub fn touch(conn: &Connection, table: &str, id: i64, now: campfire_db::Timestamp) -> campfire_db::Result<()> {
-    conn.execute_cached(&format!(r#"UPDATE "{table}" SET "updated_at" = ? WHERE "{table}"."id" = ?"#), params![now, id])?;
+pub fn touch(
+    conn: &Connection,
+    table: &str,
+    id: i64,
+    now: campfire_db::Timestamp,
+) -> campfire_db::Result<()> {
+    let now = if table == "users" {
+        let previous = conn
+            .query_row("SELECT updated_at FROM users WHERE id=?", [id], |row| {
+                row.get::<_, campfire_db::Timestamp>(0)
+            })
+            .optional()?;
+        previous.map_or(now, |previous| now.max(previous))
+    } else {
+        now
+    };
+    conn.execute_cached(
+        &format!(r#"UPDATE "{table}" SET "updated_at" = ? WHERE "{table}"."id" = ?"#),
+        params![now, id],
+    )?;
     Ok(())
 }
 

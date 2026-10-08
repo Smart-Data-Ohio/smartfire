@@ -1,4 +1,4 @@
-import { userFixture } from "../api/testing.ts";
+import { rowVersionFixture, userFixture } from "../api/testing.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
@@ -11,6 +11,7 @@ export function boardThread(
   status: WorkStatus = "planned",
   ownerId: number | null = null,
   tags: string[] = [],
+  revision = 0,
 ): Thread {
   return {
     id,
@@ -32,6 +33,7 @@ export function boardThread(
       links: [],
       tags,
       messageCount: 0,
+      updatedAt: rowVersionFixture(Date.UTC(2026, 9, 7, 10) + revision),
     },
   };
 }

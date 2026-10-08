@@ -134,9 +134,9 @@ export function presenceOf(live: PresenceStatus | undefined, loaded: Presence): 
   return live === undefined ? loaded : FROM_STATUS[live];
 }
 
-/** The later of two copies of a user (`users.updated_at`); the first when they tie. */
+/** The later of two copies of a user (`users.updated_at`); the canonical store copy when they tie. */
 export function newerUser(first: User, second: User | undefined): User {
-  return second !== undefined && second.updatedAt > first.updatedAt ? second : first;
+  return second !== undefined && second.updatedAt >= first.updatedAt ? second : first;
 }
 
 /**

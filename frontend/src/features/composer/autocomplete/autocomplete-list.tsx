@@ -3,6 +3,7 @@ import { usePresence } from "../../../motion/presence.ts";
 import { Avatar } from "../../../ui/avatar.tsx";
 import { Icon } from "../../../ui/icons/icon.tsx";
 import { Kbd } from "../../../ui/kbd.tsx";
+import { AgentBadgeFor } from "../../people/agent-badge.tsx";
 import { ROOM_KIND_ICON } from "../../room/room-icon.ts";
 import { commandUsage } from "../slash.ts";
 import { type Suggestion, selectable, TRIGGER_TITLES } from "./suggestions.ts";
@@ -118,7 +119,7 @@ function SuggestionRow({ item }: { readonly item: Suggestion }) {
             decorative
           />
           <span className="autocomplete-label">{item.user.name}</span>
-          {item.user.role === "bot" ? <span className="autocomplete-tag">Bot</span> : null}
+          <AgentBadgeFor user={item.user} />
           {item.insert === null ? (
             <span className="autocomplete-detail">Duplicate name — type as plain text</span>
           ) : null}

@@ -18,6 +18,7 @@ import { IntegrationsSection as AdminIntegrationsSection } from "./features/admi
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
+import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
@@ -45,6 +46,7 @@ import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
+import { parseWorkSearch } from "./features/work/work-search.ts";
 import { parseBoardSearch } from "./lib/board-search.ts";
 import { lazyForUpdate as lazy } from "./service-worker/lazy.ts";
 
@@ -357,6 +359,79 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** `/app/work?state=`: every work thread, by tab (its own chunk). */
+const workRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "work",
+  validateSearch: parseWorkSearch,
+  component: lazy(() =>
+    import("./features/work/work-route.tsx").then((module) => ({
+      default: module.WorkRoute,
+    })),
+  ),
+});
+
+/** `/app/agents`: every agent in the workspace, with live status (S4). */
+const agentsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents",
+  component: lazy(() =>
+    import("./features/agents/agent-directory-page.tsx").then((module) => ({
+      default: module.AgentDirectoryPage,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: an agent's profile (S4). */
+const agentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents/$agentId",
+  params: {
+    parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
+    stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
+  },
+  component: lazy(() =>
+    import("./features/agents/agent-profile-route.tsx").then((module) => ({
+      default: module.AgentProfileRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: the profile's overview section. */
+const agentOverviewRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "/",
+  component: lazy(() =>
+    import("./features/agents/agent-profile-page.tsx").then((module) => ({
+      default: module.AgentOverviewRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/approvals?status=`: an agent's approval requests (S4). */
+const agentApprovalsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "approvals",
+  validateSearch: parseApprovalsSearch,
+  component: lazy(() =>
+    import("./features/agents/agent-approvals-tab.tsx").then((module) => ({
+      default: module.AgentApprovalsRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/events?outcome=`: an agent's activity ledger (S4). */
+const agentEventsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "events",
+  validateSearch: parseLedgerSearch,
+  component: lazy(() =>
+    import("./features/agents/agent-ledger-tab.tsx").then((module) => ({
+      default: module.AgentLedgerRoute,
+    })),
+  ),
+});
+
 /** `/app/people`: the workspace's people, to message or huddle with (its own chunk). */
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -453,6 +528,9 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    workRoute,
+    agentsRoute,
+    agentRoute.addChildren([agentOverviewRoute, agentApprovalsRoute, agentEventsRoute]),
     searchRoute,
     peopleRoute,
     personRoute,

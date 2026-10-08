@@ -238,8 +238,22 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
+    // S4: agents.
+    screen("agents/directory#index", "/agents", "/app/agents", true),
+    screen(
+        "agents/approvals#for_agent",
+        "/agents/:id/approvals",
+        "/app/agents/:id/approvals",
+        true,
+    ),
+    screen(
+        "agents/events#ledger",
+        "/agents/:id/events",
+        "/app/agents/:id/events",
+        true,
+    ),
     screen("searches#index", "/searches", "/app/search", true),
-    screen("work_threads#index", "/work", "/app/work", false),
+    screen("work_threads#index", "/work", "/app/work", true),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(
         "users/profiles#show",
@@ -310,7 +324,12 @@ pub const SCREENS: &[Screen] = &[
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
     screen("accounts#edit", "/account/edit", "/app/admin/people", true),
-    screen("accounts/icons#index", "/account/icons", "/app/admin/icons", true),
+    screen(
+        "accounts/icons#index",
+        "/account/icons",
+        "/app/admin/icons",
+        true,
+    ),
     screen(
         "accounts/custom_styles#edit",
         "/account/custom_styles/edit",
@@ -330,8 +349,18 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // S7: the chat bot pages. Their writes stay classic; only the pages move.
-    screen("accounts/bots#index", "/account/bots", "/app/admin/bots", true),
-    screen("accounts/bots#new", "/account/bots/new", "/app/admin/bots/new", true),
+    screen(
+        "accounts/bots#index",
+        "/account/bots",
+        "/app/admin/bots",
+        true,
+    ),
+    screen(
+        "accounts/bots#new",
+        "/account/bots/new",
+        "/app/admin/bots/new",
+        true,
+    ),
     screen(
         "accounts/bots#edit",
         "/account/bots/:id/edit",

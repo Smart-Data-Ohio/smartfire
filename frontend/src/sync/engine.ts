@@ -23,6 +23,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { captureWorkRead, workDetailStale } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -48,7 +49,7 @@ import {
   pendingThreadFocus,
 } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
-import { changedWorkPanes, refreshWorkPane } from "./work-refresh.ts";
+import { refresh as refreshWork } from "./work-actions.ts";
 
 /**
  * A loaded window that stops short of the present: a permalink, a jump back, or a window the
@@ -256,6 +257,8 @@ export class Engine extends Context.Service<
           if (held !== undefined) mutations.setBoardLoading(roomId, held.query);
           const generation = store.getState().boards[roomId]?.generation;
 
+          const read = captureWorkRead(store.getState());
+
           const [available, listing] = yield* Effect.all(
             [
               resyncRoomDetail(roomId, revision),
@@ -275,7 +278,7 @@ export class Engine extends Context.Service<
 
           if (listing !== null && generation !== undefined) {
             if (Result.isSuccess(listing)) {
-              mutations.loadBoardListing(listing.success, generation);
+              mutations.loadBoardListing(listing.success, generation, read);
             } else {
               mutations.setBoardError(roomId, generation, listing.failure.message);
               yield* Effect.logWarning("sync: board resync failed", listing.failure.message);
@@ -468,8 +471,6 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
-      const refreshingWork = new Set<number>();
-
       const refreshRoom = (roomId: number, revision: number) =>
         room(roomId).pipe(
           Effect.tap((detail) =>
@@ -538,21 +539,20 @@ export class Engine extends Context.Service<
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh);
-        const workIds = changedWorkPanes(store.getState(), fresh, yield* topics.subscribed);
+        const open = new Set(yield* topics.subscribed);
+
+        const workIds = new Set(
+          fresh.flatMap((event) =>
+            event.type === "thread.updated" &&
+            open.has(`thread:${event.data.id}`) &&
+            workDetailStale(store.getState(), event.data.id)
+              ? [event.data.id]
+              : [],
+          ),
+        );
 
         for (const threadId of workIds) {
-          if (refreshingWork.has(threadId)) continue;
-          refreshingWork.add(threadId);
-          yield* Effect.forkIn(
-            refreshWorkPane(threadId).pipe(
-              Effect.catch((error) =>
-                Effect.logWarning("sync: work refresh failed", error.message),
-              ),
-              Effect.ensuring(Effect.sync(() => refreshingWork.delete(threadId))),
-              Effect.provideContext(api),
-            ),
-            scope,
-          );
+          yield* Effect.forkIn(refreshWork(threadId).pipe(Effect.provideContext(api)), scope);
         }
 
         const refreshes = roomRefreshIds(fresh)

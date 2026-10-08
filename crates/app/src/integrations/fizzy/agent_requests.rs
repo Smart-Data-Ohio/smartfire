@@ -2,9 +2,7 @@
 //! Constructing a request cannot call Fizzy. The executable payload and identity snapshot
 //! are built here; WS11's human decision calls agent_job::enqueue_approved in its write.
 use super::{accounts::Account, agent_action::Action, agent_reads::ReadResult};
-use campfire_db::{
-    ActivityItem, Errors, Event, Result, Timestamp, Tx, User, broadcasts::Broadcast,
-};
+use campfire_db::{ActivityItem, AgentApproval, Errors, Result, Timestamp, Tx, User};
 use jiff::{SignedDuration, tz::TimeZone};
 use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::{OptionalExtension, params};
@@ -59,24 +57,11 @@ pub fn fan_out(tx: &mut Tx<'_>, owner: i64, approval: i64) -> Result<()> {
     Ok(())
 }
 fn expire(tx: &mut Tx<'_>, approval: &mut Approval) -> Result<()> {
-    if approval.status == "pending" && approval.expires <= tx.now() {
-        tx.conn().execute(
-            "UPDATE agent_approvals SET status='expired',updated_at=? WHERE id=?",
-            params![tx.now(), approval.id],
-        )?;
-        approval.status = "expired".into();
-        campfire_db::models::agent_approval::ApprovalChange::emit(tx, approval.id);
-        let items:Vec<(i64,i64)>=tx.conn().prepare("UPDATE activity_items SET read_at=COALESCE(read_at,?),handled_at=?,updated_at=? WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NULL RETURNING id,user_id")?
-            .query_map(params![tx.now(),tx.now(),tx.now(),approval.id],|r|Ok((r.get(0)?,r.get(1)?)))?.collect::<rusqlite::Result<_>>()?;
-        for (id, user) in items {
-            if User::find_by_id(tx.conn(), user)?.is_some_and(|u| u.is_active() && !u.is_bot()) {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                    stream: format!("user_{user}_activity"),
-                    payload: json!({"activityItemId":id}),
-                }));
-            }
-        }
-    }
+    let mut stored = AgentApproval::find(tx.conn(), approval.id)?
+        .ok_or(campfire_db::Error::RecordNotFound("AgentApproval"))?;
+    stored.expire_if_due(tx)?;
+    approval.status = stored.status;
+    approval.expires = stored.expires_at;
     Ok(())
 }
 /// Date.current and end_of_day use the request's isolated Rails zone, including DST.
@@ -117,7 +102,13 @@ fn budget(
     if let Some(notice) = notice
         && User::find_by_id(tx.conn(), owner)?.is_some_and(|u| u.is_active() && !u.is_bot())
     {
-        ActivityItem::refresh_unread(tx, owner, "AgentBudgetNotice", notice, "agent_budget_exceeded")?;
+        ActivityItem::refresh_unread(
+            tx,
+            owner,
+            "AgentBudgetNotice",
+            notice,
+            "agent_budget_exceeded",
+        )?;
     }
 
     let message = format!("Daily external action budget exceeded ({limit}/day)");
@@ -178,7 +169,9 @@ pub fn create(
     if let Some(external) = &external {
         let mut binds = vec![rusqlite::types::Value::Integer(agent)];
         let predicate = match input.lookup {
-            Lookup::InvalidParameters => return Err(campfire_db::Error::Other("can't quote Hash".into())),
+            Lookup::InvalidParameters => {
+                return Err(campfire_db::Error::Other("can't quote Hash".into()));
+            }
             Lookup::Attribute => {
                 binds.push(rusqlite::types::Value::Text(external.clone()));
                 "external_id=?".into()
@@ -188,9 +181,21 @@ pub fn create(
                 let count = values.len();
                 binds.extend(values.into_iter().map(rusqlite::types::Value::Text));
                 if count == 0 {
-                    if nullable { "external_id IS NULL".into() } else { "0".into() }
+                    if nullable {
+                        "external_id IS NULL".into()
+                    } else {
+                        "0".into()
+                    }
                 } else {
-                    format!("(external_id IN ({}){})", vec!["?"; count].join(","), if nullable { " OR external_id IS NULL" } else { "" })
+                    format!(
+                        "(external_id IN ({}){})",
+                        vec!["?"; count].join(","),
+                        if nullable {
+                            " OR external_id IS NULL"
+                        } else {
+                            ""
+                        }
+                    )
                 }
             }
         };

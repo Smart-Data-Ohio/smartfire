@@ -1,13 +1,13 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
-import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
+import { captureWorkRead } from "../store/work.ts";
 import { settledDetail } from "./settle.ts";
-import { refreshWorkPane } from "./work-refresh.ts";
+import * as workActions from "./work-actions.ts";
 
 /** Room sessions own room:<id>; changing board filters does not acquire another holder. */
 export const open = Effect.fn("boards.open")(function* (roomId: number, query: BoardQuery) {
@@ -15,9 +15,10 @@ export const open = Effect.fn("boards.open")(function* (roomId: number, query: B
   const board = store.getState().boards[roomId];
 
   if (board === undefined) return;
+  const read = captureWorkRead(store.getState());
   yield* api.board(roomId, { ...board.query, page: 1 }).pipe(
     Effect.tap((listing) =>
-      Effect.sync(() => mutations.loadBoardListing(listing, board.generation)),
+      Effect.sync(() => mutations.loadBoardListing(listing, board.generation, read)),
     ),
     Effect.catch((error) =>
       Effect.sync(() => mutations.setBoardError(roomId, board.generation, error.message)),
@@ -40,9 +41,10 @@ export const loadMore = Effect.fn("boards.loadMore")(function* (roomId: number) 
   const board = store.getState().boards[roomId];
 
   if (board === undefined) return;
+  const read = captureWorkRead(store.getState());
   yield* api.board(roomId, { ...board.query, page: held.page + 1 }).pipe(
     Effect.tap((listing) =>
-      Effect.sync(() => mutations.loadBoardListing(listing, board.generation)),
+      Effect.sync(() => mutations.loadBoardListing(listing, board.generation, read)),
     ),
     Effect.catch((error) =>
       Effect.sync(() => mutations.setBoardError(roomId, board.generation, error.message)),
@@ -93,8 +95,8 @@ export const createPost = Effect.fn("boards.createPost")(function* (
               attachmentSignedId: null,
             },
     }),
-    (detail, since) => {
-      mutations.loadThreadDetail(detail, since);
+    (detail, since, read) => {
+      mutations.loadThreadDetail(detail, since, read);
 
       // Not when the reply was dropped: the post was removed while it was being created.
       if (store.getState().threads[detail.thread.id] !== undefined) {
@@ -106,37 +108,16 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   return reply.answer;
 });
 
-/**
- * A save's reply is the post as the server had it when it answered. If anything newer reached the
- * store while it was in flight (another member's change, a refreshed detail, our own broadcast),
- * the reply may be older than what we hold, so it isn't installed: the pane refetches instead,
- * and `refreshWorkPane` settles any change that lands during that GET too.
- */
-const installSaved = <E, R>(threadId: number, write: Effect.Effect<ThreadDetail, E, R>) =>
-  Effect.gen(function* () {
-    const sent = store.getState().threads[threadId];
-    let stale = false;
-
-    yield* settledDetail(write, (detail, since) => {
-      if (store.getState().threads[threadId] === sent) {
-        mutations.loadThreadDetail(detail, since);
-      } else {
-        stale = true;
-      }
-    });
-
-    if (stale) {
-      yield* refreshWorkPane(threadId);
-    }
-  });
-
-export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
-  yield* installSaved(threadId, api.updateWork(threadId, body));
+export const update = Effect.fn("boards.updateWork")(function* (
+  threadId: number,
+  body: UpdateWork,
+) {
+  yield* workActions.update(threadId, body);
 });
 
-export const handoff = Effect.fn("work.handoff")(function* (
+export const handoff = Effect.fn("boards.handoffWork")(function* (
   threadId: number,
   body: CreateWorkHandoff,
 ) {
-  yield* installSaved(threadId, api.handoffWork(threadId, body));
+  yield* workActions.handOff(threadId, body);
 });

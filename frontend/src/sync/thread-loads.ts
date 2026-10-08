@@ -65,9 +65,11 @@ export const loadThreadHeader = (threadId: number, ticket: number) =>
       thread(threadId),
       () => refetchThread(threadId),
       (answer) => [answer.thread.id],
-      (answer, since) => {
+      (answer, since, read) => {
         if (isLatestThreadLoad(threadId, ticket)) {
-          mutations.loadThreadDetail(answer, since);
+          mutations.loadThreadDetail(answer, since, read);
+        } else {
+          mutations.mergeWorkFacts(answer.thread, read);
         }
       },
     ),
