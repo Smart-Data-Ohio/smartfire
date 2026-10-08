@@ -1406,6 +1406,40 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
+  it.each(["native scrollend", "Virtua settlement"])(
+    "find past the estimated destination surrenders before the live end (%s)",
+    (delivery) => {
+      const apiRef = createRef<AnchorApi>();
+
+      const geometry: Geometry = {
+        ids: Array.from({ length: 20 }, (_, index) => index + 1),
+        heights: new Map(),
+      };
+
+      render(<Harness apiRef={apiRef} geometry={geometry} drawn={[1, 2, 3]} />);
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 100;
+      expect(viewport().scrollHeight - viewport().clientHeight).toBe(3700);
+      act(() => apiRef.current?.followEnd());
+      geometry.heights.set(20, 500);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollHeight - viewport().clientHeight).toBe(4000);
+      viewport().scrollTop = 3800;
+      fireEvent.scroll(viewport());
+      expect(apiRef.current?.canFollow()).toBe(true);
+
+      if (delivery === "native scrollend") fireEvent(viewport(), new Event("scrollend"));
+      else act(() => apiRef.current?.settle());
+
+      expect(apiRef.current?.canFollow()).toBe(false);
+      expect(viewport().scrollTop).toBe(3800);
+      geometry.heights.set(20, 600);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(3800);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
   it.each(["overshoot", "reversal"])(
     "a remeasured end still rejects %s during issued motion",
     (movement) => {
@@ -1470,7 +1504,10 @@ describe("useViewportAnchor reader control", () => {
     },
   );
 
-  it("growth during an issued jump waits for settlement and then follows", () => {
+  it.each([
+    { arrival: 700, follows: false },
+    { arrival: 760, follows: true },
+  ])("growth during an issued jump settles at $arrival with follow $follows", (scenario) => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
 
@@ -1484,46 +1521,64 @@ describe("useViewportAnchor reader control", () => {
     act(() => measureRows(geometry));
     expect(viewport().scrollTop).toBe(500);
     expect(apiRef.current?.canFollow()).toBe(true);
-    // Native animation completes at the destination issued before that growth.
-    viewport().scrollTop = 700;
+    // Growth changes the end during motion; only arrival at the live end keeps follow.
+    viewport().scrollTop = scenario.arrival;
     fireEvent.scroll(viewport());
     act(() => apiRef.current?.settle());
-    expect(viewport().scrollTop).toBe(760);
-    expect(apiRef.current?.canFollow()).toBe(true);
+    expect(viewport().scrollTop).toBe(scenario.arrival);
+    expect(apiRef.current?.canFollow()).toBe(scenario.follows);
+    geometry.heights.set(5, 300);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(scenario.follows ? 800 : scenario.arrival);
+    expect(apiRef.current?.canFollow()).toBe(scenario.follows);
   });
 
-  it("Virtua's 150ms debounce settles deferred growth without native scrollend", async () => {
+  it("Virtua's debounce keeps only a live-end arrival following after growth", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
 
     try {
-      // Virtua captures setTimeout at import, so load it after installing the fake clock.
+      // Virtua captures setTimeout at import; use one fake clock for both arrivals.
       const { VList } = await import("virtua");
-      const apiRef = createRef<AnchorApi>();
-      const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
-      const settled = vi.fn();
 
-      render(<Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />);
-      act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
-      await act(async () => undefined);
-      act(() => measureRows(geometry));
-      viewport().scrollTop = 100;
-      act(() => apiRef.current?.followEnd());
-      viewport().scrollTop = 500;
-      fireEvent.scroll(viewport());
-      await act(async () => undefined);
-      act(() => measureRows(geometry));
-      geometry.heights.set(5, 260);
-      act(() => measureRows(geometry));
-      expect(viewport().scrollTop).toBe(500);
-      viewport().scrollTop = 700;
-      fireEvent.scroll(viewport());
-      act(() => vi.advanceTimersByTime(149));
-      expect(settled).not.toHaveBeenCalled();
-      expect(viewport().scrollTop).toBe(700);
-      act(() => vi.advanceTimersByTime(1));
-      expect(settled).toHaveBeenCalledOnce();
-      expect(viewport().scrollTop).toBe(760);
-      expect(apiRef.current?.canFollow()).toBe(true);
+      for (const scenario of [
+        { arrival: 700, follows: false },
+        { arrival: 760, follows: true },
+      ]) {
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+        const settled = vi.fn();
+
+        const view = render(
+          <Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />,
+        );
+
+        act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
+        await act(async () => undefined);
+        act(() => measureRows(geometry));
+        viewport().scrollTop = 100;
+        act(() => apiRef.current?.followEnd());
+        viewport().scrollTop = 500;
+        fireEvent.scroll(viewport());
+        await act(async () => undefined);
+        act(() => measureRows(geometry));
+        geometry.heights.set(5, 260);
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(500);
+        viewport().scrollTop = scenario.arrival;
+        fireEvent.scroll(viewport());
+        act(() => vi.advanceTimersByTime(149));
+        expect(settled).not.toHaveBeenCalled();
+        expect(viewport().scrollTop).toBe(scenario.arrival);
+        act(() => vi.advanceTimersByTime(1));
+        expect(settled).toHaveBeenCalledOnce();
+        expect(viewport().scrollTop).toBe(scenario.arrival);
+        expect(apiRef.current?.canFollow()).toBe(scenario.follows);
+        geometry.heights.set(5, 300);
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(scenario.follows ? 800 : scenario.arrival);
+        expect(apiRef.current?.canFollow()).toBe(scenario.follows);
+        view.unmount();
+      }
     } finally {
       vi.useRealTimers();
     }

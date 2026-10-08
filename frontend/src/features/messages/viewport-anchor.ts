@@ -88,7 +88,7 @@ export function useViewportAnchor({
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
 
-  const issuedEndRef = useRef<{ readonly destination: number } | null>(null);
+  const endMotionRef = useRef(false);
 
   const correctionPendingRef = useRef(false);
   const retainedIdRef = useRef<number | null>(null);
@@ -158,7 +158,7 @@ export function useViewportAnchor({
     const reference = anchor.scroll + compensation;
     const expected = paused ? Math.max(0, Math.min(end, reference)) : reference;
     const continuous = (!anchor.row || offset !== undefined) && Math.abs(scrollTop - expected) <= 1;
-    const motion = issuedEndRef.current;
+    const motion = endMotionRef.current;
 
     return {
       anchor,
@@ -214,7 +214,7 @@ export function useViewportAnchor({
 
     if (!element) return;
 
-    issuedEndRef.current = null;
+    endMotionRef.current = false;
     placementRef.current = { kind: "settled", placement, messageId: null };
     const scroll = offset ?? element.scrollTop;
 
@@ -233,9 +233,9 @@ export function useViewportAnchor({
 
     const atEnd = endOffset(element) - element.scrollTop <= 1;
     const paused = interacting() || correctionPendingRef.current;
-    const motion = issuedEndRef.current;
+    const motion = endMotionRef.current;
 
-    if (motion !== null) {
+    if (motion) {
       const anchor = anchorRef.current;
       const index = anchor.row ? indices.get(anchor.row.id) : undefined;
       const offset = index !== undefined ? listRef.current?.getItemOffset(index) : undefined;
@@ -380,13 +380,10 @@ export function useViewportAnchor({
       return;
     }
 
-    if (removalSnapshot?.anchor === anchor && issuedEndRef.current !== null) {
+    if (removalSnapshot?.anchor === anchor && endMotionRef.current) {
       const element = viewport();
 
       if (element && removalSnapshot.follows === true) {
-        const end = endOffset(element);
-
-        issuedEndRef.current = { destination: end };
         anchorRef.current = {
           ...anchor,
           scroll: element.scrollTop,
@@ -411,7 +408,7 @@ export function useViewportAnchor({
 
     // A popup can mount after native arrival but before its scroll callback. Finish
     // that motion against the live end before later growth freezes the pause geometry.
-    if (issuedEndRef.current !== null && interacting()) checkFollow();
+    if (endMotionRef.current && interacting()) checkFollow();
 
     committedItemsRef.current = { placement, indices, itemIndices };
   });
@@ -448,7 +445,7 @@ export function useViewportAnchor({
 
       const end = endOffset(element);
 
-      if (end - element.scrollTop > 1) issuedEndRef.current = { destination: end };
+      if (end - element.scrollTop > 1) endMotionRef.current = true;
     }
   };
 
@@ -467,7 +464,7 @@ export function useViewportAnchor({
 
     const element = viewport();
 
-    if (issuedEndRef.current !== null && !checkFollow()) return;
+    if (endMotionRef.current && !checkFollow()) return;
 
     // Focus restoration and layout scrolls during a popup/editor preserve its pause geometry.
     // Explicit reader input clears the anchor in cancelPlacement before capturing again.
@@ -610,21 +607,15 @@ export function useViewportAnchor({
       return;
     }
 
-    const issuedEnd = issuedEndRef.current?.destination ?? null;
+    const endMotion = endMotionRef.current;
 
-    if (issuedEnd !== null && !checkFollow()) return;
+    if (endMotion && !checkFollow()) return;
 
-    issuedEndRef.current = null;
+    endMotionRef.current = false;
 
-    // App motion owns intent only until settlement. Reaching its issued destination
-    // permits deferred growth; stopping short relinquishes it in either direction.
-    if (
-      !readerInput &&
-      issuedEnd !== null &&
-      element &&
-      endOffset(element) - element.scrollTop > 1 &&
-      element.scrollTop < issuedEnd - 1
-    ) {
+    // Virtua can premeasure a taller destination after motion is issued. Only arrival
+    // at the live end keeps follow; a stop short relinquishes it in either direction.
+    if (!readerInput && endMotion && element && endOffset(element) - element.scrollTop > 1) {
       cancelPlacement(true);
 
       return;
@@ -683,7 +674,7 @@ export function useViewportAnchor({
         ? { kind: "cancelled", placement, allowEnd, awaitEndInput }
         : { kind: "settled", placement, messageId: null };
       anchorRef.current = null;
-      issuedEndRef.current = null;
+      endMotionRef.current = false;
       correctedOffsetRef.current = null;
       settle(preferredId, readerInput);
     },
@@ -1139,7 +1130,7 @@ export function useViewportAnchor({
 
     if (anchor === null || anchor.placement !== placement || list === null || !element) return;
 
-    if (interacting() || issuedEndRef.current !== null || settlementFrameRef.current !== 0) {
+    if (interacting() || endMotionRef.current || settlementFrameRef.current !== 0) {
       correctionPendingRef.current = true;
 
       return;
@@ -1196,7 +1187,7 @@ export function useViewportAnchor({
 
     correctedOffsetRef.current = null;
     correctionPendingRef.current = false;
-    issuedEndRef.current = null;
+    endMotionRef.current = false;
 
     if (!placed) return;
 
