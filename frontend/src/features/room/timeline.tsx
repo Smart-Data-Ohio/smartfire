@@ -157,6 +157,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     canFollow,
     followEnd,
     takeControl,
+    keepMounted,
   } = useViewportAnchor({
     containerRef,
     listRef,
@@ -382,6 +383,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             style={LIST_STYLE}
             shift={shift}
             bufferSize={600}
+            keepMounted={keepMounted}
             onScroll={onScroll}
             onScrollCapture={(event) => {
               if (event.target === event.currentTarget)

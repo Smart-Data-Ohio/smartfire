@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import type { VListHandle } from "virtua";
 import type { TimelineItem } from "../room/timeline-items.ts";
@@ -58,6 +59,7 @@ export function useViewportAnchor({
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
   const placementRef = useRef<PlacementState | null>(null);
+  const [retainedId, setRetainedId] = useState<number | null>(null);
 
   const { indices, itemIndices } = useMemo(() => {
     const indices = new Map<number, number>();
@@ -75,6 +77,9 @@ export function useViewportAnchor({
 
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
+  const interacting = () =>
+    Boolean(viewport()?.querySelector("[data-editing], .message-popup-anchor"));
+
   const isPlacing = useCallback(() => {
     const state = placementRef.current;
 
@@ -85,7 +90,7 @@ export function useViewportAnchor({
   }, [placement]);
 
   const canFollow = () => {
-    if (!placed || isPlacing()) return false;
+    if (!placed || isPlacing() || interacting()) return false;
 
     const state = placementRef.current;
 
@@ -113,7 +118,7 @@ export function useViewportAnchor({
     if (element) element.dataset.placementSettled = "true";
   };
 
-  const capture = () => {
+  const capture = (preferredId: number | null = null) => {
     const state = placementRef.current;
 
     if (!placed || state?.placement !== placement || isPlacing()) return;
@@ -199,6 +204,11 @@ export function useViewportAnchor({
         inset: rect.top - wrapper.getBoundingClientRect().top,
       };
 
+      if (id === preferredId) {
+        visible = candidate;
+        break;
+      }
+
       // A prepend can bring another row into view without the reader scrolling to it.
       if (
         anchorRef.current?.kind === "message" &&
@@ -230,7 +240,7 @@ export function useViewportAnchor({
     }
   });
 
-  const settle = () => {
+  const settle = (preferredId: number | null = null) => {
     if (!placed || isPlacing()) return;
 
     if (placementRef.current?.placement !== placement)
@@ -241,7 +251,7 @@ export function useViewportAnchor({
 
     if (element) {
       element.dataset.placementSettled = "true";
-      capture();
+      capture(preferredId);
     }
   };
 
@@ -264,13 +274,15 @@ export function useViewportAnchor({
     if (element) element.dataset.placementSettled = "false";
   };
 
-  const cancelPlacement = useEffectEvent((readerInput = false, allowEnd = true) => {
-    placementRef.current = readerInput
-      ? { kind: "cancelled", placement, allowEnd }
-      : { kind: "settled", placement, messageId: null };
-    anchorRef.current = null;
-    settle();
-  });
+  const cancelPlacement = useEffectEvent(
+    (readerInput = false, allowEnd = true, preferredId: number | null = null) => {
+      placementRef.current = readerInput
+        ? { kind: "cancelled", placement, allowEnd }
+        : { kind: "settled", placement, messageId: null };
+      anchorRef.current = null;
+      settle(preferredId);
+    },
+  );
 
   const takeControl = () => cancelPlacement(true, false);
 
@@ -368,6 +380,13 @@ export function useViewportAnchor({
   }, [placed, placement, itemIndices, indices]);
 
   useLayoutEffect(() => {
+    if (retainedId !== null && !indices.has(retainedId)) {
+      setRetainedId(null);
+      cancelPlacement();
+    }
+  }, [retainedId, indices]);
+
+  useLayoutEffect(() => {
     if (!placed) return;
 
     const element = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
@@ -410,8 +429,30 @@ export function useViewportAnchor({
       allowEnd: boolean;
     } | null = null;
 
+    const retainRow = (target: EventTarget | null) => {
+      const row =
+        target instanceof Element ? target.closest<HTMLElement>("[data-message-row]") : null;
+
+      const id = Number(row?.dataset.messageId);
+
+      if (!row || !Number.isFinite(id)) return false;
+
+      // A prepend can briefly exclude this row from Virtua's visible range. Keep the same
+      // DOM node while it owns focus, a popup, or an editor, including a right-click release.
+      setRetainedId(id);
+      cancelAnimationFrame(frame);
+      cancelPlacement(true, false, id);
+
+      return true;
+    };
+
+    const onFocus = (event: Event) => {
+      retainRow(event.target);
+    };
+
     const onInput = (event: Event) => {
       let away = false;
+      let preferredId: number | null = null;
 
       if (event instanceof KeyboardEvent) {
         if (!(event.target instanceof HTMLElement)) return;
@@ -432,11 +473,16 @@ export function useViewportAnchor({
         )
           return;
 
-        away =
-          command === "up" ||
-          command === "first" ||
-          ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
-          (event.key === " " && event.shiftKey);
+        // End and downward navigation also choose a reading position. Only an explicit
+        // follow action or a toward-end pointer gesture restores following.
+        away = true;
+
+        if (event.key === "End") {
+          // Even a fitting list has a last reading row. Anchor that row during reveal,
+          // rather than the first visible row, without restoring end-follow intent.
+          const rows = element.querySelectorAll<HTMLElement>("[data-message-row][data-message-id]");
+          preferredId = Number(rows[rows.length - 1]?.dataset.messageId);
+        }
       } else if (typeof WheelEvent !== "undefined" && event instanceof WheelEvent) {
         if (event.deltaY === 0 || event.ctrlKey) return;
 
@@ -444,6 +490,8 @@ export function useViewportAnchor({
       } else if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
         touchY = event.touches[0]?.clientY ?? null;
       } else if (typeof PointerEvent !== "undefined" && event instanceof PointerEvent) {
+        if (retainRow(event.target)) return;
+
         const bounds = element.getBoundingClientRect();
         const gutter = Math.max(16, element.offsetWidth - element.clientWidth);
 
@@ -475,7 +523,7 @@ export function useViewportAnchor({
       // to reassert the initial position when another row measurement arrives.
       cancelAnimationFrame(frame);
       // An away gesture must relinquish end intent before its first scroll event.
-      cancelPlacement(true, !away);
+      cancelPlacement(true, !away, preferredId);
     };
 
     const onMove = (event: Event) => {
@@ -545,6 +593,9 @@ export function useViewportAnchor({
     for (const input of inputs)
       element.addEventListener(input, onInput, { capture: true, passive: true });
 
+    element.addEventListener("focusin", onFocus, true);
+    element.addEventListener("contextmenu", onFocus, true);
+
     element.addEventListener("touchmove", onMove, { capture: true, passive: true });
     element.ownerDocument.addEventListener("pointermove", onMove, { capture: true, passive: true });
 
@@ -560,6 +611,9 @@ export function useViewportAnchor({
       cancelAnimationFrame(frame);
 
       for (const input of inputs) element.removeEventListener(input, onInput, true);
+
+      element.removeEventListener("focusin", onFocus, true);
+      element.removeEventListener("contextmenu", onFocus, true);
 
       element.removeEventListener("touchmove", onMove, true);
       element.ownerDocument.removeEventListener("pointermove", onMove, true);
@@ -581,7 +635,14 @@ export function useViewportAnchor({
     const list = listRef.current;
     const element = viewport();
 
-    if (anchor === null || anchor.placement !== placement || list === null || !element) return;
+    if (
+      anchor === null ||
+      anchor.placement !== placement ||
+      list === null ||
+      !element ||
+      interacting()
+    )
+      return;
 
     if (anchor.kind === "end") {
       const offset = element.scrollHeight - element.clientHeight;
@@ -646,10 +707,10 @@ export function useViewportAnchor({
         heights.set(entry.target, entry.contentRect.height);
 
         // Remounting a cached row during reader scrolling is not a height change.
-        // Virtua owns initial measurements; a first delivery after reveal can still grow a card.
+        // Only the cards reveal can make a first delivery a change worth correcting.
         if (
           previous !== entry.contentRect.height &&
-          (previous !== undefined || chunkLoaded()) &&
+          (previous !== undefined || (correctingCards && chunkLoaded())) &&
           (entry.target !== content || anchorRef.current?.kind === "end")
         )
           changed = true;
@@ -738,5 +799,8 @@ export function useViewportAnchor({
       finishCardsRef.current?.();
   });
 
-  return { capture, settle, place, isPlacing, canFollow, followEnd, takeControl };
+  const retainedIndex = retainedId === null ? undefined : indices.get(retainedId);
+  const keepMounted = retainedIndex === undefined ? [] : [retainedIndex];
+
+  return { capture, settle, place, isPlacing, canFollow, followEnd, takeControl, keepMounted };
 }

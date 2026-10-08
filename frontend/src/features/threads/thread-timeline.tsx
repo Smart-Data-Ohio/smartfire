@@ -158,6 +158,7 @@ export function ThreadTimeline({
     isPlacing,
     canFollow,
     followEnd,
+    keepMounted,
   } = useViewportAnchor({
     containerRef,
     listRef,
@@ -300,6 +301,7 @@ export function ThreadTimeline({
             className="thread-timeline-list"
             shift={shift}
             bufferSize={400}
+            keepMounted={keepMounted}
             onScroll={onScroll}
             onScrollCapture={(event) => {
               if (event.target === event.currentTarget)
