@@ -29,6 +29,7 @@ import { Presence } from "./presence.ts";
 import { refetchThread, settled, UNAVAILABLE } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
+import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { changedWorkPanes, refreshWorkPane } from "./work-refresh.ts";
 
@@ -221,6 +222,8 @@ export class Engine extends Context.Service<
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+        const load = beginThreadLoad(threadId);
+
         mutations.setThreadPageReplacing(threadId);
 
         const [detail, newest] = yield* Effect.all(
@@ -234,16 +237,25 @@ export class Engine extends Context.Service<
                 (answer, since) => mutations.loadThreadDetail(answer, since),
               ),
             ),
-            threadMessages(threadId, null),
+            Effect.result(threadMessages(threadId, null)),
           ],
           { concurrency: 2 },
         );
+
+        // A newer load (the pane's Try again, or another resync) decides what the pane shows.
+        if (!isLatestThreadLoad(threadId, load)) {
+          return;
+        }
 
         if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
           mutations.setThreadPaneError(threadId, UNAVAILABLE);
         }
 
-        mutations.applyThreadPage(threadId, newest, "resync");
+        if (Result.isFailure(newest)) {
+          return yield* Effect.fail(newest.failure);
+        }
+
+        mutations.applyThreadPage(threadId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().threadTimelines[threadId]);
 
@@ -253,7 +265,10 @@ export class Engine extends Context.Service<
 
         const page = yield* threadMessages(threadId, { around: anchor });
 
-        if (readingHistory(store.getState().threadTimelines[threadId])) {
+        if (
+          isLatestThreadLoad(threadId, load) &&
+          readingHistory(store.getState().threadTimelines[threadId])
+        ) {
           mutations.applyThreadPage(threadId, page, "refresh");
         }
       });
