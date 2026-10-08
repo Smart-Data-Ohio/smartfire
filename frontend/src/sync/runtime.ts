@@ -53,7 +53,7 @@ import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
-import { onSyncEvents } from "./signals.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
@@ -326,20 +326,28 @@ const events = {
     runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
   /**
    * Calls `onChange` after each applied batch that changes an event in `roomId` (see
-   * `changesRoomEvents`), holding the room's topic meanwhile, so an open calendar screen can read
-   * itself again. Returns the stop.
+   * `changesRoomEvents`), and whenever the room's topic is resynced (its events since the last
+   * one were lost, so any of them might have changed the calendar), holding the room's topic
+   * meanwhile, so an open calendar screen can read itself again. Returns the stop.
    */
   watch(roomId: number, onChange: () => void): () => void {
     runtime.runFork(eventActions.holdRoom(roomId));
 
-    const stop = onSyncEvents((applied) => {
+    const stopEvents = onSyncEvents((applied) => {
       if (applied.some((event) => eventActions.changesRoomEvents(event, roomId))) {
         onChange();
       }
     });
 
+    const stopResyncs = onResync((topics) => {
+      if (eventActions.resyncsRoom(topics, roomId)) {
+        onChange();
+      }
+    });
+
     return () => {
-      stop();
+      stopEvents();
+      stopResyncs();
       runtime.runFork(eventActions.releaseRoom(roomId));
     };
   },

@@ -1412,6 +1412,50 @@ fn every_event_write_tells_its_room_once() {
     assert_eq!(rooms_told(&t), [room], "destroying an event");
 }
 
+// A Google disconnect clears its organizer's Meet links in one statement, past the event
+// callbacks, so it tells each room whose links it cleared itself. Rooms with none of them, and
+// other organizers' links, stay quiet.
+#[test]
+fn a_google_disconnect_tells_each_room_whose_meet_links_it_cleared() {
+    let t = frozen();
+    let linked = create(&t).id;
+    let elsewhere = || {
+        let mut a = attrs(&t);
+        a.room_id = id("watercooler");
+        t.write(move |tx| CalendarEvent::create(tx, a)).id
+    };
+    elsewhere();
+    let others = elsewhere();
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE events SET meet_link='https://meet.google.com/abc-defg-hij' WHERE id IN (?,?)",
+            params![linked, others],
+        )?;
+        tx.conn().execute(
+            "UPDATE events SET organizer_id=? WHERE id=?",
+            params![id("jason"), others],
+        )?;
+        tx.conn().execute(
+            "INSERT INTO google_accounts (user_id,email,created_at,updated_at) VALUES (?,?,?,?)",
+            params![id("david"), "david@example.test", tx.now(), tx.now()],
+        )?;
+        Ok(())
+    });
+    t.sink.take();
+    let secrets = rails_compat::Secrets::new(&"k".repeat(64));
+    let planned = t.write(move |tx| {
+        let user = User::find(tx.conn(), id("david"))?;
+        crate::models::google_connection::prepare_disconnect(tx, &user, &secrets)
+            .map(|plan| plan.is_some())
+    });
+    assert!(planned);
+    assert_eq!(
+        t.read(move |c| CalendarEvent::find(c, linked)).meet_link,
+        None
+    );
+    assert_eq!(rooms_told(&t), [id("designers")]);
+}
+
 mod cutover_reference_test;
 mod cutover_reminder_test;
 mod cutover_venue_test;

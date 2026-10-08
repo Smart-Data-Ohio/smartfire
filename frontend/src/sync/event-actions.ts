@@ -40,6 +40,11 @@ export const respond = Effect.fn("events.respond")(function* (
   return yield* api.event(roomId, eventId);
 });
 
+/** Whether a resync of `topics` covers `roomId`'s topic, so its calendar may have missed news. */
+export function resyncsRoom(topics: readonly string[], roomId: number): boolean {
+  return topics.includes(`room:${roomId}`);
+}
+
 /**
  * Whether a sync event says an event in `roomId` changed elsewhere: the room's `events.changed`
  * (any event scheduled, edited, cancelled or removed, linked from a message or not), or a message

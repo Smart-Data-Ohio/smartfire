@@ -127,6 +127,88 @@ async function watchHistory(page: Page): Promise<() => Promise<readonly string[]
 }
 
 /** Lets a reply the page just took in (and any navigation it starts) reach the screen. */
+interface LostNews {
+  /** The page's sync socket is welcomed for the first time. */
+  readonly welcomed: Promise<void>;
+  /** From now on the page hears nothing on its socket: what's published meanwhile is lost. */
+  readonly lose: () => void;
+  /**
+   * Drops the socket. The page reconnects to a server that says it can't replay what was lost
+   * (its welcome `resumed: false`, as after an expired replay or a restart), then hears again.
+   * Resolves once that welcome reached the page.
+   */
+  readonly reconnectUnresumed: () => Promise<void>;
+}
+
+interface Sequenced {
+  readonly seq: number;
+}
+
+/** What `interceptSync` reads of a server frame. */
+interface ServerFrameSeen {
+  readonly t: string;
+  readonly seq?: number;
+  readonly events?: readonly Sequenced[];
+}
+
+/** Stands between the page and its sync socket, to lose news and reconnect without a replay. */
+async function interceptSync(page: Page): Promise<LostNews> {
+  const first = Promise.withResolvers<void>();
+  let again: PromiseWithResolvers<void> | null = null;
+  let losing = false;
+  let lostThrough = 0;
+  let close: (() => Promise<void>) | null = null;
+
+  await page.routeWebSocket(/\/api\/v1\/sync/, (socket) => {
+    const server = socket.connectToServer();
+
+    close = () => socket.close({ code: 4000, reason: "dropped by the test" });
+    server.onMessage((message) => {
+      const frame: ServerFrameSeen = JSON.parse(String(message));
+
+      if (frame.t !== "welcome") {
+        if (!losing) {
+          socket.send(message);
+        } else {
+          for (const event of frame.events ?? []) lostThrough = Math.max(lostThrough, event.seq);
+        }
+
+        return;
+      }
+
+      if (again === null) {
+        socket.send(message);
+        first.resolve();
+
+        return;
+      }
+
+      // The mock can replay what was lost, so it welcomes at the page's own point and replays.
+      // A server that can't says so, at its newest sequence: the page then skips the replay that
+      // follows, as it would never have come.
+      losing = false;
+      socket.send(
+        JSON.stringify({ ...frame, seq: Math.max(frame.seq ?? 0, lostThrough), resumed: false }),
+      );
+      again.resolve();
+    });
+  });
+
+  return {
+    welcomed: first.promise,
+    lose: () => {
+      losing = true;
+    },
+    reconnectUnresumed: async () => {
+      const welcome = Promise.withResolvers<void>();
+
+      again = welcome;
+      await close?.();
+      await welcome.promise;
+    },
+  };
+}
+
 async function settle(page: Page): Promise<void> {
   await page.evaluate(
     () =>
@@ -360,6 +442,39 @@ test.describe("a room's events", () => {
     });
   }
 
+  test("an edit that saves after its form was closed and opened again leaves the new opening be", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await page.getByRole("link", { name: "Edit" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit event" });
+
+    await dialog.getByLabel("Title").fill("Team check-in (moved)");
+
+    const release = await holdWrite(page, "PATCH", `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`);
+
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    // The same occurrence's form again, while the first save is still on its way.
+    await page.getByRole("link", { name: "Edit" }).click();
+    await expect(dialog.getByLabel("Title")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}/edit$`));
+
+    const historyCalls = await watchHistory(page);
+
+    release();
+    await expect(page.getByText("Event updated.")).toBeVisible();
+    await settle(page);
+
+    // The earlier save neither closes this opening nor navigates away from it.
+    expect(await historyCalls()).toEqual([]);
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}/edit$`));
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+  });
+
   for (const dismissal of ["Escape", "Back"] as const) {
     test(`a new event that saves after ${dismissal} closed the form stays on the list`, async ({
       page,
@@ -584,6 +699,66 @@ test.describe("a room's events", () => {
     await expect(edit).toBeHidden();
 
     await expect(page.getByText("This event isn't here")).toBeVisible();
+    await other.close();
+  });
+  test("an event page that missed its event's cancel while offline reads it on reconnect", async ({
+    page,
+    context,
+  }) => {
+    const sync = await interceptSync(page);
+
+    await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await sync.welcomed;
+    await expect(page.getByRole("button", { name: "Cancel event" })).toBeVisible();
+    sync.lose();
+
+    const other = await context.newPage();
+
+    await openApp(other, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await other.getByRole("button", { name: "Cancel event" }).click();
+    await other
+      .getByRole("alertdialog", { name: "Cancel this event?" })
+      .getByRole("button", { name: "Cancel event" })
+      .click();
+    await expect(other.getByText("This event was cancelled.", { exact: true })).toBeVisible();
+    await settle(page);
+    // The news was lost: the page doesn't know yet.
+    await expect(page.getByText("This event was cancelled.", { exact: true })).toHaveCount(0);
+
+    await sync.reconnectUnresumed();
+
+    await expect(page.getByText("This event was cancelled.", { exact: true })).toBeVisible();
+    await other.close();
+  });
+
+  test("an events list that missed an edit while offline reads it on reconnect", async ({
+    page,
+    context,
+  }) => {
+    const sync = await interceptSync(page);
+
+    await openApp(page, `r/${ROOM_IDS.general}/events`);
+    await sync.welcomed;
+    await expect(page.getByRole("link", { name: "Team check-in", exact: true })).toBeVisible();
+    sync.lose();
+
+    const other = await context.newPage();
+
+    await openApp(other, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await other.getByRole("link", { name: "Edit" }).click();
+
+    const edit = other.getByRole("dialog", { name: "Edit event" });
+
+    await edit.getByLabel("Title").fill("Team check-in (moved)");
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toBeHidden();
+    await settle(page);
+    // The news was lost: the list doesn't know yet.
+    await expect(page.getByRole("link", { name: "Team check-in (moved)" })).toHaveCount(0);
+
+    await sync.reconnectUnresumed();
+
+    await expect(page.getByRole("link", { name: "Team check-in (moved)" })).toBeVisible();
     await other.close();
   });
 });

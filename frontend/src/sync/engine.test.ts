@@ -25,6 +25,7 @@ import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
 import * as session from "./session.ts";
+import { onResync } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
@@ -395,6 +396,29 @@ describe("resync", () => {
         expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
           JSON.stringify({ epoch: "e2", seq: 1 }),
         );
+      }),
+    ),
+  );
+
+  it.effect("tells features the topics it resyncs, on a fresh welcome and a resync frame", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const told: (readonly string[])[] = [];
+        const stop = onResync((topics) => told.push(topics));
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        stop();
+
+        expect(told).toEqual([["user"], ["user", "room:12"], ["room:12"]]);
       }),
     ),
   );

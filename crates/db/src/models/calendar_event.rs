@@ -536,7 +536,7 @@ impl CalendarEvent {
 /// an event's row comes through here: inserts, saves (edits, cancels, reminders, Meet links) via
 /// `broadcast_cards`, and destroys, including the occurrences a shortened recurrence drops. One
 /// per room per transaction is enough, as the screens read the facts themselves.
-fn broadcast_room_events(tx: &mut Tx<'_>, room_id: i64) {
+pub(crate) fn broadcast_room_events(tx: &mut Tx<'_>, room_id: i64) {
     tx.broadcast_after_commit_once(&EventsChanged { room_id });
 }
 

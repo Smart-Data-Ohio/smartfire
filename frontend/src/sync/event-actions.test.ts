@@ -3,7 +3,7 @@ import { messageFixture } from "../api/testing.ts";
 import type { EventCard } from "../gen/EventCard.ts";
 import type { MessageCard } from "../gen/MessageCard.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
-import { changesRoomEvents } from "./event-actions.ts";
+import { changesRoomEvents, resyncsRoom } from "./event-actions.ts";
 
 const ROOM = 4;
 
@@ -71,5 +71,14 @@ describe("changesRoomEvents", () => {
     };
 
     expect(changesRoomEvents(typing, ROOM)).toBe(false);
+  });
+});
+
+describe("resyncsRoom", () => {
+  it("hears a resync of the room's topic, not another room's or only the sidebar's", () => {
+    expect(resyncsRoom(["user", "room:12"], 12)).toBe(true);
+    expect(resyncsRoom(["room:12"], 12)).toBe(true);
+    expect(resyncsRoom(["user", "room:13", "thread:12"], 12)).toBe(false);
+    expect(resyncsRoom(["user"], 12)).toBe(false);
   });
 });
