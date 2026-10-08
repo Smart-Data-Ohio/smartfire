@@ -8,7 +8,9 @@ import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useCardsChunkLoaded } from "../cards/card-slot.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
+import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { PaneError } from "../panes/pane-states.tsx";
 import { DayDivider } from "../room/dividers.tsx";
 import { useFollowPosted } from "../room/follow-posted.ts";
@@ -23,9 +25,6 @@ import {
 import { replyCountLabel } from "./thread-format.ts";
 
 export const REPLIES_FAILED = "These replies couldn't be loaded.";
-
-/** Within this many px of the end counts as "at the bottom": new replies keep it pinned. */
-const BOTTOM_SLOP = 40;
 
 /** Fetch the next page when this close to an edge. */
 const PAGE_AHEAD = 600;
@@ -66,10 +65,12 @@ function ThreadParent({
   parent,
   replyCount,
   viewerId,
+  onNavigate,
 }: {
   readonly parent: MessageDTO | null;
   readonly replyCount: number;
   readonly viewerId: number | null;
+  readonly onNavigate: (allowEnd: boolean) => void;
 }) {
   return (
     <div className="thread-parent">
@@ -86,6 +87,7 @@ function ThreadParent({
           focused={false}
           live={false}
           inThread
+          onNavigate={onNavigate}
         />
       )}
       <div className="thread-replies-rule">
@@ -169,8 +171,7 @@ export function ThreadTimeline({
   const [openedAt] = useState(() => Date.now());
   const listRef = useRef<VListHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const atBottomRef = useRef(true);
-  const placedRef = useRef<string | null>(null);
+  const [placed, setPlaced] = useState<string | null>(null);
 
   const committedRef = useRef<CommittedEdges & { readonly last: string | null }>({
     first: null,
@@ -191,33 +192,55 @@ export function ThreadTimeline({
 
   useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
-  const lastKey = items.at(-1)?.key ?? null;
+  const lastKey = items.findLast((item) => item.kind !== "loading")?.key ?? null;
   const shift = prepended(items, committedRef.current);
+  const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
+  const cardsLoaded = useCardsChunkLoaded();
 
-  // Place the view once per loaded window: on the permalinked reply, else at the newest.
+  const focusIndex =
+    focusMessageId === null
+      ? -1
+      : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+
+  const {
+    capture: captureAnchor,
+    settle: settleAnchor,
+    place: placeAnchor,
+    isPlacing,
+    canFollow,
+    followEnd,
+    takeControl,
+    keepMounted,
+  } = useViewportAnchor({
+    containerRef,
+    listRef,
+    items,
+    placement,
+    placed: loaded && placed === placement,
+    cardsLoaded,
+    parentId: parent?.id ?? null,
+  });
+
+  // Place each loaded window on its permalink, a post's work, or the newest reply.
   useLayoutEffect(() => {
     const list = listRef.current;
-    const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
 
-    if (!loaded || list === null || items.length === 0 || placedRef.current === placement) {
+    if (!loaded || list === null || items.length === 0 || placed === placement) {
       return;
     }
 
-    placedRef.current = placement;
+    setPlaced(placement);
+    const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
-    const focusIndex =
-      focusMessageId === null
-        ? -1
-        : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+    if (viewport) viewport.dataset.scrollSettled = "false";
 
     if (focusIndex >= 0) {
-      list.scrollToIndex(focusIndex, { align: "center" });
+      placeAnchor(focusIndex, { align: "center" });
     } else if (intro !== undefined) {
       // A board post opens at its work, as the classic post page does; the discussion follows.
-      atBottomRef.current = false;
-      list.scrollToIndex(0);
+      placeAnchor(0, { align: "start", follow: false });
     } else {
-      list.scrollToIndex(items.length - 1, { align: "end" });
+      placeAnchor(items.length - 1, { align: "end" });
     }
   });
 
@@ -232,12 +255,19 @@ export function ThreadTimeline({
       last: lastKey,
     };
 
-    if (appended && (atBottomRef.current || items.at(-1)?.kind === "pending")) {
+    if (
+      appended &&
+      placed === placement &&
+      !isPlacing() &&
+      (canFollow() || items.at(-1)?.kind === "pending")
+    ) {
+      followEnd();
+
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
   });
 
-  useFollowPosted(`thread:${threadId}`, items, listRef);
+  useFollowPosted(`thread:${threadId}`, items, listRef, followEnd);
 
   /** The next newer replies, when the view is within `PAGE_AHEAD` of a window short of the latest. */
   const loadNewerNear = (distance: number) => {
@@ -266,7 +296,7 @@ export function ThreadTimeline({
 
     const distance = list.scrollSize - offset - list.viewportSize;
 
-    atBottomRef.current = distance < BOTTOM_SLOP;
+    captureAnchor();
 
     // A post's work leads its pane and earlier replies load on request, under it.
     if (!introFirst && offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
@@ -285,6 +315,7 @@ export function ThreadTimeline({
             parent={parent}
             replyCount={replyCount}
             viewerId={viewerId}
+            onNavigate={takeControl}
           />
         ) : (
           <PostIntro key={item.key} intro={intro} replyCount={replyCount} />
@@ -322,6 +353,7 @@ export function ThreadTimeline({
             focused={item.message.id === focusMessageId}
             live={created > openedAt && now - created < LIVE_WINDOW_MS}
             inThread
+            onNavigate={takeControl}
           />
         );
       }
@@ -354,8 +386,22 @@ export function ThreadTimeline({
             // Earlier replies open under a post's work, where the reader asked for them.
             shift={shift && !introFirst}
             bufferSize={400}
+            keepMounted={keepMounted}
             onScroll={onScroll}
+            onScrollCapture={(event) => {
+              if (event.target === event.currentTarget)
+                event.currentTarget.dataset.scrollSettled = "false";
+            }}
+            onScrollEnd={() => {
+              const viewport = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+              if (viewport) viewport.dataset.scrollSettled = "true";
+
+              settleAnchor();
+            }}
             data={items}
+            data-scroll-settled="false"
+            data-placement-settled="false"
             aria-label="Replies"
             role="log"
             // Focusable from script only: Home/End hold focus here while the edge row is drawn.

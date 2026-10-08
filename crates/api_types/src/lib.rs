@@ -89,10 +89,13 @@ pub use bots::{
     UpdateBotAgent,
 };
 pub use cards::{
-    AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
-    FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
-    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubPullRequest, GithubPullRequestCard,
-    GithubPullRequestStatus, GithubReview, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
+    AttendanceResponse, CardFetch, CreateGithubComment, CreateGithubDiscussion, CreateGithubReview,
+    CreateGithubReviewRequest, CreatePoll, DriveFileCard, EventAttendance, EventCard,
+    FizzyAssignee, FizzyCard,
+    FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubAccountLink, GithubCardRef,
+    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubDiscussion, GithubPullRequest,
+    GithubPullRequestActions, GithubPullRequestCard, GithubPullRequestStatus, GithubReview,
+    GithubReviewKind, GithubWriteResult, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
     PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview, QuotePreviewResult,
     RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
 };
