@@ -65,6 +65,16 @@ describe("message permissions", () => {
     expect(Object.values(nobody).some(Boolean)).toBe(false);
   });
 
+  it("offers a Fizzy card on every message but a system note, replies and locked threads too", () => {
+    const reply = messageFixture(7, ROOM, { threadId: 5 });
+    const note = messageFixture(8, ROOM, { systemNote: true });
+
+    expect(messagePermissions(theirs, member).fizzy).toBe(true);
+    expect(messagePermissions(reply, { ...member, threadStatus: "locked" }).fizzy).toBe(true);
+    expect(messagePermissions(theirs, { ...member, roomKind: "direct" }).fizzy).toBe(true);
+    expect(messagePermissions(note, member).fizzy).toBe(false);
+  });
+
   it("offers threads on root messages outside direct rooms, and mark unread on the timeline", () => {
     const reply = messageFixture(6, ROOM, { threadId: 5 });
 
@@ -86,7 +96,7 @@ describe("message menu", () => {
     ).toEqual([
       ["thread", "react", "boost"],
       ["edit", "copy-text", "copy-link"],
-      ["pin", "save", "forward", "unread"],
+      ["pin", "save", "forward", "unread", "fizzy"],
       ["delete"],
     ]);
   });
