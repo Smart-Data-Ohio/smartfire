@@ -422,7 +422,233 @@ async function keepPlacementMeasuring(page: Page, messageId: number | null = nul
   }, messageId);
 }
 
-type ReaderInput = "wheel" | "PageUp" | "ArrowUp" | "touch" | "scrollbar";
+type ReaderInput = "wheel" | "PageUp" | "ArrowUp" | "Home" | "touch" | "scrollbar";
+
+async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anchor: number) {
+  const atStart = () =>
+    list.evaluate((element, anchor) => {
+      const row = element.querySelector<HTMLElement>(`[data-message-id="${anchor}"]`);
+
+      if (row === null || getComputedStyle(row).visibility === "hidden") return false;
+
+      const bounds = element.getBoundingClientRect();
+      const top = row.getBoundingClientRect().top;
+
+      return top >= bounds.top && top < bounds.bottom;
+    }, anchor);
+
+  const startGesture = () =>
+    list.evaluate((element, input) => {
+      const offset = element.scrollTop;
+
+      if (offset === 0) return false;
+
+      element.setAttribute("data-input-settled", "false");
+
+      const event = {
+        wheel: "wheel",
+        PageUp: "keydown",
+        ArrowUp: "keydown",
+        Home: "keydown",
+        touch: "touchstart",
+        scrollbar: "pointerdown",
+      }[input];
+
+      // A pending placement scroll end must not complete the next reader gesture.
+      element.addEventListener(
+        event,
+        () => {
+          // A preceding gesture can reach the edge while its final measurements land.
+          if (element.scrollTop === 0) {
+            element.setAttribute("data-input-settled", "true");
+
+            return;
+          }
+
+          const keyboard = input === "PageUp" || input === "ArrowUp" || input === "Home";
+          let released = !keyboard;
+          let ended = false;
+          let moved = element.scrollTop !== offset;
+
+          const repeat = () => {
+            released = false;
+            ended = false;
+          };
+
+          const scroll = () => {
+            moved ||= element.scrollTop !== offset;
+          };
+
+          const complete = () => {
+            if (!released || (!moved && element.scrollTop === offset)) return;
+
+            element.setAttribute("data-input-settled", "true");
+            element.removeEventListener("scroll", scroll);
+            element.removeEventListener("scrollend", end);
+            element.removeEventListener("keydown", repeat, true);
+            element.removeEventListener("keyup", release, true);
+          };
+
+          const end = (event: Event) => {
+            if (event.target !== element) return;
+
+            ended = true;
+            complete();
+          };
+
+          const release = () => {
+            released = true;
+
+            if (ended || element.scrollTop === 0) complete();
+          };
+
+          element.addEventListener("scroll", scroll);
+          element.addEventListener("scrollend", end);
+
+          if (keyboard) {
+            element.addEventListener("keydown", repeat, true);
+            element.addEventListener("keyup", release, true);
+          }
+        },
+        { once: true, capture: true, passive: true },
+      );
+
+      return true;
+    }, input);
+
+  const finishGesture = () =>
+    list.evaluate(
+      (element) =>
+        new Promise<void>((resolve) => {
+          // Native scroll end waits for keyboard animation and touch momentum at an edge.
+          const finished = () => {
+            if (element.getAttribute("data-input-settled") !== "true") return;
+
+            element.removeEventListener("scrollend", finished);
+            resolve();
+          };
+
+          element.addEventListener("scrollend", finished);
+          finished();
+        }),
+    );
+
+  if (input === "wheel") {
+    await list.hover();
+
+    while (!(await atStart())) {
+      if (!(await startGesture())) break;
+      await page.mouse.wheel(0, -10_000);
+      await finishGesture();
+    }
+  } else if (input === "PageUp" || input === "ArrowUp" || input === "Home") {
+    await list.focus();
+
+    let repeated = false;
+
+    while (!(await atStart())) {
+      if (!(await startGesture())) break;
+
+      const offset = await list.evaluate((element) => element.scrollTop);
+
+      if (input === "ArrowUp" && repeated) {
+        // A held key repeats natively; wait for the whole gesture after releasing it.
+        try {
+          for (let step = 0; step < 10; step++) await page.keyboard.down(input);
+        } finally {
+          await page.keyboard.up(input);
+        }
+      } else {
+        await list.press(input);
+      }
+
+      await finishGesture();
+
+      if (input === "ArrowUp" && !repeated)
+        await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeLessThan(offset);
+
+      repeated = true;
+    }
+  } else if (input === "touch") {
+    const session = await page.context().newCDPSession(page);
+
+    await session.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+
+    try {
+      while (!(await atStart())) {
+        const bounds = await list.boundingBox();
+
+        if (bounds === null) throw new Error("The touch scroller is not visible");
+
+        const x = bounds.x + bounds.width / 2;
+        const start = bounds.y + 60;
+        const distance = bounds.height - 120;
+
+        if (!(await startGesture())) break;
+        await session.send("Input.dispatchTouchEvent", {
+          type: "touchStart",
+          touchPoints: [{ x, y: start }],
+        });
+
+        if ((await list.getAttribute("data-input-settled")) === "true") {
+          await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+          break;
+        }
+
+        for (let step = 1; step <= 10; step++) {
+          await session.send("Input.dispatchTouchEvent", {
+            type: "touchMove",
+            touchPoints: [{ x, y: start + (distance * step) / 10 }],
+          });
+          await page.evaluate(
+            () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+          );
+        }
+
+        await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await finishGesture();
+      }
+    } finally {
+      await session.detach();
+    }
+  } else {
+    // Give headless Chromium a native track wide enough to drag precisely.
+    await page.addStyleTag({
+      content: "[data-message-list] { scrollbar-width: auto; scrollbar-gutter: stable; }",
+    });
+
+    while (!(await atStart())) {
+      const bounds = await list.boundingBox();
+
+      if (bounds === null) throw new Error("The scrollbar is not visible");
+
+      const { width, height, total, offset } = await list.evaluate((element) => {
+        if (!(element instanceof HTMLElement)) throw new Error("The scrollbar needs an HTML list");
+
+        return {
+          width: element.offsetWidth - element.clientWidth,
+          height: element.clientHeight,
+          total: element.scrollHeight,
+          offset: element.scrollTop,
+        };
+      });
+
+      expect(width).toBeGreaterThan(0);
+
+      const thumb = Math.max(20, (height * height) / total);
+      const x = bounds.x + bounds.width - 2;
+      const y = bounds.y + thumb / 2;
+
+      if (!(await startGesture())) break;
+      await page.mouse.move(x, y + (offset / (total - height)) * (height - thumb));
+      await page.mouse.down();
+      await page.mouse.move(x, bounds.y + 1, { steps: 10 });
+      await page.mouse.up();
+      await finishGesture();
+    }
+  }
+}
 
 async function olderCardsScenario(page: Page, input: ReaderInput | null) {
   // Keep the welcome's refetch out of this pagination scenario.
@@ -502,26 +728,10 @@ async function olderCardsScenario(page: Page, input: ReaderInput | null) {
     await expect(list).toHaveAttribute("data-measurement-pending", "true");
     await expect.poll(() => list.evaluate((element) => element.scrollTop > 0)).toBe(true);
     await expect(list).toHaveAttribute("data-placement-settled", "false");
+    await expect(anchorRow).not.toBeInViewport();
 
-    if (input === "wheel") {
-      await list.hover();
-      await page.mouse.wheel(0, -10_000);
-    } else {
-      if (input === "PageUp" || input === "ArrowUp") await list.press(input);
-      else if (input === "touch") await list.dispatchEvent("touchstart");
-      else await list.dispatchEvent("pointerdown", { pointerType: "mouse" });
-
-      await list.evaluate(async (element) => {
-        if (element.scrollTop === 0) return;
-
-        await new Promise<void>((resolve) => {
-          element.addEventListener("scroll", () => resolve(), { once: true });
-          element.scrollTop = 0;
-        });
-      });
-
-      if (input === "touch") await list.dispatchEvent("touchend");
-    }
+    await scrollToStart(page, list, input, Number(anchor));
+    await expect(list).toHaveAttribute("data-placement-settled", "true");
   } else {
     await expect(list).toHaveAttribute("data-scroll-settled", "true");
     await list.evaluate(
@@ -584,13 +794,24 @@ test("scrolling up before the first scroll end keeps its place when cards arrive
   await olderCardsScenario(page, "wheel");
 });
 
-for (const input of ["PageUp", "ArrowUp", "touch", "scrollbar"] as const) {
+for (const input of ["PageUp", "ArrowUp", "Home", "touch"] as const) {
   test(`${input} cancels placement and keeps the reader's place when cards arrive`, async ({
     page,
   }) => {
     await olderCardsScenario(page, input);
   });
 }
+
+const scrollbarTest = test.extend({
+  launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] },
+});
+
+scrollbarTest(
+  "scrollbar cancels placement and keeps the reader's place when cards arrive",
+  async ({ page }) => {
+    await olderCardsScenario(page, "scrollbar");
+  },
+);
 
 test("reading a tall thread parent while the cards chunk loads keeps its place", async ({
   page,
@@ -673,7 +894,7 @@ test("reading a tall thread parent while the cards chunk loads keeps its place",
     .toBeLessThanOrEqual(3);
 });
 
-async function shortThreadScenario(page: Page, permalink: boolean) {
+async function shortThreadScenario(page: Page, permalink: boolean, pressEnd = false) {
   await holdSync(page);
 
   const poll = await seededPoll(page.request);
@@ -737,6 +958,12 @@ async function shortThreadScenario(page: Page, permalink: boolean) {
     )
     .toBeLessThanOrEqual(1);
 
+  if (pressEnd) {
+    await expect(list).toHaveAttribute("data-placement-settled", "true");
+    await list.press("End");
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+  }
+
   chunk.release();
   await expect(list.locator(".thread-parent").getByRole("region", { name: "Poll" })).toBeAttached();
   await expect
@@ -760,6 +987,12 @@ test("a short thread stays at the end when the cards chunk makes it overflow", a
   await shortThreadScenario(page, false);
 });
 
+test("pressing End in a fitting thread keeps the end when a card makes it overflow", async ({
+  page,
+}) => {
+  await shortThreadScenario(page, false, true);
+});
+
 test("a short thread permalink stays in view when the cards chunk makes it overflow", async ({
   page,
 }) => {
@@ -769,7 +1002,7 @@ test("a short thread permalink stays in view when the cards chunk makes it overf
 test("an earlier reply permalink keeps its placed offset when a later card reveals", async ({
   page,
 }) => {
-  await holdSync(page);
+  const releaseSync = await holdSync(page);
 
   const poll = await seededPoll(page.request);
   const chunk = await holdCardsChunk(page);
@@ -779,6 +1012,12 @@ test("an earlier reply permalink keeps its placed offset when a later card revea
   expect(poll).toBeTruthy();
   await mockThreadParent(page, { threadId, bodyHtml: "<p>A short parent</p>", poll: undefined });
   await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+
+      return;
+    }
+
     const response = await route.fetch();
     const body: MessagePage = await response.json();
 
@@ -833,6 +1072,13 @@ test("an earlier reply permalink keeps its placed offset when a later card revea
     .poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight))
     .toBe(true);
 
+  const refreshed = page.waitForResponse((response) =>
+    response.url().endsWith(`/api/v1/threads/${threadId}/messages`),
+  );
+
+  releaseSync();
+  await (await refreshed).finished();
+
   let top = 0;
 
   await expect
@@ -855,7 +1101,97 @@ test("an earlier reply permalink keeps its placed offset when a later card revea
       return Math.max(Math.abs(measured.before - top), Math.abs(measured.after - top));
     })
     .toBeLessThanOrEqual(3);
+  await expect(list).not.toHaveAttribute("data-placement-settled", "false");
+
+  const height = await list.evaluate((element) => element.scrollHeight);
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const posted = await page.request.post("/__mock/thread-post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { threadId, userId: USER_IDS.jonah, markdown: "Another member replies after the reveal" },
+  });
+
+  expect(posted.ok()).toBe(true);
+  // An offscreen reply can stay unmounted; its append still grows the list.
+  await expect.poll(() => list.evaluate((element) => element.scrollHeight)).toBeGreaterThan(height);
+  await expect(target).toBeInViewport();
+  await expect
+    .poll(async () => {
+      const measured = await position();
+
+      return Math.max(Math.abs(measured.before - top), Math.abs(measured.after - top));
+    })
+    .toBeLessThanOrEqual(3);
   await expect(list).toHaveAttribute("data-placement-settled", "true");
+
+  // Sending explicitly leaves the permalink and resumes following subsequent replies.
+  const composer = page.getByRole("textbox", { name: "Reply…" });
+
+  await composer.fill("My reply leaves the permalink");
+  await composer.press("Enter");
+  await expect(list.getByText("My reply leaves the permalink", { exact: true })).toBeInViewport();
+
+  const next = await page.request.post("/__mock/thread-post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { threadId, userId: USER_IDS.jonah, markdown: "Another reply follows my own" },
+  });
+
+  expect(next.ok()).toBe(true);
+  await expect(list.getByText("Another reply follows my own", { exact: true })).toBeInViewport();
+});
+
+test("a short room permalink stays visible when another member posts", async ({ page }) => {
+  const releaseSync = await holdSync(page);
+  const chunk = await holdCardsChunk(page);
+  const messageId = MESSAGE_IDS.engineeringCode - 1;
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.engineering}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.messages = body.messages
+      .filter((message) => message.id >= messageId)
+      .slice(0, 3)
+      .map((message) => ({ ...message, bodyHtml: "<p>A short message</p>", attachment: null }));
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.engineering}/m/${messageId}`);
+  await chunk.requested;
+
+  const list = page.locator("[data-message-list]");
+  const target = row(page, messageId);
+
+  await expect(target).toBeInViewport();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight <= element.clientHeight))
+    .toBe(true);
+
+  const refreshed = page.waitForResponse((response) =>
+    response.url().endsWith(`/api/v1/rooms/${ROOM_IDS.engineering}/messages`),
+  );
+
+  releaseSync();
+  await (await refreshed).finished();
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const posted = await page.request.post("/__mock/post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      roomId: ROOM_IDS.engineering,
+      userId: USER_IDS.jonah,
+      markdown: `${Array.from({ length: 30 }, () => "Another member posts a long message").join("\n\n")}\n\nThe incoming room message ends here`,
+    },
+  });
+
+  expect(posted.ok()).toBe(true);
+  await expect(list.getByText("The incoming room message ends here")).toBeAttached();
+  await expect(target).toBeInViewport();
+  chunk.release();
+  await expect(target).toBeInViewport();
 });
 
 test("deleting a permalink during placement restores following new replies at the bottom", async ({

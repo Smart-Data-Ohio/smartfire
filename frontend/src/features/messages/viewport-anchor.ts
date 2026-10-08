@@ -83,6 +83,47 @@ export function useViewportAnchor({
     );
   }, [placement]);
 
+  const canFollow = (lastKey: string | null) => {
+    if (!placed || isPlacing()) return false;
+
+    const state = placementRef.current;
+
+    if (
+      state?.placement === placement &&
+      state.kind === "settled" &&
+      state.messageId !== null &&
+      indices.has(state.messageId)
+    )
+      return false;
+
+    const list = listRef.current;
+    const element = viewport();
+    const index = lastKey === null ? undefined : itemIndices.get(lastKey);
+
+    if (list === null || !element || index === undefined || element.clientHeight === 0)
+      return false;
+
+    // Measure the previous end: the new rows must not make a bottom reader appear scrolled up.
+    return (
+      list.getItemOffset(index) +
+        list.getItemSize(index) -
+        element.scrollTop -
+        element.clientHeight <
+      40
+    );
+  };
+
+  const followEnd = () => {
+    // Sending from a permalink explicitly takes the reader to the newest message.
+    placementRef.current = { kind: "settled", placement, messageId: null };
+    anchorRef.current = { kind: "end", placement };
+    correctedOffsetRef.current = null;
+
+    const element = viewport();
+
+    if (element) element.dataset.placementSettled = "true";
+  };
+
   const capture = (atBottom: boolean) => {
     const state = placementRef.current;
 
@@ -112,7 +153,16 @@ export function useViewportAnchor({
     )
       return;
 
-    if (atBottom && targetId === null) {
+    // Small native keyboard scrolls start inside the follow threshold. Once input has
+    // cancelled placement, keep their row rather than pulling them back to the end.
+    const atEnd =
+      atBottom &&
+      (state.kind !== "cancelled" ||
+        (element !== undefined &&
+          element !== null &&
+          element.scrollHeight - element.scrollTop - element.clientHeight <= 1));
+
+    if (atEnd && targetId === null) {
       anchorRef.current = { kind: "end", placement };
 
       return;
@@ -389,8 +439,12 @@ export function useViewportAnchor({
     if (anchor === null || anchor.placement !== placement || list === null || !element) return;
 
     if (anchor.kind === "end") {
-      element.scrollTop = element.scrollHeight - element.clientHeight;
-      correctedOffsetRef.current = element.scrollTop;
+      const offset = element.scrollHeight - element.clientHeight;
+
+      if (Math.abs(offset - element.scrollTop) > 1) {
+        element.scrollTop = offset;
+        correctedOffsetRef.current = element.scrollTop;
+      }
 
       return;
     }
@@ -410,9 +464,13 @@ export function useViewportAnchor({
     // Virtua already compensates fully hidden rows and prepends. Apply only the remainder,
     // without starting a scrollToIndex operation that can later override the reader's scrolling.
 
-    if (Math.abs(delta) > 1) element.scrollTop += delta;
+    if (Math.abs(delta) > 1) {
+      const before = element.scrollTop;
 
-    correctedOffsetRef.current = element.scrollTop;
+      element.scrollTop += delta;
+
+      if (element.scrollTop !== before) correctedOffsetRef.current = element.scrollTop;
+    }
   });
 
   useLayoutEffect(() => {
@@ -441,7 +499,10 @@ export function useViewportAnchor({
 
         heights.set(entry.target, entry.contentRect.height);
 
-        if (previous !== entry.contentRect.height) changed = true;
+        // Remounting a cached row during reader scrolling is not a height change.
+        // Virtua owns initial measurements; a first delivery after reveal can still grow a card.
+        if (previous !== entry.contentRect.height && (previous !== undefined || chunkLoaded()))
+          changed = true;
       }
 
       // Virtua observes these wrappers first and applies its measurements and native jump
@@ -517,5 +578,5 @@ export function useViewportAnchor({
       stopRef.current?.();
   });
 
-  return { capture, settle, place, isPlacing };
+  return { capture, settle, place, isPlacing, canFollow, followEnd };
 }

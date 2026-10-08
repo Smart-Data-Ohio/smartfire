@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import {
   expect,
   holdSync,
@@ -371,7 +372,23 @@ test("a reader at the bottom through a long absence is paged on to the present",
     (url) => url.searchParams.has("around"),
     (route) => route.abort(),
   );
+
+  const paged = page.waitForResponse(async (response) => {
+    const url = new URL(response.url());
+
+    if (
+      url.pathname !== `/api/v1/rooms/${ROOM_IDS.engineering}/messages` ||
+      !url.searchParams.has("after")
+    )
+      return false;
+
+    const body: MessagePage = await response.json();
+
+    return body.after === null;
+  });
+
   release();
+  await (await paged).finished();
   await expect(log.getByText("while away 45", { exact: true })).toBeInViewport();
 });
 

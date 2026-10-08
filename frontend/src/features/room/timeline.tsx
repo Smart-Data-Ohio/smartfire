@@ -136,7 +136,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     items.some((item) => item.kind === "message" && hasCards(item.message));
 
   const firstKey = items[0]?.key ?? null;
-  const lastKey = items.at(-1)?.key ?? null;
+  // The loading row disappears when a newer page lands; follow from the previous content.
+  const lastKey = items.findLast((item) => item.kind !== "loading")?.key ?? null;
 
   // Older rows went in above the previous first row: keep the view anchored from the end.
   const shift = prepended(items, committedRef.current);
@@ -153,6 +154,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     settle: settleAnchor,
     place: placeAnchor,
     isPlacing,
+    canFollow,
+    followEnd,
   } = useViewportAnchor({
     containerRef,
     listRef,
@@ -204,14 +207,16 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const last = items.at(-1);
     const mine = last?.kind === "pending";
 
-    if (atBottomRef.current || mine) {
+    if (canFollow(previous.last) || mine) {
+      if (mine) followEnd();
+
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     } else if (timeline.after === null) {
       setNewBelow((count) => count + Math.max(1, items.length - previous.count));
     }
   });
 
-  useFollowPosted(`room:${roomId}`, items, listRef);
+  useFollowPosted(`room:${roomId}`, items, listRef, followEnd);
 
   // A resync can leave the window short of the present with the reader at its end (more was
   // posted than a page holds while they were away): page on and offer the jump without a scroll.

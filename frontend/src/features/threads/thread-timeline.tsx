@@ -124,7 +124,6 @@ export function ThreadTimeline({
   const [openedAt] = useState(() => Date.now());
   const listRef = useRef<VListHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const atBottomRef = useRef(true);
   const [placed, setPlaced] = useState<string | null>(null);
 
   const committedRef = useRef<CommittedEdges & { readonly last: string | null }>({
@@ -145,7 +144,7 @@ export function ThreadTimeline({
 
   useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
-  const lastKey = items.at(-1)?.key ?? null;
+  const lastKey = items.findLast((item) => item.kind !== "loading")?.key ?? null;
   const shift = prepended(items, committedRef.current);
   const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
   const cardsLoaded = useCardsChunkLoaded();
@@ -160,6 +159,8 @@ export function ThreadTimeline({
     settle: settleAnchor,
     place: placeAnchor,
     isPlacing,
+    canFollow,
+    followEnd,
   } = useViewportAnchor({
     containerRef,
     listRef,
@@ -205,13 +206,15 @@ export function ThreadTimeline({
       appended &&
       placed === placement &&
       !isPlacing() &&
-      (atBottomRef.current || items.at(-1)?.kind === "pending")
+      (canFollow(previous.last) || items.at(-1)?.kind === "pending")
     ) {
+      if (items.at(-1)?.kind === "pending") followEnd();
+
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
   });
 
-  useFollowPosted(`thread:${threadId}`, items, listRef);
+  useFollowPosted(`thread:${threadId}`, items, listRef, followEnd);
 
   /** The next newer replies, when the view is within `PAGE_AHEAD` of a window short of the latest. */
   const loadNewerNear = (distance: number) => {
@@ -240,8 +243,7 @@ export function ThreadTimeline({
 
     const distance = list.scrollSize - offset - list.viewportSize;
 
-    atBottomRef.current = distance < BOTTOM_SLOP;
-    captureAnchor(atBottomRef.current);
+    captureAnchor(distance < BOTTOM_SLOP);
 
     if (offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
       void actions.threads.loadOlder(threadId);
