@@ -41,7 +41,8 @@ describe("listing and opening threads", () => {
       canLock: false,
       canUnlock: true,
       canDelete: true,
-      canConvertWork: false,
+      // Untracked, and the viewer moderates: it can become work (s4/work.ts).
+      canConvertWork: true,
       canManageWork: false,
       canUpdateWorkStatus: false,
       canAssignWork: false,

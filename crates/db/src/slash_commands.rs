@@ -723,10 +723,12 @@ fn calendar_ooo_until(tx: &Tx<'_>, user: i64) -> Result<Option<Timestamp>> {
         .max())
 }
 fn claim_ooo(tx: &Tx<'_>, user: i64, active: bool) -> Result<()> {
+    let now = tx.now();
+    let revision = crate::User::revision_for_touch(tx, user, now)?;
     if active {
-        tx.conn().execute("UPDATE users SET ooo_broadcast=1,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=1)",params![tx.now(),user])?;
+        tx.conn().execute("UPDATE users SET ooo_broadcast=1,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=1)",params![revision,user])?;
     } else {
-        tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)",params![tx.now(),user,tx.now()])?;
+        tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)",params![revision,user,now])?;
     }
     Ok(())
 }

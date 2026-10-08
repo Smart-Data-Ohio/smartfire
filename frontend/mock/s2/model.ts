@@ -17,6 +17,7 @@ import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
 import type { User } from "../../src/gen/User.ts";
 import { notFound, validation } from "../http.ts";
 import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
+import { type WorkRecord, workFacts } from "../s4/work-model.ts";
 import type { RoomRecord, World } from "../seed.ts";
 
 /** Messages per page, as `Message::PAGE_SIZE`. */
@@ -55,6 +56,8 @@ export interface ThreadRecord {
   readonly memberIds: Set<number>;
   /** The viewer's membership; `null` when they never touched the thread. */
   viewerMembership: ThreadMembership | null;
+  /** Its work columns, once anyone tracked it (s4/work-model.ts); absent for most threads. */
+  work?: WorkRecord;
 }
 
 /** One stored blob: what `POST /uploads` declared and, once `PUT`, the bytes. */
@@ -264,8 +267,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
-    // Work tracking comes with the S4 work mock.
-    work: null,
+    work: workFacts(thread.work),
   };
 }
 

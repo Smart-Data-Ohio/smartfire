@@ -181,18 +181,6 @@
     font-size: var(--text-meta);
   }
 
-  .picker-tag {
-    flex-shrink: 0;
-    padding: 1px var(--space-1-5);
-    border-radius: var(--radius-xs);
-    background: var(--agent-soft);
-    color: var(--agent-text);
-    font-size: 10px;
-    font-weight: var(--weight-semibold);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
   .picker-star {
     display: inline-flex;
     flex-shrink: 0;

@@ -6,6 +6,11 @@ import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
+import type { AgentDirectory } from "../gen/AgentDirectory.ts";
+import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
+import type { AgentProfile } from "../gen/AgentProfile.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -20,8 +25,15 @@ import type { StageState } from "../gen/StageState.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import type { WorkFacts } from "../gen/WorkFacts.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkList } from "../gen/WorkList.ts";
 import * as activity from "./activity.ts";
+import * as agents from "./agents.ts";
+import * as approvals from "./approvals.ts";
+import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
+import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
@@ -48,6 +60,7 @@ import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
+import * as work from "./work.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -79,10 +92,29 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
   );
 }
 
-const apply = (change: (state: State) => State) => store.setState(change, true);
+const apply = (change: (state: State) => State) =>
+  store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
+  startRead: (list: string, reload = true) => {
+    const read = freshness.startRead(store.getState().freshness, list, reload);
+
+    apply((state) => ({ ...state, freshness: read.freshness }));
+
+    return read.ticket;
+  },
+  finishRead: (ticket: number) => {
+    const read = freshness.finishRead(store.getState().freshness, ticket);
+
+    apply((state) => ({ ...state, freshness: read.freshness }));
+  },
+  retireReads: (list: string) => {
+    apply((state) => ({
+      ...state,
+      freshness: freshness.retireReads(state.freshness, list).freshness,
+    }));
+  },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
@@ -154,22 +186,35 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail) =>
-    apply((state) => threads.loadThreadDetail(state, detail)),
+  loadThreadDetail: (detail: ThreadDetail, read?: work.WorkRead) =>
+    apply((state) => work.loadWorkThreadDetail(state, detail, read)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
-  threadCreated: (created: ThreadCreated) =>
+  threadCreated: (created: ThreadCreated, read?: work.WorkRead) =>
     apply((state) =>
-      reduce.receiveMessage(threads.loadThreadDetail(state, created.detail), created.message),
+      reduce.receiveMessage(
+        work.loadWorkThreadDetail(state, created.detail, read),
+        created.message,
+      ),
     ),
-  upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
+  upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
   setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
-  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
-    apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, read?: work.WorkRead) =>
+    apply((state) => {
+      let next = state;
+
+      const summaries = list.threads.map((summary) => {
+        next = work.receiveWorkThread(next, summary.thread, read, "read");
+
+        return { ...summary, thread: next.threads[summary.thread.id] ?? summary.thread };
+      });
+
+      return threads.loadThreadList(next, roomId, filter, { ...list, threads: summaries });
+    }),
   setHuddlePresence: (presence: HuddlePresence) =>
     apply((state) => huddles.setHuddlePresence(state, presence)),
   loadHuddlePresence: (list: HuddlePresenceList) =>
@@ -242,11 +287,87 @@ export const mutations = {
   markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
   /** Every activity list reloads when next shown (a room came into the sidebar). */
   markActivityStale: () => apply((state) => activity.markActivityStale(state)),
-  /** Missed events the server can't replay: every S3 list reloads when next shown. */
+  /**
+   * Missed events the server can't replay: every S3 list, and every agent's approvals, reload when
+   * next shown.
+   */
   markInboxStale: () =>
     apply((state) =>
-      scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
+      approvals.markApprovalsStale(
+        scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
+      ),
     ),
+  // --- S4: work tracking ---
+  /** Shows work facts on a thread at once: an optimistic change or its rollback. */
+  putWorkFacts: (threadId: number, facts: WorkFacts | null) =>
+    apply((state) => work.putWorkFacts(state, threadId, facts)),
+  rollbackWork: (threadId: number, shown: WorkFacts | null) =>
+    apply((state) => work.rollbackWork(state, threadId, shown)),
+  landWorkReply: (
+    detail: ThreadDetail,
+    shown: WorkFacts | null | undefined,
+    read?: work.WorkRead,
+  ) => apply((state) => work.landWorkReply(state, detail, shown, read)),
+  countWorkWrite: (threadId: number, delta: 1 | -1) =>
+    apply((state) => work.countWorkWrite(state, threadId, delta)),
+  setWorkListLoading: (filter: WorkFilter) =>
+    apply((state) => work.setWorkListLoading(state, filter)),
+  setWorkListFailed: (filter: WorkFilter, error: string, generation: number) =>
+    apply((state) => work.setWorkListFailed(state, filter, error, generation)),
+  landWorkList: (filter: WorkFilter, list: WorkList, generation: number, read?: work.WorkRead) =>
+    apply((state) => work.landWorkList(state, filter, list, generation, read)),
+  // --- S4: agents ---
+  setAgentDirectoryLoading: () => apply((state) => agents.setDirectoryLoading(state)),
+  landAgentDirectory: (page: AgentDirectory, generation: number, read?: agents.AgentRead) =>
+    apply((state) => agents.landDirectory(state, page, generation, read)),
+  setAgentDirectoryFailed: (error: string, generation: number) =>
+    apply((state) => agents.setDirectoryFailed(state, error, generation)),
+  setAgentProfileLoading: (agentId: number) =>
+    apply((state) => agents.setProfileLoading(state, agentId)),
+  landAgentProfile: (profile: AgentProfile, generation: number, read?: agents.AgentRead) =>
+    apply((state) => agents.landProfile(state, profile, generation, read)),
+  setAgentProfileFailed: (agentId: number, error: string, missing: boolean, generation: number) =>
+    apply((state) => agents.setProfileFailed(state, agentId, error, missing, generation)),
+  setApprovalListLoading: (key: approvals.ApprovalListKey, more: boolean) =>
+    apply((state) => approvals.setApprovalListLoading(state, key, more)),
+  setApprovalListFailed: (key: approvals.ApprovalListKey, error: string, generation?: number) =>
+    apply((state) => approvals.setApprovalListFailed(state, key, error, generation)),
+  landApprovalPage: (
+    key: approvals.ApprovalListKey,
+    page: AgentApprovalPage,
+    mode: "replace" | "more",
+    generation?: number,
+    ticket?: number,
+    read?: approvals.ApprovalRead,
+  ) =>
+    apply((state) => approvals.landApprovalPage(state, key, page, mode, generation, ticket, read)),
+  applyApproval: (approval: AgentApproval, read?: approvals.ApprovalRead) =>
+    apply((state) => approvals.applyApproval(state, approval, undefined, read)),
+  settleApproval: (approval: AgentApproval, read?: approvals.ApprovalRead) =>
+    apply((state) => approvals.settleApproval(state, approval, read)),
+  showApproval: (approval: AgentApproval) =>
+    apply((state) => approvals.showApproval(state, approval)),
+  rollbackApproval: (shown: AgentApproval, before: AgentApproval) =>
+    apply((state) => approvals.rollbackApproval(state, shown, before)),
+  /** Every approvals list reloads when next shown. */
+  markApprovalsStale: () => apply((state) => approvals.markApprovalsStale(state)),
+  setLedgerListLoading: (key: ledger.LedgerListKey, more: boolean) =>
+    apply((state) => ledger.setLedgerListLoading(state, key, more)),
+  setLedgerListFailed: (
+    key: ledger.LedgerListKey,
+    agentId: number,
+    error: string,
+    forbidden: boolean,
+    generation?: number,
+  ) =>
+    apply((state) => ledger.setLedgerListFailed(state, key, agentId, error, forbidden, generation)),
+  landLedgerPage: (
+    key: ledger.LedgerListKey,
+    agentId: number,
+    page: AgentLedgerPage,
+    mode: "replace" | "more",
+    generation?: number,
+  ) => apply((state) => ledger.landLedgerPage(state, key, agentId, page, mode, generation)),
   /** Sidebar organisation (S3): pending changes, category replies, membership replies. */
   addSidebarOverlay: (entry: organize.SidebarOverlay) =>
     apply((state) => organize.addOverlay(state, entry)),

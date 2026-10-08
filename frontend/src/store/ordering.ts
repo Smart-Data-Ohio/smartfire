@@ -1,5 +1,12 @@
 /** Ordering and merging helpers the reducers share. */
+import {
+  nextObservation,
+  observationOf,
+  observeObject,
+  rowObservationOf,
+} from "../lib/request-observation.ts";
 import type { MessageDTO, User } from "./model.ts";
+import { landsOver, sameRecord } from "./revision.ts";
 import type { State } from "./state.ts";
 
 /** `(createdAt, id)`: the server's timeline order. */
@@ -38,27 +45,84 @@ export function insertOrdered(
   return [...ids.slice(0, low), message.id, ...ids.slice(low)];
 }
 
+/** The users-row fields of two copies agree (everything but the observation-merged ones). */
+export function sameUserRow(left: User, right: User): boolean {
+  return (
+    left.name === right.name &&
+    left.role === right.role &&
+    left.status === right.status &&
+    left.bio === right.bio &&
+    left.avatarUrl === right.avatarUrl &&
+    left.createdAt === right.createdAt &&
+    left.updatedAt === right.updatedAt
+  );
+}
+
 /**
- * Lands `list` in `users`, each record only if it is at least as new as the one held
- * (`users.updated_at`), so a slow reply never undoes a newer one, whatever order they arrive in.
- * Answers `users` itself when nothing landed.
+ * User row fields compare server revisions. The classic `updated_at` keeps Rails' `now` stamp,
+ * so a repeated or regressed server clock can give two different rows one revision (a ban and
+ * its unban); at an equal revision the row whose request or event was observed last wins.
+ * Status expiry, avatar metadata and agent badges depend on other state, so their newest
+ * request/event observation wins independently. An unchanged observation still advances
+ * history, without mutating a held snapshot.
  */
 export function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
-  const landing = list.filter((user) => {
-    const held = users[user.id];
+  let next: Record<number, User> | null = null;
 
-    return held === undefined || user.updatedAt >= held.updatedAt;
-  });
+  for (const user of list) {
+    const held = (next ?? users)[user.id];
+    const supplied = observationOf(user);
+    const observation = supplied ?? nextObservation();
+    const previous = held === undefined ? 0 : (observationOf(held) ?? 0);
+    const presentationCurrent = observation >= previous;
+    const revision = landsOver(held, user) ? user : (held ?? user);
+    const presentation = presentationCurrent ? user : (held ?? user);
 
-  if (landing.length === 0) {
-    return users;
+    const sameRevision = held !== undefined && held.updatedAt === user.updatedAt;
+    const previousRow = held === undefined ? 0 : (rowObservationOf(held) ?? 0);
+    const incomingRow = rowObservationOf(user) ?? observation;
+    const rowCurrent = !sameRevision || incomingRow >= previousRow;
+    // The row's own fields, too: at a tie the later observation, otherwise the later revision.
+    const rowPresentation = sameRevision ? (rowCurrent ? user : held) : revision;
+
+    const row =
+      held === undefined || user.updatedAt > held.updatedAt
+        ? incomingRow
+        : sameRevision
+          ? Math.max(incomingRow, previousRow)
+          : previousRow;
+
+    const previousBadge = held?.agent == null ? previous : (observationOf(held.agent) ?? previous);
+
+    const incomingBadge =
+      user.agent === null ? observation : (observationOf(user.agent) ?? observation);
+
+    const badgeCurrent = incomingBadge >= previousBadge;
+    const badge = badgeCurrent ? user.agent : (held?.agent ?? null);
+    const badgeAt = Math.max(previousBadge, incomingBadge);
+
+    const agent =
+      rowPresentation.role !== "bot" || badge === null
+        ? null
+        : observationOf(badge) === badgeAt
+          ? badge
+          : observeObject({ ...badge }, badgeAt);
+
+    // Custom status and avatar icon follow the row presentation; the rest have their own order.
+    const merged = { ...rowPresentation, hasAvatar: presentation.hasAvatar, agent };
+
+    if (held !== undefined && sameRecord(held, merged)) {
+      if (
+        (supplied === undefined && user.updatedAt < held.updatedAt) ||
+        (observation <= previous && row === previousRow && incomingBadge <= previousBadge)
+      ) {
+        continue;
+      }
+    }
+
+    next ??= { ...users };
+    next[user.id] = observeObject(merged, Math.max(observation, previous), row);
   }
 
-  const next = { ...users };
-
-  for (const user of landing) {
-    next[user.id] = user;
-  }
-
-  return next;
+  return next ?? users;
 }

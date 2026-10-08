@@ -291,9 +291,10 @@ impl AgentApproval {
         Ok(errors)
     }
     pub fn create(tx: &mut Tx<'_>, a: NewApproval) -> Result<Self> {
-        let a = a.normalized(tx.now());
-        Self::validate(tx.conn(), &a, tx.now(), None)?.into_result()?;
-        let id=tx.conn().query_row("INSERT INTO agent_approvals(agent_id,agent_credential_id,room_id,action,summary,payload,external_id,status,expires_at,decided_by_id,decided_at,decision_note,github_account_id,github_login,fizzy_connected_account_id,fizzy_user_id,fizzy_user_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.agent_credential_id,a.room_id,a.action,a.summary,a.payload,a.external_id,a.status,a.expires_at,a.decided_by_id,a.decided_at,a.decision_note,a.github_account_id,a.github_login,a.fizzy_connected_account_id,a.fizzy_user_id,a.fizzy_user_name,tx.now(),tx.now()],|r|r.get(0))?;
+        let now = tx.now();
+        let a = a.normalized(now);
+        Self::validate(tx.conn(), &a, now, None)?.into_result()?;
+        let id=tx.conn().query_row("INSERT INTO agent_approvals(agent_id,agent_credential_id,room_id,action,summary,payload,external_id,status,expires_at,decided_by_id,decided_at,decision_note,github_account_id,github_login,fizzy_connected_account_id,fizzy_user_id,fizzy_user_name,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.agent_credential_id,a.room_id,a.action,a.summary,a.payload,a.external_id,a.status,a.expires_at,a.decided_by_id,a.decided_at,a.decision_note,a.github_account_id,a.github_login,a.fizzy_connected_account_id,a.fizzy_user_id,a.fizzy_user_name,now,now],|r|r.get(0))?;
         let record = Self::find(tx.conn(), id)?.expect("inserted approval");
         let approval = record.clone();
         tx.after_commit(move |tx| approval.fan_out_inbox_items_after_commit(tx));
@@ -330,18 +331,20 @@ impl AgentApproval {
     pub fn expire_if_due(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
         *self =
             Self::find(tx.conn(), self.id)?.ok_or(crate::Error::RecordNotFound("AgentApproval"))?;
-        if self.status != "pending" || self.expires_at > tx.now() {
+        let now = tx.now();
+        if self.status != "pending" || self.expires_at > now {
             return Ok(false);
         };
         let mut a = self.attributes();
         a.status = "expired".into();
-        Self::validate(tx.conn(), &a, tx.now(), Some(self.id))?.into_result()?;
+        Self::validate(tx.conn(), &a, now, Some(self.id))?.into_result()?;
+        let revision = tx.revision_after(self.updated_at);
         tx.conn().execute(
             "UPDATE agent_approvals SET status='expired',updated_at=? WHERE id=?",
-            params![tx.now(), self.id],
+            params![revision, self.id],
         )?;
         self.status = "expired".into();
-        self.updated_at = tx.now();
+        self.updated_at = revision;
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
         ApprovalChange::emit(tx, self.id);
         Ok(true)
@@ -381,13 +384,15 @@ impl AgentApproval {
         let mut a = self.attributes();
         a.status = decision.into();
         a.decided_by_id = Some(by.id);
-        a.decided_at = Some(tx.now());
+        let now = tx.now();
+        a.decided_at = Some(now);
         a.decision_note = note.map(str::to_owned);
-        let errors = Self::validate(tx.conn(), &a, tx.now(), Some(self.id))?;
+        let errors = Self::validate(tx.conn(), &a, now, Some(self.id))?;
         if !errors.is_empty() {
             return Ok(errors);
         };
-        tx.conn().execute("UPDATE agent_approvals SET status=?,decided_by_id=?,decided_at=?,decision_note=?,updated_at=? WHERE id=?",params![decision,by.id,tx.now(),note,tx.now(),self.id])?;
+        let revision = tx.revision_after(self.updated_at);
+        tx.conn().execute("UPDATE agent_approvals SET status=?,decided_by_id=?,decided_at=?,decision_note=?,updated_at=? WHERE id=?",params![decision,by.id,now,note,revision,self.id])?;
         *self = Self::find(tx.conn(), self.id)?.expect("updated approval");
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
         ApprovalChange::emit(tx, self.id);
@@ -451,12 +456,13 @@ impl AgentApproval {
         if !errors.is_empty() {
             return Ok(errors);
         };
+        let revision = tx.revision_after(self.updated_at);
         tx.conn().execute(
             "UPDATE agent_approvals SET status='cancelled',updated_at=? WHERE id=?",
-            params![tx.now(), self.id],
+            params![revision, self.id],
         )?;
         self.status = "cancelled".into();
-        self.updated_at = tx.now();
+        self.updated_at = revision;
         ActivityItem::handle_for_source(tx, "AgentApproval", self.id)?;
         ApprovalChange::emit(tx, self.id);
         Ok(Errors::default())
@@ -498,19 +504,23 @@ impl AgentApproval {
         query_all(
             conn,
             "SELECT u.id FROM users u WHERE u.status=0 AND u.role!=2 AND (u.role=1 OR u.id=(SELECT owner_id FROM agents WHERE id=?)) ORDER BY CASE WHEN u.id=(SELECT owner_id FROM agents WHERE id=?) THEN 0 ELSE 1 END,u.id",
-            params![self.agent_id,self.agent_id],
+            params![self.agent_id, self.agent_id],
             |r| r.get(0),
         )
     }
     pub fn fan_out_inbox_items(&self, tx: &mut Tx<'_>) -> Result<()> {
-        for user in self.decider_ids(tx.conn())? { self.fan_out_inbox_item(tx, user)?; }
+        for user in self.decider_ids(tx.conn())? {
+            self.fan_out_inbox_item(tx, user)?;
+        }
         Ok(())
     }
     fn fan_out_inbox_items_after_commit(&self, tx: &mut Tx<'_>) -> Result<()> {
         for user in self.decider_ids(tx.conn())? {
             // Rails' after_create_commit loops over create_or_find_by!: a later
             // recipient's failure does not roll back earlier recipients' items.
-            crate::database::run_write(tx.conn(), tx.env(), |tx| self.fan_out_inbox_item(tx, user))?;
+            crate::database::run_write(tx.conn(), tx.env(), |tx| {
+                self.fan_out_inbox_item(tx, user)
+            })?;
         }
         Ok(())
     }

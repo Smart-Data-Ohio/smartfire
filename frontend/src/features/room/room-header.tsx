@@ -2,10 +2,12 @@ import { Link } from "@tanstack/react-router";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { useWorkingPresence } from "../agents/working.ts";
 import { DirectHeaderActions } from "../directs/direct-header-actions.tsx";
 import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { PaneButtons } from "../panes/pane-buttons.tsx";
+import { agentKindLabel, agentTone, identityOf, toneLabel } from "../people/agent-identity.ts";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
@@ -20,6 +22,34 @@ const PRESENCE_TEXT = {
   offline: "Offline",
 } as const;
 
+/**
+ * An agent DM's subtitle: its kind and status ("Workspace agent · Working"), linking to its
+ * profile; a bot without an agent row is just "Bot".
+ */
+function AgentSubtitle({ userId }: { readonly userId: number }) {
+  const identity = identityOf(useUser(userId));
+  const working = useWorkingPresence(userId);
+
+  if (identity.kind !== "agent") {
+    return <span className="room-header-topic room-header-agent">Bot</span>;
+  }
+
+  const tone = agentTone(identity) ?? "idle";
+  const status = working ?? toneLabel(tone, identity.status);
+
+  return (
+    <Link
+      to="/agents/$agentId"
+      params={{ agentId: identity.agentId }}
+      className="room-header-topic room-header-agent"
+      data-tone={tone}
+      preload={false}
+    >
+      {agentKindLabel(identity.agentKind)} · {status}
+    </Link>
+  );
+}
+
 /** A DM's subtitle: the other person's status line or presence. */
 function DirectSubtitle({ userId }: { readonly userId: number }) {
   const status = usePresenceStatus(userId);
@@ -27,7 +57,7 @@ function DirectSubtitle({ userId }: { readonly userId: number }) {
   const user = useUser(userId);
 
   if (user?.role === "bot") {
-    return <span className="room-header-topic room-header-agent">Agent</span>;
+    return <AgentSubtitle userId={userId} />;
   }
 
   const text = statusText ?? (status === undefined ? null : PRESENCE_TEXT[status]);

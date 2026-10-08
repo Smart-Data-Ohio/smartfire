@@ -22,6 +22,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { captureWorkRead } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -255,13 +256,15 @@ export class Engine extends Context.Service<
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
         mutations.setThreadPageReplacing(threadId);
 
+        const read = captureWorkRead(store.getState());
+
         const [detail, newest] = yield* Effect.all(
           [Effect.result(thread(threadId)), threadMessages(threadId, null)],
           { concurrency: 2 },
         );
 
         if (Result.isSuccess(detail)) {
-          mutations.loadThreadDetail(detail.success);
+          mutations.loadThreadDetail(detail.success, read);
         }
 
         mutations.applyThreadPage(threadId, newest, "resync");

@@ -245,15 +245,27 @@ impl Agent {
         )
     }
     pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
-        if ids.is_empty() {return Ok(vec![]);}
-        crate::sql::query_all(conn,"SELECT * FROM agents WHERE id IN (SELECT value FROM json_each(?))",[serde_json::json!(ids).to_string()],Self::from_row)
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        crate::sql::query_all(
+            conn,
+            "SELECT * FROM agents WHERE id IN (SELECT value FROM json_each(?))",
+            [serde_json::json!(ids).to_string()],
+            Self::from_row,
+        )
     }
     /// `users.preload(:agent)`: one read for the bot members of a room.
     pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
-        if user_ids.is_empty() { return Ok(Vec::new()); }
-        crate::sql::query_all(conn,
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        crate::sql::query_all(
+            conn,
             "SELECT * FROM agents WHERE user_id IN (SELECT value FROM json_each(?))",
-            [serde_json::json!(user_ids).to_string()], Self::from_row)
+            [serde_json::json!(user_ids).to_string()],
+            Self::from_row,
+        )
     }
     pub fn validate(conn: &Connection, a: &NewAgent, exclude: Option<i64>) -> Result<Errors> {
         let mut errors = Errors::default();
@@ -441,11 +453,13 @@ impl Agent {
             AgentGrant::revoke_for_agent(tx, self.id)?;
         }
         if self.status != before.status {
-            self.status_changed_at = Some(tx.now());
-            sets.push(("status_changed_at", Box::new(tx.now())));
+            let now = tx.now();
+            self.status_changed_at = Some(now);
+            sets.push(("status_changed_at", Box::new(now)));
         }
-        self.updated_at = tx.now();
-        sets.push(("updated_at", Box::new(tx.now())));
+        let revision = tx.revision_after(before.updated_at);
+        self.updated_at = revision;
+        sets.push(("updated_at", Box::new(revision)));
         let assignments = sets
             .iter()
             .map(|(field, _)| format!("{field}=?"))
@@ -458,6 +472,9 @@ impl Agent {
             &format!("UPDATE agents SET {assignments} WHERE id=?"),
             values.as_slice(),
         )?;
+        drop(values);
+        drop(sets);
+        *self = Self::find(tx.conn(), self.id)?.expect("updated agent");
         if self.status != before.status || self.status_note != before.status_note {
             for target in [AgentStatusTarget::Badge, AgentStatusTarget::DirectoryRow] {
                 tx.emit_after_commit(Event::broadcast(&AgentStatusChange {
@@ -550,7 +567,8 @@ impl Agent {
         super::agent_access::has_capability_anywhere(conn, self.id, capability)
     }
     pub fn touch_last_seen(&mut self, tx: &Tx<'_>) -> Result<()> {
-        if tx.conn().execute("UPDATE agents SET last_seen_at=? WHERE id=? AND (last_seen_at IS NULL OR last_seen_at<=?)",params![tx.now(),self.id,tx.now().ago(jiff::SignedDuration::from_mins(1))])?>0 {self.last_seen_at=Some(tx.now());}
+        let now = tx.now();
+        if tx.conn().execute("UPDATE agents SET last_seen_at=? WHERE id=? AND (last_seen_at IS NULL OR last_seen_at<=?)",params![now,self.id,now.ago(jiff::SignedDuration::from_mins(1))])?>0 {self.last_seen_at=Some(now);}
         Ok(())
     }
     pub fn working_presence_text(&self, now: Timestamp) -> Option<&str> {
@@ -647,7 +665,11 @@ impl Agent {
                         "{} in {} {}",
                         line.capability,
                         line.room_count,
-                        if line.room_count == 1 { "room" } else { "rooms" }
+                        if line.room_count == 1 {
+                            "room"
+                        } else {
+                            "rooms"
+                        }
                     )
                 }
             })

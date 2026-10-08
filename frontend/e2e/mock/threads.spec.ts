@@ -44,6 +44,12 @@ matrix("a reply indicator opens its thread", async ({ page, theme }) => {
 
   const indicator = page.getByRole("button", { name: /^\d+ replies, unread\./ }).first();
 
+  await expect(indicator).toHaveCSS("pointer-events", "auto");
+  await indicator.evaluate((element) =>
+    element.scrollIntoView({ block: "center", behavior: "instant" }),
+  );
+  await expect(indicator).toBeInViewport({ ratio: 1 });
+  await expect(indicator).toHaveCSS("pointer-events", "auto");
   await indicator.click();
   await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/${THREAD_IDS.generalActive}$`));
   await expect(pane(page).getByRole("heading", { name: ACTIVE_NAME })).toBeVisible();

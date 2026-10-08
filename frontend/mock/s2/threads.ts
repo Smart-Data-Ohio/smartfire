@@ -21,6 +21,7 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
+import { workDetail, workPermissions, workUserIds } from "../s4/work-model.ts";
 import { VIEWER_ID } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -58,6 +59,10 @@ export interface Threads {
   parentRemoved(messageId: number): void;
   /** Starts or stops `userId` typing in a thread (fanned out to `thread:<id>`). */
   typing(threadId: number, userId: number, on: boolean): void;
+  /** The viewer's `ThreadDetail`, as `GET /threads/:id` answers it. */
+  detail(thread: ThreadRecord): ThreadDetail;
+  /** The `thread.updated` events for the thread, on `room:<id>` and `thread:<id>`. */
+  updated(thread: ThreadRecord): Outgoing[];
 }
 
 /** Creates the threads module. `held` applies the send hold to posting requests. */
@@ -92,12 +97,7 @@ export function createThreads(
       canLock: moderates && status !== "locked",
       canUnlock: moderates && status === "locked",
       canDelete: moderates,
-      // No mock thread is tracked as work yet.
-      canConvertWork: false,
-      canManageWork: false,
-      canUpdateWorkStatus: false,
-      canAssignWork: false,
-      canRemoveWork: false,
+      ...workPermissions(thread, manages, VIEWER_ID),
     };
   };
 
@@ -111,14 +111,20 @@ export function createThreads(
 
   const detail = (thread: ThreadRecord): ThreadDetail => {
     const parent = parentOf(thread);
+    const allowed = permissions(thread);
+    const work = workDetail(ctx.world(), thread, allowed);
 
     return {
       thread: threadDto(thread, ctx.now()),
       membership: thread.viewerMembership,
       parentMessage: parent,
-      permissions: permissions(thread),
-      work: null,
-      users: ctx.usersFor([thread.creatorId, ...(parent === null ? [] : [parent.creatorId])]),
+      permissions: allowed,
+      work,
+      users: ctx.usersFor([
+        thread.creatorId,
+        ...(parent === null ? [] : [parent.creatorId]),
+        ...workUserIds(thread, work),
+      ]),
     };
   };
 
@@ -554,5 +560,7 @@ export function createThreads(
     typing(threadId, userId, on) {
       ctx.publish([{ topic: `thread:${threadId}`, type: "typing", data: { userId, on } }]);
     },
+    detail,
+    updated,
   };
 }
