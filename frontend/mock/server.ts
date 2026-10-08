@@ -82,6 +82,7 @@ import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts
 import { createWork } from "./s4/work.ts";
 import { WORK_STATUSES } from "./s4/work-model.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createFizzy } from "./s8/fizzy.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -735,6 +736,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const huddles = createHuddles(ctx, simulate);
   const cards = createCards(ctx);
+  const fizzy = createFizzy(ctx, threads);
 
   const routes = [
     ...agents.routes,
@@ -742,6 +744,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...ledger.routes,
     ...huddles.routes,
     ...cards.routes,
+    ...fizzy.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -1090,6 +1093,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         };
       }
 
+      case "fizzy":
+        return { status: 200, json: fizzy.control(body) };
       case "cards":
         return { status: 200, json: cards.control(body) };
       case "reset":
