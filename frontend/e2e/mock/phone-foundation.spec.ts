@@ -185,6 +185,8 @@ test.describe("on a 360 px touch phone", () => {
 
   test("pinch zoom isn't taken for a keyboard", async ({ page }) => {
     await openApp(page, GENERAL);
+    await page.getByRole("textbox", { name: "Message #general" }).focus();
+    // Scale 2 halves the visual viewport, and WebKit halves innerHeight with it.
     await page.evaluate(async () => {
       const viewport = window.visualViewport;
 
@@ -192,13 +194,14 @@ test.describe("on a 360 px touch phone", () => {
         return;
       }
 
+      const half = window.innerHeight / 2;
+
+      Object.defineProperty(window, "innerHeight", { configurable: true, get: () => half });
       Object.defineProperty(viewport, "scale", { configurable: true, get: () => 2 });
-      Object.defineProperty(viewport, "height", {
-        configurable: true,
-        get: () => window.innerHeight / 2,
-      });
+      Object.defineProperty(viewport, "height", { configurable: true, get: () => half });
       Object.defineProperty(viewport, "offsetTop", { configurable: true, get: () => 100 });
       viewport.dispatchEvent(new Event("resize"));
+      window.dispatchEvent(new Event("resize"));
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
     });
@@ -209,12 +212,38 @@ test.describe("on a 360 px touch phone", () => {
     expect((await page.locator(".app-shell").boundingBox())?.height).toBe(PHONE_SMALL.height);
   });
 
+  test("a focused field reads closed until the visible area falls a keyboard short", async ({
+    page,
+  }) => {
+    await openApp(page, GENERAL);
+
+    const html = page.locator("html");
+
+    // A hardware keyboard: focus, and nothing covers the page.
+    await page.getByRole("textbox", { name: "Message #general" }).focus();
+    await expect(html).not.toHaveAttribute("data-keyboard");
+
+    // The URL bar folding away.
+    await simulateKeyboard(page, 60);
+    await expect(html).not.toHaveAttribute("data-keyboard");
+    expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
+
+    // Rotated with the keyboard up, then dismissed with Back while the field keeps focus.
+    await page.setViewportSize({ width: PHONE_SMALL.height, height: PHONE_SMALL.width });
+    await simulateKeyboard(page, 200);
+    await expect(html).toHaveAttribute("data-keyboard", "open");
+    await simulateKeyboard(page, 0);
+    await expect(page.getByRole("textbox", { name: "Message #general" })).toBeFocused();
+    await expect(html).not.toHaveAttribute("data-keyboard");
+    expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
+  });
+
   test("a resizing keyboard shrinks the shell with the viewport", async ({ page }) => {
     await openApp(page, GENERAL);
     await page.getByRole("textbox", { name: "Message #general" }).focus();
     await page.setViewportSize({ width: PHONE_SMALL.width, height: 420 });
 
-    await expect(page.locator("html")).toHaveAttribute("data-keyboard", "open");
+    // The layout itself shrank, so there is nothing to inset.
     expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
     await expect
       .poll(async () => (await page.locator(".app-shell").boundingBox())?.height)
@@ -225,6 +254,7 @@ test.describe("on a 360 px touch phone", () => {
 
   test("toasts keep clear of the keyboard", async ({ page }) => {
     await openApp(page, GENERAL);
+    await page.getByRole("textbox", { name: "Message #general" }).focus();
     await simulateKeyboard(page, 300);
 
     expect(
@@ -353,5 +383,17 @@ test.describe("on a desktop", () => {
       .poll(async () => (await page.locator(".app-shell").boundingBox())?.height)
       .toBe(500);
     await expect(page.locator("html")).not.toHaveAttribute("data-keyboard");
+  });
+
+  test("printing lets the shell flow instead of holding it to the screen", async ({ page }) => {
+    await openApp(page, GENERAL);
+    await page.emulateMedia({ media: "print" });
+
+    const shell = page.locator(".app-shell");
+
+    expect(await shell.evaluate((element) => getComputedStyle(element).position)).toBe("static");
+    expect(
+      await shell.evaluate((element) => element.scrollHeight - element.clientHeight),
+    ).toBeLessThanOrEqual(0);
   });
 });

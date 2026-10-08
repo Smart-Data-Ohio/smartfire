@@ -292,8 +292,9 @@ export async function expectTouchTargets(
  * Raises an on-screen keyboard `height` px tall that overlays the page, as iOS Safari's does: the
  * visual viewport shrinks and the layout viewport holds. `offsetTop` pans the visible area down
  * the layout viewport, as iOS does to bring a field above the keyboard (`pageTop` follows). 0
- * lowers it. Resolves once the page has had a frame to respond. For a keyboard that resizes the
- * page instead (Android), shrink the viewport with `page.setViewportSize`.
+ * lowers it. The app reads it as a keyboard only while a text field has focus. Resolves once the
+ * page has had a frame to respond. For a keyboard that resizes the page instead (Android), shrink
+ * the viewport with `page.setViewportSize`.
  */
 export async function simulateKeyboard(
   page: Page,
@@ -309,7 +310,7 @@ export async function simulateKeyboard(
       }
 
       const readings = {
-        height: () => window.innerHeight - keyboard,
+        height: () => document.documentElement.clientHeight - keyboard,
         offsetTop: () => pan,
         pageTop: () => window.scrollY + pan,
       };

@@ -23,6 +23,15 @@
     background: var(--bg-app);
   }
 
+  /* On paper there is no viewport to follow: the shell flows, so a fixed frame doesn't repeat on
+     every page or cut the content off at one screen. */
+  @media print {
+    .app-shell {
+      position: static;
+      height: auto;
+    }
+  }
+
   .app-main {
     position: relative;
     display: flex;

@@ -1,106 +1,77 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  type KeyboardMemory,
-  keyboardMemory,
-  readKeyboard,
-  useKeyboardInset,
-  type ViewportSample,
-} from "./keyboard-inset.ts";
+import { readKeyboard, useKeyboardInset, type ViewportSample } from "./keyboard-inset.ts";
 
-/** A 360 x 740 touch phone in portrait, no keyboard, nothing focused. */
+/** A 360 x 740 phone in portrait, no keyboard, a text field focused. */
 const PHONE: ViewportSample = {
-  innerHeight: 740,
+  layoutHeight: 740,
   viewportHeight: 740,
   offsetTop: 0,
   scale: 1,
-  coarse: true,
-  orientation: "portrait",
-  editing: false,
+  editing: true,
 };
 
-function read(memory: KeyboardMemory, change: Partial<ViewportSample>) {
-  return readKeyboard({ ...PHONE, ...change }, memory);
+function read(change: Partial<ViewportSample>) {
+  return readKeyboard({ ...PHONE, ...change });
 }
+
+const CLOSED = { top: 0, bottom: 0, open: false };
 
 describe("readKeyboard", () => {
   it("reads an overlaid keyboard as the strip the visual viewport leaves uncovered", () => {
-    const memory = keyboardMemory();
-
-    expect(read(memory, {})).toEqual({ top: 0, bottom: 0, open: false });
-    expect(read(memory, { viewportHeight: 440, editing: true })).toEqual({
-      top: 0,
-      bottom: 300,
-      open: true,
-    });
+    expect(read({})).toEqual(CLOSED);
+    expect(read({ viewportHeight: 440 })).toEqual({ top: 0, bottom: 300, open: true });
   });
 
   it("splits a panned page into the strip above the visible area and the one below", () => {
-    const memory = keyboardMemory();
-
-    read(memory, {});
-
-    expect(read(memory, { viewportHeight: 440, offsetTop: 200, editing: true })).toEqual({
+    expect(read({ viewportHeight: 440, offsetTop: 200 })).toEqual({
       top: 200,
       bottom: 100,
       open: true,
     });
   });
 
-  it("takes pinch zoom for no keyboard", () => {
-    const memory = keyboardMemory();
-
-    read(memory, {});
-
-    expect(read(memory, { viewportHeight: 370, offsetTop: 120, scale: 2 })).toEqual({
-      top: 0,
-      bottom: 0,
-      open: false,
-    });
+  it("takes pinch zoom for no keyboard, though WebKit halves innerHeight with it", () => {
+    // innerHeight isn't read: the layout height is the ICB, which pinch leaves at 740.
+    expect(read({ viewportHeight: 370, offsetTop: 120, scale: 2 })).toEqual(CLOSED);
   });
 
-  it("reads a resizing keyboard as the page dropping below its full height", () => {
-    const memory = keyboardMemory();
+  it("closes once the visual viewport grows back, whatever came before", () => {
+    // Rotated to landscape with the keyboard up, then dismissed with Back, focus kept.
+    const landscape = { layoutHeight: 340 } as const;
 
-    read(memory, {});
-
-    expect(read(memory, { innerHeight: 420, viewportHeight: 420, editing: true }).open).toBe(true);
-    expect(read(memory, {}).open).toBe(false);
+    expect(read({ ...landscape, viewportHeight: 160 }).open).toBe(true);
+    expect(read({ ...landscape, viewportHeight: 340 })).toEqual(CLOSED);
   });
 
-  it("keeps a resizing keyboard open through a rotation, then learns the new full height", () => {
-    const memory = keyboardMemory();
-
-    read(memory, {});
-    read(memory, { innerHeight: 420, viewportHeight: 420, editing: true });
-
-    // Landscape with the keyboard still up: the short height must not become the baseline.
-    const landscape = { orientation: "landscape", innerHeight: 160, viewportHeight: 160 } as const;
-
-    expect(read(memory, { ...landscape, editing: true }).open).toBe(true);
-    expect(read(memory, { ...landscape, editing: true }).open).toBe(true);
-
-    // The keyboard closes: the full landscape height is learned, and a later keyboard reads open.
-    expect(
-      read(memory, { orientation: "landscape", innerHeight: 340, viewportHeight: 340 }).open,
-    ).toBe(false);
-    expect(read(memory, { ...landscape, editing: true }).open).toBe(true);
-    expect(memory.baselines.get("landscape")).toBe(340);
-    expect(memory.baselines.get("portrait")).toBe(740);
+  it("doesn't take a folding URL bar for a keyboard", () => {
+    expect(read({ viewportHeight: 680 })).toEqual(CLOSED);
   });
 
-  it("doesn't take a shorter desktop window for a keyboard", () => {
-    const memory = keyboardMemory();
+  it("doesn't take a focused field with a hardware keyboard for an open one", () => {
+    // An iPad with a keyboard attached: focus, and nothing covers the page.
+    expect(read({ layoutHeight: 1024, viewportHeight: 1024 })).toEqual(CLOSED);
+  });
 
-    read(memory, { coarse: false, innerHeight: 900, viewportHeight: 900 });
+  it("needs a focused field", () => {
+    expect(read({ viewportHeight: 440, editing: false })).toEqual(CLOSED);
+  });
 
-    expect(read(memory, { coarse: false, innerHeight: 500, viewportHeight: 500 }).open).toBe(false);
+  it("finds nothing to inset when the keyboard resizes the layout", () => {
+    // Android with interactive-widget=resizes-content: both heights drop together.
+    expect(read({ layoutHeight: 420, viewportHeight: 420 })).toEqual(CLOSED);
+  });
+
+  it("doesn't take a shorter or zoomed desktop window for a keyboard", () => {
+    expect(read({ layoutHeight: 500, viewportHeight: 500 })).toEqual(CLOSED);
+    // Page zoom shrinks both heights in CSS px and leaves the visual viewport's scale at 1.
+    expect(read({ layoutHeight: 450, viewportHeight: 450 })).toEqual(CLOSED);
   });
 });
 
 /** A visualViewport stand-in whose readings a test sets. */
 class FakeViewport extends EventTarget {
-  height = window.innerHeight;
+  height = 740;
   offsetTop = 0;
   scale = 1;
 }
@@ -108,6 +79,8 @@ class FakeViewport extends EventTarget {
 describe("useKeyboardInset", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    Reflect.deleteProperty(document.documentElement, "clientHeight");
+    document.body.replaceChildren();
   });
 
   it("publishes the insets on <html>, a frame after the viewport moves, and clears them", () => {
@@ -119,14 +92,20 @@ describe("useKeyboardInset", () => {
       frames.push(callback),
     );
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
-    vi.stubGlobal("matchMedia", () => ({ matches: true }));
 
     const root = document.documentElement;
+    const field = document.createElement("textarea");
+
+    // jsdom lays nothing out, so the ICB is given.
+    Object.defineProperty(root, "clientHeight", { configurable: true, value: 740 });
+    document.body.append(field);
+    field.focus();
+
     const hook = renderHook(() => useKeyboardInset());
 
     expect(root.style.getPropertyValue("--keyboard-inset")).toBe("0px");
 
-    viewport.height = window.innerHeight - 300;
+    viewport.height = 440;
     viewport.offsetTop = 120;
     viewport.dispatchEvent(new Event("resize"));
     viewport.dispatchEvent(new Event("scroll"));
@@ -137,6 +116,13 @@ describe("useKeyboardInset", () => {
     expect(root.style.getPropertyValue("--keyboard-inset")).toBe("180px");
     expect(root.style.getPropertyValue("--viewport-top-inset")).toBe("120px");
     expect(root.dataset.keyboard).toBe("open");
+
+    // Leaving the field closes it with nothing else changing.
+    frames.length = 0;
+    field.blur();
+    act(() => frames[0]?.(0));
+    expect(root.style.getPropertyValue("--keyboard-inset")).toBe("0px");
+    expect(root.dataset.keyboard).toBeUndefined();
 
     hook.unmount();
     expect(root.style.getPropertyValue("--keyboard-inset")).toBe("");

@@ -1,27 +1,17 @@
 import { useEffect } from "react";
-import { COARSE_QUERY } from "./breakpoints.ts";
 
-/** Under this, a change in the viewport's height is browser chrome folding away, not a keyboard. */
+/** Under this, a gap under the visual viewport is browser chrome folding away, not a keyboard. */
 const KEYBOARD_MIN_HEIGHT = 120;
-
-export type Orientation = "portrait" | "landscape";
 
 /** One reading of the viewports, in layout px. */
 export interface ViewportSample {
-  readonly innerHeight: number;
+  /** The initial containing block, which neither pinch zoom nor an overlaid keyboard moves. */
+  readonly layoutHeight: number;
   readonly viewportHeight: number;
   readonly offsetTop: number;
   readonly scale: number;
-  readonly coarse: boolean;
-  readonly orientation: Orientation;
-  /** A text field has focus, so a keyboard may be up and the height isn't a baseline. */
+  /** A text field has focus, so the keyboard may be up. */
   readonly editing: boolean;
-}
-
-/** What the readings so far have learned: the full height per orientation, and the last state. */
-export interface KeyboardMemory {
-  readonly baselines: Map<Orientation, number>;
-  open: boolean;
 }
 
 export interface KeyboardState {
@@ -32,40 +22,23 @@ export interface KeyboardState {
   readonly open: boolean;
 }
 
-export function keyboardMemory(): KeyboardMemory {
-  return { baselines: new Map(), open: false };
-}
-
 /**
- * Reads the keyboard from one sample. An overlaid keyboard (iOS) shows as the visual viewport
- * falling short of the layout viewport; a resizing one (Android, `interactive-widget=
- * resizes-content`) as the layout viewport dropping below this orientation's full height, which is
- * learned only while no field has focus, so a rotation with the keyboard up can't set a short one.
- * Until an orientation has a baseline, the keyboard stays as it was. Pinch zoom shrinks the visual
- * viewport too, so a zoomed page has no overlaid keyboard.
+ * Reads the keyboard from one sample, with no memory of earlier ones: it's open while a text field
+ * has focus, the page isn't pinch-zoomed, and the visual viewport falls a keyboard's height short
+ * of the layout. A hardware keyboard, a folding URL bar and a zoomed page all read closed, and the
+ * keyboard reads closed the moment the visual viewport grows back, whatever happened before.
  */
-export function readKeyboard(sample: ViewportSample, memory: KeyboardMemory): KeyboardState {
-  const zoomed = Math.abs(sample.scale - 1) > 0.01;
-  const covered = zoomed ? 0 : Math.max(0, sample.innerHeight - sample.viewportHeight);
-  const top = Math.min(covered, Math.max(0, sample.offsetTop));
-  const baseline = memory.baselines.get(sample.orientation);
+export function readKeyboard(sample: ViewportSample): KeyboardState {
+  const gap = sample.layoutHeight - sample.viewportHeight;
+  const open = sample.editing && Math.abs(sample.scale - 1) < 0.01 && gap > KEYBOARD_MIN_HEIGHT;
 
-  if (!sample.editing) {
-    memory.baselines.set(sample.orientation, Math.max(baseline ?? 0, sample.innerHeight));
+  if (!open) {
+    return { top: 0, bottom: 0, open };
   }
 
-  if (covered >= KEYBOARD_MIN_HEIGHT) {
-    memory.open = true;
-  } else if (!sample.coarse) {
-    // A desktop window made shorter is not a keyboard.
-    memory.open = false;
-  } else if (baseline === undefined) {
-    memory.open = sample.editing && memory.open;
-  } else {
-    memory.open = baseline - sample.innerHeight >= KEYBOARD_MIN_HEIGHT;
-  }
+  const top = Math.min(gap, Math.max(0, sample.offsetTop));
 
-  return { top, bottom: covered - top, open: memory.open };
+  return { top, bottom: gap - top, open };
 }
 
 function editing(): boolean {
@@ -81,23 +54,14 @@ function editing(): boolean {
   );
 }
 
-function orientation(): Orientation {
-  const type = window.screen.orientation?.type;
-
-  if (type !== undefined) {
-    return type.startsWith("landscape") ? "landscape" : "portrait";
-  }
-
-  return window.screen.width > window.screen.height ? "landscape" : "portrait";
-}
-
 /**
  * The on-screen keyboard, for the whole app; the shell runs it once, batched to a frame. On <html>:
  * `--keyboard-inset`, the layout viewport's strip under an overlaid keyboard (iOS), and
  * `--viewport-top-inset`, its strip above the visible area when iOS pans the page up to a field.
  * The shell sits between the two, so its header stays on screen; a position: fixed surface adds
- * them itself. While any keyboard is up, overlaid or resizing, <html> carries
- * `data-keyboard="open"`.
+ * them itself. While an overlaid keyboard is up, <html> carries `data-keyboard="open"`. A resizing
+ * keyboard (Android, `interactive-widget=resizes-content`) shrinks the layout itself, so the page
+ * already fits above it and there is nothing to inset.
  */
 export function useKeyboardInset(): void {
   useEffect(() => {
@@ -108,25 +72,20 @@ export function useKeyboardInset(): void {
     }
 
     const root = document.documentElement;
-    const coarse = window.matchMedia(COARSE_QUERY);
-    const memory = keyboardMemory();
     let frame = 0;
 
     const update = () => {
       frame = 0;
 
-      const state = readKeyboard(
-        {
-          innerHeight: window.innerHeight,
-          viewportHeight: viewport.height,
-          offsetTop: viewport.offsetTop,
-          scale: viewport.scale,
-          coarse: coarse.matches,
-          orientation: orientation(),
-          editing: editing(),
-        },
-        memory,
-      );
+      const state = readKeyboard({
+        // The ICB: WebKit holds it through the keyboard and pinch (innerHeight moves under pinch,
+        // webkit.org/b/245361); Chromium and Gecko shrink it with a resizing keyboard.
+        layoutHeight: root.clientHeight,
+        viewportHeight: viewport.height,
+        offsetTop: viewport.offsetTop,
+        scale: viewport.scale,
+        editing: editing(),
+      });
 
       root.style.setProperty("--keyboard-inset", `${Math.round(state.bottom)}px`);
       root.style.setProperty("--viewport-top-inset", `${Math.round(state.top)}px`);
@@ -148,12 +107,17 @@ export function useKeyboardInset(): void {
     viewport.addEventListener("resize", schedule);
     viewport.addEventListener("scroll", schedule);
     window.addEventListener("resize", schedule);
+    // Focus moving into or out of a field changes the reading without moving the viewport.
+    document.addEventListener("focusin", schedule);
+    document.addEventListener("focusout", schedule);
 
     return () => {
       cancelAnimationFrame(frame);
       viewport.removeEventListener("resize", schedule);
       viewport.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
+      document.removeEventListener("focusin", schedule);
+      document.removeEventListener("focusout", schedule);
       root.style.removeProperty("--keyboard-inset");
       root.style.removeProperty("--viewport-top-inset");
       delete root.dataset.keyboard;
