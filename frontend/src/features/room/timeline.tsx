@@ -158,6 +158,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const unreadIndex = items.findIndex((item) => item.kind === "unread");
 
     if (focusIndex >= 0) {
+      // Not the bottom: a page that arrives after this must not yank back to the end.
+      atBottomRef.current = false;
       list.scrollToIndex(focusIndex, { align: "center" });
     } else if (unreadIndex >= 0) {
       list.scrollToIndex(unreadIndex, { align: "start", offset: -8 });
@@ -196,6 +198,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   // A resync can leave the window short of the present with the reader at its end (more was
   // posted than a page holds while they were away): page on and offer the jump without a scroll.
+  // A permalink is centered on its message. An unmeasured list looks like the bottom, and paging
+  // newer from there walks off the message before the row is placed.
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the window's end moves, not on every render
   useEffect(() => {
     const list = listRef.current;
@@ -205,8 +209,13 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
 
     setFarFromPresent(true);
+
+    if (focusMessageId !== null) {
+      return;
+    }
+
     loadNewerNear(list.scrollSize - list.scrollOffset - list.viewportSize);
-  }, [ready, timeline.after]);
+  }, [ready, timeline.after, focusMessageId]);
 
   // An edit opened from elsewhere (the composer's ↑) brings its row into view.
   const editingId = useEditingId();
