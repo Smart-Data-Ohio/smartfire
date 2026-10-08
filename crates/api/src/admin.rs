@@ -396,12 +396,18 @@ async fn write_workspace(
     let banner = banner.stage(c.app()).await?;
     let audit = audit_context(c)?;
     let storage = c.app().storage.clone();
+    let secrets = c.app().secrets.clone();
     let (before, account, before_logo, after_logo, banner_change) = c
         .app()
         .db
         .write(move |tx| {
             if let Some(prepared) = prepared {
-                save_branding(tx, &storage, prepared)?;
+                save_branding(
+                    tx,
+                    &storage,
+                    rails_compat::blob_branding::Marker::new(&secrets),
+                    prepared,
+                )?;
             }
             let before = account.clone();
             let before_logo =
@@ -414,8 +420,8 @@ async fn write_workspace(
                     .collect()
             });
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            attachments::assign(tx, Record::account(account.id), "logo", logo)?;
-            attachments::assign(tx, Record::account(account.id), "banner", banner)?;
+            attachments::assign(tx, Record::account(account.id, &secrets), "logo", logo)?;
+            attachments::assign(tx, Record::account(account.id, &secrets), "banner", banner)?;
             let after_logo =
                 attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             let after_banner = attachments::attached_blob(tx.conn(), "Account", account.id, "banner")?.map(|blob| blob.id);
@@ -446,6 +452,7 @@ async fn write_workspace(
 fn save_branding(
     tx: &mut campfire_db::Tx<'_>,
     storage: &campfire_storage::Storage,
+    marker: rails_compat::blob_branding::Marker,
     prepared: Prepared,
 ) -> campfire_db::Result<()> {
     let mut blob = campfire_storage::Blob::find(tx.conn(), prepared.blob.id)
@@ -474,10 +481,15 @@ fn save_branding(
         branding::ANIMATED_KEY,
         campfire_storage::Json::Bool(animated),
     );
+    blob.metadata.set(
+        branding::MARK_KEY,
+        campfire_storage::Json::String(marker.sign(&blob.key)),
+    );
     tx.conn().execute(
         "UPDATE active_storage_blobs SET content_type = ?1, metadata = ?2 WHERE id = ?3",
         rusqlite::params![prepared.blob.content_type, blob.metadata.encode(), blob.id],
     )?;
+    campfire_web::active_storage::mark_branding_tree(tx.conn(), marker, blob.id)?;
     Ok(())
 }
 
@@ -485,12 +497,13 @@ fn save_branding(
 async fn detach_logo(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let account = account(c).await?;
+    let secrets = c.app().secrets.clone();
     let audit = audit_context(c)?;
     let account = c
         .app()
         .db
         .write(move |tx| {
-            attachments::destroy(tx, Record::account(account.id), "logo")?;
+            attachments::destroy(tx, Record::account(account.id, &secrets), "logo")?;
             Ok(account)
         })
         .await
@@ -507,11 +520,12 @@ async fn detach_logo(c: &mut Ctx) -> Result {
 async fn detach_banner(c: &mut Ctx) -> Result {
     administrator(c).await?;
     let account = account(c).await?;
+    let secrets = c.app().secrets.clone();
     let audit = audit_context(c)?;
     c.app()
         .db
         .write(move |tx| {
-            attachments::destroy(tx, Record::account(account.id), "banner")?;
+            attachments::destroy(tx, Record::account(account.id, &secrets), "banner")?;
             Ok(())
         })
         .await

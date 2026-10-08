@@ -715,12 +715,20 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
         .map(|row| serde_json::from_str::<Value>(row.as_str().unwrap()).unwrap())
         .find(|blob| blob["filename"] == "logo.png")
         .unwrap();
-    let spa_metadata: Value = serde_json::from_str(spa_blob["metadata"].as_str().unwrap()).unwrap();
+    // Both removals leave the server's branding mark (verified in the branding analysis tests).
+    let without_mark = |metadata: &str| {
+        let mut metadata: Value = serde_json::from_str(metadata).unwrap();
+        let mark = metadata.as_object_mut().unwrap().remove("branding_mark").unwrap();
+        let mark = mark.as_str().unwrap();
+        assert!(mark.len() == 64 && mark.bytes().all(|byte| byte.is_ascii_hexdigit()), "{mark}");
+        metadata
+    };
+    let spa_metadata = without_mark(spa_blob["metadata"].as_str().unwrap());
     assert_eq!(
         spa_metadata,
         json!({
             "identified": true, "width": 64, "height": 64, "analyzed": true,
-            "branding_animated": false, "branding": true,
+            "branding_animated": false,
         })
     );
     let mut logos = 0;
@@ -730,8 +738,8 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     {
         let mut blob: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
         if blob["filename"] == "logo.png" {
-            let metadata: Value = serde_json::from_str(blob["metadata"].as_str().unwrap()).unwrap();
-            assert_eq!(metadata, json!({"identified": true, "branding": true}));
+            // While attached the classic blob keeps Rails' metadata.
+            assert_eq!(without_mark(blob["metadata"].as_str().unwrap()), json!({"identified": true}));
             assert_eq!(blob["id"], spa_blob["id"]);
             blob["metadata"] = spa_blob["metadata"].clone();
             *row = json!(blob.to_string());

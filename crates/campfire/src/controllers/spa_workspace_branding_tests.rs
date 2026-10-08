@@ -725,6 +725,7 @@ async fn spa_workspace_branding_full_pool_times_out_and_recovers_after_blocked_c
     let mut admin = a.sign_in(DAVID).await;
     branding_slots_are_free().await;
     let (signed, id) = upload_bytes(&a, &animated_gif(), "blocked.gif", "image/gif").await;
+    let secrets = a.booted.app.secrets.clone();
     let key = a
         .db()
         .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
@@ -1088,6 +1089,7 @@ async fn spa_workspace_branding_legacy_pixel_budget_falls_back_to_stock_logo() {
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.body, stock);
     assert_eq!(admin.get("/account/logo").await.body, stock);
+    let secrets = a.booted.app.secrets.clone();
     a.db()
         .write(move |tx| {
             use crate::controllers::presenters::attachments::{self, Assignment, Record};
@@ -1097,7 +1099,7 @@ async fn spa_workspace_branding_legacy_pixel_budget_falls_back_to_stock_logo() {
                 .unwrap();
             attachments::assign(
                 tx,
-                Record::account(account.id),
+                Record::account(account.id, &secrets),
                 "banner",
                 Assignment::Existing(blob),
             )
@@ -1135,6 +1137,7 @@ async fn spa_workspace_branding_legacy_byte_cap_skips_decode_and_uses_existing_f
         &[("account[logo]", &signed)],
     )
     .await;
+    let secrets = a.booted.app.secrets.clone();
     let key = a
         .db()
         .write(move |tx| {
@@ -1154,7 +1157,7 @@ async fn spa_workspace_branding_legacy_byte_cap_skips_decode_and_uses_existing_f
             );
             attachments::assign(
                 tx,
-                Record::account(account.id),
+                Record::account(account.id, &secrets),
                 "banner",
                 Assignment::Existing(blob.clone()),
             )?;
@@ -1248,6 +1251,7 @@ async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() 
         &[("account[logo]", &signed)],
     )
     .await;
+    let secrets = a.booted.app.secrets.clone();
     let key = a
         .db()
         .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))

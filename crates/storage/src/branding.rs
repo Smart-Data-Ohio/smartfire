@@ -18,7 +18,7 @@ pub const MAX_ANIMATION_PIXELS: u64 = 100_000_000;
 pub const MAX_LEGACY_PIXELS: u64 = 100_000_000;
 pub const ANIMATED_KEY: &str = "branding_animated";
 /// Retain the purpose after replacement detaches a blob whose analysis is still queued.
-pub const METADATA_KEY: &str = "branding";
+pub const MARK_KEY: &str = "branding_mark";
 
 /// Includes waiting for the branding slot, header probing and pixel evaluation.
 pub fn processing_timeout(_blob: &Blob) -> Duration {

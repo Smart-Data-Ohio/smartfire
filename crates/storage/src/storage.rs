@@ -150,6 +150,8 @@ impl Storage {
 
     /// `blob.open`: a tempfile named `ActiveStorage-<id>-…<.ext>`, checksum-verified.
     pub fn open(&self, blob: &Blob) -> Result<NamedTempFile> {
+        #[cfg(feature = "test-support")]
+        test_hooks::opened(&blob.key);
         let file = tempfile::Builder::new()
             .prefix(&format!("ActiveStorage-{}-", blob.id))
             .suffix(blob.filename.extension_with_delimiter())
@@ -379,4 +381,47 @@ fn analyzed(metadata: &Json, mut extracted: Json) -> Json {
     let mut metadata = metadata.clone();
     metadata.merge(&extracted);
     metadata
+}
+
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, LazyLock, Mutex};
+
+    static OPENS: LazyLock<Mutex<HashMap<String, Arc<AtomicUsize>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
+
+    pub struct OpenObservation {
+        key: String,
+        count: Arc<AtomicUsize>,
+    }
+
+    impl OpenObservation {
+        pub fn count(&self) -> usize {
+            self.count.load(Ordering::Relaxed)
+        }
+    }
+
+    impl Drop for OpenObservation {
+        fn drop(&mut self) {
+            OPENS.lock().unwrap().remove(&self.key);
+        }
+    }
+
+    /// Observe the copy path before it creates a tempfile or opens the source.
+    pub fn observe_opens(key: &str) -> OpenObservation {
+        let count = Arc::new(AtomicUsize::new(0));
+        OPENS.lock().unwrap().insert(key.to_owned(), count.clone());
+        OpenObservation {
+            key: key.to_owned(),
+            count,
+        }
+    }
+
+    pub(super) fn opened(key: &str) {
+        if let Some(count) = OPENS.lock().unwrap().get(key) {
+            count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
 }

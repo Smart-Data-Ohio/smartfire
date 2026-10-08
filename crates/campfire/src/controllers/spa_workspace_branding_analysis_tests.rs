@@ -32,12 +32,15 @@ async fn blob(a: &TestApp, id: i64) -> Blob {
 }
 
 async fn attach_legacy(a: &TestApp, id: i64, name: &'static str) {
+    let secrets = a.booted.app.secrets.clone();
     a.db()
         .write(move |tx| {
             use crate::controllers::presenters::attachments::{self, Record};
             let account = campfire_db::Account::first(tx.conn())?.unwrap();
             let blob = Blob::find(tx.conn(), id).unwrap().unwrap();
-            attachments::attach_existing(tx, Record::account(account.id), name, blob)
+            attachments::attach_existing(tx, Record::account(account.id, &secrets), name, blob)?;
+            tx.conn().execute("UPDATE active_storage_blobs SET metadata = json_remove(metadata, '$.branding_mark') WHERE id = ?", [id])?;
+            Ok(())
         })
         .await
         .unwrap();
@@ -79,6 +82,16 @@ fn assert_metadata(blob: &Blob, width: i64, height: i64, animated: bool) {
     assert_eq!(
         blob.metadata.get(branding::ANIMATED_KEY),
         Some(&Json::Bool(animated))
+    );
+}
+
+fn assert_server_mark(a: &TestApp, blob: &Blob) {
+    let marker = rails_compat::blob_branding::Marker::new(&a.booted.app.secrets);
+    assert!(
+        blob.metadata
+            .get(branding::MARK_KEY)
+            .and_then(Json::as_str)
+            .is_some_and(|mark| marker.verifies(&blob.key, mark))
     );
 }
 
@@ -163,9 +176,11 @@ async fn spa_workspace_branding_saves_with_running_jobs_keep_analyzer_metadata()
     for (blob, animated) in before {
         let (width, height) = if animated { (1, 1) } else { (7, 3) };
         assert_metadata(&blob, width, height, animated);
+        assert_server_mark(&a, &blob);
     }
     for blob in after {
         assert_metadata(&blob, 1, 1, true);
+        assert_server_mark(&a, &blob);
     }
 }
 
@@ -209,6 +224,7 @@ async fn spa_workspace_branding_rendered_variants_keep_dimensions_without_analys
         assert!(image.is_analyzed());
         assert_eq!(image.metadata.get("width"), Some(&Json::Int(7)));
         assert_eq!(image.metadata.get("height"), Some(&Json::Int(3)));
+        assert_server_mark(&a, &image);
         assert_eq!(jobs, 0);
     }
 }
@@ -362,10 +378,16 @@ async fn spa_workspace_branding_legacy_analysis_caps_bytes_before_open_or_copy()
             .unwrap();
         let stalled =
             branding::test_hooks::stall(&source.key, campfire_storage::vips::StallPhase::Header);
+        let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
         let (result, full) =
             with_media_observation(campfire_web::active_storage::analyze(&a.booted.app, id)).await;
         branding_slots_are_free().await;
         assert!(full);
+        assert_eq!(
+            opens.count(),
+            0,
+            "oversized branding must not create a copy tempfile"
+        );
         assert!(!stalled.reached.load(Ordering::Relaxed));
         assert!(
             result
@@ -375,4 +397,216 @@ async fn spa_workspace_branding_legacy_analysis_caps_bytes_before_open_or_copy()
         );
         assert!(!blob(&a, id).await.is_analyzed());
     }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_direct_upload_cannot_forge_analysis_provenance() {
+    use crate::controllers::presenters::test_support::{HQ, Req};
+
+    let _branding = BRANDING_TESTS.lock().await;
+    let Some(a) = app().await else { return };
+    let mut member = a.sign_in(KEVIN).await;
+    let bytes = png(7, 3, false);
+    let reply = member
+        .write(super::super::admin_tests::json_body(
+            Method::POST,
+            "/rails/active_storage/direct_uploads",
+            &json!({"blob": {
+                "filename": "ordinary.png", "byte_size": bytes.len(),
+                "checksum": campfire_storage::key::checksum(&bytes), "content_type": "image/png",
+                "metadata": {"branding": true, "branding_animated": true,
+                             "branding_mark": "made-up", "branding_future": true, "caption": "keep"}
+            }}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let upload: Value = parse(&reply);
+    let id = upload["id"].as_i64().unwrap();
+    let reply = member
+        .send(
+            Req::new(
+                Method::PUT,
+                upload["direct_upload"]["url"].as_str().unwrap(),
+            )
+            .header("content-type", "image/png")
+            .header("content-length", &bytes.len().to_string())
+            .body(bytes),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    let source = blob(&a, id).await;
+    let Json::Object(metadata) = &source.metadata else {
+        panic!("object metadata")
+    };
+    assert!(metadata.iter().all(|(key, _)| !key.starts_with("branding")));
+    let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
+    let posted = write(
+        &mut member,
+        Method::POST,
+        &format!("/api/v1/rooms/{HQ}/messages"),
+        json!({"clientMessageId": "forged-branding", "markdownSource": "",
+               "attachmentSignedId": upload["signed_id"]}),
+    )
+    .await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let analyzed = campfire_web::active_storage::analyze(&a.booted.app, id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        opens.count() > 0,
+        "ordinary image analysis must take Storage::open's media path"
+    );
+    assert_eq!(analyzed.metadata.get("width"), Some(&Json::Int(7)));
+    assert_eq!(analyzed.metadata.get("height"), Some(&Json::Int(3)));
+    let Json::Object(metadata) = &analyzed.metadata else {
+        panic!("object metadata")
+    };
+    assert!(metadata.iter().all(|(key, _)| !key.starts_with("branding")));
+    assert_eq!(
+        analyzed.metadata.get("caption"),
+        Some(&Json::String("keep".into()))
+    );
+}
+
+async fn detached_legacy_analysis(name: &'static str, replace: bool, classic_remove: bool) {
+    let _branding = BRANDING_TESTS.lock().await;
+    let Some(a) = app().await else { return };
+    let mut admin = a.sign_in(DAVID).await;
+    let (_, id) = upload_bytes(&a, &png(7, 3, false), "legacy.png", "image/png").await;
+    let (_, variant_id) = upload_bytes(&a, &png(7, 3, false), "variant.png", "image/png").await;
+    attach_legacy(&a, id, name).await;
+    // Simulate the pre-branding release, including an already queued derivative analyzer.
+    a.db()
+        .write(move |tx| {
+            use campfire_storage::blob::{insert_attachment, insert_variant_record};
+            let record = insert_variant_record(tx.conn(), id, "legacy-digest")
+                .unwrap()
+                .unwrap();
+            insert_attachment(
+                tx.conn(),
+                "image",
+                "ActiveStorage::VariantRecord",
+                record,
+                variant_id,
+                tx.now().jiff(),
+            )
+            .unwrap();
+            for source in [id, variant_id] {
+                tx.conn().execute(
+                    "UPDATE active_storage_blobs SET metadata = '{}' WHERE id = ?",
+                    [source],
+                )?;
+            }
+            tx.emit_after_commit(campfire_db::Event::job(&crate::queue::AnalyzeJob {
+                blob_id: variant_id,
+            }));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(blob(&a, id).await.metadata.get("branding_mark").is_none());
+    if replace {
+        let (signed, _) = upload_bytes(&a, &png(2, 2, false), "replacement.png", "image/png").await;
+        let _: api::Workspace = spa(
+            &mut admin,
+            Method::PUT,
+            &format!("/api/v1/admin/workspace/{name}"),
+            json!({"signedId": signed}),
+        )
+        .await;
+    } else if classic_remove {
+        classic(&mut admin, Method::DELETE, "/account/logo", &[]).await;
+    } else {
+        let _: api::Workspace = spa(
+            &mut admin,
+            Method::DELETE,
+            &format!("/api/v1/admin/workspace/{name}"),
+            json!({}),
+        )
+        .await;
+    }
+    for source_id in [id, variant_id] {
+        let source = blob(&a, source_id).await;
+        let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(a.booted.app.storage.service.path_for(&source.key))
+            .unwrap()
+            .set_len(branding::MAX_BYTES + 1)
+            .unwrap();
+        a.db().write(move |tx| {
+            // Deliver only this pending AnalyzeJob; purge remains held.
+            tx.conn().execute("UPDATE background_jobs SET status = 'held'", [])?;
+            assert_eq!(tx.conn().execute(
+                "UPDATE background_jobs SET status = 'ready' WHERE job_class = 'ActiveStorage::AnalyzeJob' AND json_extract(arguments, '$.blob_id') = ?",
+                [source_id])?, 1);
+            Ok(())
+        }).await.unwrap();
+        let (result, full) = with_media_observation(async {
+            let app = a.booted.app.clone();
+            let runner = campfire_jobs::start(
+                app.db.clone(),
+                app.jobs.queue.clone(),
+                crate::jobs::registry(),
+                app,
+                campfire_jobs::RunnerConfig::new(vec![campfire_jobs::QueueConfig::new(
+                    "default", 1,
+                )]),
+            );
+            let result = tokio::time::timeout(Duration::from_secs(5), async {
+                loop {
+                    let jobs = a.db().read(campfire_jobs::inspect::all).await.unwrap();
+                    if let Some(error) = jobs
+                        .iter()
+                        .find(|job| {
+                            job.class == "ActiveStorage::AnalyzeJob"
+                                && job.arguments["blob_id"] == source_id
+                        })
+                        .and_then(|job| job.last_error.clone())
+                    {
+                        break error;
+                    }
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await;
+            runner.shutdown(Duration::from_secs(1)).await;
+            result
+        })
+        .await;
+        assert!(
+            full,
+            "detached legacy analysis must leave MEDIA_PERMITS full"
+        );
+        assert_eq!(
+            opens.count(),
+            0,
+            "detached legacy analysis must not copy oversized input"
+        );
+        assert!(result.unwrap().contains("10 MB byte budget"));
+        assert!(!blob(&a, source_id).await.is_analyzed());
+        assert_server_mark(&a, &blob(&a, source_id).await);
+        if source_id == id {
+            // Dependent analysis must stay bounded after purge destroys its variant association.
+            campfire_web::active_storage::purge(&a.booted.app, id)
+                .await
+                .unwrap();
+        }
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_replaced_legacy_analysis_stays_bounded() {
+    for name in ["logo", "banner"] {
+        detached_legacy_analysis(name, true, false).await;
+    }
+}
+
+#[tokio::test]
+async fn spa_workspace_branding_removed_legacy_analysis_stays_bounded() {
+    for name in ["logo", "banner"] {
+        detached_legacy_analysis(name, false, false).await;
+    }
+    detached_legacy_analysis("logo", false, true).await;
 }

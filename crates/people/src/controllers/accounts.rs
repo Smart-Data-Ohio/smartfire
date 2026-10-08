@@ -63,6 +63,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         settings.iter().map(|(key, value)| (key.clone(), value.to_s().unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&value.to_json())))).collect()
     });
     let logo = Assignment::from_params(&params, "logo")?.stage(c.app()).await?;
+    let secrets = c.app().secrets.clone();
     let audit = super::two_factor::audit_context(c)?;
 
     let (before, account, before_logo, after_logo) = c
@@ -73,7 +74,7 @@ pub async fn update(c: &mut Ctx) -> Result {
             let before_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|s| s.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect());
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            attachments::assign(tx, Record::account(account.id), "logo", logo)?;
+            attachments::assign(tx, Record::account(account.id, &secrets), "logo", logo)?;
             let after_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             Ok((before, account, before_logo, after_logo))
         })

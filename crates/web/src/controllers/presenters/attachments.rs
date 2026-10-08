@@ -124,17 +124,39 @@ pub struct Record {
     pub record_type: &'static str,
     pub table: &'static str,
     pub id: i64,
+    branding: Option<rails_compat::blob_branding::Marker>,
 }
 
 impl Record {
     pub fn user(id: i64) -> Self {
-        Self { record_type: "User", table: "users", id }
+        Self {
+            record_type: "User",
+            table: "users",
+            id,
+            branding: None,
+        }
     }
 
-    pub fn workspace_icon(id:i64) -> Self {Self {record_type:"WorkspaceIcon",table:"workspace_icons",id}}
+    pub fn workspace_icon(id: i64) -> Self {
+        Self {
+            record_type: "WorkspaceIcon",
+            table: "workspace_icons",
+            id,
+            branding: None,
+        }
+    }
 
-    pub fn account(id: i64) -> Self {
-        Self { record_type: "Account", table: "accounts", id }
+    pub fn account(id: i64, secrets: &rails_compat::Secrets) -> Self {
+        Self {
+            record_type: "Account",
+            table: "accounts",
+            id,
+            branding: Some(rails_compat::blob_branding::Marker::new(secrets)),
+        }
+    }
+
+    fn branding_marker(self, name: &str) -> Option<rails_compat::blob_branding::Marker> {
+        self.branding.filter(|_| matches!(name, "logo" | "banner"))
     }
 }
 
@@ -152,19 +174,9 @@ pub fn attach_existing(
     name: &str,
     blob: Blob,
 ) -> campfire_db::Result<()> {
-    let mut blob = save_existing(tx, blob)?;
-    if record.record_type == "Account"
-        && matches!(name, "logo" | "banner")
-        && campfire_storage::analyze::Analyzer::for_content_type(blob.content_type())
-            .analyze_later()
-    {
-        blob.metadata.set(
-            campfire_storage::branding::METADATA_KEY,
-            campfire_storage::Json::Bool(true),
-        );
-        blob.update_metadata(tx.conn(), blob.metadata.clone())
-            .map_err(storage_error)?;
-    }
+    // While attached, a logo or banner is branding through its Account association, so its
+    // metadata stays what Rails records; `destroy` marks it before that association goes.
+    let blob = save_existing(tx, blob)?;
     if attached_blob(tx.conn(), record.record_type, record.id, name)?
         .is_some_and(|attached| attached.id == blob.id)
     {
@@ -243,6 +255,10 @@ pub fn destroy(tx: &mut Tx<'_>, record: Record, name: &str) -> campfire_db::Resu
         .map(Some)
         .or_else(|error| if error == rusqlite::Error::QueryReturnedNoRows { Ok(None) } else { Err(error) })?;
     let Some((attachment_id, blob_id)) = attachment else { return Ok(false) };
+    if let Some(marker) = record.branding_marker(name) {
+        // Keep queued analysis bounded after the Account and variant associations disappear.
+        crate::active_storage::mark_branding_tree(tx.conn(), marker, blob_id)?;
+    }
     tx.conn().execute_cached("DELETE FROM active_storage_attachments WHERE id = ?1", [attachment_id])?;
     super::accounts::touch(tx.conn(), record.table, record.id, tx.now())?;
     tx.emit_after_commit(Event::PurgeBlob { blob_id });

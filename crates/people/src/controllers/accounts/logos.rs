@@ -100,11 +100,12 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let account = super::current_account(c).await?;
+    let secrets = c.app().secrets.clone();
     let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
         .write(move |tx| {
-            attachments::destroy(tx, Record::account(account.id), "logo")?;
+            attachments::destroy(tx, Record::account(account.id, &secrets), "logo")?;
             Ok(())
         })
         .await
