@@ -6,8 +6,10 @@
 import { Effect } from "effect";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
+import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
 import type { IntegrationToken } from "../gen/IntegrationToken.ts";
+import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { Reauthentication } from "../gen/Reauthentication.ts";
 import type { SessionList } from "../gen/SessionList.ts";
@@ -24,6 +26,7 @@ import {
   AccountSettings as AccountSettingsSchema,
   BackupCodes as BackupCodesSchema,
   IntegrationChange as IntegrationChangeSchema,
+  PushPublicKey as PushPublicKeySchema,
   PushSubscriptionList as PushSubscriptionListSchema,
   SessionList as SessionListSchema,
   Settings as SettingsSchema,
@@ -126,6 +129,21 @@ const pushReply = wire<PushSubscriptionList>(PushSubscriptionListSchema);
 /** `GET /settings/push_subscriptions`: the devices that get push notifications. */
 export const pushSubscriptions = Effect.fn("api.pushSubscriptions")(function* () {
   return yield* call(get("/settings/push_subscriptions"), pushReply);
+});
+
+/** `GET /settings/push_subscriptions/key`: the configured public VAPID key. */
+export const pushPublicKey = Effect.fn("api.pushPublicKey")(function* () {
+  return yield* call(
+    get("/settings/push_subscriptions/key"),
+    wire<PushPublicKey>(PushPublicKeySchema),
+  );
+});
+
+/** `POST /settings/push_subscriptions`: enroll this browser for the signed-in person. */
+export const createPushSubscription = Effect.fn("api.createPushSubscription")(function* (
+  body: CreatePushSubscription,
+) {
+  return yield* call({ method: "POST", path: "/settings/push_subscriptions", body }, pushReply);
 });
 
 /** `DELETE /settings/push_subscriptions/:id`: that device stops getting them. */

@@ -1,6 +1,7 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { useResolvedTheme } from "../lib/appearance.ts";
 import { useReducedMotion } from "../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../service-worker/lazy.ts";
 import { useTokenRgb } from "./token-color.ts";
 import "./effects.css";
 

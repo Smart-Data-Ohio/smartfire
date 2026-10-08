@@ -2,11 +2,13 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   IntegrationChange as IntegrationChangeSchema,
+  PushPublicKey as PushPublicKeySchema,
   PushSubscriptionList as PushSubscriptionListSchema,
   SessionList as SessionListSchema,
   Settings as SettingsSchema,
 } from "../../src/api/schema/settings.ts";
 import type { IntegrationChange } from "../../src/gen/IntegrationChange.ts";
+import type { PushPublicKey } from "../../src/gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../../src/gen/PushSubscriptionList.ts";
 import type { SessionList } from "../../src/gen/SessionList.ts";
 import type { Settings } from "../../src/gen/Settings.ts";
@@ -19,6 +21,54 @@ import { errorOf, expectStatus, get, harness, NOW } from "./testing.ts";
 function body(keys: readonly string[], given: Readonly<Record<string, Json>>): Json {
   return Object.fromEntries(keys.map((key) => [key, given[key] ?? null]));
 }
+
+describe("the mock's browser push enrollment", () => {
+  it("deduplicates the whole key triple and refreshes the device list", async () => {
+    const { server } = harness();
+    const path = "/api/v1/settings/push_subscriptions";
+
+    const enrollment = {
+      endpoint: "https://fcm.googleapis.com/fcm/send/enrolled",
+      p256dhKey: "p256",
+      authKey: "auth",
+    };
+
+    const saved = await expectStatus<PushSubscriptionList>(server, "POST", path, enrollment, 200);
+
+    expect(saved.pushSubscriptions).toHaveLength(3);
+    const repeat = await expectStatus<PushSubscriptionList>(server, "POST", path, enrollment, 200);
+
+    expect(repeat).toEqual(saved);
+
+    const rotated = await expectStatus<PushSubscriptionList>(
+      server,
+      "POST",
+      path,
+      { ...enrollment, authKey: "rotated" },
+      200,
+    );
+
+    expect(rotated.pushSubscriptions).toHaveLength(4);
+    expect(await get<PushSubscriptionList>(server, path)).toEqual(rotated);
+  });
+
+  it("rejects malformed and non-push-service endpoints without adding a device", async () => {
+    const { server } = harness();
+    const path = "/api/v1/settings/push_subscriptions";
+    const before = await get<PushSubscriptionList>(server, path);
+
+    for (const body of [
+      null,
+      {},
+      { endpoint: "https://fcm.googleapis.com/push", p256dhKey: 2, authKey: "auth" },
+      { endpoint: "http://fcm.googleapis.com/push", p256dhKey: "p256", authKey: "auth" },
+      { endpoint: "https://private.example/push", p256dhKey: "p256", authKey: "auth" },
+    ]) {
+      await expectStatus(server, "POST", path, body, 422);
+      expect(await get<PushSubscriptionList>(server, path)).toEqual(before);
+    }
+  });
+});
 
 const PROFILE = ["name", "emailAddress", "currentPassword", "password", "bio", "githubLogin"];
 
@@ -46,6 +96,9 @@ describe("the mock's settings", () => {
     );
     Schema.decodeUnknownSync(PushSubscriptionListSchema)(
       await get<PushSubscriptionList>(server, "/api/v1/settings/push_subscriptions"),
+    );
+    Schema.decodeUnknownSync(PushPublicKeySchema)(
+      await get<PushPublicKey>(server, "/api/v1/settings/push_subscriptions/key"),
     );
   });
 

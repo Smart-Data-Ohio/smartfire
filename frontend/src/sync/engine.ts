@@ -14,7 +14,7 @@ import { activityUnreadCount } from "../api/activity-endpoints.ts";
 import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
-import { thread, threadMessages } from "../api/thread-endpoints.ts";
+import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -26,13 +26,16 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { paneProblem, refetchThread, settled, UNAVAILABLE } from "./settle.ts";
+import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import {
   beginThreadLoad,
   finishThreadLoad,
+  isGoneFocus,
   isLatestThreadLoad,
+  loadThreadHeader,
+  openAtNewest,
   pendingThreadFocus,
 } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
@@ -235,15 +238,7 @@ export class Engine extends Context.Service<
 
         const [detail, newest] = yield* Effect.all(
           [
-            Effect.result(
-              // Installed as soon as it's settled, not after the replies (see `loadPane`).
-              settled(
-                thread(threadId),
-                () => refetchThread(threadId),
-                (answer) => [answer.thread.id],
-                (answer, since) => mutations.loadThreadDetail(answer, since),
-              ),
-            ),
+            loadThreadHeader(threadId, load),
             Effect.result(threadMessages(threadId, focus === null ? null : { around: focus })),
           ],
           { concurrency: 2 },
@@ -268,6 +263,11 @@ export class Engine extends Context.Service<
         }
 
         if (Result.isFailure(newest)) {
+          // The permalink's reply may be gone while the thread is still there (see `openAtNewest`).
+          if (focus !== null && problem === null && isGoneFocus(newest.failure)) {
+            return yield* openAtNewest(threadId, load);
+          }
+
           return yield* Effect.fail(newest.failure);
         }
 

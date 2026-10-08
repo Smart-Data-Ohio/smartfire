@@ -15,6 +15,8 @@
   { "endpoint": "rooms/files#index", "classic": "/rooms/:room_id/files", "spa": "/app/r/:room_id/files", "ported": true },
   { "endpoint": "rooms/pins#index", "classic": "/rooms/:room_id/pins", "spa": "/app/r/:room_id/pins", "ported": true },
   { "endpoint": "rooms/involvements#show", "classic": "/rooms/:room_id/involvement", "spa": "/app/r/:room_id/notifications", "ported": true },
+  { "endpoint": "rooms/fizzy/message_cards#new", "classic": "/rooms/:room_id/messages/:message_id/fizzy_cards/new", "spa": "/app/r/:room_id/m/:message_id/fizzy/new", "ported": true },
+  { "endpoint": "rooms/fizzy/message_cards#new", "classic": "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards/new", "spa": "/app/r/:room_id/t/:thread_id/m/:message_id/fizzy/new", "ported": true },
   { "endpoint": "activity_items#index", "classic": "/activity", "spa": "/app/activity", "ported": true },
   { "endpoint": "saved_items#index", "classic": "/saved", "spa": "/app/saved", "ported": true },
   { "endpoint": "scheduled_messages#index", "classic": "/scheduled_messages", "spa": "/app/scheduled", "ported": true },

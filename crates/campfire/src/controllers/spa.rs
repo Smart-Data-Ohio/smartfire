@@ -47,6 +47,10 @@ mod spa_api_board_automations_tests;
 mod settings_tests;
 
 #[cfg(test)]
+#[path = "spa_push_enrollment_tests.rs"]
+mod push_enrollment_tests;
+
+#[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
 #[cfg(test)]
@@ -83,3 +87,7 @@ mod account_tests;
 #[cfg(test)]
 #[path = "spa_people_tests.rs"]
 mod people_tests;
+
+#[cfg(test)]
+#[path = "spa_api_fizzy_tests.rs"]
+mod api_fizzy_tests;

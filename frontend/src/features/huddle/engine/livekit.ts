@@ -19,6 +19,7 @@ import type {
   VideoEncoding,
 } from "livekit-client";
 import type { StreamQuality } from "../../../gen/StreamQuality.ts";
+import { loadForUpdate } from "../../../service-worker/update-required.ts";
 import { canShareScreen, permissionDenied } from "./devices.ts";
 import { createLevelMeter, type LevelMeter } from "./meter.ts";
 import {
@@ -50,7 +51,7 @@ let liveKit: Promise<LiveKit> | null = null;
 
 /** The SDK, imported once (it is large, and most sessions never join a call). */
 export function loadLiveKit(): Promise<LiveKit> {
-  liveKit ??= import("livekit-client").catch((error: Error) => {
+  liveKit ??= loadForUpdate(() => import("livekit-client")).catch((error: Error) => {
     liveKit = null;
 
     throw error;
