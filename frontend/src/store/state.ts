@@ -178,6 +178,8 @@ export const emptyTimeline: Timeline = {
   status: "idle",
   loadingOlder: false,
   loadingNewer: false,
+  olderRequest: 0,
+  newerRequest: 0,
   unreadFromId: null,
   unreadCount: 0,
   generation: 0,

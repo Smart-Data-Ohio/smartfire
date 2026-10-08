@@ -185,6 +185,42 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
  */
 export type PageMode = "replace" | "older" | "newer" | "refresh" | "resync";
 
+type PageDirection = "older" | "newer";
+
+function requestId(timeline: Timeline, direction: PageDirection): number {
+  return direction === "older" ? timeline.olderRequest : timeline.newerRequest;
+}
+
+/** A directional result whose id was bumped (a replace, or a later page) must not land. */
+function staleRequest(timeline: Timeline, mode: PageMode, request: number | undefined): boolean {
+  if ((mode !== "older" && mode !== "newer") || request === undefined) {
+    return false;
+  }
+
+  return requestId(timeline, mode) !== request;
+}
+
+function beginDirectional(timeline: Timeline, direction: PageDirection): Timeline {
+  return direction === "older"
+    ? { ...timeline, loadingOlder: true, olderRequest: timeline.olderRequest + 1 }
+    : { ...timeline, loadingNewer: true, newerRequest: timeline.newerRequest + 1 };
+}
+
+/** Clears one direction's flag when `request` still owns it. */
+function clearOwned(
+  timeline: Timeline,
+  direction: PageDirection,
+  request: number | undefined,
+): Timeline | undefined {
+  if (requestId(timeline, direction) !== request) {
+    return undefined;
+  }
+
+  return direction === "older"
+    ? { ...timeline, loadingOlder: false }
+    : { ...timeline, loadingNewer: false };
+}
+
 /** A page merged into the store, and the window it makes. */
 interface LandedPage {
   readonly state: State;
@@ -352,8 +388,14 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
       status: "ready",
       before,
       after,
-      loadingOlder: mode === "older" ? false : timeline.loadingOlder,
-      loadingNewer: mode === "newer" ? false : timeline.loadingNewer,
+      // A fresh window ends the load that raised a flag and retires both directional requests,
+      // so a page still in flight cannot clear the next one's flag or move this cursor.
+      // Leaving `loadingNewer` set blocks every later forward page (the pane sets it while a
+      // permalink's window loads).
+      loadingOlder: mode === "replace" || mode === "older" ? false : timeline.loadingOlder,
+      loadingNewer: mode === "replace" || mode === "newer" ? false : timeline.loadingNewer,
+      olderRequest: mode === "replace" ? timeline.olderRequest + 1 : timeline.olderRequest,
+      newerRequest: mode === "replace" ? timeline.newerRequest + 1 : timeline.newerRequest,
       generation: mode === "replace" ? timeline.generation + 1 : timeline.generation,
       arrived: fresh ? null : timeline.arrived,
     },
@@ -361,8 +403,20 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
 }
 
 /** Lands a page of messages: a fresh window, or one more page on either end. */
-export function applyPage(state: State, roomId: number, page: MessagePage, mode: PageMode): State {
-  const landed = landPage(state, timelineOf(state, roomId), page, mode);
+export function applyPage(
+  state: State,
+  roomId: number,
+  page: MessagePage,
+  mode: PageMode,
+  request?: number,
+): State {
+  const timeline = timelineOf(state, roomId);
+
+  if (staleRequest(timeline, mode, request)) {
+    return state;
+  }
+
+  const landed = landPage(state, timeline, page, mode);
 
   return withTimeline(landed.state, roomId, landed.timeline);
 }
@@ -373,22 +427,21 @@ export function applyThreadPage(
   threadId: number,
   page: MessagePage,
   mode: PageMode,
+  request?: number,
 ): State {
-  const landed = landPage(state, state.threadTimelines[threadId] ?? emptyTimeline, page, mode);
+  const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  if (staleRequest(timeline, mode, request)) {
+    return state;
+  }
+
+  const landed = landPage(state, timeline, page, mode);
 
   return withThreadTimeline(landed.state, threadId, landed.timeline);
 }
 
-export function setPageLoading(state: State, roomId: number, direction: "older" | "newer"): State {
-  const timeline = timelineOf(state, roomId);
-
-  return withTimeline(
-    state,
-    roomId,
-    direction === "older"
-      ? { ...timeline, loadingOlder: true }
-      : { ...timeline, loadingNewer: true },
-  );
+export function setPageLoading(state: State, roomId: number, direction: PageDirection): State {
+  return withTimeline(state, roomId, beginDirectional(timelineOf(state, roomId), direction));
 }
 
 /**
@@ -406,8 +459,19 @@ export function setThreadPageReplacing(state: State, threadId: number): State {
   return withThreadTimeline(state, threadId, { ...timeline, arrived: [] });
 }
 
-export function setPageFailed(state: State, roomId: number): State {
+export function setPageFailed(
+  state: State,
+  roomId: number,
+  direction?: PageDirection,
+  request?: number,
+): State {
   const timeline = timelineOf(state, roomId);
+
+  if (direction !== undefined) {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withTimeline(state, roomId, cleared);
+  }
 
   return withTimeline(state, roomId, {
     ...timeline,
@@ -421,20 +485,29 @@ export function setPageFailed(state: State, roomId: number): State {
 export function setThreadPageLoading(
   state: State,
   threadId: number,
-  direction: "older" | "newer",
+  direction: PageDirection,
 ): State {
   const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
 
   return withThreadTimeline(state, threadId, {
-    ...timeline,
+    ...beginDirectional(timeline, direction),
     status: timeline.status === "idle" ? "loading" : timeline.status,
-    loadingOlder: direction === "older" ? true : timeline.loadingOlder,
-    loadingNewer: direction === "newer" ? true : timeline.loadingNewer,
   });
 }
 
-export function setThreadPageFailed(state: State, threadId: number): State {
+export function setThreadPageFailed(
+  state: State,
+  threadId: number,
+  direction?: PageDirection,
+  request?: number,
+): State {
   const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  if (direction !== undefined) {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withThreadTimeline(state, threadId, cleared);
+  }
 
   return withThreadTimeline(state, threadId, {
     ...timeline,
@@ -442,6 +515,37 @@ export function setThreadPageFailed(state: State, threadId: number): State {
     loadingOlder: false,
     loadingNewer: false,
     status: timeline.status === "loading" || timeline.status === "idle" ? "error" : timeline.status,
+  });
+}
+
+/**
+ * The in-flight page was dropped. `replace` is a fresh window: it also releases replies held for
+ * that window. A directional page clears only its own flag, and only while its request id is
+ * still current, so a superseded interrupt cannot release the page that replaced it.
+ */
+export function clearThreadPageLoading(
+  state: State,
+  threadId: number,
+  direction: PageDirection | "replace",
+  request?: number,
+): State {
+  const timeline = state.threadTimelines[threadId];
+
+  if (timeline === undefined) {
+    return state;
+  }
+
+  if (direction !== "replace") {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withThreadTimeline(state, threadId, cleared);
+  }
+
+  return withThreadTimeline(state, threadId, {
+    ...timeline,
+    arrived: null,
+    loadingOlder: false,
+    loadingNewer: false,
   });
 }
 
