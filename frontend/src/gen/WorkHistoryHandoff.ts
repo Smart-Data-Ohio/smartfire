@@ -3,7 +3,7 @@
 /**
  * The handoff an entry records: "· {summary} ({n} links, {m} open questions)".
  */
-export type WorkHistoryHandoff = { 
+export type WorkHistoryHandoff = {
 /**
  * The handoff summary cut to 200 characters (ending "..." when cut).
  */

@@ -2,6 +2,14 @@ import { store } from "../store/store.ts";
 import { PAGE_BUILD, requestsPageBuild } from "./messages.ts";
 import { watchAppUpdateErrors } from "./update-required.ts";
 
+interface WorkerRegistration {
+  update(): Promise<WorkerRegistration | undefined>;
+}
+
+interface WorkerRegistrar {
+  register(url: string, options: RegistrationOptions): Promise<WorkerRegistration>;
+}
+
 function watchPageBuild(serviceWorker: ServiceWorkerContainer): void {
   // import.meta.url is the actual content-hashed entry this page loaded, even after a new
   // worker claims it. Reading the controller's build would incorrectly relabel an old page.
@@ -20,7 +28,7 @@ function watchPageBuild(serviceWorker: ServiceWorkerContainer): void {
 /** Startup quietly swaps the script in the root registration and asks for the latest build. */
 export async function registerWorker(
   url: string | null,
-  serviceWorker: ServiceWorkerContainer | null = navigator.serviceWorker ?? null,
+  serviceWorker: WorkerRegistrar | null = navigator.serviceWorker ?? null,
 ): Promise<void> {
   if (url === null || serviceWorker === null) {
     return;

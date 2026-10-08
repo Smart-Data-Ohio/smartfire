@@ -810,10 +810,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        next = applyActivityItem(next, event.data.item, event.data);
         break;
       case "activity.removed":
-        next = removeActivityItem(next, event.data.id, event.data.unreadCount);
+        next = removeActivityItem(next, event.data.id, event.data);
         break;
       case "scheduled.changed":
         next = applyScheduled(next, event.data);

@@ -102,6 +102,15 @@ pub fn migrate(conn: &mut Connection) -> Result<Vec<String>, Error> {
     migrate_with(conn, &manifest, &catalog())
 }
 
+/// Migrates frozen test seeds without changing their deliberate orphan rows. New foreign key
+/// violations still roll everything back; normal [`migrate`] remains strict.
+pub fn migrate_preserving_existing_foreign_key_violations(
+    conn: &mut Connection,
+) -> Result<Vec<String>, Error> {
+    let manifest: Vec<_> = crate::schema::migration_versions().collect();
+    migrate_with_policy(conn, &manifest, &catalog(), true)
+}
+
 /// Brings the database to `manifest` by applying the pending part of `catalog`, oldest first, in
 /// one transaction with their `schema_migrations` rows: either all of them commit or none do.
 /// Foreign key enforcement is off while they run (so a migration can rebuild a table the way
@@ -113,6 +122,15 @@ pub fn migrate_with(
     manifest: &[&str],
     catalog: &[Migration],
 ) -> Result<Vec<String>, Error> {
+    migrate_with_policy(conn, manifest, catalog, false)
+}
+
+fn migrate_with_policy(
+    conn: &mut Connection,
+    manifest: &[&str],
+    catalog: &[Migration],
+    preserve_existing_foreign_keys: bool,
+) -> Result<Vec<String>, Error> {
     let planned: Vec<String> = pending(conn, manifest, catalog)?
         .into_iter()
         .map(|m| m.version.clone())
@@ -122,13 +140,31 @@ pub fn migrate_with(
     }
     let foreign_keys: bool = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0))?;
     conn.pragma_update(None, "foreign_keys", false)?;
-    let result = apply(conn, manifest, catalog, &planned);
+    let result = apply(
+        conn,
+        manifest,
+        catalog,
+        &planned,
+        preserve_existing_foreign_keys,
+    );
     conn.pragma_update(None, "foreign_keys", foreign_keys)?;
     result.map(|()| planned)
 }
 
-fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planned: &[String]) -> Result<(), Error> {
+fn apply(
+    conn: &mut Connection,
+    manifest: &[&str],
+    catalog: &[Migration],
+    planned: &[String],
+    preserve_existing_foreign_keys: bool,
+) -> Result<(), Error> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    // Only the frozen-seed tool may retain the orphan rows its fixtures deliberately include.
+    let before = if preserve_existing_foreign_keys {
+        foreign_key_violations(&tx)?
+    } else {
+        BTreeSet::new()
+    };
     // Plan again while holding the write lock: another runner may have got there first.
     let migrations = pending(&tx, manifest, catalog)?;
     if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
@@ -146,16 +182,25 @@ fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planne
         tx.execute(r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#, [&migration.version])
             .map_err(failed)?;
     }
-    let violation: Option<String> = {
-        let mut stmt = tx.prepare("PRAGMA foreign_key_check")?;
-        let mut rows = stmt.query([])?;
-        rows.next()?.map(|row| row.get(0)).transpose()?
-    };
-    if let Some(table) = violation {
+    let violation = foreign_key_violations(&tx)?
+        .into_iter()
+        .find(|violation| !before.contains(violation));
+    if let Some((table, ..)) = violation {
         return Err(Error::ForeignKeys(table));
     }
     tx.commit()?;
     Ok(())
+}
+
+/// One `PRAGMA foreign_key_check` row: (table, rowid, parent table, key index).
+type Violation = (String, Option<i64>, String, i64);
+
+fn foreign_key_violations(conn: &Connection) -> Result<BTreeSet<Violation>, Error> {
+    let mut stmt = conn.prepare("PRAGMA foreign_key_check")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+    })?;
+    Ok(rows.collect::<Result<_, _>>()?)
 }
 
 fn validate(manifest: &[&str], catalog: &[Migration]) -> Result<(), Error> {
@@ -383,6 +428,82 @@ mod tests {
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
         assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
         assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"));
+    }
+
+    fn database_with_an_orphan() -> Connection {
+        let conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(parent_id INTEGER REFERENCES ws18_parent(id)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn existing_foreign_key_violations_remain_strict_by_default() {
+        let mut conn = database_with_an_orphan();
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_other(id INTEGER PRIMARY KEY);",
+        )];
+        let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(!exists(
+            &conn,
+            "SELECT 1 FROM sqlite_schema WHERE name='ws18_other'"
+        ));
+        assert!(versions_like(&conn, "2999%").is_empty());
+    }
+
+    #[test]
+    fn frozen_seed_migration_preserves_existing_but_rejects_new_foreign_key_violations() {
+        let mut conn = database_with_an_orphan();
+        let before = foreign_key_violations(&conn).unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_other(id INTEGER PRIMARY KEY);",
+        )];
+        migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true).unwrap();
+        assert!(exists(
+            &conn,
+            "SELECT 1 FROM sqlite_schema WHERE name='ws18_other'"
+        ));
+        assert_eq!(foreign_key_violations(&conn).unwrap(), before);
+
+        // Another orphan in the same table must still roll back its migration and ledger row.
+        let catalog = [
+            migration(
+                "29990101000000",
+                "CREATE TABLE ws18_other(id INTEGER PRIMARY KEY);",
+            ),
+            migration("29990102000000", "INSERT INTO ws18_child VALUES (8);"),
+        ];
+        let error = migrate_with_policy(
+            &mut conn,
+            &manifest(&["29990101000000", "29990102000000"]),
+            &catalog,
+            true,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert_eq!(foreign_key_violations(&conn).unwrap(), before);
+        assert!(!exists(
+            &conn,
+            "SELECT 1 FROM ws18_child WHERE parent_id = 8"
+        ));
+        assert!(versions_like(&conn, "29990102000000").is_empty());
+        assert!(
+            conn.query_row("PRAGMA foreign_keys", [], |row| row.get::<_, bool>(0))
+                .unwrap()
+        );
     }
 
     #[test]

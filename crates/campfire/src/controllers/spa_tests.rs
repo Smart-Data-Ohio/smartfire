@@ -145,7 +145,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
             "theme": campfire_spa::theme(Some(&settings.theme)),
             "textSize": campfire_spa::text_size(Some(&settings.text_size)),
             "cableUrl": "/cable",
-            "serviceWorkerUrl": null,
+            "serviceWorkerUrl": "/service-worker.js",
             "version": "parity",
             "revision": "parity",
         })
@@ -301,7 +301,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         // Without the SPA the layout is the Rails layout and names no worker.
         let expected = match (enabled, next) {
             (false, _) => None,
-            (true, true) => Some("/app/service-worker.js"),
+            (true, true) => Some("/service-worker.js"),
             (true, false) => Some("/service-worker.js"),
         };
         let mut b = a.sign_in(DAVID).await;
@@ -319,11 +319,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         let shell = b.get("/app/").await;
         let boot = b.send(json_request("/api/v1/boot")).await;
         if enabled {
-            let expected = if next {
-                Value::from("/app/service-worker.js")
-            } else {
-                Value::Null
-            };
+            let expected = Value::from("/service-worker.js");
             assert_eq!(
                 boot_json(&shell.text())["serviceWorkerUrl"],
                 expected,
@@ -351,7 +347,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         // With no signed-in user, SPA_DEFAULT selects the classic layout's worker.
         let expected = match (enabled, default_next) {
             (false, _) => None,
-            (true, true) => Some("/app/service-worker.js"),
+            (true, true) => Some("/service-worker.js"),
             (true, false) => Some("/service-worker.js"),
         };
         let signed_out = a.anonymous().get("/session/new").await;
@@ -369,38 +365,18 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
 }
 
 #[tokio::test]
-async fn pwa_manifest_reuses_classic_fields_with_one_spa_start_and_scope() {
+async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     let Some(a) = app(true).await else { return };
-    let mut b = a.anonymous();
-    let classic = b.get("/webmanifest.json").await.json();
-    let manifest = b.get("/app/manifest.webmanifest").await;
-    assert_eq!(manifest.status, StatusCode::OK);
-    assert_eq!(
-        manifest.content_type(),
-        Some("application/manifest+json; charset=utf-8")
-    );
+    let manifest = a.anonymous().get("/webmanifest.json").await;
     let json = manifest.json();
-    assert_eq!(json["start_url"], campfire_spa::root_path());
-    assert_eq!(json["scope"], json["start_url"]);
-    for field in [
-        "name",
-        "icons",
-        "display",
-        "description",
-        "categories",
-        "theme_color",
-        "background_color",
-        "screenshots",
-    ] {
-        assert_eq!(json[field], classic[field], "{field}");
-    }
-    assert_eq!(json["shortcuts"][0]["url"], "/app/rooms/new/open");
-    assert_eq!(json["shortcuts"][1]["url"], "/app/settings");
+    assert_eq!(json["start_url"], "/");
+    assert_eq!(json["scope"], "/");
+    assert!(json.get("id").is_none(), "the historical manifest uses start_url as its implicit id");
+    let alias = a.anonymous().get("/app/manifest.webmanifest").await;
+    assert_eq!(alias.status, StatusCode::FOUND);
+    assert_eq!(alias.header("location"), Some("http://campfire.test/webmanifest.json"));
     let shell = a.sign_in(DAVID).await.get("/app/").await;
-    assert!(shell.text().contains(&format!(
-        "<link rel=\"manifest\" href=\"{}manifest.webmanifest\"",
-        campfire_spa::root_path()
-    )));
+    assert!(shell.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
     let classic = a.anonymous().get("/session/new").await;
     assert!(classic.text().contains("href=\"/webmanifest.json\""));
 }
@@ -474,36 +450,22 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
     }
     for path in ["service-worker.js", "offline.html"] {
         let reply = a.anonymous().get(&format!("/app/{path}")).await;
-        match campfire_spa::file(path, None) {
-            Some(served) => {
-                assert_eq!(reply.status, StatusCode::OK, "{path}");
-                assert_eq!(reply.body, served.body, "{path}");
-                assert_eq!(
-                    reply.content_type(),
-                    Some(served.file.content_type),
-                    "{path}"
-                );
-                assert_eq!(reply.header("set-cookie"), None, "{path}");
-                if path == "service-worker.js" {
-                    assert_eq!(reply.header("service-worker-allowed"), Some("/"));
-                    assert_eq!(
-                        reply.header("cache-control"),
-                        Some("no-cache, no-transform")
-                    );
-                }
-            }
-            None => assert_eq!(
-                reply.status,
-                StatusCode::NOT_FOUND,
-                "a stub never serves the shell for {path}"
-            ),
+        let root = a.anonymous().get(&format!("/{path}")).await;
+        let file = campfire_spa::pwa::file(path, true, None).unwrap();
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.content_type(), Some(file.file.content_type));
+        assert_eq!(reply.body, root.body, "older bundles use the same root resource");
+        assert_eq!(reply.body, file.body);
+        assert_eq!(reply.header("set-cookie"), None);
+        if path == "service-worker.js" {
+            assert_eq!(reply.header("service-worker-allowed"), Some("/"));
+            assert_eq!(reply.header("cache-control"), Some("no-cache, no-transform"));
         }
     }
 }
 
-/// Application startup owns every registration: real sign-in (a full page load from the auth
-/// pages) and UI preference forms, the unchanged classic worker, and the built SPA (not a
-/// registration fixture or stub).
+/// After seeding a legacy registration, real sign-in and UI preference forms update the
+/// shared root worker through application startup and the built SPA.
 #[tokio::test]
 #[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
 async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
@@ -539,6 +501,52 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
         .read(|conn| Ok(User::find(conn, DAVID)?.email_address.unwrap()))
         .await
         .unwrap();
+    let stdout = run_pwa_browser(&app, "pwa_registration_browser.mjs", &email, VAPID_PUBLIC_KEY).await;
+    assert!(
+        stdout.contains("PWA_REGISTRATION_RECEIPT "),
+        "browser completed every lifecycle assertion"
+    );
+    if stdout.contains("PWA_PUSH_PRESERVATION_SKIPPED ") {
+        let allow_unavailable = std::env::var("PWA_ALLOW_PUSH_UNAVAILABLE").as_deref() == Ok("1");
+        assert!(allow_unavailable, "subscription preservation was skipped without an opt-out");
+        println!("SKIPPED: push subscription preservation (no push service in this browser)");
+    } else {
+        assert!(
+            stdout.contains("\"subscription\":\"endpoint-and-keys-preserved\""),
+            "a real subscription survived every worker swap"
+        );
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
+async fn pwa_browser_manifest_uses_session_for_saved_ui_preference() {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    assert!(campfire_spa::built(), "build frontend/dist before compiling this browser test");
+    let app = TestApp::boot_frozen_with_env(&[
+        ("RAILS_ENV", "test"),
+        ("SPA_ENABLED", "1"),
+        ("SPA_DEFAULT", "next"),
+    ])
+    .await
+    .expect("PWA browser requires the restored default seed")
+    .without_job_runner()
+    .await;
+    unenroll(&app, DAVID).await;
+    app.db()
+        .write(|tx| ui_preference::store(tx, DAVID, UiPreference::Classic))
+        .await
+        .unwrap();
+    let email = app.db()
+        .read(|conn| Ok(User::find(conn, DAVID)?.email_address.unwrap()))
+        .await
+        .unwrap();
+    let stdout = run_pwa_browser(&app, "pwa_manifest_browser.mjs", &email, "").await;
+    assert!(stdout.contains("PWA_MANIFEST_RECEIPT "), "browser checked every manifest link");
+}
+
+async fn run_pwa_browser(app: &TestApp, script: &str, email: &str, vapid_public_key: &str) -> String {
     let listener = crate::test_support::bind_listener().await;
     let target = format!("http://{}", listener.local_addr().unwrap());
     let router = app.booted.router.clone();
@@ -568,7 +576,7 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
                 .status();
         }
     }
-    let container = (!local).then(|| Container(format!("pwa-browser-{}", std::process::id())));
+    let container = (!local).then(|| Container(format!("pwa-browser-{}-{script}", std::process::id())));
     let mut command = if local {
         tokio::process::Command::new("node")
     } else {
@@ -587,18 +595,18 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
             .arg("--env")
             .arg(format!("PWA_ALLOW_PUSH_UNAVAILABLE={allow_flag}"))
             .arg("--env")
-            .arg(format!("PWA_BROWSER_VAPID_KEY={VAPID_PUBLIC_KEY}"))
+            .arg(format!("PWA_BROWSER_VAPID_KEY={vapid_public_key}"))
             .arg(std::env::var("PWA_PLAYWRIGHT_IMAGE")
                 .expect("ci/correctness.sh pwa supplies the pinned browser image"))
             .arg("node");
         docker
     };
     let output = command
-        .arg(root.join("test-support/pwa_registration_browser.mjs"))
+        .arg(root.join("test-support").join(script))
         .env("PWA_BROWSER_TARGET", target)
         .env("PWA_BROWSER_EMAIL", email)
         .env("PWA_ALLOW_PUSH_UNAVAILABLE", allow_flag)
-        .env("PWA_BROWSER_VAPID_KEY", VAPID_PUBLIC_KEY)
+        .env("PWA_BROWSER_VAPID_KEY", vapid_public_key)
         .kill_on_drop(true).output();
     // Every browser wait is bounded; this catches anything that still hangs.
     let output = tokio::time::timeout(std::time::Duration::from_secs(300), output)
@@ -612,17 +620,5 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
         "real PWA browser failed\n{stdout}\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        stdout.contains("PWA_REGISTRATION_RECEIPT "),
-        "browser completed every lifecycle assertion"
-    );
-    if stdout.contains("PWA_PUSH_PRESERVATION_SKIPPED ") {
-        assert!(allow_unavailable, "subscription preservation was skipped without an opt-out");
-        println!("SKIPPED: push subscription preservation (no push service in this browser)");
-    } else {
-        assert!(
-            stdout.contains("\"subscription\":\"endpoint-and-keys-preserved\""),
-            "a real subscription survived every worker swap"
-        );
-    }
+    stdout.into_owned()
 }

@@ -156,6 +156,10 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
     while let Some(row) = rows.next().unwrap() {
         let mut fields: Vec<(String, String)> = Vec::new();
         for (i, name) in names.iter().enumerate() {
+            // Port-only counter for the SPA activity badge that Rails doesn't have.
+            if table == "users" && name == "activity_revision" {
+                continue;
+            }
             let value: rusqlite::types::Value = row.get(i).unwrap();
             if table == "rooms" && name == "client_room_id" {
                 assert_eq!(

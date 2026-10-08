@@ -2,6 +2,7 @@
  * The words and numbers the cards show: relative times ("closes in 2 hours", "3 hours ago"),
  * event times, compact counts ("1.2K") and a link's host.
  */
+import { ianaZone } from "../../lib/rails-zones.ts";
 
 const MINUTE = 60_000;
 
@@ -13,7 +14,7 @@ const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 const compact = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
 
-/** An event's formatters, all in the zone its times were set in. */
+/** An event's formatters, all in one zone (the one its times were set in, or the viewer's). */
 interface EventFormats {
   /** "Thu, Oct 8, 2026" (classic always shows the year). */
   readonly day: Intl.DateTimeFormat;
@@ -48,9 +49,14 @@ function makeEventFormats(timeZone: string | undefined): EventFormats {
   };
 }
 
-/** The formatters for `timeZone`, made once; the viewer's own zone if this browser doesn't know it. */
-function formatsIn(timeZone: string): EventFormats {
-  const held = eventFormats.get(timeZone);
+/**
+ * The formatters for `timeZone` (a Rails name such as "Eastern Time (US & Canada)" read as its
+ * IANA zone), or for the viewer's own zone when it's `null`, made once. A zone this browser
+ * doesn't know falls back to the viewer's.
+ */
+function formatsIn(timeZone: string | null): EventFormats {
+  const zone = timeZone === null ? "" : ianaZone(timeZone);
+  const held = eventFormats.get(zone);
 
   if (held !== undefined) {
     return held;
@@ -59,12 +65,12 @@ function formatsIn(timeZone: string): EventFormats {
   let made: EventFormats;
 
   try {
-    made = makeEventFormats(timeZone);
+    made = makeEventFormats(zone === "" ? undefined : zone);
   } catch {
     made = makeEventFormats(undefined);
   }
 
-  eventFormats.set(timeZone, made);
+  eventFormats.set(zone, made);
 
   return made;
 }
@@ -117,8 +123,8 @@ export interface EventTile {
   readonly day: string;
 }
 
-/** The month and day for an event's date tile, in the event's zone. */
-export function eventTile(timestamp: string, timeZone: string): EventTile {
+/** The month and day for an event's date tile, in `timeZone` (`null`: the viewer's own). */
+export function eventTile(timestamp: string, timeZone: string | null): EventTile {
   const millis = Date.parse(timestamp);
   const formats = formatsIn(timeZone);
 
@@ -131,17 +137,36 @@ export function eventTile(timestamp: string, timeZone: string): EventTile {
  * day.
  */
 export function eventWhen(startsAt: string, endsAt: string | null, timeZone: string): string {
-  const formats = formatsIn(timeZone);
+  return when(formatsIn(timeZone), startsAt, endsAt, true);
+}
+
+/**
+ * "Thu, Oct 8, 2026 · 8:00 AM – 8:45 AM": when an event is in the viewer's own zone, unnamed. The
+ * classic calendar shows its times this way, followed by the event's `zoneLabel` (its times where
+ * it's scheduled, with that zone named).
+ */
+export function localEventWhen(startsAt: string, endsAt: string | null): string {
+  return when(formatsIn(null), startsAt, endsAt, false);
+}
+
+/** The start and end in `formats`' zone, naming the zone after the last time when `named`. */
+function when(
+  formats: EventFormats,
+  startsAt: string,
+  endsAt: string | null,
+  named: boolean,
+): string {
+  const lastTime = named ? formats.zonedTime : formats.time;
   const start = Date.parse(startsAt);
   const startDay = formats.day.format(start);
 
   if (endsAt === null) {
-    return `${startDay} · ${unbroken(formats.zonedTime.format(start))}`;
+    return `${startDay} · ${unbroken(lastTime.format(start))}`;
   }
 
   const end = Date.parse(endsAt);
   const endDay = formats.day.format(end);
-  const endTime = unbroken(formats.zonedTime.format(end));
+  const endTime = unbroken(lastTime.format(end));
   const endPart = `${startDay === endDay ? "" : `${endDay} · `}${endTime}`;
 
   return `${startDay} · ${unbroken(formats.time.format(start))} – ${endPart}`;

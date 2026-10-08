@@ -5,7 +5,7 @@ import type { Person } from "./Person";
  * `GET /api/v1/admin/people?page=`: active people, administrators first on the first page, 500
  * a page as the classic list.
  */
-export type PeoplePage = { people: Array<Person>, 
+export type PeoplePage = { people: Array<Person>,
 /**
  * Pass as `page` for the rest; `null` on the last page.
  */

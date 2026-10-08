@@ -5,11 +5,11 @@ import type { StageRole } from "./StageRole";
  * A stage member as the roster shows them (`presenters::calls::stage_model`). Every membership
  * of a stage room has a role (listener when they join).
  */
-export type StageMember = { membershipId: number, userId: number, role: StageRole, 
+export type StageMember = { membershipId: number, userId: number, role: StageRole,
 /**
  * Listeners only: when they raised their hand; the queue is ordered by it.
  */
-handRaisedAt: string | null, 
+handRaisedAt: string | null,
 /**
  * A host or administrator muted them.
  */

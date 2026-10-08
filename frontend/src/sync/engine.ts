@@ -11,7 +11,6 @@ import {
   type Scope,
   Stream,
 } from "effect";
-import { activityUnreadCount } from "../api/activity-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, room, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
@@ -23,6 +22,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
@@ -34,7 +34,7 @@ import {
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
-import { emitSyncEvents } from "./signals.ts";
+import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
@@ -71,14 +71,16 @@ export const reconnectSchedule = Schedule.min([
 ]);
 
 /**
- * Events whose effect a fresh sidebar snapshot already includes. After a reload they are replayed
- * from the stored cursor on top of a sidebar fetched since, so applying them would count twice.
+ * Events covered by fresh sidebar and activity snapshots. After a reload, replay starts at the
+ * stored cursor, so replaying covered events would change the freshly loaded state.
  */
 const SNAPSHOT_EVENTS: ReadonlySet<SyncEvent["type"]> = new Set([
   "room.unread",
   "room.read",
   "sidebar.row.upserted",
   "sidebar.row.removed",
+  "activity.item",
+  "activity.removed",
 ]);
 
 /** Frames this close together land in one store commit. */
@@ -194,8 +196,13 @@ export class Engine extends Context.Service<
       const api = yield* Effect.context<ApiClient>();
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
-      /** Replayed sidebar events up to this seq are already in the refetched sidebar. */
+      /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+
+      const activitySnapshotThrough = yield* Ref.make({
+        generation: store.getState().activity.generation,
+        through: Number.NEGATIVE_INFINITY,
+      });
 
       /**
        * A room's newest page, merged into the window the reader is on (`resync`); then, for a
@@ -273,18 +280,36 @@ export class Engine extends Context.Service<
       });
 
       /** The badge from the server; a failure keeps the count shown. */
-      const refreshUnreadCount = activityUnreadCount().pipe(
-        Effect.tap(({ unreadCount }) =>
-          Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
-        ),
-        Effect.catch((error) =>
-          Effect.logWarning("sync: activity count refresh failed", error.message),
-        ),
-        Effect.provideContext(api),
-      );
+      const refreshUnreadCount = (through?: number) => {
+        const generation = store.getState().activity.generation;
+
+        return loadUnreadCount(generation).pipe(
+          Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
+          Effect.tap(() =>
+            through === undefined
+              ? Effect.void
+              : Ref.update(activitySnapshotThrough, (held) =>
+                  held.generation === generation &&
+                  store.getState().activity.generation === generation
+                    ? { generation, through: Math.max(held.through, through) }
+                    : held,
+                ),
+          ),
+          Effect.catch((error) =>
+            Effect.logWarning("sync: activity count refresh failed", error.message),
+          ),
+          Effect.provideContext(api),
+        );
+      };
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
-      const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
+      const resync = Effect.fnUntraced(function* (
+        topicList: readonly string[],
+        activityThrough?: number,
+      ) {
+        // What the store doesn't hold (an open calendar's events) reads itself again meanwhile.
+        emitResync(topicList);
+
         for (const topic of topicList) {
           const roomId = roomIdOf(topic);
           const threadId = threadIdOf(topic);
@@ -306,7 +331,7 @@ export class Engine extends Context.Service<
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
-            yield* refreshUnreadCount;
+            yield* Effect.forkChild(refreshUnreadCount(activityThrough));
           } else if (roomId !== null) {
             yield* resyncRoom(roomId).pipe(
               Effect.catch((error) =>
@@ -364,6 +389,13 @@ export class Engine extends Context.Service<
       ) {
         const point = yield* cursor.get;
         const covered = yield* Ref.get(snapshotThrough);
+        const activitySnapshot = yield* Ref.get(activitySnapshotThrough);
+
+        const activityCovered =
+          activitySnapshot.generation === store.getState().activity.generation
+            ? activitySnapshot.through
+            : Number.NEGATIVE_INFINITY;
+
         const fresh: SyncEvent[] = [];
         const start = point?.seq ?? Number.NEGATIVE_INFINITY;
         let seq = start;
@@ -372,7 +404,12 @@ export class Engine extends Context.Service<
           if (event.seq > seq) {
             seq = event.seq;
 
-            if (!(event.seq <= covered && SNAPSHOT_EVENTS.has(event.type))) {
+            const through =
+              event.type === "activity.item" || event.type === "activity.removed"
+                ? activityCovered
+                : covered;
+
+            if (!(event.seq <= through && SNAPSHOT_EVENTS.has(event.type))) {
               fresh.push(event);
             }
           }
@@ -422,23 +459,32 @@ export class Engine extends Context.Service<
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
+        const newEpoch = point?.epoch !== frame.epoch;
+
+        // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
+        mutations.beginActivityGeneration(newEpoch);
+        yield* Ref.set(activitySnapshotThrough, {
+          generation: store.getState().activity.generation,
+          through: Number.NEGATIVE_INFINITY,
+        });
+
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
 
-          // After a reload the sidebar was fetched before this socket, while the replay starts
-          // at the stored cursor: some replayed unreads are already counted, others (those since
-          // the fetch) aren't. Refetch now, after every replayed event happened, and skip the
-          // replayed sidebar events the new snapshot covers.
+          // The stored cursor predates the page reload. Refetch after every replayed event
+          // happened, then skip sidebar and activity events the fresh snapshots cover.
           if (afterReload && frame.seq > point.seq) {
             yield* Ref.set(snapshotThrough, frame.seq);
-            yield* resync(["user"]);
+            yield* resync(["user"], frame.seq);
+          } else {
+            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
           }
 
           return;
         }
 
         yield* cursor.set({ epoch: frame.epoch, seq: frame.seq });
-        yield* resync(["user", ...(yield* topics.subscribed)]);
+        yield* resync(["user", ...(yield* topics.subscribed)], frame.seq);
       });
 
       /**
@@ -626,7 +672,7 @@ export class Engine extends Context.Service<
         while (true) {
           yield* Queue.take(grew);
           mutations.markActivityStale();
-          yield* refreshUnreadCount;
+          yield* refreshUnreadCount();
         }
       });
 

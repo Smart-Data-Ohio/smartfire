@@ -79,6 +79,10 @@ async fn snapshot(db: &Database, json_columns: Value) -> Value {
                             );
                             continue;
                         }
+                        // Port-only counter for the SPA activity badge that Rails doesn't have.
+                        if table == "users" && column == "activity_revision" {
+                            continue;
+                        }
                         let v = match row.get::<_, SqlValue>(i)? {
                             SqlValue::Null => Value::Null,
                             SqlValue::Integer(v) => json!(v),

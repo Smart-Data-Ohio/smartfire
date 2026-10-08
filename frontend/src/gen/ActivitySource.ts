@@ -12,56 +12,56 @@ import type { AgentBudgetCap } from "./AgentBudgetCap";
  * two-step lockouts (following Rails' JSON), this is filled for every type the HTML inbox
  * renders, with the same title and body.
  */
-export type ActivitySource = { sourceType: ActivitySourceType, sourceId: number, 
+export type ActivitySource = { sourceType: ActivitySourceType, sourceId: number,
 /**
  * The room it happened in; `null` for agent budget notices, sign-ins and lockouts (and an
  * approval outside a room).
  */
-roomId: number | null, 
+roomId: number | null,
 /**
  * The thread, for messages in a thread, work events and SLA nudges.
  */
-threadId: number | null, 
+threadId: number | null,
 /**
  * The message to open at, for `message` and `saved_item` sources (a saved item's message).
  */
-messageId: number | null, 
+messageId: number | null,
 /**
  * `event` sources only: the calendar event.
  */
-eventId: number | null, 
+eventId: number | null,
 /**
  * Who's behind it: the message's creator, the event's organizer, the huddle's caller, the
  * work event's actor, the agent's user, or the scheduled message's owner. `null` for
  * sign-ins, lockouts and a work event without an actor.
  */
-creatorId: number | null, 
+creatorId: number | null,
 /**
  * The row's heading: the viewer-relative room name, then ` · ` and the thread name or the
  * event title where there is one; `"{bot} · daily {label} budget"`; `"Two-step sign-in"`;
  * `"Account security"`.
  */
-title: string, 
+title: string,
 /**
  * Plain text, at most 500 characters (497 and `...`): the message, or a sentence such as
  * "Ada started a huddle", "Status: Planned → In progress", "You asked to be reminded about
  * this message: …" or "Your scheduled message was not sent (…): …".
  */
-body: string, 
+body: string,
 /**
  * The timestamp the row shows: the source's own creation time, not the item's.
  */
-occurredAt: string, 
+occurredAt: string,
 /**
  * `agent_approval` sources only: the approval's state (`AgentApproval#effective_status`).
  * `null` otherwise.
  */
-approvalStatus: AgentApprovalStatus | null, 
+approvalStatus: AgentApprovalStatus | null,
 /**
  * `agent_budget_notice` sources only: which daily cap was hit
  * (`agent_budget_notices.cap`). `null` otherwise.
  */
-budgetCap: AgentBudgetCap | null, 
+budgetCap: AgentBudgetCap | null,
 /**
  * The classic page `open` leads to (`presenters::activity` destination), for sources the SPA
  * has no screen for yet, e.g. `/agents/3/approvals` or `/users/me/sessions`. The SPA routes

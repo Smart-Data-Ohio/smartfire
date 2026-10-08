@@ -9,6 +9,14 @@ pub use campfire_controllers::controllers::spa::*;
 mod tests;
 
 #[cfg(test)]
+#[path = "url_contract_tests.rs"]
+mod url_contract_tests;
+
+#[cfg(test)]
+#[path = "url_contract_fixtures.rs"]
+mod url_contract_fixtures;
+
+#[cfg(test)]
 #[path = "spa_api_tests.rs"]
 mod api_tests;
 
@@ -82,6 +90,10 @@ mod people_tests;
 #[cfg(test)]
 #[path = "spa_api_room_management_tests.rs"]
 mod api_room_management_tests;
+
+#[cfg(test)]
+#[path = "spa_api_events_tests.rs"]
+mod spa_api_events_tests;
 
 #[cfg(test)]
 #[path = "spa_api_fizzy_tests.rs"]

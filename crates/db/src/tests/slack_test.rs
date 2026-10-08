@@ -211,6 +211,10 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
                         );
                         continue;
                     }
+                    // Port-only counter for the SPA activity badge that Rails doesn't have.
+                    if table == "users" && column == "activity_revision" {
+                        continue;
+                    }
                     value[column] = match row.get_ref(index)? {
                         ValueRef::Null => Value::Null,
                         ValueRef::Integer(v) => json!(v),

@@ -10,17 +10,19 @@ import {
   useRef,
   useState,
 } from "react";
-import { setTheme, useAppearance } from "../../lib/appearance.ts";
+import { setThemeOverride, useAppearance } from "../../lib/appearance.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
+import { saveAccountTheme } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
@@ -475,8 +477,23 @@ function YouPanel() {
   const me = useStore((state) => state.me);
   const bootUser = useStore((state) => state.boot?.user ?? null);
   const status = useStore((state) => (me === null ? null : (state.presence[me.user.id] ?? null)));
-  const { theme } = useAppearance();
+  const { theme, themeOverride } = useAppearance();
   const userId = me?.user.id ?? bootUser?.id;
+
+  // The next theme: pinned on this device when one is pinned, else saved to the account.
+  const cycleTheme = () => {
+    const next = THEME_NEXT[theme];
+
+    if (themeOverride !== null) {
+      setThemeOverride(next);
+
+      return;
+    }
+
+    saveAccountTheme(next).catch((error: Error) =>
+      toast({ title: "Couldn't save your theme", description: error.message, tone: "danger" }),
+    );
+  };
 
   if (userId === undefined) {
     return null;
@@ -497,7 +514,7 @@ function YouPanel() {
         icon={THEME_ICON[theme]}
         label={`Theme: ${theme}`}
         size="sm"
-        onClick={() => setTheme(THEME_NEXT[theme])}
+        onClick={cycleTheme}
       />
     </footer>
   );

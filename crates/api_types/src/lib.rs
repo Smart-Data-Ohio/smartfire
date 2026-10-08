@@ -26,6 +26,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod events;
 mod fizzy;
 mod huddle;
 mod me;
@@ -102,6 +103,11 @@ pub use direct::{
 };
 pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};
+pub use events::{
+    CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,
+    EventLimits, EventList, EventRecurrenceRule, EventRepeatOption, EventScope, EventValues,
+    EventVenue, EventVenueOption, EventsChanged, UpdateEvent,
+};
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
