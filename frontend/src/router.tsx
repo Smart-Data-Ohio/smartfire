@@ -123,6 +123,7 @@ const roomControlRoutes = [
   createRoute({ getParentRoute: () => roomRoute, path: "threads", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "files", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
+  createRoute({ getParentRoute: () => roomRoute, path: "automations", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
 ];
 

@@ -2,10 +2,10 @@ import { useStore as useZustand } from "zustand";
 import { createStore } from "zustand/vanilla";
 
 /** The right pane's non-thread views. An open thread is in the URL (`/r/$roomId/t/$threadId`). */
-export type PaneKind = "members" | "pins" | "files" | "threads" | "stage";
+export type PaneKind = "members" | "pins" | "files" | "threads" | "stage" | "automations";
 
 /** The existing side panes that also have classic page mappings. */
-export type RoutePaneKind = Extract<PaneKind, "threads" | "files" | "pins">;
+export type RoutePaneKind = Extract<PaneKind, "threads" | "files" | "pins" | "automations">;
 
 type OpenPane =
   | { readonly kind: "local"; readonly pane: PaneKind }

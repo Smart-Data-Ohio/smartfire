@@ -102,6 +102,8 @@ const loadFilesPane = () => import("./files-pane.tsx");
 
 const loadStagePane = () => import("../huddle/stage-pane.tsx");
 
+const loadBoardAutomationsPane = () => import("../boards/automations-pane.tsx");
+
 const ThreadPane = lazy(() => loadThreadPane().then((module) => ({ default: module.ThreadPane })));
 
 const NewThreadPane = lazy(() =>
@@ -122,6 +124,10 @@ const FilesPane = lazy(() => loadFilesPane().then((module) => ({ default: module
 
 const StagePane = lazy(() => loadStagePane().then((module) => ({ default: module.StagePane })));
 
+const BoardAutomationsPane = lazy(() =>
+  loadBoardAutomationsPane().then((module) => ({ default: module.BoardAutomationsPane })),
+);
+
 let preloaded = false;
 
 /** Fetches every pane's chunk once the page is idle, so later opens don't wait on the network. */
@@ -141,6 +147,7 @@ function preloadPanes(): void {
       loadPinsPane,
       loadFilesPane,
       loadStagePane,
+      loadBoardAutomationsPane,
     ]) {
       void loader().catch(() => undefined);
     }
@@ -192,6 +199,8 @@ function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: Ri
           return <ThreadsPane roomId={roomId} />;
         case "stage":
           return <StagePane roomId={roomId} />;
+        case "automations":
+          return <BoardAutomationsPane roomId={roomId} />;
       }
   }
 }

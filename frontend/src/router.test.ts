@@ -67,7 +67,13 @@ describe("board route search", () => {
   });
 
   it("inherits board search on posts/new, threads and ordinary room child routes", () => {
-    for (const path of ["/r/900/posts/new", "/r/900/t/42", "/r/900/files", "/r/900/m/123"]) {
+    for (const path of [
+      "/r/900/posts/new",
+      "/r/900/t/42",
+      "/r/900/files",
+      "/r/900/automations",
+      "/r/900/m/123",
+    ]) {
       const leaf = router
         .matchRoutes(path, { view: "board", status: "all", owner: "me", tag: "api", m: 123 })
         .at(-1);

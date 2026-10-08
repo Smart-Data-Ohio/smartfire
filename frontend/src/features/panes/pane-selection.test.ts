@@ -1,8 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { closeStep, isPaneShowing, selectRightPaneView, viewKey } from "./pane-selection.ts";
+import {
+  closeStep,
+  isPaneShowing,
+  PANE_TITLES,
+  paneRoute,
+  selectRightPaneView,
+  viewKey,
+} from "./pane-selection.ts";
 import { clampPaneWidth } from "./right-pane.tsx";
 
 describe("selectRightPaneView", () => {
+  it("opens automations only for boards, including locally remembered panes", () => {
+    const input = {
+      threadId: null,
+      newThreadParent: null,
+      routePane: "automations",
+      openPane: "files",
+    } as const;
+
+    expect(selectRightPaneView({ ...input, roomKind: "board" })).toEqual({
+      kind: "pane",
+      pane: "automations",
+    });
+
+    for (const roomKind of ["open", "closed", "direct", "voice", "stage", undefined] as const) {
+      expect(selectRightPaneView({ ...input, roomKind })).toBeNull();
+      expect(
+        selectRightPaneView({ ...input, roomKind, routePane: null, openPane: "automations" }),
+      ).toBeNull();
+    }
+
+    expect(selectRightPaneView({ ...input, roomKind: "board", threadId: 7 })).toEqual({
+      kind: "thread",
+      threadId: 7,
+    });
+    expect(paneRoute("automations")).toBe("/r/$roomId/automations");
+    expect(PANE_TITLES.automations).toBe("Automations");
+  });
   it("opens posts/new without a remembered right pane", () => {
     expect(
       selectRightPaneView({
@@ -58,6 +92,7 @@ describe("viewKey", () => {
       viewKey({ kind: "new-thread", parentId: 1 }),
       viewKey({ kind: "pane", pane: "pins" }),
       viewKey({ kind: "pane", pane: "files" }),
+      viewKey({ kind: "pane", pane: "automations" }),
     ];
 
     expect(new Set(keys).size).toBe(keys.length);

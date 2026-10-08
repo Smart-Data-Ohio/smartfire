@@ -14,6 +14,7 @@ import { clientMessageIdOf, parseMessage } from "../s2/posting.ts";
 import type { Threads } from "../s2/threads.ts";
 import type { Uploads } from "../s2/uploads.ts";
 import { VIEWER_ID } from "../seed.ts";
+import { autoAssignedBoardOwner, createBoardAutomations } from "./automations.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
 import {
   emptyWorkDetail,
@@ -222,7 +223,12 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     const status = statusOf(field(body, "status"), "planned");
     const tags = tagsOf(body);
     const ownerId = checkedOwner(roomId, body);
-    const owner = ownerId === null ? null : (ctx.world().users.get(ownerId) ?? null);
+
+    const owner =
+      ownerId === null
+        ? autoAssignedBoardOwner(ctx.world(), roomId, tags)
+        : (ctx.world().users.get(ownerId) ?? null);
+
     const source = stringField(messageBody, "markdownSource") ?? "";
 
     if ([...source].length > 50000)
@@ -375,11 +381,20 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     if (rawTags !== undefined && !thread.isBoard)
       throw validation("tags", "Tags are only available on board posts");
     const tags = rawTags === undefined ? (thread.work?.tags ?? []) : tagsOf(body);
-    const owner = ownerId === null ? null : (ctx.world().users.get(ownerId) ?? null);
+
+    const addedTags = tags.filter((tag) => !(thread.work?.tags ?? []).includes(tag));
+
+    const owner =
+      ownerId === null
+        ? rawTags === undefined
+          ? null
+          : autoAssignedBoardOwner(ctx.world(), thread.roomId, addedTags)
+        : (ctx.world().users.get(ownerId) ?? null);
+
     const before = thread.work;
     const detail = thread.workDetail ?? emptyWorkDetail;
     const statusChanged = status !== (before?.status ?? null);
-    const ownerChanged = ownerId !== (before?.owner?.id ?? null);
+    const ownerChanged = (owner?.id ?? null) !== (before?.owner?.id ?? null);
     const resultChanged = result !== detail.resultMarkdown;
     const tagsChanged = JSON.stringify(tags) !== JSON.stringify(before?.tags ?? []);
 
@@ -547,6 +562,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
 
   return {
     routes: [
+      ...createBoardAutomations(ctx).routes,
       route("GET", /^\/rooms\/(\d+)\/board$/, (request) =>
         ok(listing(firstId(request), request.query)),
       ),

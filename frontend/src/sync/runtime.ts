@@ -7,7 +7,9 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
+import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
@@ -28,6 +30,7 @@ import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
@@ -301,6 +304,14 @@ const cards = {
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   boards: {
+    automations: (roomId: number): Promise<BoardAutomations> =>
+      runAction(boardActions.automations(roomId)),
+    addTagRule: (roomId: number, input: CreateBoardTagRule): Promise<BoardAutomations> =>
+      runAction(boardActions.addTagRule(roomId, input)),
+    removeTagRule: (roomId: number, ruleId: number): Promise<BoardAutomations> =>
+      runAction(boardActions.removeTagRule(roomId, ruleId)),
+    saveSlaTimers: (roomId: number, input: UpdateBoardSlaTimers): Promise<BoardAutomations> =>
+      runAction(boardActions.saveSlaTimers(roomId, input)),
     open: (roomId: number, query: BoardQuery): Promise<void> =>
       runAction(boardActions.open(roomId, query)),
     loadMore: (roomId: number): Promise<void> => runAction(boardActions.loadMore(roomId)),
