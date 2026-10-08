@@ -605,9 +605,13 @@ function newerOnly(
 export function applyAgentSteps(state: State, change: AgentStepsChanged): State {
   if (change.messageId === null) {
     const threadId = change.threadId;
-    const detail = threadId === null ? undefined : state.work.details[threadId];
 
-    if (threadId === null || detail === undefined) {
+    const detail =
+      threadId === null
+        ? undefined
+        : (state.work.details[threadId] ?? state.threadPanes[threadId]?.work);
+
+    if (threadId === null || detail == null) {
       return state;
     }
 
@@ -621,6 +625,16 @@ export function applyAgentSteps(state: State, change: AgentStepsChanged): State 
             ...state.work,
             details: { ...state.work.details, [threadId]: { ...detail, steps: [...steps] } },
           },
+          threadPanes:
+            state.threadPanes[threadId] === undefined
+              ? state.threadPanes
+              : {
+                  ...state.threadPanes,
+                  [threadId]: {
+                    ...state.threadPanes[threadId],
+                    work: { ...detail, steps: [...steps] },
+                  },
+                },
         };
   }
 

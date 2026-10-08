@@ -338,6 +338,13 @@ impl<'c> Tx<'c> {
         }
     }
 
+    pub(crate) fn has_settled_broadcast<B: crate::Broadcast>(&self, broadcast: &B) -> bool {
+        let event = Event::broadcast(broadcast);
+        self.after_commit.iter().any(|pending| {
+            matches!(pending, AfterCommit::SettledBroadcast(existing) if existing == &event)
+        }) || self.settled_broadcasts.borrow().contains(&event)
+    }
+
     fn collect_settled_broadcast(&self, event: Event) {
         let mut broadcasts = self.settled_broadcasts.borrow_mut();
         if !broadcasts.contains(&event) {

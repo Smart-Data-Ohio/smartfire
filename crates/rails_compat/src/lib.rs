@@ -18,6 +18,7 @@ pub mod turbo;
 pub mod password;
 pub mod ar_encryption;
 pub mod calendar_credentials;
+pub mod blob_branding;
 pub mod verifiers;
 pub mod webhook;
 pub mod jwt;

@@ -390,6 +390,7 @@ fn newly_added_tag_assigns_after_commit_and_records_the_system_actor() {
         tx.conn().execute("INSERT INTO board_tag_assignments(room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES (?,?,?,?,?,?)",params![room.id,"bug",id("jz"),id("david"),tx.now(),tx.now()])?;
         Ok(room)
     });
+    let from = t.events().len();
     let post = t.write(move |tx| {
         ChannelThread::create(
             tx,
@@ -405,6 +406,23 @@ fn newly_added_tag_assigns_after_commit_and_records_the_system_actor() {
     });
     let fresh = t.read(move |conn| ChannelThread::find(conn, post.id));
     assert_eq!(fresh.work_owner_id, Some(id("jz")));
+    use crate::models::channel_thread::{ThreadBoardCreation, ThreadWorkChange};
+    let sync = t.events()[from..]
+        .iter()
+        .filter_map(|event| match event {
+            crate::Event::Broadcast(request) => {
+                if request.decode::<ThreadBoardCreation>().is_some() {
+                    Some("created")
+                } else if request.decode::<ThreadWorkChange>().is_some() {
+                    Some("updated")
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(sync, ["created", "updated"]);
     let events = t.read(move |conn| WorkThreadEvent::for_thread(conn, post.id));
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].actor_id, None);

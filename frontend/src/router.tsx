@@ -53,7 +53,10 @@ import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
+import { parseBoardSearch } from "./lib/board-search.ts";
 import { isModuleResourceLoadError, loadForUpdate } from "./service-worker/update-required.ts";
+
+export type { BoardSearch } from "./lib/board-search.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
 function parseId(segment: string): number {
@@ -115,6 +118,7 @@ const homeRoute = createRoute({
 const roomRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "r/$roomId",
+  validateSearch: parseBoardSearch,
   params: {
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
@@ -157,6 +161,13 @@ const roomControlRoutes = [
   // The room's settings dialog (`RoomSettingsHost`), over the conversation.
   createRoute({ getParentRoute: () => roomRoute, path: "settings", component: () => null }),
 ];
+
+/** The board owns its new-post dialog; this route opens no right pane. */
+const newBoardPostRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "posts/new",
+  component: () => null,
+});
 
 /** `/app/rooms/new/<kind>`: the create-a-room dialog, opened on that kind over the home screen. */
 const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
@@ -558,6 +569,7 @@ const routeTree = rootRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,
       newThreadRoute,
+      newBoardPostRoute,
       threadRoute.addChildren([threadFizzyCardRoute]),
       ...roomControlRoutes,
     ]),

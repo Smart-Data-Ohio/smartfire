@@ -52,6 +52,7 @@ export interface WorkRecord {
   runUrl: string | null;
   /** Oldest first. */
   readonly links: WorkLink[];
+  tags: string[];
   resultMarkdown: string | null;
   resultHtml: string | null;
   resultUpdatedById: number | null;
@@ -73,6 +74,7 @@ export function emptyWork(at: string): WorkRecord {
     ownerActive: false,
     runUrl: null,
     links: [],
+    tags: [],
     resultMarkdown: null,
     resultHtml: null,
     resultUpdatedById: null,
@@ -84,7 +86,7 @@ export function emptyWork(at: string): WorkRecord {
 }
 
 /** The thread's `WorkFacts`, or `null` when it isn't tracked. */
-export function workFacts(work: WorkRecord | undefined): WorkFacts | null {
+export function workFacts(work: WorkRecord | undefined, messageCount: number): WorkFacts | null {
   if (work === undefined || work.status === null) return null;
 
   return {
@@ -94,6 +96,8 @@ export function workFacts(work: WorkRecord | undefined): WorkFacts | null {
     runUrl: work.runUrl,
     resultUpdatedAt: work.resultUpdatedAt,
     links: work.links,
+    tags: work.tags,
+    messageCount,
     updatedAt: work.updatedAt,
   };
 }
@@ -182,7 +186,7 @@ export function workPermissions(
     canManageWork: manageWork,
     canUpdateWorkStatus: manageWork,
     canAssignWork: tracked && manages,
-    canRemoveWork: tracked && manages && thread.roomId !== S4_BOARD.roomId,
+    canRemoveWork: tracked && manages && !thread.isBoard && thread.roomId !== S4_BOARD.roomId,
   };
 }
 

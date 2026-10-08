@@ -249,7 +249,7 @@ matrix("the work page", async ({ page, theme }) => {
 
   await page.getByRole("tab", { name: "Agents" }).click();
   await expect(page).toHaveURL(/state=agents/);
-  await expect(rows(page)).toHaveCount(1);
+  await expect(rows(page)).toHaveCount(3);
   await expect(rows(page).first()).toContainText(AGENT_OWNED);
 
   await page.getByRole("tab", { name: "Boards" }).click();
@@ -296,17 +296,15 @@ test("a work row opens its thread in the room", async ({ page }) => {
   await expect(pane(page).getByRole("heading", { name: AGENT_OWNED })).toBeVisible();
 });
 
-test("a board post opens on its classic page", async ({ page }) => {
-  const classic = `/rooms/${S4_BOARD.roomId}/threads/${S4_BOARD_POST_IDS.publicApi}`;
-
-  await page.route(`**${classic}?classic=1`, (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<p>classic board post</p>" }),
-  );
+test("a work row opens its board post in the SPA", async ({ page }) => {
   await openApp(page, "work?state=boards");
   await rows(page).filter({ hasText: "Public API" }).first().locator(".list-row-open").click();
 
-  await expect(page.getByText("classic board post")).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe(classic);
+  await expect(page).toHaveURL(
+    new RegExp(`/app/r/${S4_BOARD.roomId}/t/${S4_BOARD_POST_IDS.publicApi}$`),
+  );
+  await expect(pane(page).getByRole("heading", { name: "Public API" })).toBeVisible();
+  await expect(pane(page).getByRole("heading", { name: "Result" })).toBeVisible();
 });
 
 test("the sidebar's Work destination opens the page, and it reloads when shown again", async ({

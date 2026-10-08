@@ -149,6 +149,9 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::channel_thread::ThreadWorkChange::KIND => decode::<campfire_db::models::channel_thread::ThreadWorkChange>(request).map(|change| {
             if let Some(app) = app { app.broadcasts.thread_updated(change.thread_id); }
         }),
+        campfire_db::models::channel_thread::ThreadBoardCreation::KIND => decode::<campfire_db::models::channel_thread::ThreadBoardCreation>(request).map(|change| {
+            if let Some(app) = app { app.broadcasts.thread_created(change.thread_id); }
+        }),
         campfire_db::models::agent_approval::ApprovalChange::KIND => decode::<campfire_db::models::agent_approval::ApprovalChange>(request).map(|change| {
             if let Some(app) = app { app.broadcasts.sync_approval(change.approval_id); }
         }),

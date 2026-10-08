@@ -32,6 +32,8 @@ export function factsFixture(extra: Partial<WorkFacts> = {}): WorkFacts {
     runUrl: null,
     resultUpdatedAt: null,
     links: [],
+    tags: [],
+    messageCount: 0,
     ...extra,
   };
 }

@@ -36,24 +36,53 @@
     padding: var(--space-3) 0;
   }
 
+  /* Discord's server tile: a circle at rest that squares off under the pointer or focus. */
   .rail-workspace {
     display: grid;
     place-items: center;
     width: 40px;
     height: 40px;
-    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border-radius: 50%;
     background: var(--accent-solid);
     color: var(--on-accent);
     font-size: var(--text-ui);
     font-weight: var(--weight-semibold);
     text-decoration: none;
     transition:
+      border-radius var(--duration-small) var(--ease-move),
       filter var(--duration-micro) var(--ease-enter),
       scale var(--duration-micro) var(--ease-enter);
   }
 
-  .rail-workspace:hover {
+  .rail-workspace:hover,
+  .rail-workspace:focus-visible {
+    border-radius: var(--radius-lg);
     filter: brightness(1.08);
+  }
+
+  /* A logo may be transparent: it sits on the pane colour, not the accent. */
+  .rail-workspace[data-logo] {
+    position: relative;
+    background: var(--bg-pane);
+  }
+
+  /* A hairline over the image's edge, so a white logo still has a shape on a light rail. */
+  .rail-workspace[data-logo]::after {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--border);
+    content: "";
+    pointer-events: none;
+  }
+
+  .rail-workspace-logo {
+    grid-area: 1 / 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .rail-workspace:active {
