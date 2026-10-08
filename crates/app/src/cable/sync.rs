@@ -213,6 +213,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
         ],
     ),
     ("poll::PollChanged", &["poll.updated", "poll.ballot"]),
+    ("calendar_event::EventsChanged", &["events.changed"]),
     // The card slots' replaces after a fetch, a refresh or an event's change.
     ("calendar_event::CardUpdate", &["message.cards"]),
     ("link_embed::store::CardUpdate", &["message.cards"]),
@@ -704,6 +705,18 @@ pub fn scheduled_later(
             }
         }
     }));
+}
+
+/// `events.changed` on the room's topic: one of its events was scheduled, edited, cancelled or
+/// removed. Carries only the room, so it needs no renderer or read.
+pub fn events_changed(server: &Cable, change: campfire_db::models::calendar_event::EventsChanged) {
+    publish(
+        server,
+        Audience::Topic(room_topic(change.room_id)),
+        &SyncPayload::EventsChanged(campfire_api_types::EventsChanged {
+            room_id: change.room_id,
+        }),
+    );
 }
 
 /// A vote or a close, read afresh later: `poll.updated` on the poll message's conversation, and
