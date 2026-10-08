@@ -350,5 +350,5 @@ test("a bot's page opens its ported agent profile", async ({ page }) => {
 
   await page.goto("/app/people/9");
   await expect(page).toHaveURL(/\/app\/agents\/9$/);
-  await expect(page.getByRole("heading", { name: "Ember", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Ember", exact: true })).toBeVisible();
 });
