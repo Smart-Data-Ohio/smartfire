@@ -152,6 +152,7 @@ test.describe("on a 360 px touch phone", () => {
     await simulateKeyboard(page, 0);
     await expect(html).not.toHaveAttribute("data-keyboard");
     expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
+    expect(await rootToken(page, "--viewport-height")).toBe("100dvh");
     await expect
       .poll(async () => (await page.locator(".app-shell").boundingBox())?.height)
       .toBe(PHONE_SMALL.height);
@@ -181,6 +182,33 @@ test.describe("on a 360 px touch phone", () => {
     await expect
       .poll(async () => await page.locator(".app-shell").boundingBox())
       .toMatchObject({ y: 0, height: PHONE_SMALL.height });
+  });
+
+  test("with browser chrome retracted, the shell still ends where the visible area does", async ({
+    page,
+  }) => {
+    await openApp(page, GENERAL);
+    await page.getByRole("textbox", { name: "Message #general" }).focus();
+    // Retracted chrome leaves the ICB 60 px short of 100dvh (740).
+    await page.evaluate(() =>
+      Object.defineProperty(document.documentElement, "clientHeight", {
+        configurable: true,
+        get: () => window.innerHeight - 60,
+      }),
+    );
+    // The visual viewport: 440 px tall, 40 px down the layout viewport.
+    await simulateKeyboard(page, 240, { offsetTop: 40 });
+
+    await expect(page.locator("html")).toHaveAttribute("data-keyboard", "open");
+    expect(await rootToken(page, "--viewport-height")).toBe("440px");
+    expect(await rootToken(page, "--keyboard-inset")).toBe("260px");
+    await expect
+      .poll(async () => await page.locator(".app-shell").boundingBox())
+      .toMatchObject({ y: 40, height: 440 });
+
+    const composer = await page.locator(".composer").boundingBox();
+
+    expect((composer?.y ?? 0) + (composer?.height ?? 0)).toBe(40 + 440);
   });
 
   test("pinch zoom isn't taken for a keyboard", async ({ page }) => {

@@ -5,6 +5,7 @@ import { readKeyboard, useKeyboardInset, type ViewportSample } from "./keyboard-
 /** A 360 x 740 phone in portrait, no keyboard, a text field focused. */
 const PHONE: ViewportSample = {
   layoutHeight: 740,
+  innerHeight: 740,
   viewportHeight: 740,
   offsetTop: 0,
   scale: 1,
@@ -15,25 +16,43 @@ function read(change: Partial<ViewportSample>) {
   return readKeyboard({ ...PHONE, ...change });
 }
 
-const CLOSED = { top: 0, bottom: 0, open: false };
+const CLOSED = { top: 0, height: undefined, bottom: 0, open: false };
 
 describe("readKeyboard", () => {
   it("reads an overlaid keyboard as the strip the visual viewport leaves uncovered", () => {
     expect(read({})).toEqual(CLOSED);
-    expect(read({ viewportHeight: 440 })).toEqual({ top: 0, bottom: 300, open: true });
+    expect(read({ viewportHeight: 440 })).toEqual({
+      top: 0,
+      height: 440,
+      bottom: 300,
+      open: true,
+    });
   });
 
   it("splits a panned page into the strip above the visible area and the one below", () => {
     expect(read({ viewportHeight: 440, offsetTop: 200 })).toEqual({
       top: 200,
+      height: 440,
       bottom: 100,
       open: true,
     });
   });
 
+  it("takes the visual viewport for the geometry when retracted chrome leaves the ICB short", () => {
+    // The ICB (680) only decides it's open; the visible area is 40-480 of a 740 layout viewport.
+    expect(read({ layoutHeight: 680, viewportHeight: 440, offsetTop: 40 })).toEqual({
+      top: 40,
+      height: 440,
+      bottom: 260,
+      open: true,
+    });
+  });
+
   it("takes pinch zoom for no keyboard, though WebKit halves innerHeight with it", () => {
-    // innerHeight isn't read: the layout height is the ICB, which pinch leaves at 740.
-    expect(read({ viewportHeight: 370, offsetTop: 120, scale: 2 })).toEqual(CLOSED);
+    // The decision reads the ICB, which pinch leaves at 740.
+    expect(read({ innerHeight: 370, viewportHeight: 370, offsetTop: 120, scale: 2 })).toEqual(
+      CLOSED,
+    );
   });
 
   it("closes once the visual viewport grows back, whatever came before", () => {
@@ -92,6 +111,7 @@ describe("useKeyboardInset", () => {
       frames.push(callback),
     );
     vi.stubGlobal("cancelAnimationFrame", () => undefined);
+    vi.stubGlobal("innerHeight", 740);
 
     const root = document.documentElement;
     const field = document.createElement("textarea");
@@ -115,6 +135,7 @@ describe("useKeyboardInset", () => {
     act(() => frames[0]?.(0));
     expect(root.style.getPropertyValue("--keyboard-inset")).toBe("180px");
     expect(root.style.getPropertyValue("--viewport-top-inset")).toBe("120px");
+    expect(root.style.getPropertyValue("--viewport-height")).toBe("440px");
     expect(root.dataset.keyboard).toBe("open");
 
     // Leaving the field closes it with nothing else changing.
@@ -122,6 +143,7 @@ describe("useKeyboardInset", () => {
     field.blur();
     act(() => frames[0]?.(0));
     expect(root.style.getPropertyValue("--keyboard-inset")).toBe("0px");
+    expect(root.style.getPropertyValue("--viewport-height")).toBe("");
     expect(root.dataset.keyboard).toBeUndefined();
 
     hook.unmount();

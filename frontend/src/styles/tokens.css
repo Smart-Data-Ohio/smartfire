@@ -196,10 +196,13 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     /* The layout viewport's bottom strip an overlaid keyboard covers (iOS), set by
-       src/lib/keyboard-inset.ts. The shell already shrinks by it; only position: fixed adds it. */
+       src/lib/keyboard-inset.ts. The shell already fits above it; only position: fixed adds it. */
     --keyboard-inset: 0px;
     /* The strip above the visible area while iOS pans the page up to a focused field (same hook). */
     --viewport-top-inset: 0px;
+    /* The visible area's height: the full dynamic viewport, or the visual viewport's while an
+       overlaid keyboard is up (same hook). */
+    --viewport-height: 100dvh;
     /* What a viewport-anchored (position: fixed) surface keeps clear at the bottom. */
     --viewport-bottom-inset: max(var(--safe-bottom), var(--keyboard-inset));
 
