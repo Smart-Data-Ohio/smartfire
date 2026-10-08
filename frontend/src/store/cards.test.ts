@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, pageFixture } from "../api/testing.ts";
+import type { AgentStep } from "../gen/AgentStep.ts";
 import type { MessageCard } from "../gen/MessageCard.ts";
 import type { Poll } from "../gen/Poll.ts";
 import {
@@ -101,6 +102,40 @@ describe("reconcileMessage", () => {
 
   it("returns the held message itself when nothing changes", () => {
     expect(reconcileMessage(held, { ...held }, false)).toBe(held);
+  });
+
+  it("merges agent steps from both copies while taking the newer poll", () => {
+    const step = (id: number, updated: number, status: AgentStep["status"]): AgentStep => ({
+      id,
+      messageId: held.id,
+      threadId: null,
+      name: `Step ${id}`,
+      status,
+      inputSummary: null,
+      outputSummary: null,
+      durationMs: null,
+      position: id,
+      createdAt: at(0),
+      updatedAt: at(updated),
+    });
+
+    const withSteps = { ...held, steps: [step(1, 20, "done"), step(2, 20, "running")] };
+
+    const newerBody = {
+      ...held,
+      updatedAt: at(50),
+      poll: poll(at(30), [2, 0]),
+      steps: [step(1, 5, "running")],
+    };
+
+    const merged = reconcileMessage(withSteps, newerBody, false);
+
+    expect(merged.updatedAt).toBe(at(50));
+    expect(merged.poll?.asOf).toBe(at(30));
+    expect(merged.steps.map((each) => [each.id, each.status])).toEqual([
+      [1, "done"],
+      [2, "running"],
+    ]);
   });
 });
 

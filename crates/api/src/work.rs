@@ -166,6 +166,9 @@ pub fn facts(
                 run_url: thread.run_url.clone().filter(|url| https(url)),
                 result_updated_at: thread.result_updated_at.map(dto::time),
                 links,
+                // Owner/link rows can disappear without touching the thread; taking their
+                // live timestamps would make this revision go backwards after a deletion.
+                updated_at: dto::row_version(thread.updated_at),
             },
         );
     }
@@ -362,7 +365,7 @@ async fn list_work(c: &mut Ctx) -> Result {
                     thread: dto::thread(thread, room, now, Some(work)),
                     room_name: names.get(&room.id).cloned().unwrap_or_default(),
                     board: room.board(),
-                    updated_at: dto::time(thread.updated_at),
+                    updated_at: dto::row_version(thread.updated_at),
                 });
             }
             Ok(api::WorkList {

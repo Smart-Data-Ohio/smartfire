@@ -7,7 +7,7 @@ import { Schema } from "effect";
 export const Timestamp = Schema.DateTimeUtcFromString;
 
 /**
- * A row version, `users.updated_at`: an RFC 3339 UTC string with exactly six fraction digits
+ * A server row version: an RFC 3339 UTC string with exactly six fractional digits
  * (`"2026-09-26T12:26:46.848123Z"`). The fixed width makes string order time order, so the client
  * compares it as a string and never decodes it.
  */

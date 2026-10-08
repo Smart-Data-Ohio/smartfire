@@ -170,6 +170,7 @@ fn work_facts() -> WorkFacts {
         run_url: Some("https://ci.example.com/runs/7".into()),
         result_updated_at: None,
         links: vec![pull_request_link()],
+        updated_at: "2026-10-06T09:05:00.000000Z".into(),
     }
 }
 
@@ -191,6 +192,7 @@ fn work_facts_wire() -> serde_json::Value {
             "eventTimeZone": null,
             "eventCancelled": false,
         }],
+        "updatedAt": "2026-10-06T09:05:00.000000Z",
     })
 }
 
@@ -382,7 +384,7 @@ fn work_list_round_trips() {
             thread: work_thread(),
             room_name: "general".into(),
             board: false,
-            updated_at: "2026-10-06T10:00:00.000Z".into(),
+            updated_at: "2026-10-06T10:00:00.000000Z".into(),
         }],
         users: vec![user()],
     };
@@ -393,7 +395,7 @@ fn work_list_round_trips() {
                 "thread": serde_json::to_value(work_thread()).unwrap(),
                 "roomName": "general",
                 "board": false,
-                "updatedAt": "2026-10-06T10:00:00.000Z",
+                "updatedAt": "2026-10-06T10:00:00.000000Z",
             }],
             "users": [serde_json::to_value(user()).unwrap()],
         }),

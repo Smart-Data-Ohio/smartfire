@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { WorkFacts } from "../../gen/WorkFacts.ts";
 import type { Thread } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -9,6 +10,7 @@ import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { usePaneNavigation } from "../panes/use-right-pane.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { WorkLinks, WorkSummary } from "../work/work-facts.tsx";
 import {
   lastReplyLabel,
   replyCountLabel,
@@ -27,6 +29,26 @@ import { useNow } from "./use-now.ts";
 
 /** The tab last picked, for the next time the pane opens in this tab. */
 let lastTab: ThreadTab = "active";
+
+/**
+ * A tracked thread's links and run, under its row: beside the row's button rather than in it,
+ * since they're links. (Its status and owner read inside the button, with the row.)
+ */
+function ThreadRowLinks({ thread, work }: { readonly thread: Thread; readonly work: WorkFacts }) {
+  if (work.links.length === 0 && work.runUrl === null) {
+    return null;
+  }
+
+  return (
+    <div className="thread-row-work">
+      <WorkLinks
+        links={work.links}
+        runUrl={work.runUrl}
+        label={`Links for ${threadTitle(thread)}`}
+      />
+    </div>
+  );
+}
 
 function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpen: () => void }) {
   const now = useNow();
@@ -58,6 +80,7 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
               {lastReplyLabel(thread.lastActivityAt, now)}
             </time>
           </span>
+          {thread.work === null ? null : <WorkSummary facts={thread.work} />}
         </span>
         <span className="thread-row-tags">
           {thread.status === "active" ? null : (
@@ -74,6 +97,7 @@ function ThreadRow({ thread, onOpen }: { readonly thread: Thread; readonly onOpe
           ) : null}
         </span>
       </button>
+      {thread.work === null ? null : <ThreadRowLinks thread={thread} work={thread.work} />}
     </li>
   );
 }

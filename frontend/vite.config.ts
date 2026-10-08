@@ -99,6 +99,7 @@ export default defineConfig(({ mode }) => {
         "tools/service-worker.test.ts",
         "tools/preview-policy.test.ts",
       ],
+      maxWorkers: 4,
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.

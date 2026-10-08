@@ -539,9 +539,14 @@ pub(crate) fn touch_attachment_records(
     {
         match record_type.as_str() {
             "Message" => campfire_db::Message::find(tx.conn(), record_id)?.touch(tx)?,
-            "User" | "Account" | "WorkspaceIcon" => {
+            "User" => crate::controllers::presenters::accounts::touch(
+                tx.conn(),
+                "users",
+                record_id,
+                tx.now(),
+            )?,
+            "Account" | "WorkspaceIcon" => {
                 let table = match record_type.as_str() {
-                    "User" => "users",
                     "Account" => "accounts",
                     _ => "workspace_icons",
                 };

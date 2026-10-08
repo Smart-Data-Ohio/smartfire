@@ -41,4 +41,17 @@ resultUpdatedAt: string | null,
 /**
  * Linked pull requests, calendar events and Drive files, oldest first.
  */
-links: Array<WorkLink>, };
+links: Array<WorkLink>,
+/**
+ * The server's revision of these facts: the thread's `updated_at`, which every change to
+ * the status, owner, run URL, result or tracking moves (and other thread changes too).
+ * Links, the owner's own profile and `ownerActive` can change without moving it, so a
+ * client merges those fields on their own rather than by this revision.
+ * UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+ * millisecond rows are padded with zeros.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };
