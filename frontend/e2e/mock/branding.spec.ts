@@ -367,9 +367,14 @@ test("an animated PNG is taken as a still image", async ({ page }) => {
 test("files that aren't real images, or are too big, are refused in place", async ({ page }) => {
   await openProfile(page);
 
+  // Each picker keeps its own refusal until its next file, so look in the picker under test: a
+  // page-wide match would find the other picker's alert too, or pass on it before this one renders.
   const refusedWith = async (noun: "icon" | "banner", file: typeof LOGO, message: string) => {
-    await page.getByLabel(`Choose ${noun} image`).setInputFiles(file);
-    await expect(page.getByRole("alert").filter({ hasText: message })).toBeVisible();
+    const input = page.getByLabel(`Choose ${noun} image`);
+    const slot = page.locator(".profile-slot").filter({ has: input });
+
+    await input.setInputFiles(file);
+    await expect(slot.getByRole("alert")).toContainText(message);
   };
 
   // Text with an image type, and a GIF that stops before its first frame.
