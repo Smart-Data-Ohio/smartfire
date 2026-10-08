@@ -173,6 +173,31 @@ const threadRoute = createRoute({
   component: () => null,
 });
 
+/** A message's id in a "Create Fizzy card" URL (not `messageId`: that would refocus the room). */
+const sourceParams = {
+  parse: ({ sourceId }: { readonly sourceId: string }) => ({ sourceId: parseId(sourceId) }),
+  stringify: ({ sourceId }: { readonly sourceId: number }) => ({ sourceId: `${sourceId}` }),
+};
+
+/**
+ * `/app/r/$roomId/m/$sourceId/fizzy/new`: the room with "Create Fizzy card" open on a message of
+ * its timeline (the classic form page); `…/t/$threadId/m/$sourceId/fizzy/new` opens it on a reply,
+ * over the thread. The room draws the dialog (features/fizzy/fizzy-card-overlay.tsx).
+ */
+const fizzyCardRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
+  component: () => null,
+});
+
+const threadFizzyCardRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
+  component: () => null,
+});
+
 /** `/app/settings`: the classic profile page's sections, the profile first. */
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -364,7 +389,13 @@ const routeTree = rootRoute.addChildren([
     peopleRoute,
     personRoute,
     messageRoute,
-    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute, ...roomControlRoutes]),
+    roomRoute.addChildren([
+      permalinkRoute,
+      fizzyCardRoute,
+      newThreadRoute,
+      threadRoute.addChildren([threadFizzyCardRoute]),
+      ...roomControlRoutes,
+    ]),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),
