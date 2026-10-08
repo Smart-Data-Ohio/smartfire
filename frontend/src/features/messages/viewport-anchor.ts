@@ -12,7 +12,16 @@ import type { TimelineItem } from "../room/timeline-items.ts";
 import { rowCommand } from "./keyboard.ts";
 
 type Anchor =
-  | { readonly placement: string; readonly kind: "end" }
+  | {
+      readonly placement: string;
+      readonly kind: "end";
+      readonly row: {
+        readonly id: number;
+        readonly bottom: number;
+        readonly viewport: number;
+        readonly inset: number;
+      } | null;
+    }
   | {
       readonly placement: string;
       readonly kind: "message";
@@ -62,7 +71,6 @@ export function useViewportAnchor({
   const anchorRef = useRef<Anchor | null>(null);
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
-  const growthRef = useRef({ end: 0, delta: 0 });
   const issuedEndRef = useRef<number | null>(null);
   const correctionPendingRef = useRef(false);
   const retainedIdRef = useRef<number | null>(null);
@@ -87,7 +95,9 @@ export function useViewportAnchor({
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
   const interacting = useEffectEvent(() =>
-    Boolean(viewport()?.querySelector("[data-editing], .message-popup-anchor")),
+    Boolean(
+      viewport()?.querySelector("[data-editing], [data-popup-pending], .message-popup-anchor"),
+    ),
   );
 
   const isPlacing = useCallback(() => {
@@ -99,36 +109,51 @@ export function useViewportAnchor({
     );
   }, [placement]);
 
-  const recordGrowth = useEffectEvent(() => {
+  const endRow = (offset: number) => {
     const element = viewport();
 
-    if (!element) return;
+    if (!element) return null;
 
-    const end = endOffset(element);
-    const growth = growthRef.current;
+    const bounds = element.getBoundingClientRect();
 
-    // The content and its wrappers report the same growth. Account for the net end
-    // extent once, including viewport changes and layout not yet delivered by RO.
-    growth.delta += end - growth.end;
-    growth.end = end;
-  });
+    for (const [id, index] of indices) {
+      const row = element.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
+      const wrapper = row && wrapperOf(row);
 
-  const pinEnd = () => {
-    const element = viewport();
+      if (wrapper?.style.visibility === "hidden") continue;
 
-    if (!element) return;
+      const rect = row?.getBoundingClientRect();
+      const inset = rect && wrapper ? rect.top - wrapper.getBoundingClientRect().top : 0;
 
-    growthRef.current = { end: endOffset(element), delta: 0 };
-    issuedEndRef.current = null;
-    placementRef.current = { kind: "settled", placement, messageId: null };
-    anchorRef.current = { kind: "end", placement };
+      const top = rect
+        ? rect.top - bounds.top + element.scrollTop - offset
+        : (listRef.current?.getItemOffset(index) ?? 0) + inset - offset;
+
+      const height = rect?.height ?? listRef.current?.getItemSize(index) ?? 0;
+
+      if (top + height > 0 && top < element.clientHeight)
+        return { id, bottom: element.clientHeight - top, viewport: element.clientHeight, inset };
+    }
+
+    return null;
   };
 
-  const checkFollow = () => {
+  const pinEnd = (offset?: number) => {
+    const element = viewport();
+
+    if (!element) return;
+
+    issuedEndRef.current = null;
+    placementRef.current = { kind: "settled", placement, messageId: null };
+    // The first visible row's start survives compensation of fully hidden rows.
+    // Its own height can change without making that start reader movement.
+    anchorRef.current = { kind: "end", placement, row: endRow(offset ?? element.scrollTop) };
+  };
+
+  const checkFollow = useEffectEvent(() => {
     if (anchorRef.current?.placement !== placement || anchorRef.current.kind !== "end")
       return false;
 
-    recordGrowth();
     const element = viewport();
 
     if (!element) return false;
@@ -141,16 +166,30 @@ export function useViewportAnchor({
 
     if (issuedEndRef.current !== null) return true;
 
-    // Eventless browser movement is checked only when deciding to follow/correct.
-    // Growth can explain distance from the end; scroll deltas never change intent.
-    if (endOffset(element) - element.scrollTop > growthRef.current.delta + 1) {
+    const witness = anchorRef.current.row;
+    const index = witness === null ? undefined : indices.get(witness.id);
+
+    // A removed witness cannot establish reader movement. The next pin selects another row.
+    if (witness === null || index === undefined) return true;
+
+    const row = element.querySelector<HTMLElement>(`[data-message-id="${witness.id}"]`);
+
+    if (row && wrapperOf(row)?.style.visibility === "hidden") return true;
+
+    const top = row
+      ? row.getBoundingClientRect().top - element.getBoundingClientRect().top
+      : (listRef.current?.getItemOffset(index) ?? 0) + witness.inset - element.scrollTop;
+
+    // Compare an element's visual position, including eventless browser movement.
+    // Hidden shrink and growth never cancel each other into a movement allowance.
+    if (Math.abs(top - (witness.viewport - witness.bottom)) > 1) {
       cancelPlacement(true);
 
       return false;
     }
 
     return true;
-  };
+  });
 
   const canFollow = () => {
     if (!placed || isPlacing() || interacting()) return false;
@@ -174,10 +213,10 @@ export function useViewportAnchor({
 
   const followEnd = () => {
     // Sending from a permalink explicitly takes the reader to the newest message.
-    pinEnd();
-    correctedOffsetRef.current = null;
-
     const element = viewport();
+
+    pinEnd(element ? endOffset(element) : undefined);
+    correctedOffsetRef.current = null;
 
     if (element) {
       element.dataset.placementSettled = "true";
@@ -200,6 +239,10 @@ export function useViewportAnchor({
     }
 
     const element = viewport();
+
+    // Focus restoration and layout scrolls during a popup/editor preserve its pause geometry.
+    // Explicit reader input clears the anchor in cancelPlacement before capturing again.
+    if (interacting() && anchorRef.current?.placement === placement) return;
 
     if (
       element &&
@@ -481,6 +524,8 @@ export function useViewportAnchor({
 
       const row = viewport()?.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
 
+      if (row?.matches("[data-popup-pending]")) return;
+
       if (row && (row.matches("[data-editing]") || row.querySelector(".message-popup-anchor"))) {
         retentionPendingRef.current = null;
 
@@ -514,6 +559,8 @@ export function useViewportAnchor({
     if (!element) return;
 
     let frame = 0;
+    let retentionFrame = 0;
+    let retentionTask: number | undefined;
     let previous: ReturnType<typeof measurePlacement> = null;
 
     const tick = () => {
@@ -560,17 +607,20 @@ export function useViewportAnchor({
 
       // A prepend can briefly exclude this row from Virtua's visible range. Keep the same
       // DOM node while it owns focus, a popup, or an editor, including a right-click release.
+      const restoring =
+        retainedIdRef.current === id && (interacting() || correctionPendingRef.current);
+
       retainedIdRef.current = id;
       setRetainedId(id);
-      recordGrowth();
+
+      if (restoring) return true;
 
       // Focusing the newest row at the bottom (including End navigation) keeps follow.
       // Older rows surrender it before the focus scroll's event is delivered.
       if (
         isNewest(id) &&
         (endOffset(element) - element.scrollTop <= 1 ||
-          (anchorRef.current?.kind === "end" &&
-            endOffset(element) - element.scrollTop <= growthRef.current.delta + 1))
+          (anchorRef.current?.kind === "end" && checkFollow()))
       )
         return true;
 
@@ -715,11 +765,18 @@ export function useViewportAnchor({
 
         // Pressed context menus open in a task after release. Let their marker mount
         // before checking ownership, and never release a newly retained row.
-        requestAnimationFrame(() => {
-          if (retentionPendingRef.current === releasedId) retentionPendingRef.current = null;
+        window.clearTimeout(retentionTask);
+        cancelAnimationFrame(retentionFrame);
+        retentionTask = window.setTimeout(() => {
+          retentionTask = undefined;
+          retentionFrame = requestAnimationFrame(() => {
+            retentionFrame = 0;
 
-          if (retainedIdRef.current === releasedId) releaseRetention();
-        });
+            if (retentionPendingRef.current === releasedId) retentionPendingRef.current = null;
+
+            if (retainedIdRef.current === releasedId) releaseRetention();
+          });
+        }, 0);
       }
 
       if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
@@ -773,6 +830,8 @@ export function useViewportAnchor({
 
     return () => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(retentionFrame);
+      window.clearTimeout(retentionTask);
 
       for (const input of inputs) element.removeEventListener(input, onInput, true);
 
@@ -797,7 +856,6 @@ export function useViewportAnchor({
   const chunkLoaded = useEffectEvent(() => cardsLoaded);
 
   const correct = useEffectEvent(() => {
-    recordGrowth();
     const anchor = anchorRef.current;
     const list = listRef.current;
     const element = viewport();
@@ -872,7 +930,6 @@ export function useViewportAnchor({
     let correctingCards = !chunkLoaded();
 
     const resizes = new ResizeObserver((entries) => {
-      recordGrowth();
       seed();
 
       let changed = false;
@@ -956,7 +1013,7 @@ export function useViewportAnchor({
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ["data-editing"],
+        attributeFilter: ["data-editing", "data-popup-pending"],
       });
     };
 
@@ -967,14 +1024,13 @@ export function useViewportAnchor({
     };
 
     finishCardsRef.current = finishCards;
-    growthRef.current = { end: endOffset(element), delta: 0 };
     resizes.observe(element);
     resizes.observe(content);
     mutations.observe(content, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["style", "data-editing"],
+      attributeFilter: ["style", "data-editing", "data-popup-pending"],
     });
     observeRows();
 

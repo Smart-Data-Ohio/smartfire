@@ -75,6 +75,9 @@ interface HarnessProps {
   readonly hasCards?: boolean;
   readonly popupId?: number;
   readonly editingId?: number;
+  readonly popupPendingId?: number;
+  readonly virtual?: typeof import("virtua").VList;
+  readonly onSettled?: () => void;
 }
 
 /** The virtualiser's geometry is explicit because jsdom does not lay out the rows. */
@@ -86,6 +89,9 @@ function Harness({
   hasCards = false,
   popupId,
   editingId,
+  popupPendingId,
+  virtual: VirtualList,
+  onSettled,
 }: HarnessProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
@@ -133,6 +139,62 @@ function Harness({
       heightOf(geometry, id),
     );
 
+  if (VirtualList) {
+    return (
+      <div
+        ref={(container) => {
+          containerRef.current = container;
+          const element = container?.querySelector<HTMLElement>('[role="log"]');
+
+          if (!element) return;
+
+          Object.defineProperties(element, {
+            clientHeight: { configurable: true, value: VIEWPORT_HEIGHT },
+            scrollHeight: {
+              configurable: true,
+              get: () => offsetOf(geometry, geometry.ids.length),
+            },
+          });
+          element.getBoundingClientRect = () => new DOMRect(0, 0, 600, VIEWPORT_HEIGHT);
+        }}
+      >
+        <VirtualList
+          ref={listRef}
+          role="log"
+          itemSize={200}
+          onScroll={() => anchor.capture()}
+          onScrollEnd={() => {
+            onSettled?.();
+            anchor.settle();
+          }}
+        >
+          {geometry.ids.map((id) => (
+            <article
+              key={id}
+              data-message-row
+              data-message-id={id}
+              ref={(row) => {
+                if (!row) return;
+
+                row.getBoundingClientRect = () => rowBounds(id);
+
+                if (row.parentElement) {
+                  row.parentElement.getBoundingClientRect = () => rowBounds(id);
+                  Object.defineProperty(row.parentElement, "offsetParent", {
+                    configurable: true,
+                    value: viewport(),
+                  });
+                }
+              }}
+            >
+              Message {id}
+            </article>
+          ))}
+        </VirtualList>
+      </div>
+    );
+  }
+
   return (
     <div ref={containerRef}>
       <div
@@ -165,6 +227,7 @@ function Harness({
                 data-message-row
                 data-message-id={id}
                 data-editing={editingId === id ? true : undefined}
+                data-popup-pending={popupPendingId === id ? true : undefined}
                 tabIndex={-1}
                 ref={(element) => {
                   if (element) element.getBoundingClientRect = () => rowBounds(id);
@@ -247,6 +310,80 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
+  it("follows visible growth when a hidden row shrinks in the same delivery", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    follow(apiRef, geometry);
+    geometry.heights.set(1, 100);
+    geometry.heights.set(3, 400);
+    // The hidden shrink is compensated, leaving the visible row at its original top.
+    viewport().scrollTop = 200;
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(400);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("find-in-page within hidden compensation cancels paused follow", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.heights.set(1, 400);
+    geometry.heights.set(3, 300);
+    viewport().scrollTop = 500;
+    act(() => measureRows(geometry));
+    // Browser movement is backward from compensation, but forward from the last pin.
+    viewport().scrollTop = 400;
+    fireEvent.scroll(viewport());
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(400);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it.each(["menu", "editor"])(
+    "restoring focus after an older %s preserves the paused row position",
+    async (interaction) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+      const view = render(
+        <Harness apiRef={apiRef} geometry={geometry} cardsLoaded={false} hasCards />,
+      );
+
+      follow(apiRef, geometry);
+      act(() => rowOf(2).focus());
+      const top = rowOf(2).getBoundingClientRect().top;
+
+      view.rerender(
+        <Harness
+          apiRef={apiRef}
+          geometry={geometry}
+          cardsLoaded={false}
+          hasCards
+          {...(interaction === "menu" ? { popupId: 2 } : { editingId: 2 })}
+        />,
+      );
+      act(() => rowOf(2).querySelector<HTMLAnchorElement>("a")?.focus());
+      geometry.heights.set(1, 300);
+      viewport().scrollTop = 350;
+      act(() => measureRows(geometry));
+      fireEvent.scroll(viewport());
+      expect(rowOf(2).getBoundingClientRect().top).toBe(top + 50);
+      // Both Esc and closing an editor restore focus before removing the marker.
+      act(() => rowOf(2).focus());
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} cardsLoaded hasCards />);
+      await act(async () => undefined);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(top);
+      expect(viewport().scrollTop).toBe(400);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
   it("a forward interruption of jump-to-latest stops short without snapping on growth", () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
@@ -326,7 +463,87 @@ describe("useViewportAnchor reader control", () => {
     },
   );
 
-  it("keeps a pressed context row through release until its deferred popup opens", async () => {
+  it.each(["timers first", "frames first"])(
+    "keeps a pressed context row until its deferred popup opens with %s",
+    async (order) => {
+      const frames: FrameRequestCallback[] = [];
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
+        frames.push(callback),
+      );
+      vi.stubGlobal("cancelAnimationFrame", () => undefined);
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+        const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+        follow(apiRef, geometry);
+        fireEvent.contextMenu(rowOf(2), { button: 2, buttons: 2 });
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupPendingId={2} />);
+        // The production popup opens in the task after pointer release.
+        window.setTimeout(() => {
+          view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={2} />);
+        }, 0);
+        fireEvent(rowOf(2), new Event("pointerup", { bubbles: true }));
+        await act(async () => undefined);
+        expect(apiRef.current?.keepMounted).toEqual([1]);
+
+        if (order === "frames first") {
+          act(() => {
+            for (const callback of frames.splice(0)) callback(0);
+          });
+          expect(apiRef.current?.keepMounted).toEqual([1]);
+        }
+
+        await act(async () => vi.runOnlyPendingTimers());
+        expect(rowOf(2).querySelector(".message-popup-anchor")).not.toBeNull();
+        act(() => {
+          for (const callback of frames.splice(0)) callback(0);
+        });
+        expect(apiRef.current?.keepMounted).toEqual([1]);
+
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+        await act(async () => undefined);
+        expect(apiRef.current?.keepMounted).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(["task", "frame"])("cancels the retention release %s on unmount", (phase) => {
+    const frames = new Map<number, FrameRequestCallback>();
+    let nextFrame = 0;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      const id = ++nextFrame;
+
+      frames.set(id, callback);
+
+      return id;
+    });
+    vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    try {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      fireEvent.contextMenu(rowOf(2), { button: 2, buttons: 2 });
+      fireEvent(rowOf(2), new Event("pointerup", { bubbles: true }));
+
+      if (phase === "frame") act(() => vi.runOnlyPendingTimers());
+      view.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+      expect(frames.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("retains pending popup ownership after both the release task and frame", async () => {
     const frames: FrameRequestCallback[] = [];
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
       frames.push(callback),
@@ -341,26 +558,41 @@ describe("useViewportAnchor reader control", () => {
 
       follow(apiRef, geometry);
       fireEvent.contextMenu(rowOf(2), { button: 2, buttons: 2 });
-      // The production popup opens in the task after pointer release.
-      window.setTimeout(() => {
-        view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={2} />);
-      }, 0);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupPendingId={2} />);
       fireEvent(rowOf(2), new Event("pointerup", { bubbles: true }));
-      await act(async () => undefined);
-      expect(apiRef.current?.keepMounted).toEqual([1]);
-      await act(async () => vi.runOnlyPendingTimers());
-      expect(rowOf(2).querySelector(".message-popup-anchor")).not.toBeNull();
+      act(() => vi.runOnlyPendingTimers());
       act(() => {
         for (const callback of frames.splice(0)) callback(0);
       });
       expect(apiRef.current?.keepMounted).toEqual([1]);
 
+      // The popup commits after all release work, transferring ownership without a gap.
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={2} />);
+      await act(async () => undefined);
+      expect(rowOf(2).querySelector(".message-popup-anchor")).not.toBeNull();
+      expect(apiRef.current?.keepMounted).toEqual([1]);
       view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
       await act(async () => undefined);
       expect(apiRef.current?.keepMounted).toEqual([]);
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("viewport shrink without row displacement preserves follow", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
+    follow(apiRef, geometry);
+    const element = viewport();
+
+    Object.defineProperty(element, "clientHeight", { configurable: true, value: 200 });
+    element.getBoundingClientRect = () => new DOMRect(0, 0, 600, 200);
+    act(() => MeasuringObserver.deliver([[element, 200]]));
+    expect(element.scrollTop).toBe(400);
+    expect(apiRef.current?.canFollow()).toBe(true);
   });
 
   it("replays deferred end correction when the interacting newest row unmounts", async () => {
@@ -612,6 +844,43 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
+  it("Virtua's 150ms debounce settles deferred growth without native scrollend", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    try {
+      // Virtua captures setTimeout at import, so load it after installing the fake clock.
+      const { VList } = await import("virtua");
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+      const settled = vi.fn();
+
+      render(<Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />);
+      act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 100;
+      act(() => apiRef.current?.followEnd());
+      viewport().scrollTop = 500;
+      fireEvent.scroll(viewport());
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      geometry.heights.set(5, 260);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(500);
+      viewport().scrollTop = 700;
+      fireEvent.scroll(viewport());
+      act(() => vi.advanceTimersByTime(149));
+      expect(settled).not.toHaveBeenCalled();
+      expect(viewport().scrollTop).toBe(700);
+      act(() => vi.advanceTimersByTime(1));
+      expect(settled).toHaveBeenCalledOnce();
+      expect(viewport().scrollTop).toBe(760);
+      expect(apiRef.current?.canFollow()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("an issued jump settles at the actual end after its destination shrinks", () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
@@ -654,7 +923,7 @@ describe("useViewportAnchor reader control", () => {
     // The app's issued jump reaches the end; later growth has its own budget.
     viewport().scrollTop = 700;
     fireEvent.scroll(viewport());
-    geometry.heights.set(3, 260);
+    geometry.heights.set(4, 260);
     act(() => measureRows(geometry));
     expect(viewport().scrollTop).toBe(760);
     fireEvent.scroll(viewport());
