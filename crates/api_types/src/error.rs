@@ -38,6 +38,24 @@ pub enum ApiError {
     },
     /// 429: try again after `retryAfter` seconds.
     RateLimited { message: String, retry_after: u32 },
+    /// 422: link a Fizzy account on the viewer's profile first.
+    FizzyNotConnected { message: String },
+    /// 503: boards or the token verification request could not reach Fizzy.
+    FizzyUnreachable { message: String },
+    /// 422: Fizzy rejected the token; the linked account has been marked disconnected.
+    FizzyTokenRejected { message: String },
+    /// 422: identity works but card creation is unauthorized. The account stays connected.
+    FizzyReadOnly { message: String },
+    /// 422: any other card refusal, including a failed create request, as in classic.
+    FizzyRefused { message: String },
+    /// 409: the source thread was locked before or during posting.
+    FizzyThreadLocked { message: String },
+    /// 422: the card exists, but posting its reply failed validation. Do not create it again.
+    FizzyReplyFailed {
+        message: String,
+        number: String,
+        url: String,
+    },
     /// 503: the feature isn't set up on this server ("Huddles are not configured"). Not worth
     /// retrying; the client hides the feature.
     Unavailable { message: String },
@@ -52,10 +70,16 @@ impl ApiError {
             | ApiError::SudoRequired { .. }
             | ApiError::TwoFactorRequired { .. } => 403,
             ApiError::NotFound { .. } => 404,
-            ApiError::Conflict { .. } => 409,
-            ApiError::InvalidAuthenticityToken { .. } | ApiError::Validation { .. } => 422,
+            ApiError::Conflict { .. } | ApiError::FizzyThreadLocked { .. } => 409,
+            ApiError::InvalidAuthenticityToken { .. }
+            | ApiError::Validation { .. }
+            | ApiError::FizzyNotConnected { .. }
+            | ApiError::FizzyTokenRejected { .. }
+            | ApiError::FizzyReadOnly { .. }
+            | ApiError::FizzyRefused { .. }
+            | ApiError::FizzyReplyFailed { .. } => 422,
             ApiError::RateLimited { .. } => 429,
-            ApiError::Unavailable { .. } => 503,
+            ApiError::Unavailable { .. } | ApiError::FizzyUnreachable { .. } => 503,
         }
     }
 }

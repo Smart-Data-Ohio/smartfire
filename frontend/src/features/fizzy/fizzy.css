@@ -1,0 +1,149 @@
+/* "Create Fizzy card" on a message: the source, the form, and its disconnected and failed states. */
+@layer app {
+  .fz-eyebrow strong {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .fz-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .fz-source {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    background: var(--bg-sunken);
+  }
+
+  .fz-source p {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-ui);
+    white-space: pre-line;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow-wrap: anywhere;
+  }
+
+  .fz-source cite {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-style: normal;
+    font-weight: var(--weight-semibold);
+  }
+
+  .fz-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .fz-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .fz-fields:disabled {
+    opacity: 0.6;
+  }
+
+  .fz-select {
+    width: 100%;
+  }
+
+  .fz-description {
+    height: auto;
+    min-height: calc(var(--control-lg) * 3);
+    padding-block: var(--space-2);
+    resize: vertical;
+    font: inherit;
+    font-size: var(--text-ui);
+  }
+
+  .fz-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .fz-problem,
+  .fz-disconnected {
+    display: flex;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-ui);
+  }
+
+  .fz-problem {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .fz-disconnected {
+    background: var(--bg-sunken);
+    color: var(--text);
+  }
+
+  .fz-problem svg,
+  .fz-disconnected svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .fz-problem p,
+  .fz-disconnected p {
+    margin: 0;
+  }
+
+  .fz-disconnected-reason {
+    color: var(--danger-text);
+  }
+
+  .fz-disconnected-reason + p {
+    margin-top: var(--space-1);
+  }
+
+  .fz-created a {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+    color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+
+  .fz-load-error {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    color: var(--danger-text);
+    font-size: var(--text-ui);
+  }
+
+  .fz-load-error p {
+    margin: 0;
+  }
+
+  .fz-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
