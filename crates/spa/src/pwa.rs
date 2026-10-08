@@ -150,12 +150,12 @@ impl askama::filters::Escaper for ManifestEscaper {
 }
 
 macro_rules! pwa_file {
-    ($path:literal, $source:literal, $content_type:literal) => {
+    ($path:literal, $identity:expr, $content_type:literal) => {
         File {
             path: $path,
             content_type: $content_type,
             immutable: false,
-            identity: include_bytes!($source),
+            identity: $identity,
             br: None,
             gz: None,
         }
@@ -164,30 +164,38 @@ macro_rules! pwa_file {
 
 static WORKER: File = pwa_file!(
     "service-worker.js",
-    "../pwa/service_worker.js",
+    include_bytes!("../pwa/service_worker.js"),
     "text/javascript; charset=utf-8"
 );
-static OFFLINE: File = pwa_file!("offline.html", "../pwa/offline.html", "text/html");
+static OFFLINE: File = pwa_file!(
+    "offline.html",
+    include_bytes!("../pwa/offline.html"),
+    "text/html"
+);
 static ASSETS: &[File] = &[
-    pwa_file!("assets/add.svg", "../pwa/assets/add.svg", "image/svg+xml"),
+    pwa_file!(
+        "assets/add.svg",
+        include_bytes!("../pwa/assets/add.svg"),
+        "image/svg+xml"
+    ),
     pwa_file!(
         "assets/person.svg",
-        "../pwa/assets/person.svg",
+        include_bytes!("../pwa/assets/person.svg"),
         "image/svg+xml"
     ),
     pwa_file!(
         "assets/screenshots/android-chat.png",
-        "../pwa/assets/screenshots/android-chat.png",
+        include_bytes!("../pwa/assets/screenshots/android-chat.png"),
         "image/png"
     ),
     pwa_file!(
         "assets/screenshots/android-dark-mode.png",
-        "../pwa/assets/screenshots/android-dark-mode.png",
+        include_bytes!("../pwa/assets/screenshots/android-dark-mode.png"),
         "image/png"
     ),
     pwa_file!(
         "assets/screenshots/android-sidebar.png",
-        "../pwa/assets/screenshots/android-sidebar.png",
+        include_bytes!("../pwa/assets/screenshots/android-sidebar.png"),
         "image/png"
     ),
 ];
