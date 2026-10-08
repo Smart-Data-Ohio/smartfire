@@ -159,11 +159,15 @@ const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older"
     return;
   }
 
-  mutations.setPageLoading(roomId, direction);
+  // A replace bumps this id. A late page or error is dropped once it no longer matches.
+  const request = mutations.setPageLoading(roomId, direction);
 
   yield* messages(roomId, direction === "older" ? { before: from } : { after: from }).pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, direction))),
-    Effect.catch(() => Effect.sync(() => mutations.setPageFailed(roomId))),
+    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, direction, request))),
+    Effect.catch(() => Effect.sync(() => mutations.setPageFailed(roomId, direction, request))),
+    Effect.onInterrupt(() =>
+      Effect.sync(() => mutations.setPageFailed(roomId, direction, request)),
+    ),
   );
 });
 
