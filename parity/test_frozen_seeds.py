@@ -95,8 +95,8 @@ class CheckTests(unittest.TestCase):
         campfire = self.root / "campfire"
         campfire.write_text("#!/usr/bin/env python3\n"
                             "import sqlite3, sys\n"
-                            "assert sys.argv[1] == 'db-migrate', sys.argv\n"
-                            "conn = sqlite3.connect(sys.argv[2])\n"
+                            "assert sys.argv[1:3] == ['db-migrate', '--preserve-existing-foreign-key-violations'], sys.argv\n"
+                            "conn = sqlite3.connect(sys.argv[3])\n"
                             "conn.execute(\"INSERT INTO schema_migrations (version) VALUES ('29991231000000')\")\n"
                             "conn.commit()\n")
         campfire.chmod(0o755)

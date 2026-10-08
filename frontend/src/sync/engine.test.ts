@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
-import { NetworkError, ServerError, Validation } from "../api/errors.ts";
+import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
 import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
 import {
   FakeApi,
@@ -26,6 +26,8 @@ import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
+import * as roomActions from "./room-actions.ts";
+import { invalidateRoom, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
 import { onResync } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
@@ -1195,11 +1197,12 @@ describe("resync", () => {
 
         const requests = (yield* api.requests).slice(before);
 
-        expect(requests).toHaveLength(3);
+        expect(requests).toHaveLength(4);
         expect(requests).toEqual(
           expect.arrayContaining([
             { method: "GET", path: "/sidebar" },
             { method: "GET", path: "/activity/unread_count" },
+            { method: "GET", path: "/rooms/12" },
             { method: "GET", path: "/rooms/12/messages" },
           ]),
         );
@@ -1255,6 +1258,7 @@ describe("resync", () => {
         yield* settle;
 
         expect((yield* api.requests).slice(before)).toEqual([
+          { method: "GET", path: "/rooms/12" },
           { method: "GET", path: "/rooms/12/messages" },
         ]);
         expect(timelineIds(12)).toEqual([1, 2]);
@@ -1955,6 +1959,456 @@ describe("activity follows the room list", () => {
 
         expect(unreadListStale()).toBe(true);
         expect((yield* countRequests) - before).toBe(1);
+      }),
+    ),
+  );
+});
+
+describe("room management refresh", () => {
+  const loaded = Effect.gen(function* () {
+    yield* serve([]);
+    yield* startEngine;
+    yield* welcome(0, false);
+    yield* session.openRoom(12, null);
+  });
+
+  const changed = (seq: number, roomId = 12): SyncEvent => ({
+    seq,
+    topic: "user",
+    type: "sidebar.row.upserted",
+    data: { ...sidebarRowFixture(roomId, "Edited room"), refreshRoom: true },
+  });
+
+  it.effect(
+    "refreshes loaded roster facts once per flagged batch and ignores ordinary hot rows",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const before = (yield* api.requests).length;
+          let reloads = 0;
+
+          const unsubscribe = onRoomRefresh(12, () => {
+            reloads++;
+          });
+
+          yield* api.reply("GET /rooms/12", {
+            ...roomDetailFixture(12),
+            memberCount: 8,
+            memberPreviewIds: [7, 8],
+          });
+          yield* pushEvents(changed(1), changed(2), changed(3, 30));
+
+          expect(
+            (yield* api.requests).slice(before).filter((request) => request.path === "/rooms/12"),
+          ).toHaveLength(1);
+          expect(
+            (yield* api.requests).slice(before).some((request) => request.path === "/rooms/30"),
+          ).toBe(false);
+          expect(store.getState().rooms[12]?.detail).toMatchObject({
+            memberCount: 8,
+            memberPreviewIds: [7, 8],
+            displayName: "Edited room",
+          });
+          expect(reloads).toBe(1);
+
+          const after = (yield* api.requests).length;
+
+          yield* pushEvents({
+            seq: 4,
+            topic: "user",
+            type: "sidebar.row.upserted",
+            data: { ...sidebarRowFixture(12, "Edited room"), unreadCount: 2 },
+          });
+
+          expect(
+            (yield* api.requests).slice(after).some((request) => request.path === "/rooms/12"),
+          ).toBe(false);
+          expect(reloads).toBe(1);
+          unsubscribe();
+          invalidateRoom(12);
+          expect(reloads).toBe(1);
+        }),
+      ),
+  );
+
+  it.effect("doesn't let a save that was on its way during a resync bring back a lost room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+
+        // The save is sent, then its reply is held until after the reconnect.
+        yield* api.route("PATCH /rooms/12", () => Deferred.await(release).pipe(Effect.as(stale)));
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+
+        // Meanwhile the viewer is removed; the server can't resume, so the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/12", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        const before = (yield* api.requests).length;
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect((yield* api.requests).slice(before)).toContainEqual({
+          method: "GET",
+          path: "/rooms/12",
+        });
+      }),
+    ),
+  );
+
+  it.effect(
+    "a repair read's NotFound that beats a pending resync leaves the resync to clear the room",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const releaseSave = yield* Deferred.make<void>();
+          const releaseRepair = yield* Deferred.make<void>();
+          const releaseResync = yield* Deferred.make<void>();
+          const row = sidebarRowFixture(12, "general");
+          const stale = { room: row.room, detail: roomDetailFixture(12), row };
+          const gone = new NotFound({ message: "gone" });
+          let reads = 0;
+
+          yield* api.route("PATCH /rooms/12", () =>
+            Deferred.await(releaseSave).pipe(Effect.as(stale)),
+          );
+          // The save's repair read and the resync's read both find the room deleted, each held.
+          yield* api.route("GET /rooms/12", () => {
+            reads += 1;
+
+            if (reads === 1)
+              return Deferred.await(releaseRepair).pipe(Effect.andThen(Effect.fail(gone)));
+
+            if (reads === 2)
+              return Deferred.await(releaseResync).pipe(Effect.andThen(Effect.fail(gone)));
+
+            return Effect.fail(gone);
+          });
+
+          const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+          yield* settle;
+          invalidateRoom(12);
+          yield* Deferred.succeed(releaseSave, undefined);
+          yield* settle;
+          expect(reads).toBe(1);
+
+          // Reconnect: the sidebar no longer lists the room, and its resync read is on its way.
+          yield* api.reply("GET /sidebar", sidebarFixture([]));
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(1, false, "e2");
+          expect(reads).toBe(2);
+
+          // The repair's NotFound arrives first: it's older than the snapshot, so it's dropped.
+          yield* Deferred.succeed(releaseRepair, undefined);
+          yield* Fiber.join(saving);
+          yield* settle;
+
+          // The resync's own NotFound still counts, and clears the room.
+          yield* Deferred.succeed(releaseResync, undefined);
+          yield* settle;
+
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          expect(reads).toBe(2);
+        }),
+      ),
+  );
+
+  it.effect("drops a repair read that was on its way during a resync", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const releaseSave = yield* Deferred.make<void>();
+        const releaseRepair = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+        let reads = 0;
+
+        yield* api.route("PATCH /rooms/12", () =>
+          Deferred.await(releaseSave).pipe(Effect.as(stale)),
+        );
+        // The save's repair read is held across the resync; later reads find the room gone.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Deferred.await(releaseRepair).pipe(Effect.as(roomDetailFixture(12)))
+            : Effect.fail(new NotFound({ message: "gone" }));
+        });
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+        // A management change lands while the save is on its way: its reply is superseded.
+        invalidateRoom(12);
+        yield* Deferred.succeed(releaseSave, undefined);
+        yield* settle;
+        expect(reads).toBe(1);
+
+        // While the repair read is held, the viewer loses the room and the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        yield* Deferred.succeed(releaseRepair, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("doesn't land a create that was on its way during a resync over the snapshot", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(40, "launch");
+        const made = { room: row.room, detail: roomDetailFixture(40), row };
+
+        yield* api.route("POST /rooms", () => Deferred.await(release).pipe(Effect.as(made)));
+
+        const creating = yield* Effect.forkChild(
+          roomActions.create({ type: "open", name: "launch", iconName: null, clientRoomId: "k1" }),
+        );
+
+        yield* settle;
+
+        // The snapshot doesn't list the new room: by then the viewer has lost it again.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/40", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(creating);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[40]).toBeUndefined();
+        expect(store.getState().rooms[40]?.detail).toBeNull();
+      }),
+    ),
+  );
+
+  it.effect("refreshes a hidden row without revoking its still-readable room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+
+        yield* api.reply("GET /rooms/12", { ...roomDetailFixture(12), memberCount: 5 });
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 12, refreshRoom: true },
+        });
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(5);
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+      }),
+    ),
+  );
+
+  it.effect("drops an older pending roster response after a newer management change", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const oldReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+        let requests = 0;
+
+        yield* api.route("GET /rooms/12", () =>
+          ++requests === 1
+            ? Deferred.await(oldReply)
+            : Effect.succeed({ ...roomDetailFixture(12), memberCount: 9 }),
+        );
+        yield* pushEvents(changed(1));
+        yield* pushEvents(changed(2));
+
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+        yield* Deferred.succeed(oldReply, { ...roomDetailFixture(12), memberCount: 4 });
+        yield* settle;
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+      }),
+    ),
+  );
+
+  it.effect("drops a pending response after a locally confirmed management reply", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const reply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(reply));
+        yield* pushEvents(changed(1));
+        mutations.setRoomDetail({ ...roomDetailFixture(12), memberCount: 11 });
+        invalidateRoom(12);
+        yield* Deferred.succeed(reply, { ...roomDetailFixture(12), memberCount: 4 });
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(11);
+      }),
+    ),
+  );
+});
+
+describe("room access refresh", () => {
+  const loaded = Effect.gen(function* () {
+    yield* serve([]);
+    yield* startEngine;
+    yield* welcome(0, false);
+    yield* session.openRoom(12, null);
+  });
+
+  it.effect(
+    "a flagged access loss clears detail and prevents a pending older success restoring it",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const oldReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+          let requests = 0;
+
+          yield* api.route("GET /rooms/12", () =>
+            ++requests === 1
+              ? Deferred.await(oldReply)
+              : Effect.fail(new NotFound({ message: "Room not found" })),
+          );
+          yield* pushEvents({
+            seq: 1,
+            topic: "user",
+            type: "sidebar.row.upserted",
+            data: { ...sidebarRowFixture(12, "Room"), refreshRoom: true },
+          });
+          yield* pushEvents({
+            seq: 2,
+            topic: "user",
+            type: "sidebar.row.removed",
+            data: { roomId: 12, refreshRoom: true },
+          });
+
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          yield* Deferred.succeed(oldReply, roomDetailFixture(12));
+          yield* settle;
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+        }),
+      ),
+  );
+
+  it.effect("a disconnected access loss clears stale detail even when both REST reads fail", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+
+        yield* api.route("GET /rooms/12", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* api.route("GET /rooms/12/messages", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect(store.getState().rooms[12]?.status).toBe("error");
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("a delayed resync preserves later membership fields and ignores a local delete", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const reply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(reply));
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        const row = sidebarRowFixture(12, "Room");
+
+        mutations.applyEvents(
+          [
+            {
+              seq: 0,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: {
+                ...row,
+                membership: {
+                  ...row.membership,
+                  involvement: "muted",
+                  roomCategoryId: 4,
+                  lastReadMessageId: 90,
+                },
+              },
+            },
+          ],
+          0,
+        );
+        yield* Deferred.succeed(reply, roomDetailFixture(12));
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail?.membership).toMatchObject({
+          involvement: "muted",
+          roomCategoryId: 4,
+          lastReadMessageId: 90,
+        });
+
+        const deletedReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(deletedReply));
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        mutations.setRoomUnavailable(12);
+        invalidateRoom(12);
+        yield* Deferred.succeed(deletedReply, roomDetailFixture(12));
+        yield* settle;
+        expect(store.getState().rooms[12]?.detail).toBeNull();
       }),
     ),
   );

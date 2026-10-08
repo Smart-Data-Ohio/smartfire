@@ -33,6 +33,7 @@ pub mod bots;
 pub mod huddles;
 pub mod message_actions;
 pub mod organize;
+pub mod room_management;
 pub mod people;
 pub mod search;
 pub mod settings;
@@ -87,7 +88,11 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             post(unparsed_action(fizzy::create)),
         )
         .route("/api/v1/sidebar", get(action(endpoints::sidebar)))
-        .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)))
+        .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
+        .route("/api/v1/rooms/new", get(action(room_management::new)))
+        .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))
+        .route("/api/v1/rooms/{room_id}/membership", delete(action(room_management::leave)))
+        .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)).patch(unparsed_action(room_management::update)).delete(action(room_management::destroy)))
         .route(
             "/api/v1/rooms/{room_id}/messages",
             get(action(endpoints::messages)).post(unparsed_action(endpoints::create_message)),

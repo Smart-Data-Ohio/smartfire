@@ -8,9 +8,10 @@ import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { RoomGlyph } from "../rooms/room-glyph.tsx";
+import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
 import { HeaderSearch } from "../search/header-search.tsx";
 import { NotificationsButton } from "../sidebar/notifications-button.tsx";
-import { ROOM_KIND_ICON } from "./room-icon.ts";
 
 const PRESENCE_TEXT = {
   online: "Active",
@@ -45,6 +46,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const row = useStore((state) => state.sidebar.rows[roomId] ?? null);
   const kind = detail?.room.kind ?? row?.room.kind ?? null;
   const name = detail?.displayName ?? row?.displayName ?? null;
+  const iconName = detail?.room.iconName ?? row?.room.iconName ?? null;
   const directIds = detail?.directMemberIds ?? row?.directMemberIds ?? [];
   const otherId = kind === "direct" && directIds.length === 1 ? directIds[0] : undefined;
 
@@ -57,13 +59,32 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         <Skeleton width={140} height={14} />
       ) : (
         <div className="room-title enter-fade">
-          {otherId === undefined ? (
-            <Icon name={ROOM_KIND_ICON[kind]} size={18} className="room-title-icon" />
+          {kind === "direct" ? (
+            <>
+              {otherId === undefined ? (
+                <RoomGlyph kind={kind} iconName={null} size={18} className="room-title-icon" />
+              ) : (
+                <UserAvatar userId={otherId} size={24} presence decorative />
+              )}
+              <h1 className="room-title-name">{name}</h1>
+              {otherId === undefined ? null : <DirectSubtitle userId={otherId} />}
+            </>
           ) : (
-            <UserAvatar userId={otherId} size={24} presence decorative />
+            // Slack's channel name button: the name opens the room's settings.
+            <Link
+              to="/r/$roomId/settings"
+              params={{ roomId }}
+              state={settingsOverState(roomId)}
+              className="room-title-button"
+              aria-label={`${name}, room settings`}
+              onPointerEnter={preloadRoomSettings}
+              onFocus={preloadRoomSettings}
+            >
+              <RoomGlyph kind={kind} iconName={iconName} size={18} className="room-title-icon" />
+              <h1 className="room-title-name">{name}</h1>
+              <Icon name="chevron-down" size={14} className="room-title-chevron" />
+            </Link>
           )}
-          <h1 className="room-title-name">{name}</h1>
-          {otherId === undefined ? null : <DirectSubtitle userId={otherId} />}
         </div>
       )}
       <div className="room-header-tools">

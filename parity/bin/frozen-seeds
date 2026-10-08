@@ -106,7 +106,10 @@ def migrate(campfire):
         with tempfile.TemporaryDirectory() as scratch:
             copy = Path(scratch) / "production.sqlite3"
             shutil.copyfile(database, copy)
-            subprocess.run([str(campfire), "db-migrate", str(copy)], check=True)
+            # Deliberate unrenderable-message fixtures retain their missing creators. Reject new
+            # violations without requiring the migration to repair these frozen Rails rows.
+            subprocess.run([str(campfire), "db-migrate",
+                            "--preserve-existing-foreign-key-violations", str(copy)], check=True)
             # Fold the WAL back in so the committed file is complete on its own.
             with sqlite3.connect(copy) as conn:
                 conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
