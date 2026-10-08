@@ -1,10 +1,21 @@
 import { userFixture } from "../api/testing.ts";
+import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 
 export const BOARD = 900;
+
+export function boardAutomations(userId = 7): BoardAutomations {
+  return {
+    roomId: BOARD,
+    tagRules: [{ id: 1, tag: "bug", assigneeId: userId }],
+    slaTimers: [{ status: "planned", nudgeAfterMinutes: 1440, escalateAfterMinutes: 2880 }],
+    candidates: [userId],
+    users: [userFixture(userId)],
+  };
+}
 
 export function boardThread(
   id: number,
