@@ -777,6 +777,8 @@ const BOARD_THREAD: i64 = 4;
 const RELEASE_BOARD: i64 = 699448332;
 const SPA_BOOT: &str = "<script type=\"application/json\" id=\"boot\"";
 const CLASSIC_SHELL: &str = "data-controller=\"local-time lightbox";
+/// The profile save's notice (`"✓"`), as the application layout renders the flash.
+const PROFILE_NOTICE: &str = "role=\"alert\" aria-atomic=\"true\">✓</span>";
 
 /// Follow redirects on `start` until a page, and return that page's path and body.
 async fn follow(b: &mut Browser<'_>, start: &str) -> (String, Reply) {
@@ -1016,6 +1018,10 @@ async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frame
     let shown = b.get(&edit).await;
     assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
     assert!(shown.text().contains(CLASSIC_SHELL));
+    assert!(
+        shown.text().contains(PROFILE_NOTICE),
+        "the profile notice should survive the settings hop"
+    );
     assert!(redirected_to_spa(&b.get(&settings).await));
 
     let saved = b
@@ -1030,6 +1036,10 @@ async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frame
         flashed_profile.location()
     );
     assert!(flashed_profile.text().contains(CLASSIC_SHELL));
+    assert!(
+        flashed_profile.text().contains(PROFILE_NOTICE),
+        "the profile notice should render on the numeric profile"
+    );
     assert_eq!(
         b.get(&profile).await.location(),
         Some(to("/app/settings").as_str())

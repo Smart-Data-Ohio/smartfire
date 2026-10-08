@@ -430,9 +430,10 @@ pub struct ConfirmedRoomQuery {
 ///
 /// Names and values are percent-decoded (`+` is a space) before the id check, so `thread=%39`
 /// is thread 9. `thread` is the first value, which is what the thread panel reads with
-/// `URLSearchParams.get`. `message_id` is the last value, which is what the room controller
-/// reads from params. Only that value is parsed: another duplicate is not a fallback when the
-/// effective one isn't an id.
+/// `URLSearchParams.get`. A non-empty `thread` makes `message_id` the first value too: the
+/// panel forwards that id into the thread. With no thread (or an empty one), `message_id` is
+/// the last value, which is what the room controller reads from params. Only that value is
+/// parsed: another duplicate is not a fallback when the effective one isn't an id.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct RoomQueryIds {
     pub thread: Option<u64>,
@@ -537,8 +538,9 @@ fn room_notification_url(
     Some(url)
 }
 
-/// `thread` (first value) and `message_id` (last value) from `query`, plus every other pair.
-/// `classic` is dropped. A parameter whose effective value isn't an id stays `None`.
+/// `thread` (first value) and `message_id` from `query`, plus every other pair.
+/// A non-empty `thread` selects the first `message_id`; otherwise the last. `classic` is
+/// dropped. A parameter whose effective value isn't an id stays `None`.
 struct ParsedRoomQuery {
     thread: Option<u64>,
     message: Option<u64>,
@@ -547,7 +549,9 @@ struct ParsedRoomQuery {
 
 fn parse_room_query(query: Option<&str>) -> ParsedRoomQuery {
     let mut thread_pair: Option<Option<u64>> = None;
-    let mut message: Option<u64> = None;
+    let mut thread_opens = false;
+    let mut message_first: Option<Option<u64>> = None;
+    let mut message_last: Option<u64> = None;
     let mut rest = Vec::new();
     for pair in query.unwrap_or("").split('&') {
         if pair.is_empty() {
@@ -556,15 +560,29 @@ fn parse_room_query(query: Option<&str>) -> ParsedRoomQuery {
         let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
         match query_component(name).as_deref() {
             Some("classic") => {}
-            Some("thread") if thread_pair.is_none() => thread_pair = Some(record_id(value)),
+            Some("thread") if thread_pair.is_none() => {
+                let decoded = query_component(value);
+                thread_opens = decoded.as_ref().is_some_and(|text| !text.is_empty());
+                thread_pair = Some(decoded.as_deref().and_then(id));
+            }
             Some("thread") => {}
-            Some("message_id") => message = record_id(value),
+            Some("message_id") => {
+                let parsed = record_id(value);
+                if message_first.is_none() {
+                    message_first = Some(parsed);
+                }
+                message_last = parsed;
+            }
             _ => rest.push(pair.to_string()),
         }
     }
     ParsedRoomQuery {
         thread: thread_pair.flatten(),
-        message,
+        message: if thread_opens {
+            message_first.flatten()
+        } else {
+            message_last
+        },
         rest,
     }
 }

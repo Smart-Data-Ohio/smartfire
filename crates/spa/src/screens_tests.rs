@@ -469,8 +469,9 @@ fn room_notification_queries_open_the_thread_or_message() {
 #[test]
 fn room_notification_queries_decode_and_use_the_classic_duplicate() {
     // `%39` is `9`. `thread` is the first value (the thread panel's `URLSearchParams.get`).
-    // `message_id` is the last value (the room controller's params). An effective value that
-    // isn't an id is not replaced by another duplicate.
+    // A non-empty `thread` makes `message_id` the first value too. With no thread, `message_id`
+    // is the last value (the room controller's params). An effective value that isn't an id is
+    // not replaced by another duplicate.
     assert_eq!(
         spa_url("rooms#show", "/rooms/12", Some("thread=%39")).as_deref(),
         Some("/app/r/12/t/9")
@@ -515,7 +516,16 @@ fn room_notification_queries_decode_and_use_the_classic_duplicate() {
             Some("thread=9&thread=8&message_id=4&message_id=5")
         )
         .as_deref(),
-        Some("/app/r/12/t/9?m=5")
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&message_id=nope&message_id=5")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9")
     );
     // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins
     // the translator when such a query is handed to it.
@@ -565,13 +575,28 @@ fn room_notification_queries_decode_and_use_the_classic_duplicate() {
         room_query_ids(Some("thread=%39&thread=8&message_id=4&message_id=5")),
         RoomQueryIds {
             thread: Some(9),
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("message_id=4&message_id=5")),
+        RoomQueryIds {
+            thread: None,
             message: Some(5),
         }
     );
+    // `thread=nope` is still present, so the first `message_id` is the one that counts.
     assert_eq!(
         room_query_ids(Some("thread=nope&thread=9&message_id=4&message_id=nope")),
         RoomQueryIds {
             thread: None,
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=9&message_id=nope&message_id=4")),
+        RoomQueryIds {
+            thread: Some(9),
             message: None,
         }
     );

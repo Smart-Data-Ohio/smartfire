@@ -100,13 +100,15 @@ function recordId(raw: string): string | null {
 /**
  * A room notification's `thread` and `message_id` query, as the SPA's thread and message routes.
  * `null` when neither effective value is a record id, so the plain room URL keeps the query.
- * `thread` is the first value (the classic thread panel's `URLSearchParams.get`). `message_id`
- * is the last value (the room controller's params). Only that value is parsed; another duplicate
- * is not a fallback when it isn't an id. The same rules as the server translator.
+ * `thread` is the first value (the classic thread panel's `URLSearchParams.get`). A non-empty
+ * `thread` makes `message_id` the first value too. With no thread, `message_id` is the last
+ * value (the room controller's params). Only that value is parsed; another duplicate is not a
+ * fallback when it isn't an id. The same rules as the server translator.
  */
 function roomNotificationUrl(spa: string, search: string): string | null {
   let threadRaw: string | undefined;
-  let messageRaw: string | undefined;
+  let messageFirst: string | undefined;
+  let messageLast: string | undefined;
   const rest: string[] = [];
 
   for (const pair of search.replace(/^\?/, "").split("&")) {
@@ -132,7 +134,11 @@ function roomNotificationUrl(spa: string, search: string): string | null {
     }
 
     if (name === "message_id") {
-      messageRaw = rawValue;
+      if (messageFirst === undefined) {
+        messageFirst = rawValue;
+      }
+
+      messageLast = rawValue;
 
       continue;
     }
@@ -140,6 +146,9 @@ function roomNotificationUrl(spa: string, search: string): string | null {
     rest.push(pair);
   }
 
+  const threadDecoded = threadRaw === undefined ? null : queryComponent(threadRaw);
+  const threadOpens = threadDecoded !== null && threadDecoded !== "";
+  const messageRaw = threadOpens ? messageFirst : messageLast;
   const thread = threadRaw === undefined ? undefined : (recordId(threadRaw) ?? undefined);
   const message = messageRaw === undefined ? undefined : (recordId(messageRaw) ?? undefined);
 

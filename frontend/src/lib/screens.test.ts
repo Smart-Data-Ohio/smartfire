@@ -108,8 +108,10 @@ describe("the screen map", () => {
       "/app/r/12?message_id=4&message_id=nope",
     );
     expect(spaUrlFor("/rooms/12", "?thread=9&thread=8&message_id=4&message_id=5")).toBe(
-      "/app/r/12/t/9?m=5",
+      "/app/r/12/t/9?m=4",
     );
+    expect(spaUrlFor("/rooms/12", "?thread=9&message_id=nope&message_id=5")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=nope&message_id=5")).toBe("/app/r/12/m/5");
     // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins the translator.
     expect(spaUrlFor("/rooms/12", "?thread=%ZZ&x=1")).toBe("/app/r/12?thread=%ZZ&x=1");
   });
