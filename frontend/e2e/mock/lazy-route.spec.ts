@@ -3,6 +3,9 @@ import { expect, openApp, ROOM_IDS, test } from "./support.ts";
 
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
 
+// A cold chunk under load can take longer than the default 30s. The assertions do not depend on that.
+test.setTimeout(120_000);
+
 const composer = (page: Page) => page.getByRole("textbox", { name: "Message #general" });
 
 const DRAFT = "stay put while it loads";
@@ -88,7 +91,7 @@ function watchPaneSkeleton(page: Page): Promise<void> {
 /**
  * The openApp helper emulates reduced motion, which shows the placeholder at once. Full motion
  * is read on the next render; the shell's 150ms wait is applied in an effect after paint, so
- * the timer waits past that effect.
+ * the timer waits past that effect. Page time must still be running here.
  */
 async function allowMotion(page: Page): Promise<void> {
   await page.evaluate(() => {
@@ -101,6 +104,57 @@ async function allowMotion(page: Page): Promise<void> {
         setTimeout(resolve, 50);
       }),
   );
+}
+
+/** The clock `page.clock.install()` puts on the page. */
+interface PageClock {
+  readonly controller: {
+    now: () => number;
+    pauseAt: (time: number) => Promise<void>;
+  };
+}
+
+/**
+ * Stops page time so a hold cannot elapse. Install `page.clock` before the page opens. The pause
+ * is read and applied in the page: a round trip can outrun a cushion and land in the past. The
+ * jump is shorter than either hold, and neither hold has been scheduled yet.
+ */
+async function freezeTime(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    // SAFETY: page.clock.install() defines __pwClock on this page before it opens.
+    const clock = (globalThis as { __pwClock?: PageClock }).__pwClock;
+
+    if (clock === undefined) {
+      throw new Error("page clock is not installed");
+    }
+
+    await clock.controller.pauseAt(clock.controller.now() + 20);
+  });
+}
+
+/**
+ * Waits until `ready`. Page time advances at most `budget` ms, then waits on the wall clock, so a
+ * longer hold still cannot elapse. React reveals a resolved fallback after about 300ms; the pane
+ * bones wait 400ms, and `budget` sits between them.
+ */
+async function untilReady(
+  page: Page,
+  ready: () => Promise<boolean>,
+  budget: number,
+): Promise<void> {
+  let advanced = 0;
+
+  while (!(await ready())) {
+    if (advanced >= budget) {
+      await page.waitForTimeout(50);
+      continue;
+    }
+
+    const step = Math.min(20, budget - advanced);
+
+    await page.clock.runFor(step);
+    advanced += step;
+  }
 }
 
 /** Tags the sidebar node and parks its scroller, so a remount is visible later. */
@@ -198,46 +252,53 @@ test("a slow lazy route keeps the shell mounted until its screen arrives", async
 });
 
 test("a fast lazy route never shows the loading skeleton", async ({ page }) => {
+  await page.clock.install();
   await watchLoadingPage(page);
-  await openApp(page, `r/${ROOM_IDS.general}`);
-  await allowMotion(page);
-  await expect(page.getByRole("heading", { name: "general" })).toBeVisible();
-  await markShell(page);
 
-  // A cold transform of the chunk can outlast the 150ms hold. Warm Vite, then the click waits
-  // only the 40ms below.
-  await page.request.get("/app/src/features/activity/activity-route.tsx");
-  await page.request.get("/app/src/features/activity/activity-page.tsx");
+  // Held across the wall-clock wait below. Page time is stopped, so the chunk can be slow.
+  const gate = Promise.withResolvers<void>();
 
   await page.route(
     (url) => url.pathname.endsWith("/activity-route.tsx"),
     async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 40));
+      await gate.promise;
       await route.continue();
     },
   );
 
+  await openApp(page, `r/${ROOM_IDS.general}`);
+  await allowMotion(page);
+  await expect(page.getByRole("heading", { name: "general" })).toBeVisible();
+  await markShell(page);
+  await freezeTime(page);
+
   await page.getByRole("button", { name: "Activity" }).click();
 
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
-  await page.waitForTimeout(500);
-  await expectShellKept(page);
+  // Longer than the shell's 150ms hold. That timer cannot run while the clock is stopped.
+  await page.waitForTimeout(400);
+  await expect(page.locator("html")).toHaveAttribute("data-loading-page-seen", "0");
 
+  gate.resolve();
+
+  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+
+  // The navigation has committed, so advancing past the hold must not mount the placeholder.
+  await page.clock.fastForward(1_000);
+  await expectShellKept(page);
   await expect(page.locator("html")).toHaveAttribute("data-loading-page-seen", "0");
 });
 
 test("a fast right-pane chunk names the pane at once and skips the skeleton", async ({ page }) => {
+  await page.clock.install();
   await watchPaneSkeleton(page);
 
-  // Held until the name is read, then a fast chunk: the title has to be there before the module.
+  // Held until the name is read. Page time is stopped, so the bone delay cannot elapse.
   const named = Promise.withResolvers<void>();
 
   await page.route(
     (url) => url.pathname.endsWith("/members-pane.tsx"),
     async (route) => {
       await named.promise;
-
-      await new Promise((resolve) => setTimeout(resolve, 40));
       await route.continue();
     },
   );
@@ -245,6 +306,7 @@ test("a fast right-pane chunk names the pane at once and skips the skeleton", as
   await openApp(page, `r/${ROOM_IDS.general}`);
   await allowMotion(page);
   await expect(page.getByRole("heading", { name: "general" })).toBeVisible();
+  await freezeTime(page);
 
   await page
     .locator(".room-header")
@@ -264,9 +326,18 @@ test("a fast right-pane chunk names the pane at once and skips the skeleton", as
     )
     .toBe("Members");
 
+  // Longer than the 400ms bone delay. That timer cannot run while the clock is stopped.
+  await page.waitForTimeout(500);
+  await expect(page.locator("html")).toHaveAttribute("data-pane-skeleton-seen", "0");
+
   named.resolve();
 
-  await expect(pane.getByRole("searchbox", { name: "Find a member" })).toBeVisible();
-  await page.waitForTimeout(500);
+  const search = pane.getByRole("searchbox", { name: "Find a member" });
+
+  await untilReady(page, () => search.isVisible(), 320);
+  await expect(search).toBeVisible();
+
+  // The chunk has committed, so advancing past the bone delay must not mount the skeleton.
+  await page.clock.fastForward(1_000);
   await expect(page.locator("html")).toHaveAttribute("data-pane-skeleton-seen", "0");
 });
