@@ -352,6 +352,30 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(false);
   });
 
+  it("find-in-page before deleting the paused end witness cancels follow", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    expect(viewport().scrollTop).toBe(300);
+    expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.heights.set(3, 500);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(300);
+    // Find-in-page moves before another member deletes the paused witness.
+    viewport().scrollTop = 0;
+    fireEvent.scroll(viewport());
+    geometry.ids = [1, 3];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    await act(async () => undefined);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(0);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
   it("find-in-page after deleting the paused end witness cancels follow", async () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
@@ -375,6 +399,109 @@ describe("useViewportAnchor reader control", () => {
     await act(async () => undefined);
     expect(viewport().scrollTop).toBe(0);
     expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it("witness deletion cancels paused follow before find-in-page delivers a scroll event", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.heights.set(3, 500);
+    act(() => measureRows(geometry));
+    viewport().scrollTop = 0;
+    geometry.ids = [1, 3];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    await act(async () => undefined);
+    act(() => apiRef.current?.settle());
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(0);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it("gives up paused follow when the deleted witness was already unmounted", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} drawn={[1, 3]} />);
+    geometry.heights.set(3, 500);
+    act(() => measureRows(geometry));
+    geometry.ids = [1, 3];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    await act(async () => undefined);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(300);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it("deleting a paused witness cannot repin at the clamped end", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.ids = [1, 3];
+    viewport().scrollTop = 100;
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    await act(async () => undefined);
+    geometry.heights.set(3, 500);
+    act(() => measureRows(geometry));
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(100);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it.each(["measurement", "capture", "close"])(
+    "a paused %s cannot repin browser movement at the current end",
+    async (delivery) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+      geometry.heights.set(3, 500);
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 600;
+
+      if (delivery === "measurement") act(() => measureRows(geometry));
+
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      if (delivery === "capture") act(() => apiRef.current?.capture());
+
+      await act(async () => undefined);
+      geometry.heights.set(3, 600);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(600);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
+  it("a paused native shrink preserves follow through later growth", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.heights.set(3, 150);
+    viewport().scrollTop = 250;
+    act(() => measureRows(geometry));
+    geometry.heights.set(3, 260);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(250);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(360);
+    expect(apiRef.current?.canFollow()).toBe(true);
   });
 
   it.each(["menu", "editor"])(

@@ -169,7 +169,10 @@ export function useViewportAnchor({
 
     if (settlementFrameRef.current !== 0) return false;
 
-    if (endOffset(element) - element.scrollTop <= 1) {
+    const atEnd = endOffset(element) - element.scrollTop <= 1;
+    const paused = interacting() || correctionPendingRef.current;
+
+    if (atEnd && !paused) {
       pinEnd();
 
       return true;
@@ -181,7 +184,7 @@ export function useViewportAnchor({
     const index = witness === null ? undefined : indices.get(witness.id);
 
     if (witness !== null && (index === undefined || listRef.current === null)) {
-      cancelPlacement(true);
+      cancelPlacement(true, !paused);
 
       return false;
     }
@@ -189,17 +192,22 @@ export function useViewportAnchor({
     // Rows above the first visible witness are fully hidden and compensated by Virtua.
     // Its own compensation is recorded across each measurement batch below.
     // An empty list still has an offset reference while its first row is being measured.
-    const expected =
+    const reference =
       anchorRef.current.scroll +
       (witness && index !== undefined
         ? (listRef.current?.getItemOffset(index) ?? witness.offset) - witness.offset
         : 0);
 
+    // A paused pin can be clamped by a native layout shrink, but cannot adopt movement.
+    const expected = paused ? Math.max(0, Math.min(endOffset(element), reference)) : reference;
+
     if (Math.abs(element.scrollTop - expected) > 1) {
-      cancelPlacement(true);
+      cancelPlacement(true, !paused);
 
       return false;
     }
+
+    if (atEnd) pinEnd(expected);
 
     return true;
   });
@@ -235,6 +243,12 @@ export function useViewportAnchor({
 
     if (measurement?.anchor !== anchor || anchor?.kind !== "end" || !list || !element) return;
 
+    if (anchor.row && index === undefined) {
+      cancelPlacement(true, false);
+
+      return;
+    }
+
     // No browser input runs between these observer callbacks. Include every actual
     // Virtua scroll change, including compensation of a partly visible witness.
     anchorRef.current = {
@@ -261,7 +275,7 @@ export function useViewportAnchor({
     };
   }, []);
 
-  const replaceEndWitness = useEffectEvent(() => {
+  const validateEndWitness = useEffectEvent(() => {
     const anchor = anchorRef.current;
 
     if (
@@ -271,16 +285,13 @@ export function useViewportAnchor({
       anchor.row &&
       !indices.has(anchor.row.id)
     ) {
-      const element = viewport();
-      const row = element ? endRow(element.scrollTop) : null;
-
-      // Rebase at deletion, before a paused correction or later browser movement.
-      if (row && element) anchorRef.current = { ...anchor, scroll: element.scrollTop, row };
-      else cancelPlacement(true);
+      // The removed witness no longer has a measured offset to prove continuity.
+      // A replacement at the current scroll position could erase paused reader movement.
+      cancelPlacement(true, false);
     }
   });
 
-  useLayoutEffect(() => replaceEndWitness());
+  useLayoutEffect(() => validateEndWitness());
 
   const canFollow = () => {
     if (!placed || isPlacing() || interacting()) return false;
@@ -341,6 +352,9 @@ export function useViewportAnchor({
       endOffset(element) - element.scrollTop <= 1 &&
       (state.kind !== "cancelled" || state.allowEnd || !readerInput)
     ) {
+      if (anchorRef.current?.kind === "end" && correctionPendingRef.current && !checkFollow())
+        return;
+
       pinEnd();
 
       return;
@@ -996,10 +1010,11 @@ export function useViewportAnchor({
       return;
     }
 
-    correctionPendingRef.current = false;
-
     if (anchor.kind === "end") {
-      if (!checkFollow()) return;
+      const follows = checkFollow();
+      correctionPendingRef.current = false;
+
+      if (!follows) return;
       const offset = element.scrollHeight - element.clientHeight;
 
       if (Math.abs(offset - element.scrollTop) > 1) {
@@ -1012,6 +1027,7 @@ export function useViewportAnchor({
       return;
     }
 
+    correctionPendingRef.current = false;
     const index = indices.get(anchor.id);
 
     if (index === undefined) return;
