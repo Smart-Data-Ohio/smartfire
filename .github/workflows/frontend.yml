@@ -165,9 +165,17 @@ jobs:
           CARGO_TERM_COLOR: always
         run: cargo test -p campfire_spa --locked -j 4
 
+      # The runner image usually has the shell's system libraries (it ships Chrome). Fetching
+      # them with apt only when the shell can't start keeps a slow mirror off the critical path.
       - name: Install the preview browser
         if: steps.scope.outputs.run == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install --only-shell chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then((browser) => browser.close())"; then
+            echo "The headless shell can't start yet; installing its system libraries."
+            pnpm exec playwright install-deps chromium
+          fi
 
       - name: Playwright (production preview and installed app)
         if: steps.scope.outputs.run == 'true'
@@ -283,11 +291,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
 
-      # The specs run headless, so Chromium's headless shell is the only browser they launch. The
-      # system libraries it needs aren't cached: --with-deps installs them on every run.
+      # The specs run headless, so Chromium's headless shell is the only browser they launch. Its
+      # system libraries come with the runner image; apt runs only when the shell can't start,
+      # because a slow mirror once spent six minutes of the job's fifteen there.
       - name: Install the Playwright browser
         if: steps.scope.outputs.run == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install --only-shell chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then((browser) => browser.close())"; then
+            echo "The headless shell can't start yet; installing its system libraries."
+            pnpm exec playwright install-deps chromium
+          fi
 
       - name: Save the Playwright browser
         if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.browser-cache.outputs.cache-hit != 'true' }}
