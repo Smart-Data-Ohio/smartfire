@@ -180,6 +180,8 @@ function Harness({
               key={id}
               data-message-row
               data-message-id={id}
+              data-editing={editingId === id ? true : undefined}
+              data-popup-pending={popupPendingId === id ? true : undefined}
               ref={(row) => {
                 if (!row) return;
 
@@ -189,12 +191,13 @@ function Harness({
                   row.parentElement.getBoundingClientRect = () => rowBounds(id);
                   Object.defineProperty(row.parentElement, "offsetParent", {
                     configurable: true,
-                    value: viewport(),
+                    get: () => viewport(),
                   });
                 }
               }}
             >
               Message {id}
+              {popupId === id ? <span className="message-popup-anchor" /> : null}
             </article>
           ))}
         </VirtualList>
@@ -350,6 +353,104 @@ describe("useViewportAnchor reader control", () => {
     await act(async () => undefined);
     expect(viewport().scrollTop).toBe(400);
     expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it("an idle fitting list follows appends through overflow after its witness is deleted", async () => {
+    const apiRef = createRef<AnchorApi>();
+
+    const geometry: Geometry = {
+      ids: [1, 2],
+      heights: new Map([
+        [1, 100],
+        [2, 100],
+        [3, 100],
+        [4, 100],
+        [5, 100],
+      ]),
+    };
+
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    act(() => apiRef.current?.followEnd());
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(0);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    geometry.ids = [2];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    expect(viewport().scrollTop).toBe(0);
+
+    for (const id of [3, 4, 5]) {
+      geometry.ids = [...geometry.ids, id];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(apiRef.current?.canFollow()).toBe(true);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(Math.max(0, geometry.ids.length * 100 - VIEWPORT_HEIGHT));
+    }
+
+    expect(viewport().scrollTop).toBe(100);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("an idle overflowing list stays pinned after its witness is deleted", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+    geometry.ids = [1, 3];
+    // The shorter list clamps the native offset before delivering a scroll event.
+    viewport().scrollTop = 100;
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(100);
+
+    geometry.ids = [1, 3, 4];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(300);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it.each([
+    { deletion: "last", ids: [1, 2], remaining: [1] },
+    { deletion: "only", ids: [2], remaining: [] },
+  ])("an idle list keeps follow after deleting its $deletion message", async (scenario) => {
+    const apiRef = createRef<AnchorApi>();
+
+    const geometry: Geometry = {
+      ids: scenario.ids,
+      heights: new Map([
+        [1, 100],
+        [2, 100],
+      ]),
+    };
+
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    act(() => apiRef.current?.followEnd());
+    act(() => measureRows(geometry));
+    geometry.ids = scenario.remaining;
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(0);
+    expect(apiRef.current?.canFollow()).toBe(true);
+
+    geometry.ids = [...geometry.ids, 3, 4];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(offsetOf(geometry, geometry.ids.length) - VIEWPORT_HEIGHT);
+    expect(apiRef.current?.canFollow()).toBe(true);
   });
 
   it("find-in-page before deleting the paused end witness cancels follow", async () => {
@@ -1076,33 +1177,68 @@ describe("useViewportAnchor reader control", () => {
     }
   });
 
-  it("follows Virtua's downward compensation of a partly visible witness before debounce", async () => {
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+  it.each(["unpaused", "popup"])(
+    "follows Virtua's downward compensation of a partly visible witness before debounce (%s)",
+    async (pause) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
 
-    try {
-      const { VList } = await import("virtua");
-      const apiRef = createRef<AnchorApi>();
-      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
-      const settled = vi.fn();
+      try {
+        const { VList } = await import("virtua");
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+        const settled = vi.fn();
 
-      render(<Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />);
-      act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
-      await act(async () => undefined);
-      act(() => measureRows(geometry));
-      follow(apiRef, geometry);
-      fireEvent.scroll(viewport());
-      expect(viewport().scrollTop).toBe(300);
-      expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
-      geometry.heights.set(2, 300);
-      geometry.heights.set(3, 300);
-      act(() => measureRows(geometry));
-      expect(settled).not.toHaveBeenCalled();
-      expect(viewport().scrollTop).toBe(500);
-      expect(apiRef.current?.canFollow()).toBe(true);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+        const view = render(
+          <Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />,
+        );
+
+        act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
+        await act(async () => undefined);
+        act(() => measureRows(geometry));
+        follow(apiRef, geometry);
+        fireEvent.scroll(viewport());
+        expect(viewport().scrollTop).toBe(300);
+        expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+
+        if (pause === "popup") {
+          view.rerender(
+            <Harness
+              apiRef={apiRef}
+              geometry={geometry}
+              virtual={VList}
+              onSettled={settled}
+              popupId={3}
+            />,
+          );
+          await act(async () => undefined);
+          expect(rowOf(3).querySelector(".message-popup-anchor")).not.toBeNull();
+          expect(viewport().scrollTop).toBe(300);
+          expect(apiRef.current?.canFollow()).toBe(false);
+        }
+
+        geometry.heights.set(2, 300);
+        geometry.heights.set(3, 300);
+        act(() => measureRows(geometry));
+        expect(settled).not.toHaveBeenCalled();
+        expect(viewport().scrollTop).toBe(pause === "popup" ? 400 : 500);
+        expect(apiRef.current?.canFollow()).toBe(pause !== "popup");
+
+        if (pause === "popup") {
+          view.rerender(
+            <Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />,
+          );
+          await act(async () => undefined);
+          expect(rowOf(3).querySelector(".message-popup-anchor")).toBeNull();
+        }
+
+        expect(settled).not.toHaveBeenCalled();
+        expect(viewport().scrollTop).toBe(500);
+        expect(apiRef.current?.canFollow()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("an issued jump settles at the actual end after its destination shrinks", () => {
     const apiRef = createRef<AnchorApi>();

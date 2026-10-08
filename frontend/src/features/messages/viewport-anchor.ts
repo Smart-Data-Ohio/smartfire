@@ -286,8 +286,9 @@ export function useViewportAnchor({
       !indices.has(anchor.row.id)
     ) {
       // The removed witness no longer has a measured offset to prove continuity.
-      // A replacement at the current scroll position could erase paused reader movement.
-      cancelPlacement(true, false);
+      // Only an unpaused reader can prove bottom intent from the live geometry;
+      // a replacement during a pause could erase reader movement.
+      cancelPlacement(true, !(interacting() || correctionPendingRef.current));
     }
   });
 
@@ -1015,7 +1016,7 @@ export function useViewportAnchor({
       correctionPendingRef.current = false;
 
       if (!follows) return;
-      const offset = element.scrollHeight - element.clientHeight;
+      const offset = endOffset(element);
 
       if (Math.abs(offset - element.scrollTop) > 1) {
         element.scrollTop = offset;
