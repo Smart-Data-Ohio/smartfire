@@ -566,7 +566,7 @@
   }
 
   /* Phones: smaller glyph tiles, and a blurb may wrap rather than lose its end. */
-  @media (width < 480px) {
+  @media (width < 720px) {
     .kind-card-glyph {
       width: 32px;
       height: 32px;

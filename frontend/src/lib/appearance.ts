@@ -95,6 +95,8 @@ function writeAttributes(appearance: Appearance): void {
     dataset.theme = appearance.theme;
   }
 
+  writeThemeColor(appearance.theme);
+
   dataset.textSize = appearance.textSize;
 
   if (appearance.density === "comfortable") {
@@ -116,6 +118,25 @@ function writeAttributes(appearance: Appearance): void {
   }
 
   writePalette(appearance.palette);
+}
+
+/**
+ * Points index.html's two `theme-color` metas at the theme on screen: each follows the OS under
+ * "system", and a pinned theme switches its own on and the other off.
+ */
+function writeThemeColor(theme: ThemePreference): void {
+  for (const meta of document.querySelectorAll<HTMLMetaElement>(
+    'meta[name="theme-color"][data-scheme]',
+  )) {
+    const scheme = meta.dataset.scheme;
+
+    meta.media =
+      theme === "system"
+        ? `(prefers-color-scheme: ${scheme})`
+        : theme === scheme
+          ? "all"
+          : "not all";
+  }
 }
 
 /**

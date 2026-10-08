@@ -627,6 +627,12 @@
       display: grid;
     }
 
+    /* Nine tools at the touch size would push the back button and title off a 360 px screen, so
+       they keep the desktop size until the header folds them into an overflow menu. */
+    .room-header-tools {
+      --control-md: 32px;
+    }
+
     .message,
     .day-divider,
     .unread-divider,

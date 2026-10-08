@@ -1,7 +1,8 @@
 // @vitest-environment node
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PHONE_QUERY } from "../lib/breakpoints.ts";
 import {
   composite,
   contrastRatio,
@@ -293,5 +294,76 @@ describe("cascade layers", () => {
     expect(layerOrder(style?.[1] ?? "")).toEqual(layerOrder(tokens));
     expect(html.indexOf("<style>")).toBeLessThan(html.indexOf("<!--boot-->"));
     expect(html).not.toMatch(/<link[^>]+stylesheet/);
+  });
+});
+
+/** `#rrggbb` for an sRGB colour, as a `<meta name="theme-color">` carries it. */
+function hex({ r, g, b }: Rgb): string {
+  return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const SRC = new URL("../", import.meta.url);
+
+/** Every width a media query compares against in src (CSS and script), with where it is. */
+function widthQueries(): readonly { readonly where: string; readonly query: string }[] {
+  const files = readdirSync(SRC, { recursive: true, encoding: "utf8" }).filter(
+    (file) => /\.(css|tsx?)$/.test(file) && !/\.test\.tsx?$/.test(file) && !file.startsWith("gen/"),
+  );
+
+  return files.flatMap((file) => {
+    // Comments blanked to their line breaks, so a query quoted in prose isn't read as one.
+    const text = readFileSync(new URL(file, SRC), "utf8").replaceAll(
+      /\/\*[\s\S]*?\*\//g,
+      (comment) => comment.replaceAll(/[^\n]/g, ""),
+    );
+
+    const pattern = file.endsWith(".css")
+      ? /@media\s+([^{]*width[^{]*)\{/g
+      : /["'`](\([^"'`]*width[^"'`]*\))["'`]/g;
+
+    return [...text.matchAll(pattern)].map((match) => ({
+      where: `${file}:${text.slice(0, match.index).split("\n").length}`,
+      query: (match[1] ?? "").trim(),
+    }));
+  });
+}
+
+describe("phone foundation", () => {
+  const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
+
+  it("has one phone breakpoint, spelled `width < 720px` everywhere", () => {
+    expect(TOKENS.get("--bp-phone")).toBe("720px");
+    expect(PHONE_QUERY).toBe(`(width < ${TOKENS.get("--bp-phone")})`);
+
+    const queries = widthQueries();
+
+    // Below 720 px is the phone layout, so a width there is a second phone breakpoint; 720 itself
+    // must read `width < 720px` (or `720px <= width`), never `max-width: 720px`, which is off by one.
+    const strays = queries.filter(({ query }) =>
+      [...query.matchAll(/(\d+)px/g)].some(([, value]) => {
+        const px = Number(value);
+
+        return px < 720 || (px === 720 && !/width < 720px|720px <= width/.test(query));
+      }),
+    );
+
+    expect(queries.length).toBeGreaterThan(20);
+    expect(strays.map(({ where, query }) => `${where} ${query}`)).toEqual([]);
+  });
+
+  it("lets the app draw under the notch and has Android resize it for the keyboard", () => {
+    const viewport = /<meta\s+name="viewport"\s+content="([^"]+)"/.exec(html)?.[1] ?? "";
+
+    expect(viewport.split(/,\s*/)).toEqual(
+      expect.arrayContaining(["viewport-fit=cover", "interactive-widget=resizes-content"]),
+    );
+  });
+
+  it.each(["light", "dark"] as const)("colours the %s browser bar as the sidebar", (theme) => {
+    const meta = new RegExp(
+      `<meta name="theme-color" content="(#[0-9a-f]{6})" media="\\(prefers-color-scheme: ${theme}\\)" data-scheme="${theme}" />`,
+    ).exec(html);
+
+    expect(meta?.[1]).toBe(hex(color("--bg-sidebar", theme)));
   });
 });

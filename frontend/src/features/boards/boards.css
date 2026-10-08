@@ -1069,7 +1069,7 @@
 
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
-  @media (max-width: 720px) {
+  @media (width < 720px) {
     .board-toolbar {
       flex-wrap: wrap;
       padding-inline: var(--space-3);

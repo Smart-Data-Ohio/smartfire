@@ -2,7 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+      viewport-fit=cover lets the app draw under the notch and home indicator (tokens.css pads with
+      --safe-*); resizes-content has Android shrink the page for the keyboard rather than overlay it.
+    -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!--
+      The browser and status bar take the top surface's colour (--bg-sidebar, kept in step by
+      src/styles/tokens.test.ts); a pinned theme repoints both media queries (src/lib/appearance.ts).
+    -->
+    <meta name="theme-color" content="#f1f4f6" media="(prefers-color-scheme: light)" data-scheme="light" />
+    <meta name="theme-color" content="#141619" media="(prefers-color-scheme: dark)" data-scheme="dark" />
     <title>Smartfire</title>
     <!--
       The cascade-layer order, ahead of every stylesheet. The build splits CSS per chunk and links
@@ -42,7 +55,12 @@
         const pin = device.themeOverride;
         const theme = pin === "light" || pin === "dark" || pin === "system" ? pin : boot.theme;
 
-        if (theme === "light" || theme === "dark") root.dataset.theme = theme;
+        if (theme === "light" || theme === "dark") {
+          root.dataset.theme = theme;
+          for (const meta of document.querySelectorAll('meta[name="theme-color"][data-scheme]')) {
+            meta.media = meta.dataset.scheme === theme ? "all" : "not all";
+          }
+        }
         root.dataset.textSize = ["smaller", "small", "large", "larger"].includes(boot.textSize)
           ? boot.textSize
           : "default";
