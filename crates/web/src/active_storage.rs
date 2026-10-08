@@ -373,22 +373,24 @@ async fn analyze_with(
     skip_analyzed: bool,
 ) -> anyhow::Result<Option<Blob>> {
     let marker = rails_compat::blob_branding::Marker::new(&app.secrets);
-    let (blob, branding) = app
+    let classified = app
         .db
         .read(move |conn| {
             let blob = Blob::find(conn, blob_id).map_err(storage_db_error)?;
             #[cfg(feature = "test-support")]
             test_hooks::reached_analysis_classification(blob_id);
-            let branding = match &blob {
-                Some(blob) if !(skip_analyzed && blob.is_analyzed()) => {
-                    branding_blob(conn, marker, blob)?
+            Ok(match blob {
+                Some(blob) if skip_analyzed && blob.is_analyzed() => Some((blob, false)),
+                // A row purged since `find` stops analysis, as Rails discards a purged blob's job:
+                // its file may not be deleted yet, so nothing may open it.
+                Some(blob) => {
+                    branding_classification(conn, marker, &blob)?.map(|branding| (blob, branding))
                 }
-                _ => false,
-            };
-            Ok((blob, branding))
+                None => None,
+            })
         })
         .await?;
-    let Some(blob) = blob else { return Ok(None) };
+    let Some((blob, branding)) = classified else { return Ok(None) };
     if skip_analyzed && blob.is_analyzed() {
         return Ok(Some(blob));
     }
@@ -431,10 +433,21 @@ fn branding_blob(
     marker: rails_compat::blob_branding::Marker,
     blob: &Blob,
 ) -> campfire_db::Result<bool> {
+    Ok(branding_classification(conn, marker, blob)?.unwrap_or(false))
+}
+
+/// Whether `blob` is workspace branding, or `None` once its row is gone (purged).
+fn branding_classification(
+    conn: &campfire_db::Connection,
+    marker: rails_compat::blob_branding::Marker,
+    blob: &Blob,
+) -> campfire_db::Result<Option<bool>> {
     // One statement reads one snapshot. A replacement or removal marks the tree and deletes the
     // Account association in one write transaction, so this sees the association or the mark,
     // never neither; `blob` may have been loaded before that commit and lack the mark.
-    // Untagged legacy variants still belong to the Account through their source tree.
+    // Untagged legacy variants and previews still belong to the Account through their source
+    // tree: a variant's image climbs to its variant record's blob, a preview to the blob it
+    // previews.
     let current = conn.query_row_cached(
         "WITH RECURSIVE sources(id) AS (
             VALUES (?1)
@@ -443,6 +456,10 @@ fn branding_blob(
             JOIN active_storage_variant_records variants ON variants.id = images.record_id
             JOIN sources ON sources.id = images.blob_id
             WHERE images.record_type = 'ActiveStorage::VariantRecord' AND images.name = 'image'
+            UNION
+            SELECT previews.record_id FROM active_storage_attachments previews
+            JOIN sources ON sources.id = previews.blob_id
+            WHERE previews.record_type = 'ActiveStorage::Blob' AND previews.name = 'preview_image'
          ) SELECT blobs.metadata, EXISTS (
             SELECT 1 FROM active_storage_attachments attachments JOIN sources ON sources.id = attachments.blob_id
             WHERE attachments.record_type = 'Account' AND attachments.name IN ('logo', 'banner')
@@ -452,11 +469,13 @@ fn branding_blob(
     );
     let (metadata, attached) = match current {
         Ok(current) => current,
-        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(false),
+        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
         Err(error) => return Err(error.into()),
     };
     let metadata = metadata.and_then(|text| Json::parse(&text).ok());
-    Ok(attached || metadata.is_some_and(|metadata| mark_verifies(marker, &blob.key, &metadata)))
+    Ok(Some(
+        attached || metadata.is_some_and(|metadata| mark_verifies(marker, &blob.key, &metadata)),
+    ))
 }
 
 fn verified_branding_mark(marker: rails_compat::blob_branding::Marker, blob: &Blob) -> bool {
@@ -1133,6 +1152,50 @@ mod tests {
         let other_secret =
             rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("another-secret"));
         assert!(!branding_blob(&conn, other_secret, &blob).unwrap());
+    }
+
+    #[test]
+    fn branding_analysis_follows_legacy_previews_and_stops_once_purged() {
+        use campfire_storage::blob::{NewBlob, insert_attachment, insert_variant_record};
+
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let now = jiff::Timestamp::now();
+        let marker =
+            rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("test-secret"));
+        let new_blob = |name: &str, content_type: &str| {
+            NewBlob::unfurl(b"bytes", Filename::new(name), Some(content_type), "local", false)
+                .insert(&conn, now)
+                .unwrap()
+        };
+        let original = new_blob("banner.mp4", "video/mp4");
+        let preview = new_blob("banner.png", "image/png");
+        let preview_variant = new_blob("banner.webp", "image/webp");
+        insert_attachment(&conn, "preview_image", "ActiveStorage::Blob", original.id, preview.id, now)
+            .unwrap();
+        let record = insert_variant_record(&conn, preview.id, "digest").unwrap().unwrap();
+        insert_attachment(
+            &conn,
+            "image",
+            "ActiveStorage::VariantRecord",
+            record,
+            preview_variant.id,
+            now,
+        )
+        .unwrap();
+        for blob in [&original, &preview, &preview_variant] {
+            assert!(!branding_blob(&conn, marker, blob).unwrap());
+        }
+
+        insert_attachment(&conn, "banner", "Account", 1, original.id, now).unwrap();
+        for blob in [&original, &preview, &preview_variant] {
+            assert_eq!(branding_classification(&conn, marker, blob).unwrap(), Some(true));
+        }
+
+        let purged = new_blob("purged.png", "image/png");
+        conn.execute("DELETE FROM active_storage_blobs WHERE id = ?1", [purged.id])
+            .unwrap();
+        assert_eq!(branding_classification(&conn, marker, &purged).unwrap(), None);
     }
 
     #[test]

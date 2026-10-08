@@ -664,3 +664,49 @@ async fn spa_workspace_branding_replacement_between_analysis_reads_stays_bounded
     );
     assert_server_mark(&a, &blob(&a, id).await);
 }
+
+#[tokio::test]
+async fn spa_workspace_branding_purge_between_analysis_reads_stops_without_copying() {
+    let _branding = BRANDING_TESTS.lock().await;
+    let Some(a) = app().await else { return };
+    let (_, id) = upload_bytes(&a, &png(7, 3, false), "purged.png", "image/png").await;
+    let source = blob(&a, id).await;
+    let path = a.booted.app.storage.service.path_for(&source.key);
+    std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .unwrap()
+        .set_len(branding::MAX_BYTES + 1)
+        .unwrap();
+    let opens = campfire_storage::storage::test_hooks::observe_opens(&source.key);
+    let (reached, reached_here) = std::sync::mpsc::channel();
+    let (go, go_here) = std::sync::mpsc::channel::<()>();
+    campfire_web::active_storage::test_hooks::between_analysis_reads(id, move || {
+        reached.send(()).unwrap();
+        go_here.recv().unwrap();
+    });
+    let (result, full) = with_media_observation(async {
+        let app = a.booted.app.clone();
+        let analysis =
+            tokio::spawn(async move { campfire_web::active_storage::analyze(&app, id).await });
+        tokio::task::spawn_blocking(move || reached_here.recv().unwrap())
+            .await
+            .unwrap();
+        // Purge's transaction commits the row deletion; deleting the file only follows it.
+        a.db()
+            .write(move |tx| {
+                tx.conn()
+                    .execute("DELETE FROM active_storage_blobs WHERE id = ?1", [id])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        go.send(()).unwrap();
+        analysis.await.unwrap()
+    })
+    .await;
+    assert!(full, "a purged blob's analysis must not take a media permit");
+    assert_eq!(opens.count(), 0, "a purged blob's file must not be copied");
+    assert!(result.unwrap().is_none());
+    assert!(path.exists(), "the file deletion is still pending");
+}
