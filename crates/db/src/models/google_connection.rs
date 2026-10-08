@@ -95,7 +95,18 @@ pub fn prepare_disconnect(
         // claim_ooo_broadcast deliberately keeps the loaded attributes, as update_all does.
         status.announce_ooo(tx)?;
     }
+    // The cleared Meet links must leave the open calendar screens of every room they were in.
+    let rooms = tx
+        .conn()
+        .prepare(
+            "SELECT DISTINCT room_id FROM events WHERE organizer_id=? AND meet_link IS NOT NULL AND meet_link!='' ORDER BY room_id",
+        )?
+        .query_map([id], |r| r.get::<_, i64>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
     tx.conn().execute("UPDATE events SET meet_link=NULL WHERE organizer_id=? AND meet_link IS NOT NULL AND meet_link!=''", [id])?;
+    for room_id in rooms {
+        super::calendar_event::broadcast_room_events(tx, room_id);
+    }
     Ok(Some(plan))
 }
 

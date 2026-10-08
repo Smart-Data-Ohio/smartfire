@@ -82,6 +82,23 @@ export async function postMessage(request: APIRequestContext, body: MockPost): P
 }
 
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */
+/** Saves the account's appearance through the API, as another device (or person) would. */
+export async function saveAccountAppearance(
+  page: Page,
+  change: Partial<Record<"theme" | "textSize" | "timeZone", string>>,
+): Promise<void> {
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const response = await page.request.patch("/api/v1/settings/appearance", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { theme: null, textSize: null, timeZone: null, ...change },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`saving the appearance answered ${response.status()}`);
+  }
+}
+
 export async function openApp(page: Page, path: string, theme: Theme = "light"): Promise<void> {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path.replace(/^\//, "")}`);

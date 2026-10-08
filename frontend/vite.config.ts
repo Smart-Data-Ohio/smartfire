@@ -3,6 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig, type ProxyOptions } from "vite";
 import { isMockEnabled, smartfireMock } from "./mock/vite-plugin.ts";
+import { smartfirePreviewPolicy } from "./tools/preview-policy.ts";
 import { smartfireServiceWorker } from "./tools/service-worker.ts";
 
 // The Rust app serves the built SPA under /app/ (crates/spa). In development Vite serves it and
@@ -28,6 +29,9 @@ export default defineConfig(({ mode }) => {
       babel({ presets: [reactCompilerPreset()] }),
       smartfireMock(),
       smartfireServiceWorker(),
+      // The embedded files' policy under `vite preview`, so the browser suite exercises its
+      // same-origin script, worker, style and font rules (tools/preview-policy.ts).
+      smartfirePreviewPolicy(),
     ],
     build: {
       // The bundle-size report in CI reads the entry chunks from here.
@@ -50,16 +54,13 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: { proxy: Object.fromEntries(proxy) },
-    preview: {
-      headers: {
-        // The embedded files use the app's nonce-free policy. Exercise its same-origin script,
-        // worker, style and font rules in the browser suite too.
-        "Content-Security-Policy":
-          "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:",
-      },
-    },
     test: {
-      include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts", "tools/service-worker.test.ts"],
+      include: [
+        "src/**/*.test.{ts,tsx}",
+        "mock/**/*.test.ts",
+        "tools/service-worker.test.ts",
+        "tools/preview-policy.test.ts",
+      ],
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.
