@@ -11,7 +11,8 @@
 //!
 //! [`TWINS`] lists which broadcasts have twins and [`NOT_YET_TWINNED`] the ones still to port;
 //! a test in the server crate fails when a broadcast is in neither.
-use std::sync::{Arc, OnceLock};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
@@ -111,23 +112,44 @@ pub trait SyncRenderer: Send + Sync + 'static {
 
 /// Where [`Broadcasts`](super::Broadcasts) finds the installed [`SyncRenderer`].
 #[derive(Clone, Default)]
-pub struct RendererSlot(Arc<OnceLock<Arc<dyn SyncRenderer>>>);
+pub struct RendererSlot(Arc<RendererState>);
+
+#[derive(Default)]
+struct RendererState {
+    renderer: OnceLock<Arc<dyn SyncRenderer>>,
+    threads: Mutex<HashMap<i64, Weak<Mutex<()>>>>,
+}
 
 impl RendererSlot {
     /// Only the first call takes effect.
     pub fn install(&self, renderer: Arc<dyn SyncRenderer>) {
-        let _ = self.0.set(renderer);
+        let _ = self.0.renderer.set(renderer);
     }
 
     #[cfg(feature = "test-support")]
     pub async fn settle(&self) {
-        if let Some(renderer) = self.0.get() {
+        if let Some(renderer) = self.0.renderer.get() {
             renderer.settle().await;
         }
     }
 
     fn get(&self, server: &Cable) -> Option<&Arc<dyn SyncRenderer>> {
-        server.sync_wanted().then(|| self.0.get()).flatten()
+        server.sync_wanted().then(|| self.0.renderer.get()).flatten()
+    }
+
+    fn thread_lock(&self, thread_id: i64) -> Arc<Mutex<()>> {
+        let mut threads = self
+            .0
+            .threads
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if let Some(lock) = threads.get(&thread_id).and_then(Weak::upgrade) {
+            return lock;
+        }
+        threads.retain(|_, lock| lock.strong_count() > 0);
+        let lock = Arc::new(Mutex::new(()));
+        threads.insert(thread_id, Arc::downgrade(&lock));
+        lock
     }
 }
 
@@ -847,6 +869,10 @@ pub fn thread_changed(
     let Some(renderer) = slot.get(server) else {
         return;
     };
+    // Deferred readers can render an older snapshot more slowly than a newer one. Serialize
+    // the read through both publications, so a late reader cannot send stale state last.
+    let lock = slot.thread_lock(thread_id);
+    let _publication = lock.lock().unwrap_or_else(|error| error.into_inner());
     let thread = match ChannelThread::find_by_id(conn, thread_id) {
         Ok(Some(thread)) => thread,
         Ok(None) => return,
@@ -1354,6 +1380,21 @@ pub fn approval_updated_later(server: &Cable, slot: &RendererSlot, approval_id: 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn thread_publications_share_locks_per_app_and_thread_until_finished() {
+        let slot = RendererSlot::default();
+        let first = slot.thread_lock(1);
+        let concurrent = slot.clone().thread_lock(1);
+        assert!(Arc::ptr_eq(&first, &concurrent));
+        assert!(!Arc::ptr_eq(&first, &slot.thread_lock(2)));
+        assert!(!Arc::ptr_eq(&first, &RendererSlot::default().thread_lock(1)));
+        drop(first);
+        assert!(Arc::ptr_eq(&concurrent, &slot.thread_lock(1)));
+        drop(concurrent);
+        let _next = slot.thread_lock(3);
+        assert_eq!(slot.0.threads.lock().unwrap().len(), 1);
+    }
 
     #[test]
     fn twins_and_the_backlog_dont_overlap() {

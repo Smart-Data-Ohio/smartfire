@@ -96,21 +96,39 @@ async fn post_card(c: &mut Ctx) -> Result {
         request.description,
     )
     .await?
+    .map_err(|error| fail(c, failure(error)))?
+    .into_spa()
     .map_err(|error| fail(c, failure(error)))?;
     let app = c.app().clone();
+    let reply = created.reply;
     let message = c
         .app()
         .db
-        .read(move |conn| dto::message(conn, &app, &created.reply))
+        .read(move |conn| dto::message(conn, &app, &reply))
         .await
-        .map_err(db_error)?;
+        .map_err(|error| {
+            fail(
+                c,
+                failure(Failure::reply_failed(
+                    created.number.clone(),
+                    created.url.clone(),
+                    db_error(error),
+                )),
+            )
+        })?;
     c.json(
         StatusCode::CREATED,
         &api::CreatedFizzyCard {
             notice: format!("Fizzy card #{} created.", created.number),
-            number: created.number,
-            url: created.url,
+            number: created.number.clone(),
+            url: created.url.clone(),
             message,
         },
     )
+    .map_err(|error| {
+        fail(
+            c,
+            failure(Failure::reply_failed(created.number, created.url, error)),
+        )
+    })
 }
