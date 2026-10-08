@@ -84,6 +84,16 @@ export const ROOM_IDS = {
   townHall: 12,
 } as const;
 
+/**
+ * #campfire: an open room the viewer has not joined. It is not in the seeded world, so nothing
+ * else lists it; the preview and join handlers materialise it.
+ */
+export const JOINABLE_OPEN_ROOM = {
+  id: 90,
+  name: "campfire",
+  memberIds: [USER_IDS.maya, USER_IDS.jonah, USER_IDS.priya],
+} as const;
+
 /** The viewer's sidebar categories: "Launch" (#design, #launch-planning) and "Team" (#announcements). */
 export const CATEGORY_IDS = { launch: 1, team: 2 } as const;
 

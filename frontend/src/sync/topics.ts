@@ -67,6 +67,11 @@ export class Topics extends Context.Service<
   {
     readonly acquire: (topic: string) => Effect.Effect<void>;
     readonly release: (topic: string) => Effect.Effect<void>;
+    /**
+     * Sends `sub` again for a topic this client already holds. A join is refused until the
+     * membership exists, so the first `sub` from opening the preview does not stick.
+     */
+    readonly resubscribe: (topic: string) => Effect.Effect<void>;
     /** Every subscribed topic: held ones, then hot ones. */
     readonly subscribed: Effect.Effect<readonly string[]>;
   }
@@ -85,9 +90,17 @@ export class Topics extends Context.Service<
             (frame) => (frame === null ? Effect.void : link.send(frame)),
           );
 
+      const resubscribe = (topic: string) =>
+        Effect.flatMap(Ref.get(interest), (current) => {
+          const held = (current.holders.get(topic) ?? 0) > 0 || current.hot.includes(topic);
+
+          return held ? link.send({ t: "sub", topics: [topic] }) : Effect.void;
+        });
+
       return Topics.of({
         acquire: change(acquireIn),
         release: change(releaseIn),
+        resubscribe,
         subscribed: Effect.map(Ref.get(interest), (current) => [
           ...current.holders.keys(),
           ...current.hot,

@@ -192,6 +192,12 @@ impl Broadcasts {
         self.sync.settle().await;
     }
 
+    /// `sidebar.row.upserted` for a membership an open-room join just created. The classic
+    /// page only prepends HTML; the single-page app reads this twin.
+    pub fn joined_open_room(&self, conn: &Connection, membership_id: i64) {
+        sync::membership_row(&self.server, &self.sync, conn, membership_id);
+    }
+
     /// `message.created` (or `message.updated`) for a message a broadcast point outside this
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {

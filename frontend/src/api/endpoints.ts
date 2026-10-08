@@ -7,13 +7,19 @@ import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { Me } from "../gen/Me.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessagePage } from "../gen/MessagePage.ts";
+import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { PresenceList } from "../gen/PresenceList.ts";
 import type { ReadState } from "../gen/ReadState.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
+import type { RoomJoin } from "../gen/RoomJoin.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
 import type { UserList } from "../gen/UserList.ts";
 import { call, get } from "./call.ts";
 import { BootReply } from "./schema/boot.ts";
+import {
+  OpenRoomPreview as OpenRoomPreviewSchema,
+  RoomJoin as RoomJoinSchema,
+} from "./schema/join.ts";
 import { Me as MeSchema } from "./schema/me.ts";
 import { MessagePage as MessagePageSchema, MessageDTO as MessageSchema } from "./schema/message.ts";
 import { PresenceList as PresenceListSchema } from "./schema/presence.ts";
@@ -48,6 +54,19 @@ export const sidebar = Effect.fn("api.sidebar")(function* () {
 /** `GET /rooms/:id`: the room's header data and unread divider. */
 export const room = Effect.fn("api.room")(function* (roomId: number) {
   return yield* call(get(`/rooms/${roomId}`), wire<RoomDetail>(RoomDetailSchema));
+});
+
+/** `GET /rooms/:id/preview`: an open room the viewer may join. No messages. */
+export const openRoomPreview = Effect.fn("api.openRoomPreview")(function* (roomId: number) {
+  return yield* call(get(`/rooms/${roomId}/preview`), wire<OpenRoomPreview>(OpenRoomPreviewSchema));
+});
+
+/** `POST /rooms/:id/join`: membership in an open room, with the room and its sidebar row. */
+export const joinOpenRoom = Effect.fn("api.joinOpenRoom")(function* (roomId: number) {
+  return yield* call(
+    { method: "POST", path: `/rooms/${roomId}/join` },
+    wire<RoomJoin>(RoomJoinSchema),
+  );
 });
 
 export function cursorQuery(cursor: PageCursor): Readonly<Record<string, string>> | undefined {

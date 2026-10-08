@@ -2,12 +2,14 @@
  * What the UI asks for, as Effect programs. `runtime.ts` runs them for React as `actions`.
  * Failures land in the store (room errors, failed pages, failed sends), so these rarely fail.
  */
-import { Effect, Option } from "effect";
+import { Clock, Effect, Option, Predicate, Result } from "effect";
 import { readBoot } from "../api/boot.ts";
 import {
   me,
   messages,
+  openRoomPreview,
   type PageCursor,
+  joinOpenRoom as postJoin,
   markRead as postRead,
   presence,
   room,
@@ -68,28 +70,12 @@ export const start = Effect.fn("session.start")(function* () {
   }
 });
 
-/** The room's detail, then its first page: at the focused message, the unread divider or the end. */
-const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: number | null) {
-  mutations.setRoomLoading(roomId);
-  mutations.setPageReplacing(roomId);
-
-  const detail = yield* room(roomId).pipe(
-    Effect.tapError((error) =>
-      Effect.sync(() => {
-        mutations.setPageFailed(roomId);
-        mutations.setRoomError(roomId, error.message);
-      }),
-    ),
-    Effect.option,
-  );
-
-  if (Option.isNone(detail)) {
-    return;
-  }
-
-  mutations.setRoomDetail(detail.value);
-
-  const unread = detail.value.unread;
+/** The first page: at the focused message, the unread divider or the end. */
+const loadFirstPage = Effect.fnUntraced(function* (
+  roomId: number,
+  focusMessageId: number | null,
+  unread: { readonly firstUnreadMessageId: number; readonly count: number } | null,
+) {
   let cursor: PageCursor = null;
 
   if (focusMessageId !== null) {
@@ -107,6 +93,61 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: nu
       }),
     ),
   );
+});
+
+/**
+ * The room's detail, then its first page. A 404 on an open room the viewer may join lands the
+ * preview instead of an error; every other failure stays an error.
+ */
+const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: number | null) {
+  mutations.setRoomLoading(roomId);
+  mutations.setPageReplacing(roomId);
+
+  const loaded = yield* Effect.result(room(roomId));
+
+  if (Result.isSuccess(loaded)) {
+    mutations.setRoomDetail(loaded.success);
+    yield* loadFirstPage(roomId, focusMessageId, loaded.success.unread);
+
+    return;
+  }
+
+  mutations.setPageFailed(roomId);
+
+  if (Predicate.isTagged(loaded.failure, "NotFound")) {
+    const preview = yield* Effect.result(openRoomPreview(roomId));
+
+    if (Result.isSuccess(preview)) {
+      mutations.setRoomPreview(roomId, preview.success);
+
+      return;
+    }
+  }
+
+  mutations.setRoomError(roomId, loaded.failure.message);
+});
+
+/**
+ * Joins an open room, puts it in the sidebar, and loads it. The topic was subscribed when the
+ * preview opened, before the membership existed, so it is subscribed again now.
+ */
+export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
+  const joined = yield* postJoin(roomId);
+  const topics = yield* Topics;
+  const presenceService = yield* Presence;
+
+  mutations.setRoomDetail(joined.detail);
+
+  const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
+
+  mutations.applyEvents(
+    [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: joined.row }],
+    yield* Clock.currentTimeMillis,
+  );
+  yield* topics.resubscribe(roomTopic(roomId));
+  yield* presenceService.enter(roomId);
+  mutations.setPageReplacing(roomId);
+  yield* loadFirstPage(roomId, null, joined.detail.unread);
 });
 
 /**

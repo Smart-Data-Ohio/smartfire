@@ -89,6 +89,7 @@ import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
   CATEGORY_IDS,
+  JOINABLE_OPEN_ROOM,
   ROOM_IDS,
   type RoomRecord,
   seededUuid,
@@ -414,6 +415,109 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       directPlaceholderUserIds: placeholders,
       canCreateRooms: true,
     };
+  };
+
+  const materialiseJoinable = (): RoomRecord => {
+    const createdAt = timestamp(now() - 30 * 24 * 60 * 60 * 1000);
+
+    const record: RoomRecord = {
+      room: {
+        id: JOINABLE_OPEN_ROOM.id,
+        kind: "open",
+        name: JOINABLE_OPEN_ROOM.name,
+        iconName: null,
+        creatorId: USER_IDS.priya,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
+      membership: {
+        id: 9_000 + JOINABLE_OPEN_ROOM.id,
+        roomId: JOINABLE_OPEN_ROOM.id,
+        userId: VIEWER_ID,
+        involvement: "mentions",
+        unreadAt: null,
+        lastReadMessageId: null,
+        roomCategoryId: null,
+        favoritePosition: null,
+        stageRole: null,
+      },
+      messages: [],
+      mentionCount: 0,
+    };
+
+    world.rooms.set(record.room.id, record);
+
+    return record;
+  };
+
+  /** Alive open rooms only. The catalog room isn't in the world until someone joins it. */
+  const openPreview = (
+    roomId: number,
+  ): { id: number; name: string; memberCount: number } | null => {
+    const record = world.rooms.get(roomId);
+
+    if (record !== undefined) {
+      if (record.room.kind !== "open") return null;
+
+      return {
+        id: record.room.id,
+        name: record.room.name ?? "",
+        memberCount: record.memberIds.length,
+      };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) return null;
+
+    return {
+      id: JOINABLE_OPEN_ROOM.id,
+      name: JOINABLE_OPEN_ROOM.name,
+      memberCount: JOINABLE_OPEN_ROOM.memberIds.length,
+    };
+  };
+
+  const publishJoined = (record: RoomRecord) => {
+    hub.publish([
+      {
+        topic: "user",
+        type: "sidebar.row.upserted",
+        data: { ...sidebarRow(record), refreshRoom: true },
+      },
+    ]);
+  };
+
+  const joinOpen = (roomId: number) => {
+    const existing = world.rooms.get(roomId);
+
+    if (existing !== undefined) {
+      if (existing.room.kind !== "open") throw notFound("Room not found");
+
+      if (!existing.memberIds.includes(VIEWER_ID)) {
+        existing.memberIds.push(VIEWER_ID);
+        existing.membership = {
+          id: 9_000 + existing.room.id,
+          roomId: existing.room.id,
+          userId: VIEWER_ID,
+          involvement: "mentions",
+          unreadAt: null,
+          lastReadMessageId: null,
+          roomCategoryId: null,
+          favoritePosition: null,
+          stageRole: null,
+        };
+        publishJoined(existing);
+      }
+
+      return { detail: roomDetail(roomId), row: sidebarRow(existing) };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) throw notFound("Room not found");
+
+    const record = materialiseJoinable();
+
+    publishJoined(record);
+
+    return { detail: roomDetail(roomId), row: sidebarRow(record) };
   };
 
   const roomDetail = (roomId: number): RoomDetail => {
@@ -868,6 +972,24 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
       if (sent !== csrf) {
         throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
+      }
+    }
+
+    const joining = /^\/rooms\/(\d+)\/(preview|join)$/.exec(path);
+
+    if (joining !== null) {
+      const id = Number(joining[1]);
+
+      if (method === "GET" && joining[2] === "preview") {
+        const preview = openPreview(id);
+
+        if (preview === null) throw notFound("Room not found");
+
+        return { status: 200, json: preview };
+      }
+
+      if (method === "POST" && joining[2] === "join") {
+        return { status: 200, json: joinOpen(id) };
       }
     }
 

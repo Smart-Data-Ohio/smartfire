@@ -42,6 +42,7 @@ import type {
   Membership,
   MessageDTO,
   MessagePage,
+  OpenRoomPreview,
   PendingMessage,
   RoomCategory,
   RoomDetail,
@@ -136,6 +137,8 @@ export const mutations = {
   setRoomLoading: (roomId: number) => apply((state) => reduce.setRoomLoading(state, roomId)),
   setRoomError: (roomId: number, error: string) =>
     apply((state) => reduce.setRoomError(state, roomId, error)),
+  setRoomPreview: (roomId: number, preview: OpenRoomPreview) =>
+    apply((state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail) => apply((state) => reduce.setRoomDetail(state, detail)),
   setRoomUnavailable: (roomId: number) =>
     apply((state) => reduce.setRoomUnavailable(state, roomId)),

@@ -4,6 +4,7 @@
  * stay RFC 3339 strings: the server's fixed `YYYY-MM-DDTHH:MM:SS.mmmZ` form sorts as text.
  */
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
@@ -16,6 +17,8 @@ export type { Membership } from "../gen/Membership.ts";
 export type { MessageDTO } from "../gen/MessageDTO.ts";
 
 export type { MessagePage } from "../gen/MessagePage.ts";
+
+export type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 
 export type { Presence } from "../gen/Presence.ts";
 
@@ -124,6 +127,8 @@ export interface RoomState {
   readonly detail: RoomDetail | null;
   readonly status: LoadStatus;
   readonly error: string | null;
+  /** An open room the viewer may join. Set only while they are not a member. */
+  readonly preview: OpenRoomPreview | null;
 }
 
 export type TimelineMessage = MessageDTO;
