@@ -1209,8 +1209,6 @@ async fn overlapping_handoffs_commit_once_and_publish_thread_updated_once() {
 async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
     // Exercise both queue orders: a later work write cannot suppress the classic rename's
     // publication, and a rename cannot overwrite the work columns from an earlier API write.
-    // Each publication reads after its own commit, on its own worker, so the later event is
-    // not guaranteed to carry both writes. The final row is.
     for classic_first in [true, false] {
         let a = app(true).await.expect("the frozen default seed");
         let (addr, server) = serve(&a).await;
@@ -1262,18 +1260,15 @@ async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
         };
         assert!(renamed.status.is_redirection(), "{}", renamed.text());
         assert_eq!(changed.status, StatusCode::OK, "{}", changed.text());
-        let first = tab.until(thread_updated(THREAD), |_| false).await;
-        let second = tab.until(thread_updated(THREAD), |_| false).await;
-        let published = [first, second].map(|event| {
-            let api::SyncPayload::ThreadUpdated(thread) = event.payload else {
-                unreachable!()
-            };
-            thread.name
-        });
-        assert!(
-            published.iter().any(|name| name == "Concurrent release"),
-            "the classic rename publishes once even when a work write overlaps it: {published:?}"
-        );
+        tab.until(thread_updated(THREAD), |_| false).await;
+        let last = tab.until(thread_updated(THREAD), |_| false).await;
+        let api::SyncPayload::ThreadUpdated(thread) = last.payload else {
+            unreachable!()
+        };
+        assert_eq!(thread.name, "Concurrent release");
+        let work = thread.work.unwrap();
+        assert_eq!(work.status, api::WorkStatus::InProgress);
+        assert_eq!(work.owner.unwrap().id, KEVIN);
         let detail: api::ThreadDetail = parse(
             &classic
                 .send(get(&format!("/api/v1/threads/{THREAD}")))
