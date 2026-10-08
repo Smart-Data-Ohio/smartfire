@@ -1374,6 +1374,102 @@ describe("useViewportAnchor reader control", () => {
     expect(viewport().scrollTop).toBe(360);
   });
 
+  it("follows past the estimated end when Virtua premeasures a taller destination", () => {
+    const apiRef = createRef<AnchorApi>();
+
+    const geometry: Geometry = {
+      ids: Array.from({ length: 20 }, (_, index) => index + 1),
+      heights: new Map(),
+    };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} drawn={[1, 2, 3]} />);
+    act(() => measureRows(geometry));
+    viewport().scrollTop = 100;
+    expect(viewport().scrollHeight - viewport().clientHeight).toBe(3700);
+    act(() => apiRef.current?.followEnd());
+    // The newest row is outside the unread viewport. Virtua premeasures it before
+    // starting native smooth scroll, extending the destination without compensation.
+    geometry.heights.set(20, 500);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(100);
+    expect(viewport().scrollHeight - viewport().clientHeight).toBe(4000);
+    viewport().scrollTop = 3702;
+    fireEvent.scroll(viewport());
+    expect(apiRef.current?.canFollow()).toBe(true);
+    viewport().scrollTop = 4000;
+    fireEvent.scroll(viewport());
+    act(() => apiRef.current?.settle());
+    expect(apiRef.current?.canFollow()).toBe(true);
+    geometry.heights.set(20, 600);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(4100);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it.each(["overshoot", "reversal"])(
+    "a remeasured end still rejects %s during issued motion",
+    (movement) => {
+      const apiRef = createRef<AnchorApi>();
+
+      const geometry: Geometry = {
+        ids: Array.from({ length: 20 }, (_, index) => index + 1),
+        heights: new Map(),
+      };
+
+      render(<Harness apiRef={apiRef} geometry={geometry} />);
+      viewport().scrollTop = 100;
+      act(() => apiRef.current?.followEnd());
+      geometry.heights.set(20, 500);
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 3750;
+      fireEvent.scroll(viewport());
+      expect(apiRef.current?.canFollow()).toBe(true);
+      viewport().scrollTop = movement === "overshoot" ? 4002 : 3748;
+      fireEvent.scroll(viewport());
+      expect(apiRef.current?.canFollow()).toBe(false);
+      viewport().scrollTop = 4000;
+      fireEvent.scroll(viewport());
+      act(() => apiRef.current?.settle());
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
+  it.each(["start", "center", "end"] as const)(
+    "%s placement follows its live measured destination across frames",
+    (align) => {
+      vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+
+        const geometry: Geometry = {
+          ids: Array.from({ length: 20 }, (_, index) => index + 1),
+          heights: new Map(),
+        };
+
+        const index = align === "end" ? 19 : 10;
+
+        render(<Harness apiRef={apiRef} geometry={geometry} />);
+        act(() => apiRef.current?.place(index, { align }));
+        act(() => vi.advanceTimersToNextFrame());
+        expect(viewport().scrollTop).toBe({ end: 3700, center: 1950, start: 2000 }[align]);
+        geometry.heights.set(1, 500);
+        geometry.heights.set(index + 1, 500);
+        act(() => measureRows(geometry));
+        act(() => vi.advanceTimersToNextFrame());
+        expect(viewport().scrollTop).toBe({ end: 4300, center: 2400, start: 2300 }[align]);
+        expect(apiRef.current?.isPlacing()).toBe(true);
+        act(() => vi.advanceTimersToNextFrame());
+        expect(apiRef.current?.isPlacing()).toBe(false);
+        expect(viewport().dataset.placementSettled).toBe("true");
+
+        if (align === "end") expect(apiRef.current?.canFollow()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("growth during an issued jump waits for settlement and then follows", () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };

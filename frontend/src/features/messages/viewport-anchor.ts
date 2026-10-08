@@ -54,13 +54,10 @@ function endOffset(element: HTMLElement): number {
   return Math.max(0, element.scrollHeight - element.clientHeight);
 }
 
-function followsMotion(scroll: number, end: number, reference: number, limit: number): boolean {
-  // Native smooth scrolling advances toward the issued end. Growth can compensate
-  // that path, but cannot explain a reversal or motion past its issued range.
-  return (
-    scroll >= Math.max(0, Math.min(end, reference)) - 1 &&
-    scroll <= Math.max(0, Math.min(end, limit)) + 1
-  );
+function followsMotion(scroll: number, end: number, reference: number): boolean {
+  // Virtua premeasures the destination before native smooth scrolling starts.
+  // Follow toward the live end, while rejecting reversals and overshoot.
+  return scroll >= Math.max(0, Math.min(end, reference)) - 1 && scroll <= end + 1;
 }
 
 function hasInteraction(element: HTMLElement | null | undefined): boolean {
@@ -91,9 +88,7 @@ export function useViewportAnchor({
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
 
-  const issuedEndRef = useRef<{ readonly destination: number; readonly limit: number } | null>(
-    null,
-  );
+  const issuedEndRef = useRef<{ readonly destination: number } | null>(null);
 
   const correctionPendingRef = useRef(false);
   const retainedIdRef = useRef<number | null>(null);
@@ -168,8 +163,7 @@ export function useViewportAnchor({
     return {
       anchor,
       follows: motion
-        ? (!anchor.row || offset !== undefined) &&
-          followsMotion(scrollTop, end, reference, motion.limit + compensation)
+        ? (!anchor.row || offset !== undefined) && followsMotion(scrollTop, end, reference)
         : continuous || (!paused && atEnd),
       allowEnd: atEnd || (Math.abs(compensation) > 1 && continuous),
     };
@@ -249,26 +243,20 @@ export function useViewportAnchor({
 
       if (
         (anchor.row && offset === undefined) ||
-        !followsMotion(
-          element.scrollTop,
-          endOffset(element),
-          anchor.scroll + compensation,
-          motion.limit + compensation,
-        )
+        !followsMotion(element.scrollTop, endOffset(element), anchor.scroll + compensation)
       ) {
         cancelPlacement(true, false, null, true);
 
         return false;
       }
 
-      if (atEnd && !paused) pinEnd();
+      if (atEnd) pinEnd();
       else {
         anchorRef.current = {
           ...anchor,
           scroll: element.scrollTop,
           row: endRow(element.scrollTop),
         };
-        issuedEndRef.current = { ...motion, limit: motion.limit + compensation };
       }
 
       return true;
@@ -359,14 +347,6 @@ export function useViewportAnchor({
           ? { ...anchor.row, offset: list.getItemOffset(index) }
           : null,
     };
-
-    const motion = issuedEndRef.current;
-
-    if (motion !== null)
-      issuedEndRef.current = {
-        ...motion,
-        limit: motion.limit + element.scrollTop - measurement.before,
-      };
   });
 
   // Virtua creates its observer in child layout effects. Construct this one earlier,
@@ -406,7 +386,7 @@ export function useViewportAnchor({
       if (element && removalSnapshot.follows === true) {
         const end = endOffset(element);
 
-        issuedEndRef.current = { destination: end, limit: end };
+        issuedEndRef.current = { destination: end };
         anchorRef.current = {
           ...anchor,
           scroll: element.scrollTop,
@@ -428,6 +408,11 @@ export function useViewportAnchor({
 
   useLayoutEffect(() => {
     validateRemoval();
+
+    // A popup can mount after native arrival but before its scroll callback. Finish
+    // that motion against the live end before later growth freezes the pause geometry.
+    if (issuedEndRef.current !== null && interacting()) checkFollow();
+
     committedItemsRef.current = { placement, indices, itemIndices };
   });
 
@@ -463,7 +448,7 @@ export function useViewportAnchor({
 
       const end = endOffset(element);
 
-      if (end - element.scrollTop > 1) issuedEndRef.current = { destination: end, limit: end };
+      if (end - element.scrollTop > 1) issuedEndRef.current = { destination: end };
     }
   };
 

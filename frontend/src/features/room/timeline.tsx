@@ -193,7 +193,12 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   // Follow new rows at the bottom; count them when scrolled up.
   useLayoutEffect(() => {
     const previous = committedRef.current;
-    const appended = previous.last !== null && lastKey !== previous.last && !shift;
+
+    const appended =
+      previous.last !== null &&
+      lastKey !== previous.last &&
+      !shift &&
+      items.some((item) => item.key === previous.last);
 
     committedRef.current = {
       first: firstKey,
