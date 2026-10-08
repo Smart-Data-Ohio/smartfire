@@ -360,6 +360,40 @@ describe("resuming", () => {
   );
 });
 
+/** Thread 88's header in room 12. */
+const threadDetail = (status: "active" | "closed", canClose: boolean) => ({
+  thread: {
+    id: 88,
+    roomId: 12,
+    parentMessageId: 1,
+    creatorId: 7,
+    name: "Plans",
+    status,
+    replyCount: 2,
+    lastActivityAt: "2026-10-06T00:00:10.000Z",
+    autoArchiveAfterMinutes: 4320,
+    createdAt: "2026-10-06T00:00:01.000Z",
+    work: null,
+  },
+  membership: null,
+  parentMessage: null,
+  permissions: {
+    canRename: true,
+    canClose,
+    canReopen: !canClose,
+    canLock: true,
+    canUnlock: false,
+    canDelete: true,
+    canConvertWork: false,
+    canManageWork: false,
+    canUpdateWorkStatus: false,
+    canAssignWork: false,
+    canRemoveWork: false,
+  },
+  work: null,
+  users: [],
+});
+
 describe("resync", () => {
   it.effect("refetches the sidebar and subscribed rooms when the server can't resume", () =>
     withSync(
@@ -437,44 +471,11 @@ describe("resync", () => {
         const socket = yield* MemorySocket;
         const api = yield* FakeApi;
 
-        const detail = (status: "active" | "closed", canClose: boolean) => ({
-          thread: {
-            id: 88,
-            roomId: 12,
-            parentMessageId: 1,
-            creatorId: 7,
-            name: "Plans",
-            status,
-            replyCount: 2,
-            lastActivityAt: "2026-10-06T00:00:10.000Z",
-            autoArchiveAfterMinutes: 4320,
-            createdAt: "2026-10-06T00:00:01.000Z",
-            work: null,
-          },
-          membership: null,
-          parentMessage: null,
-          permissions: {
-            canRename: true,
-            canClose,
-            canReopen: !canClose,
-            canLock: true,
-            canUnlock: false,
-            canDelete: true,
-            canConvertWork: false,
-            canManageWork: false,
-            canUpdateWorkStatus: false,
-            canAssignWork: false,
-            canRemoveWork: false,
-          },
-          work: null,
-          users: [],
-        });
-
         const replies = (ids: readonly number[]) =>
           pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
 
         yield* serve([]);
-        yield* api.reply("GET /threads/88", detail("active", true));
+        yield* api.reply("GET /threads/88", threadDetail("active", true));
         yield* api.reply("GET /threads/88/messages", replies([5, 6]));
         yield* startEngine;
         yield* welcome(5, false);
@@ -483,7 +484,7 @@ describe("resync", () => {
         expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
 
         // Closed and one reply deleted while the events were lost.
-        yield* api.reply("GET /threads/88", detail("closed", false));
+        yield* api.reply("GET /threads/88", threadDetail("closed", false));
         yield* api.reply("GET /threads/88/messages", replies([5, 7]));
         yield* socket.push({ t: "resync", topics: ["thread:88"], reason: "lagged" });
         yield* settle;
@@ -491,6 +492,45 @@ describe("resync", () => {
         expect(store.getState().threads[88]?.status).toBe("closed");
         expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
         expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  it.effect("drops a thread load that answers after a later reload around a reply", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const newest = yield* Deferred.make<void>();
+        const around = yield* Deferred.make<void>();
+
+        const replies = (ids: readonly number[]) =>
+          pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/88", threadDetail("active", true));
+        yield* api.route("GET /threads/88/messages", (request) =>
+          request.query?.around === "3"
+            ? Effect.andThen(Deferred.await(around), Effect.succeed(replies([2, 3, 4])))
+            : Effect.andThen(Deferred.await(newest), Effect.succeed(replies([50, 51]))),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        // The pane opens on the newest replies; before they arrive, it's read in around reply 3.
+        yield* Effect.forkChild(threadActions.open(88));
+        yield* settle;
+        yield* Effect.forkChild(threadActions.reload(88, 3));
+        yield* settle;
+        yield* Deferred.succeed(around, undefined);
+        yield* settle;
+
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([2, 3, 4]);
+
+        // The newest replies answer last, and are dropped.
+        yield* Deferred.succeed(newest, undefined);
+        yield* settle;
+
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([2, 3, 4]);
       }),
     ),
   );

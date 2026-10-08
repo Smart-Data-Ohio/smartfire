@@ -23,6 +23,8 @@
   { "endpoint": "rooms/closeds#edit", "classic": "/rooms/closeds/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
   { "endpoint": "rooms/voices#edit", "classic": "/rooms/voices/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
   { "endpoint": "rooms/stages#edit", "classic": "/rooms/stages/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
+  { "endpoint": "rooms/fizzy/message_cards#new", "classic": "/rooms/:room_id/messages/:message_id/fizzy_cards/new", "spa": "/app/r/:room_id/m/:message_id/fizzy/new", "ported": true },
+  { "endpoint": "rooms/fizzy/message_cards#new", "classic": "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards/new", "spa": "/app/r/:room_id/t/:thread_id/m/:message_id/fizzy/new", "ported": true },
   { "endpoint": "activity_items#index", "classic": "/activity", "spa": "/app/activity", "ported": true },
   { "endpoint": "saved_items#index", "classic": "/saved", "spa": "/app/saved", "ported": true },
   { "endpoint": "scheduled_messages#index", "classic": "/scheduled_messages", "spa": "/app/scheduled", "ported": true },

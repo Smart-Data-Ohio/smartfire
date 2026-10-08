@@ -24,6 +24,8 @@ export interface MessagePermissions {
   readonly thread: boolean;
   /** Mark the room unread from it (root timeline only). */
   readonly markUnread: boolean;
+  /** Create a Fizzy card from it (any message but a system note, connected or not, even locked). */
+  readonly fizzy: boolean;
 }
 
 /**
@@ -52,5 +54,6 @@ export function messagePermissions(
     forward: human && !note,
     thread: human && !note && (root || message.thread !== null) && context.roomKind !== "direct",
     markUnread: human && root,
+    fizzy: human && !note,
   };
 }
