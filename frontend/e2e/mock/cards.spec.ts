@@ -440,7 +440,7 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
 
   const startGesture = () =>
     list.evaluate((element, input) => {
-      const offset = element.scrollTop;
+      let offset = element.scrollTop;
 
       if (offset === 0) return false;
 
@@ -459,6 +459,42 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
       element.addEventListener(
         event,
         () => {
+          const keyboard = input === "PageUp" || input === "ArrowUp" || input === "Home";
+
+          // Placement can move between setup and keydown. Keyboard default scrolling
+          // starts after this capture callback; wheel scrolling can precede its callback.
+          if (keyboard) offset = element.scrollTop;
+
+          if (input === "ArrowUp") {
+            element.removeAttribute("data-input-row");
+            element.removeAttribute("data-input-row-top");
+
+            const bounds = element.getBoundingClientRect();
+
+            const visible = Array.from(
+              element.querySelectorAll<HTMLElement>("[data-message-row][data-message-id]"),
+            ).filter((row) => {
+              const rect = row.getBoundingClientRect();
+
+              return (
+                getComputedStyle(row).visibility !== "hidden" &&
+                rect.bottom > bounds.top &&
+                rect.top < bounds.bottom
+              );
+            });
+
+            const witness =
+              visible.find((row) => row.getBoundingClientRect().top >= bounds.top) ?? visible[0];
+
+            if (witness) {
+              element.setAttribute("data-input-row", witness.dataset.messageId ?? "");
+              element.setAttribute(
+                "data-input-row-top",
+                String(witness.getBoundingClientRect().top - bounds.top),
+              );
+            }
+          }
+
           // A preceding gesture can reach the edge while its final measurements land.
           if (element.scrollTop === 0) {
             element.setAttribute("data-input-settled", "true");
@@ -466,7 +502,6 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
             return;
           }
 
-          const keyboard = input === "PageUp" || input === "ArrowUp" || input === "Home";
           let released = !keyboard;
           let ended = false;
           let moved = element.scrollTop !== offset;
@@ -550,8 +585,6 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
     while (!(await atStart())) {
       if (!(await startGesture())) break;
 
-      const offset = await list.evaluate((element) => element.scrollTop);
-
       if (input === "ArrowUp" && repeated) {
         // A held key repeats natively; wait for the whole gesture after releasing it.
         try {
@@ -565,8 +598,28 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
 
       await finishGesture();
 
-      if (input === "ArrowUp" && !repeated)
-        await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeLessThan(offset);
+      if (input === "ArrowUp" && !repeated) {
+        const id = await list.getAttribute("data-input-row");
+        const top = await list.getAttribute("data-input-row-top");
+
+        expect(id).not.toBeNull();
+        expect(top).not.toBeNull();
+        expect(Number(id)).toBeGreaterThan(0);
+        expect(Number.isFinite(Number(top))).toBe(true);
+        // Late measurements can increase scrollTop while preserving this row. Its
+        // downward displacement proves ArrowUp moved the reader backward.
+        await expect
+          .poll(() =>
+            row(page, Number(id)).evaluate((element) => {
+              const list = element.closest("[data-message-list]");
+
+              if (!list) throw new Error("The input witness is outside the message list");
+
+              return element.getBoundingClientRect().top - list.getBoundingClientRect().top;
+            }),
+          )
+          .toBeGreaterThan(Number(top) + 1);
+      }
 
       repeated = true;
     }

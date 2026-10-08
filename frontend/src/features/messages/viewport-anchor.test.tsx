@@ -76,6 +76,7 @@ interface HarnessProps {
   readonly popupId?: number;
   readonly editingId?: number;
   readonly popupPendingId?: number;
+  readonly placement?: string;
   readonly virtual?: typeof import("virtua").VList;
   readonly onSettled?: () => void;
 }
@@ -90,6 +91,7 @@ function Harness({
   popupId,
   editingId,
   popupPendingId,
+  placement = "room:12",
   virtual: VirtualList,
   onSettled,
 }: HarnessProps) {
@@ -124,7 +126,7 @@ function Harness({
     containerRef,
     listRef,
     items,
-    placement: "room:12",
+    placement,
     placed: true,
     cardsLoaded,
   });
@@ -156,6 +158,11 @@ function Harness({
             },
           });
           element.getBoundingClientRect = () => new DOMRect(0, 0, 600, VIEWPORT_HEIGHT);
+          element.scrollBy = (
+            ...args: [options?: ScrollToOptions | undefined] | [x: number, y: number]
+          ) => {
+            element.scrollTop += args.length === 2 ? args[1] : (args[0]?.top ?? 0);
+          };
         }}
       >
         <VirtualList
@@ -342,6 +349,31 @@ describe("useViewportAnchor reader control", () => {
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
     await act(async () => undefined);
     expect(viewport().scrollTop).toBe(400);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it("find-in-page after deleting the paused end witness cancels follow", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    // Another member removes the first visible row; the browser clamps the shorter list.
+    geometry.ids = [1, 3];
+    viewport().scrollTop = 100;
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    await act(async () => undefined);
+    geometry.heights.set(3, 500);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(100);
+    // Find-in-page moves without any wheel/key input while the popup still owns correction.
+    viewport().scrollTop = 0;
+    fireEvent.scroll(viewport());
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(0);
     expect(apiRef.current?.canFollow()).toBe(false);
   });
 
@@ -542,6 +574,42 @@ describe("useViewportAnchor reader control", () => {
       vi.useRealTimers();
     }
   });
+
+  it.each(["task", "frame"])(
+    "placement cleanup releases pending retention before the %s runs",
+    (phase) => {
+      const frames = new Map<number, FrameRequestCallback>();
+      let nextFrame = 0;
+      vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+        const id = ++nextFrame;
+
+        frames.set(id, callback);
+
+        return id;
+      });
+      vi.stubGlobal("cancelAnimationFrame", (id: number) => frames.delete(id));
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+        const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+        follow(apiRef, geometry);
+        act(() => rowOf(2).focus());
+        fireEvent.contextMenu(rowOf(2), { button: 2, buttons: 2 });
+        fireEvent(rowOf(2), new Event("pointerup", { bubbles: true }));
+
+        if (phase === "frame") act(() => vi.runOnlyPendingTimers());
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} placement="room:12:reply:2" />);
+        expect(apiRef.current?.keepMounted).toEqual([1]);
+        act(() => rowOf(2).blur());
+        expect(apiRef.current?.keepMounted).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("retains pending popup ownership after both the release task and frame", async () => {
     const frames: FrameRequestCallback[] = [];
@@ -875,6 +943,34 @@ describe("useViewportAnchor reader control", () => {
       act(() => vi.advanceTimersByTime(1));
       expect(settled).toHaveBeenCalledOnce();
       expect(viewport().scrollTop).toBe(760);
+      expect(apiRef.current?.canFollow()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("follows Virtua's downward compensation of a partly visible witness before debounce", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+
+    try {
+      const { VList } = await import("virtua");
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const settled = vi.fn();
+
+      render(<Harness apiRef={apiRef} geometry={geometry} virtual={VList} onSettled={settled} />);
+      act(() => MeasuringObserver.deliver([[viewport(), VIEWPORT_HEIGHT]]));
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      follow(apiRef, geometry);
+      fireEvent.scroll(viewport());
+      expect(viewport().scrollTop).toBe(300);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+      geometry.heights.set(2, 300);
+      geometry.heights.set(3, 300);
+      act(() => measureRows(geometry));
+      expect(settled).not.toHaveBeenCalled();
+      expect(viewport().scrollTop).toBe(500);
       expect(apiRef.current?.canFollow()).toBe(true);
     } finally {
       vi.useRealTimers();

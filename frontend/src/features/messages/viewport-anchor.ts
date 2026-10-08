@@ -2,6 +2,7 @@ import {
   type RefObject,
   useCallback,
   useEffectEvent,
+  useInsertionEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -15,11 +16,10 @@ type Anchor =
   | {
       readonly placement: string;
       readonly kind: "end";
+      readonly scroll: number;
       readonly row: {
         readonly id: number;
-        readonly bottom: number;
-        readonly viewport: number;
-        readonly inset: number;
+        readonly offset: number;
       } | null;
     }
   | {
@@ -76,6 +76,15 @@ export function useViewportAnchor({
   const retainedIdRef = useRef<number | null>(null);
   const retentionPendingRef = useRef<number | null>(null);
   const placementRef = useRef<PlacementState | null>(null);
+  const beforeResizesRef = useRef<ResizeObserver | null>(null);
+
+  const measurementRef = useRef<{
+    readonly anchor: Extract<Anchor, { kind: "end" }>;
+    readonly before: number;
+    readonly expected: number;
+  } | null>(null);
+
+  const settlementFrameRef = useRef(0);
   const [retainedId, setRetainedId] = useState<number | null>(null);
 
   const { indices, itemIndices } = useMemo(() => {
@@ -132,7 +141,7 @@ export function useViewportAnchor({
       const height = rect?.height ?? listRef.current?.getItemSize(index) ?? 0;
 
       if (top + height > 0 && top < element.clientHeight)
-        return { id, bottom: element.clientHeight - top, viewport: element.clientHeight, inset };
+        return { id, offset: listRef.current?.getItemOffset(index) ?? 0 };
     }
 
     return null;
@@ -145,9 +154,9 @@ export function useViewportAnchor({
 
     issuedEndRef.current = null;
     placementRef.current = { kind: "settled", placement, messageId: null };
-    // The first visible row's start survives compensation of fully hidden rows.
-    // Its own height can change without making that start reader movement.
-    anchorRef.current = { kind: "end", placement, row: endRow(offset ?? element.scrollTop) };
+    const scroll = offset ?? element.scrollTop;
+
+    anchorRef.current = { kind: "end", placement, scroll, row: endRow(scroll) };
   };
 
   const checkFollow = useEffectEvent(() => {
@@ -157,6 +166,8 @@ export function useViewportAnchor({
     const element = viewport();
 
     if (!element) return false;
+
+    if (settlementFrameRef.current !== 0) return false;
 
     if (endOffset(element) - element.scrollTop <= 1) {
       pinEnd();
@@ -169,20 +180,22 @@ export function useViewportAnchor({
     const witness = anchorRef.current.row;
     const index = witness === null ? undefined : indices.get(witness.id);
 
-    // A removed witness cannot establish reader movement. The next pin selects another row.
-    if (witness === null || index === undefined) return true;
+    if (witness !== null && (index === undefined || listRef.current === null)) {
+      cancelPlacement(true);
 
-    const row = element.querySelector<HTMLElement>(`[data-message-id="${witness.id}"]`);
+      return false;
+    }
 
-    if (row && wrapperOf(row)?.style.visibility === "hidden") return true;
+    // Rows above the first visible witness are fully hidden and compensated by Virtua.
+    // Its own compensation is recorded across each measurement batch below.
+    // An empty list still has an offset reference while its first row is being measured.
+    const expected =
+      anchorRef.current.scroll +
+      (witness && index !== undefined
+        ? (listRef.current?.getItemOffset(index) ?? witness.offset) - witness.offset
+        : 0);
 
-    const top = row
-      ? row.getBoundingClientRect().top - element.getBoundingClientRect().top
-      : (listRef.current?.getItemOffset(index) ?? 0) + witness.inset - element.scrollTop;
-
-    // Compare an element's visual position, including eventless browser movement.
-    // Hidden shrink and growth never cancel each other into a movement allowance.
-    if (Math.abs(top - (witness.viewport - witness.bottom)) > 1) {
+    if (Math.abs(element.scrollTop - expected) > 1) {
       cancelPlacement(true);
 
       return false;
@@ -190,6 +203,84 @@ export function useViewportAnchor({
 
     return true;
   });
+
+  const beforeMeasure = useEffectEvent(() => {
+    measurementRef.current = null;
+
+    if (!checkFollow()) return;
+
+    const anchor = anchorRef.current;
+    const element = viewport();
+    const list = listRef.current;
+    const index = anchor?.kind === "end" && anchor.row ? indices.get(anchor.row.id) : undefined;
+
+    if (anchor?.kind !== "end" || !element || !list) return;
+
+    measurementRef.current = {
+      anchor,
+      before: element.scrollTop,
+      expected:
+        anchor.scroll +
+        (anchor.row && index !== undefined ? list.getItemOffset(index) - anchor.row.offset : 0),
+    };
+  });
+
+  const afterMeasure = useEffectEvent(() => {
+    const measurement = measurementRef.current;
+    measurementRef.current = null;
+    const anchor = anchorRef.current;
+    const list = listRef.current;
+    const element = viewport();
+    const index = anchor?.kind === "end" && anchor.row ? indices.get(anchor.row.id) : undefined;
+
+    if (measurement?.anchor !== anchor || anchor?.kind !== "end" || !list || !element) return;
+
+    // No browser input runs between these observer callbacks. Include every actual
+    // Virtua scroll change, including compensation of a partly visible witness.
+    anchorRef.current = {
+      ...anchor,
+      scroll: measurement.expected + element.scrollTop - measurement.before,
+      row:
+        anchor.row && index !== undefined
+          ? { ...anchor.row, offset: list.getItemOffset(index) }
+          : null,
+    };
+  });
+
+  // Virtua creates its observer in child layout effects. Construct this one earlier,
+  // then attach both observers in our layout effect to bracket its synchronous batch.
+  // Keep its construction order across placement changes in the same mounted list.
+  useInsertionEffect(() => {
+    const observer = new ResizeObserver(beforeMeasure);
+
+    beforeResizesRef.current = observer;
+
+    return () => {
+      observer.disconnect();
+      beforeResizesRef.current = null;
+    };
+  }, []);
+
+  const replaceEndWitness = useEffectEvent(() => {
+    const anchor = anchorRef.current;
+
+    if (
+      placed &&
+      anchor?.placement === placement &&
+      anchor.kind === "end" &&
+      anchor.row &&
+      !indices.has(anchor.row.id)
+    ) {
+      const element = viewport();
+      const row = element ? endRow(element.scrollTop) : null;
+
+      // Rebase at deletion, before a paused correction or later browser movement.
+      if (row && element) anchorRef.current = { ...anchor, scroll: element.scrollTop, row };
+      else cancelPlacement(true);
+    }
+  });
+
+  useLayoutEffect(() => replaceEndWitness());
 
   const canFollow = () => {
     if (!placed || isPlacing() || interacting()) return false;
@@ -346,12 +437,40 @@ export function useViewportAnchor({
     }
   });
 
-  const settle = (preferredId: number | null = null, readerInput = false) => {
+  const settle = (preferredId: number | null = null, readerInput = false, afterCommit = false) => {
     if (!placed || isPlacing()) return;
+
+    const element = viewport();
+    const anchor = anchorRef.current;
+    const list = listRef.current;
+    const index = anchor?.kind === "end" && anchor.row ? indices.get(anchor.row.id) : undefined;
+
+    if (
+      !readerInput &&
+      !afterCommit &&
+      correctionPendingRef.current &&
+      anchor?.kind === "end" &&
+      anchor.row &&
+      element &&
+      list &&
+      index !== undefined &&
+      endOffset(element) - element.scrollTop > 1 &&
+      Math.abs(element.scrollTop - anchor.scroll) <= 1 &&
+      Math.abs(list.getItemOffset(index) - anchor.row.offset) > 1
+    ) {
+      // Virtua exposes a queued jump in its offsets before the scroll-end layout
+      // commit applies it (iOS momentum and smooth scrolling). Check after that commit.
+      cancelAnimationFrame(settlementFrameRef.current);
+      settlementFrameRef.current = requestAnimationFrame(() => {
+        settlementFrameRef.current = 0;
+        settleAfterCommit(preferredId);
+      });
+
+      return;
+    }
 
     const issuedEnd = issuedEndRef.current;
     issuedEndRef.current = null;
-    const element = viewport();
 
     // App motion owns intent only until settlement. Reaching its issued destination
     // permits deferred growth; stopping short relinquishes it in either direction.
@@ -384,6 +503,10 @@ export function useViewportAnchor({
     }
   };
 
+  const settleAfterCommit = useEffectEvent((preferredId: number | null) =>
+    settle(preferredId, false, true),
+  );
+
   const place = (
     index: number,
     { align, offset = 0 }: { readonly align: "start" | "center" | "end"; readonly offset?: number },
@@ -405,6 +528,8 @@ export function useViewportAnchor({
 
   const cancelPlacement = useEffectEvent(
     (readerInput = false, allowEnd = true, preferredId: number | null = null) => {
+      cancelAnimationFrame(settlementFrameRef.current);
+      settlementFrameRef.current = 0;
       placementRef.current = readerInput
         ? { kind: "cancelled", placement, allowEnd }
         : { kind: "settled", placement, messageId: null };
@@ -832,6 +957,9 @@ export function useViewportAnchor({
       cancelAnimationFrame(frame);
       cancelAnimationFrame(retentionFrame);
       window.clearTimeout(retentionTask);
+      retentionPendingRef.current = null;
+      cancelAnimationFrame(settlementFrameRef.current);
+      settlementFrameRef.current = 0;
 
       for (const input of inputs) element.removeEventListener(input, onInput, true);
 
@@ -862,7 +990,7 @@ export function useViewportAnchor({
 
     if (anchor === null || anchor.placement !== placement || list === null || !element) return;
 
-    if (interacting() || issuedEndRef.current !== null) {
+    if (interacting() || issuedEndRef.current !== null || settlementFrameRef.current !== 0) {
       correctionPendingRef.current = true;
 
       return;
@@ -927,9 +1055,11 @@ export function useViewportAnchor({
     if (!element || !content) return;
 
     const heights = new Map<Element, number>();
+    const beforeResizes = beforeResizesRef.current;
     let correctingCards = !chunkLoaded();
 
     const resizes = new ResizeObserver((entries) => {
+      afterMeasure();
       seed();
 
       let changed = false;
@@ -979,6 +1109,7 @@ export function useViewportAnchor({
       for (const row of observed) {
         if (row.parentElement !== content) {
           resizes.unobserve(row);
+          beforeResizes?.unobserve(row);
           observed.delete(row);
           heights.delete(row);
         }
@@ -989,6 +1120,7 @@ export function useViewportAnchor({
           observed.add(row);
 
           resizes.observe(row);
+          beforeResizes?.observe(row);
         }
       }
 
@@ -1019,6 +1151,8 @@ export function useViewportAnchor({
 
     const stop = () => {
       resizes.disconnect();
+      beforeResizes?.disconnect();
+      measurementRef.current = null;
       mutations.disconnect();
       finishCardsRef.current = null;
     };
@@ -1026,6 +1160,8 @@ export function useViewportAnchor({
     finishCardsRef.current = finishCards;
     resizes.observe(element);
     resizes.observe(content);
+    beforeResizes?.observe(element);
+    beforeResizes?.observe(content);
     mutations.observe(content, {
       childList: true,
       subtree: true,
