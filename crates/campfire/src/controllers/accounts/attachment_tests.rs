@@ -93,6 +93,7 @@ async fn signed_icon_and_logo_http_assignments_match_rails_filenames_metadata_an
             assert_eq!(attached.filename.raw(), row["raw_filename"]);
             assert_eq!(attached.filename.sanitized(), row["sanitized"]);
             assert_eq!(attached.content_type(), row["content_type"]);
+            // An attached logo keeps Rails' metadata; the branding mark is written only on detach.
             assert_eq!(serde_json::from_str::<Value>(&attached.metadata.encode()).unwrap(), row["metadata"]);
             let jobs = c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='ActiveStorage::AnalyzeJob'", [], |r| r.get::<_, i64>(0))?;
             assert_eq!(jobs - before, row["analysis_jobs"].as_i64().unwrap());

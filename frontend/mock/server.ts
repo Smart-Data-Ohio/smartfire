@@ -82,6 +82,8 @@ import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts
 import { createWork } from "./s4/work.ts";
 import { WORK_STATUSES } from "./s4/work-model.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createBoards } from "./s6/boards.ts";
+import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
 import { createRoomManagement } from "./s8/rooms.ts";
@@ -147,6 +149,7 @@ export const SEED_IDS = {
     unknownLedgerType: UNKNOWN_LEDGER_TYPE,
   },
   cards: CARD_IDS,
+  boards: { roomId: BOARD_ROOM_ID, posts: BOARD_POST_IDS },
   events: EVENT_IDS,
 } as const;
 
@@ -367,7 +370,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
-      account: { name: "Smart Data" },
+      account: admin.branding(),
       ...settings.appearance(),
       cableUrl: "/cable",
       serviceWorkerUrl: null,
@@ -842,6 +845,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const saved = createSaved(ctx, activity);
   const messageActions = createMessages(ctx, threads, saved.savedChanged);
   const work = createWork(ctx, threads);
+  const boards = createBoards(ctx, threads, uploads, work);
 
   const composer = createComposer(
     ctx,
@@ -884,6 +888,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...fizzy.routes,
     ...uploads.routes,
     ...threads.routes,
+    ...boards.routes,
     ...messageActions.routes,
     ...composer.routes,
     ...createDirects(ctx).routes,
@@ -1282,6 +1287,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         return ok;
       default: {
+        const boardControl = boards.control(action, body);
+
+        if (boardControl !== null) return boardControl;
+
         const handled = huddles.control(action, {
           int,
           text,

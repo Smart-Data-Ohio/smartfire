@@ -5,9 +5,9 @@
  */
 export type Workspace = { name: string,
 /**
- * The logo image (the stock app icon when none is attached), versioned by the account.
+ * The logo image (the stock app icon when none is attached), with a cache version.
  */
-logoUrl: string,
+logoUrl: string, logoStillUrl: string | null, bannerUrl: string | null, bannerStillUrl: string | null,
 /**
  * An uploaded logo is attached (it can be removed).
  */

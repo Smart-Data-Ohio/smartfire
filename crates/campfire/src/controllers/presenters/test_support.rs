@@ -9,8 +9,8 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::server::{Booted, boot_with_services};
 use crate::config::Config;
+use crate::server::{Booted, boot_with_services};
 
 /// The pinned Rails `test/support/test_session_controller.rb` GET bridge. Only tests
 /// mount it; credential verification, the verified session and cookies use real producers.
@@ -87,7 +87,6 @@ pub async fn sign_in_for_tests(app: &crate::app::App, user_id: i64) -> String {
     cookies.join("; ")
 }
 
-
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 /// Failure artifacts are output, never fixture inputs. Create their parent and a private
@@ -121,6 +120,19 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
         actual.len(),
         expected.len()
     );
+}
+
+/// Columns the Rust era added after the Rails app was frozen, as (table, column). Rails-recorded
+/// row oracles never have them, so the tests comparing whole rows with those oracles leave them
+/// out of the Rust side.
+pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[
+    ("channel_threads", "client_post_id"),
+    ("rooms", "client_room_id"),
+];
+
+/// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].
+pub fn rust_only_column(table: &str, column: &str) -> bool {
+    RUST_ONLY_COLUMNS.contains(&(table, column))
 }
 
 pub const DAVID: i64 = 127326141;
@@ -180,7 +192,9 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
         !ci,
         "CI requires parity/.seed/{name}; run python3 parity/bin/frozen-seeds restore before the tests"
     );
-    eprintln!("skipping locally: parity/.seed/{name} isn't restored (python3 parity/bin/frozen-seeds restore)");
+    eprintln!(
+        "skipping locally: parity/.seed/{name} isn't restored (python3 parity/bin/frozen-seeds restore)"
+    );
     None
 }
 
@@ -239,22 +253,43 @@ pub struct TestApp {
 impl TestApp {
     /// Start only when an ordered producer assertion is needed. Nothing is recorded by default.
     pub fn publications(&self) -> &campfire_cable::pubsub::PublicationCapture {
-        self.publications.get_or_init(|| self.booted.app.cable.capture_publications())
+        self.publications
+            .get_or_init(|| self.booted.app.cable.capture_publications())
     }
 
-    pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_huddle_services(clock, crate::net::Network::system(), settings, huddle).await
+    pub async fn boot_with_settings(
+        huddle: crate::huddle::Config,
+        clock: campfire_kit::SharedClock,
+        settings: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_with_huddle_services(clock, crate::net::Network::system(), settings, huddle)
+            .await
     }
     /// Stop and join job workers before arranging assertions about committed enqueues.
     /// HTTP routes and the durable queue sink stay active. Tests of job execution should
     /// keep the default runner instead.
     pub async fn without_job_runner(mut self) -> Self {
-        self.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+        self.booted
+            .jobs
+            .stop(std::time::Duration::from_secs(1))
+            .await;
         self
     }
 
-    pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy("default", clock, crate::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
+    pub async fn boot_with_fizzy(
+        clock: campfire_kit::SharedClock,
+        fizzy: crate::integrations::fizzy::State,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_fizzy(
+            "default",
+            clock,
+            crate::net::Network::system(),
+            &[],
+            crate::huddle::Config::default(),
+            (None, None),
+            Some(fizzy),
+        )
+        .await
     }
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
@@ -269,13 +304,7 @@ impl TestApp {
         huddle: crate::huddle::Config,
         clock: campfire_kit::SharedClock,
     ) -> Option<TestApp> {
-        Self::boot_with_huddle_services(
-            clock,
-            crate::net::Network::system(),
-            &[],
-            huddle,
-        )
-        .await
+        Self::boot_with_huddle_services(clock, crate::net::Network::system(), &[], huddle).await
     }
 
     /// Byte goldens generated with the reference's --freeze clock.
@@ -321,14 +350,7 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients(
-            "default",
-            clock,
-            crate::net::Network::system(),
-            extra,
-            None,
-        )
-        .await
+        Self::boot_with_clients("default", clock, crate::net::Network::system(), extra, None).await
     }
 
     /// All seeded service fixtures omit periodic sweeps; durable workers keep their normal concurrency.
@@ -336,12 +358,23 @@ impl TestApp {
         Self::boot().await
     }
 
-    pub async fn boot_without_periodic_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+    pub async fn boot_without_periodic_with_clock(
+        clock: campfire_kit::SharedClock,
+    ) -> Option<TestApp> {
         Self::boot_with_clock(clock).await
     }
 
     pub async fn boot_with_github_network(network: crate::net::Network) -> Option<TestApp> {
-        Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
+        Self::boot_with_clients(
+            "default",
+            std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            network,
+            &[],
+            Some(crate::integrations::github::client::AppClient::new(
+                None, None,
+            )),
+        )
+        .await
     }
 
     /// A seeded SPA with the same caller-owned GitHub network as the classic HTTP tests.
@@ -349,7 +382,20 @@ impl TestApp {
         network: crate::net::Network,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network.clone(), extra, Some(crate::integrations::github::client::AppClient::with_network(Some("fixture-client".into()), Some("fixture-secret".into()), network))).await
+        Self::boot_with_clients(
+            "default",
+            std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            network.clone(),
+            extra,
+            Some(
+                crate::integrations::github::client::AppClient::with_network(
+                    Some("fixture-client".into()),
+                    Some("fixture-secret".into()),
+                    network,
+                ),
+            ),
+        )
+        .await
     }
 
     /// Real durable GitHub fetch jobs with the owner's HTTP client over a caller-owned network.
@@ -357,10 +403,17 @@ impl TestApp {
         reader: crate::integrations::github::client::ReadClient,
     ) -> Option<TestApp> {
         Self::boot_seed_with_huddle_services(
-            "default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
-            crate::net::Network::system(), &[], crate::huddle::Config::default(),
-            Some(crate::integrations::github::client::AppClient::new(None, None)), Some(reader),
-        ).await
+            "default",
+            std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
+            crate::net::Network::system(),
+            &[],
+            crate::huddle::Config::default(),
+            Some(crate::integrations::github::client::AppClient::new(
+                None, None,
+            )),
+            Some(reader),
+        )
+        .await
     }
 
     pub async fn boot_with_github_app(
@@ -381,24 +434,10 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         vars: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_with_clients(
-            name,
-            clock,
-            crate::net::Network::system(),
-            vars,
-            None,
-        )
-        .await
+        Self::boot_with_clients(name, clock, crate::net::Network::system(), vars, None).await
     }
     pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_with_clients(
-            name,
-            seed_clock(),
-            crate::net::Network::system(),
-            &[],
-            None,
-        )
-        .await
+        Self::boot_with_clients(name, seed_clock(), crate::net::Network::system(), &[], None).await
     }
 
     async fn boot_with_clients(
@@ -426,7 +465,8 @@ impl TestApp {
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None, None).await
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle, None, None)
+            .await
     }
 
     async fn boot_seed_with_huddle_services(
@@ -438,7 +478,16 @@ impl TestApp {
         github_app: Option<crate::integrations::github::client::AppClient>,
         github_read: Option<crate::integrations::github::client::ReadClient>,
     ) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy(name, clock, network, extra, huddle, (github_app, github_read), None).await
+        Self::boot_seed_with_fizzy(
+            name,
+            clock,
+            network,
+            extra,
+            huddle,
+            (github_app, github_read),
+            None,
+        )
+        .await
     }
 
     async fn boot_seed_with_fizzy(
@@ -462,6 +511,54 @@ impl TestApp {
         )
         .unwrap();
         copy_dir(&seed.join("storage"), &dir.path().join("files"));
+        let mut config = Self::config_for(&dir, extra);
+        config.huddle = huddle;
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
+        let booted = if let Some(fizzy) = fizzy {
+            crate::server::boot_with_integrations(
+                config,
+                clock,
+                crate::server::BootIntegrations {
+                    github_read: crate::integrations::github::client::ReadClient::from_env(),
+                    github_app: crate::integrations::github::client::AppClient::new(None, None),
+                    github_network: crate::net::Network::system(),
+                    subscription_network: network,
+                    fizzy,
+                },
+                intervals,
+            )
+            .await
+            .unwrap()
+        } else {
+            match github_app {
+                Some(client) => crate::server::boot_with_all_services(
+                    config,
+                    clock,
+                    github_read
+                        .unwrap_or_else(crate::integrations::github::client::ReadClient::from_env),
+                    client,
+                    network.clone(),
+                    network,
+                    intervals,
+                )
+                .await
+                .unwrap(),
+                None => boot_with_services(config, clock, network, intervals)
+                    .await
+                    .unwrap(),
+            }
+        };
+        Some(TestApp {
+            booted,
+            _dir: dir,
+            publications: Default::default(),
+        })
+    }
+
+    fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
         let root = dir.path().to_string_lossy().into_owned();
         let secret = parity_env("SECRET_KEY_BASE").unwrap();
         let mut config = Config::from_lookup(|name| match name {
@@ -477,30 +574,35 @@ impl TestApp {
         .unwrap();
         // Every environment uses this private seed copy, not an empty environment-named database.
         config.storage.database = dir.path().join("db/production.sqlite3");
-        config.huddle = huddle;
+        config
+    }
+
+    /// Boots a new app on this one's database and files, as a restart does: nothing the old
+    /// process held in memory carries over.
+    pub async fn restart(
+        self,
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> TestApp {
+        let (app, dir) = self.stop_jobs().await;
+        drop(app);
         let intervals = crate::jobs::periodic::Intervals {
             periodic: None,
             huddle: None,
         };
-        let booted = if let Some(fizzy) = fizzy {
-            crate::server::boot_with_integrations(config, clock, crate::server::BootIntegrations { github_read: crate::integrations::github::client::ReadClient::from_env(), github_app: crate::integrations::github::client::AppClient::new(None, None), github_network: crate::net::Network::system(), subscription_network: network, fizzy }, intervals).await.unwrap()
-        } else { match github_app {
-            Some(client) => crate::server::boot_with_all_services(
-                config,
-                clock,
-                github_read.unwrap_or_else(crate::integrations::github::client::ReadClient::from_env),
-                client,
-                network.clone(),
-                network,
-                intervals,
-            )
-            .await
-            .unwrap(),
-            None => boot_with_services(config, clock, network, intervals)
-                .await
-                .unwrap(),
-        }};
-        Some(TestApp { booted, _dir: dir, publications: Default::default() })
+        let booted = boot_with_services(
+            Self::config_for(&dir, extra),
+            clock,
+            crate::net::Network::system(),
+            intervals,
+        )
+        .await
+        .unwrap();
+        TestApp {
+            booted,
+            _dir: dir,
+            publications: Default::default(),
+        }
     }
 
     pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
@@ -713,7 +815,9 @@ impl Browser<'_> {
         let key = campfire_kit::session::SESSION_KEY;
         let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
         let raw = rails_compat::cookies::unescape(self.cookies.get(key).unwrap());
-        let session = crypto.decrypt_cookie(key, &raw, self.app.booted.app.clock.now()).unwrap();
+        let session = crypto
+            .decrypt_cookie(key, &raw, self.app.booted.app.clock.now())
+            .unwrap();
         session["flash"]["flashes"].clone()
     }
 

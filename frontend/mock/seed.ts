@@ -1,3 +1,4 @@
+import type { BoardDigest } from "../src/gen/BoardDigest.ts";
 /**
  * The mock workspace: people, rooms, the viewer's memberships and a realistic message history,
  * all generated from a seed and placed relative to `now`, so day dividers and "5 minutes ago"
@@ -119,6 +120,7 @@ export function seededMessageId(roomId: number, index: number): number {
 
 /** A room as the mock keeps it: the DTO plus what the viewer's sidebar row and detail need. */
 export interface RoomRecord {
+  boardDigest?: BoardDigest | null;
   room: Room;
   /** Everyone in the room, in membership order (oldest first), viewer included. */
   memberIds: number[];

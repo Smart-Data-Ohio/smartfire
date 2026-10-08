@@ -48,8 +48,8 @@ interface RoomVisit {
   readonly load: number;
 }
 
-let nextVisitToken = 0;
-let nextLoad = 0;
+let nextVisitToken = 0,
+  nextLoad = 0;
 
 const visits = new Map<number, RoomVisit>();
 
@@ -158,6 +158,20 @@ const loadFirstPage = Effect.fnUntraced(function* (
   );
 });
 
+/** Boards keep their posts. A chat room replaces the window with this visit's first page. */
+const loadTimeline = Effect.fnUntraced(function* (
+  roomId: number,
+  token: number,
+  detail: RoomDetail,
+) {
+  if (detail.room.kind === "board") {
+    return;
+  }
+
+  mutations.setPageReplacing(roomId);
+  yield* loadFirstPage(roomId, token, detail.unread);
+});
+
 /** How many times a superseded join re-reads the room before it gives up and shows the load error. */
 const RECOVERY_ATTEMPTS = 3;
 
@@ -188,7 +202,6 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   mutations.setRoomLoading(roomId);
-  mutations.setPageReplacing(roomId);
 
   const loaded = yield* Effect.result(room(roomId));
 
@@ -199,7 +212,7 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (Result.isSuccess(loaded)) {
     clearRoomJoin(roomId);
     mutations.setRoomDetail(loaded.success);
-    yield* loadFirstPage(roomId, token, loaded.success.unread);
+    yield* loadTimeline(roomId, token, loaded.success);
 
     return;
   }
@@ -208,7 +221,7 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
   if (kept !== null) {
     mutations.setRoomDetail(kept);
-    yield* loadFirstPage(roomId, token, kept.unread);
+    yield* loadTimeline(roomId, token, kept);
 
     return;
   }
@@ -303,8 +316,7 @@ const installJoined = Effect.fnUntraced(function* (
     return;
   }
 
-  mutations.setPageReplacing(roomId);
-  yield* loadFirstPage(roomId, visit.token, detail.unread);
+  yield* loadTimeline(roomId, visit.token, detail);
 });
 
 /**
@@ -417,6 +429,7 @@ export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: numbe
 });
 
 const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older" | "newer") {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   const timeline = store.getState().timelines[roomId];
 
   if (timeline === undefined) {
@@ -446,6 +459,7 @@ export const loadAround = Effect.fn("session.loadAround")(function* (
   roomId: number,
   messageId: number,
 ) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, { around: messageId }).pipe(
@@ -470,6 +484,7 @@ export const loadNewer = Effect.fn("session.loadNewer")(function* (roomId: numbe
 
 /** Replaces the window with the newest page. */
 export const jumpToPresent = Effect.fn("session.jumpToPresent")(function* (roomId: number) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, null).pipe(

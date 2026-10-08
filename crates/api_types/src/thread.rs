@@ -1,5 +1,5 @@
 //! Channel threads: a conversation hanging off one root message, shown in the right pane.
-//! Board posts (threads without a parent in board rooms) are out of scope here.
+//! Board posts are threads without a parent in board rooms (see `crate::BoardListing`).
 //!
 //! Replies are messages with `threadId` set. They never appear on the room's timeline and never
 //! make the room unread; they're published on `thread:<id>` (subscribe while the pane is open),

@@ -273,6 +273,7 @@ impl ChannelThread {
         if !room.board() {
             return;
         }
+        tx.broadcast_after_commit_settled_once(&ThreadBoardCreation { thread_id: id });
         tx.after_commit_record_latest("board_post_creation", id, move |tx| {
             let Some(thread) = Self::find_by_id(tx.conn(), id)? else {
                 return Ok(());
@@ -327,6 +328,9 @@ impl ChannelThread {
     ) -> Result<()> {
         if !room.board() || tx.has_commit_record("board_post_creation", self.id) {
             return Ok(());
+        }
+        if row_changed {
+            ThreadWorkChange::emit(tx, self.id);
         }
         let id = self.id;
         tx.after_commit_record_latest("board_post_update", id, move |tx| {

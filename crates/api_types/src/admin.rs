@@ -20,8 +20,11 @@ use crate::Timestamp;
 #[ts(export)]
 pub struct Workspace {
     pub name: String,
-    /// The logo image (the stock app icon when none is attached), versioned by the account.
+    /// The logo image (the stock app icon when none is attached), with a cache version.
     pub logo_url: String,
+    pub logo_still_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub banner_still_url: Option<String>,
     /// An uploaded logo is attached (it can be removed).
     pub logo_attached: bool,
     /// The full join link everyone may share (`/join/:join_code`).
@@ -50,6 +53,14 @@ pub struct UpdateWorkspace {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateLogo {
+    pub signed_id: String,
+}
+
+/// `PUT /api/v1/admin/workspace/banner`: attach an uploaded image.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UpdateBanner {
     pub signed_id: String,
 }
 
