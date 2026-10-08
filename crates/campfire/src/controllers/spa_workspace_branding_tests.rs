@@ -725,7 +725,6 @@ async fn spa_workspace_branding_full_pool_times_out_and_recovers_after_blocked_c
     let mut admin = a.sign_in(DAVID).await;
     branding_slots_are_free().await;
     let (signed, id) = upload_bytes(&a, &animated_gif(), "blocked.gif", "image/gif").await;
-    let secrets = a.booted.app.secrets.clone();
     let key = a
         .db()
         .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
@@ -1251,7 +1250,6 @@ async fn spa_workspace_branding_legacy_cache_miss_cancels_with_stock_fallback() 
         &[("account[logo]", &signed)],
     )
     .await;
-    let secrets = a.booted.app.secrets.clone();
     let key = a
         .db()
         .read(move |conn| Ok(campfire_storage::Blob::find(conn, id).unwrap().unwrap().key))
