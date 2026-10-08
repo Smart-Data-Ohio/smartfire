@@ -103,6 +103,12 @@ export const CATEGORY_IDS = { launch: 1, team: 2 } as const;
  */
 export const MESSAGE_ID_BLOCK = 10_000;
 
+/** How many messages `#campfire` has once someone joins it, oldest first. */
+export const JOINABLE_HISTORY_LENGTH = 100;
+
+/** The oldest message in that history (`around` this one, the newest page doesn't hold it). */
+export const JOINABLE_OLDEST_MESSAGE_ID = JOINABLE_OPEN_ROOM.id * MESSAGE_ID_BLOCK;
+
 /** Messages created at run time count up from here, above every seeded id. */
 export const FIRST_LIVE_MESSAGE_ID = 1_000_000;
 

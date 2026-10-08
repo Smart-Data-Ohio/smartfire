@@ -2,7 +2,6 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_db::CachedStatements;
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_rooms::controllers::rooms::{find_joinable_open_room, join_open_room};
 use campfire_web::concerns::{self, require_current_user};
@@ -32,24 +31,13 @@ async fn show_preview(c: &mut Ctx) -> Result {
     let Some(room) = find_joinable_open_room(c, id).await? else {
         return Err(Error::NotFound);
     };
-    let preview = c
-        .app()
-        .db
-        .read(move |conn| {
-            let member_count: i64 = conn.query_row_cached(
-                r#"SELECT COUNT(*) FROM "memberships" WHERE "memberships"."room_id" = ?"#,
-                [room.id],
-                |row| row.get(0),
-            )?;
-            Ok(api::OpenRoomPreview {
-                id: room.id,
-                name: room.name.unwrap_or_default(),
-                member_count,
-            })
-        })
-        .await
-        .map_err(db_error)?;
-    c.json(StatusCode::OK, &preview)
+    c.json(
+        StatusCode::OK,
+        &api::OpenRoomPreview {
+            id: room.id,
+            name: room.name.unwrap_or_default(),
+        },
+    )
 }
 
 async fn join_room(c: &mut Ctx) -> Result {
@@ -67,9 +55,9 @@ async fn join_room(c: &mut Ctx) -> Result {
         .db
         .read(move |conn| {
             let detail = dto::room_detail(conn, &secrets, &viewer, &room, &membership, now)?;
-            let row = dto::sidebar_row(conn, &room, &membership)?.ok_or_else(|| {
-                campfire_db::Error::Other("joined room has no sidebar row".into())
-            })?;
+            // `None` for an invisible involvement: that membership has no sidebar row.
+            // Classic still redirects into the room, so the detail is the whole answer.
+            let row = dto::sidebar_row(conn, &room, &membership)?;
             Ok(api::RoomJoin { detail, row })
         })
         .await

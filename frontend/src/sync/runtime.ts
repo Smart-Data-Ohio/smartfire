@@ -497,8 +497,12 @@ export const actions = {
   openRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>
     runtime.runPromise(session.openRoom(roomId, focusMessageId)),
 
-  /** Joins an open room from its preview, then loads it and adds the sidebar row. */
-  joinOpenRoom: (roomId: number): Promise<void> => runtime.runPromise(session.joinOpenRoom(roomId)),
+  /**
+   * Joins an open room from its preview, then loads it (around `focusMessageId` for a permalink)
+   * and adds the sidebar row when the membership is visible.
+   */
+  joinOpenRoom: (roomId: number, focusMessageId: number | null = null): Promise<void> =>
+    runtime.runPromise(session.joinOpenRoom(roomId, focusMessageId)),
 
   /** Loads an open room again (its Try again); doesn't subscribe or say present a second time. */
   reloadRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>

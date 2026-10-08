@@ -15,10 +15,13 @@ import {
   room,
   sidebar,
 } from "../api/endpoints.ts";
+import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
+import type { SidebarRow } from "../gen/SidebarRow.ts";
 import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -26,6 +29,13 @@ import { Typing } from "./typing.ts";
 export const OPEN_AT_UNREAD_ABOVE = 40;
 
 const roomTopic = (roomId: number) => `room:${roomId}`;
+
+/**
+ * Rooms on screen. `openRoom` adds one and `closeRoom` removes it before either yields, so a join
+ * that answers after the viewer has left still records the membership without saying present or
+ * loading the timeline.
+ */
+const viewedRooms = new Set<number>();
 
 /** Everyone the sidebar shows a presence dot for: direct-message members and placeholders. */
 function presenceIds(data: Sidebar): readonly number[] {
@@ -128,26 +138,106 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: nu
 });
 
 /**
- * Joins an open room, puts it in the sidebar, and loads it. The topic was subscribed when the
- * preview opened, before the membership existed, so it is subscribed again now.
+ * Lands a join: the membership, and the sidebar row when the membership is visible. Presence and
+ * the timeline follow only while the room is still the one on screen (a reply can arrive after
+ * the viewer has left). The topic was subscribed when the preview opened, before the membership
+ * existed, so it is subscribed again now when this client still holds it.
  */
-export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
-  const joined = yield* postJoin(roomId);
+const landJoined = Effect.fnUntraced(function* (
+  roomId: number,
+  detail: RoomDetail,
+  row: SidebarRow | null,
+  focusMessageId: number | null,
+) {
+  mutations.setRoomDetail(detail);
+
+  if (row !== null) {
+    const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
+
+    mutations.applyEvents(
+      [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: row }],
+      yield* Clock.currentTimeMillis,
+    );
+  }
+
+  invalidateRoom(roomId);
+
   const topics = yield* Topics;
+
+  yield* topics.resubscribe(roomTopic(roomId));
+
+  if (!viewedRooms.has(roomId)) {
+    return;
+  }
+
   const presenceService = yield* Presence;
 
-  mutations.setRoomDetail(joined.detail);
-
-  const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
-
-  mutations.applyEvents(
-    [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: joined.row }],
-    yield* Clock.currentTimeMillis,
-  );
-  yield* topics.resubscribe(roomTopic(roomId));
   yield* presenceService.enter(roomId);
   mutations.setPageReplacing(roomId);
-  yield* loadFirstPage(roomId, null, joined.detail.unread);
+  yield* loadFirstPage(roomId, focusMessageId, detail.unread);
+});
+
+/**
+ * The join reply is older than a management change that landed while it was in flight (the room
+ * was deleted, say). Read the room again instead of restoring what that change removed.
+ */
+const recoverSupersededJoin = Effect.fnUntraced(function* (
+  roomId: number,
+  focusMessageId: number | null,
+) {
+  const revision = invalidateRoom(roomId);
+  const since = managementEpoch();
+  const fetched = yield* Effect.result(room(roomId));
+
+  if (roomRevision(roomId) !== revision || changedSince(roomId, since)) {
+    return;
+  }
+
+  if (Result.isFailure(fetched)) {
+    if (Predicate.isTagged(fetched.failure, "NotFound")) {
+      mutations.setRoomUnavailable(roomId);
+    }
+
+    return;
+  }
+
+  const row = store.getState().sidebar.rows[roomId];
+
+  yield* landJoined(
+    roomId,
+    row === undefined
+      ? fetched.success
+      : {
+          ...fetched.success,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+    null,
+    focusMessageId,
+  );
+});
+
+/**
+ * Joins an open room. The membership and sidebar row always land, unless a management change
+ * during the request made the reply stale. Presence and the first page (around `focusMessageId`
+ * when the join came from a permalink) land only if the room is still on screen.
+ */
+export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (
+  roomId: number,
+  focusMessageId: number | null,
+) {
+  const since = managementEpoch();
+  const joined = yield* postJoin(roomId);
+
+  if (changedSince(roomId, since)) {
+    yield* recoverSupersededJoin(roomId, focusMessageId);
+
+    return;
+  }
+
+  yield* landJoined(roomId, joined.detail, joined.row, focusMessageId);
 });
 
 /**
@@ -158,6 +248,8 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
   roomId: number,
   focusMessageId: number | null,
 ) {
+  viewedRooms.add(roomId);
+
   const topics = yield* Topics;
   const presenceService = yield* Presence;
 
@@ -176,6 +268,8 @@ export const reloadRoom = Effect.fn("session.reloadRoom")(function* (
 
 /** Closes a room view: releases its topic, says absent, stops typing, forgets the divider. */
 export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: number) {
+  viewedRooms.delete(roomId);
+
   const topics = yield* Topics;
   const presenceService = yield* Presence;
   const typing = yield* Typing;

@@ -61,7 +61,7 @@ export const openRoomPreview = Effect.fn("api.openRoomPreview")(function* (roomI
   return yield* call(get(`/rooms/${roomId}/preview`), wire<OpenRoomPreview>(OpenRoomPreviewSchema));
 });
 
-/** `POST /rooms/:id/join`: membership in an open room, with the room and its sidebar row. */
+/** `POST /rooms/:id/join`: membership in an open room. `row` is null when it stays out of the sidebar. */
 export const joinOpenRoom = Effect.fn("api.joinOpenRoom")(function* (roomId: number) {
   return yield* call(
     { method: "POST", path: `/rooms/${roomId}/join` },

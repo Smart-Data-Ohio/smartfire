@@ -2438,3 +2438,156 @@ describe("decoding", () => {
     ),
   );
 });
+
+describe("joining an open room", () => {
+  const preview = { id: 90, name: "campfire" };
+
+  const joined = () => ({
+    detail: roomDetailFixture(90),
+    row: sidebarRowFixture(90, "campfire"),
+  });
+
+  const previewRoutes = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    yield* api.reply("GET /rooms/90/preview", preview);
+    yield* api.route("GET /rooms/90", () =>
+      Effect.fail(new NotFound({ message: "Room not found" })),
+    );
+  });
+
+  it.effect("reloads the preview when a reconnect refetches the held room", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* previewRoutes;
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(90, null);
+
+        expect(store.getState().rooms[90]?.preview).toEqual(preview);
+
+        yield* api.reply("GET /rooms/90/preview", { id: 90, name: "renamed" });
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().rooms[90]).toMatchObject({
+          status: "ready",
+          detail: null,
+          preview: { id: 90, name: "renamed" },
+        });
+        expect(store.getState().sidebar.rows[90]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("records the membership without presence or a timeline after the viewer has left", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* previewRoutes;
+        yield* api.route("POST /rooms/90/join", () =>
+          Deferred.await(release).pipe(Effect.as(joined())),
+        );
+        yield* api.reply("GET /rooms/90/messages", pageFixture([messageFixture(1, 90)]));
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, null);
+
+        const joining = yield* Effect.forkChild(session.joinOpenRoom(90, null));
+
+        yield* settle;
+        yield* session.closeRoom(90);
+
+        const afterClose = (yield* socket.sent).length;
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(joining);
+
+        expect(store.getState().sidebar.rows[90]?.displayName).toBe("campfire");
+        expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
+        expect(store.getState().timelines[90]?.ids ?? []).toEqual([]);
+        expect(
+          (yield* socket.sent).slice(afterClose).filter((frame) => frame.t === "present"),
+        ).toEqual([]);
+        expect((yield* api.requests).some((request) => request.path === "/rooms/90/messages")).toBe(
+          false,
+        );
+      }),
+    ),
+  );
+
+  it.effect("does not restore a room deleted while the join was in flight", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+
+        yield* serve([]);
+        yield* previewRoutes;
+        yield* api.route("POST /rooms/90/join", () =>
+          Deferred.await(release).pipe(Effect.as(joined())),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(90, null);
+
+        const joining = yield* Effect.forkChild(session.joinOpenRoom(90, null));
+
+        yield* settle;
+        yield* socket.push({
+          t: "batch",
+          events: [
+            {
+              seq: 6,
+              topic: "user",
+              type: "sidebar.row.removed",
+              data: { roomId: 90, refreshRoom: true },
+            },
+          ],
+        });
+        yield* settle;
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(joining);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[90]).toBeUndefined();
+        expect(store.getState().rooms[90]?.detail).toBeNull();
+        expect(store.getState().rooms[90]?.status).toBe("error");
+      }),
+    ),
+  );
+
+  it.effect("loads the permalink's message after joining", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* previewRoutes;
+        yield* api.reply("POST /rooms/90/join", joined());
+        yield* api.reply("GET /rooms/90/messages", pageFixture([messageFixture(5, 90)]));
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, 5);
+        yield* session.joinOpenRoom(90, 5);
+
+        expect(timelineIds(90)).toEqual([5]);
+        expect(yield* api.requests).toContainEqual({
+          method: "GET",
+          path: "/rooms/90/messages",
+          query: { around: "5" },
+        });
+      }),
+    ),
+  );
+});

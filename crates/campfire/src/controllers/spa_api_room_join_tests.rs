@@ -7,8 +7,8 @@ use campfire_api_types as api;
 use campfire_db::{CachedStatements, Membership, RoomType};
 use serde_json::Value;
 
-use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
-use crate::controllers::presenters::test_support::{ALL_TALK, DAVID, HQ, KEVIN, TestApp};
+use super::api_tests::{app, get, json_body, parse, serve, tag, Sync};
+use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, DAVID, HQ, KEVIN};
 
 fn oracle() -> Value {
     serde_json::from_str(include_str!("../../../../vectors/rooms_join.json")).unwrap()
@@ -63,25 +63,9 @@ async fn preview_is_allowed_for_an_open_room_and_refused_otherwise() {
     let body: Value = serde_json::from_slice(&reply.body).unwrap();
     assert_eq!(
         body.as_object().unwrap().keys().collect::<Vec<_>>(),
-        ["id", "name", "memberCount"]
+        ["id", "name"]
     );
-    let count = app
-        .db()
-        .read(|conn| {
-            let count: i64 = conn.query_row_cached(
-                r#"SELECT COUNT(*) FROM "memberships" WHERE "memberships"."room_id" = ?"#,
-                [HQ],
-                |row| row.get(0),
-            )?;
-            Ok(count)
-        })
-        .await
-        .unwrap();
-    assert_eq!(
-        (preview.id, preview.name.as_str(), preview.member_count),
-        (HQ, "HQ", count)
-    );
-    assert!(count >= 1);
+    assert_eq!((preview.id, preview.name.as_str()), (HQ, "HQ"));
 
     for kind in [
         RoomType::Closed,
@@ -184,14 +168,15 @@ async fn join_creates_a_membership_is_idempotent_and_matches_classic() {
     let first = kevin.write(post_join(&path)).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.text());
     let joined: api::RoomJoin = parse(&first);
+    let row = joined.row.expect("a visible membership has a sidebar row");
     assert_eq!(
         (
             joined.detail.room.id,
             joined.detail.membership.user_id,
             joined.detail.display_name.as_str(),
             joined.detail.membership.involvement,
-            joined.row.room.id,
-            joined.row.display_name.as_str(),
+            row.room.id,
+            row.display_name.as_str(),
         ),
         (HQ, KEVIN, "HQ", api::Involvement::Mentions, HQ, "HQ",)
     );
@@ -205,6 +190,7 @@ async fn join_creates_a_membership_is_idempotent_and_matches_classic() {
     assert_eq!(again.status, StatusCode::OK, "{}", again.text());
     let repeated: api::RoomJoin = parse(&again);
     assert_eq!(repeated.detail.membership.id, created.id);
+    assert!(repeated.row.is_some());
     assert_eq!(member(&app, HQ, KEVIN).await.unwrap().id, created.id);
 
     let audits_after = app
@@ -284,4 +270,61 @@ async fn join_publishes_the_sidebar_row_once() {
     )
     .await;
     server.abort();
+}
+
+#[tokio::test]
+async fn joining_again_while_invisible_enters_the_room_without_a_sidebar_row() {
+    let app = app(true).await.expect("seed required");
+    let before = member(&app, HQ, DAVID).await.expect("david belongs to HQ");
+    app.db()
+        .write(move |tx| {
+            let mut membership =
+                Membership::find_by_room_and_user(tx.conn(), HQ, DAVID)?.expect("membership");
+            membership.update_involvement(tx, Some(campfire_db::Involvement::Invisible))?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    let mut david = app.sign_in(DAVID).await;
+    let classic = david
+        .write(crate::controllers::presenters::test_support::Req::new(
+            Method::POST,
+            &format!("/rooms/{HQ}/join"),
+        ))
+        .await;
+    assert_eq!(
+        classic.location(),
+        Some(format!("http://campfire.test/rooms/{HQ}").as_str()),
+        "classic redirects an invisible member into the room"
+    );
+    assert_eq!(
+        member(&app, HQ, DAVID)
+            .await
+            .expect("still a member")
+            .involvement,
+        Some(campfire_db::Involvement::Invisible)
+    );
+
+    let joined = david
+        .write(post_join(&format!("/api/v1/rooms/{HQ}/join")))
+        .await;
+    assert_eq!(joined.status, StatusCode::OK, "{}", joined.text());
+    let body: api::RoomJoin = parse(&joined);
+    assert_eq!(
+        (
+            body.detail.room.id,
+            body.detail.membership.id,
+            body.detail.membership.involvement,
+            body.row.is_none(),
+        ),
+        (HQ, before.id, api::Involvement::Invisible, true)
+    );
+    assert_eq!(
+        member(&app, HQ, DAVID).await.expect("unchanged").id,
+        before.id
+    );
+
+    let room = david.send(get(&format!("/api/v1/rooms/{HQ}"))).await;
+    assert_eq!(room.status, StatusCode::OK, "{}", room.text());
 }

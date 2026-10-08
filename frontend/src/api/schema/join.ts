@@ -6,21 +6,23 @@ import type { Assert, Pinned } from "./pin.ts";
 import { RoomDetail } from "./room.ts";
 import { SidebarRow } from "./sidebar.ts";
 
-/** `GET /rooms/:id/preview`: name and member count, and nothing from the timeline. */
+/** `GET /rooms/:id/preview`: the name, and nothing from the timeline. */
 export const OpenRoomPreview = Schema.Struct({
   id: RoomId,
   name: Schema.String,
-  memberCount: Schema.Int,
 });
 
 export type OpenRoomPreview = typeof OpenRoomPreview.Type;
 
 export type OpenRoomPreviewPin = Assert<Pinned<typeof OpenRoomPreview, GeneratedOpenRoomPreview>>;
 
-/** `POST /rooms/:id/join`: the room once the viewer belongs to it, and their sidebar row. */
+/**
+ * `POST /rooms/:id/join`: the room once the viewer belongs to it. `row` is their sidebar row, or
+ * null when the membership is invisible and stays out of the sidebar.
+ */
 export const RoomJoin = Schema.Struct({
   detail: RoomDetail,
-  row: SidebarRow,
+  row: Schema.NullOr(SidebarRow),
 });
 
 export type RoomJoin = typeof RoomJoin.Type;

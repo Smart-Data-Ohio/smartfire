@@ -3,11 +3,11 @@
 /**
  * `GET /api/v1/rooms/:id/preview`: an alive open room the viewer may join
  * (`RoomsController#show`'s join preview). Rooms have no topic column; the classic page shows
- * the name. `memberCount` is `memberships.count`. The body has no messages. 404 for every other
- * room, the same refusal `GET /api/v1/rooms/:id` gives a nonmember.
+ * the name and nothing else. The body has no messages. 404 for every other room, the same
+ * refusal `GET /api/v1/rooms/:id` gives a nonmember.
  */
 export type OpenRoomPreview = { id: number,
 /**
  * `rooms.name`, or `""` when the room is unnamed (the classic heading is `#` plus this).
  */
-name: string, memberCount: number, };
+name: string, };

@@ -3,11 +3,6 @@ import type { OpenRoomPreview } from "../../gen/OpenRoomPreview.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 
-/** "3 members", or "1 member". */
-export function membersLabel(count: number): string {
-  return count === 1 ? "1 member" : `${count} members`;
-}
-
 interface JoinPreviewProps {
   readonly preview: OpenRoomPreview;
   readonly joining: boolean;
@@ -15,10 +10,7 @@ interface JoinPreviewProps {
   readonly onJoin: () => void;
 }
 
-/**
- * The classic join page: the channel's name, that you aren't a member, and Join. Rooms have no
- * topic, so the member count is the only extra fact.
- */
+/** The classic join page: the channel's name, that you aren't a member, and Join. */
 export function JoinPreview({ preview, joining, joinError, onJoin }: JoinPreviewProps) {
   const name = preview.name === "" ? "this channel" : `#${preview.name}`;
 
@@ -26,7 +18,6 @@ export function JoinPreview({ preview, joining, joinError, onJoin }: JoinPreview
     <section className="room room-error enter-fade" aria-label={`Join ${name}`}>
       <h1 className="text-title">{name}</h1>
       <p className="text-muted">You're not a member of this channel.</p>
-      <p className="text-muted">{membersLabel(preview.memberCount)}</p>
       {joinError === null ? null : <p className="text-muted">{joinError}</p>}
       <div className="room-error-actions">
         <Button variant="primary" loading={joining} onClick={onJoin}>
@@ -41,9 +32,11 @@ export function JoinPreview({ preview, joining, joinError, onJoin }: JoinPreview
 export function JoinRoom({
   roomId,
   preview,
+  focusMessageId,
 }: {
   readonly roomId: number;
   readonly preview: OpenRoomPreview;
+  readonly focusMessageId: number | null;
 }) {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -57,7 +50,7 @@ export function JoinRoom({
         setJoining(true);
         setJoinError(null);
 
-        void actions.joinOpenRoom(roomId).then(
+        void actions.joinOpenRoom(roomId, focusMessageId).then(
           () => undefined,
           (failure: Error) => {
             setJoining(false);

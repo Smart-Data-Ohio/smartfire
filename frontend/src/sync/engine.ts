@@ -12,7 +12,7 @@ import {
   Stream,
 } from "effect";
 import type { ApiClient } from "../api/client.ts";
-import { messages, room, sidebar, users } from "../api/endpoints.ts";
+import { messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
@@ -226,6 +226,26 @@ export class Engine extends Context.Service<
           roomRevision(roomId) === revision &&
           Predicate.isTagged(detail.failure, "NotFound")
         ) {
+          // A previewed room is not a membership: this 404 is expected. Reload the preview
+          // instead of treating the reconnect as lost access.
+          if (store.getState().rooms[roomId]?.preview != null) {
+            const preview = yield* Effect.result(openRoomPreview(roomId));
+
+            if (roomRevision(roomId) !== revision) {
+              return;
+            }
+
+            if (Result.isSuccess(preview)) {
+              mutations.setRoomPreview(roomId, preview.success);
+
+              return;
+            }
+
+            if (!Predicate.isTagged(preview.failure, "NotFound")) {
+              return;
+            }
+          }
+
           markRoomsChanged([roomId]);
           mutations.setRoomUnavailable(roomId);
           mutations.setPageFailed(roomId);
