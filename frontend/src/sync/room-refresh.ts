@@ -87,6 +87,29 @@ export function onRoomRefresh(roomId: number, listener: Listener): () => void {
   };
 }
 
+const rereads = new Set<number>();
+
+/**
+ * One fresh read after a room response lost to a newer membership fact. Further losses for that
+ * room share it, so a burst of rejections is one GET, not one per event.
+ */
+export function holdRoomReread(roomId: number): boolean {
+  if (rereads.has(roomId)) return false;
+
+  rereads.add(roomId);
+
+  return true;
+}
+
+export function releaseRoomReread(roomId: number): void {
+  rereads.delete(roomId);
+}
+
+/** Test isolation. A rejected read's re-read outlives the store. */
+export function resetRoomRereads(): void {
+  rereads.clear();
+}
+
 /** Once per room in a batch, including hidden removals whose membership is still readable. */
 export function roomRefreshIds(events: readonly SyncEvent[]): readonly number[] {
   const ids = new Set<number>();

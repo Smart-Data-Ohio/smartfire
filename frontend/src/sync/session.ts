@@ -4,6 +4,7 @@
  */
 import { Clock, Effect, Option, Predicate, Result } from "effect";
 import { readBoot } from "../api/boot.ts";
+import type { ApiClient } from "../api/client.ts";
 import {
   me,
   messages,
@@ -28,7 +29,15 @@ import {
 import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
+import {
+  changedSince,
+  holdRoomReread,
+  invalidateRoom,
+  managementEpoch,
+  releaseRoomReread,
+  resetRoomRereads,
+  roomRevision,
+} from "./room-refresh.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -69,6 +78,7 @@ function sameVisit(roomId: number, token: number): boolean {
 export function resetRoomVisits(): void {
   visits.clear();
   resetJoinState();
+  resetRoomRereads();
   nextVisitToken = 0;
   nextLoad = 0;
 }
@@ -187,6 +197,14 @@ function currentJoinDetail(roomId: number): RoomDetail | null {
 }
 
 /**
+ * The read lost to a membership fact that arrived while it was in flight. One later read, with a
+ * new sequence, fills what that fact did not (member counts, or the first detail). A burst shares
+ * it. Confirmed mutations are not reads and do not come through here.
+ */
+let retryRejectedLoad: (roomId: number, token: number) => Effect.Effect<void, never, ApiClient> =
+  () => Effect.void;
+
+/**
  * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
  * room is unavailable. A preview applies only when its load is still the visit's latest. An older
  * room outcome cannot replace a newer one. Cached membership never overrides a 404, except detail
@@ -210,9 +228,13 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   if (Result.isSuccess(loaded)) {
-    if (mutations.setRoomDetail(loaded.success, started)) {
+    const detail = withSidebarRow(loaded.success, store.getState().sidebar.rows[roomId]);
+
+    if (mutations.setRoomDetail(detail, started)) {
       clearRoomJoin(roomId);
-      yield* loadTimeline(roomId, token, loaded.success);
+      yield* loadTimeline(roomId, token, detail);
+    } else {
+      yield* retryRejectedLoad(roomId, token);
     }
 
     return;
@@ -258,6 +280,14 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   mutations.setRoomError(roomId, loaded.failure.message);
+});
+
+retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token) || !holdRoomReread(roomId)) return;
+
+  yield* loadRoom(roomId, token).pipe(
+    Effect.ensuring(Effect.sync(() => releaseRoomReread(roomId))),
+  );
 });
 
 /** The sidebar row's facts win over a room read that raced a rename or a membership change. */

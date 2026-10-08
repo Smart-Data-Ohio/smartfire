@@ -112,17 +112,33 @@ function landRoom(roomId: number, started: number, change: (state: State) => Sta
   return true;
 }
 
-/** A socket membership change names one room; other events do not. */
-function confirmedMembershipRoom(event: SyncEvent): number | null {
-  if (event.type === "sidebar.row.removed") {
-    return event.data.roomId;
+function sameMembers(left: readonly number[], right: readonly number[]): boolean {
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) return false;
   }
 
-  if (event.type === "sidebar.row.upserted") {
-    return event.data.room.id;
-  }
+  return true;
+}
 
-  return null;
+/**
+ * Involvement, the membership itself, or who a direct row names. Unread, category, favourite
+ * order and a rename do not count: those must not retire a room read.
+ */
+function membershipChanged(previous: SidebarRow | undefined, row: SidebarRow): boolean {
+  if (previous === undefined) return true;
+
+  const before = previous.membership;
+  const after = row.membership;
+
+  return (
+    before.id !== after.id ||
+    before.userId !== after.userId ||
+    before.involvement !== after.involvement ||
+    before.stageRole !== after.stageRole ||
+    !sameMembers(previous.directMemberIds, row.directMemberIds)
+  );
 }
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
@@ -241,19 +257,29 @@ export const mutations = {
   discardPending: (clientMessageId: string) =>
     apply((state) => reduce.discardPending(state, clientMessageId)),
   applyEvents: (events: readonly SyncEvent[], now: number) => {
-    for (const event of events) {
-      const roomId = confirmedMembershipRoom(event);
+    let held = { ...store.getState().sidebar.rows };
 
-      if (roomId === null) {
+    for (const event of events) {
+      if (event.type === "sidebar.row.removed") {
+        // Access changed at delivery, so a read that started earlier must not restore the room.
+        claimRoomOutcome(event.data.roomId, beginRoomRequest());
+        clearRoomJoin(event.data.roomId);
+
+        const { [event.data.roomId]: _removed, ...rest } = held;
+
+        held = rest;
         continue;
       }
 
-      // Confirmed at delivery, so a read that started earlier must not overwrite it.
-      claimRoomOutcome(roomId, beginRoomRequest());
+      if (event.type !== "sidebar.row.upserted") continue;
 
-      if (event.type === "sidebar.row.removed") {
-        clearRoomJoin(roomId);
+      const row = event.data;
+
+      if (membershipChanged(held[row.room.id], row)) {
+        claimRoomOutcome(row.room.id, beginRoomRequest());
       }
+
+      held[row.room.id] = row;
     }
 
     apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now)));

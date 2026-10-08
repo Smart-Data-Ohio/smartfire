@@ -31,9 +31,11 @@ import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
 import {
+  holdRoomReread,
   invalidateRoom,
   markRoomsChanged,
   markSidebarSnapshot,
+  releaseRoomReread,
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
@@ -164,24 +166,28 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   return [...missing];
 }
 
-function landRefreshedRoom(detail: RoomDetail, revision: number, started: number): void {
+function landRefreshedRoom(
+  detail: RoomDetail,
+  revision: number,
+  started: number,
+): "applied" | "skipped" | "rejected" {
   const state = store.getState();
   const roomId = detail.room.id;
   const view = state.rooms[roomId];
 
   if (roomRevision(roomId) !== revision || view == null) {
-    return;
+    return "skipped";
   }
 
   // Unavailable, or a join preview, has no detail this refresh may replace. A first load does.
   if (view.detail == null && view.status !== "loading") {
-    return;
+    return "skipped";
   }
 
   // A read/unread or placement row may have landed while this request was pending.
   const row = state.sidebar.rows[roomId];
 
-  mutations.setRoomDetail(
+  const landed = mutations.setRoomDetail(
     row === undefined
       ? detail
       : {
@@ -193,6 +199,8 @@ function landRefreshedRoom(detail: RoomDetail, revision: number, started: number
         },
     started,
   );
+
+  return landed ? "applied" : "rejected";
 }
 
 /**
@@ -228,6 +236,13 @@ export class Engine extends Context.Service<
         through: Number.NEGATIVE_INFINITY,
       });
 
+      /**
+       * A refresh lost to a membership fact. One later read, at the room's current revision and a
+       * new sequence, replaces it. A burst of losses shares that read. The fact itself is not read
+       * again.
+       */
+      let retryRejectedRefresh: (roomId: number) => Effect.Effect<void> = () => Effect.void;
+
       /** Refetch room metadata at its current management revision, including lost access. */
       const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
         const started = beginRoomRequest();
@@ -235,7 +250,10 @@ export class Engine extends Context.Service<
 
         if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
           markRoomsChanged([roomId]);
-          landRefreshedRoom(detail.success, revision, started);
+
+          if (landRefreshedRoom(detail.success, revision, started) === "rejected") {
+            yield* retryRejectedRefresh(roomId);
+          }
         } else if (
           Result.isFailure(detail) &&
           roomRevision(roomId) === revision &&
@@ -514,8 +532,10 @@ export class Engine extends Context.Service<
 
         return room(roomId).pipe(
           Effect.tap((detail) =>
-            Effect.sync(() => {
-              landRefreshedRoom(detail, revision, started);
+            Effect.gen(function* () {
+              if (landRefreshedRoom(detail, revision, started) === "rejected") {
+                yield* retryRejectedRefresh(roomId);
+              }
             }),
           ),
           Effect.catch((error) =>
@@ -532,6 +552,14 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
       };
+
+      retryRejectedRefresh = Effect.fnUntraced(function* (roomId: number) {
+        if (!holdRoomReread(roomId)) return;
+
+        yield* refreshRoom(roomId, roomRevision(roomId)).pipe(
+          Effect.ensuring(Effect.sync(() => releaseRoomReread(roomId))),
+        );
+      });
 
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (
