@@ -18,6 +18,7 @@ fn boot() -> Boot {
         theme: theme(Some("dark")),
         text_size: text_size(None),
         cable_url: "/cable".into(),
+        service_worker_url: Some("/app/service-worker.js".into()),
         version: "1.2.3".into(),
         flash: None,
         revision: Some("0123abc".into()),
@@ -150,6 +151,8 @@ fn embedding_keeps_servable_files_with_their_types_and_cache_policy() {
             ("assets/unhashed.js", "text/javascript; charset=utf-8", false),
             ("assets/vendor-Q1w2E3r4.js", "text/javascript; charset=utf-8", true),
             ("favicon.svg", "image/svg+xml", false),
+            ("offline.html", "text/html; charset=utf-8", false),
+            ("service-worker.js", "text/javascript; charset=utf-8", false),
         ],
         "index.html is the template, .vite/ and dotfiles are build metadata, and Vite's .br/.gz \
          are encodings of the file beside them"
@@ -243,6 +246,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <meta name=\"turbo-visit-control\" content=\"reload\" />\n\
+         <link rel=\"manifest\" href=\"/app/manifest.webmanifest\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
@@ -257,6 +261,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
             "theme": "dark",
             "textSize": "default",
             "cableUrl": "/cable",
+            "serviceWorkerUrl": "/app/service-worker.js",
             "version": "1.2.3",
             "revision": "0123abc",
         })
@@ -316,6 +321,24 @@ fn the_image_build_embeds_its_own_dist_and_tracks_it_by_content() {
     let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
     let digest = build_step.find("export SPA_DIST_DIGEST=").expect("the cargo build step exports SPA_DIST_DIGEST");
     assert!(Some(digest) < build_step.find("cargo build"));
+}
+
+#[test]
+fn pwa_worker_and_offline_page_are_files_while_only_index_is_the_shell() {
+    let files = fixture();
+    let offline = find(files, "offline.html").unwrap();
+    assert_eq!(offline.content_type, "text/html; charset=utf-8");
+    assert!(!offline.immutable);
+    assert!(std::str::from_utf8(offline.identity).unwrap().contains("/app/assets/index-B2x8Kq1f.js"));
+    let worker = find(files, "service-worker.js").unwrap();
+    assert_eq!(worker.content_type, "text/javascript; charset=utf-8");
+    assert!(!worker.immutable);
+    assert!(find(files, "index.html").is_none());
+    if built() {
+        for path in ["offline.html", "service-worker.js"] {
+            assert!(file(path, None).is_some(), "the built PWA emits {path}");
+        }
+    }
 }
 
 #[test]

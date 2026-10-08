@@ -109,6 +109,25 @@ export function spaUrlFor(path: string, search = ""): string | null {
   return null;
 }
 
+/** A same-origin notification path's ported SPA URL, retaining its query and fragment. */
+export function classicToSpaUrl(path: string, origin: string): string | null {
+  let url: URL;
+
+  try {
+    url = new URL(path, origin);
+
+    if (url.origin !== new URL(origin).origin) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const mapped = spaUrlFor(url.pathname);
+
+  return mapped === null ? null : `${mapped}${url.search}${url.hash}`;
+}
+
 /**
  * The classic URL of an SPA `path` (`/app/r/12` is `/rooms/12`), ported or not, else `null`:
  * where a destination the SPA hasn't built opens, with a full page load.

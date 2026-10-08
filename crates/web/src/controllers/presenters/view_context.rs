@@ -127,6 +127,13 @@ impl Layout {
             || c.cookies
                 .get("enable_service_worker")
                 .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
+        // Without the SPA the layout stays the Rails layout, and its scripts register the classic
+        // worker as Rails does; with it, the head names the worker for the effective UI.
+        chrome.service_worker_url = if app.config.spa_enabled {
+            Some(concerns::service_worker_url(concerns::effective_ui(c).await?))
+        } else {
+            None
+        };
         chrome.huddle_configured = app.config.huddle.configured();
         chrome.global_search_query = if c.request.path().starts_with("/searches") {
             crate::controllers::presenters::params::display_query(c)
@@ -204,7 +211,12 @@ impl Layout {
             platform: self.platform.clone(),
             vapid_public_key: self.vapid_public_key.clone(),
             asset_path: &asset_path,
-            importmap_tags: campfire_assets::javascript_importmap_tags(),
+            // A head that names a worker loads the scripts that read it; otherwise the Rails map.
+            importmap_tags: if self.chrome.service_worker_url.is_some() {
+                campfire_assets::javascript_importmap_tags_selecting_worker()
+            } else {
+                campfire_assets::javascript_importmap_tags()
+            },
             stylesheet_tags: &stylesheets.html,
             custom_styles: self.custom_styles.clone(),
             cable_url: "/cable".into(),
