@@ -1,18 +1,27 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
-import { Deferred, Effect, Fiber } from "effect";
+import { Deferred, Effect, Fiber, Layer } from "effect";
 import { ServerError } from "../api/errors.ts";
 import { FakeApi, messageFixture, pageFixture } from "../api/testing.ts";
 import { threadDetailFixture } from "../features/work/test-fixtures.ts";
 import { mutations, store } from "../store/store.ts";
+import { SyncLink } from "./link.ts";
 import * as threads from "./thread-actions.ts";
+import { Topics } from "./topics.ts";
+import { Typing } from "./typing.ts";
 
 const THREAD = 70;
+
+const OTHER = 71;
 
 const ROOM = 4;
 
 const reply = (id: number) => messageFixture(id, ROOM, { threadId: THREAD });
 
 const timeline = () => store.getState().threadTimelines[THREAD];
+
+const navigation = Layer.mergeAll(Topics.layer, Typing.layer).pipe(
+  Layer.provideMerge(Layer.mergeAll(SyncLink.layer, FakeApi.layerClient)),
+);
 
 describe("thread reply paging", () => {
   afterEach(() => mutations.reset());
@@ -152,6 +161,7 @@ describe("thread reply paging", () => {
       const fake = yield* FakeApi;
       const olderStarted = yield* Deferred.make<void>();
       const newerStarted = yield* Deferred.make<void>();
+      const releaseOlder = yield* Deferred.make<void>();
       const releaseNewer = yield* Deferred.make<void>();
 
       mutations.applyThreadPage(THREAD, pageFixture([reply(5)], 4, 5), "replace");
@@ -159,6 +169,7 @@ describe("thread reply paging", () => {
       yield* fake.route(`GET /threads/${THREAD}/messages`, (request) => {
         if (request.query?.before !== undefined) {
           return Deferred.succeed(olderStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseOlder)),
             Effect.andThen(Effect.fail(new ServerError({ status: 500, message: "nope" }))),
           );
         }
@@ -174,6 +185,7 @@ describe("thread reply paging", () => {
 
       yield* Deferred.await(olderStarted);
       yield* Deferred.await(newerStarted);
+      yield* Deferred.succeed(releaseOlder, undefined);
       yield* Fiber.join(older);
 
       expect(timeline()?.loadingOlder).toBe(false);
@@ -340,4 +352,245 @@ describe("thread reply paging", () => {
       expect(timeline()?.ids).toEqual([8, 9]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
+
+  it.effect("a page started before switching threads does not clear the one issued on return", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      const returned = yield* Deferred.make<void>();
+      const releaseReturn = yield* Deferred.make<void>();
+
+      mutations.applyThreadPage(THREAD, pageFixture([reply(5)], 4, null), "replace");
+      yield* fake.reply(`GET /threads/${THREAD}`, threadDetailFixture(THREAD, null, null));
+      yield* fake.reply(`GET /threads/${OTHER}`, threadDetailFixture(OTHER, null, null));
+      yield* fake.reply(
+        `GET /threads/${OTHER}/messages`,
+        pageFixture([messageFixture(30, ROOM, { threadId: OTHER })], null, null),
+      );
+      yield* fake.route(`GET /threads/${THREAD}/messages`, (request) => {
+        if (request.query?.before === "4") {
+          return Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as(pageFixture([reply(1)], null, 5)),
+          );
+        }
+
+        if (request.query?.before === "8") {
+          return Deferred.succeed(returned, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseReturn)),
+            Effect.as(pageFixture([reply(8)], null, 9)),
+          );
+        }
+
+        return Effect.succeed(pageFixture([reply(9)], 8, null));
+      });
+
+      const older = yield* Effect.forkChild(threads.loadOlder(THREAD));
+
+      yield* Deferred.await(started);
+      yield* threads.close(THREAD);
+      yield* threads.open(OTHER);
+      yield* threads.close(OTHER);
+      yield* threads.open(THREAD);
+
+      const again = yield* Effect.forkChild(threads.loadOlder(THREAD));
+
+      yield* Deferred.await(returned);
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(older);
+
+      expect(timeline()?.loadingOlder).toBe(true);
+      expect(timeline()?.ids).toEqual([9]);
+      expect(timeline()?.before).toBe(8);
+
+      yield* Deferred.succeed(releaseReturn, undefined);
+      yield* Fiber.join(again);
+
+      expect(timeline()?.loadingOlder).toBe(false);
+      expect(timeline()?.ids).toEqual([8, 9]);
+      expect(timeline()?.before).toBeNull();
+    }).pipe(Effect.provide(navigation)),
+  );
+
+  it.effect("a stale failure leaves the request that replaced it running", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const started = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      const returned = yield* Deferred.make<void>();
+      const releaseReturn = yield* Deferred.make<void>();
+
+      mutations.applyThreadPage(THREAD, pageFixture([reply(5)], 4, null), "replace");
+      yield* fake.reply(`GET /threads/${THREAD}`, threadDetailFixture(THREAD, null, null));
+      yield* fake.route(`GET /threads/${THREAD}/messages`, (request) => {
+        if (request.query?.before === "4") {
+          return Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.andThen(Effect.fail(new ServerError({ status: 500, message: "nope" }))),
+          );
+        }
+
+        if (request.query?.before === "8") {
+          return Deferred.succeed(returned, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseReturn)),
+            Effect.as(pageFixture([reply(8)], null, 9)),
+          );
+        }
+
+        return Effect.succeed(pageFixture([reply(9)], 8, null));
+      });
+
+      const older = yield* Effect.forkChild(threads.loadOlder(THREAD));
+
+      yield* Deferred.await(started);
+      yield* threads.reload(THREAD, null);
+
+      const again = yield* Effect.forkChild(threads.loadOlder(THREAD));
+
+      yield* Deferred.await(returned);
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(older);
+
+      expect(timeline()?.loadingOlder).toBe(true);
+      expect(timeline()?.ids).toEqual([9]);
+      expect(timeline()?.before).toBe(8);
+
+      yield* Deferred.succeed(releaseReturn, undefined);
+      yield* Fiber.join(again);
+
+      expect(timeline()?.loadingOlder).toBe(false);
+      expect(timeline()?.ids).toEqual([8, 9]);
+      expect(timeline()?.before).toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("a page that arrives while a replacement is still pending is dropped", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const olderStarted = yield* Deferred.make<void>();
+      const newerStarted = yield* Deferred.make<void>();
+      const replacing = yield* Deferred.make<void>();
+      const releaseOlder = yield* Deferred.make<void>();
+      const releaseNewer = yield* Deferred.make<void>();
+      const releaseReplace = yield* Deferred.make<void>();
+
+      mutations.applyThreadPage(THREAD, pageFixture([reply(5)], 4, 5), "replace");
+      yield* fake.reply(`GET /threads/${THREAD}`, threadDetailFixture(THREAD, null, null));
+      yield* fake.route(`GET /threads/${THREAD}/messages`, (request) => {
+        if (request.query?.before !== undefined) {
+          return Deferred.succeed(olderStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseOlder)),
+            Effect.as(pageFixture([reply(4)], null, 5)),
+          );
+        }
+
+        if (request.query?.after !== undefined) {
+          return Deferred.succeed(newerStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseNewer)),
+            Effect.as(pageFixture([reply(6)], 5, null)),
+          );
+        }
+
+        return Deferred.succeed(replacing, undefined).pipe(
+          Effect.andThen(Deferred.await(releaseReplace)),
+          Effect.as(pageFixture([reply(9)], 8, null)),
+        );
+      });
+
+      const older = yield* Effect.forkChild(threads.loadOlder(THREAD));
+      const newer = yield* Effect.forkChild(threads.loadNewer(THREAD));
+
+      yield* Deferred.await(olderStarted);
+      yield* Deferred.await(newerStarted);
+
+      const replaced = yield* Effect.forkChild(threads.reload(THREAD, null));
+
+      yield* Deferred.await(replacing);
+      yield* Deferred.succeed(releaseNewer, undefined);
+      yield* Fiber.join(newer);
+
+      expect(timeline()?.loadingNewer).toBe(true);
+      expect(timeline()?.loadingOlder).toBe(true);
+      expect(timeline()?.ids).toEqual([5]);
+
+      yield* Deferred.succeed(releaseReplace, undefined);
+      yield* Fiber.join(replaced);
+
+      expect(timeline()?.ids).toEqual([9]);
+      expect(timeline()?.before).toBe(8);
+      expect(timeline()?.loadingOlder).toBe(false);
+      expect(timeline()?.loadingNewer).toBe(false);
+
+      yield* Deferred.succeed(releaseOlder, undefined);
+      yield* Fiber.join(older);
+
+      expect(timeline()?.ids).toEqual([9]);
+      expect(timeline()?.before).toBe(8);
+      expect(timeline()?.loadingOlder).toBe(false);
+      expect(timeline()?.loadingNewer).toBe(false);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  for (const first of ["older", "newer"] as const) {
+    it.effect(`both pages land when the ${first} one finishes first`, () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const olderStarted = yield* Deferred.make<void>();
+        const newerStarted = yield* Deferred.make<void>();
+        const releaseOlder = yield* Deferred.make<void>();
+        const releaseNewer = yield* Deferred.make<void>();
+
+        mutations.applyThreadPage(THREAD, pageFixture([reply(5)], 4, 5), "replace");
+
+        yield* fake.route(`GET /threads/${THREAD}/messages`, (request) => {
+          if (request.query?.before !== undefined) {
+            return Deferred.succeed(olderStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseOlder)),
+              Effect.as(pageFixture([reply(4)], null, 5)),
+            );
+          }
+
+          return Deferred.succeed(newerStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseNewer)),
+            Effect.as(pageFixture([reply(6)], 5, null)),
+          );
+        });
+
+        const older = yield* Effect.forkChild(threads.loadOlder(THREAD));
+        const newer = yield* Effect.forkChild(threads.loadNewer(THREAD));
+
+        yield* Deferred.await(olderStarted);
+        yield* Deferred.await(newerStarted);
+
+        if (first === "older") {
+          yield* Deferred.succeed(releaseOlder, undefined);
+          yield* Fiber.join(older);
+
+          expect(timeline()?.loadingOlder).toBe(false);
+          expect(timeline()?.loadingNewer).toBe(true);
+          expect(timeline()?.ids).toEqual([4, 5]);
+
+          yield* Deferred.succeed(releaseNewer, undefined);
+          yield* Fiber.join(newer);
+        } else {
+          yield* Deferred.succeed(releaseNewer, undefined);
+          yield* Fiber.join(newer);
+
+          expect(timeline()?.loadingOlder).toBe(true);
+          expect(timeline()?.loadingNewer).toBe(false);
+          expect(timeline()?.ids).toEqual([5, 6]);
+
+          yield* Deferred.succeed(releaseOlder, undefined);
+          yield* Fiber.join(older);
+        }
+
+        expect(timeline()?.loadingOlder).toBe(false);
+        expect(timeline()?.loadingNewer).toBe(false);
+        expect(timeline()?.ids).toEqual([4, 5, 6]);
+        expect(timeline()?.before).toBeNull();
+        expect(timeline()?.after).toBeNull();
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+  }
 });
