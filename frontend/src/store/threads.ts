@@ -2,7 +2,7 @@
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadIndicatorChanged } from "../gen/ThreadIndicatorChanged.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
-import { boardThreadChanged, removeBoardPost } from "./boards.ts";
+import { boardThreadChanged, mergeSteps, removeBoardPost } from "./boards.ts";
 import { reconcileMessage } from "./cards.ts";
 import type { Thread, ThreadFilter, ThreadMembership } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
@@ -58,14 +58,34 @@ export function upsertThread(state: State, thread: Thread): State {
 }
 
 /** Forgets that `threadId` was removed: an HTTP load just showed it. */
-export function revive(state: State, threadId: number): State {
-  if (state.removedThreads[threadId] === undefined) {
+export function revive(state: State, threadId: number, since: number): State {
+  const removed = state.removedThreads[threadId];
+
+  // A reply to a request sent before the removal says nothing about the thread now.
+  if (removed === undefined || removed > since) {
     return state;
   }
 
   const { [threadId]: _lifted, ...removedThreads } = state.removedThreads;
 
   return { ...state, removedThreads };
+}
+
+/** The most removals remembered; enough to cover any reply still in flight. */
+export const MAX_REMOVED_THREADS = 500;
+
+function tombstone(
+  removed: Readonly<Record<number, number>>,
+  threadId: number,
+  count: number,
+): Readonly<Record<number, number>> {
+  const entries = Object.entries({ ...removed, [threadId]: count });
+
+  return Object.fromEntries(
+    entries.length <= MAX_REMOVED_THREADS
+      ? entries
+      : entries.sort(([, a], [, b]) => b - a).slice(0, MAX_REMOVED_THREADS),
+  );
 }
 
 /** A moderator deleted the thread: it leaves the lists, its pane says so, the indicator goes. */
@@ -78,7 +98,8 @@ export function removeThread(state: State, threadId: number, roomId: number): St
 
   return {
     ...removeBoardPost(state, roomId, threadId),
-    removedThreads: { ...state.removedThreads, [threadId]: true },
+    removedThreads: tombstone(state.removedThreads, threadId, state.removalCount + 1),
+    removalCount: state.removalCount + 1,
     threads,
     threadPanes: {
       ...state.threadPanes,
@@ -180,13 +201,30 @@ export function setThreadPaneError(state: State, threadId: number, error: string
   };
 }
 
-/** `GET /threads/:id` landed: the record, the viewer's membership, the parent and permissions. */
-export function loadThreadDetail(state: State, detail: ThreadDetail): State {
+/**
+ * `GET /threads/:id` (or a write that answers the thread) landed: the record, the viewer's
+ * membership, the parent and permissions. `since` is the `removalCount` when the request was
+ * sent: a reply to a request sent after the thread's removal lifts it; an older one is dropped.
+ * Agent steps merge with the ones held, by `updatedAt`, since `agent.steps` may be newer.
+ */
+export function loadThreadDetail(state: State, detail: ThreadDetail, since: number): State {
   const threadId = detail.thread.id;
+  const revived = revive(state, threadId, since);
+
+  if (revived.removedThreads[threadId] !== undefined) {
+    return state;
+  }
+
   const parent = detail.parentMessage;
   const held = parent === null ? undefined : state.messages[parent.id];
-  // A fresh load that answers the thread is the one thing that lifts its removal.
-  const next = upsertThread(revive(state, threadId), detail.thread);
+  const next = upsertThread(revived, detail.thread);
+  const heldWork = state.threadPanes[threadId]?.work;
+
+  const work =
+    detail.work === null || heldWork == null
+      ? detail.work
+      : { ...detail.work, steps: mergeSteps(heldWork.steps, detail.work.steps) };
+
   const kept = parent === null ? undefined : reconcileMessage(held, parent, true);
 
   return {
@@ -201,7 +239,7 @@ export function loadThreadDetail(state: State, detail: ThreadDetail): State {
         status: "ready",
         error: null,
         permissions: detail.permissions,
-        work: detail.work,
+        work,
         workFacts: detail.thread.work,
       },
     },

@@ -160,12 +160,16 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail) =>
-    apply((state) => threads.loadThreadDetail(state, detail)),
+  /** `since`: the state's `removalCount` when the request was sent (see `loadThreadDetail`). */
+  loadThreadDetail: (detail: ThreadDetail, since: number) =>
+    apply((state) => threads.loadThreadDetail(state, detail, since)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
-  threadCreated: (created: ThreadCreated) =>
+  threadCreated: (created: ThreadCreated, since: number) =>
     apply((state) =>
-      reduce.receiveMessage(threads.loadThreadDetail(state, created.detail), created.message),
+      reduce.receiveMessage(
+        threads.loadThreadDetail(state, created.detail, since),
+        created.message,
+      ),
     ),
   upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
