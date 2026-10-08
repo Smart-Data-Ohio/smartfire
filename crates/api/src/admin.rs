@@ -469,12 +469,11 @@ fn save_branding(
                 .is_some();
         }
     }
+    blob.metadata.merge(&prepared.blob.metadata);
     blob.metadata.set(
         branding::ANIMATED_KEY,
         campfire_storage::Json::Bool(animated),
     );
-    blob.metadata
-        .set("identified", campfire_storage::Json::Bool(true));
     tx.conn().execute(
         "UPDATE active_storage_blobs SET content_type = ?1, metadata = ?2 WHERE id = ?3",
         rusqlite::params![prepared.blob.content_type, blob.metadata.encode(), blob.id],

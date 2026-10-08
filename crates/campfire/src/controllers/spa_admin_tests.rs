@@ -706,8 +706,23 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     else {
         return;
     };
-    // The API additionally validates the image and stores its animation decision. The
-    // attachment, audit, jobs and publications still match the classic lifecycle exactly.
+    // The API's bounded validation supplies analyzer metadata, so only the classic
+    // assignment enqueues analysis. Both still enqueue the same purge on removal.
+    let spa_blob: Value = spa_side.rows["active_storage_blobs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| serde_json::from_str::<Value>(row.as_str().unwrap()).unwrap())
+        .find(|blob| blob["filename"] == "logo.png")
+        .unwrap();
+    let spa_metadata: Value = serde_json::from_str(spa_blob["metadata"].as_str().unwrap()).unwrap();
+    assert_eq!(
+        spa_metadata,
+        json!({
+            "identified": true, "width": 64, "height": 64, "analyzed": true,
+            "branding_animated": false, "branding": true,
+        })
+    );
     let mut logos = 0;
     for row in classic_side.rows["active_storage_blobs"]
         .as_array_mut()
@@ -715,22 +730,40 @@ async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     {
         let mut blob: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
         if blob["filename"] == "logo.png" {
-            let mut metadata =
-                campfire_storage::Json::parse(blob["metadata"].as_str().unwrap()).unwrap();
-            assert_eq!(metadata.get(campfire_storage::branding::ANIMATED_KEY), None);
-            metadata.set(
-                campfire_storage::branding::ANIMATED_KEY,
-                campfire_storage::Json::Bool(false),
-            );
-            blob["metadata"] = json!(metadata.encode());
+            let metadata: Value = serde_json::from_str(blob["metadata"].as_str().unwrap()).unwrap();
+            assert_eq!(metadata, json!({"identified": true, "branding": true}));
+            assert_eq!(blob["id"], spa_blob["id"]);
+            blob["metadata"] = spa_blob["metadata"].clone();
             *row = json!(blob.to_string());
             logos += 1;
         }
     }
     assert_eq!(logos, 1);
+    let classic_jobs = classic_side.rows["background_jobs"].as_array_mut().unwrap();
+    assert_eq!(classic_jobs.len(), 2);
+    let analysis = classic_jobs
+        .iter()
+        .position(|row| {
+            let job: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
+            job["job_class"] == "ActiveStorage::AnalyzeJob"
+        })
+        .unwrap();
+    let analysis: Value =
+        serde_json::from_str(classic_jobs.remove(analysis).as_str().unwrap()).unwrap();
+    let arguments: Value = serde_json::from_str(analysis["arguments"].as_str().unwrap()).unwrap();
+    assert_eq!(arguments, json!({"blob_id": spa_blob["id"]}));
+    assert_eq!(
+        spa_side.rows["background_jobs"].as_array().unwrap().len(),
+        1
+    );
+    let mut purge: Value = serde_json::from_str(classic_jobs[0].as_str().unwrap()).unwrap();
+    assert_eq!(purge["job_class"], "ActiveStorage::PurgeJob");
+    // Skipping the analysis enqueue also skips its autoincremented job ID.
+    purge["id"] = json!(purge["id"].as_i64().unwrap() - 1);
+    classic_jobs[0] = json!(purge.to_string());
     assert_eq!(
         spa_side.rows, classic_side.rows,
-        "rows including the stored static flag"
+        "rows including prepared metadata and the shared purge lifecycle"
     );
     assert_eq!(spa_side.frames, classic_side.frames, "frames");
 

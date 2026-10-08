@@ -152,7 +152,19 @@ pub fn attach_existing(
     name: &str,
     blob: Blob,
 ) -> campfire_db::Result<()> {
-    let blob = save_existing(tx, blob)?;
+    let mut blob = save_existing(tx, blob)?;
+    if record.record_type == "Account"
+        && matches!(name, "logo" | "banner")
+        && campfire_storage::analyze::Analyzer::for_content_type(blob.content_type())
+            .analyze_later()
+    {
+        blob.metadata.set(
+            campfire_storage::branding::METADATA_KEY,
+            campfire_storage::Json::Bool(true),
+        );
+        blob.update_metadata(tx.conn(), blob.metadata.clone())
+            .map_err(storage_error)?;
+    }
     if attached_blob(tx.conn(), record.record_type, record.id, name)?
         .is_some_and(|attached| attached.id == blob.id)
     {

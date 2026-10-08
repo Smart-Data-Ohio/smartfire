@@ -12,6 +12,9 @@ use crate::controllers::presenters::test_support::{DAVID, JASON, KEVIN, TestApp}
 // These tests inspect the process-wide branding limiter and install deadline hooks.
 static BRANDING_TESTS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
+#[path = "spa_workspace_branding_analysis_tests.rs"]
+mod analysis_tests;
+
 /// Two 1x1 frames, black then white, looping forever.
 fn animated_gif() -> Vec<u8> {
     gif_with_canvas(1, 1, 2)
@@ -1161,7 +1164,23 @@ async fn spa_workspace_branding_legacy_byte_cap_skips_decode_and_uses_existing_f
         .unwrap();
     let boot: Value = parse(&admin.get("/api/v1/boot").await);
     // Both the recorded blob size and the actual file size must refuse input before libvips.
-    for declared_size in [campfire_storage::branding::MAX_BYTES as i64 + 1, 1] {
+    for (declared_size, disk_size) in [
+        (
+            campfire_storage::branding::MAX_BYTES as i64 + 1,
+            bytes.len(),
+        ),
+        (1, bytes.len()),
+        (
+            campfire_storage::branding::MAX_BYTES as i64 + 1,
+            png(2, 2, false).len(),
+        ),
+    ] {
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(a.booted.app.storage.service.path_for(&key))
+            .unwrap()
+            .set_len(disk_size as u64)
+            .unwrap();
         a.db()
             .write(move |tx| {
                 tx.conn().execute(

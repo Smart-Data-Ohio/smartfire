@@ -17,6 +17,8 @@ pub const MAX_BYTES: u64 = 10 * 1024 * 1024;
 pub const MAX_ANIMATION_PIXELS: u64 = 100_000_000;
 pub const MAX_LEGACY_PIXELS: u64 = 100_000_000;
 pub const ANIMATED_KEY: &str = "branding_animated";
+/// Retain the purpose after replacement detaches a blob whose analysis is still queued.
+pub const METADATA_KEY: &str = "branding";
 
 /// Includes waiting for the branding slot, header probing and pixel evaluation.
 pub fn processing_timeout(_blob: &Blob) -> Duration {
@@ -108,6 +110,9 @@ pub fn prepare(
     let (image, content_type) = header(&path, kind, cancel)?;
     blob.content_type = Some(content_type.to_owned());
     blob.metadata.set("identified", Json::Bool(true));
+    blob.metadata
+        .merge(&crate::analyze::image_dimensions(&image));
+    blob.metadata.set("analyzed", Json::Bool(true));
     let pages = if matches!(content_type, "image/gif" | "image/webp") {
         image
             .get_string("n-pages")
@@ -128,6 +133,25 @@ pub fn prepare(
     Ok(Prepared { blob, still })
 }
 
+/// Legacy branding analysis reads bounded headers directly, without `Storage::open`'s copy.
+/// It keeps legacy animation semantics: only a validated upload opts into animation.
+pub fn analyzed_metadata(
+    storage: &Storage,
+    blob: &Blob,
+    cancel: &Cancellation,
+) -> crate::Result<Json> {
+    configure_cancellation(blob, cancel);
+    cancel.check()?;
+    let mut metadata = if blob.content_type().starts_with("image") {
+        crate::analyze::image_dimensions(&legacy_image(storage, blob, cancel)?)
+    } else {
+        Json::object()
+    };
+    cancel.check()?;
+    metadata.set("analyzed", Json::Bool(true));
+    Ok(metadata)
+}
+
 /// Older/classic attachments retain the classic variable formats and first-page conversion,
 /// with a larger pixel budget. API uploads retain their strict validation on cache misses.
 pub fn transform_variant(
@@ -143,23 +167,31 @@ pub fn transform_variant(
         if !blob.is_variable() {
             return Err(crate::Error::Invariable(blob.content_type().to_owned()));
         }
-        if blob.byte_size > MAX_BYTES as i64 || std::fs::metadata(&path)?.len() > MAX_BYTES {
-            return Err(crate::Error::Analyze("legacy image exceeds the 10 MB byte budget".into()));
-        }
-        let image = Image::open_legacy_branding(&path, cancel)?;
-        let (width, height) = (image.width(), image.height());
-        if width <= 0 || height <= 0 || width as u64 * height as u64 > MAX_LEGACY_PIXELS {
-            return Err(crate::Error::Analyze(
-                "legacy image exceeds the 100 megapixel budget".into(),
-            ));
-        }
-        image
+        legacy_image(storage, blob, cancel)?
     } else {
         header(&path, kind, cancel)
             .map_err(|invalid| crate::Error::Analyze(invalid.message(kind).to_owned()))?
             .0
     };
     transform(storage, blob, image, variation, cancel)
+}
+
+fn legacy_image(storage: &Storage, blob: &Blob, cancel: &Cancellation) -> crate::Result<Image> {
+    cancel.check()?;
+    let path = storage.service.path_for(&blob.key);
+    if blob.byte_size > MAX_BYTES as i64 || std::fs::metadata(&path)?.len() > MAX_BYTES {
+        return Err(crate::Error::Analyze(
+            "legacy image exceeds the 10 MB byte budget".into(),
+        ));
+    }
+    let image = Image::open_legacy_branding(&path, cancel)?;
+    let (width, height) = (image.width(), image.height());
+    if width <= 0 || height <= 0 || width as u64 * height as u64 > MAX_LEGACY_PIXELS {
+        return Err(crate::Error::Analyze(
+            "legacy image exceeds the 100 megapixel budget".into(),
+        ));
+    }
+    Ok(image)
 }
 
 fn header(
