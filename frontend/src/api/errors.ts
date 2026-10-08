@@ -56,6 +56,46 @@ export class Unavailable extends Schema.TaggedError<Unavailable>()("Unavailable"
   message: Schema.String,
 }) {}
 
+export class FizzyNotConnected extends Schema.TaggedError<FizzyNotConnected>()(
+  "FizzyNotConnected",
+  {
+    message: Schema.String,
+  },
+) {}
+
+export class FizzyUnreachable extends Schema.TaggedError<FizzyUnreachable>()("FizzyUnreachable", {
+  message: Schema.String,
+}) {}
+
+export class FizzyTokenRejected extends Schema.TaggedError<FizzyTokenRejected>()(
+  "FizzyTokenRejected",
+  {
+    message: Schema.String,
+  },
+) {}
+
+export class FizzyReadOnly extends Schema.TaggedError<FizzyReadOnly>()("FizzyReadOnly", {
+  message: Schema.String,
+}) {}
+
+export class FizzyRefused extends Schema.TaggedError<FizzyRefused>()("FizzyRefused", {
+  message: Schema.String,
+}) {}
+
+export class FizzyThreadLocked extends Schema.TaggedError<FizzyThreadLocked>()(
+  "FizzyThreadLocked",
+  {
+    message: Schema.String,
+  },
+) {}
+
+/** The card already exists. Show this message without retrying card creation. */
+export class FizzyReplyFailed extends Schema.TaggedError<FizzyReplyFailed>()("FizzyReplyFailed", {
+  message: Schema.String,
+  number: Schema.String,
+  url: Schema.String,
+}) {}
+
 /** Every typed `/api/v1` error, told apart by `_tag`. */
 export const ApiError = Schema.Union([
   Unauthorized,
@@ -68,6 +108,13 @@ export const ApiError = Schema.Union([
   Validation,
   RateLimited,
   Unavailable,
+  FizzyNotConnected,
+  FizzyUnreachable,
+  FizzyTokenRejected,
+  FizzyReadOnly,
+  FizzyRefused,
+  FizzyThreadLocked,
+  FizzyReplyFailed,
 ]);
 
 export type ApiError = typeof ApiError.Type;
