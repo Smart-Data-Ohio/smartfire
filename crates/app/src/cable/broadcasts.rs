@@ -261,6 +261,11 @@ impl Broadcasts {
         sync::poll_later(&self.server, &self.sync, change);
     }
 
+    /// `events.changed` on the room's topic for a change to one of its events.
+    pub fn sync_events_changed(&self, change: campfire_db::models::calendar_event::EventsChanged) {
+        sync::events_changed(&self.server, change);
+    }
+
     /// `message.cards` for each of `messages`, for a card slot's replace a broadcast point
     /// outside this type sent.
     pub fn sync_message_cards(&self, conn: &Connection, messages: &[campfire_db::Message]) {

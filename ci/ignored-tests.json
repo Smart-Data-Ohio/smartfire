@@ -5,6 +5,12 @@
       "package": "campfire",
       "binary": "campfire",
       "test": "controllers::spa::tests::pwa_browser_reconciles_sign_in_and_preserves_root_registration"
+    },
+    {
+      "path": "crates/campfire/src/controllers/spa_smoke_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::spa_smoke_tests::real_server_spa_smoke_sends_and_persists_a_message"
     }
   ],
   "acme": [

@@ -357,6 +357,50 @@ const personRoute = createRoute({
   ),
 });
 
+/** `/app/r/$roomId/events`: a room's calendar (its own chunk); `…/new` opens the form over it. */
+const eventsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events",
+  params: {
+    parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
+    stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/events-page.tsx").then((module) => ({
+      default: module.EventsRoute,
+    })),
+  ),
+});
+
+const newEventRoute = createRoute({
+  getParentRoute: () => eventsRoute,
+  path: "new",
+  component: () => null,
+});
+
+/**
+ * `/app/r/$roomId/events/$eventId`: an event's page; `…/edit` opens the form over it and
+ * `…/attendance` opens it on the viewer's response.
+ */
+const eventRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events/$eventId",
+  params: {
+    parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
+    stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/event-page.tsx").then((module) => ({
+      default: module.EventRoute,
+    })),
+  ),
+});
+
+const eventChildRoutes = [
+  createRoute({ getParentRoute: () => eventRoute, path: "edit", component: () => null }),
+  createRoute({ getParentRoute: () => eventRoute, path: "attendance", component: () => null }),
+];
+
 /** The search page's query as the URL has it. */
 interface RawSearchPageSearch {
   readonly q?: unknown;
@@ -396,6 +440,8 @@ const routeTree = rootRoute.addChildren([
       threadRoute.addChildren([threadFizzyCardRoute]),
       ...roomControlRoutes,
     ]),
+    eventsRoute.addChildren([newEventRoute]),
+    eventRoute.addChildren(eventChildRoutes),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),

@@ -4,11 +4,14 @@ import type { TextSize } from "../../gen/TextSize.ts";
 import type { Theme } from "../../gen/Theme.ts";
 import type { UpdateAppearance } from "../../gen/UpdateAppearance.ts";
 import {
+  showTextSize as applyTextSize,
   type DensityPreference,
   type MotionPreference,
   setDensity,
   setMotion,
-  setTheme,
+  setThemeOverride,
+  showAccountTheme,
+  type ThemePreference,
   useAppearance,
 } from "../../lib/appearance.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
@@ -34,15 +37,20 @@ const MOTION_CHOICES: readonly Choice<MotionPreference>[] = [
   { value: "full", label: "Full motion" },
 ];
 
-/** `<html data-text-size>`, as the server renders it from the account's choice. */
-function applyTextSize(size: TextSize): void {
-  document.documentElement.dataset.textSize = size;
-}
+/** "account" follows the account's theme; the others pin one on this device. */
+type DeviceTheme = "account" | ThemePreference;
+
+const DEVICE_THEME_CHOICES: readonly Choice<DeviceTheme>[] = [
+  { value: "account", label: "Use my account's theme" },
+  { value: "system", label: "Match my system" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 /**
  * Appearance: the account's theme, text size and time zone (saved for every device, as the
- * classic page saves them), then this device's own density and motion. Choosing a theme shows it
- * at once here too.
+ * classic page saves them), then this device's own theme pin, density and motion. Choosing a
+ * theme or size shows it at once here too.
  */
 export function AppearanceSection() {
   const { settings, replace } = useSettings();
@@ -87,7 +95,7 @@ export function AppearanceSection() {
 
   const showTheme = ({ theme }: { readonly theme?: Theme | null }) => {
     if (theme !== undefined && theme !== null) {
-      setTheme(theme);
+      showAccountTheme(theme);
     }
   };
 
@@ -130,6 +138,13 @@ export function AppearanceSection() {
       </SettingsGroup>
 
       <SettingsGroup title="This device" description="Only this browser remembers these.">
+        <SettingsSelect
+          label="Theme on this device"
+          value={device.themeOverride ?? "account"}
+          choices={DEVICE_THEME_CHOICES}
+          hint="Pin a theme here without changing it on your other devices."
+          onChange={(choice: DeviceTheme) => setThemeOverride(choice === "account" ? null : choice)}
+        />
         <SettingsRadios
           label="Density"
           value={device.density}

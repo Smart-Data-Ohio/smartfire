@@ -150,6 +150,7 @@ jobs:
     outputs:
       rust: ${{ steps.scope.outputs.rust }}
       pages: ${{ steps.scope.outputs.pages }}
+      spa: ${{ steps.scope.outputs.spa }}
     steps:
       - name: Checkout PR history
         id: history
@@ -209,6 +210,7 @@ jobs:
 
           rust = True
           pages = True
+          spa = True
           try:
               if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
                   if os.environ["HISTORY_OUTCOME"] != "success":
@@ -224,15 +226,20 @@ jobs:
                       paths = [path for path in diff.split(b"\0") if path]
                       rust = not paths or any(rust_input(path) for path in paths)
                       pages = not paths or any(page_input(path) for path in paths)
+                      spa = not paths or any(path.startswith((b"frontend/", b"crates/api/")) for path in paths)
           except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
               rust = True
               pages = True
+              spa = True
               print(f"::warning::PR diff unavailable ({type(error).__name__}); running the full Rust gates.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"rust={str(rust).lower()}\n")
               output.write(f"pages={str(pages).lower()}\n")
+              output.write(f"spa={str(spa).lower()}\n")
           print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
           print("Run the page suites" if pages else "No page inputs changed: skip the page suites")
+          if spa and not pages:
+              print("Run the PWA suite for SPA inputs (including the real-server smoke test)")
           PY
 
   # The committed default/first_run/agents_ui/ledger_originals seeds (parity/seeds/frozen), built
@@ -703,7 +710,7 @@ jobs:
   correctness:
     name: Rust correctness (${{ matrix.suite }})
     needs: [source, changes, correctness-image]
-    if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
+    if: (needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true') && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
@@ -714,6 +721,8 @@ jobs:
       fail-fast: false
       matrix:
         suite: [acme, agents-ui, pwa]
+        # SPA-only PRs need the production-dist PWA/smoke checks, without the other suites.
+        exclude: ${{ needs.changes.outputs.pages == 'true' && fromJSON('[]') || fromJSON('[{"suite":"acme"},{"suite":"agents-ui"}]') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -886,7 +895,7 @@ jobs:
   correctness-image:
     name: Rust correctness image build
     needs: [source, changes]
-    if: needs.changes.outputs.pages == 'true'
+    if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
     runs-on: ubuntu-latest
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
@@ -905,7 +914,7 @@ jobs:
         with:
           parity: none
 
-      # All shared-harness and messaging consumers reuse this image independently of the app.
+      # All correctness consumers reuse this image independently of the app, including SPA-only PWA.
       - name: Build and export pinned correctness prerequisites
         shell: bash
         run: |
@@ -1205,42 +1214,46 @@ jobs:
       - name: Require every job to be gated
         run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
 
-      # No page inputs: every page job must be skipped; seeds follow the ordinary Rust scope.
-      # The correctness matrix is also skipped for a manual messaging-and-browsers check.
+      # SPA-only inputs select PWA and its prerequisite image; seeds follow the ordinary Rust scope.
+      # The correctness matrix and LiveKit skip a manual messaging-and-browsers check.
       - name: Gate on every correctness job
         env:
           NEEDS: ${{ toJSON(needs) }}
           RUST: ${{ needs.changes.outputs.rust }}
           PAGES: ${{ needs.changes.outputs.pages }}
+          SPA: ${{ needs.changes.outputs.spa }}
           PARTIAL: ${{ inputs.scope == 'messaging-and-browsers' }}
         run: |
           python3 - <<'PY'
           import json, os, sys
           results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
           print("\n".join(f"{job}: {result}" for job, result in results.items()))
-          if results.pop("source") != "success" or results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES")):
+          if results.pop("source") != "success" or results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES", "SPA")):
               sys.exit(1)
           seed_result = "success" if os.environ["RUST"] == "true" else "skipped"
           passed = results.pop("seeds") == seed_result
           for job, result in results.items():
               expected = "success" if os.environ["PAGES"] == "true" else "skipped"
+              if job in ("correctness", "correctness-image"):
+                  selected = os.environ["PAGES"] == "true" or os.environ["SPA"] == "true"
+                  expected = "success" if selected else "skipped"
               if job in ("correctness", "correctness-livekit") and os.environ["PARTIAL"] == "true":
                   expected = "skipped"
               passed = passed and result == expected
-          if os.environ["PAGES"] == "false":
+          if os.environ["PAGES"] == "false" and os.environ["SPA"] == "false":
               print("No page inputs changed: the page suites were intentionally skipped.")
           sys.exit(not passed)
           PY
 
       - name: Collect correctness receipts
-        if: needs.changes.outputs.pages == 'true'
+        if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-correctness-*-${{ needs.source.outputs.sha }}
           path: ${{ runner.temp }}/receipts
 
       - name: Check that the shards cover every suite
-        if: needs.changes.outputs.pages == 'true'
+        if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
         env:
-          SCOPE: ${{ inputs.scope || 'full' }}
+          SCOPE: ${{ needs.changes.outputs.pages == 'true' && (inputs.scope || 'full') || 'spa' }}
         run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$CI_SOURCE_SHA"

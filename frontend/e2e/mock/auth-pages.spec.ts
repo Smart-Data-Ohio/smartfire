@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, shot, type Theme, test } from "./support.ts";
+import {
+  expect,
+  matrix,
+  openApp,
+  saveAccountAppearance,
+  shot,
+  type Theme,
+  test,
+} from "./support.ts";
 
 /**
  * The server-rendered pages outside the SPA (sign-in, joining, two-step sign-in, password
@@ -87,12 +95,12 @@ for (const { name, heading } of PAGES) {
   });
 }
 
-test("the pages follow the theme the SPA remembers on this device", async ({ page }) => {
+test("the pages follow a theme pinned on this device in the SPA", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.addInitScript(() =>
     localStorage.setItem(
       "smartfire.appearance",
-      JSON.stringify({ theme: "dark", density: "comfortable", motion: "system" }),
+      JSON.stringify({ themeOverride: "dark", density: "comfortable", motion: "system" }),
     ),
   );
   await page.goto("/__auth/sign-in.html");
@@ -104,12 +112,12 @@ test("the pages follow the theme the SPA remembers on this device", async ({ pag
   expect(scheme).toBe("dark");
 });
 
-test("a saved system theme follows the OS over the account's theme", async ({ page }) => {
+test("a pinned system theme follows the OS over the account's theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.addInitScript(() =>
     localStorage.setItem(
       "smartfire.appearance",
-      JSON.stringify({ theme: "system", density: "comfortable", motion: "system" }),
+      JSON.stringify({ themeOverride: "system", density: "comfortable", motion: "system" }),
     ),
   );
   // As a signed-in page whose account theme is dark.
@@ -129,6 +137,48 @@ test("a saved system theme follows the OS over the account's theme", async ({ pa
   await page.emulateMedia({ colorScheme: "dark" });
 
   expect(await background()).not.toBe(light);
+});
+
+/** Serves the password-confirmation page as the server renders it for an account in `theme`. */
+async function sudoPageFor(page: Page, theme: Theme): Promise<void> {
+  await page.route("**/__auth/sudo-totp.html", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace(/data-theme="[a-z]+"/, `data-theme="${theme}"`);
+
+    await route.fulfill({ response, body });
+  });
+}
+
+test("one person's account theme never follows the next person onto these pages", async ({
+  page,
+}) => {
+  // A uses dark on their account, with nothing pinned on this device.
+  await openApp(page, "");
+  await saveAccountAppearance(page, { theme: "dark" });
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  // A signs out: the sign-in page follows the OS (light).
+  await page.goto("/__auth/sign-in.html");
+  await expect(page.locator("html")).not.toHaveAttribute("data-theme", "dark");
+
+  // B, light on their account, signs in and confirms their password.
+  await sudoPageFor(page, "light");
+  await page.goto("/__auth/sudo-totp.html");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("a theme pinned on this device stays through sign-out", async ({ page }) => {
+  await openApp(page, "settings/appearance");
+  await page.getByLabel("Theme on this device").selectOption({ label: "Dark" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.goto("/__auth/sign-in.html");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await sudoPageFor(page, "light");
+  await page.goto("/__auth/sudo-totp.html");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
 test("sign-in shows a rejected attempt above the card and shakes it", async ({ page }) => {

@@ -5,18 +5,22 @@
 // Loaded blocking in <head>, so the appearance is applied before the first paint; everything that
 // touches the page waits for DOMContentLoaded.
 (() => {
-  // The SPA's per-device appearance (frontend/src/lib/appearance.ts): theme, density and motion as
-  // attributes on <html>, remembered under one localStorage key. "system" leaves the attribute off.
+  // The SPA's per-device appearance (frontend/src/lib/appearance.ts): a theme pinned on this
+  // device, density and motion, remembered under one localStorage key. Only the pin is read for the
+  // theme: the account's own theme is the server's (this page's data-theme), so one person's
+  // theme never carries over to the next person who signs in on this browser.
   const root = document.documentElement;
 
   try {
     const saved = JSON.parse(localStorage.getItem("smartfire.appearance") || "null");
 
     if (saved && typeof saved === "object") {
-      // A saved preference wins over the server's account theme, "system" included: the SPA
-      // removes the attribute for it, so this page follows the OS just as the SPA does.
-      if (saved.theme === "light" || saved.theme === "dark") root.dataset.theme = saved.theme;
-      else if (saved.theme === "system") delete root.dataset.theme;
+      // A pin wins over the server's account theme, "system" included: the SPA removes the
+      // attribute for it, so this page follows the OS just as the SPA does.
+      const pin = saved.themeOverride;
+
+      if (pin === "light" || pin === "dark") root.dataset.theme = pin;
+      else if (pin === "system") delete root.dataset.theme;
       if (saved.motion === "reduce" || saved.motion === "full") root.dataset.motion = saved.motion;
       else if (saved.motion === "system") delete root.dataset.motion;
     }

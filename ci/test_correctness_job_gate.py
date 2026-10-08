@@ -20,16 +20,20 @@ class CorrectnessJobGateTest(unittest.TestCase):
         cls.script = step.split("          python3 - <<'PY'\n", 1)[1].split('\n          PY', 1)[0]
         cls.script = '\n'.join(line[10:] for line in cls.script.splitlines())
 
-    def gate(self, *, rust=True, pages=True, partial=False, changed=None):
+    def gate(self, *, rust=True, pages=True, spa=False, partial=False, changed=None):
         statuses = dict.fromkeys(self.required, 'success' if pages else 'skipped')
         statuses['source'] = 'success'
         statuses['changes'] = 'success'
         statuses['seeds'] = 'success' if rust else 'skipped'
-        if pages and partial:
+        if spa:
+            statuses['correctness'] = 'success'
+            statuses['correctness-image'] = 'success'
+        if partial:
             statuses['correctness'] = 'skipped'
             statuses['correctness-livekit'] = 'skipped'
         statuses.update(changed or {})
         env = dict(os.environ, RUST=str(rust).lower(), PAGES=str(pages).lower(),
+                   SPA=str(spa).lower(),
                    PARTIAL=str(partial).lower(),
                    NEEDS=json.dumps({job: {'result': status} for job, status in statuses.items()}))
         return subprocess.run([sys.executable, '-c', self.script], env=env, capture_output=True, text=True)
@@ -65,6 +69,23 @@ class CorrectnessJobGateTest(unittest.TestCase):
                 with self.subTest(job=job, status=status):
                     result = self.gate(partial=True, changed={job: status})
                     self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_spa_only_runs_require_pwa_and_its_image_and_skip_other_page_jobs(self):
+        for rust in (False, True):
+            result = self.gate(rust=rust, pages=False, spa=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for job in set(self.required) - {'source', 'changes', 'seeds'}:
+                expected = 'success' if job in ('correctness', 'correctness-image') else 'skipped'
+                for status in {'success', 'failure', 'cancelled', 'skipped'} - {expected}:
+                    with self.subTest(rust=rust, job=job, status=status):
+                        result = self.gate(rust=rust, pages=False, spa=True, changed={job: status})
+                        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+
+    def test_invalid_spa_output_fails_the_gate(self):
+        for spa in (None, '', 'invalid'):
+            with self.subTest(spa=spa):
+                result = self.gate(spa=spa)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

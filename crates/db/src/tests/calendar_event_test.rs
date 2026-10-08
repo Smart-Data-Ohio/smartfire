@@ -1333,6 +1333,129 @@ fn cancelling_a_singleton_twice_preserves_timestamp_and_activity_rows() {
     );
 }
 
+/// The rooms the writes since the last `take` told their open calendar screens about, in order.
+fn rooms_told(t: &TestDb) -> Vec<i64> {
+    t.events()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Broadcast(request) => request
+                .decode::<crate::models::calendar_event::EventsChanged>()
+                .map(|change| change.unwrap().room_id),
+            _ => None,
+        })
+        .collect()
+}
+
+// Later occurrences of a series have no message linking them, so the card update can't reach
+// the single-page app's calendar screens for them: every write to an event tells its room,
+// once per transaction, including the occurrences a shortened recurrence destroys.
+#[test]
+fn every_event_write_tells_its_room_once() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let room = id("designers");
+    t.sink.take();
+    let head = series(&t);
+    assert_eq!(rooms_told(&t), [room], "scheduling a series");
+    let ids: Vec<i64> = t
+        .read(|c| head.series_events(c))
+        .iter()
+        .map(|e| e.id)
+        .collect();
+    assert_eq!(ids.len(), 3);
+
+    t.sink.take();
+    let later = ids[1];
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            later,
+            EventChanges {
+                title: Some("Planning, moved".into()),
+                ..Default::default()
+            },
+            "this_event",
+            Some(id("david")),
+        )
+    });
+    assert_eq!(rooms_told(&t), [room], "editing a later occurrence");
+
+    t.sink.take();
+    let (head_id, last) = (head.id, ids[2]);
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            head_id,
+            EventChanges {
+                recurrence_until: Some(Some("2026-09-29".parse().unwrap())),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )
+    });
+    assert_eq!(rooms_told(&t), [room], "shortening the recurrence");
+    assert!(
+        t.read(|c| Ok(CalendarEvent::find(c, last).is_err())),
+        "the occurrence past the new end is gone"
+    );
+
+    t.sink.take();
+    assert!(t.write(move |tx| {
+        CalendarEvent::cancel_with_scope(tx, later, "this_event", Some(id("david")))
+    }));
+    assert_eq!(rooms_told(&t), [room], "cancelling a later occurrence");
+
+    let single = create(&t);
+    t.sink.take();
+    t.write(move |tx| single.destroy(tx));
+    assert_eq!(rooms_told(&t), [room], "destroying an event");
+}
+
+// A Google disconnect clears its organizer's Meet links in one statement, past the event
+// callbacks, so it tells each room whose links it cleared itself. Rooms with none of them, and
+// other organizers' links, stay quiet.
+#[test]
+fn a_google_disconnect_tells_each_room_whose_meet_links_it_cleared() {
+    let t = frozen();
+    let linked = create(&t).id;
+    let elsewhere = || {
+        let mut a = attrs(&t);
+        a.room_id = id("watercooler");
+        t.write(move |tx| CalendarEvent::create(tx, a)).id
+    };
+    elsewhere();
+    let others = elsewhere();
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE events SET meet_link='https://meet.google.com/abc-defg-hij' WHERE id IN (?,?)",
+            params![linked, others],
+        )?;
+        tx.conn().execute(
+            "UPDATE events SET organizer_id=? WHERE id=?",
+            params![id("jason"), others],
+        )?;
+        tx.conn().execute(
+            "INSERT INTO google_accounts (user_id,email,created_at,updated_at) VALUES (?,?,?,?)",
+            params![id("david"), "david@example.test", tx.now(), tx.now()],
+        )?;
+        Ok(())
+    });
+    t.sink.take();
+    let secrets = rails_compat::Secrets::new(&"k".repeat(64));
+    let planned = t.write(move |tx| {
+        let user = User::find(tx.conn(), id("david"))?;
+        crate::models::google_connection::prepare_disconnect(tx, &user, &secrets)
+            .map(|plan| plan.is_some())
+    });
+    assert!(planned);
+    assert_eq!(
+        t.read(move |c| CalendarEvent::find(c, linked)).meet_link,
+        None
+    );
+    assert_eq!(rooms_told(&t), [id("designers")]);
+}
+
 mod cutover_reference_test;
 mod cutover_reminder_test;
 mod cutover_venue_test;
