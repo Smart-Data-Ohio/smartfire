@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { type ReactNode, useCallback } from "react";
+import { type ReactNode, useCallback, useMemo } from "react";
 import type { GithubCardRef } from "../../gen/GithubCardRef.ts";
 import type { GithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks } from "../../gen/GithubChecks.ts";
@@ -8,7 +8,7 @@ import type { GithubPullRequestStatus } from "../../gen/GithubPullRequestStatus.
 import type { GithubReview } from "../../gen/GithubReview.ts";
 import { githubKey } from "../../store/cards.ts";
 import type { MessageDTO } from "../../store/model.ts";
-import { actions } from "../../sync/runtime.ts";
+import { actions, type GithubCardScope } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -16,6 +16,7 @@ import { Skeleton } from "../../ui/skeleton.tsx";
 import { useNow } from "../threads/use-now.ts";
 import { BrandMark } from "./brand-marks.tsx";
 import { ago } from "./format.ts";
+import { GithubActions } from "./github-actions.tsx";
 import { usePreview } from "./use-preview.ts";
 
 interface Look {
@@ -115,11 +116,13 @@ function ChangedFiles({ files }: { readonly files: GithubChangedFiles }) {
 interface LoadedProps {
   readonly message: MessageDTO;
   readonly pull: GithubPullRequest;
+  readonly pullRequestId: number;
+  readonly scope: GithubCardScope;
   /** It heads the pull request's discussion thread: files instead of "Discuss". */
   readonly header: boolean;
 }
 
-function Loaded({ message, pull, header }: LoadedProps) {
+function Loaded({ message, pull, pullRequestId, scope, header }: LoadedProps) {
   const now = useNow();
   const status = STATUS[pull.status];
 
@@ -207,6 +210,7 @@ function Loaded({ message, pull, header }: LoadedProps) {
         )}
       </div>
       {header && pull.files !== null ? <ChangedFiles files={pull.files} /> : null}
+      <GithubActions roomId={message.roomId} pullRequestId={pullRequestId} scope={scope} />
     </section>
   );
 }
@@ -258,21 +262,17 @@ interface PreviewProps {
 
 /** The pull request fetched in one scope: under the message, or as a thread's header. */
 function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
-  const load = useCallback(
-    () =>
-      actions.cards.loadGithub(
-        message.roomId,
-        card.pullRequestId,
-        threadId === null ? { messageId: message.id } : { threadId },
-      ),
-    [message.roomId, card.pullRequestId, message.id, threadId],
+  const scope = useMemo<GithubCardScope>(
+    () => (threadId === null ? { messageId: message.id } : { threadId }),
+    [threadId, message.id],
   );
 
-  const key = githubKey(
-    message.roomId,
-    card.pullRequestId,
-    threadId === null ? { messageId: message.id } : { threadId },
+  const load = useCallback(
+    () => actions.cards.loadGithub(message.roomId, card.pullRequestId, scope),
+    [message.roomId, card.pullRequestId, scope],
   );
+
+  const key = githubKey(message.roomId, card.pullRequestId, scope);
 
   const preview = usePreview("github", key, load);
   const value = preview?.value ?? null;
@@ -298,7 +298,15 @@ function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
     case "failed":
       return <Failed card={card} reason={value.message} onRetry={retry} />;
     case "loaded":
-      return <Loaded message={message} pull={value} header={threadId !== null} />;
+      return (
+        <Loaded
+          message={message}
+          pull={value}
+          pullRequestId={card.pullRequestId}
+          scope={scope}
+          header={threadId !== null}
+        />
+      );
   }
 }
 

@@ -10,6 +10,7 @@ import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
 import { cardMutations } from "../store/card-mutations.ts";
 import {
   attendanceKey,
@@ -143,6 +144,64 @@ export const loadGithub = Effect.fn("cards.loadGithub")(function* (
     api.githubCard(roomId, pullRequestId, scope),
     githubStillLoading,
   );
+});
+
+/** What this viewer can do on the pull request. The card shows a control only when its flag is set. */
+export const githubActions = Effect.fn("cards.githubActions")(function* (
+  roomId: number,
+  pullRequestId: number,
+) {
+  return yield* api.githubActions(roomId, pullRequestId);
+});
+
+/**
+ * After a write, ask for the card again. A failure here doesn't undo the post: GitHub already
+ * has it, and `message.cards` drops the preview so a mounted card fetches it too.
+ */
+const refreshGithub = (roomId: number, pullRequestId: number, scope: api.GithubCardScope) =>
+  loadGithub(roomId, pullRequestId, scope).pipe(Effect.catch(() => Effect.void));
+
+/** Posts an issue comment as the viewer, then refetches the card. */
+export const commentOnGithub = Effect.fn("cards.commentOnGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  body: string,
+) {
+  const result = yield* api.commentOnGithub(roomId, pullRequestId, body);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
+});
+
+/** Submits a review (approve, request changes, or a review comment), then refetches the card. */
+export const reviewGithub = Effect.fn("cards.reviewGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  event: GithubReviewKind,
+  body: string,
+) {
+  const result = yield* api.reviewGithub(roomId, pullRequestId, event, body);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
+});
+
+/** Asks GitHub users to review, then refetches the card. */
+export const requestGithubReviewers = Effect.fn("cards.requestGithubReviewers")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  reviewers: string,
+) {
+  const result = yield* api.requestGithubReviewers(roomId, pullRequestId, reviewers);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
 });
 
 /** The Fizzy card under a message (the fetch also asks the server to refresh it). */

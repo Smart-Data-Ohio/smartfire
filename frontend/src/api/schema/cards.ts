@@ -1,6 +1,9 @@
 import { Schema, SchemaGetter } from "effect";
 import type { AttendanceResponse as GeneratedAttendanceResponse } from "../../gen/AttendanceResponse.ts";
 import type { CardFetch as GeneratedCardFetch } from "../../gen/CardFetch.ts";
+import type { CreateGithubComment as GeneratedCreateGithubComment } from "../../gen/CreateGithubComment.ts";
+import type { CreateGithubReview as GeneratedCreateGithubReview } from "../../gen/CreateGithubReview.ts";
+import type { CreateGithubReviewRequest as GeneratedCreateGithubReviewRequest } from "../../gen/CreateGithubReviewRequest.ts";
 import type { CreatePoll as GeneratedCreatePoll } from "../../gen/CreatePoll.ts";
 import type { DriveFileCard as GeneratedDriveFileCard } from "../../gen/DriveFileCard.ts";
 import type { EventAttendance as GeneratedEventAttendance } from "../../gen/EventAttendance.ts";
@@ -10,14 +13,18 @@ import type { FizzyCard as GeneratedFizzyCard } from "../../gen/FizzyCard.ts";
 import type { FizzyCardPreview as GeneratedFizzyCardPreview } from "../../gen/FizzyCardPreview.ts";
 import type { FizzyCardRef as GeneratedFizzyCardRef } from "../../gen/FizzyCardRef.ts";
 import type { FizzyCardStatus as GeneratedFizzyCardStatus } from "../../gen/FizzyCardStatus.ts";
+import type { GithubAccountLink as GeneratedGithubAccountLink } from "../../gen/GithubAccountLink.ts";
 import type { GithubCardRef as GeneratedGithubCardRef } from "../../gen/GithubCardRef.ts";
 import type { GithubChangedFile as GeneratedGithubChangedFile } from "../../gen/GithubChangedFile.ts";
 import type { GithubChangedFiles as GeneratedGithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks as GeneratedGithubChecks } from "../../gen/GithubChecks.ts";
 import type { GithubPullRequest as GeneratedGithubPullRequest } from "../../gen/GithubPullRequest.ts";
+import type { GithubPullRequestActions as GeneratedGithubPullRequestActions } from "../../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard as GeneratedGithubPullRequestCard } from "../../gen/GithubPullRequestCard.ts";
 import type { GithubPullRequestStatus as GeneratedGithubPullRequestStatus } from "../../gen/GithubPullRequestStatus.ts";
 import type { GithubReview as GeneratedGithubReview } from "../../gen/GithubReview.ts";
+import type { GithubReviewKind as GeneratedGithubReviewKind } from "../../gen/GithubReviewKind.ts";
+import type { GithubWriteResult as GeneratedGithubWriteResult } from "../../gen/GithubWriteResult.ts";
 import type { LinkCard as GeneratedLinkCard } from "../../gen/LinkCard.ts";
 import type { LinkedinCard as GeneratedLinkedinCard } from "../../gen/LinkedinCard.ts";
 import type { MessageCard as GeneratedMessageCard } from "../../gen/MessageCard.ts";
@@ -364,6 +371,79 @@ export type GithubPullRequestCard = typeof GithubPullRequestCard.Type;
 
 export type GithubPullRequestCardPin = Assert<
   Pinned<typeof GithubPullRequestCard, GeneratedGithubPullRequestCard>
+>;
+
+/** Whether the viewer has a GitHub account the write actions can use. */
+export const GithubAccountLink = Schema.Literals(["none", "connected", "rejected"]);
+
+export type GithubAccountLinkPin = Assert<
+  Pinned<typeof GithubAccountLink, GeneratedGithubAccountLink>
+>;
+
+/**
+ * `GET /api/v1/rooms/:roomId/github/pull_requests/:id/actions`: what this viewer can do.
+ * The three `can*` flags are true together, when the linked account is usable. `status` is the
+ * pull request's state and does not hide the actions.
+ */
+export const GithubPullRequestActions = Schema.Struct({
+  login: Schema.NullOr(Schema.String),
+  account: GithubAccountLink,
+  canComment: Schema.Boolean,
+  canReview: Schema.Boolean,
+  canRequestReviewers: Schema.Boolean,
+  status: GithubPullRequestStatus,
+});
+
+export type GithubPullRequestActions = typeof GithubPullRequestActions.Type;
+
+export type GithubPullRequestActionsPin = Assert<
+  Pinned<typeof GithubPullRequestActions, GeneratedGithubPullRequestActions>
+>;
+
+/** The body of `POST .../github/pull_requests/:id/comments`. */
+export const CreateGithubComment = Schema.Struct({ body: Schema.String });
+
+export type CreateGithubComment = typeof CreateGithubComment.Type;
+
+export type CreateGithubCommentPin = Assert<
+  Pinned<typeof CreateGithubComment, GeneratedCreateGithubComment>
+>;
+
+/** The review the dialog submits: approve, request changes, or a review comment. */
+export const GithubReviewKind = Schema.Literals(["approve", "request_changes", "comment"]);
+
+export type GithubReviewKindPin = Assert<
+  Pinned<typeof GithubReviewKind, GeneratedGithubReviewKind>
+>;
+
+/** The body of `POST .../github/pull_requests/:id/reviews`. `body` may be empty for an approval. */
+export const CreateGithubReview = Schema.Struct({
+  event: GithubReviewKind,
+  body: Schema.String,
+});
+
+export type CreateGithubReview = typeof CreateGithubReview.Type;
+
+export type CreateGithubReviewPin = Assert<
+  Pinned<typeof CreateGithubReview, GeneratedCreateGithubReview>
+>;
+
+/** The body of `POST .../github/pull_requests/:id/review_requests`. */
+export const CreateGithubReviewRequest = Schema.Struct({ reviewers: Schema.String });
+
+export type CreateGithubReviewRequest = typeof CreateGithubReviewRequest.Type;
+
+export type CreateGithubReviewRequestPin = Assert<
+  Pinned<typeof CreateGithubReviewRequest, GeneratedCreateGithubReviewRequest>
+>;
+
+/** A write's confirmation. The card itself updates from `message.cards` and a refetch. */
+export const GithubWriteResult = Schema.Struct({ notice: Schema.String });
+
+export type GithubWriteResult = typeof GithubWriteResult.Type;
+
+export type GithubWriteResultPin = Assert<
+  Pinned<typeof GithubWriteResult, GeneratedGithubWriteResult>
 >;
 
 /** A LinkedIn post; without a title or description it's a plain chip. Fill order: 8. */

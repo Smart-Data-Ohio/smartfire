@@ -20,6 +20,7 @@ import type { ThreadCreated } from "../../gen/ThreadCreated.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { mutations, store, useStore } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
+import { toastSnapshot } from "../../ui/toast-store.ts";
 import { CreatePollDialog, filledOptions, pollProblems } from "./create-poll-dialog.tsx";
 import MessageCards from "./message-cards.tsx";
 
@@ -487,6 +488,78 @@ describe("GitHub pull requests", () => {
 
     expect(await screen.findByText("4 files changed")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Discuss" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Comment" })).toBeTruthy();
+  });
+
+  it("comments, requests changes and asks for reviewers from the card", async () => {
+    const user = userEvent.setup();
+
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", {
+      name: "Pull request: Rate limit the sync endpoint with a token bucket",
+    });
+
+    await user.click(within(card).getByRole("button", { name: "Comment" }));
+    expect(within(card).getByRole("alert").textContent).toBe("Write a comment first.");
+
+    await user.type(within(card).getByRole("textbox", { name: "Comment" }), "Looks good.");
+    await user.click(within(card).getByRole("button", { name: "Comment" }));
+    expect((await within(card).findByRole("status")).textContent).toBe(
+      "Comment posted on GitHub as @maya.",
+    );
+
+    await user.click(within(card).getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request changes" });
+
+    await user.click(within(dialog).getByRole("button", { name: "Request changes" }));
+    expect(within(dialog).getByRole("alert").textContent).toBe(
+      "Add a note describing the requested changes.",
+    );
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Note" }), "Rename the limiter.");
+    await user.click(within(dialog).getByRole("button", { name: "Request changes" }));
+    await waitFor(() => expect(within(card).getByText("Changes requested")).toBeTruthy());
+
+    await user.click(within(card).getByRole("button", { name: "Request reviewers" }));
+
+    const reviewers = await screen.findByRole("dialog", { name: "Request reviewers" });
+
+    await user.type(within(reviewers).getByRole("textbox", { name: "Reviewers" }), "alice, @bob");
+    await user.click(within(reviewers).getByRole("button", { name: "Request reviewers" }));
+    await waitFor(() =>
+      expect(
+        toastSnapshot().some(
+          (item) => item.title === "Requested review from @alice, @bob on GitHub as @maya.",
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it("hides comment, review and reviewer request when the account can't post", async () => {
+    await control({ op: "github-writes", roomId: ROOM, enabled: 0 });
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", {
+      name: "Pull request: Rate limit the sync endpoint with a token bucket",
+    });
+
+    await waitFor(async () => {
+      const response = await fetch("/__mock/cards", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ op: "fetches", roomId: ROOM }),
+      });
+
+      const fetches: Record<string, number> = await response.json();
+
+      expect(fetches[`github-actions:${CARD_IDS.pullRequests.open}`]).toBeGreaterThan(0);
+    });
+    expect(within(card).queryByRole("button", { name: "Comment" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "Review" })).toBeNull();
+    expect(within(card).queryByRole("button", { name: "Request reviewers" })).toBeNull();
   });
 });
 

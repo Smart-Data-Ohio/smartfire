@@ -27,6 +27,9 @@ import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
+import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
@@ -84,7 +87,7 @@ import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
 
-export type { EventPrefill };
+export type { EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
 
@@ -391,6 +394,34 @@ const cards = {
   ): Promise<void> => runAction(cardActions.respond(roomId, eventId, response, applyToFuture)),
   loadGithub: (roomId: number, pullRequestId: number, scope: GithubCardScope): Promise<void> =>
     runAction(cardActions.loadGithub(roomId, pullRequestId, scope)),
+  /** What this viewer can post. The card shows a control only when its flag is set. */
+  githubActions: (roomId: number, pullRequestId: number): Promise<GithubPullRequestActions> =>
+    runAction(cardActions.githubActions(roomId, pullRequestId)),
+  /** Posts an issue comment as the viewer; the card refetches when it lands. */
+  commentOnGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.commentOnGithub(roomId, pullRequestId, scope, body)),
+  /** Approves, requests changes, or leaves a review comment; the card refetches when it lands. */
+  reviewGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    event: GithubReviewKind,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.reviewGithub(roomId, pullRequestId, scope, event, body)),
+  /** Asks those GitHub usernames to review; the card refetches when it lands. */
+  requestGithubReviewers: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    reviewers: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.requestGithubReviewers(roomId, pullRequestId, scope, reviewers)),
   loadFizzy: (roomId: number, fizzyCardId: number, messageId: number): Promise<void> =>
     runAction(cardActions.loadFizzy(roomId, fizzyCardId, messageId)),
   loadQuote: (roomId: number, referenceId: number): Promise<void> =>
