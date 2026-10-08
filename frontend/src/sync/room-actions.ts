@@ -41,7 +41,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 
   if (Result.isFailure(fetched)) {
     if (Predicate.isTagged(fetched.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId);
+      mutations.setRoomUnavailable(roomId, started);
     }
 
     return;
@@ -79,10 +79,13 @@ const landMutation = Effect.fn("rooms.landMutation")(function* (
     return result;
   }
 
-  if (result.detail === null) {
-    mutations.setRoomUnavailable(result.room.id);
-  } else {
-    mutations.setRoomDetail(result.detail, started);
+  const landed =
+    result.detail === null
+      ? mutations.setRoomUnavailable(result.room.id, started)
+      : mutations.setRoomDetail(result.detail, started);
+
+  if (!landed) {
+    return result;
   }
 
   const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
@@ -129,19 +132,23 @@ export const update = Effect.fn("rooms.update")(function* (roomId: number, body:
 });
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {
+  const started = beginRoomRequest();
   const result = yield* api.removeRoom(roomId);
 
-  mutations.setRoomUnavailable(result.roomId);
-  invalidateRoom(result.roomId);
+  if (mutations.setRoomUnavailable(result.roomId, started)) {
+    invalidateRoom(result.roomId);
+  }
 
   return result;
 });
 
 export const leaveDirect = Effect.fn("rooms.leaveDirect")(function* (roomId: number) {
+  const started = beginRoomRequest();
   const result = yield* api.leaveDirectRoom(roomId);
 
-  mutations.setRoomUnavailable(result.roomId);
-  invalidateRoom(result.roomId);
+  if (mutations.setRoomUnavailable(result.roomId, started)) {
+    invalidateRoom(result.roomId);
+  }
 
   return result;
 });

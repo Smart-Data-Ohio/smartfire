@@ -21,7 +21,6 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import {
   beginRoomRequest,
   clearRoomJoin,
-  detailInstalledGeneration,
   joinedAtEpoch,
   noteJoined,
   resetJoinState,
@@ -189,9 +188,9 @@ function currentJoinDetail(roomId: number): RoomDetail | null {
 
 /**
  * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
- * room is unavailable. A preview applies only when its load is still the visit's latest and no
- * detail from a request that began later has been installed. Cached membership never overrides a 404.
- * The exception is detail this session's join installed while that join's epoch is still current.
+ * room is unavailable. A preview applies only when its load is still the visit's latest. An older
+ * room outcome cannot replace a newer one. Cached membership never overrides a 404, except detail
+ * this session's join installed while that join's epoch is still current.
  */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const open = visits.get(roomId);
@@ -211,9 +210,10 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   if (Result.isSuccess(loaded)) {
-    clearRoomJoin(roomId);
-    mutations.setRoomDetail(loaded.success, started);
-    yield* loadTimeline(roomId, token, loaded.success);
+    if (mutations.setRoomDetail(loaded.success, started)) {
+      clearRoomJoin(roomId);
+      yield* loadTimeline(roomId, token, loaded.success);
+    }
 
     return;
   }
@@ -221,8 +221,9 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const kept = currentJoinDetail(roomId);
 
   if (kept !== null) {
-    mutations.setRoomDetail(kept, started);
-    yield* loadTimeline(roomId, token, kept);
+    if (mutations.setRoomDetail(kept, started)) {
+      yield* loadTimeline(roomId, token, kept);
+    }
 
     return;
   }
@@ -233,19 +234,20 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     const preview = yield* Effect.result(openRoomPreview(roomId));
     const latest = sameVisit(roomId, token) && visits.get(roomId)?.load === load;
 
-    if (!latest || detailInstalledGeneration(roomId) > started) {
+    if (!latest) {
       return;
     }
 
     if (Result.isSuccess(preview)) {
-      clearRoomJoin(roomId);
-      mutations.setRoomPreview(roomId, preview.success);
+      if (mutations.setRoomPreview(roomId, preview.success, started)) {
+        clearRoomJoin(roomId);
+      }
 
       return;
     }
 
     if (Predicate.isTagged(preview.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId);
+      mutations.setRoomUnavailable(roomId, started);
 
       return;
     }
@@ -283,7 +285,9 @@ const installJoined = Effect.fnUntraced(function* (
   row: SidebarRow | null,
   started: number,
 ) {
-  mutations.setRoomDetail(detail, started);
+  if (!mutations.setRoomDetail(detail, started)) {
+    return;
+  }
 
   if (row !== null) {
     const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
@@ -354,7 +358,7 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
       Predicate.isTagged(fetched.failure, "NotFound") &&
       !superseded
     ) {
-      mutations.setRoomUnavailable(roomId);
+      mutations.setRoomUnavailable(roomId, started);
 
       return;
     }

@@ -36,7 +36,7 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
-import { clearRoomJoin, noteDetailInstalled } from "./join-state.ts";
+import { claimRoomOutcome, clearRoomJoin } from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -100,6 +100,14 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
 
 const apply = (change: (state: State) => State) =>
   store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
+
+/** A room outcome lands only when its request started after the one already applied. */
+function landRoom(roomId: number, started: number, change: (state: State) => State): boolean {
+  if (!claimRoomOutcome(roomId, started)) return false;
+  apply(change);
+
+  return true;
+}
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
@@ -179,17 +187,16 @@ export const mutations = {
   setRoomLoading: (roomId: number) => apply((state) => reduce.setRoomLoading(state, roomId)),
   setRoomError: (roomId: number, error: string) =>
     apply((state) => reduce.setRoomError(state, roomId, error)),
-  setRoomPreview: (roomId: number, preview: OpenRoomPreview) =>
-    apply((state) => reduce.setRoomPreview(state, roomId, preview)),
-  setRoomDetail: (detail: RoomDetail, started: number) => {
-    noteDetailInstalled(detail.room.id, started);
+  setRoomPreview: (roomId: number, preview: OpenRoomPreview, started: number) =>
+    landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
+  setRoomDetail: (detail: RoomDetail, started: number) =>
+    landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
+  setRoomUnavailable: (roomId: number, started: number) =>
+    landRoom(roomId, started, (state) => {
+      clearRoomJoin(roomId);
 
-    return apply((state) => reduce.setRoomDetail(state, detail));
-  },
-  setRoomUnavailable: (roomId: number) => {
-    clearRoomJoin(roomId);
-    apply((state) => reduce.setRoomUnavailable(state, roomId));
-  },
+      return reduce.setRoomUnavailable(state, roomId);
+    }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),
   setPageLoading: (roomId: number, direction: "older" | "newer") => {

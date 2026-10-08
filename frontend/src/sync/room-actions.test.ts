@@ -153,7 +153,7 @@ describe("room management actions", () => {
               0,
             );
             invalidateRoom(20);
-            mutations.setRoomUnavailable(20);
+            mutations.setRoomUnavailable(20, beginRoomRequest());
 
             return { room: row.room, detail: { ...detail, room: row.room }, row };
           }),

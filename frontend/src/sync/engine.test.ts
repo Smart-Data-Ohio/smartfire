@@ -2953,7 +2953,7 @@ describe("room access refresh", () => {
         yield* api.route("GET /rooms/12", () => Deferred.await(deletedReply));
         yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
         yield* settle;
-        mutations.setRoomUnavailable(12);
+        mutations.setRoomUnavailable(12, beginRoomRequest());
         invalidateRoom(12);
         yield* Deferred.succeed(deletedReply, roomDetailFixture(12));
         yield* settle;
@@ -3776,7 +3776,10 @@ describe("joining an open room", () => {
     () => lateRefresh("unavailable"),
   );
 
-  const staleJoinRecovery = (outcome: "join" | "unavailable") =>
+  const staleJoinRecovery = (
+    outcome: "join" | "unavailable",
+    first: "recovery" | "preview" = "recovery",
+  ) =>
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
@@ -3834,9 +3837,17 @@ describe("joining an open room", () => {
         const reopening = yield* Effect.forkChild(session.openRoom(90, null));
 
         yield* settle;
-        yield* Deferred.succeed(releaseRecovery, undefined);
-        yield* settle;
-        yield* Deferred.succeed(releasePreview, undefined);
+
+        if (first === "preview") {
+          yield* Deferred.succeed(releasePreview, undefined);
+          yield* settle;
+          yield* Deferred.succeed(releaseRecovery, undefined);
+        } else {
+          yield* Deferred.succeed(releaseRecovery, undefined);
+          yield* settle;
+          yield* Deferred.succeed(releasePreview, undefined);
+        }
+
         yield* Fiber.join(reopening);
         yield* Fiber.join(joining);
         yield* settle;
@@ -3865,6 +3876,14 @@ describe("joining an open room", () => {
   it.effect(
     "a join recovery started before disconnect cannot hide an unavailable room opened after an unseen revocation",
     () => staleJoinRecovery("unavailable"),
+  );
+
+  it.effect("a newer preview stays when an older join recovery lands after it", () =>
+    staleJoinRecovery("join", "preview"),
+  );
+
+  it.effect("a newer unavailable room stays when an older join recovery lands after it", () =>
+    staleJoinRecovery("unavailable", "preview"),
   );
 });
 

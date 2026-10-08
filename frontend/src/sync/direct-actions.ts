@@ -23,7 +23,9 @@ const upsertRow = Effect.fn("directs.upsertRow")(function* (row: SidebarRow) {
 
 /** A renamed or grown DM's header data, mirrored onto its sidebar row (label and avatars). */
 const landDetail = Effect.fn("directs.landDetail")(function* (detail: RoomDetail, started: number) {
-  mutations.setRoomDetail(detail, started);
+  if (!mutations.setRoomDetail(detail, started)) {
+    return detail;
+  }
 
   const row = store.getState().sidebar.rows[detail.room.id];
 

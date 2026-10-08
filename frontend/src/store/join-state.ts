@@ -7,16 +7,16 @@
 const joinedAt = new Map<number, number>();
 
 /**
- * Start sequence of the request whose detail is installed. A preview applies unless a request that
- * began later installed detail.
+ * Start sequence of the latest outcome applied for a room. Detail, a join preview, unavailable,
+ * and a join or leave that changed the view all share it. An older start does not apply.
  */
-const detailInstalled = new Map<number, number>();
+const appliedOutcome = new Map<number, number>();
 
 let nextRequest = 0;
 
 export function resetJoinState(): void {
   joinedAt.clear();
-  detailInstalled.clear();
+  appliedOutcome.clear();
   nextRequest = 0;
 }
 
@@ -30,17 +30,17 @@ export function beginRoomRequest(): number {
   return ++nextRequest;
 }
 
-/** Detail from a request that began at `started`. An older start must not replace a newer one. */
-export function noteDetailInstalled(roomId: number, started: number): void {
-  const current = detailInstalled.get(roomId) ?? 0;
+/** Records `started` when it is newer than the outcome already applied for `roomId`. */
+export function claimRoomOutcome(roomId: number, started: number): boolean {
+  const current = appliedOutcome.get(roomId) ?? 0;
 
-  if (started > current) {
-    detailInstalled.set(roomId, started);
+  if (started <= current) {
+    return false;
   }
-}
 
-export function detailInstalledGeneration(roomId: number): number {
-  return detailInstalled.get(roomId) ?? 0;
+  appliedOutcome.set(roomId, started);
+
+  return true;
 }
 
 export function noteJoined(roomId: number, epoch: number): void {

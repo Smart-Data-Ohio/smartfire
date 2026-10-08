@@ -237,7 +237,10 @@ export class Engine extends Context.Service<
         ) {
           // A previewed room is not a membership: this 404 is expected. Reload the preview
           // instead of treating the reconnect as lost access.
+          let unavailableAt = started;
+
           if (store.getState().rooms[roomId]?.preview != null) {
+            unavailableAt = beginRoomRequest();
             const preview = yield* Effect.result(openRoomPreview(roomId));
 
             if (roomRevision(roomId) !== revision) {
@@ -247,7 +250,7 @@ export class Engine extends Context.Service<
             if (Result.isSuccess(preview)) {
               // A join can install the membership while this refetch is in flight.
               if (store.getState().rooms[roomId]?.detail == null) {
-                mutations.setRoomPreview(roomId, preview.success);
+                mutations.setRoomPreview(roomId, preview.success, unavailableAt);
               }
 
               return "preview";
@@ -259,7 +262,7 @@ export class Engine extends Context.Service<
           }
 
           markRoomsChanged([roomId]);
-          mutations.setRoomUnavailable(roomId);
+          mutations.setRoomUnavailable(roomId, unavailableAt);
 
           return false;
         }
@@ -512,7 +515,7 @@ export class Engine extends Context.Service<
           Effect.catch((error) =>
             Effect.sync(() => {
               if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
-                mutations.setRoomUnavailable(roomId);
+                mutations.setRoomUnavailable(roomId, started);
               }
             }).pipe(
               Effect.andThen(
