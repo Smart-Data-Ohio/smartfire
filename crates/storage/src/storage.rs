@@ -47,6 +47,13 @@ impl Staged {
         &self.blob
     }
 
+    pub(crate) fn with_image_dimensions(mut self, width: i32, height: i32) -> Self {
+        self.blob.metadata.set("width", Json::Int(width.into()));
+        self.blob.metadata.set("height", Json::Int(height.into()));
+        self.blob.metadata.set("analyzed", Json::Bool(true));
+        self
+    }
+
     /// A generated attachment is identified now and analyzed by its after-commit
     /// attachment callback. Keep that boundary when persisting a variant for HTTP.
     pub fn defer_analysis(mut self) -> Self {
@@ -77,6 +84,19 @@ impl Drop for Staged {
 impl Storage {
     pub fn new(service: DiskService, verifier: Arc<dyn Verifier>) -> Self {
         Self { service, verifier }
+    }
+
+    /// GIF and WebP loaders report the frame count without decoding the whole animation.
+    /// Variants load page 0, so callers must serve the source to retain animation.
+    pub fn is_animated(&self, blob: &Blob) -> Result<bool> {
+        if !matches!(blob.content_type(), "image/gif" | "image/webp") {
+            return Ok(false);
+        }
+        let image = crate::vips::Image::open_sequential(&self.service.path_for(&blob.key))?;
+        Ok(image
+            .get_string("n-pages")
+            .and_then(|pages| pages.parse::<u32>().ok())
+            .is_some_and(|pages| pages > 1))
     }
 
     /// `Blob#identify_without_saving`, called by signed-ID assignment before validation.
@@ -130,6 +150,8 @@ impl Storage {
 
     /// `blob.open`: a tempfile named `ActiveStorage-<id>-…<.ext>`, checksum-verified.
     pub fn open(&self, blob: &Blob) -> Result<NamedTempFile> {
+        #[cfg(feature = "test-support")]
+        test_hooks::opened(&blob.key);
         let file = tempfile::Builder::new()
             .prefix(&format!("ActiveStorage-{}-", blob.id))
             .suffix(blob.filename.extension_with_delimiter())
@@ -183,7 +205,12 @@ impl Storage {
     }
 
     /// Stages a generated image with the metadata its analysis would save.
-    fn stage_analyzed(&self, path: &Path, filename: Filename, content_type: &str) -> Result<Staged> {
+    pub(crate) fn stage_analyzed(
+        &self,
+        path: &Path,
+        filename: Filename,
+        content_type: &str,
+    ) -> Result<Staged> {
         let mut staged = self.stage_file(path, filename, Some(content_type))?;
         let analyzer = Analyzer::for_content_type(staged.blob.content_type.as_deref().unwrap_or(""));
         staged.blob.metadata = analyzed(&staged.blob.metadata, analyzer.metadata(path)?);
@@ -354,4 +381,47 @@ fn analyzed(metadata: &Json, mut extracted: Json) -> Json {
     let mut metadata = metadata.clone();
     metadata.merge(&extracted);
     metadata
+}
+
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{Arc, LazyLock, Mutex};
+
+    static OPENS: LazyLock<Mutex<HashMap<String, Arc<AtomicUsize>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
+
+    pub struct OpenObservation {
+        key: String,
+        count: Arc<AtomicUsize>,
+    }
+
+    impl OpenObservation {
+        pub fn count(&self) -> usize {
+            self.count.load(Ordering::Relaxed)
+        }
+    }
+
+    impl Drop for OpenObservation {
+        fn drop(&mut self) {
+            OPENS.lock().unwrap().remove(&self.key);
+        }
+    }
+
+    /// Observe the copy path before it creates a tempfile or opens the source.
+    pub fn observe_opens(key: &str) -> OpenObservation {
+        let count = Arc::new(AtomicUsize::new(0));
+        OPENS.lock().unwrap().insert(key.to_owned(), count.clone());
+        OpenObservation {
+            key: key.to_owned(),
+            count,
+        }
+    }
+
+    pub(super) fn opened(key: &str) {
+        if let Some(count) = OPENS.lock().unwrap().get(key) {
+            count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
 }

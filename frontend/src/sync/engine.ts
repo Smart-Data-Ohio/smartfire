@@ -11,9 +11,10 @@ import {
   type Scope,
   Stream,
 } from "effect";
+import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, room, sidebar, users } from "../api/endpoints.ts";
-import { thread, threadMessages } from "../api/thread-endpoints.ts";
+import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
@@ -22,7 +23,7 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
-import { captureWorkRead } from "../store/work.ts";
+import { captureWorkRead, workDetailStale } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -35,9 +36,20 @@ import {
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
+import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
+import {
+  beginThreadLoad,
+  finishThreadLoad,
+  isGoneFocus,
+  isLatestThreadLoad,
+  loadThreadHeader,
+  openAtNewest,
+  pendingThreadFocus,
+} from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
+import { refresh as refreshWork } from "./work-actions.ts";
 
 /**
  * A loaded window that stops short of the present: a permalink, a jump back, or a window the
@@ -124,7 +136,10 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   const missing = new Set<number>();
 
   for (const event of events) {
-    if (event.type === "message.created" && known[event.data.creatorId] === undefined) {
+    if (
+      (event.type === "message.created" || event.type === "thread.created") &&
+      known[event.data.creatorId] === undefined
+    ) {
       missing.add(event.data.creatorId);
     }
 
@@ -205,18 +220,9 @@ export class Engine extends Context.Service<
         through: Number.NEGATIVE_INFINITY,
       });
 
-      /**
-       * A room's newest page, merged into the window the reader is on (`resync`); then, for a
-       * window away from the present, the page around its middle re-read in place.
-       */
-      const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
-        mutations.setPageReplacing(roomId);
-        const revision = roomRevision(roomId);
-
-        const [detail, newest] = yield* Effect.all(
-          [Effect.result(room(roomId)), Effect.result(messages(roomId, null))],
-          { concurrency: 2 },
-        );
+      /** Refetch room metadata at its current management revision, including lost access. */
+      const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const detail = yield* Effect.result(room(roomId));
 
         if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
           markRoomsChanged([roomId]);
@@ -228,6 +234,68 @@ export class Engine extends Context.Service<
         ) {
           markRoomsChanged([roomId]);
           mutations.setRoomUnavailable(roomId);
+
+          return false;
+        }
+
+        return true;
+      });
+
+      /**
+       * A room's newest page, merged into the window the reader is on (`resync`); then, for a
+       * window away from the present, the page around its middle re-read in place.
+       */
+      const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
+        const state = store.getState();
+        const held = state.boards[roomId];
+        const revision = roomRevision(roomId);
+
+        const kind =
+          state.rooms[roomId]?.detail?.room.kind ?? state.sidebar.rows[roomId]?.room.kind;
+
+        if (kind === "board") {
+          if (held !== undefined) mutations.setBoardLoading(roomId, held.query);
+          const generation = store.getState().boards[roomId]?.generation;
+
+          const read = captureWorkRead(store.getState());
+
+          const [available, listing] = yield* Effect.all(
+            [
+              resyncRoomDetail(roomId, revision),
+              held === undefined
+                ? Effect.succeed(null)
+                : Effect.result(board(roomId, { ...held.query, page: held.page })),
+            ],
+            { concurrency: 2 },
+          );
+
+          if (!available) {
+            if (generation !== undefined)
+              mutations.setBoardError(roomId, generation, "This room is no longer available.");
+
+            return;
+          }
+
+          if (listing !== null && generation !== undefined) {
+            if (Result.isSuccess(listing)) {
+              mutations.loadBoardListing(listing.success, generation, read);
+            } else {
+              mutations.setBoardError(roomId, generation, listing.failure.message);
+              yield* Effect.logWarning("sync: board resync failed", listing.failure.message);
+            }
+          }
+
+          return;
+        }
+
+        mutations.setPageReplacing(roomId);
+
+        const [available, newest] = yield* Effect.all(
+          [resyncRoomDetail(roomId, revision), Effect.result(messages(roomId, null))],
+          { concurrency: 2 },
+        );
+
+        if (!available) {
           mutations.setPageFailed(roomId);
 
           return;
@@ -254,20 +322,56 @@ export class Engine extends Context.Service<
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+        // A permalink's load this supersedes still wants its reply: open around it instead.
+        const focus = pendingThreadFocus(threadId);
+        const load = beginThreadLoad(threadId, focus);
+
         mutations.setThreadPageReplacing(threadId);
 
-        const read = captureWorkRead(store.getState());
-
         const [detail, newest] = yield* Effect.all(
-          [Effect.result(thread(threadId)), threadMessages(threadId, null)],
+          [
+            loadThreadHeader(threadId, load),
+            Effect.result(threadMessages(threadId, focus === null ? null : { around: focus })),
+          ],
           { concurrency: 2 },
         );
 
-        if (Result.isSuccess(detail)) {
-          mutations.loadThreadDetail(detail.success, read);
+        // A newer load (the pane's Try again, or another resync) decides what the pane shows.
+        if (!isLatestThreadLoad(threadId, load)) {
+          return;
         }
 
-        mutations.applyThreadPage(threadId, newest, "resync");
+        const problem = paneProblem(detail);
+        const pane = store.getState().threadPanes[threadId];
+
+        // A pane already showing the thread keeps it through a failed refresh; one still loading
+        // (whose own load this superseded) or failed says why, with Try again.
+        if (
+          problem !== null &&
+          pane !== undefined &&
+          (problem === UNAVAILABLE || pane.status !== "ready")
+        ) {
+          mutations.setThreadPaneError(threadId, problem);
+        }
+
+        if (Result.isFailure(newest)) {
+          // The permalink's reply may be gone while the thread is still there (see `openAtNewest`).
+          if (focus !== null && problem === null && isGoneFocus(newest.failure)) {
+            return yield* openAtNewest(threadId, load);
+          }
+
+          return yield* Effect.fail(newest.failure);
+        }
+
+        // Only once its page is in does a permalink's focus stop carrying over (see `loadPane`).
+        if (focus !== null) {
+          mutations.applyThreadPage(threadId, newest.success, "replace");
+          finishThreadLoad(threadId, load);
+
+          return;
+        }
+
+        mutations.applyThreadPage(threadId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().threadTimelines[threadId]);
 
@@ -277,7 +381,10 @@ export class Engine extends Context.Service<
 
         const page = yield* threadMessages(threadId, { around: anchor });
 
-        if (readingHistory(store.getState().threadTimelines[threadId])) {
+        if (
+          isLatestThreadLoad(threadId, load) &&
+          readingHistory(store.getState().threadTimelines[threadId])
+        ) {
           mutations.applyThreadPage(threadId, page, "refresh");
         }
       });
@@ -432,6 +539,21 @@ export class Engine extends Context.Service<
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh);
+        const open = new Set(yield* topics.subscribed);
+
+        const workIds = new Set(
+          fresh.flatMap((event) =>
+            event.type === "thread.updated" &&
+            open.has(`thread:${event.data.id}`) &&
+            workDetailStale(store.getState(), event.data.id)
+              ? [event.data.id]
+              : [],
+          ),
+        );
+
+        for (const threadId of workIds) {
+          yield* Effect.forkIn(refreshWork(threadId).pipe(Effect.provideContext(api)), scope);
+        }
 
         const refreshes = roomRefreshIds(fresh)
           .map((roomId) => ({

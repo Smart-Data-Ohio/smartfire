@@ -9,10 +9,12 @@ import {
   PersonChange,
   PersonRemoved,
   PersonRole,
+  UpdateBanner,
   UpdateLogo,
   UpdatePerson,
   UpdateWorkspace,
   Workspace,
+  WorkspaceBranding,
   WorkspaceIconList,
 } from "./admin.ts";
 
@@ -41,6 +43,9 @@ describe("S7 admin schemas", () => {
       name: "Smart Data",
       logoUrl: "/account/logo?v=1700000000",
       logoAttached: false,
+      logoStillUrl: null,
+      bannerUrl: "/account/banner?v=7",
+      bannerStillUrl: null,
       joinUrl: "https://chat.example/join/abc-123",
       canAdminister: true,
       restrictRoomCreationToAdministrators: false,
@@ -48,6 +53,14 @@ describe("S7 admin schemas", () => {
     });
     roundTrips(UpdateWorkspace, { name: null, restrictRoomCreationToAdministrators: true });
     roundTrips(UpdateLogo, { signedId: "blob-1" });
+    roundTrips(UpdateBanner, { signedId: "blob-2" });
+    roundTrips(WorkspaceBranding, {
+      name: "Smart Data",
+      logoUrl: "/account/logo?v=1&animated=1",
+      logoStillUrl: "/account/logo?v=1",
+      bannerUrl: null,
+      bannerStillUrl: null,
+    });
   });
 
   it("round-trip people and the changes to them", () => {

@@ -1,5 +1,6 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useActivityUnread } from "../../store/inbox-hooks.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
@@ -51,6 +52,70 @@ function initialsOf(name: string): string {
     .toUpperCase();
 }
 
+interface WorkspaceTileProps {
+  readonly name: string;
+  readonly logoUrl: string | null;
+  /** An animated logo's first frame, shown at rest; `null` for a still logo. */
+  readonly stillUrl: string | null;
+}
+
+/**
+ * The workspace's tile at the top of the rail: its logo when one is uploaded (and loads), else
+ * its initials. Round at rest, it squares off under the pointer, as a Discord server does. An
+ * animated logo rests on its first frame and plays only while pointed at or focused (never under
+ * reduced motion), starting from the top each time.
+ */
+function WorkspaceTile({ name, logoUrl, stillUrl }: WorkspaceTileProps) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+  const reduced = useReducedMotion();
+
+  const rest = stillUrl ?? logoUrl;
+  const logo = rest !== null && rest !== broken ? rest : null;
+  const playing = live && !reduced && stillUrl !== null && logoUrl !== null && logoUrl !== broken;
+
+  return (
+    <Tooltip content={name} placement="right" describe={false}>
+      <Link
+        to="/"
+        className="rail-workspace"
+        aria-label={name}
+        data-logo={logo !== null || undefined}
+        onPointerEnter={() => setLive(true)}
+        onPointerLeave={() => setLive(false)}
+        onFocus={() => setLive(true)}
+        onBlur={() => setLive(false)}
+      >
+        {logo === null ? (
+          initialsOf(name)
+        ) : (
+          <img
+            className="rail-workspace-logo"
+            src={logo}
+            alt=""
+            width={40}
+            height={40}
+            draggable={false}
+            onError={() => setBroken(logo)}
+          />
+        )}
+        {playing ? (
+          <img
+            className="rail-workspace-logo"
+            data-animated=""
+            src={logoUrl}
+            alt=""
+            width={40}
+            height={40}
+            draggable={false}
+            onError={() => setBroken(logoUrl)}
+          />
+        ) : null}
+      </Link>
+    </Tooltip>
+  );
+}
+
 /** Unread direct messages across the sidebar, for the DMs destination. */
 function useDirectUnread(): number {
   return useStore((state) => {
@@ -82,6 +147,8 @@ function useDirectUnread(): number {
 export function Rail() {
   const destination = useDestination();
   const accountName = useStore((state) => state.boot?.account.name ?? "Smartfire");
+  const logoUrl = useStore((state) => state.boot?.account.logoUrl ?? null);
+  const logoStillUrl = useStore((state) => state.boot?.account.logoStillUrl ?? null);
   const unreadRooms = useStore((state) => sidebarTotals(state.sidebar).unreadRooms);
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const directUnread = useDirectUnread();
@@ -101,11 +168,7 @@ export function Rail() {
 
   return (
     <nav className="rail" aria-label="Destinations">
-      <Tooltip content={accountName} placement="right" describe={false}>
-        <Link to="/" className="rail-workspace" aria-label={accountName}>
-          {initialsOf(accountName)}
-        </Link>
-      </Tooltip>
+      <WorkspaceTile name={accountName} logoUrl={logoUrl} stillUrl={logoStillUrl} />
       <span className="rail-divider" aria-hidden="true" />
       <RailItem
         label="Home"

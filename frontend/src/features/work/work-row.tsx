@@ -19,7 +19,7 @@ interface WorkRowProps {
 /**
  * One work thread: its name (and a Board marker for a board post), where it lives, its status
  * and owner, its links, and when it last changed. The whole row opens it: a channel thread in
- * its room's pane, a board post on its classic page. Arrow keys move between rows.
+ * its room's pane, including board posts. Arrow keys move between rows.
  */
 export function WorkRow({ row, now, motion, onOpen }: WorkRowProps) {
   const { thread } = row;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseBoardSearch } from "./lib/board-search.ts";
 import { SCREENS } from "./lib/screens.ts";
 import { router } from "./router.tsx";
 
@@ -50,5 +51,35 @@ describe("the screen map and the router", () => {
 
       expect(mapped.has(path) || internal.has(path), path).toBe(true);
     }
+  });
+});
+
+describe("board route search", () => {
+  it("keeps valid board search and drops invalid values", () => {
+    expect(parseBoardSearch({ view: "board", status: "all", owner: 7, tag: "api" })).toEqual({
+      view: "board",
+      status: "all",
+      owner: "7",
+      tag: "api",
+    });
+    expect(parseBoardSearch({ view: "other", status: "blocked", owner: [], tag: false })).toEqual(
+      {},
+    );
+  });
+
+  it("inherits board search on posts/new, threads and ordinary room child routes", () => {
+    for (const path of ["/r/900/posts/new", "/r/900/t/42", "/r/900/files", "/r/900/m/123"]) {
+      const leaf = router
+        .matchRoutes(path, { view: "board", status: "all", owner: "me", tag: "api", m: 123 })
+        .at(-1);
+
+      expect(leaf?.search).toMatchObject({ view: "board", status: "all", owner: "me", tag: "api" });
+
+      if (path === "/r/900/t/42") expect(leaf?.search).toHaveProperty("m", 123);
+    }
+
+    expect(
+      router.matchRoutes("/r/900/t/new", { parent: 123, status: "open" }).at(-1)?.search,
+    ).toMatchObject({ parent: 123, status: "open" });
   });
 });

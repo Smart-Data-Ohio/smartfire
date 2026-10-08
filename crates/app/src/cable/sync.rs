@@ -14,6 +14,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
+pub use campfire_api_types::WorkspaceBranding;
 use campfire_api_types::{
     MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload,
@@ -158,6 +159,7 @@ impl RendererSlot {
 /// cable sink handles (its type's path, as the sink names it, without `campfire_db::models::`,
 /// `campfire_db::` or `crate::integrations::`).
 pub const TWINS: &[(&str, &[&str])] = &[
+    ("workspace_branding::publish", &["workspace.updated"]),
     (
         "Broadcasts::message_create",
         &["message.created", "room.unread", "sidebar.row.upserted"],
@@ -202,6 +204,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("activity_item::ActivityItemsRemoved", &["activity.removed"]),
     ("agent::AgentSyncChange", &["agent.status"]),
     ("agent_approval::ApprovalChange", &["approval.updated"]),
+    ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("activity_item::ActivityItemTouched", &["activity.item"]),
     (
@@ -226,8 +229,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
     // carries the thread's new count and activity), a direct room's sidebar row
     // (`Partial::DirectSidebar`, with the member's row), and the huddle notices and invitations on
-    // `user_<id>_huddle_notices`/`user_<id>_activity`. Its other frames (message features, room
-    // headers, polls, board rows and the other directory partials) have no twin yet. Its
+    // `user_<id>_huddle_notices`/`user_<id>_activity`. Board-row prepends and replaces have
+    // `ThreadBoardCreation`/`ThreadWorkChange` companions, coalesced after the commit's callbacks;
+    // row removal has `Broadcasts::thread_removed`. Its other frames (message features, room
+    // headers, polls and the other directory partials) have no twin yet. Its
     // `ActivityChannel` frames (`user_<id>_activity`) have `activity.item`.
     (
         "broadcasts::Broadcast",
@@ -240,7 +245,9 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "message.pinned",
             "thread.unread",
             "thread.indicator",
+            "thread.created",
             "thread.updated",
+            "thread.removed",
             "sidebar.row.upserted",
             "huddle.notice",
             "huddle.ring",
@@ -1269,6 +1276,22 @@ pub fn presence(server: &Cable, presence: UserPresence) {
     );
 }
 
+/// Latest workspace name and images on everyone's `user` topic.
+pub fn workspace_updated(server: &Cable, branding: WorkspaceBranding) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::Everyone,
+        &SyncPayload::WorkspaceUpdated(branding),
+        |publication| SyncPublication {
+            coalesce: Some("workspace".into()),
+            ..publication
+        },
+    );
+}
+
 /// The twin of a status badge update (`StatusBadgeBroadcast`), whose presence is the badge's
 /// word.
 pub fn status_badge(server: &Cable, user_id: i64, presence_word: &str, status_text: Option<&str>) {
@@ -1479,5 +1502,21 @@ mod tests {
             assert!(!NOT_YET_TWINNED.contains(kind), "{kind} is in both lists");
             assert!(!events.is_empty(), "{kind} has no events");
         }
+    }
+
+    #[test]
+    fn board_row_frames_have_creation_update_and_removal_twins() {
+        let events = TWINS
+            .iter()
+            .find(|(kind, _)| *kind == "broadcasts::Broadcast")
+            .unwrap()
+            .1;
+        for event in ["thread.created", "thread.updated", "thread.removed"] {
+            assert!(events.contains(&event), "board rows need {event}");
+        }
+        assert!(TWINS.contains(&(
+            "channel_thread::ThreadBoardCreation",
+            &["thread.created"] as &[&str],
+        )));
     }
 }

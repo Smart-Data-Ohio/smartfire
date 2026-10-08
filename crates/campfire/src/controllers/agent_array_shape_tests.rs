@@ -30,10 +30,10 @@ fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<
                 }
                 use rusqlite::types::ValueRef;
                 // The API's per-attempt creation key is port-only; classic paths leave it null.
-                if table == "rooms" && name == "client_room_id" {
+                if crate::controllers::presenters::test_support::rust_only_column(table, name) {
                     assert!(
                         matches!(r.get_ref(i)?, ValueRef::Null),
-                        "classic room paths never set API creation keys"
+                        "classic paths never set API creation keys"
                     );
                     continue;
                 }

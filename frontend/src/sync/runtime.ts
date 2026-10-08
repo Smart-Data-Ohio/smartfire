@@ -1,4 +1,5 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
+import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import type { EventPrefill } from "../api/event-endpoints.ts";
@@ -10,6 +11,7 @@ import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
 import type { CreateEvent } from "../gen/CreateEvent.ts";
@@ -49,16 +51,20 @@ import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
+import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { ApprovalFilter } from "../store/approvals.ts";
+import type { BoardQuery } from "../store/boards.ts";
 import type { LedgerFilter } from "../store/ledger.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
+import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
 import * as eventActions from "./event-actions.ts";
@@ -185,6 +191,8 @@ const threads = {
   ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),
   update: (threadId: number, body: UpdateThread): Promise<void> =>
     runAction(threadActions.update(threadId, body)),
+  /** Deletes the thread (a moderator's; a board post's "Delete post"). */
+  remove: (threadId: number): Promise<void> => runAction(threadActions.remove(threadId)),
   follow: (threadId: number, involvement: ThreadInvolvement | null): Promise<void> =>
     runAction(threadActions.follow(threadId, involvement)),
   markRead: (threadId: number): Promise<void> => runAction(threadActions.markRead(threadId)),
@@ -295,6 +303,11 @@ export { isSafeWorkHref } from "../api/schema/work.ts";
 
 /** Work tracking (S4). Loads and refreshes never reject; writes reject on failure. */
 const work = {
+  update: (threadId: number, body: UpdateWork): Promise<void> =>
+    runAction(boardActions.update(threadId, body)),
+  handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
+    runAction(boardActions.handoff(threadId, body)),
+  list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
   /** Loads (or reloads) a filter of the work list. */
   loadList: (filter: WorkFilter): Promise<void> => runAction(workActions.loadList(filter)),
   /** Refetches a thread's detail after live work facts moved past the pane's. */
@@ -453,6 +466,14 @@ const events = {
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
+  boards: {
+    open: (roomId: number, query: BoardQuery): Promise<void> =>
+      runAction(boardActions.open(roomId, query)),
+    loadMore: (roomId: number): Promise<void> => runAction(boardActions.loadMore(roomId)),
+    postForm: (roomId: number): Promise<BoardPostForm> => runAction(boardActions.postForm(roomId)),
+    createPost: (roomId: number, input: boardActions.BoardPostInput): Promise<ThreadDetail> =>
+      runAction(boardActions.createPost(roomId, input)),
+  },
   messages,
   threads,
   activity,
@@ -550,3 +571,5 @@ export const actions = {
     runtime.runFork(Presence.use((presence) => presence.noteActivity));
   },
 };
+
+export type { BoardPostInput } from "./board-actions.ts";

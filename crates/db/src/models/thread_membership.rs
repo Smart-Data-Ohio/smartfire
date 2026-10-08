@@ -106,6 +106,19 @@ impl ThreadMembership {
         )
     }
 
+    /// The viewer's memberships for a page of threads, read together.
+    pub fn for_user_threads(conn: &Connection, user_id: i64, thread_ids: &[i64]) -> Result<Vec<Self>> {
+        if thread_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        query_all(
+            conn,
+            "SELECT * FROM thread_memberships WHERE user_id=? AND thread_id IN (SELECT value FROM json_each(?))",
+            params![user_id, serde_json::json!(thread_ids).to_string()],
+            Self::from_row,
+        )
+    }
+
     /// `user.thread_memberships.unread`
     pub fn unread_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
         query_all(

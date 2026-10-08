@@ -312,6 +312,12 @@ describe("switcher", () => {
     expect(switcher.people.find((person) => person.userId === users.sam)?.directRoomId).toBeNull();
     expect(switcher.people.map((person) => person.userId)).not.toContain(users.ember);
     expect(switcher.threads[0]).toMatchObject({ roomName: expect.any(String) });
-    expect(switcher.threads.map((thread) => thread.threadId).sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(switcher.rooms.find((room) => room.roomId === 900)).toMatchObject({
+      kind: "board",
+      name: "Roadmap",
+    });
+    expect(switcher.threads.map((thread) => thread.threadId).sort((a, b) => a - b)).toEqual([
+      1, 4, 5, 6, 901, 9001, 9002, 9004, 9005, 9006, 9008, 9009, 9010, 9011, 9012,
+    ]);
   });
 });

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Smartfire navigation URL contract (cutover step 1)",
-  "notes": "Machine-readable pin of every navigation URL family and retained boundary from the SPA cutover inventory (AGENTS.md; ~/.cache/spa-cutover-inventory.md sections 1, 5, 6 row 1). Each entry names its broad family pattern plus concrete representative cases that run today over real HTTP against a booted TestApp (see crates/campfire/src/controllers/url_contract_tests.rs). The runner reads ALL expectation state from this file: later default flips and prefix drops must need only expectation edits here, never hardcoded path assertions in the test. Statuses pin 302 (classic navigation redirects, incl. SPA coexistence) vs 303 (POST /app/ui_preference only). Locations pin target query preservation and classic=1 handling. owner_today is one of classic/spa/both/server/static/api. after_cutover.action is one of spa (canonical same-path SPA screen, served or handed off internally without a self-redirect), alias (legacy HTML navigation redirects to target, preserving query context and authorization), retain (existing endpoint and behavior remain). known_bug records current defects or missing screens and their fix_before deadline. Expectations describe this revision, not permission to preserve bugs throughout cutover: fix blockers before their deadline and update their expectations with the behavior change. This review step changes no application behavior.",
+  "notes": "Machine-readable pin of every navigation URL family and retained boundary from the SPA cutover inventory (AGENTS.md; ~/.cache/spa-cutover-inventory.md sections 1, 5, 6 row 1). Each entry names its broad family pattern plus concrete representative cases that run today over real HTTP against a booted TestApp (see crates/campfire/src/controllers/url_contract_tests.rs). The runner reads ALL expectation state from this file: later default flips and prefix drops must need only expectation edits here, never hardcoded path assertions in the test. Statuses pin 302 (classic navigation redirects, incl. SPA coexistence) vs 303 (POST /app/ui_preference only). Locations pin target query preservation and classic=1 handling. owner_today is one of classic/spa/both/server/static/api. after_cutover.action is one of spa (canonical same-path SPA screen, served or handed off internally without a self-redirect), alias (legacy HTML navigation redirects to target, preserving query context and authorization), retain (existing endpoint and behavior remain). known_bug records current defects or missing screens and their fix_before deadline. Expectations describe this revision, not permission to preserve bugs throughout cutover: fix blockers before their deadline and update their expectations with the behavior change. The contract tracks the screens and retained boundaries available in this revision.",
   "placeholders": {
     "OPEN_ROOM": "201306877",
     "OPEN_PETS": "104393281",
@@ -177,11 +177,11 @@
       "category": "rooms",
       "classic_endpoint": "rooms#show",
       "owner_today": "both",
-      "after_cutover": {"action": "alias", "target": "/r/:id", "notes": "Board rooms redirect server-side today; the SPA bounces them back to classic client-side until boards are ported."},
+      "after_cutover": {"action": "alias", "target": "/r/:id", "notes": "Every room kind has an SPA screen, including the board list and status columns."},
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "One redirect case per kind plus classic renders for the kinds the SPA cannot show yet.",
+      "notes": "One redirect case per kind plus retained classic renders for board and voice rooms.",
       "bookmark_notes": "Same as room_show for every kind.",
       "notification_notes": "Same as room_show for every kind.",
       "cases": [
@@ -334,11 +334,11 @@
       "category": "threads",
       "classic_endpoint": "channel_threads#show",
       "owner_today": "both",
-      "after_cutover": {"action": "alias", "target": "/r/:room_id/t/:id", "notes": "Include board posts once boards are ported. The classic new form is board-only; do not treat it as an ordinary thread draft."},
+      "after_cutover": {"action": "alias", "target": "/r/:room_id/t/:id", "notes": "Board posts and their new-post form are ported. The classic new form is board-only and maps to /r/:room_id/posts/new."},
       "bookmarks": true,
       "notifications": true,
       "known_bug": {"fix_before": "none", "reason": "The classic thread content partial requested as JSON raises500; it does not block cutover."},
-      "notes": "Show/index are ported; new is absent from the screen map. Requesting the content partial as JSON raises a pinned 500 (MissingTemplate parity).",
+      "notes": "Show/index and the board-only new-post form are ported. Requesting the content partial as JSON raises a pinned 500 (MissingTemplate parity).",
       "bookmark_notes": "Thread links and board-nudge links must keep resolving with message context.",
       "notification_notes": "Thread push links carry ?thread=:id; translate into the thread route, not a plain room route.",
       "cases": [
@@ -348,7 +348,8 @@
         {"id": "thread.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Planned work"]}},
         {"id": "thread.content.html", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "absent": ["{CLASSIC_SHELL}", "{SPA_BOOT}", "id=\"root\""], "markers": ["thread-panel__thread-content", "data-controller=\"thread-messages\""]}},
         {"id": "thread.content.json500", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"accept": "application/json"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 500, "content_type_prefix": "application/json", "markers": ["{\"status\":500,\"error\":\"Internal Server Error\"}"]}},
-        {"id": "thread.new.board", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
+        {"id": "thread.new.board", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/posts/new"}},
+        {"id": "thread.new.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
         {"id": "thread.new.plain404", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}}
       ]
     },

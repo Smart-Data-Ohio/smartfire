@@ -22,7 +22,7 @@ import type { LoadStatus, Thread } from "./model.ts";
 import { mergeUserList } from "./ordering.ts";
 import { landsOver, mergeRevision } from "./revision.ts";
 import type { State } from "./state.ts";
-import { loadThreadDetail, upsertThread } from "./threads.ts";
+import { loadThreadDetail, removedSince, revive, upsertThread } from "./threads.ts";
 
 /** One filter's work list. */
 export interface WorkListState {
@@ -47,6 +47,8 @@ interface WorkFields {
   readonly ownerActive: number;
   readonly choices: number;
   readonly links: number;
+  readonly tags: number;
+  readonly messageCount: number;
 }
 
 export interface WorkSlice {
@@ -66,6 +68,8 @@ export interface WorkSlice {
 /** A read captures only fields outside WorkFacts.updatedAt, never record freshness. */
 export interface WorkRead {
   readonly at: number;
+  readonly since: number;
+  readonly threads: State["threads"];
   /** Per-thread overrides for a reply's own tracking intent. */
   readonly fields: WorkSlice["fields"];
 }
@@ -79,10 +83,18 @@ export const emptyWork: WorkSlice = {
   fields: {},
 };
 
-const emptyFields: WorkFields = { tracking: 0, owner: 0, ownerActive: 0, choices: 0, links: 0 };
+const emptyFields: WorkFields = {
+  tracking: 0,
+  owner: 0,
+  ownerActive: 0,
+  choices: 0,
+  links: 0,
+  tags: 0,
+  messageCount: 0,
+};
 
-export function captureWorkRead(_state: State): WorkRead {
-  return { at: nextObservation(), fields: {} };
+export function captureWorkRead(state: State): WorkRead {
+  return { at: nextObservation(), since: state.removalCount, threads: state.threads, fields: {} };
 }
 
 function withWork(state: State, change: Partial<WorkSlice>): State {
@@ -105,6 +117,8 @@ function showFacts(
     readonly owner?: boolean;
     readonly eligibility?: boolean;
     readonly links?: boolean;
+    readonly tags?: boolean;
+    readonly messageCount?: boolean;
   } = {},
 ): State {
   const before = state.threads[thread.id]?.work ?? null;
@@ -156,6 +170,15 @@ function showFacts(
           before?.ownerActive !== thread.work?.ownerActive
             ? Math.max(fields.ownerActive, mark("ownerActive"))
             : fields.ownerActive,
+        tags:
+          observations.tags === true ||
+          JSON.stringify(before?.tags ?? []) !== JSON.stringify(thread.work?.tags ?? [])
+            ? Math.max(fields.tags, mark("tags"))
+            : fields.tags,
+        messageCount:
+          observations.messageCount === true || before?.messageCount !== thread.work?.messageCount
+            ? Math.max(fields.messageCount, mark("messageCount"))
+            : fields.messageCount,
         links:
           observations.links === true || !sameLinks(before?.links ?? [], thread.work?.links ?? [])
             ? Math.max(fields.links, mark("links"))
@@ -213,6 +236,8 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
 
   const eligibilityCurrent = mark("ownerActive") > fields.ownerActive;
   const linksCurrent = mark("links") > fields.links;
+  const tagsCurrent = mark("tags") > fields.tags;
+  const countCurrent = mark("messageCount") > fields.messageCount;
 
   let confirmed = stored ?? null;
   let observedOwner = false;
@@ -248,6 +273,14 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
 
     confirmed = confirmed.links === links ? confirmed : { ...confirmed, links };
 
+    confirmed = {
+      ...confirmed,
+      tags: tagsCurrent ? incoming.tags : (stored?.tags ?? incoming.tags),
+      messageCount: countCurrent
+        ? incoming.messageCount
+        : (stored?.messageCount ?? incoming.messageCount),
+    };
+
     // Eligibility belongs to the selected owner, never to a rejected owner snapshot.
     const matchesIncoming = confirmed.owner?.id === incoming.owner?.id;
     observedEligibility = matchesIncoming && eligibilityCurrent;
@@ -279,6 +312,8 @@ function mergedFacts(state: State, thread: Thread, event: boolean, read?: WorkRe
     observedOwner,
     observedEligibility,
     observedLinks,
+    observedTags: incoming !== null && tagsCurrent,
+    observedCount: incoming !== null && countCurrent,
     observedAbsence: incoming === null && !pending && (event || trackingCurrent),
   };
 }
@@ -290,6 +325,8 @@ export function receiveWorkThread(
   read?: WorkRead,
   source: "event" | "read" = "event",
 ): State {
+  if (state.removedThreads[thread.id] !== undefined) return state;
+
   const result = mergedFacts(state, thread, source === "event", read);
   const overlay = state.work.overlays[thread.id];
 
@@ -303,9 +340,35 @@ export function receiveWorkThread(
         })
       : withoutOverlay(state, thread.id);
 
+  const held = state.threads[thread.id];
+  const captured = read?.threads[thread.id];
+
+  const record =
+    read !== undefined && held !== undefined && held !== captured
+      ? {
+          ...thread,
+          name: held.name !== captured?.name ? held.name : thread.name,
+          status: held.status !== captured?.status ? held.status : thread.status,
+          parentMessageId:
+            held.parentMessageId !== captured?.parentMessageId
+              ? held.parentMessageId
+              : thread.parentMessageId,
+          autoArchiveAfterMinutes:
+            held.autoArchiveAfterMinutes !== captured?.autoArchiveAfterMinutes
+              ? held.autoArchiveAfterMinutes
+              : thread.autoArchiveAfterMinutes,
+          lastActivityAt:
+            held.lastActivityAt !== captured?.lastActivityAt
+              ? held.lastActivityAt
+              : thread.lastActivityAt,
+          replyCount:
+            held.replyCount !== captured?.replyCount ? held.replyCount : thread.replyCount,
+        }
+      : thread;
+
   return showFacts(
     next,
-    { ...thread, work: result.facts },
+    { ...record, work: result.facts },
     {
       at: result.at,
       read,
@@ -313,17 +376,55 @@ export function receiveWorkThread(
       owner: result.observedOwner,
       eligibility: result.observedEligibility,
       links: result.observedLinks,
+      tags: result.observedTags,
+      messageCount: result.observedCount,
     },
   );
 }
 
 /** Thread permissions and membership land independently of the work record. */
-export function loadWorkThreadDetail(state: State, detail: ThreadDetail, read?: WorkRead): State {
-  const users = mergeUserList(state.users, detail.users);
-  const next = receiveWorkThread({ ...state, users }, detail.thread, read, "read");
-  const thread = next.threads[detail.thread.id] ?? detail.thread;
+export function loadWorkThreadDetail(
+  state: State,
+  detail: ThreadDetail,
+  read?: WorkRead,
+  since = read?.since ?? state.removalCount,
+): State {
+  const id = detail.thread.id;
 
-  return mergeWorkDetail(loadThreadDetail(next, { ...detail, thread }), detail, read);
+  if (removedSince(state, id, since)) return state;
+
+  const users = mergeUserList(state.users, detail.users);
+
+  const next = receiveWorkThread(
+    { ...revive(state, id, since), users },
+    detail.thread,
+    read,
+    "read",
+  );
+
+  const thread = next.threads[id] ?? detail.thread;
+
+  const merged = mergeWorkDetail(
+    loadThreadDetail(next, { ...detail, thread }, since),
+    detail,
+    read,
+  );
+
+  const pane = merged.threadPanes[id];
+
+  return pane === undefined
+    ? merged
+    : {
+        ...merged,
+        threadPanes: {
+          ...merged.threadPanes,
+          [id]: {
+            ...pane,
+            work: merged.work.details[id] ?? null,
+            workFacts: merged.work.heldFacts[id] ?? null,
+          },
+        },
+      };
 }
 
 /** The filters, in the work page's tab order. */
@@ -379,6 +480,9 @@ export function sameWorkFacts(a: WorkFacts | null, b: WorkFacts | null): boolean
     a.ownerActive === b.ownerActive &&
     a.runUrl === b.runUrl &&
     a.resultUpdatedAt === b.resultUpdatedAt &&
+    a.messageCount === b.messageCount &&
+    a.tags.length === b.tags.length &&
+    a.tags.every((tag, index) => tag === b.tags[index]) &&
     sameLinks(a.links, b.links)
   );
 }
@@ -399,7 +503,13 @@ export function workDetailStale(state: State, threadId: number): boolean {
     !sameWorkFacts(
       held === null || live === null
         ? held
-        : { ...held, ownerActive: live.ownerActive, links: live.links },
+        : {
+            ...held,
+            ownerActive: live.ownerActive,
+            links: live.links,
+            tags: live.tags,
+            messageCount: live.messageCount,
+          },
       live,
     )
   );
@@ -509,6 +619,8 @@ export function optimisticFacts(
         runUrl: null,
         resultUpdatedAt: null,
         links: [],
+        tags: [],
+        messageCount: 0,
         updatedAt: "0001-01-01T00:00:00.000000Z",
       }
     : { ...current, status };
@@ -570,6 +682,8 @@ function workReplyRead(
         ownerActive: captured?.ownerActive ?? read.at,
         links: captured?.links ?? read.at,
         choices: captured?.choices ?? read.at,
+        tags: captured?.tags ?? read.at,
+        messageCount: captured?.messageCount ?? read.at,
       },
     },
   };
@@ -651,11 +765,15 @@ export function landWorkList(
 
   let next = users === state.users ? state : { ...state, users };
 
-  const rows = list.threads.map((row) => {
-    next = receiveWorkThread(next, row.thread, read, "read");
+  const since = read?.since ?? state.removalCount;
 
-    return { ...row, thread: next.threads[row.thread.id] ?? row.thread };
-  });
+  const rows = list.threads
+    .filter(({ thread }) => !removedSince(state, thread.id, since))
+    .map((row) => {
+      next = receiveWorkThread(revive(next, row.thread.id, since), row.thread, read, "read");
+
+      return { ...row, thread: next.threads[row.thread.id] ?? row.thread };
+    });
 
   return workListOf(state, filter).generation !== generation
     ? next

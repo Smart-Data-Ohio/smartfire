@@ -4,6 +4,7 @@ import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
 import { type AgentsSlice, emptyAgents } from "./agents.ts";
 import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
+import type { BoardState } from "./boards.ts";
 import { type CardsState, emptyCards } from "./cards.ts";
 import { emptyFreshness, type Freshness } from "./freshness.ts";
 import { emptyLedger, type LedgerSlice } from "./ledger.ts";
@@ -65,11 +66,27 @@ export interface State {
   readonly threadPanes: Readonly<Record<number, ThreadPaneState>>;
   /** Each open thread's loaded window of replies (the unread fields stay unused). */
   readonly threadTimelines: Readonly<Record<number, Timeline>>;
+  readonly boards: Readonly<Record<number, BoardState>>;
   readonly roomThreads: Readonly<Record<number, RoomThreadList>>;
   /** Typists per topic (`room:12`): user id to the time (ms) their entry expires. */
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
+  /**
+   * Deleted thread ids, each with the `removalCount` its removal made: a `thread.created` or
+   * `thread.updated` published out of order after the `thread.removed` can't bring the thread
+   * back, and neither can an HTTP reply to a request sent before the removal. Only a reply to one
+   * sent after it does (see `revive`). At most `MAX_REMOVED_THREADS`, the oldest dropped first.
+   */
+  readonly removedThreads: Readonly<Record<number, number>>;
+  /** How many thread removals this session has seen: a request's `since` is the count at send. */
+  readonly removalCount: number;
+  /**
+   * The newest removal dropped from `removedThreads`: a reply to a request sent before it can't
+   * tell whether a thread it shows was removed meanwhile, so it doesn't add threads (see
+   * `removedSince`).
+   */
+  readonly forgottenRemoval: number;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -134,9 +151,13 @@ export const initialState: State = {
   threadMemberships: {},
   threadPanes: {},
   threadTimelines: {},
+  boards: {},
   roomThreads: {},
   typing: {},
   tombstones: {},
+  removedThreads: {},
+  removalCount: 0,
+  forgottenRemoval: 0,
   huddles: {},
   stages: {},
   activity: emptyActivity,

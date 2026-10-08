@@ -11,43 +11,36 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
-import { captureWorkRead } from "../store/work.ts";
+import { paneProblem, refetchThread, settled, settledDetail } from "./settle.ts";
+import {
+  beginThreadLoad,
+  finishThreadLoad,
+  isGoneFocus,
+  isLatestThreadLoad,
+  loadThreadHeader,
+  openAtNewest,
+} from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
 
-/**
- * The latest pane load per thread. Only the latest lands: an earlier load that answers late (the
- * newest replies the pane opened on, say, after a reload around an older reply) would otherwise
- * replace the window the later one put in place.
- */
-const paneLoads = new Map<number, number>();
+export { UNSETTLED } from "./settle.ts";
 
 /**
  * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
- * permalink) into the pane. Errors land in the store. A later load of the same thread supersedes
- * this one, whose results are then dropped.
+ * permalink) into the pane. Errors land in the store.
  */
 const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
-  const load = (paneLoads.get(threadId) ?? 0) + 1;
+  const load = beginThreadLoad(threadId, focusMessageId);
 
-  paneLoads.set(threadId, load);
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
-  const read = captureWorkRead(store.getState());
-
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(
-        api
-          .thread(threadId)
-          .pipe(
-            Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, read))),
-          ),
-      ),
+      loadThreadHeader(threadId, load),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -57,29 +50,35 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     // Interrupted before the window lands. A later load owns the flag, so only this one clears it.
     Effect.onInterrupt(() =>
       Effect.sync(() => {
-        if (paneLoads.get(threadId) === load) {
+        if (isLatestThreadLoad(threadId, load)) {
           mutations.clearThreadPageLoading(threadId, "replace");
         }
       }),
     ),
   );
 
-  // A later load owns the pane (and its loading state) now.
-  if (paneLoads.get(threadId) !== load) {
+  // A newer load (a resync, or another Try again) decides what the pane shows.
+  if (!isLatestThreadLoad(threadId, load)) {
     return;
   }
 
-  if (Result.isFailure(detail)) {
-    mutations.setThreadPaneError(threadId, detail.failure.message);
+  const problem = paneProblem(detail);
+
+  if (problem !== null) {
+    mutations.setThreadPaneError(threadId, problem);
     mutations.setThreadPageFailed(threadId);
 
     return;
   }
 
-  if (Result.isFailure(page)) {
-    mutations.setThreadPageFailed(threadId);
-  } else {
+  if (Result.isSuccess(page)) {
     mutations.applyThreadPage(threadId, page.success, "replace");
+    // Only now is a permalink's reply in view; until then a later load still opens around it.
+    finishThreadLoad(threadId, load);
+  } else if (focusMessageId !== null && isGoneFocus(page.failure)) {
+    yield* openAtNewest(threadId, load);
+  } else {
+    mutations.setThreadPageFailed(threadId);
   }
 });
 
@@ -168,31 +167,39 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
-  const read = captureWorkRead(store.getState());
+  const reply = yield* settled(
+    api.createThread(roomId, {
+      parentMessageId,
+      name: options.name ?? null,
+      message: {
+        clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
+        markdownSource: markdown,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: options.attachmentSignedId ?? null,
+      },
+    }),
+    (previous) =>
+      refetchThread(previous.detail.thread.id).pipe(
+        Effect.map((detail) => (detail === null ? null : { ...previous, detail })),
+      ),
+    (answer) => [answer.detail.thread.id],
+    (answer, since, read) => mutations.threadCreated(answer, since, read),
+  );
 
-  const created = yield* api.createThread(roomId, {
-    parentMessageId,
-    name: options.name ?? null,
-    message: {
-      clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
-      markdownSource: markdown,
-      replyToMessageId: null,
-      replyNotifyAuthor: null,
-      attachmentSignedId: options.attachmentSignedId ?? null,
-    },
-  });
-
-  mutations.threadCreated(created, read);
-
-  return created.detail.thread.id;
+  return reply.answer.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  const read = captureWorkRead(store.getState());
-  const detail = yield* api.updateThread(threadId, body);
+  yield* settledDetail(api.updateThread(threadId, body), (detail, since, read) =>
+    mutations.loadThreadDetail(detail, since, read),
+  );
+});
 
-  mutations.loadThreadDetail(detail, read);
+/** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */
+export const remove = Effect.fn("threads.remove")(function* (threadId: number) {
+  yield* api.deleteThread(threadId);
 });
 
 /** Follows (`everything`), mentions-only, or leaves (`null`). */
@@ -226,12 +233,20 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
   mutations.setThreadListLoading(roomId, filter);
+  const ask = api.threads(roomId, filter);
 
-  const read = captureWorkRead(store.getState());
-
-  yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) =>
-      Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, read)),
+  yield* settled(
+    ask,
+    () => ask,
+    (list) => list.threads.map(({ thread }) => thread.id),
+    (list, since, read) => mutations.loadThreadList(roomId, filter, list, since, read),
+  ).pipe(
+    Effect.tap((reply) =>
+      Effect.sync(() => {
+        if (reply.outcome !== "installed") {
+          mutations.setThreadListFailed(roomId, filter);
+        }
+      }),
     ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );

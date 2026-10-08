@@ -12,6 +12,7 @@ export type RightPaneView =
   | { readonly kind: "pane"; readonly pane: PaneKind };
 
 export interface PaneInputs {
+  readonly newBoardPost?: boolean;
   /** `$threadId` from the URL, when a thread route matched. */
   readonly threadId: number | null;
   /** `?parent=` on the new-thread route, when it matched. */
@@ -25,9 +26,12 @@ export interface PaneInputs {
 export function selectRightPaneView({
   threadId,
   newThreadParent,
+  newBoardPost = false,
   routePane = null,
   openPane,
 }: PaneInputs): RightPaneView | null {
+  if (newBoardPost) return null;
+
   if (threadId !== null) {
     return { kind: "thread", threadId };
   }

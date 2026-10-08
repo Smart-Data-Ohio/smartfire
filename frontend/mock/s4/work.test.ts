@@ -61,9 +61,9 @@ describe("the work list", () => {
       expect.arrayContaining([ids.done, boardPosts.darkMode]),
     );
     expect(done.threads.every((row) => row.thread.work?.status === "done")).toBe(true);
-    expect(agents.threads.map((row) => row.thread.id)).toEqual([ids.agentOwned]);
+    expect(agents.threads.map((row) => row.thread.id)).toEqual([ids.agentOwned, 9005, 9008]);
     expect(boards.threads.every((row) => row.board)).toBe(true);
-    expect(boards.threads).toHaveLength(3);
+    expect(boards.threads).toHaveLength(15);
     expect(all.threads).toHaveLength(done.threads.length + open.threads.length);
   });
 });
@@ -140,6 +140,7 @@ describe("work facts and detail", () => {
         ownerActive: true,
         runUrl: null,
         links: [],
+        tags: [],
         resultMarkdown: null,
         resultHtml: null,
         resultUpdatedById: null,
