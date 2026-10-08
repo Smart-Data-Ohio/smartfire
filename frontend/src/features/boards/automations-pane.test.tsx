@@ -182,6 +182,35 @@ describe("the board automations pane", () => {
     });
   });
 
+  it("refetches when its room resyncs, keeping the timer fields being edited", async () => {
+    const fresh = withTimers([
+      { status: "planned", nudgeAfterMinutes: 60, escalateAfterMinutes: 120 },
+      { status: "blocked", nudgeAfterMinutes: 5, escalateAfterMinutes: 10 },
+    ]);
+
+    const load = vi
+      .spyOn(actions.boards, "automations")
+      .mockResolvedValueOnce(boardAutomations())
+      .mockResolvedValueOnce(fresh);
+
+    const user = userEvent.setup();
+
+    render(<BoardAutomationsPane roomId={BOARD} />);
+    await screen.findByLabelText("Planned nudge minutes");
+    await user.clear(field("Planned escalation minutes"));
+    await user.type(field("Planned escalation minutes"), "3000");
+    await user.type(field("In progress nudge minutes"), "30");
+
+    // As the sync engine does when the board's room resyncs.
+    act(() => mutations.boardAutomationsChanged(BOARD));
+
+    await vi.waitFor(() => expect(field("Blocked nudge minutes").value).toBe("5"));
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(field("Planned nudge minutes").value).toBe("60");
+    expect(field("Planned escalation minutes").value).toBe("3000");
+    expect(field("In progress nudge minutes").value).toBe("30");
+  });
+
   it("locks the fields while a change saves, so nothing typed meanwhile is dropped", async () => {
     vi.spyOn(actions.boards, "automations").mockResolvedValue(boardAutomations());
 

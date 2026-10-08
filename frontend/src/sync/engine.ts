@@ -22,14 +22,14 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
-import { THREAD_DELETED } from "../store/threads.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { refetchThread, settled } from "./settle.ts";
+import { refetchThread, settled, UNAVAILABLE } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
+import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { changedWorkPanes, refreshWorkPane } from "./work-refresh.ts";
 
@@ -175,6 +175,9 @@ export class Engine extends Context.Service<
           state.rooms[roomId]?.detail?.room.kind ?? state.sidebar.rows[roomId]?.room.kind;
 
         if (kind === "board") {
+          // A missed `board.automations.changed` can't be replayed either.
+          mutations.boardAutomationsChanged(roomId);
+
           if (held !== undefined) {
             mutations.setBoardLoading(roomId, held.query);
             const generation = store.getState().boards[roomId]?.generation;
@@ -219,6 +222,8 @@ export class Engine extends Context.Service<
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+        const load = beginThreadLoad(threadId);
+
         mutations.setThreadPageReplacing(threadId);
 
         const [detail, newest] = yield* Effect.all(
@@ -232,16 +237,25 @@ export class Engine extends Context.Service<
                 (answer, since) => mutations.loadThreadDetail(answer, since),
               ),
             ),
-            threadMessages(threadId, null),
+            Effect.result(threadMessages(threadId, null)),
           ],
           { concurrency: 2 },
         );
 
-        if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
-          mutations.setThreadPaneError(threadId, THREAD_DELETED);
+        // A newer load (the pane's Try again, or another resync) decides what the pane shows.
+        if (!isLatestThreadLoad(threadId, load)) {
+          return;
         }
 
-        mutations.applyThreadPage(threadId, newest, "resync");
+        if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
+          mutations.setThreadPaneError(threadId, UNAVAILABLE);
+        }
+
+        if (Result.isFailure(newest)) {
+          return yield* Effect.fail(newest.failure);
+        }
+
+        mutations.applyThreadPage(threadId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().threadTimelines[threadId]);
 
@@ -251,7 +265,10 @@ export class Engine extends Context.Service<
 
         const page = yield* threadMessages(threadId, { around: anchor });
 
-        if (readingHistory(store.getState().threadTimelines[threadId])) {
+        if (
+          isLatestThreadLoad(threadId, load) &&
+          readingHistory(store.getState().threadTimelines[threadId])
+        ) {
           mutations.applyThreadPage(threadId, page, "refresh");
         }
       });

@@ -10,10 +10,20 @@ import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import { store } from "../store/store.ts";
 import { uncertainSince } from "../store/threads.ts";
 
+/**
+ * What a pane says when asking again found no thread: it may have been deleted, or the viewer's
+ * access may be gone for now, so the pane keeps its Try again.
+ */
+export const UNAVAILABLE =
+  "This thread isn't available. It may have been deleted, or you may no longer have access.";
+
 /** How many replies are asked for before giving up on telling (each one past 500 removals). */
 export const MAX_SETTLE_ATTEMPTS = 3;
 
-/** Installed; the thread is gone (asking again found no thread); or every reply was uncertain. */
+/**
+ * Installed; gone (asking again answered 404, which a removal and a lost room membership both
+ * do, so callers treat it as "not available", not as a deletion); or every reply was uncertain.
+ */
 export type SettleOutcome = "installed" | "gone" | "unsettled";
 
 /** The last reply, and what became of it. */
@@ -62,7 +72,7 @@ export const settled = <A, E, R, E2, R2>(
     }
   });
 
-/** `GET /threads/:id`, asked again by `settled`: a 404 means the thread was removed (`null`). */
+/** `GET /threads/:id`, asked again by `settled`: `null` on a 404 (removed, or out of reach). */
 export const refetchThread = (threadId: number) =>
   thread(threadId).pipe(
     Effect.catchIf(

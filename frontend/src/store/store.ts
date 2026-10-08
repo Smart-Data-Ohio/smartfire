@@ -91,6 +91,8 @@ export const mutations = {
   loadBoardListing: (listing: BoardListing, generation: number) =>
     apply((state) => boards.loadBoardListing(state, listing, generation)),
   addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
+  boardAutomationsChanged: (roomId: number) =>
+    apply((state) => boards.boardAutomationsChanged(state, roomId)),
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>

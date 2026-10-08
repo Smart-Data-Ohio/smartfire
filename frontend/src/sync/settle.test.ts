@@ -9,7 +9,7 @@ import { mutations, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS, THREAD_DELETED } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boards from "./board-actions.ts";
-import { MAX_SETTLE_ATTEMPTS } from "./settle.ts";
+import { MAX_SETTLE_ATTEMPTS, UNAVAILABLE } from "./settle.ts";
 import * as threads from "./thread-actions.ts";
 
 afterEach(() => mutations.reset());
@@ -128,7 +128,7 @@ describe("replies that can't tell whether a thread was removed", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("says the thread was deleted when asking again finds it gone", () =>
+  it.effect("keeps a 404 on asking again retryable: it may be lost access, not a deletion", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
       yield* fake.reply("GET /threads/1/messages", pageFixture([]));
@@ -156,6 +156,90 @@ describe("replies that can't tell whether a thread was removed", () => {
 
       expect(details).toBe(2);
       expect(store.getState().threads[1]).toBeUndefined();
+      expect(store.getState().threadPanes[1]).toMatchObject({
+        status: "error",
+        error: UNAVAILABLE,
+      });
+
+      // Access is back: Try again loads it.
+      yield* fake.reply("GET /threads/1", boardDetail());
+      yield* threads.reload(1);
+      expect(store.getState().threadPanes[1]?.status).toBe("ready");
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keeps a deletion that lands while asking again over the 404 that follows it", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply("GET /threads/1/messages", pageFixture([]));
+      const first = yield* Deferred.make<ThreadDetail>();
+      const again = yield* Deferred.make<void>();
+      const entered = yield* Deferred.make<void>();
+      const askedAgain = yield* Deferred.make<void>();
+      let details = 0;
+
+      yield* fake.route("GET /threads/1", () => {
+        details += 1;
+
+        return details === 1
+          ? Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(first))
+          : Effect.andThen(
+              Effect.andThen(Deferred.succeed(askedAgain, undefined), Deferred.await(again)),
+              Effect.fail(new NotFound({ message: "Not found" })),
+            );
+      });
+
+      const load = yield* Effect.forkChild(threads.reload(1));
+
+      yield* Deferred.await(entered);
+      remove();
+      yield* Deferred.succeed(first, boardDetail());
+      yield* Deferred.await(askedAgain);
+      remove([1]);
+      yield* Deferred.succeed(again, undefined);
+      yield* Fiber.join(load);
+
+      expect(store.getState().threadPanes[1]).toMatchObject({
+        status: "error",
+        error: THREAD_DELETED,
+      });
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keeps a deletion that lands while the replies load over an earlier 404", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const first = yield* Deferred.make<ThreadDetail>();
+      const entered = yield* Deferred.make<void>();
+      const replies = yield* Deferred.make<void>();
+      let details = 0;
+
+      yield* fake.route("GET /threads/1/messages", () =>
+        Effect.andThen(Deferred.await(replies), Effect.succeed(pageFixture([]))),
+      );
+      yield* fake.route("GET /threads/1", () => {
+        details += 1;
+
+        return details === 1
+          ? Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(first))
+          : Effect.fail(new NotFound({ message: "Not found" }));
+      });
+
+      const load = yield* Effect.forkChild(threads.reload(1));
+
+      yield* Deferred.await(entered);
+      remove();
+      yield* Deferred.succeed(first, boardDetail());
+
+      // Asking again has answered 404; the replies are still out.
+      while (details < 2) {
+        yield* Effect.yieldNow;
+      }
+
+      remove([1]);
+      yield* Deferred.succeed(replies, undefined);
+      yield* Fiber.join(load);
+
       expect(store.getState().threadPanes[1]).toMatchObject({
         status: "error",
         error: THREAD_DELETED,
