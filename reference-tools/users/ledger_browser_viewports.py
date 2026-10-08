@@ -3,7 +3,7 @@
 The requested pairs come from the pinned system declarations. Chrome owns the
 inner viewport calculation; the replay never assumes a toolbar-height offset.
 """
-import json, os, pathlib, shutil, socket, subprocess, time, urllib.request
+import json, os, pathlib, shutil, socket, subprocess, tempfile, time, urllib.request
 
 # ApplicationSystemTestCase plus the remaining original files' resize_to calls
 # (room_header's width loops retain each width with their original height).
@@ -21,8 +21,12 @@ def browser_executables():
 def prepare_viewports(labels, root):
     """Populate labels before their seed copy is written; owns only its driver."""
     pin=(root/'parity/reference.sha').read_text().strip()
-    worker_tmpdir=pathlib.Path.home()/'.cache/campfire-chrome-tmp'/str(os.getpid())
-    worker_tmpdir.mkdir(parents=True,exist_ok=True)
+    # Each run gets its own directory under the shared cache. A pid path collides
+    # when CI jobs share a home and reuse pids, and rmtree then fails with
+    # "Directory not empty" or deletes another job's Chrome files.
+    parent=pathlib.Path.home()/'.cache'/'campfire-chrome-tmp'
+    parent.mkdir(parents=True,exist_ok=True)
+    worker_tmpdir=pathlib.Path(tempfile.mkdtemp(dir=parent))
     with socket.socket() as sock:
         sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
     env=os.environ.copy();env['TMPDIR']=str(worker_tmpdir)
@@ -55,4 +59,5 @@ def prepare_viewports(labels, root):
             try:request('DELETE',f'/session/{session}')
             except OSError:pass
         driver.terminate();driver.wait(timeout=10)
-        shutil.rmtree(worker_tmpdir)
+        # Chrome can still be releasing profile files. This directory is ours alone.
+        shutil.rmtree(worker_tmpdir, ignore_errors=True)
