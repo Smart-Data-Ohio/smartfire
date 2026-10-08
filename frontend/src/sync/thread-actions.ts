@@ -11,22 +11,21 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
-import { refetchThread, settled, settledDetail, UNAVAILABLE } from "./settle.ts";
-import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
+import { paneProblem, refetchThread, settled, settledDetail } from "./settle.ts";
+import { beginThreadLoad, finishThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
 
-/** When removals kept outrunning the thread's replies (see `settled`); Try again asks afresh. */
-export const UNSETTLED = "This thread couldn't be loaded. Try again.";
+export { UNSETTLED } from "./settle.ts";
 
 /**
  * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
  * permalink) into the pane. Errors land in the store.
  */
 const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
-  const load = beginThreadLoad(threadId);
+  const load = beginThreadLoad(threadId, focusMessageId);
 
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
@@ -56,15 +55,12 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  if (Result.isFailure(detail) || detail.success.outcome !== "installed") {
-    mutations.setThreadPaneError(
-      threadId,
-      Result.isFailure(detail)
-        ? detail.failure.message
-        : detail.success.outcome === "gone"
-          ? UNAVAILABLE
-          : UNSETTLED,
-    );
+  finishThreadLoad(threadId, load);
+
+  const problem = paneProblem(detail);
+
+  if (problem !== null) {
+    mutations.setThreadPaneError(threadId, problem);
     mutations.setThreadPageFailed(threadId);
 
     return;

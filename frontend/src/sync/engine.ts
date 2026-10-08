@@ -26,10 +26,15 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { refetchThread, settled, UNAVAILABLE } from "./settle.ts";
+import { paneProblem, refetchThread, settled, UNAVAILABLE } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
-import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
+import {
+  beginThreadLoad,
+  finishThreadLoad,
+  isLatestThreadLoad,
+  pendingThreadFocus,
+} from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { changedWorkPanes, refreshWorkPane } from "./work-refresh.ts";
 
@@ -222,7 +227,9 @@ export class Engine extends Context.Service<
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
-        const load = beginThreadLoad(threadId);
+        // A permalink's load this supersedes still wants its reply: open around it instead.
+        const focus = pendingThreadFocus(threadId);
+        const load = beginThreadLoad(threadId, focus);
 
         mutations.setThreadPageReplacing(threadId);
 
@@ -237,7 +244,7 @@ export class Engine extends Context.Service<
                 (answer, since) => mutations.loadThreadDetail(answer, since),
               ),
             ),
-            Effect.result(threadMessages(threadId, null)),
+            Effect.result(threadMessages(threadId, focus === null ? null : { around: focus })),
           ],
           { concurrency: 2 },
         );
@@ -247,12 +254,29 @@ export class Engine extends Context.Service<
           return;
         }
 
-        if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
-          mutations.setThreadPaneError(threadId, UNAVAILABLE);
+        finishThreadLoad(threadId, load);
+
+        const problem = paneProblem(detail);
+        const pane = store.getState().threadPanes[threadId];
+
+        // A pane already showing the thread keeps it through a failed refresh; one still loading
+        // (whose own load this superseded) or failed says why, with Try again.
+        if (
+          problem !== null &&
+          pane !== undefined &&
+          (problem === UNAVAILABLE || pane.status !== "ready")
+        ) {
+          mutations.setThreadPaneError(threadId, problem);
         }
 
         if (Result.isFailure(newest)) {
           return yield* Effect.fail(newest.failure);
+        }
+
+        if (focus !== null) {
+          mutations.applyThreadPage(threadId, newest.success, "replace");
+
+          return;
         }
 
         mutations.applyThreadPage(threadId, newest.success, "resync");
