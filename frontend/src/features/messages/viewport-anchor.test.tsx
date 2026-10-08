@@ -97,6 +97,9 @@ function Harness({
 }: HarnessProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+  // Keep DOM geometry on the committed rows until React attaches the next ref.
+  const renderedGeometry: Geometry = { ids: geometry.ids, heights: geometry.heights };
+  const committedGeometryRef = useRef(renderedGeometry);
 
   const listRef = useRef<VListHandle>({
     cache: [[]],
@@ -104,11 +107,14 @@ function Harness({
       return viewport()?.scrollTop ?? 0;
     },
     get scrollSize() {
-      return offsetOf(geometry, geometry.ids.length);
+      const current = committedGeometryRef.current;
+
+      return offsetOf(current, current.ids.length);
     },
     viewportSize: VIEWPORT_HEIGHT,
-    getItemOffset: (index) => offsetOf(geometry, index),
-    getItemSize: (index) => heightOf(geometry, geometry.ids[index] ?? -1),
+    getItemOffset: (index) => offsetOf(committedGeometryRef.current, index),
+    getItemSize: (index) =>
+      heightOf(committedGeometryRef.current, committedGeometryRef.current.ids[index] ?? -1),
     findItemIndex: () => 0,
     scrollToIndex: () => undefined,
     scrollTo: () => undefined,
@@ -136,9 +142,9 @@ function Harness({
   const rowBounds = (id: number) =>
     new DOMRect(
       0,
-      offsetOf(geometry, geometry.ids.indexOf(id)) - (viewport()?.scrollTop ?? 0),
+      offsetOf(renderedGeometry, renderedGeometry.ids.indexOf(id)) - (viewport()?.scrollTop ?? 0),
       600,
-      heightOf(geometry, id),
+      heightOf(renderedGeometry, id),
     );
 
   if (VirtualList) {
@@ -150,13 +156,18 @@ function Harness({
 
           if (!element) return;
 
+          committedGeometryRef.current = renderedGeometry;
           Object.defineProperties(element, {
             clientHeight: { configurable: true, value: VIEWPORT_HEIGHT },
             scrollHeight: {
               configurable: true,
-              get: () => offsetOf(geometry, geometry.ids.length),
+              get: () => offsetOf(renderedGeometry, renderedGeometry.ids.length),
             },
           });
+          element.scrollTop = Math.max(
+            0,
+            Math.min(element.scrollTop, element.scrollHeight - element.clientHeight),
+          );
           element.getBoundingClientRect = () => new DOMRect(0, 0, 600, VIEWPORT_HEIGHT);
           element.scrollBy = (
             ...args: [options?: ScrollToOptions | undefined] | [x: number, y: number]
@@ -215,13 +226,18 @@ function Harness({
         ref={(element) => {
           if (element === null) return;
 
+          committedGeometryRef.current = renderedGeometry;
           Object.defineProperties(element, {
             clientHeight: { configurable: true, value: VIEWPORT_HEIGHT },
             scrollHeight: {
               configurable: true,
-              get: () => offsetOf(geometry, geometry.ids.length),
+              get: () => offsetOf(renderedGeometry, renderedGeometry.ids.length),
             },
           });
+          element.scrollTop = Math.max(
+            0,
+            Math.min(element.scrollTop, element.scrollHeight - element.clientHeight),
+          );
           element.getBoundingClientRect = () => new DOMRect(0, 0, 600, VIEWPORT_HEIGHT);
         }}
       >
@@ -403,7 +419,6 @@ describe("useViewportAnchor reader control", () => {
     expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
     geometry.ids = [1, 3];
     // The shorter list clamps the native offset before delivering a scroll event.
-    viewport().scrollTop = 100;
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
     await act(async () => undefined);
     expect(apiRef.current?.canFollow()).toBe(true);
@@ -416,6 +431,143 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
     act(() => measureRows(geometry));
     expect(viewport().scrollTop).toBe(300);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it.each(["none", "capture", "settle"])(
+    "eventless find-in-page before deleting the end witness cancels follow (%s)",
+    async (delivery) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      expect(viewport().scrollTop).toBe(300);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+      // Find-in-page changes the offset synchronously, before any scroll event.
+      viewport().scrollTop = 100;
+      geometry.ids = [1, 3];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(viewport().scrollTop).toBe(100);
+      act(() => measureRows(geometry));
+
+      if (delivery === "capture") fireEvent.scroll(viewport());
+
+      if (delivery === "settle") act(() => apiRef.current?.settle());
+
+      geometry.ids = [1, 3, 4];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(100);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
+  it.each(["none", "capture", "settle"])(
+    "eventless programmatic scroll before deleting a non-witness row cancels follow (%s)",
+    async (delivery) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+      // No keyboard input or scroll event announces this reader movement.
+      viewport().scrollTop = 100;
+      geometry.ids = [1, 2];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(viewport().scrollTop).toBe(100);
+      act(() => measureRows(geometry));
+
+      if (delivery === "capture") fireEvent.scroll(viewport());
+
+      if (delivery === "settle") act(() => apiRef.current?.settle());
+
+      geometry.ids = [1, 2, 4];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(100);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
+  it("a toward-end gesture restores follow after eventless movement and deletion", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    viewport().scrollTop = 100;
+    geometry.ids = [1, 3];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(false);
+
+    fireEvent.wheel(viewport(), { deltaY: 100 });
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    geometry.ids = [1, 3, 4];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(300);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("Virtua compensation before witness deletion preserves follow", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    geometry.heights.set(1, 300);
+    geometry.heights.set(3, 300);
+    // Virtua compensates hidden growth; visible growth still leaves a gap to the end.
+    viewport().scrollTop = 400;
+    expect(viewport().scrollHeight - viewport().clientHeight - viewport().scrollTop).toBe(100);
+    geometry.ids = [1, 3];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(300);
+
+    geometry.ids = [1, 3, 4];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(500);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("deleting a non-witness during an issued end jump preserves intent until settlement", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    act(() => measureRows(geometry));
+    viewport().scrollTop = 100;
+    act(() => apiRef.current?.followEnd());
+    viewport().scrollTop = 300;
+    geometry.ids = [1, 2, 3, 4];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(300);
+
+    viewport().scrollTop = 500;
+    act(() => apiRef.current?.settle());
+    expect(apiRef.current?.canFollow()).toBe(true);
+    geometry.ids = [1, 2, 3, 4, 6];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(700);
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
@@ -487,7 +639,6 @@ describe("useViewportAnchor reader control", () => {
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
     // Another member removes the first visible row; the browser clamps the shorter list.
     geometry.ids = [1, 3];
-    viewport().scrollTop = 100;
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
     await act(async () => undefined);
     geometry.heights.set(3, 500);
@@ -548,7 +699,6 @@ describe("useViewportAnchor reader control", () => {
     follow(apiRef, geometry);
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
     geometry.ids = [1, 3];
-    viewport().scrollTop = 100;
     view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
     await act(async () => undefined);
     geometry.heights.set(3, 500);

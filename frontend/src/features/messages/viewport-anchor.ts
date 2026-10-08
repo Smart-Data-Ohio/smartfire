@@ -39,7 +39,11 @@ type PlacementState = { readonly placement: string } & (
       readonly offset: number;
     }
   | { readonly kind: "settled"; readonly messageId: number | null }
-  | { readonly kind: "cancelled"; readonly allowEnd: boolean }
+  | {
+      readonly kind: "cancelled";
+      readonly allowEnd: boolean;
+      readonly awaitEndInput: boolean;
+    }
 );
 
 function wrapperOf(row: HTMLElement): HTMLElement | null {
@@ -78,6 +82,12 @@ export function useViewportAnchor({
   const placementRef = useRef<PlacementState | null>(null);
   const beforeResizesRef = useRef<ResizeObserver | null>(null);
 
+  const committedItemsRef = useRef<{
+    readonly placement: string;
+    readonly indices: ReadonlyMap<number, number>;
+    readonly itemIndices: ReadonlyMap<string, number>;
+  } | null>(null);
+
   const measurementRef = useRef<{
     readonly anchor: Extract<Anchor, { kind: "end" }>;
     readonly before: number;
@@ -102,6 +112,43 @@ export function useViewportAnchor({
   }, [items, parentId]);
 
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+  // Render still sees the committed DOM. A deletion's native clamp can erase
+  // eventless reader movement before any layout effect gets to inspect it.
+  const removalSnapshot = useMemo(() => {
+    const previous = committedItemsRef.current;
+    const anchor = anchorRef.current;
+
+    if (
+      !placed ||
+      previous?.placement !== placement ||
+      anchor?.placement !== placement ||
+      anchor.kind !== "end" ||
+      issuedEndRef.current !== null ||
+      !Array.from(previous.itemIndices.keys()).some((key) => !itemIndices.has(key))
+    )
+      return null;
+
+    const element = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
+
+    if (!element) return { anchor, follows: null, allowEnd: null };
+
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    const index = anchor.row ? previous.indices.get(anchor.row.id) : undefined;
+    const offset = index !== undefined ? listRef.current?.getItemOffset(index) : undefined;
+    const compensation = anchor.row && offset !== undefined ? offset - anchor.row.offset : 0;
+
+    const atEnd =
+      scrollHeight <= clientHeight || Math.max(0, scrollHeight - clientHeight) - scrollTop <= 1;
+
+    const continuous = Math.abs(scrollTop - anchor.scroll - compensation) <= 1;
+
+    return {
+      anchor,
+      follows: atEnd || continuous,
+      allowEnd: atEnd || (Math.abs(compensation) > 1 && continuous),
+    };
+  }, [itemIndices, placed, placement, containerRef, listRef]);
 
   const interacting = useEffectEvent(() =>
     Boolean(
@@ -275,24 +322,36 @@ export function useViewportAnchor({
     };
   }, []);
 
-  const validateEndWitness = useEffectEvent(() => {
+  const validateRemoval = useEffectEvent(() => {
     const anchor = anchorRef.current;
 
+    if (!placed || anchor?.placement !== placement || anchor.kind !== "end") return;
+
+    const paused = interacting() || correctionPendingRef.current;
+
     if (
-      placed &&
-      anchor?.placement === placement &&
-      anchor.kind === "end" &&
-      anchor.row &&
-      !indices.has(anchor.row.id)
+      removalSnapshot?.anchor === anchor &&
+      (removalSnapshot.follows === false || (removalSnapshot.follows === null && paused))
     ) {
-      // The removed witness no longer has a measured offset to prove continuity.
-      // Only an unpaused reader can prove bottom intent from the live geometry;
-      // a replacement during a pause could erase reader movement.
-      cancelPlacement(true, !(interacting() || correctionPendingRef.current));
+      // Delayed native scroll and settlement callbacks cannot rearm this new end.
+      cancelPlacement(true, false, null, true);
+
+      return;
+    }
+
+    // Without a surviving witness, a pause still cannot acquire a replacement pin.
+    if (anchor.row && !indices.has(anchor.row.id)) {
+      const allowEnd =
+        !paused && (removalSnapshot?.anchor !== anchor || removalSnapshot.allowEnd !== false);
+
+      cancelPlacement(true, allowEnd, null, !allowEnd);
     }
   });
 
-  useLayoutEffect(() => validateEndWitness());
+  useLayoutEffect(() => {
+    validateRemoval();
+    committedItemsRef.current = { placement, indices, itemIndices };
+  });
 
   const canFollow = () => {
     if (!placed || isPlacing() || interacting()) return false;
@@ -351,7 +410,7 @@ export function useViewportAnchor({
       element &&
       targetId === null &&
       endOffset(element) - element.scrollTop <= 1 &&
-      (state.kind !== "cancelled" || state.allowEnd || !readerInput)
+      (state.kind !== "cancelled" || state.allowEnd || (!readerInput && !state.awaitEndInput))
     ) {
       if (anchorRef.current?.kind === "end" && correctionPendingRef.current && !checkFollow())
         return;
@@ -502,7 +561,7 @@ export function useViewportAnchor({
     }
 
     if (placementRef.current?.placement !== placement)
-      placementRef.current = { kind: "cancelled", placement, allowEnd: true };
+      placementRef.current = { kind: "cancelled", placement, allowEnd: true, awaitEndInput: false };
 
     if (!readerInput && !interacting()) {
       checkFollow();
@@ -542,11 +601,16 @@ export function useViewportAnchor({
   };
 
   const cancelPlacement = useEffectEvent(
-    (readerInput = false, allowEnd = true, preferredId: number | null = null) => {
+    (
+      readerInput = false,
+      allowEnd = true,
+      preferredId: number | null = null,
+      awaitEndInput = false,
+    ) => {
       cancelAnimationFrame(settlementFrameRef.current);
       settlementFrameRef.current = 0;
       placementRef.current = readerInput
-        ? { kind: "cancelled", placement, allowEnd }
+        ? { kind: "cancelled", placement, allowEnd, awaitEndInput }
         : { kind: "settled", placement, messageId: null };
       anchorRef.current = null;
       issuedEndRef.current = null;
