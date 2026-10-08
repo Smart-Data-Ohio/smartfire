@@ -605,6 +605,43 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
+  it.each(["settled", "issued"])(
+    "eventless find to the paused end cannot repin after deleting a non-witness (%s)",
+    async (motion) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+
+      if (motion === "issued") {
+        viewport().scrollTop = 100;
+        act(() => apiRef.current?.followEnd());
+        viewport().scrollTop = 300;
+      }
+
+      expect(viewport().scrollTop).toBe(300);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(-100);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+      geometry.heights.set(3, 500);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(300);
+      // Find reaches the grown end before a scroll event or the deletion's native clamp.
+      viewport().scrollTop = 600;
+      geometry.ids = [1, 2];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(viewport().scrollTop).toBe(100);
+      expect(rowOf(2).getBoundingClientRect().top).toBe(100);
+      geometry.ids = [1, 2, 4];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(100);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
   it("find-in-page before deleting the paused end witness cancels follow", async () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };

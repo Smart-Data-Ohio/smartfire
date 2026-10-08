@@ -54,6 +54,12 @@ function endOffset(element: HTMLElement): number {
   return Math.max(0, element.scrollHeight - element.clientHeight);
 }
 
+function hasInteraction(element: HTMLElement | null | undefined): boolean {
+  return Boolean(
+    element?.querySelector("[data-editing], [data-popup-pending], .message-popup-anchor"),
+  );
+}
+
 /** Keep a visible message through the cards reveal, and a bottom reader through later growth. */
 export function useViewportAnchor({
   containerRef,
@@ -124,8 +130,8 @@ export function useViewportAnchor({
       previous?.placement !== placement ||
       anchor?.placement !== placement ||
       anchor.kind !== "end" ||
-      issuedEndRef.current !== null ||
-      !Array.from(previous.itemIndices.keys()).some((key) => !itemIndices.has(key))
+      (!Array.from(previous.itemIndices.keys()).some((key) => !itemIndices.has(key)) &&
+        !Array.from(previous.indices.keys()).some((id) => !indices.has(id)))
     )
       return null;
 
@@ -133,28 +139,26 @@ export function useViewportAnchor({
 
     if (!element) return { anchor, follows: null, allowEnd: null };
 
-    const { scrollTop, scrollHeight, clientHeight } = element;
+    const { scrollTop } = element;
+    const end = endOffset(element);
+    const paused = hasInteraction(element) || correctionPendingRef.current;
     const index = anchor.row ? previous.indices.get(anchor.row.id) : undefined;
     const offset = index !== undefined ? listRef.current?.getItemOffset(index) : undefined;
     const compensation = anchor.row && offset !== undefined ? offset - anchor.row.offset : 0;
 
-    const atEnd =
-      scrollHeight <= clientHeight || Math.max(0, scrollHeight - clientHeight) - scrollTop <= 1;
-
-    const continuous = Math.abs(scrollTop - anchor.scroll - compensation) <= 1;
+    const atEnd = end - scrollTop <= 1;
+    const reference = anchor.scroll + compensation;
+    const expected = paused ? Math.max(0, Math.min(end, reference)) : reference;
+    const continuous = (!anchor.row || offset !== undefined) && Math.abs(scrollTop - expected) <= 1;
 
     return {
       anchor,
-      follows: atEnd || continuous,
+      follows: continuous || (!paused && (atEnd || issuedEndRef.current !== null)),
       allowEnd: atEnd || (Math.abs(compensation) > 1 && continuous),
     };
-  }, [itemIndices, placed, placement, containerRef, listRef]);
+  }, [indices, itemIndices, placed, placement, containerRef, listRef]);
 
-  const interacting = useEffectEvent(() =>
-    Boolean(
-      viewport()?.querySelector("[data-editing], [data-popup-pending], .message-popup-anchor"),
-    ),
-  );
+  const interacting = useEffectEvent(() => hasInteraction(viewport()));
 
   const isPlacing = useCallback(() => {
     const state = placementRef.current;
