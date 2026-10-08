@@ -1,4 +1,5 @@
 import { Outlet, useMatchRoute, useParams } from "@tanstack/react-router";
+import { Suspense } from "react";
 import { AgentProfilePage, type AgentSection } from "./agent-profile-page.tsx";
 
 /** Which section the URL shows. */
@@ -14,7 +15,8 @@ function useSection(): AgentSection {
 
 /**
  * `/app/agents/$agentId` and its sections: the profile of the agent in the URL, with the section
- * (overview, approvals or activity) in its outlet.
+ * (overview, approvals or activity) in its outlet. A section's chunk loads inside the panel, so
+ * the profile (and its loaded state) stays up while a tab is opened for the first time.
  */
 export function AgentProfileRoute() {
   const { agentId } = useParams({ from: "/shell/agents/$agentId" });
@@ -22,7 +24,9 @@ export function AgentProfileRoute() {
 
   return (
     <AgentProfilePage key={agentId} agentId={agentId} section={section}>
-      <Outlet />
+      <Suspense fallback={null}>
+        <Outlet />
+      </Suspense>
     </AgentProfilePage>
   );
 }
