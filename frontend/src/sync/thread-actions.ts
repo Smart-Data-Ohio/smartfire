@@ -46,6 +46,15 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
       ),
     ],
     { concurrency: 2 },
+  ).pipe(
+    // Interrupted before the window lands. A later load owns the flag, so only this one clears it.
+    Effect.onInterrupt(() =>
+      Effect.sync(() => {
+        if (isLatestThreadLoad(threadId, load)) {
+          mutations.clearThreadPageLoading(threadId, "replace");
+        }
+      }),
+    ),
   );
 
   // A newer load (a resync, or another Try again) decides what the pane shows.
@@ -115,13 +124,21 @@ const loadPage = Effect.fnUntraced(function* (threadId: number, direction: "olde
     return;
   }
 
-  mutations.setThreadPageLoading(threadId, direction);
+  // A replace bumps this id. A late page, error, or interrupt is dropped once it no longer matches.
+  const request = mutations.setThreadPageLoading(threadId, direction);
 
   yield* api
     .threadMessages(threadId, direction === "older" ? { before: from } : { after: from })
     .pipe(
-      Effect.tap((page) => Effect.sync(() => mutations.applyThreadPage(threadId, page, direction))),
-      Effect.catch(() => Effect.sync(() => mutations.setThreadPageFailed(threadId))),
+      Effect.tap((page) =>
+        Effect.sync(() => mutations.applyThreadPage(threadId, page, direction, request)),
+      ),
+      Effect.catch(() =>
+        Effect.sync(() => mutations.setThreadPageFailed(threadId, direction, request)),
+      ),
+      Effect.onInterrupt(() =>
+        Effect.sync(() => mutations.clearThreadPageLoading(threadId, direction, request)),
+      ),
     );
 });
 
