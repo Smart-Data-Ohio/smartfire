@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import type { AgentStep } from "../../gen/AgentStep.ts";
 import type { User } from "../../gen/User.ts";
@@ -7,6 +8,7 @@ import type { WorkLink } from "../../gen/WorkLink.ts";
 import type { WorkLinkKind } from "../../gen/WorkLinkKind.ts";
 import type { WorkOwnerSnapshot } from "../../gen/WorkOwnerSnapshot.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import { formatFull } from "../../lib/time.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -561,31 +563,44 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/** Links and handoff are still classic pages (steps 9 and 10 bring them here). */
-function ClassicWorkLinks({ threadId }: { readonly threadId: number }) {
+/**
+ * What a manager can do with the work beyond its facts: hand it off to an agent (the dialog over
+ * this pane), and manage its links, still a classic page (step 10 brings it here).
+ */
+function WorkActions({ roomId, threadId }: { readonly roomId: number; readonly threadId: number }) {
   return (
-    <p className="post-classic">
-      <span>Links and handoff open in classic.</span>
-      <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
-        Manage links
-        <Icon name="arrow-up-right" size={12} />
-      </a>
-      <a className="post-classic-link" href={classicWorkUrl(threadId, "handoff")}>
+    <div className="post-actions">
+      <Link
+        to="/r/$roomId/t/$threadId/handoff"
+        params={{ roomId, threadId }}
+        search={parseBoardSearch}
+        className="button"
+        data-variant="secondary"
+        data-size="sm"
+      >
+        <Icon name="send" size={14} />
         Hand off
-        <Icon name="arrow-up-right" size={12} />
-      </a>
-    </p>
+      </Link>
+      <p className="post-classic">
+        <span>Links open in classic.</span>
+        <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
+          Manage links
+          <Icon name="arrow-up-right" size={12} />
+        </a>
+      </p>
+    </div>
   );
 }
 
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, the agent's steps, the work history, and the way to the classic links and handoff
- * pages.
+ * its editor, the agent's steps, the work history, the handoff and the way to the classic links
+ * page.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
+  const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
   const detail = useStore((state) => state.threadPanes[threadId]?.work ?? null);
 
   const permissions: ThreadPermissions | null = useStore(
@@ -651,7 +666,9 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
       />
       <Steps steps={detail?.steps ?? []} />
       <History history={detail?.history ?? []} />
-      {permissions?.canManageWork === true ? <ClassicWorkLinks threadId={threadId} /> : null}
+      {permissions?.canManageWork === true && roomId !== null ? (
+        <WorkActions roomId={roomId} threadId={threadId} />
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,70 @@
+/* The handoff dialog: the receiving agent, the summary, links and open questions. */
+@layer app {
+  .handoff-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  /* One even rhythm between fields: an error line takes room only while it says something. */
+  .handoff-form .field-error:empty {
+    display: none;
+  }
+
+  .handoff-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .handoff-alert > svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .handoff-select,
+  .handoff-textarea {
+    width: 100%;
+  }
+
+  .handoff-textarea {
+    height: auto;
+    min-height: 76px;
+    max-height: 240px;
+    padding-block: var(--space-2);
+    font-family: inherit;
+    line-height: var(--leading-ui);
+    resize: vertical;
+    field-sizing: content;
+  }
+
+  .handoff-summary {
+    min-height: 128px;
+    max-height: 320px;
+  }
+
+  .handoff-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .handoff-counter {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .handoff-counter[data-over] {
+    color: var(--danger-text);
+    font-weight: var(--weight-medium);
+  }
+}

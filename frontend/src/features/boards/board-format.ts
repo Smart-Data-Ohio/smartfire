@@ -194,11 +194,9 @@ export function stepDuration(ms: number): string {
   return `${Math.floor(rounded / 10)}.${rounded % 10}s`;
 }
 
-/** A post's classic links or handoff page, which the SPA doesn't have yet (steps 9 and 10). */
-export function classicWorkUrl(threadId: number, page: "links" | "handoff"): string {
-  return withClassicBypass(
-    page === "links" ? `/threads/${threadId}/work/links` : `/threads/${threadId}/work/handoff/new`,
-  );
+/** A post's classic links page, which the SPA doesn't have yet (step 10). */
+export function classicWorkUrl(threadId: number, page: "links"): string {
+  return withClassicBypass(`/threads/${threadId}/work/${page}`);
 }
 
 /** The longest SLA timer, in minutes (30 days), as the classic rule validates. */

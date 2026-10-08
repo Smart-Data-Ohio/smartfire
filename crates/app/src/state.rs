@@ -4,6 +4,5 @@
 
 pub mod agent_payload;
 pub mod mail;
-pub mod receipts;
 pub mod sudo;
 pub mod two_factor;

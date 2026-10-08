@@ -304,10 +304,16 @@ describe("threads", () => {
   });
 
   it("keep a loaded list in activity order for its filter, and handle deletion", () => {
-    const listed = loadThreadList(opened([message(1, 1)]), ROOM, "active", {
-      threads: [{ thread: thread("active", 5, 70), membership: null }],
-      users: [],
-    });
+    const listed = loadThreadList(
+      opened([message(1, 1)]),
+      ROOM,
+      "active",
+      {
+        threads: [{ thread: thread("active", 5, 70), membership: null }],
+        users: [],
+      },
+      0,
+    );
 
     const created = events(listed, {
       topic: `room:${ROOM}`,
@@ -334,24 +340,31 @@ describe("threads", () => {
 
     expect(removed.threads[70]).toBeUndefined();
     expect(removed.roomThreads[ROOM]?.ids).toEqual([]);
-    expect(removed.threadPanes[70]?.status).toBe("error");
+    // Nobody opened its pane, so none is kept for it.
+    expect(removed.threadPanes[70]).toBeUndefined();
   });
 
   it("track the viewer's unread state from thread.unread and thread.read", () => {
-    const listed = loadThreadList(initialState, ROOM, "all", {
-      threads: [
-        {
-          thread: thread("active", 5),
-          membership: {
-            threadId: THREAD,
-            involvement: "everything",
-            unreadAt: null,
-            joinedAt: "2026-10-06T09:30:00.000Z",
+    const listed = loadThreadList(
+      initialState,
+      ROOM,
+      "all",
+      {
+        threads: [
+          {
+            thread: thread("active", 5),
+            membership: {
+              threadId: THREAD,
+              involvement: "everything",
+              unreadAt: null,
+              joinedAt: "2026-10-06T09:30:00.000Z",
+            },
           },
-        },
-      ],
-      users: [],
-    });
+        ],
+        users: [],
+      },
+      0,
+    );
 
     const unread = events(listed, {
       topic: "user",
@@ -454,14 +467,43 @@ describe("thread lists", () => {
       "closed",
     );
 
-    const late = loadThreadList(switched, ROOM, "active", list(70));
+    const late = loadThreadList(switched, ROOM, "active", list(70), 0);
 
     expect(late.roomThreads[ROOM]).toEqual({ filter: "closed", ids: [], status: "loading" });
     expect(late.threads[70]?.id).toBe(70);
     expect(setThreadListFailed(late, ROOM, "active").roomThreads[ROOM]?.status).toBe("loading");
 
-    const current = loadThreadList(late, ROOM, "closed", list(71));
+    const current = loadThreadList(late, ROOM, "closed", list(71), 0);
 
     expect(current.roomThreads[ROOM]).toEqual({ filter: "closed", ids: [71], status: "ready" });
+  });
+
+  it("keep out a thread removed after the listing was asked for", () => {
+    const asked = setThreadListLoading(initialState, ROOM, "active");
+    const since = asked.removalCount;
+
+    const removed = events(loadThreadList(asked, ROOM, "active", list(70), since), {
+      topic: `room:${ROOM}`,
+      type: "thread.removed",
+      data: { threadId: 70, roomId: ROOM },
+    });
+
+    const late = loadThreadList(
+      setThreadListLoading(removed, ROOM, "active"),
+      ROOM,
+      "active",
+      list(70),
+      since,
+    );
+
+    expect(late.threads[70]).toBeUndefined();
+    expect(late.roomThreads[ROOM]?.ids).toEqual([]);
+    expect(late.removedThreads[70]).toBe(1);
+
+    const fresh = loadThreadList(late, ROOM, "active", list(70), late.removalCount);
+
+    expect(fresh.threads[70]?.id).toBe(70);
+    expect(fresh.roomThreads[ROOM]?.ids).toEqual([70]);
+    expect(fresh.removedThreads[70]).toBeUndefined();
   });
 });

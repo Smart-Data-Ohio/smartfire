@@ -5,7 +5,7 @@ use axum::http::{Method, StatusCode};
 use campfire_api_types as api;
 use serde_json::{Value, json};
 
-use super::api_tests::{app, get, json_body, parse, tag};
+use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
     BENDER, Browser, DAVID, JASON, KEVIN, Reply, TestApp,
 };
@@ -804,4 +804,130 @@ async fn spa_api_board_automations_sla_validates_every_row_before_any_write() {
         "an invalid blocked row prevents the planned update and in-progress removal"
     );
     assert!(audit_details(&a).await.is_empty());
+}
+
+#[tokio::test]
+async fn spa_api_board_automations_sla_leaves_rows_the_client_left_out() {
+    let a = app(true).await.expect("the frozen default seed");
+    reset(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{BOARD}/automations/sla_timers");
+    let initial = timers(
+        timer(Some(10), Some(30)),
+        timer(Some(20), Some(40)),
+        timer(Some(30), Some(60)),
+    );
+    let created = david.write(json_body(Method::PUT, &path, &initial)).await;
+    assert_eq!(created.status, StatusCode::OK, "{}", created.text());
+
+    let only_blocked = json!({"blocked": timer(None, None)});
+    let saved = david
+        .write(json_body(Method::PUT, &path, &only_blocked))
+        .await;
+    assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+    assert_eq!(
+        sla_rows(&a).await,
+        [("in_progress".into(), 20, 40), ("planned".into(), 10, 30)],
+        "only the row sent changed"
+    );
+    assert_eq!(
+        &audit_details(&a).await[3..],
+        [json!({"sla_rule":"removed","status":"blocked"})]
+    );
+
+    let nothing = david.write(json_body(Method::PUT, &path, &json!({}))).await;
+    assert_eq!(nothing.status, StatusCode::OK, "{}", nothing.text());
+    assert_eq!(sla_rows(&a).await.len(), 2);
+    assert_eq!(audit_details(&a).await.len(), 4, "an empty form changes nothing");
+
+    let invalid_planned = json!({"planned": timer(Some(30), Some(10))});
+    let refused = david
+        .write(json_body(Method::PUT, &path, &invalid_planned))
+        .await;
+    validation(
+        &refused,
+        "planned",
+        &["Escalate after minutes must be after the nudge threshold"],
+    );
+    assert_eq!(
+        sla_rows(&a).await,
+        [("in_progress".into(), 20, 40), ("planned".into(), 10, 30)]
+    );
+}
+
+/// Every change reaches the other open panes on the board's room topic: here an administrator's
+/// and a plain member's connections (the member can't read the settings, but the signal carries
+/// nothing but the room).
+#[tokio::test]
+async fn spa_api_board_automations_changes_signal_the_boards_other_clients() {
+    let a = app(true).await.expect("the frozen default seed");
+    reset(&a).await;
+    sql(
+        &a,
+        format!(
+            "UPDATE users SET role=1 WHERE id={JASON};
+             UPDATE users SET role=0 WHERE id={KEVIN};
+             INSERT OR IGNORE INTO memberships(room_id,user_id,created_at,updated_at)
+             VALUES({BOARD},{KEVIN},'2026-03-02 16:00:00','2026-03-02 16:00:00'),
+                   ({BOARD},{JASON},'2026-03-02 16:00:00','2026-03-02 16:00:00');"
+        ),
+    )
+    .await;
+    let (addr, server) = serve(&a).await;
+    let topic = format!("room:{BOARD}");
+    let jason = a.sign_in(JASON).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut clients = [
+        Sync::connect(addr, &jason.cookie_header(), std::slice::from_ref(&topic)).await,
+        Sync::connect(addr, &kevin.cookie_header(), std::slice::from_ref(&topic)).await,
+    ];
+    for client in &mut clients {
+        client.welcome().await;
+    }
+    let changed = |event: &api::SyncEvent| {
+        event.topic == format!("room:{BOARD}")
+            && event.payload
+                == api::SyncPayload::BoardAutomationsChanged(api::BoardAutomationsChanged {
+                    room_id: BOARD,
+                })
+    };
+
+    let mut david = a.sign_in(DAVID).await;
+    let rule = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{BOARD}/automations/tag_rules"),
+            &json!({"tag": "bug", "assigneeId": DAVID}),
+        ))
+        .await;
+    assert_eq!(rule.status, StatusCode::CREATED, "{}", rule.text());
+    for client in &mut clients {
+        client.until(changed, |_| false).await;
+    }
+
+    let timers = david
+        .write(json_body(
+            Method::PUT,
+            &format!("/api/v1/rooms/{BOARD}/automations/sla_timers"),
+            &json!({"planned": timer(Some(10), Some(20))}),
+        ))
+        .await;
+    assert_eq!(timers.status, StatusCode::OK, "{}", timers.text());
+    for client in &mut clients {
+        client.until(changed, |_| false).await;
+    }
+
+    let rule_id = parse::<api::BoardAutomations>(&rule).tag_rules[0].id;
+    let removed = david
+        .write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/rooms/{BOARD}/automations/tag_rules/{rule_id}"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(removed.status, StatusCode::OK, "{}", removed.text());
+    for client in &mut clients {
+        client.until(changed, |_| false).await;
+    }
+    server.abort();
 }

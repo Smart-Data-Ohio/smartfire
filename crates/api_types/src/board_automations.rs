@@ -100,9 +100,11 @@ pub struct BoardSlaTimerInput {
     pub escalate_after_minutes: Option<i64>,
 }
 
-/// `PUT /api/v1/rooms/:room_id/automations/sla_timers` (`sla_rules#update`): the whole SLA form at
-/// once. Every row is validated before anything is written; then each status's rule is created,
-/// updated, deleted or left alone, with one audit entry per changed rule
+/// `PUT /api/v1/rooms/:room_id/automations/sla_timers` (`sla_rules#update`): the SLA form's rows.
+/// A missing row leaves its status's timer as it stands (the SPA sends only the rows the person
+/// changed, so a timer someone else saved meanwhile survives); the classic form always sends all
+/// three. Every row sent is validated before anything is written; then each status's rule is
+/// created, updated, deleted or left alone, with one audit entry per changed rule
 /// (`{"sla_rule":"created"|"updated"|"removed",…}`, as classic). Answers [`BoardAutomations`]
 /// (200).
 ///
@@ -115,7 +117,24 @@ pub struct BoardSlaTimerInput {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateBoardSlaTimers {
-    pub planned: BoardSlaTimerInput,
-    pub in_progress: BoardSlaTimerInput,
-    pub blocked: BoardSlaTimerInput,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub planned: Option<BoardSlaTimerInput>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_progress: Option<BoardSlaTimerInput>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked: Option<BoardSlaTimerInput>,
+}
+
+/// The `board.automations.changed` event on `room:<id>`: someone changed the board's tag rules or
+/// SLA timers. Every member following the room gets it (it carries nothing but the room); an open
+/// automations pane refetches [`BoardAutomations`], which only the creator and administrators
+/// may read. New: the classic settings page doesn't stream.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct BoardAutomationsChanged {
+    pub room_id: i64,
 }

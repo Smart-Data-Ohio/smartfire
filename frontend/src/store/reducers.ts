@@ -1,4 +1,4 @@
-import { addBoardPost, mergeWorkSteps } from "./boards.ts";
+import { addBoardPost, boardAutomationsChanged, mergeWorkSteps } from "./boards.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
@@ -785,6 +785,9 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId);
+        break;
+      case "board.automations.changed":
+        next = boardAutomationsChanged(next, event.data.roomId);
         break;
       case "thread.unread":
         next = event.data.refreshOnly

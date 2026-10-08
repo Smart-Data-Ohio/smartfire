@@ -4,6 +4,7 @@ import { Validation } from "../api/errors.ts";
 import { FakeApi, roomDetailFixture } from "../api/testing.ts";
 import { boardPostIds } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
+import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boards from "./board-actions.ts";
 import { Presence } from "./presence.ts";
@@ -334,8 +335,56 @@ it.effect("doesn't bring back a post removed while its creation was in flight", 
     yield* Fiber.join(create);
     expect(store.getState().threads[1]).toBeUndefined();
     expect(boardPostIds(store.getState(), BOARD)).toEqual([]);
-    expect(store.getState().threadPanes[1]?.status).toBe("error");
   }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect(
+  "doesn't bring back a post whose removal was forgotten while its creation was in flight",
+  () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply(`GET /rooms/${BOARD}/board`, boardListing([]));
+      yield* boards.open(BOARD, all);
+      const reply = yield* Deferred.make<ReturnType<typeof boardDetail>>();
+      const entered = yield* Deferred.make<void>();
+      yield* fake.route(`POST /rooms/${BOARD}/posts`, () =>
+        Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(reply)),
+      );
+
+      const create = yield* Effect.forkChild(
+        boards.createPost(BOARD, {
+          name: "New",
+          status: "planned",
+          ownerId: null,
+          tags: [],
+          brief: "",
+          clientId: "0192a3b4-0000-7000-8000-00000000c1af",
+        }),
+      );
+
+      yield* Deferred.await(entered);
+      mutations.applyEvents(
+        [{ seq: 1, topic: "room:900", type: "thread.created", data: boardThread(1) }],
+        0,
+      );
+      // The post goes, then enough other removals that its own is no longer remembered.
+      mutations.applyEvents(
+        [1, ...Array.from({ length: MAX_REMOVED_THREADS }, (_, index) => 20_000 + index)].map(
+          (threadId, index) => ({
+            seq: index + 2,
+            topic: "room:900",
+            type: "thread.removed" as const,
+            data: { threadId, roomId: BOARD },
+          }),
+        ),
+        0,
+      );
+      expect(store.getState().removedThreads[1]).toBeUndefined();
+      yield* Deferred.succeed(reply, boardDetail());
+      yield* Fiber.join(create);
+      expect(store.getState().threads[1]).toBeUndefined();
+      expect(boardPostIds(store.getState(), BOARD)).toEqual([]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
 );
 
 it.effect("keeps a step the agent reported while a save was in flight", () =>

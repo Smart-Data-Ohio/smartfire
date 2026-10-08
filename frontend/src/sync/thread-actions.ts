@@ -11,25 +11,39 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
+import { refetchThread, settled, settledDetail, UNAVAILABLE } from "./settle.ts";
+import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
+
+/** When removals kept outrunning the thread's replies (see `settled`); Try again asks afresh. */
+export const UNSETTLED = "This thread couldn't be loaded. Try again.";
 
 /**
  * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
  * permalink) into the pane. Errors land in the store.
  */
 const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
+  const load = beginThreadLoad(threadId);
+
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
-  const since = store.getState().removalCount;
-
+  // The header installs as soon as it's settled, not after the replies: a removal landing
+  // while they load would otherwise make it uncertain again with nobody left to ask.
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(api.thread(threadId)),
+      Effect.result(
+        settled(
+          api.thread(threadId),
+          () => refetchThread(threadId),
+          (answer) => [answer.thread.id],
+          (answer, since) => mutations.loadThreadDetail(answer, since),
+        ),
+      ),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -37,20 +51,42 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     { concurrency: 2 },
   );
 
-  if (Result.isFailure(detail)) {
-    mutations.setThreadPaneError(threadId, detail.failure.message);
+  // A newer load (a resync, or another Try again) decides what the pane shows.
+  if (!isLatestThreadLoad(threadId, load)) {
+    return;
+  }
+
+  if (Result.isFailure(detail) || detail.success.outcome !== "installed") {
+    mutations.setThreadPaneError(
+      threadId,
+      Result.isFailure(detail)
+        ? detail.failure.message
+        : detail.success.outcome === "gone"
+          ? UNAVAILABLE
+          : UNSETTLED,
+    );
     mutations.setThreadPageFailed(threadId);
 
     return;
   }
-
-  mutations.loadThreadDetail(detail.success, since);
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
   } else {
     mutations.applyThreadPage(threadId, page.success, "replace");
   }
+});
+
+/**
+ * The room a thread lives in, for a link that names only the thread: the store's copy when it
+ * holds the thread, else the server's (`GET /threads/:id`, which 404s unless the viewer can see it).
+ */
+export const locate = Effect.fn("threads.locate")(function* (threadId: number) {
+  const held = store.getState().threads[threadId];
+
+  if (held !== undefined) return held.roomId;
+
+  return (yield* api.thread(threadId)).thread.roomId;
 });
 
 /** Subscribes to the thread, then loads its header and newest replies (or those around a reply). */
@@ -130,30 +166,34 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
-  const since = store.getState().removalCount;
+  const reply = yield* settled(
+    api.createThread(roomId, {
+      parentMessageId,
+      name: options.name ?? null,
+      message: {
+        clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
+        markdownSource: markdown,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: options.attachmentSignedId ?? null,
+      },
+    }),
+    (previous) =>
+      refetchThread(previous.detail.thread.id).pipe(
+        Effect.map((detail) => (detail === null ? null : { ...previous, detail })),
+      ),
+    (answer) => [answer.detail.thread.id],
+    (answer, since) => mutations.threadCreated(answer, since),
+  );
 
-  const created = yield* api.createThread(roomId, {
-    parentMessageId,
-    name: options.name ?? null,
-    message: {
-      clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
-      markdownSource: markdown,
-      replyToMessageId: null,
-      replyNotifyAuthor: null,
-      attachmentSignedId: options.attachmentSignedId ?? null,
-    },
-  });
-
-  mutations.threadCreated(created, since);
-
-  return created.detail.thread.id;
+  return reply.answer.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  const since = store.getState().removalCount;
-
-  mutations.loadThreadDetail(yield* api.updateThread(threadId, body), since);
+  yield* settledDetail(api.updateThread(threadId, body), (detail, since) =>
+    mutations.loadThreadDetail(detail, since),
+  );
 });
 
 /** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */
@@ -192,9 +232,21 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
   mutations.setThreadListLoading(roomId, filter);
+  const ask = api.threads(roomId, filter);
 
-  yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) => Effect.sync(() => mutations.loadThreadList(roomId, filter, threads))),
+  yield* settled(
+    ask,
+    () => ask,
+    (list) => list.threads.map(({ thread }) => thread.id),
+    (list, since) => mutations.loadThreadList(roomId, filter, list, since),
+  ).pipe(
+    Effect.tap((reply) =>
+      Effect.sync(() => {
+        if (reply.outcome !== "installed") {
+          mutations.setThreadListFailed(roomId, filter);
+        }
+      }),
+    ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
 });

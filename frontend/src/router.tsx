@@ -44,6 +44,7 @@ import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
+import { parseWorkSearch } from "./features/work/work-search.ts";
 import { parseBoardSearch } from "./lib/board-search.ts";
 
 export type { BoardSearch } from "./lib/board-search.ts";
@@ -184,6 +185,27 @@ const threadRoute = createRoute({
   component: () => null,
 });
 
+/** `/app/r/$roomId/t/$threadId/handoff`: the thread pane with its handoff dialog open over it. */
+const handoffRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "handoff",
+  component: () => null,
+});
+
+/** The classic handoff page names only the thread: resolve its room, then open the dialog. */
+const handoffResolverRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "t/$threadId/handoff",
+  params: {
+    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
+    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
+  },
+  component: lazyRouteComponent(
+    () => import("./features/work/handoff-resolver.tsx"),
+    "HandoffResolver",
+  ),
+});
+
 /** `/app/settings`: the classic profile page's sections, the profile first. */
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -315,6 +337,14 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** `/app/work?state=`: tracked work from every room the viewer is in (its own chunk). */
+const workRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "work",
+  validateSearch: parseWorkSearch,
+  component: lazyRouteComponent(() => import("./features/work/work-route.tsx"), "WorkRoute"),
+});
+
 /** `/app/people`: the workspace's people, to message or huddle with (its own chunk). */
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -359,15 +389,17 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    workRoute,
     searchRoute,
     peopleRoute,
     personRoute,
     messageRoute,
+    handoffResolverRoute,
     roomRoute.addChildren([
       permalinkRoute,
       newThreadRoute,
       newBoardPostRoute,
-      threadRoute,
+      threadRoute.addChildren([handoffRoute]),
       ...roomControlRoutes,
     ]),
     settingsRoute.addChildren(settingsSections),

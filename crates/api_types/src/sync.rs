@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, MessageCards,
+    ApprovalUpdated, BoardAutomationsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, MessageCards,
     MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory,
     RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
@@ -166,6 +166,10 @@ pub enum SyncPayload {
     /// `thread:<id>` stop following it.
     #[serde(rename = "thread.removed")]
     ThreadRemoved(ThreadRemoved),
+    /// On `room:<id>`: a board's tag rules or SLA timers changed (see
+    /// [`BoardAutomationsChanged`]). New.
+    #[serde(rename = "board.automations.changed")]
+    BoardAutomationsChanged(BoardAutomationsChanged),
     /// On a member's `user` topic: a thread went unread for them, or needs refreshing.
     #[serde(rename = "thread.unread")]
     ThreadUnread(ThreadUnread),

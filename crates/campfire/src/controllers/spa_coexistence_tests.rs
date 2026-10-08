@@ -219,7 +219,22 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
             reply.location(),
             Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
         );
-        assert!(!redirected_to_spa(&david.get("/work").await));
+        // The work list and the handoff page are ported too; the handoff page's room is the
+        // SPA's to resolve, and the list keeps its filter.
+        for (classic, spa) in [
+            ("/work?state=agents".to_string(), "/app/work?state=agents".to_string()),
+            (
+                format!("/threads/{POST}/work/handoff/new"),
+                format!("/app/t/{POST}/handoff"),
+            ),
+        ] {
+            let reply = david.get(&classic).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{env:?} {classic}");
+            assert_eq!(reply.location(), Some(to(&spa).as_str()), "{classic}");
+        }
+        let bypass = david.get("/work?classic=1").await;
+        assert_eq!(bypass.status, StatusCode::OK, "{}", bypass.text());
+        assert!(!redirected_to_spa(&bypass));
         let opted_out = post_ui(
             &mut david,
             &[

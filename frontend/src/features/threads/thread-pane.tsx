@@ -1,5 +1,5 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useMatchRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -15,6 +15,7 @@ import { PostWork } from "../boards/post-work.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { LazyHandoffDialog } from "../work/lazy-handoff-dialog.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
@@ -447,8 +448,20 @@ export function ThreadPane({
   // A reply's permalink: the pane opens around it and highlights it.
   const focusMessageId = useSearch({ strict: false }).m ?? null;
   const focusRef = useRef(focusMessageId);
+  const navigate = useNavigate();
+  const handingOff = useMatchRoute()({ to: "/r/$roomId/t/$threadId/handoff" }) !== false;
 
   focusRef.current = focusMessageId;
+
+  // The handoff dialog closes back to the thread, keeping the board's filters.
+  const closeHandoff = useCallback(() => {
+    void navigate({
+      to: "/r/$roomId/t/$threadId",
+      params: { roomId, threadId },
+      search: parseBoardSearch,
+      replace: true,
+    });
+  }, [navigate, roomId, threadId]);
 
   useEffect(() => {
     void actions.threads.open(threadId, focusRef.current).catch(() => undefined);
@@ -532,6 +545,7 @@ export function ThreadPane({
         open={deleting}
         onOpenChange={setDeleting}
       />
+      <LazyHandoffDialog threadId={threadId} open={handingOff} onClose={closeHandoff} />
     </PaneFrame>
   );
 }

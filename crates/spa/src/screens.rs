@@ -142,7 +142,15 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     screen("searches#index", "/searches", "/app/search", true),
-    screen("work_threads#index", "/work", "/app/work", false),
+    screen("work_threads#index", "/work", "/app/work", true),
+    // S6: the handoff page names only the thread; the SPA resolves its room, then opens the
+    // dialog over the room's thread pane (`/app/r/:room_id/t/:thread_id/handoff`).
+    screen(
+        "threads/work/handoffs#new",
+        "/threads/:thread_id/work/handoff/new",
+        "/app/t/:thread_id/handoff",
+        true,
+    ),
     screen(
         "threads/work/links#index",
         "/threads/:thread_id/work/links",

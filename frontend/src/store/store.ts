@@ -91,6 +91,8 @@ export const mutations = {
   loadBoardListing: (listing: BoardListing, generation: number) =>
     apply((state) => boards.loadBoardListing(state, listing, generation)),
   addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
+  boardAutomationsChanged: (roomId: number) =>
+    apply((state) => boards.boardAutomationsChanged(state, roomId)),
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
@@ -178,8 +180,8 @@ export const mutations = {
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
   setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
-  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
-    apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, since: number) =>
+    apply((state) => threads.loadThreadList(state, roomId, filter, list, since)),
   setHuddlePresence: (presence: HuddlePresence) =>
     apply((state) => huddles.setHuddlePresence(state, presence)),
   loadHuddlePresence: (list: HuddlePresenceList) =>

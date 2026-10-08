@@ -205,7 +205,7 @@ fn ported_classic_pages_map_to_their_spa_urls() {
 }
 
 #[test]
-fn board_pages_are_ported_and_workspace_work_stays_classic() {
+fn board_pages_and_workspace_work_are_ported() {
     for (endpoint, classic, spa) in [
         ("rooms#show", "/rooms/12", "/app/r/12"),
         (
@@ -223,12 +223,30 @@ fn board_pages_are_ported_and_workspace_work_stays_classic() {
             "/rooms/boards/12/automations",
             "/app/r/12/automations",
         ),
+        ("work_threads#index", "/work", "/app/work"),
+        (
+            "threads/work/handoffs#new",
+            "/threads/9/work/handoff/new",
+            "/app/t/9/handoff",
+        ),
     ] {
         assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
         assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
     }
-    assert_eq!(spa_url("work_threads#index", "/work", None), None);
-    assert_eq!(classic_url("/app/work", None).as_deref(), Some("/work"));
+    // The work filter carries over both ways.
+    assert_eq!(
+        spa_url("work_threads#index", "/work", Some("state=agents")).as_deref(),
+        Some("/app/work?state=agents")
+    );
+    assert_eq!(
+        classic_url("/app/work", Some("state=done")).as_deref(),
+        Some("/work?state=done")
+    );
+    // Creating the handoff stays a classic form post; only its page moves.
+    assert_eq!(
+        spa_url("threads/work/handoffs#create", "/threads/9/work/handoff", None),
+        None
+    );
 }
 
 #[test]

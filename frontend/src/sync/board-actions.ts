@@ -4,13 +4,14 @@ import * as links from "../api/work-link-endpoints.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
-import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
+import { settledDetail } from "./settle.ts";
 import { refreshWorkPane } from "./work-refresh.ts";
 
 export const automations = Effect.fn("boards.automations")(function* (roomId: number) {
@@ -116,30 +117,35 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   input: BoardPostInput,
 ) {
   // A post removed while its creation was in flight stays removed.
-  const since = store.getState().removalCount;
+  const reply = yield* settledDetail(
+    api.createBoardPost(roomId, {
+      name: input.name,
+      status: input.status,
+      ownerId: input.ownerId,
+      tags: [...input.tags],
+      clientPostId: input.clientId,
+      message:
+        input.brief.trim() === ""
+          ? null
+          : {
+              clientMessageId: input.clientId,
+              markdownSource: input.brief,
+              replyToMessageId: null,
+              replyNotifyAuthor: null,
+              attachmentSignedId: null,
+            },
+    }),
+    (detail, since) => {
+      mutations.loadThreadDetail(detail, since);
 
-  const detail = yield* api.createBoardPost(roomId, {
-    name: input.name,
-    status: input.status,
-    ownerId: input.ownerId,
-    tags: [...input.tags],
-    clientPostId: input.clientId,
-    message:
-      input.brief.trim() === ""
-        ? null
-        : {
-            clientMessageId: input.clientId,
-            markdownSource: input.brief,
-            replyToMessageId: null,
-            replyNotifyAuthor: null,
-            attachmentSignedId: null,
-          },
-  });
+      // Not when the reply was dropped: the post was removed while it was being created.
+      if (store.getState().threads[detail.thread.id] !== undefined) {
+        mutations.addBoardPost(detail.thread);
+      }
+    },
+  );
 
-  mutations.loadThreadDetail(detail, since);
-  mutations.addBoardPost(detail.thread);
-
-  return detail;
+  return reply.answer;
 });
 
 /**
@@ -148,36 +154,43 @@ export const createPost = Effect.fn("boards.createPost")(function* (
  * the reply may be older than what we hold, so it isn't installed: the pane refetches instead,
  * and `refreshWorkPane` settles any change that lands during that GET too.
  */
-const installSaved = Effect.fnUntraced(function* (
-  threadId: number,
-  sent: Thread | undefined,
-  since: number,
-  detail: ThreadDetail,
-) {
-  if (store.getState().threads[threadId] === sent) {
-    mutations.loadThreadDetail(detail, since);
+const installSaved = <E, R>(threadId: number, write: Effect.Effect<ThreadDetail, E, R>) =>
+  Effect.gen(function* () {
+    const sent = store.getState().threads[threadId];
+    let stale = false;
 
-    return;
-  }
+    const reply = yield* settledDetail(write, (detail, since) => {
+      if (store.getState().threads[threadId] === sent) {
+        mutations.loadThreadDetail(detail, since);
+      } else {
+        stale = true;
+      }
+    });
 
-  yield* refreshWorkPane(threadId);
-});
+    if (stale) {
+      yield* refreshWorkPane(threadId);
+    }
+
+    return reply.answer;
+  });
 
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
-  const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
-
-  yield* installSaved(threadId, sent, since, yield* api.updateWork(threadId, body));
+  yield* installSaved(threadId, api.updateWork(threadId, body));
 });
 
 export const handoff = Effect.fn("work.handoff")(function* (
   threadId: number,
   body: CreateWorkHandoff,
 ) {
-  const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
+  yield* installSaved(threadId, api.handoffWork(threadId, body));
+});
 
-  yield* installSaved(threadId, sent, since, yield* api.handoffWork(threadId, body));
+/** The work list (`GET /work?state=`); its creators join the store's people. */
+export const list = Effect.fn("work.list")(function* (state: WorkFilter) {
+  const work = yield* api.workList(state);
+  mutations.mergeUsers(work.users);
+
+  return work;
 });
 
 export const linkForm = links.workLinkForm;
@@ -186,22 +199,12 @@ export const addLink = Effect.fn("work.addLink")(function* (
   threadId: number,
   input: CreateWorkLink,
 ) {
-  const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
-  const detail = yield* links.createWorkLink(threadId, input);
-  yield* installSaved(threadId, sent, since, detail);
-
-  return detail;
+  return yield* installSaved(threadId, links.createWorkLink(threadId, input));
 });
 
 export const removeLink = Effect.fn("work.removeLink")(function* (
   threadId: number,
   linkId: number,
 ) {
-  const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
-  const detail = yield* links.deleteWorkLink(threadId, linkId);
-  yield* installSaved(threadId, sent, since, detail);
-
-  return detail;
+  return yield* installSaved(threadId, links.deleteWorkLink(threadId, linkId));
 });

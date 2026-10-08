@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { BoardAutomations } from "../../gen/BoardAutomations.ts";
 import type { BoardSlaTimerInput } from "../../gen/BoardSlaTimerInput.ts";
 import type { BoardTagRule } from "../../gen/BoardTagRule.ts";
@@ -12,9 +12,9 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { isAgent } from "../people/people.ts";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { isAgent } from "../people/people.ts";
 import { MAX_SLA_MINUTES, MAX_TAG_LENGTH, minutesLabel } from "./board-format.ts";
 import { StatusChip, UserFace } from "./board-parts.tsx";
 
@@ -47,6 +47,16 @@ interface TimerDraft {
 
 type TimerDrafts = Readonly<Record<TimerField, TimerDraft>>;
 
+/**
+ * The pane's one-at-a-time automation changes. `run` starts a change and shows its answer, or
+ * answers `null` while another is pending (every control is disabled then, but Enter in a field
+ * can still submit).
+ */
+interface Mutations {
+  readonly pending: boolean;
+  readonly run: (change: () => Promise<BoardAutomations>) => Promise<BoardAutomations> | null;
+}
+
 function timerDrafts(settings: BoardAutomations): TimerDrafts {
   const draft = (status: WorkStatus): TimerDraft => {
     const timer = settings.slaTimers.find((candidate) => candidate.status === status);
@@ -57,6 +67,29 @@ function timerDrafts(settings: BoardAutomations): TimerDrafts {
   };
 
   return { planned: draft("planned"), inProgress: draft("in_progress"), blocked: draft("blocked") };
+}
+
+/**
+ * The drafts once `fresh` settings arrive: a field still as last loaded takes the fresh value; one
+ * the person has edited keeps their text.
+ */
+function reconcile(drafts: TimerDrafts, loaded: TimerDrafts, fresh: TimerDrafts): TimerDrafts {
+  const field = (name: TimerField): TimerDraft => ({
+    nudge: drafts[name].nudge === loaded[name].nudge ? fresh[name].nudge : drafts[name].nudge,
+    escalate:
+      drafts[name].escalate === loaded[name].escalate
+        ? fresh[name].escalate
+        : drafts[name].escalate,
+  });
+
+  return { planned: field("planned"), inProgress: field("inProgress"), blocked: field("blocked") };
+}
+
+function edited(drafts: TimerDrafts, loaded: TimerDrafts, field: TimerField): boolean {
+  return (
+    drafts[field].nudge.trim() !== loaded[field].nudge ||
+    drafts[field].escalate.trim() !== loaded[field].escalate
+  );
 }
 
 /** A minutes field's value: blank is `null`, whole minutes are numbers, anything else isn't. */
@@ -80,10 +113,12 @@ function messageOf(fields: Fields, field: string): string | undefined {
 function TagRuleRow({
   rule,
   removing,
+  disabled,
   onRemove,
 }: {
   readonly rule: BoardTagRule;
   readonly removing: boolean;
+  readonly disabled: boolean;
   readonly onRemove: () => void;
 }) {
   const assignee = useStore((state) => state.users[rule.assigneeId]);
@@ -105,7 +140,7 @@ function TagRuleRow({
         icon="trash"
         label={`Remove auto-assign rule for ${rule.tag}`}
         className="automation-rule-remove"
-        disabled={removing}
+        disabled={disabled}
         onClick={onRemove}
       />
     </li>
@@ -117,11 +152,13 @@ function AssigneeSelect({
   candidates,
   value,
   error,
+  disabled,
   onChange,
 }: {
   readonly candidates: readonly number[];
   readonly value: string;
   readonly error: string | undefined;
+  readonly disabled: boolean;
   readonly onChange: (value: string) => void;
 }) {
   const id = useId();
@@ -139,6 +176,7 @@ function AssigneeSelect({
         id={id}
         className="input board-select"
         value={value}
+        disabled={disabled}
         aria-invalid={error === undefined ? undefined : true}
         aria-describedby={error === undefined ? undefined : `${id}-error`}
         onChange={(event) => onChange(event.target.value)}
@@ -174,11 +212,11 @@ function AssigneeSelect({
 function TagRules({
   roomId,
   settings,
-  onSaved,
+  mutations,
 }: {
   readonly roomId: number;
   readonly settings: BoardAutomations;
-  readonly onSaved: (settings: BoardAutomations) => void;
+  readonly mutations: Mutations;
 }) {
   const titleId = useId();
   const [tag, setTag] = useState("");
@@ -189,18 +227,21 @@ function TagRules({
   const [removing, setRemoving] = useState<number | null>(null);
 
   const add = () => {
+    const input = { tag, assigneeId: assigneeId === "" ? null : Number(assigneeId) };
+    const request = mutations.run(() => actions.boards.addTagRule(roomId, input));
+
+    if (request === null) {
+      return;
+    }
+
     setSaving(true);
-    actions.boards
-      .addTagRule(roomId, {
-        tag,
-        assigneeId: assigneeId === "" ? null : Number(assigneeId),
-      })
+    request
       .then(
-        (next) => {
+        () => {
+          // The fields were disabled while the rule saved, so these are still what was sent.
           setTag("");
           setAssigneeId("");
           setFields(NO_FIELDS);
-          onSaved(next);
           toast({ title: "Auto-assign rule added." });
         },
         (error: Error) => {
@@ -218,12 +259,16 @@ function TagRules({
   };
 
   const remove = (rule: BoardTagRule) => {
+    const request = mutations.run(() => actions.boards.removeTagRule(roomId, rule.id));
+
+    if (request === null) {
+      return;
+    }
+
     setRemoving(rule.id);
-    actions.boards
-      .removeTagRule(roomId, rule.id)
+    request
       .then(
-        (next) => {
-          onSaved(next);
+        () => {
           toast({ title: "Auto-assign rule removed." });
         },
         (error: Error) => {
@@ -251,6 +296,7 @@ function TagRules({
               key={rule.id}
               rule={rule}
               removing={removing === rule.id}
+              disabled={mutations.pending}
               onRemove={() => remove(rule)}
             />
           ))}
@@ -272,6 +318,7 @@ function TagRules({
             autoComplete="off"
             maxLength={MAX_TAG_LENGTH}
             value={tag}
+            disabled={mutations.pending}
             error={messageOf(fields, "tag")}
             attempt={attempt}
             onChange={(event) => setTag(event.target.value)}
@@ -280,11 +327,19 @@ function TagRules({
             candidates={settings.candidates}
             value={assigneeId}
             error={messageOf(fields, "assigneeId")}
+            disabled={mutations.pending}
             onChange={setAssigneeId}
           />
         </div>
         <div className="automation-actions">
-          <Button type="submit" variant="primary" size="sm" icon="plus" loading={saving}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon="plus"
+            loading={saving}
+            disabled={mutations.pending && !saving}
+          >
             Add rule
           </Button>
         </div>
@@ -299,12 +354,14 @@ function TimerRow({
   status,
   draft,
   error,
+  disabled,
   onChange,
 }: {
   readonly label: string;
   readonly status: WorkStatus;
   readonly draft: TimerDraft;
   readonly error: string | undefined;
+  readonly disabled: boolean;
   readonly onChange: (draft: TimerDraft) => void;
 }) {
   const errorId = useId();
@@ -324,6 +381,7 @@ function TimerRow({
           step={1}
           placeholder="Off"
           value={value}
+          disabled={disabled}
           aria-label={`${label} ${name} minutes`}
           aria-describedby={described}
           aria-invalid={error === undefined ? undefined : true}
@@ -392,28 +450,37 @@ function timerInput(draft: TimerDraft): BoardSlaTimerInput {
   };
 }
 
-/** "SLA timers": nudge and escalation minutes for each unfinished status, saved together. */
+/**
+ * "SLA timers": nudge and escalation minutes for each unfinished status. Settings that arrive
+ * meanwhile (someone else's save, this pane's other changes) fill the fields the person hasn't
+ * touched, and a save sends only the rows they changed.
+ */
 function SlaTimers({
   roomId,
   settings,
-  onSaved,
+  mutations,
 }: {
   readonly roomId: number;
   readonly settings: BoardAutomations;
-  readonly onSaved: (settings: BoardAutomations) => void;
+  readonly mutations: Mutations;
 }) {
   const titleId = useId();
-  const [saved, setSaved] = useState(() => timerDrafts(settings));
-  const [drafts, setDrafts] = useState(saved);
+  const [shown, setShown] = useState(settings);
+  const [loaded, setLoaded] = useState(() => timerDrafts(settings));
+  const [drafts, setDrafts] = useState(loaded);
   const [fields, setFields] = useState<Fields>(NO_FIELDS);
   const [alert, setAlert] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const dirty = TIMED.some(
-    ({ field }) =>
-      drafts[field].nudge.trim() !== saved[field].nudge ||
-      drafts[field].escalate.trim() !== saved[field].escalate,
-  );
+  if (settings !== shown) {
+    const fresh = timerDrafts(settings);
+
+    setShown(settings);
+    setLoaded(fresh);
+    setDrafts(reconcile(drafts, loaded, fresh));
+  }
+
+  const dirty = TIMED.some(({ field }) => edited(drafts, loaded, field));
 
   const save = () => {
     const local = localTimerProblems(drafts);
@@ -425,22 +492,29 @@ function SlaTimers({
       return;
     }
 
+    // Only the rows the person changed: a timer saved elsewhere meanwhile stays as it is.
+    const input: UpdateBoardSlaTimers = {};
+
+    for (const { field } of TIMED) {
+      if (edited(drafts, loaded, field)) {
+        input[field] = timerInput(drafts[field]);
+      }
+    }
+
+    const request = mutations.run(() => actions.boards.saveSlaTimers(roomId, input));
+
+    if (request === null) {
+      return;
+    }
+
     setSaving(true);
-    actions.boards
-      .saveSlaTimers(roomId, {
-        planned: timerInput(drafts.planned),
-        inProgress: timerInput(drafts.inProgress),
-        blocked: timerInput(drafts.blocked),
-      })
+    request
       .then(
         (next) => {
-          const fresh = timerDrafts(next);
-
-          setSaved(fresh);
-          setDrafts(fresh);
+          // The fields were disabled while the timers saved: nothing typed since is lost.
+          setDrafts(timerDrafts(next));
           setFields(NO_FIELDS);
           setAlert(null);
-          onSaved(next);
           toast({ title: "SLA timers saved." });
         },
         (error: Error) => {
@@ -497,6 +571,7 @@ function SlaTimers({
                 status={status}
                 draft={drafts[field]}
                 error={messageOf(fields, field)}
+                disabled={mutations.pending}
                 onChange={(draft) => setDrafts((previous) => ({ ...previous, [field]: draft }))}
               />
             ))}
@@ -508,9 +583,9 @@ function SlaTimers({
               type="button"
               variant="ghost"
               size="sm"
-              disabled={saving}
+              disabled={mutations.pending}
               onClick={() => {
-                setDrafts(saved);
+                setDrafts(loaded);
                 setFields(NO_FIELDS);
                 setAlert(null);
               }}
@@ -518,7 +593,13 @@ function SlaTimers({
               Reset
             </Button>
           ) : null}
-          <Button type="submit" variant="primary" size="sm" loading={saving} disabled={!dirty}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            loading={saving}
+            disabled={!dirty || (mutations.pending && !saving)}
+          >
             Save SLA timers
           </Button>
         </div>
@@ -546,25 +627,64 @@ function AutomationsSkeleton() {
 /**
  * The board's automations in the right pane (classic `rooms/boards/automations#show`): the
  * auto-assign-by-tag rules and the SLA timers, for the board's creator and administrators. Every
- * change saves at once and answers the settings as they now stand.
+ * change saves at once and answers the settings as they now stand. Changes go one at a time, and
+ * `board.automations.changed` (someone else's change) refetches once none is pending; an answer
+ * older than the one shown is dropped.
  */
 export function BoardAutomationsPane({ roomId }: { readonly roomId: number }) {
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [generation, setGeneration] = useState(0);
+  const [pending, setPending] = useState(false);
+  const busy = useRef(false);
+  const issued = useRef(0);
+  const shown = useRef(0);
+  const refetchWanted = useRef(false);
+  const signal = useStore((state) => state.boardAutomationsChanged[roomId] ?? 0);
+  const signalSeen = useRef(signal);
+
+  /** Shows `settings` unless an answer to a later request is already showing. */
+  const show = useCallback((ticket: number, settings: BoardAutomations) => {
+    if (ticket > shown.current) {
+      shown.current = ticket;
+      setLoad({ status: "ready", settings });
+    }
+  }, []);
+
+  const refetch = useCallback(() => {
+    if (busy.current) {
+      refetchWanted.current = true;
+
+      return;
+    }
+
+    issued.current += 1;
+
+    const ticket = issued.current;
+
+    actions.boards.automations(roomId).then(
+      (settings) => show(ticket, settings),
+      // The settings shown stay; the next change or signal tries again.
+      () => undefined,
+    );
+  }, [roomId, show]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: generation is the Retry trigger
   useEffect(() => {
     let current = true;
 
+    issued.current += 1;
+
+    const ticket = issued.current;
+
     setLoad({ status: "loading" });
     actions.boards.automations(roomId).then(
       (settings) => {
         if (current) {
-          setLoad({ status: "ready", settings });
+          show(ticket, settings);
         }
       },
       (error: Error) => {
-        if (current) {
+        if (current && ticket > shown.current) {
           setLoad({ status: "error", message: error.message });
         }
       },
@@ -573,9 +693,44 @@ export function BoardAutomationsPane({ roomId }: { readonly roomId: number }) {
     return () => {
       current = false;
     };
-  }, [roomId, generation]);
+  }, [roomId, generation, show]);
 
-  const saved = (settings: BoardAutomations) => setLoad({ status: "ready", settings });
+  useEffect(() => {
+    if (signal !== signalSeen.current) {
+      signalSeen.current = signal;
+      refetch();
+    }
+  }, [signal, refetch]);
+
+  const run = (change: () => Promise<BoardAutomations>): Promise<BoardAutomations> | null => {
+    if (busy.current) {
+      return null;
+    }
+
+    busy.current = true;
+    setPending(true);
+    issued.current += 1;
+
+    const ticket = issued.current;
+
+    return change()
+      .then((settings) => {
+        show(ticket, settings);
+
+        return settings;
+      })
+      .finally(() => {
+        busy.current = false;
+        setPending(false);
+
+        if (refetchWanted.current) {
+          refetchWanted.current = false;
+          refetch();
+        }
+      });
+  };
+
+  const mutations: Mutations = { pending, run };
 
   return (
     <PaneFrame title="Automations" subtitle={<RoomName roomId={roomId} />}>
@@ -592,8 +747,8 @@ export function BoardAutomationsPane({ roomId }: { readonly roomId: number }) {
                 Tag rules and SLA timers run for every post on this board. Only the board's creator
                 and administrators can change them.
               </p>
-              <TagRules roomId={roomId} settings={load.settings} onSaved={saved} />
-              <SlaTimers roomId={roomId} settings={load.settings} onSaved={saved} />
+              <TagRules roomId={roomId} settings={load.settings} mutations={mutations} />
+              <SlaTimers roomId={roomId} settings={load.settings} mutations={mutations} />
               <section className="automation-section" aria-labelledby="automation-digest-title">
                 <h3 id="automation-digest-title" className="post-section-title">
                   Stale-work digest

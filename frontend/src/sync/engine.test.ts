@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
-import { Clock, Deferred, Effect, Layer, Random, Ref, Schema } from "effect";
+import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { NetworkError, ServerError, Validation } from "../api/errors.ts";
 import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
@@ -20,6 +20,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
+import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boardActions from "./board-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
@@ -43,6 +44,10 @@ type Services = Layer.Success<typeof TestLayer>;
 /** Runs `body` against fresh sync services, an in-memory socket and API, and no jitter. */
 const withSync = <A, E>(body: Effect.Effect<A, E, Services>) =>
   body.pipe(Effect.provide(TestLayer), Effect.provideService(Random.Random, noJitter));
+
+/** Replies in board post 1's thread. */
+const threadReplies = (ids: readonly number[]) =>
+  pageFixture(ids.map((id) => messageFixture(id, BOARD, { threadId: 1 })));
 
 /** Lets forked fibers run and the 16 ms coalescing window close. */
 const settle = TestClock.adjust("20 millis");
@@ -489,6 +494,176 @@ describe("resync", () => {
         expect(store.getState().threads[88]?.status).toBe("closed");
         expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
         expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  it.effect("installs a resynced thread's header before 501 removals land during its replies", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const entered = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let hold = false;
+
+        yield* serve([]);
+        yield* api.route("GET /threads/1/messages", () =>
+          hold
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+                Effect.succeed(pageFixture([])),
+              )
+            : Effect.succeed(pageFixture([])),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        // The pane is open but holds no thread: its first load failed.
+        yield* threadActions.open(1);
+        expect(store.getState().threads[1]).toBeUndefined();
+
+        yield* api.reply("GET /threads/1", boardDetail());
+        hold = true;
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        yield* Deferred.await(entered);
+        yield* settle;
+        mutations.applyEvents(
+          Array.from({ length: MAX_REMOVED_THREADS + 1 }, (_, index) => ({
+            seq: 100 + index,
+            topic: `room:${BOARD}`,
+            type: "thread.removed" as const,
+            data: { threadId: 20_000 + index, roomId: BOARD },
+          })),
+          0,
+        );
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        expect(store.getState().threads[1]?.name).toBe("Post 1");
+        expect(store.getState().threadPanes[1]?.status).toBe("ready");
+      }),
+    ),
+  );
+
+  it.effect(
+    "leaves a resynced pane's replies failed, for the timeline to retry, when they don't load",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const socket = yield* MemorySocket;
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(5, false);
+          // The first open fails outright: no header, no replies.
+          yield* threadActions.open(1);
+          expect(store.getState().threadPanes[1]?.status).toBe("error");
+
+          // The resync gets the header, but the replies still fail.
+          yield* api.reply("GET /threads/1", boardDetail());
+          yield* api.route("GET /threads/1/messages", () =>
+            Effect.fail(new ServerError({ status: 500, message: "boom" })),
+          );
+          yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+          yield* settle;
+
+          expect(store.getState().threadPanes[1]?.status).toBe("ready");
+          expect(store.getState().threadTimelines[1]?.status).toBe("error");
+        }),
+      ),
+  );
+
+  it.effect("keeps the replies a resync installed when an older Try again answers after it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const retried = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let calls = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1", boardDetail());
+        yield* api.route("GET /threads/1/messages", () => {
+          calls += 1;
+
+          if (calls === 1) {
+            return Effect.fail(new ServerError({ status: 500, message: "boom" }));
+          }
+
+          // The Try again's snapshot is taken first and answers last.
+          return calls === 2
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(retried, undefined), Deferred.await(release)),
+                Effect.succeed(threadReplies([5])),
+              )
+            : Effect.succeed(threadReplies([5, 6, 7]));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(1);
+        expect(store.getState().threadTimelines[1]?.status).toBe("error");
+
+        const retry = yield* Effect.forkChild(threadActions.reload(1));
+
+        yield* Deferred.await(retried);
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([5, 6, 7]);
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(retry);
+
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([5, 6, 7]);
+        expect(store.getState().threadTimelines[1]?.status).toBe("ready");
+      }),
+    ),
+  );
+
+  it.effect("keeps the replies a Try again installed when an older resync answers after it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const resynced = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let calls = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1", boardDetail());
+        yield* api.route("GET /threads/1/messages", () => {
+          calls += 1;
+
+          if (calls === 1) {
+            return Effect.fail(new ServerError({ status: 500, message: "boom" }));
+          }
+
+          // The resync's snapshot is taken first and answers last.
+          return calls === 2
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(resynced, undefined), Deferred.await(release)),
+                Effect.succeed(threadReplies([5])),
+              )
+            : Effect.succeed(threadReplies([5, 6, 7]));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(1);
+        expect(store.getState().threadTimelines[1]?.status).toBe("error");
+
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        yield* Deferred.await(resynced);
+        yield* threadActions.reload(1);
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([5, 6, 7]);
+
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([5, 6, 7]);
+        expect(store.getState().threadTimelines[1]?.status).toBe("ready");
       }),
     ),
   );
@@ -1164,6 +1339,43 @@ describe("decoding", () => {
 });
 
 describe("boards and open work panes", () => {
+  it.effect(
+    "has an open board's automations refetched when its room resyncs or the server restarts",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const detail = roomDetailFixture(BOARD);
+          detail.room.kind = "board";
+          yield* api.reply(
+            "GET /sidebar",
+            sidebarFixture([sidebarRowFixture(BOARD, "Roadmap", "board")]),
+          );
+          yield* api.reply(`GET /rooms/${BOARD}`, detail);
+          yield* api.reply(`GET /rooms/${BOARD}/board`, boardListing());
+          yield* session.openRoom(BOARD, null);
+          yield* boardActions.open(BOARD, { status: "all", owner: "anyone", tag: "" });
+          yield* startEngine;
+          yield* welcome(0, true);
+
+          const signal = () => store.getState().boardAutomationsChanged[BOARD] ?? 0;
+          const before = signal();
+
+          // Replay expired: the events it names are gone, a settings change among them.
+          yield* socket.push({ t: "resync", topics: [`room:${BOARD}`], reason: "missed" });
+          yield* settle;
+          expect(signal()).toBe(before + 1);
+
+          // The server restarted and can't resume.
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(1, false, "e2");
+          expect(signal()).toBe(before + 2);
+        }),
+      ),
+  );
+
   it.effect("refetches changed work detail through sync without fetching a board timeline", () =>
     withSync(
       Effect.gen(function* () {
