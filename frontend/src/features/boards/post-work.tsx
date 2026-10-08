@@ -589,6 +589,8 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
       </dl>
       {roomId === null ? null : (
         <PostLinks
+          // Another post's links start afresh: no busy change or draft carries over.
+          key={threadId}
           threadId={threadId}
           roomId={roomId}
           links={work.links}

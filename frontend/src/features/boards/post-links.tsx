@@ -1,6 +1,7 @@
 import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { CreateWorkLink } from "../../gen/CreateWorkLink.ts";
+import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
 import type { WorkLink } from "../../gen/WorkLink.ts";
 import type { WorkLinkEventCandidate } from "../../gen/WorkLinkEventCandidate.ts";
 import type { WorkLinkKind } from "../../gen/WorkLinkKind.ts";
@@ -152,12 +153,17 @@ function LinkRow({
 
 interface AddLinkProps {
   readonly threadId: number;
+  /** The post's links, by id: a change (here or elsewhere) can change which events are offered. */
+  readonly linked: string;
   readonly busy: boolean;
   readonly onSubmit: (input: CreateWorkLink, kind: WorkLinkKind) => Promise<void>;
   readonly onCancel: () => void;
 }
 
-/** The candidates the event picker offers, fetched each time the form opens. */
+/**
+ * The candidates the event picker offers, fetched when the form opens and again whenever the
+ * post's links change (a removed event is offered again; one linked elsewhere isn't).
+ */
 type Events =
   | { readonly status: "loading" }
   | { readonly status: "ready"; readonly events: readonly WorkLinkEventCandidate[] }
@@ -167,7 +173,7 @@ type Events =
  * The classic "Link" forms as one: pick the kind, then a pull request URL, one of the room's
  * upcoming events, or a Drive file URL.
  */
-function AddLink({ threadId, busy, onSubmit, onCancel }: AddLinkProps) {
+function AddLink({ threadId, linked, busy, onSubmit, onCancel }: AddLinkProps) {
   const [kind, setKind] = useState<WorkLinkKind>("pull_request");
   const [pullRequestUrl, setPullRequestUrl] = useState("");
   const [driveUrl, setDriveUrl] = useState("");
@@ -179,19 +185,24 @@ function AddLink({ threadId, busy, onSubmit, onCancel }: AddLinkProps) {
   const selectId = useId();
   const formRef = useRef<HTMLFormElement | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `linked` changing is the refresh
   useEffect(() => {
     let current = true;
 
     void actions.work.linkForm(threadId).then(
       (form) => {
         if (current) {
+          const offered = form.events.map((candidate) => `${candidate.id}`);
+
           setEvents({ status: "ready", events: form.events });
-          setEventId((chosen) => chosen || `${form.events[0]?.id ?? ""}`);
+          // A refresh keeps the draft's choice while it's still offered.
+          setEventId((chosen) => (offered.includes(chosen) ? chosen : (offered[0] ?? "")));
         }
       },
       () => {
         if (current) {
-          setEvents({ status: "error" });
+          // A failed refresh keeps the events already shown.
+          setEvents((shown) => (shown.status === "ready" ? shown : { status: "error" }));
         }
       },
     );
@@ -199,7 +210,7 @@ function AddLink({ threadId, busy, onSubmit, onCancel }: AddLinkProps) {
     return () => {
       current = false;
     };
-  }, [threadId]);
+  }, [threadId, linked]);
 
   useEffect(() => {
     formRef.current?.querySelector<HTMLElement>("input, select")?.focus();
@@ -354,6 +365,17 @@ export function PostLinks({
   const busyRef = useRef(false);
   const headingId = useId();
   const linkButtonRef = useRef<HTMLButtonElement | null>(null);
+  // The opening an add's answer belongs to: closing or reopening the form, and unmounting (a
+  // different post), end it, so a late answer neither moves the reader nor touches a new draft.
+  const openingRef = useRef(0);
+
+  useEffect(() => {
+    openingRef.current += 1;
+
+    return () => {
+      openingRef.current += 1;
+    };
+  }, [adding, threadId]);
 
   const setAdding = (open: boolean) => {
     void navigate({
@@ -382,9 +404,22 @@ export function PostLinks({
   };
 
   const add = async (input: CreateWorkLink) => {
-    const saved = await run(() => actions.work.addLink(threadId, input));
+    const opening = openingRef.current;
+    const current = () => openingRef.current === opening;
+    let saved: ThreadDetail | undefined;
 
-    if (saved !== undefined) {
+    try {
+      saved = await run(() => actions.work.addLink(threadId, input));
+    } catch (error) {
+      // A refusal for an opening that's over has no form left to show it.
+      if (current()) {
+        throw error;
+      }
+
+      return;
+    }
+
+    if (saved !== undefined && current()) {
       setAdding(false);
       linkButtonRef.current?.focus();
     }
@@ -443,6 +478,7 @@ export function PostLinks({
       {adding ? (
         <AddLink
           threadId={threadId}
+          linked={links.map((link) => link.id).join(",")}
           busy={busy}
           onSubmit={add}
           onCancel={() => {

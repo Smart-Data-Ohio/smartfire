@@ -336,6 +336,67 @@ async fn spa_api_work_links_destroy_is_scoped_to_the_thread() {
 }
 
 #[tokio::test]
+async fn spa_api_work_links_refuse_a_removed_member_and_keep_the_link() {
+    let Some(a) = app(true).await else { return };
+    track(&a).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let detail = add(
+        &mut kevin,
+        THREAD,
+        json!({"kind":"drive_file","driveUrl":"https://drive.google.com/file/d/1234567890/view"}),
+    )
+    .await;
+    let id = links(&detail)[0].id;
+    sql(
+        &a,
+        format!("DELETE FROM memberships WHERE user_id={KEVIN} AND room_id={ROOM}"),
+    )
+    .await;
+    let replies = [
+        kevin
+            .write(json_body(
+                Method::POST,
+                &path(THREAD),
+                &json!({"kind":"drive_file","driveUrl":"https://drive.google.com/file/d/0987654321/view"}),
+            ))
+            .await,
+        kevin
+            .write(json_body(
+                Method::DELETE,
+                &format!("{}/{id}", path(THREAD)),
+                &json!({}),
+            ))
+            .await,
+    ];
+    for reply in replies {
+        assert_eq!(
+            (reply.status, tag(&reply)),
+            (StatusCode::NOT_FOUND, "NotFound".into()),
+            "{}",
+            reply.text()
+        );
+    }
+    let kept: Vec<i64> = a
+        .db()
+        .read(move |conn| {
+            let mut statement = conn.prepare(
+                "SELECT id FROM work_thread_links WHERE channel_thread_id = ? ORDER BY id",
+            )?;
+            let ids = statement
+                .query_map([THREAD], |row| row.get(0))?
+                .collect::<Result<Vec<i64>, _>>()?;
+            Ok(ids)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        kept,
+        vec![id],
+        "the removed member's writes changed nothing"
+    );
+}
+
+#[tokio::test]
 async fn spa_api_work_links_pr_fetch_is_claimed_once_and_rolls_back_with_link() {
     let Some(a) = app(true).await else { return };
     let a = a.without_job_runner().await;
