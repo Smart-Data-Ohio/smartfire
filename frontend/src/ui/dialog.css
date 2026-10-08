@@ -61,8 +61,143 @@
     margin-top: var(--space-3);
   }
 
+  /* Desktop has no grabber: the sheet's, below. */
+  .dialog-grabber {
+    display: none;
+  }
+
+  /* It takes focus only on a touch screen, in place of a field (dialog.tsx), so it draws no ring. */
+  .dialog:focus-visible {
+    outline: none;
+  }
+
   :root:has(.dialog[open]) {
     overflow: hidden;
     scrollbar-gutter: stable;
+  }
+
+  /*
+   * Phones: a sheet from the bottom edge, as Slack's and Discord's. Full height, short of the
+   * status bar, or as tall as its content at size="sm". It ends at the keyboard (the shell's
+   * --keyboard-inset), so the pinned header and footer stay on screen with the body scrolling
+   * between them, and the last row keeps clear of the home indicator. The modal recipe slides it.
+   */
+  @media (width < 720px) {
+    .dialog {
+      --sheet-height: calc(100dvh - var(--keyboard-inset) - var(--safe-top) - var(--space-2));
+      --sheet-pad: var(--space-4);
+
+      inset: auto 0 var(--keyboard-inset);
+      width: 100%;
+      max-width: none;
+      height: var(--sheet-height);
+      max-height: var(--sheet-height);
+      margin: 0;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .dialog[data-size="sm"] {
+      width: 100%;
+      height: auto;
+    }
+
+    .dialog-surface {
+      gap: 0;
+      height: 100%;
+      padding: 0 var(--sheet-pad);
+    }
+
+    .dialog-header {
+      position: relative;
+      flex-shrink: 0;
+      min-height: calc(var(--touch-target) + var(--space-4));
+      margin-inline: calc(var(--sheet-pad) * -1);
+      padding: var(--space-3) var(--space-1) var(--space-1) var(--sheet-pad);
+      touch-action: none;
+    }
+
+    .dialog-grabber {
+      position: absolute;
+      top: var(--space-1-5);
+      left: 50%;
+      display: block;
+      width: 36px;
+      height: 5px;
+      border-radius: var(--radius-pill);
+      background: var(--border-strong);
+      translate: -50% 0;
+    }
+
+    .dialog .button.dialog-close {
+      --button-height: var(--touch-target);
+    }
+
+    /* Alert dialogs have no close button (and no grabber): just the title, with room above. */
+    .dialog[role="alertdialog"] .dialog-header {
+      min-height: 0;
+      padding: var(--space-5) var(--sheet-pad) var(--space-1);
+    }
+
+    .dialog-description {
+      flex-shrink: 0;
+      padding-top: var(--space-3);
+    }
+
+    /* Edge to edge, so it scrolls at the sheet's edge and a pinned action row can span it. */
+    .dialog-body {
+      flex: 1 1 auto;
+      margin: 0 calc(var(--sheet-pad) * -1);
+      padding: var(--space-3) var(--sheet-pad) var(--space-4);
+      overscroll-behavior: contain;
+    }
+
+    .dialog-body:last-child {
+      padding-bottom: calc(var(--space-4) + var(--safe-bottom));
+    }
+
+    .dialog-description + .dialog-body {
+      padding-top: var(--space-2);
+    }
+
+    /* The footer spans the sheet edge to edge, so its rule and fill do too. */
+    .dialog-footer,
+    .dialog-body [data-dialog-actions] {
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      margin: 0 calc(var(--sheet-pad) * -1);
+      padding: var(--space-3) var(--sheet-pad) calc(var(--space-3) + var(--safe-bottom));
+      background: var(--bg-raised);
+      box-shadow: 0 -1px 0 var(--border);
+    }
+
+    /* A full-height sheet's header is a bar, as a page's is; a short sheet reads as one card. */
+    .dialog:not([data-size="sm"]) .dialog-header {
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    /*
+     * A form's own action row pins to the bottom like the footer: the body lays the form out to
+     * fill the sheet, the row takes the space left over, and it sticks while the form scrolls.
+     */
+    .dialog-body:has([data-dialog-actions]) {
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 0;
+    }
+
+    .dialog-body:has([data-dialog-actions]) > * {
+      flex: 1 0 auto;
+    }
+
+    .dialog-body [data-dialog-actions] {
+      position: sticky;
+      bottom: 0;
+      margin-top: auto;
+    }
+
+    .dialog[data-size="sm"] .dialog-footer,
+    .dialog[data-size="sm"] .dialog-body [data-dialog-actions] {
+      box-shadow: none;
+    }
   }
 }

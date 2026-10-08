@@ -181,7 +181,7 @@ function EditForm({ item, onClose, onSave }: EditFormProps) {
           ))}
         </fieldset>
       </div>
-      <div className="scheduled-edit-actions">
+      <div className="scheduled-edit-actions" data-dialog-actions>
         <Button variant="secondary" onClick={onClose}>
           Cancel
         </Button>

@@ -6,7 +6,7 @@ import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -389,7 +389,7 @@ function EventFormBody({ formId, form, onBusy, onDirty, onSubmit, touched }: Eve
       (dialog !== null && !dialog.contains(active));
 
     if (input !== null && (lost || !touched.current)) {
-      input.focus();
+      focusOnOpen(input);
     }
   }, []);
 

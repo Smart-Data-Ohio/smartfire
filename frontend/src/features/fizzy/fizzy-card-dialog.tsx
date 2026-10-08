@@ -4,7 +4,7 @@ import type { CreatedFizzyCard } from "../../gen/CreatedFizzyCard.ts";
 import type { FizzyMessageCardForm } from "../../gen/FizzyMessageCardForm.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -168,7 +168,7 @@ export default function FizzyCardDialog({
     const inField = active instanceof Element && active.closest(".fz-form") !== null;
 
     if (!inField) {
-      select.focus();
+      focusOnOpen(select);
     }
   }, [fieldsShown]);
 

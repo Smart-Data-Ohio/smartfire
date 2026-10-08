@@ -7,7 +7,7 @@ import { useStore } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
@@ -181,8 +181,10 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
 
   // A step that comes in takes focus at its first field, as the dialog does when it opens.
   useLayoutEffect(() => {
-    if (step === "members") {
-      stepRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    const field = stepRef.current?.querySelector<HTMLElement>("[data-autofocus]");
+
+    if (step === "members" && field !== null && field !== undefined) {
+      focusOnOpen(field);
     }
   }, [step]);
 

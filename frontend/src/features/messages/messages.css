@@ -515,9 +515,12 @@
 
   /* ── Lightbox ───────────────────────────────────────────────────────────── */
 
-  .dialog:has(.lightbox) {
-    width: min(96vw, 1100px);
-    max-width: 96vw;
+  /* Wide on a desktop; on a phone, Dialog's full-height sheet. */
+  @media (720px <= width) {
+    .dialog:has(.lightbox) {
+      width: min(96vw, 1100px);
+      max-width: 96vw;
+    }
   }
 
   .lightbox {

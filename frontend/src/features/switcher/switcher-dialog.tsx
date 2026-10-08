@@ -254,7 +254,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
             autoComplete="off"
             spellCheck={false}
             value={query}
-            data-autofocus
+            data-autofocus="always"
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(0);

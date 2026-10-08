@@ -263,7 +263,7 @@ function CreatePollForm({ roomId, onOpenChange, initialQuestion = "" }: CreatePo
           {failure}
         </p>
       )}
-      <div className="create-poll-actions">
+      <div className="create-poll-actions" data-dialog-actions>
         <Button variant="secondary" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>

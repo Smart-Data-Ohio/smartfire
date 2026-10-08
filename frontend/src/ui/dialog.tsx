@@ -1,12 +1,14 @@
 import {
   type KeyboardEvent,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
   type SyntheticEvent,
   useId,
   useLayoutEffect,
   useRef,
 } from "react";
+import { COARSE_QUERY, PHONE_QUERY } from "../lib/breakpoints.ts";
 import { usePresence } from "../motion/presence.ts";
 import { IconButton } from "./icon-button.tsx";
 import "./dialog.css";
@@ -48,8 +50,41 @@ function focusables(root: HTMLElement): HTMLElement[] {
   );
 }
 
+/** Whether `query` matches; never, where there's no matchMedia (jsdom leaves it undefined). */
+function matches(query: string): boolean {
+  return window.matchMedia?.(query).matches === true;
+}
+
+/** Whether focusing `element` brings up the on-screen keyboard. */
+function takesText(element: HTMLElement): boolean {
+  if (element instanceof HTMLInputElement) {
+    return !["button", "checkbox", "color", "file", "radio", "range", "reset", "submit"].includes(
+      element.type,
+    );
+  }
+
+  return element instanceof HTMLTextAreaElement || element.isContentEditable;
+}
+
+/**
+ * On a touch screen a focused field raises the keyboard over the dialog before anyone has read
+ * it, so no field takes the opening focus there unless it's the whole point
+ * (`data-autofocus="always"`: a search to type in).
+ */
+function raisesKeyboardUnasked(element: HTMLElement): boolean {
+  return takesText(element) && element.dataset.autofocus !== "always" && matches(COARSE_QUERY);
+}
+
+/**
+ * The `data-autofocus` element, else the first control. On a touch screen only a `data-autofocus`
+ * that raises no keyboard (a confirmation's Cancel) takes it; otherwise the dialog itself does.
+ */
 function initialFocus(dialog: HTMLElement): HTMLElement {
   const preferred = dialog.querySelector<HTMLElement>("[data-autofocus]");
+
+  if (matches(COARSE_QUERY)) {
+    return preferred === null || raisesKeyboardUnasked(preferred) ? dialog : preferred;
+  }
 
   if (preferred !== null) {
     return preferred;
@@ -62,10 +97,127 @@ function initialFocus(dialog: HTMLElement): HTMLElement {
 }
 
 /**
+ * Gives `field` the opening focus, for a form that loads after its dialog has opened. On a touch
+ * screen, where the dialog kept focus itself, a field takes it only with `data-autofocus="always"`.
+ */
+export function focusOnOpen(field: HTMLElement): void {
+  if (field.dataset.autofocus === "always" || !matches(COARSE_QUERY)) {
+    field.focus();
+  }
+}
+
+/** How far down (px) a released drag closes the sheet. */
+const SWIPE_DISTANCE = 96;
+
+/** How fast (px/ms) a shorter drag must be going when let go to count as a flick that closes it. */
+const SWIPE_VELOCITY = 0.5;
+
+/** The flick's speed is measured over the drag's last this-many ms, not between two moves. */
+const SWIPE_WINDOW = 100;
+
+interface Drag {
+  readonly pointerId: number;
+  readonly startY: number;
+  /** Where the finger was and when, over the last SWIPE_WINDOW ms (and the start). */
+  samples: { readonly y: number; readonly time: number }[];
+}
+
+/**
+ * Swipe down to dismiss a phone sheet, from its grabber and header: the sheet follows the finger
+ * (the CSS `translate`, so the modal recipe's transform stays free for the exit), and a drag past
+ * SWIPE_DISTANCE or a downward flick closes it; anything less springs back.
+ */
+function useSwipeDown(onClose: () => void) {
+  const drag = useRef<Drag | null>(null);
+
+  const sheetOf = (event: PointerEvent<HTMLElement>) =>
+    event.currentTarget.closest<HTMLElement>(".dialog");
+
+  const settle = (event: PointerEvent<HTMLElement>, close: boolean) => {
+    const sheet = sheetOf(event);
+
+    drag.current = null;
+
+    if (sheet === null) {
+      return;
+    }
+
+    delete sheet.dataset.dragging;
+
+    if (close) {
+      onClose();
+    } else {
+      sheet.style.removeProperty("translate");
+    }
+  };
+
+  return {
+    onPointerDown: (event: PointerEvent<HTMLElement>) => {
+      const target = event.target instanceof Element ? event.target : null;
+
+      if (
+        event.pointerType === "mouse" ||
+        !event.isPrimary ||
+        target?.closest("button, a, input, select, textarea") ||
+        !matches(PHONE_QUERY)
+      ) {
+        return;
+      }
+
+      drag.current = {
+        pointerId: event.pointerId,
+        startY: event.clientY,
+        samples: [{ y: event.clientY, time: event.timeStamp }],
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerMove: (event: PointerEvent<HTMLElement>) => {
+      const current = drag.current;
+      const sheet = sheetOf(event);
+
+      if (current === null || current.pointerId !== event.pointerId || sheet === null) {
+        return;
+      }
+
+      current.samples = [
+        ...current.samples.filter((sample) => sample.time >= event.timeStamp - SWIPE_WINDOW),
+        { y: event.clientY, time: event.timeStamp },
+      ];
+      sheet.dataset.dragging = "";
+      sheet.style.translate = `0 ${Math.max(0, event.clientY - current.startY)}px`;
+    },
+    onPointerUp: (event: PointerEvent<HTMLElement>) => {
+      const current = drag.current;
+
+      if (current === null || current.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const distance = event.clientY - current.startY;
+      const from = current.samples[0] ?? { y: current.startY, time: event.timeStamp };
+      // At least a frame: two moves a millisecond apart aren't a flick.
+      const speed = (event.clientY - from.y) / Math.max(16, event.timeStamp - from.time);
+
+      settle(event, distance >= SWIPE_DISTANCE || (distance > 0 && speed >= SWIPE_VELOCITY));
+    },
+    onPointerCancel: (event: PointerEvent<HTMLElement>) => {
+      if (drag.current?.pointerId === event.pointerId) {
+        settle(event, false);
+      }
+    },
+  };
+}
+
+/**
  * A modal dialog on the native <dialog>: showModal() puts it in the top layer and makes the page
  * behind it inert. On top of that it keeps Tab inside, closes on Esc (and on a backdrop click for
  * plain dialogs), plays the modal recipe's exit before closing, and returns focus to whatever
  * opened it. Where showModal() is missing it falls back to the open attribute plus aria-modal.
+ *
+ * On a phone it is a sheet (dialog.css): full height, or bottom-anchored at `size="sm"`, with its
+ * header and footer pinned and the footer kept above the keyboard. Plain dialogs there get a
+ * grabber and swipe down to close. An action row inside the body (a form's own buttons) pins the
+ * same way with `data-dialog-actions`.
  */
 export function Dialog({
   open,
@@ -130,6 +282,7 @@ export function Dialog({
   }, [presence.mounted, presence.ref]);
 
   const close = () => onOpenChange(false);
+  const swipe = useSwipeDown(close);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === "Escape") {
@@ -193,12 +346,14 @@ export function Dialog({
       aria-describedby={description === undefined ? undefined : descriptionId}
       data-state={presence.state}
       data-size={size}
+      tabIndex={-1}
       onKeyDown={onKeyDown}
       onCancel={onCancel}
       onClick={onClick}
     >
       <div className="dialog-surface">
-        <header className="dialog-header">
+        <header className="dialog-header" {...(role === "dialog" ? swipe : {})}>
+          {role === "dialog" ? <span className="dialog-grabber" aria-hidden="true" /> : null}
           <h2 id={titleId} className="dialog-title">
             {title}
           </h2>
@@ -207,6 +362,7 @@ export function Dialog({
               icon="x"
               label="Close"
               size="sm"
+              className="dialog-close"
               onClick={close}
               tooltipPlacement="bottom"
             />

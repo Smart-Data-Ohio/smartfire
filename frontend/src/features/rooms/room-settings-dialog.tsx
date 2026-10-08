@@ -5,7 +5,7 @@ import { useStore } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -225,7 +225,7 @@ export default function RoomSettingsDialog({
       (dialog !== null && !dialog.contains(active));
 
     if (lost || !touched.current) {
-      input.focus();
+      focusOnOpen(input);
     }
   }, [loading, readOnly]);
 

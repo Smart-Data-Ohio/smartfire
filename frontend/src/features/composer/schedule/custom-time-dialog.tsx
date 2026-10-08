@@ -100,7 +100,7 @@ function CustomTimeForm({ initial, confirmLabel, onConfirm, onOpenChange }: Cust
           setError(undefined);
         }}
       />
-      <div className="schedule-form-actions">
+      <div className="schedule-form-actions" data-dialog-actions>
         <Button variant="secondary" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>
