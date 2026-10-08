@@ -2,7 +2,6 @@ import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
-import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
@@ -10,7 +9,7 @@ import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
-import { type Settled, settledDetail } from "./settle.ts";
+import { settledDetail } from "./settle.ts";
 import { refreshWorkPane } from "./work-refresh.ts";
 
 export const automations = Effect.fn("boards.automations")(function* (roomId: number) {
@@ -134,20 +133,17 @@ export const createPost = Effect.fn("boards.createPost")(function* (
               attachmentSignedId: null,
             },
     }),
+    (detail, since) => {
+      mutations.loadThreadDetail(detail, since);
+
+      // Not when the reply was dropped: the post was removed while it was being created.
+      if (store.getState().threads[detail.thread.id] !== undefined) {
+        mutations.addBoardPost(detail.thread);
+      }
+    },
   );
 
-  const detail = reply.answer;
-
-  if (reply.since !== null) {
-    mutations.loadThreadDetail(detail, reply.since);
-  }
-
-  // Not when the reply was dropped: the post was removed while it was being created.
-  if (store.getState().threads[detail.thread.id] !== undefined) {
-    mutations.addBoardPost(detail.thread);
-  }
-
-  return detail;
+  return reply.answer;
 });
 
 /**
@@ -156,37 +152,33 @@ export const createPost = Effect.fn("boards.createPost")(function* (
  * the reply may be older than what we hold, so it isn't installed: the pane refetches instead,
  * and `refreshWorkPane` settles any change that lands during that GET too.
  */
-const installSaved = Effect.fnUntraced(function* (
-  threadId: number,
-  sent: Thread | undefined,
-  { answer, since }: Settled<ThreadDetail>,
-) {
-  if (since === null) {
-    return;
-  }
+const installSaved = <E, R>(threadId: number, write: Effect.Effect<ThreadDetail, E, R>) =>
+  Effect.gen(function* () {
+    const sent = store.getState().threads[threadId];
+    let stale = false;
 
-  if (store.getState().threads[threadId] === sent) {
-    mutations.loadThreadDetail(answer, since);
+    yield* settledDetail(write, (detail, since) => {
+      if (store.getState().threads[threadId] === sent) {
+        mutations.loadThreadDetail(detail, since);
+      } else {
+        stale = true;
+      }
+    });
 
-    return;
-  }
-
-  yield* refreshWorkPane(threadId);
-});
+    if (stale) {
+      yield* refreshWorkPane(threadId);
+    }
+  });
 
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
-  const sent = store.getState().threads[threadId];
-
-  yield* installSaved(threadId, sent, yield* settledDetail(api.updateWork(threadId, body)));
+  yield* installSaved(threadId, api.updateWork(threadId, body));
 });
 
 export const handoff = Effect.fn("work.handoff")(function* (
   threadId: number,
   body: CreateWorkHandoff,
 ) {
-  const sent = store.getState().threads[threadId];
-
-  yield* installSaved(threadId, sent, yield* settledDetail(api.handoffWork(threadId, body)));
+  yield* installSaved(threadId, api.handoffWork(threadId, body));
 });
 
 /** The work list (`GET /work?state=`); its creators join the store's people. */

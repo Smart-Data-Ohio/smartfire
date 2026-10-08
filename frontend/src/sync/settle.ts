@@ -13,23 +13,26 @@ import { uncertainSince } from "../store/threads.ts";
 /** How many replies are asked for before giving up on telling (each one past 500 removals). */
 export const MAX_SETTLE_ATTEMPTS = 3;
 
-/**
- * The last reply and its request's `since` (the `removalCount` when it was sent), or `null` when
- * the reply can't be installed: every reply was uncertain, or `again` found the thread gone.
- */
+/** Installed; the thread is gone (asking again found no thread); or every reply was uncertain. */
+export type SettleOutcome = "installed" | "gone" | "unsettled";
+
+/** The last reply, and what became of it. */
 export interface Settled<A> {
   readonly answer: A;
-  readonly since: number | null;
+  readonly outcome: SettleOutcome;
 }
 
 /**
  * Runs `first`, then `again(previous)` while a thread the reply names (`threadIds`) is uncertain,
- * up to `MAX_SETTLE_ATTEMPTS` replies. `again` answers `null` when the thread is gone.
+ * up to `MAX_SETTLE_ATTEMPTS` replies; `again` answers `null` when the thread is gone. A reply
+ * that isn't uncertain is installed (`install`, with its request's `since`) in the same step as
+ * the check, so no removal can land between them.
  */
 export const settled = <A, E, R, E2, R2>(
   first: Effect.Effect<A, E, R>,
   again: (previous: A) => Effect.Effect<A | null, E2, R2>,
   threadIds: (answer: A) => readonly number[],
+  install: (answer: A, since: number) => void,
 ): Effect.Effect<Settled<A>, E | E2, R | R2> =>
   Effect.gen(function* () {
     let since = store.getState().removalCount;
@@ -39,37 +42,43 @@ export const settled = <A, E, R, E2, R2>(
       const state = store.getState();
 
       if (!threadIds(answer).some((id) => uncertainSince(state, id, since))) {
-        return { answer, since };
+        install(answer, since);
+
+        return { answer, outcome: "installed" };
       }
 
       if (attempt >= MAX_SETTLE_ATTEMPTS) {
-        return { answer, since: null };
+        return { answer, outcome: "unsettled" };
       }
 
       since = store.getState().removalCount;
       const next = yield* again(answer);
 
       if (next === null) {
-        return { answer, since: null };
+        return { answer, outcome: "gone" };
       }
 
       answer = next;
     }
   });
 
-/**
- * As `settled` for a reply that is the thread's detail (a write's, usually): it's asked for again
- * with `GET /threads/:id`, and a 404 there means the thread was removed.
- */
-export const settledDetail = <E, R>(first: Effect.Effect<ThreadDetail, E, R>) =>
+/** `GET /threads/:id`, asked again by `settled`: a 404 means the thread was removed (`null`). */
+export const refetchThread = (threadId: number) =>
+  thread(threadId).pipe(
+    Effect.catchIf(
+      (error) => Predicate.isTagged(error, "NotFound"),
+      () => Effect.succeed(null),
+    ),
+  );
+
+/** As `settled` for a reply that is the thread's detail (a write's, usually). */
+export const settledDetail = <E, R>(
+  first: Effect.Effect<ThreadDetail, E, R>,
+  install: (detail: ThreadDetail, since: number) => void,
+) =>
   settled(
     first,
-    (previous) =>
-      thread(previous.thread.id).pipe(
-        Effect.catchIf(
-          (error) => Predicate.isTagged(error, "NotFound"),
-          () => Effect.succeed(null),
-        ),
-      ),
+    (previous) => refetchThread(previous.thread.id),
     (detail) => [detail.thread.id],
+    install,
   );
