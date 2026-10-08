@@ -350,8 +350,10 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
       status: "ready",
       before,
       after,
-      loadingOlder: mode === "older" ? false : timeline.loadingOlder,
-      loadingNewer: mode === "newer" ? false : timeline.loadingNewer,
+      // A fresh window ends the load that raised a flag. Leaving `loadingNewer` set blocks
+      // every later forward page (the pane sets it while a permalink's window loads).
+      loadingOlder: mode === "replace" || mode === "older" ? false : timeline.loadingOlder,
+      loadingNewer: mode === "replace" || mode === "newer" ? false : timeline.loadingNewer,
       generation: mode === "replace" ? timeline.generation + 1 : timeline.generation,
       arrived: fresh ? null : timeline.arrived,
     },
@@ -440,6 +442,29 @@ export function setThreadPageFailed(state: State, threadId: number): State {
     loadingOlder: false,
     loadingNewer: false,
     status: timeline.status === "loading" || timeline.status === "idle" ? "error" : timeline.status,
+  });
+}
+
+/**
+ * The in-flight page was dropped. `replace` is a fresh window: it also releases replies held for
+ * that window. A directional page clears only its own flag, so the other direction can stay out.
+ */
+export function clearThreadPageLoading(
+  state: State,
+  threadId: number,
+  direction: "older" | "newer" | "replace",
+): State {
+  const timeline = state.threadTimelines[threadId];
+
+  if (timeline === undefined) {
+    return state;
+  }
+
+  return withThreadTimeline(state, threadId, {
+    ...timeline,
+    arrived: direction === "replace" ? null : timeline.arrived,
+    loadingOlder: direction === "newer" ? timeline.loadingOlder : false,
+    loadingNewer: direction === "older" ? timeline.loadingNewer : false,
   });
 }
 

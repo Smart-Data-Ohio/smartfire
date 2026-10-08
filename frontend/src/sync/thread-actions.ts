@@ -53,6 +53,15 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
       ),
     ],
     { concurrency: 2 },
+  ).pipe(
+    // Interrupted before the window lands. A later load owns the flag, so only this one clears it.
+    Effect.onInterrupt(() =>
+      Effect.sync(() => {
+        if (paneLoads.get(threadId) === load) {
+          mutations.clearThreadPageLoading(threadId, "replace");
+        }
+      }),
+    ),
   );
 
   // A later load owns the pane (and its loading state) now.
@@ -123,6 +132,9 @@ const loadPage = Effect.fnUntraced(function* (threadId: number, direction: "olde
     .pipe(
       Effect.tap((page) => Effect.sync(() => mutations.applyThreadPage(threadId, page, direction))),
       Effect.catch(() => Effect.sync(() => mutations.setThreadPageFailed(threadId))),
+      Effect.onInterrupt(() =>
+        Effect.sync(() => mutations.clearThreadPageLoading(threadId, direction)),
+      ),
     );
 });
 

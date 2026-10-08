@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { MESSAGE_IDS, seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
+import { expect, matrix, ROOM_IDS, shot, syncWelcomed, type Theme, test } from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -20,6 +20,24 @@ interface ThreadPost {
   readonly threadId: number;
   readonly userId: number;
   readonly markdown: string;
+}
+
+/** Posts `count` replies so an early one falls off the newest page. */
+async function postReplies(page: Page, threadId: number, count: number): Promise<void> {
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  for (let index = 0; index < count; index += 1) {
+    await page.request.post(`/api/v1/threads/${threadId}/messages`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        clientMessageId: `paging-filler-${index}`,
+        markdownSource: `Filler reply ${index}`,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: null,
+      },
+    });
+  }
 }
 
 /** Has someone reply in a thread through the mock's `/__mock/thread-post` control. */
@@ -194,6 +212,35 @@ test("the thread menu offers what the viewer may do", async ({ page }) => {
   await field.fill("Conversion dip, week 40");
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
   await expect(pane(page).getByRole("heading", { name: "Conversion dip, week 40" })).toBeVisible();
+});
+
+test("an older reply's permalink pages forward when scrolled to the bottom", async ({ page }) => {
+  const oldest = seededReplyId(THREAD_IDS.generalActive, 0);
+
+  await open(page, `r/${GENERAL}`);
+  // More replies than a permalink window plus the welcome's re-read around its middle, so the
+  // tail stays past the loaded window until the reader scrolls down to it.
+  await postReplies(page, THREAD_IDS.generalActive, 80);
+
+  const welcomed = syncWelcomed(page);
+
+  const newer = page.waitForResponse((response) =>
+    response.url().includes(`/api/v1/threads/${THREAD_IDS.generalActive}/messages?after=`),
+  );
+
+  await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}?m=${oldest}`);
+  await welcomed;
+
+  const log = pane(page).getByRole("log", { name: "Replies" });
+  const oldestRow = log.locator(`[data-message-id="${oldest}"]`);
+
+  await expect(oldestRow).toBeVisible();
+  // End asks the virtual list to bring its last loaded reply to the bottom edge, which pages on.
+  await oldestRow.focus();
+  await page.keyboard.press("End");
+  await (await newer).finished();
+  await page.keyboard.press("End");
+  await expect(log.getByText("Filler reply 79", { exact: true })).toBeVisible();
 });
 
 test.describe("phone", () => {
