@@ -10,12 +10,15 @@
     overflow: hidden;
   }
 
-  /* The visible viewport: above an overlaid keyboard, clear of a landscape notch. Each column
-     pads itself under the status bar, so its own surface fills that strip. */
+  /* The visible viewport: fixed to the layout viewport between the strip iOS pans above the screen
+     and the one an overlaid keyboard covers, clear of a landscape notch. Each column pads itself
+     under the status bar, so its own surface fills that strip. */
   .app-shell {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
     display: grid;
     grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr);
-    height: calc(100dvh - var(--keyboard-inset));
+    height: calc(100dvh - var(--viewport-top-inset) - var(--keyboard-inset));
     padding-inline: var(--safe-left) var(--safe-right);
     background: var(--bg-app);
   }

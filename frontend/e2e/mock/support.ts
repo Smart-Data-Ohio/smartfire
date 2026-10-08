@@ -177,10 +177,18 @@ export function matrix(
   }
 }
 
-/** Asserts nothing scrolls the page sideways, naming the widest elements that stick out if so. */
-export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const overflow = await page.evaluate(() => {
+/**
+ * Asserts nothing scrolls sideways: not the page, and no box inside it (a pane body wider than the
+ * screen, say), naming the culprits if so. Code blocks and text fields may; pass `allowScroll` (a
+ * selector) for any other deliberate sideways scroller, such as a chip strip.
+ */
+export async function expectNoHorizontalOverflow(
+  page: Page,
+  { allowScroll }: { readonly allowScroll?: string | undefined } = {},
+): Promise<void> {
+  const overflow = await page.evaluate((allowed) => {
     const width = window.innerWidth;
+    const exempt = ["pre", "textarea", allowed].filter(Boolean).join(", ");
 
     const wide = [...document.querySelectorAll("body *")]
       .flatMap((element) => {
@@ -194,13 +202,29 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
       .slice(0, 5)
       .map(({ name }) => name);
 
-    return { scrollWidth: document.documentElement.scrollWidth, width, wide };
-  });
+    const scrollers = [...document.querySelectorAll<HTMLElement>("body *")].flatMap((element) => {
+      const { overflowX } = getComputedStyle(element);
+
+      const scrolls =
+        (overflowX === "auto" || overflowX === "scroll") &&
+        element.scrollWidth > element.clientWidth + 1 &&
+        element.closest(exempt) === null;
+
+      return scrolls
+        ? [
+            `${element.tagName.toLowerCase()}.${element.className} ${element.scrollWidth}/${element.clientWidth}`,
+          ]
+        : [];
+    });
+
+    return { scrollWidth: document.documentElement.scrollWidth, width, wide, scrollers };
+  }, allowScroll);
 
   expectBase(
     overflow.scrollWidth,
     `scrollWidth ${overflow.scrollWidth} > ${overflow.width}: ${overflow.wide.join(", ")}`,
   ).toBeLessThanOrEqual(overflow.width);
+  expectBase(overflow.scrollers, "boxes that scroll sideways").toEqual([]);
 }
 
 const TAPPABLE = [
@@ -239,10 +263,13 @@ export async function expectTouchTargets(
         const box = target.getBoundingClientRect();
         const style = getComputedStyle(target);
 
+        // Visually hidden (the .visually-hidden clip) is skipped; a visible 1 px target is not.
         const skipped =
-          box.width < 2 ||
-          box.height < 2 ||
+          box.width === 0 ||
+          box.height === 0 ||
           style.visibility === "hidden" ||
+          target.closest(".visually-hidden") !== null ||
+          style.clipPath === "inset(50%)" ||
           (target.tagName === "A" && style.display === "inline") ||
           (ignore !== undefined && target.matches(ignore));
 
@@ -263,28 +290,46 @@ export async function expectTouchTargets(
 
 /**
  * Raises an on-screen keyboard `height` px tall that overlays the page, as iOS Safari's does: the
- * visual viewport shrinks and the layout viewport holds. 0 lowers it. For a keyboard that resizes
- * the page instead (Android), shrink the viewport with `page.setViewportSize`.
+ * visual viewport shrinks and the layout viewport holds. `offsetTop` pans the visible area down
+ * the layout viewport, as iOS does to bring a field above the keyboard (`pageTop` follows). 0
+ * lowers it. Resolves once the page has had a frame to respond. For a keyboard that resizes the
+ * page instead (Android), shrink the viewport with `page.setViewportSize`.
  */
-export async function simulateKeyboard(page: Page, height: number): Promise<void> {
-  await page.evaluate((keyboard) => {
-    const viewport = window.visualViewport;
+export async function simulateKeyboard(
+  page: Page,
+  height: number,
+  { offsetTop = 0 }: { readonly offsetTop?: number } = {},
+): Promise<void> {
+  await page.evaluate(
+    async ({ keyboard, pan }) => {
+      const viewport = window.visualViewport;
 
-    if (viewport === null) {
-      throw new Error("this browser has no visualViewport");
-    }
+      if (viewport === null) {
+        throw new Error("this browser has no visualViewport");
+      }
 
-    if (keyboard === 0) {
-      Reflect.deleteProperty(viewport, "height");
-    } else {
-      Object.defineProperty(viewport, "height", {
-        configurable: true,
-        get: () => window.innerHeight - keyboard,
-      });
-    }
+      const readings = {
+        height: () => window.innerHeight - keyboard,
+        offsetTop: () => pan,
+        pageTop: () => window.scrollY + pan,
+      };
 
-    viewport.dispatchEvent(new Event("resize"));
-  }, height);
+      for (const [name, read] of Object.entries(readings)) {
+        if (keyboard === 0) {
+          Reflect.deleteProperty(viewport, name);
+        } else {
+          Object.defineProperty(viewport, name, { configurable: true, get: read });
+        }
+      }
+
+      viewport.dispatchEvent(new Event("resize"));
+      viewport.dispatchEvent(new Event("scroll"));
+
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+    },
+    { keyboard: height, pan: offsetTop },
+  );
 }
 
 /**

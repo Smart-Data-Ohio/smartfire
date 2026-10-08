@@ -198,6 +198,8 @@
     /* The layout viewport's bottom strip an overlaid keyboard covers (iOS), set by
        src/lib/keyboard-inset.ts. The shell already shrinks by it; only position: fixed adds it. */
     --keyboard-inset: 0px;
+    /* The strip above the visible area while iOS pans the page up to a focused field (same hook). */
+    --viewport-top-inset: 0px;
     /* What a viewport-anchored (position: fixed) surface keeps clear at the bottom. */
     --viewport-bottom-inset: max(var(--safe-bottom), var(--keyboard-inset));
 
