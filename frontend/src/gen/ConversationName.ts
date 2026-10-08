@@ -9,19 +9,19 @@ import type { RoomKind } from "./RoomKind";
  * pair their rows name, so a row renders without the sidebar (which leaves out `invisible`
  * rooms).
  */
-export type ConversationName = { roomId: number, 
+export type ConversationName = { roomId: number,
 /**
  * `null` for the room's root timeline.
  */
-threadId: number | null, roomKind: RoomKind, 
+threadId: number | null, roomKind: RoomKind,
 /**
  * The viewer-relative room name.
  */
-roomName: string, 
+roomName: string,
 /**
  * The room's icon (`rooms.icon_name`), shown beside search hits; `null` for none.
  */
-roomIconName: string | null, 
+roomIconName: string | null,
 /**
  * `null` when `threadId` is.
  */

@@ -26,7 +26,7 @@ pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: O
     // A classic page's Turbo Drive visit that ends here (a ported screen's redirect) loads the
     // page in full rather than swapping its body in.
     tags.push_str("<meta name=\"turbo-visit-control\" content=\"reload\" />\n");
-    tags.push_str(&format!("<link rel=\"manifest\" href=\"{}manifest.webmanifest\" />\n", crate::root_path()));
+    tags.push_str("<link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n");
     tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
 
     let page = with_nonce(template, &nonce);

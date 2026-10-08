@@ -5,6 +5,7 @@ import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -179,6 +180,8 @@ export const mutations = {
   loadStageDetail: (detail: StageDetail) =>
     apply((state) => huddles.loadStageDetail(state, detail)),
   // --- S3: the activity inbox, saved items and scheduled messages ---
+  beginActivityGeneration: (newEpoch = true) =>
+    apply((state) => activity.beginActivityGeneration(state, newEpoch)),
   setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
     apply((state) => activity.setActivityListLoading(state, tab, status, more)),
   setActivityListFailed: (
@@ -186,7 +189,11 @@ export const mutations = {
     status: ActivityState,
     error: string,
     generation?: number,
-  ) => apply((state) => activity.setActivityListFailed(state, tab, status, error, generation)),
+    activityGeneration?: number,
+  ) =>
+    apply((state) =>
+      activity.setActivityListFailed(state, tab, status, error, generation, activityGeneration),
+    ),
   landActivityPage: (
     tab: ActivityTab,
     status: ActivityState,
@@ -194,17 +201,17 @@ export const mutations = {
     mode: "replace" | "more",
     start?: activity.ActivityLoadStart,
   ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode, start)),
-  /** An item as the server has it now; `unreadCount` `null` keeps the badge. */
-  applyActivityItem: (item: ActivityItem, unreadCount: number | null) =>
-    apply((state) => activity.applyActivityItem(state, item, unreadCount)),
+  /** An item as the server has it now; `unread` `null` keeps the badge. */
+  applyActivityItem: (item: ActivityItem, unread: ActivityUnreadCount | null) =>
+    apply((state) => activity.applyActivityItem(state, item, unread)),
   /** A change on its way, shown at once (see `activity.showActivityChange`). */
   showActivityChange: (item: ActivityItem, token: number, unreadDelta: number) =>
     apply((state) => activity.showActivityChange(state, item, token, unreadDelta)),
   /** A change on its way ended (see `activity.endActivityChange`). */
   endActivityChange: (end: activity.ActivityChangeEnd) =>
     apply((state) => activity.endActivityChange(state, end)),
-  setActivityUnreadCount: (unreadCount: number) =>
-    apply((state) => activity.setActivityUnreadCount(state, unreadCount)),
+  setActivityUnreadCount: (unread: ActivityUnreadCount, generation?: number) =>
+    apply((state) => activity.setActivityUnreadCount(state, unread, generation)),
   setSavedListLoading: (filter: SavedFilter, more: boolean) =>
     apply((state) => savedList.setSavedListLoading(state, filter, more)),
   setSavedListFailed: (filter: SavedFilter, error: string, generation?: number) =>

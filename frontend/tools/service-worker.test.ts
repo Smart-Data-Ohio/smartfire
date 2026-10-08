@@ -25,7 +25,7 @@ describe("service worker build injection", () => {
       "/app/assets/offline-page-87654321.html",
       "/app/assets/service-worker-12345678.js",
       "/app/assets/styles-12345678.css",
-      "/app/offline.html",
+      "/offline.html",
     ]);
   });
 

@@ -12,12 +12,17 @@ import type { User } from "../gen/User.ts";
 import {
   activityDestination,
   activityListOf,
+  activityLoadStart,
   applyActivityItem,
+  beginActivityGeneration,
+  endActivityChange,
   landActivityPage,
   markActivityStale,
   nextActivityItem,
+  removeActivityItem,
   setActivityListLoading,
   setActivityUnreadCount,
+  showActivityChange,
   unreadDelta,
 } from "./activity.ts";
 import { conversationNameOf } from "./conversations.ts";
@@ -128,8 +133,9 @@ function activityPage(
   items: readonly ActivityItem[],
   unreadCount: number,
   nextCursor: string | null = null,
+  unreadRevision = 1,
 ): ActivityList {
-  return { items: [...items], users: [user(2)], unreadCount, nextCursor };
+  return { items: [...items], users: [user(2)], unreadCount, unreadRevision, nextCursor };
 }
 
 /** The inbox with Unread, Read and Handled loaded in All, and Unread loaded in Mentions. */
@@ -365,7 +371,7 @@ describe("the activity inbox", () => {
     const next = events(state, {
       topic: "user",
       type: "activity.item",
-      data: { item: handled, unreadCount: 2 },
+      data: { item: handled, unreadCount: 2, unreadRevision: 2 },
     });
 
     expect(ids(next, "all", "unread")).toEqual([5, 4]);
@@ -376,12 +382,134 @@ describe("the activity inbox", () => {
   });
 
   it("puts a new arrival at the top of the lists of its tab, and nowhere else", () => {
-    const next = applyActivityItem(inbox(), item(6, 59, "huddle_started"), 4);
+    const next = applyActivityItem(inbox(), item(6, 59, "huddle_started"), {
+      unreadCount: 4,
+      unreadRevision: 2,
+    });
 
     expect(ids(next, "all", "unread")).toEqual([6, 5, 4, 3]);
     expect(ids(next, "mentions", "unread")).toEqual([5, 3]);
     expect(next.activity.unreadCount).toBe(4);
   });
+
+  it("keeps the version of a confirmed row installed during reconnect", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+    const start = activityLoadStart(state, "all", "read");
+    const confirmed = item(5, 60, "mention", "read");
+
+    state = setActivityListLoading(state, "all", "read", false);
+    state = landActivityPage(
+      state,
+      "all",
+      "read",
+      activityPage([confirmed], 2, null, 2),
+      "replace",
+      start,
+    );
+    expect(state.activity.items[5]).toBe(optimistic);
+    state = beginActivityGeneration(state, false);
+    expect(state.activity.items[5]).toEqual(confirmed);
+    expect(state.activity.versions[5]).toBe(confirmed.updatedAt);
+    state = applyActivityItem(state, item(5, 56), null);
+    expect(state.activity.items[5]).toEqual(confirmed);
+  });
+
+  it("keeps a newer reply item when its count snapshot is stale", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+      unreadCount: 2,
+      unreadRevision: 2,
+    });
+    state = setActivityUnreadCount(state, { unreadCount: 8, unreadRevision: 5 });
+    const reply = item(5, 60, "mention", "handled");
+
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 1,
+      optimistic,
+      settled: reply,
+      unread: { unreadCount: 2, unreadRevision: 3 },
+    });
+    expect(state.activity.items[5]).toEqual(reply);
+    expect(state.activity.unreadCount).toBe(8);
+  });
+
+  it("reconciles the newest zero-delta transition without changing an earlier read adjustment", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+    const read = item(5, 50, "mention", "read");
+
+    state = applyActivityItem(state, read, { unreadCount: 2, unreadRevision: 2 });
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 1,
+      optimistic,
+      settled: before,
+      unread: null,
+    });
+    const handled = nextActivityItem(read, "handled", at(55));
+
+    state = showActivityChange(state, handled, 3, 0);
+    state = applyActivityItem(state, item(5, 50, "mention", "handled"), {
+      unreadCount: 2,
+      unreadRevision: 3,
+    });
+    expect(state.activity.unreadCount).toBe(1);
+    state = applyActivityItem(state, before, { unreadCount: 3, unreadRevision: 4 });
+    expect(state.activity.pendingUnread[1]?.delta).toBe(-1);
+    expect(state.activity.pendingUnread[3]?.delta).toBe(1);
+    expect(state.activity.unreadCount).toBe(2);
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 3,
+      optimistic: handled,
+      settled: read,
+      unread: null,
+    });
+    expect(state.activity.items[5]).toEqual(before);
+    expect(state.activity.unreadCount).toBe(2);
+  });
+
+  for (const latestState of ["handled", "unread"] as const) {
+    it(`keeps the latest equal-timestamp ${latestState} observation on failure`, () => {
+      const before = item(5, 50);
+      const optimistic = nextActivityItem(before, "read", at(55));
+      let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+      state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+      state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+        unreadCount: 2,
+        unreadRevision: 2,
+      });
+      const latest = item(5, 50, "mention", latestState);
+      const unreadCount = latestState === "unread" ? 3 : 2;
+
+      state = applyActivityItem(state, latest, { unreadCount, unreadRevision: 3 });
+      state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+        unreadCount: 2,
+        unreadRevision: 2,
+      });
+      state = endActivityChange(state, {
+        generation: state.activity.generation,
+        token: 1,
+        optimistic,
+        settled: before,
+        unread: null,
+      });
+      expect(state.activity.items[5]).toEqual(latest);
+      expect(state.activity.unreadCount).toBe(latestState === "unread" ? 2 : 1);
+    });
+  }
 
   it("leaves an older item past a loaded window to the page that brings it", () => {
     const state = landActivityPage(
@@ -392,7 +520,10 @@ describe("the activity inbox", () => {
       "replace",
     );
 
-    const next = applyActivityItem(state, item(2, 20, "mention", "read"), 0);
+    const next = applyActivityItem(state, item(2, 20, "mention", "read"), {
+      unreadCount: 0,
+      unreadRevision: 2,
+    });
 
     expect(ids(next, "all", "read")).toEqual([5]);
     expect(next.activity.items[2]).toBeDefined();
@@ -402,23 +533,142 @@ describe("the activity inbox", () => {
     const state = inbox();
     const read = item(3, 30, "mention", "read");
 
-    expect(applyActivityItem(state, read, 11).activity.unreadCount).toBe(11);
+    expect(
+      applyActivityItem(state, read, { unreadCount: 11, unreadRevision: 2 }).activity.unreadCount,
+    ).toBe(11);
     expect(applyActivityItem(state, read, null).activity.unreadCount).toBe(3);
-    expect(setActivityUnreadCount(state, 3)).toBe(state);
-    expect(setActivityUnreadCount(state, 0).activity.unreadCount).toBe(0);
+    expect(
+      setActivityUnreadCount(state, { unreadCount: 3, unreadRevision: 2 }).activity.unreadCount,
+    ).toBe(3);
+    expect(
+      setActivityUnreadCount(state, { unreadCount: 0, unreadRevision: 2 }).activity.unreadCount,
+    ).toBe(0);
   });
 
   it("removes an item gone with its source from the store and every list", () => {
     const next = events(inbox(), {
       topic: "user",
       type: "activity.removed",
-      data: { id: 5, unreadCount: 2 },
+      data: { id: 5, unreadCount: 2, unreadRevision: 2 },
     });
 
     expect(next.activity.items[5]).toBeUndefined();
     expect(ids(next, "all", "unread")).toEqual([4, 3]);
     expect(ids(next, "mentions", "unread")).toEqual([3]);
     expect(next.activity.unreadCount).toBe(2);
+  });
+
+  it("invalidates a delayed count even when removal of an unseen item leaves the count unchanged", () => {
+    const state = inbox();
+    const next = removeActivityItem(state, 999, { unreadCount: 3, unreadRevision: 2 });
+
+    expect(
+      setActivityUnreadCount(next, { unreadCount: 10, unreadRevision: 1 }).activity.unreadCount,
+    ).toBe(3);
+  });
+
+  it("accepts revision zero first and ignores equal or older count snapshots", () => {
+    const first = setActivityUnreadCount(initialState, { unreadCount: 2, unreadRevision: 0 });
+    const newer = setActivityUnreadCount(first, { unreadCount: 4, unreadRevision: 3 });
+
+    expect(first.activity.serverUnread).toEqual({ unreadCount: 2, unreadRevision: 0 });
+    expect(
+      setActivityUnreadCount(newer, { unreadCount: 0, unreadRevision: 3 }).activity.unreadCount,
+    ).toBe(4);
+    expect(
+      setActivityUnreadCount(newer, { unreadCount: 9, unreadRevision: 2 }).activity.unreadCount,
+    ).toBe(4);
+  });
+
+  it("discards deferred counts at a generation fence and accepts a lower new count", () => {
+    const before = item(3, 30);
+
+    const optimistic = nextActivityItem(before, "read", at(55));
+    const held = setActivityUnreadCount(inbox(), { unreadCount: 8, unreadRevision: 100 });
+    const pending = showActivityChange(held, optimistic, 1, -1);
+    const queued = setActivityUnreadCount(pending, { unreadCount: 7, unreadRevision: 101 });
+
+    expect(queued.activity.unreadCount).toBe(7);
+
+    const restored = beginActivityGeneration(queued);
+
+    expect(restored.activity.deferredUnread).toBeNull();
+
+    const nextPending = showActivityChange(restored, optimistic, 2, -1);
+    const nextQueued = setActivityUnreadCount(nextPending, { unreadCount: 2, unreadRevision: 50 });
+
+    const settled = endActivityChange(nextQueued, {
+      generation: restored.activity.generation,
+      token: 2,
+      optimistic,
+      settled: optimistic,
+      unread: { unreadCount: 1, unreadRevision: 49 },
+    });
+
+    expect(settled.activity.unreadCount).toBe(2);
+    expect(settled.activity.serverUnread?.unreadRevision).toBe(50);
+    expect(settled.activity.deferredUnread).toBeNull();
+  });
+
+  it("keeps a newer count when an old page lands, without invalidating a newer GET", () => {
+    const state = inbox();
+    const start = activityLoadStart(state, "all", "unread");
+    const newer = setActivityUnreadCount(state, { unreadCount: 4, unreadRevision: 2 });
+
+    const paged = landActivityPage(
+      newer,
+      "all",
+      "unread",
+      activityPage([item(5, 50)], 3),
+      "replace",
+      start,
+    );
+
+    const refreshed = setActivityUnreadCount(paged, { unreadCount: 5, unreadRevision: 3 });
+
+    expect(paged.activity.serverUnread).toEqual({ unreadCount: 4, unreadRevision: 2 });
+    expect(refreshed.activity.unreadCount).toBe(5);
+  });
+
+  it("accepts a newer page count even when its list generation has been superseded", () => {
+    const state = inbox();
+    const start = activityLoadStart(state, "all", "unread");
+    const reloading = setActivityListLoading(state, "all", "unread", false);
+
+    const next = landActivityPage(
+      reloading,
+      "all",
+      "unread",
+      activityPage([item(99, 59)], 4, null, 2),
+      "replace",
+      start,
+    );
+
+    expect(next.activity.unreadCount).toBe(4);
+    expect(next.activity.items[99]).toBeUndefined();
+    expect(ids(next, "all", "unread")).toEqual([5, 4, 3]);
+  });
+
+  it("ignores conflicting equal or older websocket counts independently of item timestamps", () => {
+    const state = setActivityUnreadCount(inbox(), { unreadCount: 4, unreadRevision: 3 });
+
+    const changed = events(
+      state,
+      {
+        topic: "user",
+        type: "activity.item",
+        data: { item: item(3, 59, "mention", "read"), unreadCount: 0, unreadRevision: 2 },
+      },
+      {
+        topic: "user",
+        type: "activity.removed",
+        data: { id: 5, unreadCount: 9, unreadRevision: 3 },
+      },
+    );
+
+    expect(changed.activity.items[3]?.state).toBe("read");
+    expect(changed.activity.items[5]).toBeUndefined();
+    expect(changed.activity.unreadCount).toBe(4);
   });
 
   it("marks only loaded lists stale, and keeps the rows shown while one reloads", () => {

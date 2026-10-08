@@ -39,11 +39,11 @@ import type { WorkspaceBranding } from "./WorkspaceBranding";
 /**
  * One event in a `batch`: `{"seq", "topic", "type", "data"}`.
  */
-export type SyncEvent = { 
+export type SyncEvent = {
 /**
  * The hub's global publication sequence.
  */
-seq: number, 
+seq: number,
 /**
  * `user`, `room:<id>` or `thread:<id>`.
  */

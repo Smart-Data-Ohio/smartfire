@@ -695,7 +695,7 @@
       "bookmark_notes": "Old /app/... links (tabs, installs, auth return URLs) must keep working via aliases.",
       "notification_notes": "No producer emits /app URLs.",
       "cases": [
-        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "/app/manifest.webmanifest"], "absent": ["{CLASSIC_SHELL}"]}},
+        {"id": "app.home", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}", "{SPA_RELOAD}", "href=\"/webmanifest.json\""], "absent": ["{CLASSIC_SHELL}", "/app/manifest.webmanifest"]}},
         {"id": "app.noslash", "method": "GET", "path": "/app", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{SPA_BOOT}"]}},
         {"id": "app.anonymous", "method": "GET", "path": "/app/", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/session/new"}},
         {"id": "app.disabled", "method": "GET", "path": "/app/", "auth": "david", "preference": "next", "spa_enabled": false, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"]}}
@@ -862,14 +862,14 @@
       "bookmarks": false,
       "notifications": false,
       "known_bug": null,
-      "notes": "Missing embedded files answer 404 (never the shell, never a redirect). The worker/offline files exist only in a real dist; expectations are conditional on campfire_spa::built(). SPA_ASSET resolves a real hashed JavaScript file in the embedded dist, so /app/assets must keep serving downloadable bytes as well as rejecting missing files.",
+      "notes": "Missing embedded files answer 404 (never the shell, never a redirect). The /app worker and offline URLs serve the built files, or the root fallbacks in a stub build. The unreleased /app manifest redirects to the root manifest. SPA_ASSET resolves a real hashed JavaScript file in the embedded dist, so /app/assets must keep serving downloadable bytes as well as rejecting missing files.",
       "bookmark_notes": "No bookmarks; bundle internals.",
       "notification_notes": "No producer emits these.",
       "cases": [
         {"id": "assets.missing", "method": "GET", "path": "/app/assets/no-such-chunk-abc123.js", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
-        {"id": "assets.worker", "method": "GET", "path": "/app/service-worker.js", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect_stub": {"status": 404, "markers": ["{ERR404}"]}, "expect_built": {"status": 200, "content_type_prefix": "text/javascript"}},
-        {"id": "assets.offline", "method": "GET", "path": "/app/offline.html", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect_stub": {"status": 404, "markers": ["{ERR404}"]}, "expect_built": {"status": 200, "content_type_prefix": "text/html"}},
-        {"id": "assets.manifest", "method": "GET", "path": "/app/manifest.webmanifest", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/manifest+json", "markers": ["\"start_url\": \"/app/\""]}},
+        {"id": "assets.worker", "method": "GET", "path": "/app/service-worker.js", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/javascript"}},
+        {"id": "assets.offline", "method": "GET", "path": "/app/offline.html", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html"}},
+        {"id": "assets.manifest", "method": "GET", "path": "/app/manifest.webmanifest", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/webmanifest.json"}},
         {"id": "assets.existing", "method": "GET", "path": "/app/{SPA_ASSET}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect_built": {"status": 200, "content_type_prefix": "text/javascript", "body_nonempty": true, "location_absent": true}, "expect_stub": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}}
       ]
     },
@@ -884,18 +884,18 @@
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "Public (no sign-in). Static files are served before routing; missing /assets/* fall through to the app 404. Extensionless worker and manifest URLs require the matching Accept format (otherwise 406); .js and .json paths determine it.",
+      "notes": "Public (no sign-in). Static files are served before routing; missing /assets/* fall through to the app 404. Extensionless worker and manifest URLs require the matching Accept format (otherwise 406); .js and .json paths determine it. With the SPA enabled and built, the worker and offline page come from the SPA build; a stub build serves the Rails files.",
       "bookmark_notes": "Install identity; keep start URL and scope stable.",
       "notification_notes": "The worker opens payload click paths; old classic paths must keep working.",
       "cases": [
         {"id": "pwa.worker", "method": "GET", "path": "/service-worker", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "body_empty": true, "location_absent": true}},
-        {"id": "pwa.worker.js", "method": "GET", "path": "/service-worker.js", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["smartfire-static-v1"]}},
+        {"id": "pwa.worker.js", "method": "GET", "path": "/service-worker.js", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect_stub": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["smartfire-static-v1"]}, "expect_built": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["self.smartfireBuild="]}},
         {"id": "pwa.manifest", "method": "GET", "path": "/webmanifest", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "body_empty": true, "location_absent": true}},
         {"id": "pwa.manifest.json", "method": "GET", "path": "/webmanifest.json", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/json", "markers": ["\"start_url\": \"/\""]}},
-        {"id": "pwa.offline", "method": "GET", "path": "/offline.html", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Smartfire | Offline"]}},
+        {"id": "pwa.offline", "method": "GET", "path": "/offline.html", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect_stub": {"status": 200, "content_type_prefix": "text/html", "markers": ["Smartfire | Offline"]}, "expect_built": {"status": 200, "content_type_prefix": "text/html", "markers": ["Offline · Smartfire"]}},
         {"id": "pwa.robots", "method": "GET", "path": "/robots.txt", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "markers": ["robotstxt.org"]}},
         {"id": "pwa.asset.missing", "method": "GET", "path": "/assets/no-such-file-abc123.js", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
-        {"id": "pwa.worker.accepted", "method": "GET", "path": "/service-worker", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["smartfire-static-v1"]}, "headers": {"accept": "text/javascript"}},
+        {"id": "pwa.worker.accepted", "method": "GET", "path": "/service-worker", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect_stub": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["smartfire-static-v1"]}, "expect_built": {"status": 200, "content_type_prefix": "text/javascript", "markers": ["self.smartfireBuild="]}, "headers": {"accept": "text/javascript"}},
         {"id": "pwa.manifest.accepted", "method": "GET", "path": "/webmanifest", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "application/json", "markers": ["\"start_url\": \"/\""]}, "headers": {"accept": "application/json"}}
       ]
     },

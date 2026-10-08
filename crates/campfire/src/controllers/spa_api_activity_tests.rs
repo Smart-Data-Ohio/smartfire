@@ -225,6 +225,69 @@ async fn the_inbox_lists_changes_and_publishes_items() {
 }
 
 #[tokio::test]
+async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
+    let a = app(true)
+        .await
+        .expect("activity count test requires the default seed");
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM activity_items WHERE user_id=?", [DAVID])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let read = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 60).await;
+    let handled = item(&a, DAVID, ("Message", ROOT_MESSAGE), "reply", 30).await;
+    let mut david = a.sign_in(DAVID).await;
+    let count: api::ActivityUnreadCount =
+        parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(count.unread_count, 2);
+
+    // SPA "Mark handled" and classic "Mark read" must clear the same persisted count.
+    let changed: api::ActivityItemChanged = parse(
+        &david
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/activity/{handled}"),
+                &json!({"action": "handled"}),
+            ))
+            .await,
+    );
+    assert_eq!(changed.unread_count, 1);
+    assert_eq!(changed.unread_revision, count.unread_revision + 1);
+    assert!(changed.item.read_at.is_some() && changed.item.handled_at.is_some());
+    let response = david
+        .write(
+            Req::new(Method::PATCH, &format!("/activity/{read}/read"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+
+    let mut reopened = a.sign_in(DAVID).await;
+    let final_count: api::ActivityUnreadCount =
+        parse(&reopened.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(final_count.unread_count, 0);
+    assert_eq!(final_count.unread_revision, changed.unread_revision + 1);
+    for path in ["/api/v1/activity/unread_count", "/activity/unread_count"] {
+        let response = reopened.send(get(path)).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        assert_eq!(response.header("cache-control"), Some("no-store"));
+        let count = serde_json::from_slice::<serde_json::Value>(&response.body).unwrap();
+        assert_eq!(
+            count.get("unreadCount").or_else(|| count.get("unread_count")),
+            Some(&json!(0)),
+            "{path}"
+        );
+    }
+    let page: api::ActivityList = parse(&reopened.send(get("/api/v1/activity")).await);
+    assert!(page.items.is_empty());
+    assert_eq!(page.unread_count, 0);
+    assert_eq!(page.unread_revision, final_count.unread_revision);
+}
+
+#[tokio::test]
 async fn the_inbox_pages_by_cursor() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
@@ -414,7 +477,8 @@ async fn saved_items_list_page_change_and_drop_their_reminders() {
         removed,
         api::ActivityItemRemoved {
             id: reminder,
-            unread_count: count.unread_count
+            unread_count: count.unread_count,
+            unread_revision: count.unread_revision,
         }
     );
     server.abort();

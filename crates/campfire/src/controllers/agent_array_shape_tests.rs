@@ -24,6 +24,10 @@ fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<
         .query_map([], |r| {
             let mut object = serde_json::Map::new();
             for (i, name) in columns.iter().enumerate() {
+                // Port-only counter for the SPA activity badge that Rails doesn't have.
+                if table == "users" && name == "activity_revision" {
+                    continue;
+                }
                 use rusqlite::types::ValueRef;
                 object.insert(
                     name.clone(),
