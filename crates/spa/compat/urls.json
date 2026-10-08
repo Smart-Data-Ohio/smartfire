@@ -143,13 +143,13 @@
       "after_cutover": {"action": "alias", "target": "/r/:id/t/:thread_id?m=:message_id", "notes": "Translate query context into the message/thread route. Omit m when message_id is absent. Preserve other query parameters; fragments are handled by the client."},
       "bookmarks": true,
       "notifications": true,
-      "known_bug": {"fix_before": "default-next", "reason": "Today the coexistence redirect copies these parameters onto a plain room route. The SPA does not translate them, so the intended message/thread context is lost."},
-      "notes": "Today the coexistence redirect copies these parameters onto a plain room route. The SPA does not translate them, so the intended message/thread context is lost.",
+      "known_bug": null,
+      "notes": "A thread query becomes /app/r/:id/t/:thread, with m when message_id is also present. Other query parameters are kept.",
       "bookmark_notes": "Primary bookmark family. Old /rooms/:id links must keep working indefinitely.",
       "notification_notes": "Push payloads and huddle/board notices emit /rooms/:id; queued notifications must open after cutover.",
       "cases": [
-        {"id": "room.query.thread_copied", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}&message_id={THREAD_MSG}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}&message_id={THREAD_MSG}"}},
-        {"id": "room.query.thread_only", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}"}}
+        {"id": "room.query.thread_copied", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}&message_id={THREAD_MSG}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/t/{THREAD_DESIGNERS}?m={THREAD_MSG}"}},
+        {"id": "room.query.thread_only", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?thread={THREAD_DESIGNERS}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/t/{THREAD_DESIGNERS}"}}
       ]
     },
     {
@@ -162,12 +162,12 @@
       "after_cutover": {"action": "alias", "target": "/r/:id/m/:message_id", "notes": "Translate query context into the message/thread route. Omit m when message_id is absent. Preserve other query parameters; fragments are handled by the client."},
       "bookmarks": true,
       "notifications": true,
-      "known_bug": {"fix_before": "default-next", "reason": "Today the coexistence redirect copies these parameters onto a plain room route. The SPA does not translate them, so the intended message/thread context is lost."},
-      "notes": "Today the coexistence redirect copies these parameters onto a plain room route. The SPA does not translate them, so the intended message/thread context is lost.",
+      "known_bug": null,
+      "notes": "A message_id query with no thread becomes /app/r/:id/m/:message_id. Other query parameters are kept.",
       "bookmark_notes": "Primary bookmark family. Old /rooms/:id links must keep working indefinitely.",
       "notification_notes": "Push payloads and huddle/board notices emit /rooms/:id; queued notifications must open after cutover.",
       "cases": [
-        {"id": "room.query.message", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?message_id={MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}?message_id={MSG_DAVID}"}}
+        {"id": "room.query.message", "method": "GET", "path": "/rooms/{CLOSED_ROOM}?message_id={MSG_DAVID}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/m/{MSG_DAVID}"}}
       ]
     },
     {
@@ -204,8 +204,8 @@
       "after_cutover": {"action": "alias", "target": "/r/:id", "notes": "Preserve the current canonical-room/last-room redirect, then resolve to the root screen."},
       "bookmarks": true,
       "notifications": false,
-      "known_bug": {"fix_before": "none", "reason": "Direct namespace show raises 500; it does not block the default flip or classic retirement."},
-      "notes": "Direct namespace show raises a pinned 500; it is a nonblocking quirk. Board deletion has a separate retirement blocker entry.",
+    "known_bug": null,
+    "notes": "Direct namespace show redirects to the room, the same way the other room namespace show aliases do. A non-member or a room that is not a direct gets the inaccessible redirect.",
       "bookmark_notes": "Namespace URLs appear in old links; keep the canonical-room redirect.",
       "notification_notes": "No producer emits namespace URLs.",
       "cases": [
@@ -216,7 +216,7 @@
         {"id": "ns.boards.show", "method": "GET", "path": "/rooms/boards/{BOARD_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{BOARD_ROOM}"}},
         {"id": "ns.index", "method": "GET", "path": "/rooms/opens", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/"}},
         {"id": "ns.rooms.index", "method": "GET", "path": "/rooms", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location_prefix": "/rooms/"}},
-        {"id": "ns.directs.show.pinned500", "method": "GET", "path": "/rooms/directs/{DIRECT_DJ}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 500, "content_type_prefix": "text/html", "markers": ["{ERR500}"]}}
+        {"id": "ns.directs.show.pinned500", "method": "GET", "path": "/rooms/directs/{DIRECT_DJ}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/{DIRECT_DJ}"}}
       ]
     },
     {
@@ -229,12 +229,12 @@
       "after_cutover": {"action": "retain", "target": "same write URL", "notes": "Repair deletion before classic retirement; navigation aliases do not replace writes."},
       "bookmarks": false,
       "notifications": false,
-      "known_bug": {"fix_before": "classic-retirement", "reason": "Board deletion currently raises 500 and must work before classic retirement."},
-      "notes": "Existing board destroy fails with 500. This entry pins the observed response until the deletion implementation is repaired.",
+    "known_bug": null,
+    "notes": "Deleting a board redirects to the root with the same notice as deleting any other room. The case uses its own fixture profile so the shared seed board stays available to later entries.",
       "bookmark_notes": "A mutation, not a bookmark.",
       "notification_notes": "No notification links.",
       "cases": [
-        {"id": "ns.boards.destroy.pinned500", "method": "DELETE", "path": "/rooms/boards/{BOARD_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "expect": {"status": 500, "content_type_prefix": "text/html", "markers": ["{ERR500}"]}}
+        {"id": "ns.boards.destroy.pinned500", "method": "DELETE", "path": "/rooms/boards/{BOARD_ROOM}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "csrf": true, "fixture_profile": "board_delete", "expect": {"status": 302, "location": "/"}}
       ]
     },
     {
@@ -337,8 +337,8 @@
       "after_cutover": {"action": "alias", "target": "/r/:room_id/t/:id", "notes": "Include board posts once boards are ported. The classic new form is board-only; do not treat it as an ordinary thread draft."},
       "bookmarks": true,
       "notifications": true,
-      "known_bug": {"fix_before": "none", "reason": "The classic thread content partial requested as JSON raises500; it does not block cutover."},
-      "notes": "Show/index are ported; new is absent from the screen map. Requesting the content partial as JSON raises a pinned 500 (MissingTemplate parity).",
+    "known_bug": null,
+    "notes": "Show/index are ported; new is absent from the screen map. The content partial is HTML only, so JSON is 406.",
       "bookmark_notes": "Thread links and board-nudge links must keep resolving with message context.",
       "notification_notes": "Thread push links carry ?thread=:id; translate into the thread route, not a plain room route.",
       "cases": [
@@ -347,7 +347,7 @@
         {"id": "thread.board.next", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{BOARD_ROOM}/t/{BOARD_THREAD}"}},
         {"id": "thread.board.classic", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/{BOARD_THREAD}", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Planned work"]}},
         {"id": "thread.content.html", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "absent": ["{CLASSIC_SHELL}", "{SPA_BOOT}", "id=\"root\""], "markers": ["thread-panel__thread-content", "data-controller=\"thread-messages\""]}},
-        {"id": "thread.content.json500", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"accept": "application/json"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 500, "content_type_prefix": "application/json", "markers": ["{\"status\":500,\"error\":\"Internal Server Error\"}"]}},
+        {"id": "thread.content.json500", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/{THREAD_DESIGNERS}/content", "headers": {"accept": "application/json"}, "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 406, "content_type_prefix": "application/json", "markers": ["{\"status\":406,\"error\":\"Not Acceptable\"}"]}},
         {"id": "thread.new.board", "method": "GET", "path": "/rooms/{BOARD_ROOM}/threads/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
         {"id": "thread.new.plain404", "method": "GET", "path": "/rooms/{DESIGNERS}/threads/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}}
       ]
@@ -423,12 +423,13 @@
       "after_cutover": {"action": "alias", "target": "/r/:id/settings", "notes": "Map this legacy alias to the shared SPA settings screen for ported room kinds; board settings stay classic until ported."},
       "bookmarks": false,
       "notifications": false,
-      "known_bug": {"fix_before": "classic-retirement", "reason": "This missing legacy settings controller and board settings must be resolved before retiring classic."},
-      "notes": "The declared room settings URL currently has no controller and answers 500.",
+    "known_bug": null,
+    "notes": "GET /rooms/:id/settings redirects. Next UI goes to /app/r/:id/settings; classic goes to that room type's edit form. Board settings still need SPA controls; that stays on the room forms entry.",
       "bookmark_notes": "No stable bookmarks; creation links live in the sidebar.",
       "notification_notes": "No producer emits these.",
       "cases": [
-        {"id": "errors.room.settings500", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 500, "content_type_prefix": "text/html", "markers": ["{ERR500}"]}}
+        {"id": "errors.room.settings500", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/rooms/closeds/{CLOSED_ROOM}/edit"}},
+        {"id": "errors.room.settings.next", "method": "GET", "path": "/rooms/{CLOSED_ROOM}/settings", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/r/{CLOSED_ROOM}/settings"}}
       ]
     },
     {
@@ -537,8 +538,8 @@
       "after_cutover": {"action": "alias", "target": "/settings", "notes": "Support numeric own-user aliases too (gap today)."},
       "bookmarks": true,
       "notifications": false,
-      "known_bug": {"fix_before": "none", "reason": "Known gaps: the map redirects only literal me, so numeric own-user aliases stay classic; the action ignores :user_id and always renders the viewer's own profile. classic=0 and empty classic do NOT bypass (only classic=1 and other nonzero values do)."},
-      "notes": "Known gaps: the map redirects only literal me, so numeric own-user aliases stay classic; the action ignores :user_id and always renders the viewer's own profile. classic=0 and empty classic do NOT bypass (only classic=1 and other nonzero values do).",
+    "known_bug": null,
+    "notes": "A numeric id equal to the viewer redirects like me. Another user's id redirects to their page. classic=0 and empty classic do NOT bypass (only classic=1 and other nonzero values do).",
       "bookmark_notes": "Profile links from menus and mail (sign-in alert links /users/me/sessions).",
       "notification_notes": "No producer emits these.",
       "cases": [
@@ -546,8 +547,8 @@
         {"id": "profile.me.classic", "method": "GET", "path": "/users/me/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}", "Try the new Smartfire"]}},
         {"id": "profile.me.next.bypass", "method": "GET", "path": "/users/me/profile?classic=1", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["Open the new Smartfire"], "location_absent": true}},
         {"id": "profile.me.next.classic0", "method": "GET", "path": "/users/me/profile?classic=0", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
-        {"id": "profile.numeric.stays", "method": "GET", "path": "/users/{DAVID}/profile", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}},
-        {"id": "profile.other.renders.own", "method": "GET", "path": "/users/{JASON}/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"], "location_absent": true}}
+        {"id": "profile.numeric.stays", "method": "GET", "path": "/users/{DAVID}/profile", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/settings"}},
+        {"id": "profile.other.renders.own", "method": "GET", "path": "/users/{JASON}/profile", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/users/{JASON}"}}
       ]
     },
     {
@@ -1168,8 +1169,8 @@
       "after_cutover": {"action": "retain", "target": "same URLs", "notes": "Keep signed avatar URLs, /account/logo, and /icons/:name. Existing stored HTML and bot payloads keep old asset URLs."},
       "bookmarks": true,
       "notifications": true,
-      "known_bug": {"fix_before": "none", "reason": "Malformed QR input raises500 and the automatic favicon request returns404; neither blocks cutover."},
-      "notes": "Malformed QR input answers 500 (Ruby urlsafe_decode64 parity), not 400. The seed account has no logo, so /account/logo serves the stock PNG. The automatic /favicon.ico request currently returns 404; normal page icons use /account/logo.",
+    "known_bug": {"fix_before": "none", "reason": "The automatic favicon request returns 404; it does not block cutover."},
+    "notes": "Malformed QR input answers 404, the same empty response as a bad avatar token. The seed account has no logo, so /account/logo serves the stock PNG. The automatic /favicon.ico request currently returns 404; normal page icons use /account/logo.",
       "bookmark_notes": "PWA icons use the logo route.",
       "notification_notes": "Push icon uses the logo route.",
       "cases": [
@@ -1178,7 +1179,7 @@
         {"id": "images.avatar.bad", "method": "GET", "path": "/users/not-a-token/avatar", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
         {"id": "images.icons.unknown", "method": "GET", "path": "/icons/no-such-icon", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
         {"id": "images.qr.valid", "method": "GET", "path": "/qr_code/{QR_URL_ID}", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "image/svg+xml", "markers": ["<svg"]}},
-        {"id": "images.qr.malformed500", "method": "GET", "path": "/qr_code/!!!", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 500, "markers": ["{ERR500}"]}},
+        {"id": "images.qr.malformed500", "method": "GET", "path": "/qr_code/!!!", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "body_empty": true}},
         {"id": "images.embeds.bad", "method": "GET", "path": "/embeds/image/not-signed", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404}},
         {"id": "images.favicon.missing", "method": "GET", "path": "/favicon.ico", "auth": "anonymous", "preference": null, "spa_enabled": true, "spa_default_next": false, "expect": {"status": 404, "markers": ["{ERR404}"], "absent": ["{SPA_BOOT}"]}},
         {"auth": "david", "expect": {"body_nonempty": true, "content_type_prefix": "image/webp", "status": 200, "body_sha256": "{AVATAR_SHA256}"}, "fixture_profile": "retained", "id": "images.avatar.ok", "method": "GET", "path": "/users/{AVATAR_TOKEN}/avatar", "preference": "classic", "spa_enabled": true}

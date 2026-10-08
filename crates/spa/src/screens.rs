@@ -178,6 +178,15 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:id/settings",
         true,
     ),
+    // The declared `/rooms/:id/settings` route has no classic controller. SPA users land on the
+    // settings screen; classic users are redirected to the room type's edit form. The rooms#show
+    // row above stays the classic fallback for the shared settings URL.
+    screen(
+        "rooms/settings#show",
+        "/rooms/:room_id/settings",
+        "/app/r/:room_id/settings",
+        true,
+    ),
     // S8: a room's calendar, an event's page, its form and the viewer's response.
     screen(
         "rooms/events#index",
@@ -397,7 +406,12 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/slack/runs/:id/plan",
         true,
     ),
-    screen("slack/imports#index", "/slack/imports", "/app/settings/slack", true),
+    screen(
+        "slack/imports#index",
+        "/slack/imports",
+        "/app/settings/slack",
+        true,
+    ),
     screen(
         "slack/imports#show",
         "/slack/imports/:id",
@@ -407,17 +421,84 @@ pub const SCREENS: &[Screen] = &[
 ];
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.
-/// `query` (without its `?`) carries over, less `classic`.
+/// `query` (without its `?`) carries over, less `classic`. A room's `thread` and `message_id`
+/// parameters become the thread and message routes (`/app/r/:id/t/:thread` with `m` for a reply,
+/// or `/app/r/:id/m/:message` when there is no thread).
 pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
     SCREENS
         .iter()
         .filter(|screen| screen.ported && screen.endpoint == endpoint)
         .find_map(|screen| {
-            Some(with_query(
-                fill(screen.spa, &captures(screen.classic, path)?),
-                query,
-            ))
+            let spa = fill(screen.spa, &captures(screen.classic, path)?);
+            if screen.classic == "/rooms/:id"
+                && screen.spa == "/app/r/:id"
+                && let Some(url) = room_notification_url(&spa, query)
+            {
+                return Some(url);
+            }
+            Some(with_query(spa, query))
         })
+}
+
+/// Notification links open a room as `/rooms/:id?thread=&message_id=`. The SPA reads a thread at
+/// `/app/r/:id/t/:thread` (`?m=` scrolls to a reply) and a timeline message at `/app/r/:id/m/:id`.
+/// `None` when the query has neither as a record id, so the plain room URL keeps the query.
+fn room_notification_url(spa: &str, query: Option<&str>) -> Option<String> {
+    let mut thread = None;
+    let mut message = None;
+    let mut rest = Vec::new();
+    for pair in query
+        .unwrap_or("")
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+    {
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        if name == "classic" {
+            continue;
+        }
+        if name == "thread"
+            && thread.is_none()
+            && let Some(id) = id(value)
+        {
+            thread = Some(id);
+            continue;
+        }
+        if name == "message_id"
+            && message.is_none()
+            && let Some(id) = id(value)
+        {
+            message = Some(id);
+            continue;
+        }
+        rest.push(pair.to_string());
+    }
+    if thread.is_none() && message.is_none() {
+        return None;
+    }
+    rest.retain(|pair| {
+        let name = pair.split_once('=').map_or(pair.as_str(), |(name, _)| name);
+        name != "thread" && name != "message_id"
+    });
+    let mut url = spa.to_string();
+    match (thread, message) {
+        (Some(thread), message) => {
+            url.push_str("/t/");
+            url.push_str(&thread.to_string());
+            if let Some(message) = message {
+                rest.insert(0, format!("m={message}"));
+            }
+        }
+        (None, Some(message)) => {
+            url.push_str("/m/");
+            url.push_str(&message.to_string());
+        }
+        (None, None) => return None,
+    }
+    if !rest.is_empty() {
+        url.push('?');
+        url.push_str(&rest.join("&"));
+    }
+    Some(url)
 }
 
 /// The classic URL for an SPA `path` (under `/app/`), ported or not: where "Switch to classic"

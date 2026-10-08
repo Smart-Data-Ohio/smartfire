@@ -297,6 +297,16 @@ pub fn service_worker_url(_ui: campfire_db::models::user::ui_preference::UiPrefe
     "/service-worker.js".into()
 }
 
+/// The SPA URL coexistence would use for `endpoint` at `path`.
+pub fn ported_page(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
+    campfire_spa::screens::spa_url(endpoint, path, query)
+}
+
+/// Whether the query asks to stay on the classic page (`?classic=1`).
+pub fn classic_requested(query: Option<&str>) -> bool {
+    campfire_spa::screens::bypassed(query)
+}
+
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
 /// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
 /// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page
@@ -322,7 +332,12 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if campfire_spa::screens::bypassed(query) {
         return Ok(());
     }
-    let Some(location) = campfire_spa::screens::spa_url(endpoint, c.request.path(), query) else {
+    // `/users/:id/profile` for the viewer's own id is the same page as `/users/me/profile`.
+    let own_id = c.param_str("user_id").and_then(cast_integer);
+    let own_profile = endpoint == "users/profiles#show"
+        && own_id.is_some_and(|id| current_user(c).is_some_and(|user| user.id == id));
+    let screen_path = if own_profile { "/users/me/profile" } else { c.request.path() };
+    let Some(location) = campfire_spa::screens::spa_url(endpoint, screen_path, query) else {
         return Ok(());
     };
     if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) || !navigates(c) {

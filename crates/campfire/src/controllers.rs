@@ -213,6 +213,10 @@ static ROUTES: LazyLock<Vec<Route>> = LazyLock::new(|| {
         .map(|spec| {
             let action = match spec.action {
                 ActionStatus::ActionNotFound => arc(action_not_found),
+                // Declared, with no classic controller. Redirects to the room's settings.
+                ActionStatus::MissingController if spec.endpoint == "rooms/settings#show" => {
+                    arc(rooms::settings::show)
+                }
                 ActionStatus::MissingController => arc(missing_controller),
                 ActionStatus::Defined | ActionStatus::Implicit => {
                     ported(spec.endpoint).unwrap_or_else(|| arc(not_yet_ported))

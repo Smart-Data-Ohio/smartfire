@@ -139,7 +139,7 @@ async fn google_sign_in_returns_directly_to_the_spa_after_the_last_factor() {
             ("/app/settings/security", "/app/settings/security"),
             (
                 "/rooms/486777696?message_id=9",
-                "/app/r/486777696?message_id=9",
+                "/app/r/486777696/m/9",
             ),
             ("/rooms/486777696/events", "/app/r/486777696/events"),
         ] {

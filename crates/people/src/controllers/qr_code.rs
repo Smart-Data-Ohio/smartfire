@@ -3,7 +3,7 @@
 
 mod rqrcode;
 
-use campfire_kit::{Ctx, Error, ExpiresIn, Result, StatusCode};
+use campfire_kit::{Ctx, Error, ExpiresIn, Result, StatusCode, halt};
 
 use crate::concerns::{self, Before};
 
@@ -21,9 +21,11 @@ pub fn transfer_svg(url: &str) -> Option<String> {
 /// `allow_unauthenticated_access`
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
-    // `Base64.urlsafe_decode64(params[:id])` raises ArgumentError (a 500) on malformed input.
+    // A bad token is not an image. Same empty 404 as a bad avatar signature (`head :not_found`).
     let id = c.param_str("id").unwrap_or_default().to_string();
-    let url = urlsafe_decode64(&id).ok_or_else(|| Error::internal(anyhow::anyhow!("invalid base64")))?;
+    let Some(url) = urlsafe_decode64(&id) else {
+        return halt(c.head(StatusCode::NOT_FOUND));
+    };
     // Too much to encode is the client's doing (rqrcode raises, a 500 in Rails).
     let qr_code = rqrcode::svg_bytes(&url).ok_or_else(|| Error::internal(anyhow::anyhow!("Data length exceed maximum capacity of version 40")))?;
 

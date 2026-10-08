@@ -111,6 +111,7 @@ fn only_intentional_aliases_share_a_url() {
                     ("rooms/closeds#edit", "/rooms/closeds/:id/edit"),
                     ("rooms/voices#edit", "/rooms/voices/:id/edit"),
                     ("rooms/stages#edit", "/rooms/stages/:id/edit"),
+                    ("rooms/settings#show", "/rooms/:room_id/settings"),
                 ],
             ),
         ]),
@@ -435,6 +436,35 @@ fn unported_screens_never_redirect() {
         let path = sample(screen.classic, &[3, 4, 5]);
         assert_eq!(spa_url(screen.endpoint, &path, None), None, "{screen:?}");
     }
+}
+
+#[test]
+fn room_notification_queries_open_the_thread_or_message() {
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&message_id=4")).as_deref(),
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("x=1&thread=9&classic=1&y=2")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9?x=1&y=2")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&x=1")).as_deref(),
+        Some("/app/r/12?thread=nope&x=1")
+    );
 }
 
 #[test]

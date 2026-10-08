@@ -4,8 +4,9 @@
 //!
 //! The subclasses (`Rooms::OpensController` and friends) re-declare `before_action :set_room`
 //! (and `ensure_can_administer`) with their own `only:`, which *replaces* the parent's callback.
-//! So the actions they inherit from here but don't list (`destroy` for opens/closeds, `show` for
-//! directs) run without `set_room` and raise on the nil `@room`, as in the reference.
+//! So the actions they inherit from here but don't list (`destroy` for opens/closeds) run without
+//! `set_room` and raise on the nil `@room`, as in the reference. Direct show and board destroy
+//! are implemented on their own controllers.
 
 pub mod call_moderation;
 pub mod stage_streams;
@@ -29,6 +30,7 @@ pub mod polls;
 pub mod reads;
 pub mod refreshes;
 
+pub mod settings;
 pub mod slash_commands;
 
 use askama::Template;

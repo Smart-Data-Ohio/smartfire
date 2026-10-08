@@ -78,6 +78,68 @@ function fill(pattern: string, captured: Map<string, string>): string {
   return pattern.endsWith("/") && path !== "/" ? `${path}/` : path;
 }
 
+/**
+ * A room notification's `thread` and `message_id` query, as the SPA's thread and message routes.
+ * `null` when neither is a record id, so the plain room URL keeps the query.
+ */
+function roomNotificationUrl(spa: string, search: string): string | null {
+  let thread: string | undefined;
+  let message: string | undefined;
+  const rest: string[] = [];
+
+  for (const pair of search.replace(/^\?/, "").split("&")) {
+    if (pair === "") {
+      continue;
+    }
+
+    const eq = pair.indexOf("=");
+    const name = eq === -1 ? pair : pair.slice(0, eq);
+    const value = eq === -1 ? "" : pair.slice(eq + 1);
+
+    if (name === "classic") {
+      continue;
+    }
+
+    if (name === "thread" && thread === undefined && isId(value)) {
+      thread = String(Number(value));
+
+      continue;
+    }
+
+    if (name === "message_id" && message === undefined && isId(value)) {
+      message = String(Number(value));
+
+      continue;
+    }
+
+    rest.push(pair);
+  }
+
+  if (thread === undefined && message === undefined) {
+    return null;
+  }
+
+  const kept = rest.filter((pair) => {
+    const name = pair.split("=")[0] ?? "";
+
+    return name !== "thread" && name !== "message_id";
+  });
+
+  if (thread !== undefined) {
+    if (message !== undefined) {
+      kept.unshift(`m=${message}`);
+    }
+
+    const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
+
+    return `${spa}/t/${thread}${query}`;
+  }
+
+  const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
+
+  return `${spa}/m/${message}${query}`;
+}
+
 /** `search` (with or without its `?`) less any `classic` parameter, as `?...` or "". */
 function keptSearch(search: string): string {
   const params = new URLSearchParams(search);
@@ -102,7 +164,17 @@ export function spaUrlFor(path: string, search = ""): string | null {
     const captured = capture(screen.classic, path);
 
     if (captured !== null) {
-      return `${fill(screen.spa, captured)}${keptSearch(search)}`;
+      const filled = fill(screen.spa, captured);
+
+      if (screen.classic === "/rooms/:id" && screen.spa === "/app/r/:id") {
+        const translated = roomNotificationUrl(filled, search);
+
+        if (translated !== null) {
+          return translated;
+        }
+      }
+
+      return `${filled}${keptSearch(search)}`;
     }
   }
 

@@ -12,7 +12,7 @@ async fn spa_coexistence_password_and_challenge_success_map_returns_after_the_fi
                 ("/app/settings/security", "/app/settings/security"),
                 (
                     "/rooms/486777696?message_id=9",
-                    "/app/r/486777696?message_id=9",
+                    "/app/r/486777696/m/9",
                 ),
                 // `?classic=1` keeps the classic page, as it does on any SPA-routed request.
                 ("/rooms/486777696?classic=1", "/rooms/486777696?classic=1"),

@@ -132,10 +132,9 @@ async fn undeclared_actions() {
     let direct = david
         .get(&format!("/rooms/directs/{DIRECT_DAVID_JASON}"))
         .await;
-    // Our fork inherits show without set_room; the pinned callback failure replaces
-    // the upstream redirect (see vectors/room_coercions.json).
-    assert_eq!(direct.status, StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(direct.location(), None);
+    assert_eq!(direct.status, StatusCode::FOUND);
+    let location = format!("http://campfire.test/rooms/{DIRECT_DAVID_JASON}");
+    assert_eq!(direct.location(), Some(location.as_str()));
     let reply = david
         .write(Req::new(Method::DELETE, &format!("/rooms/opens/{HQ}")))
         .await;

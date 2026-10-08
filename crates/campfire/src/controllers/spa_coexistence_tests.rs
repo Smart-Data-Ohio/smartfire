@@ -156,7 +156,7 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
         ),
         (
             format!("/rooms/{room}?message_id=9"),
-            format!("/app/r/{room}?message_id=9"),
+            format!("/app/r/{room}/m/9"),
         ),
         (
             format!("/rooms/{room}/events"),

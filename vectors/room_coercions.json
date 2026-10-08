@@ -318,32 +318,20 @@
   ],
   "shows": {
     "186869642": {
-      "status": 500,
-      "json": {
-        "status": 500,
-        "error": "Internal Server Error"
-      }
+      "status": 302,
+      "location": "http://campfire.test/rooms/186869642"
     },
     "340026324": {
-      "status": 500,
-      "json": {
-        "status": 500,
-        "error": "Internal Server Error"
-      }
+      "status": 302,
+      "location": "http://campfire.test/"
     },
     "9999999999": {
-      "status": 500,
-      "json": {
-        "status": 500,
-        "error": "Internal Server Error"
-      }
+      "status": 302,
+      "location": "http://campfire.test/"
     },
     "nonsense": {
-      "status": 500,
-      "json": {
-        "status": 500,
-        "error": "Internal Server Error"
-      }
+      "status": 302,
+      "location": "http://campfire.test/"
     }
   },
   "ids": [

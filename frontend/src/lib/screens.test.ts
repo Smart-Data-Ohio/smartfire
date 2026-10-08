@@ -88,6 +88,14 @@ describe("the screen map", () => {
     expect(classicUrlFor("/app/r/general")).toBeNull();
   });
 
+  it("translates room notification queries into the thread and message routes", () => {
+    expect(spaUrlFor("/rooms/12", "?thread=9&message_id=4")).toBe("/app/r/12/t/9?m=4");
+    expect(spaUrlFor("/rooms/12", "?thread=9")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=4")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?x=1&thread=9&classic=1&y=2")).toBe("/app/r/12/t/9?x=1&y=2");
+    expect(spaUrlFor("/rooms/12", "?thread=nope&x=1")).toBe("/app/r/12?thread=nope&x=1");
+  });
+
   it("carries the query over without classic", () => {
     expect(spaUrlFor("/rooms/12", "?a=1&classic=0&b=2")).toBe("/app/r/12?a=1&b=2");
     expect(classicUrlFor("/app/search", "q=fire&classic=1")).toBe("/searches?q=fire");
