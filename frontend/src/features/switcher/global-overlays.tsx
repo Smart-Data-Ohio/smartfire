@@ -1,6 +1,8 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect, useEffectEvent, useState } from "react";
+import { Suspense, useEffect, useEffectEvent, useState } from "react";
 import { IS_APPLE } from "../../lib/shortcuts.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
+import { ignoreModuleResourceLoadError } from "../../service-worker/update-required.ts";
 import { store } from "../../store/store.ts";
 import { useDestination } from "../shell/view-store.ts";
 import { type GlobalShortcut, globalShortcut } from "./global-keys.ts";
@@ -42,7 +44,7 @@ function usePreloadOverlays(): void {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       for (const load of Object.values(overlayChunks)) {
-        void load();
+        void load().catch(ignoreModuleResourceLoadError);
       }
     }, PRELOAD_DELAY_MS);
 

@@ -5,7 +5,8 @@
  * check while one is open.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { store } from "../../store/store.ts";
 import { onHuddleSignal } from "../../sync/huddles.ts";
 import { callNotices, incomingCalls, setCallNavigator } from "./alerts.ts";

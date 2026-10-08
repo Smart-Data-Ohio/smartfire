@@ -1,15 +1,19 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
+import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
@@ -32,6 +36,7 @@ import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
+import * as fizzyActions from "./fizzy-actions.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
@@ -261,6 +266,10 @@ const organize = {
 
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
 const cards = {
+  fizzyForm: (scope: FizzyMessageScope): Promise<FizzyMessageCardForm> =>
+    runAction(fizzyActions.form(scope)),
+  createFizzy: (scope: FizzyMessageScope, body: CreateFizzyCard): Promise<CreatedFizzyCard> =>
+    runAction(fizzyActions.create(scope, body)),
   /** The viewer's results for a poll (an anonymous poll's own choice comes only from here). */
   loadPoll: (roomId: number, pollId: number): Promise<void> =>
     runAction(cardActions.loadPoll(roomId, pollId)),
