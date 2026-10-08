@@ -221,6 +221,7 @@ export function setThreadPaneLoading(state: State, threadId: number): State {
   };
 }
 
+/** A failed load's error; a remembered `thread.removed` wins over whatever the load says. */
 export function setThreadPaneError(state: State, threadId: number, error: string): State {
   const pane = state.threadPanes[threadId];
 
@@ -230,7 +231,7 @@ export function setThreadPaneError(state: State, threadId: number, error: string
       ...state.threadPanes,
       [threadId]: {
         status: "error",
-        error,
+        error: state.removedThreads[threadId] === undefined ? error : THREAD_DELETED,
         permissions: pane?.permissions ?? null,
         work: pane?.work ?? null,
         workFacts: pane?.workFacts ?? null,

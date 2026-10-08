@@ -12,6 +12,7 @@ import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
 import { refetchThread, settled, settledDetail, UNAVAILABLE } from "./settle.ts";
+import { beginThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -25,6 +26,8 @@ export const UNSETTLED = "This thread couldn't be loaded. Try again.";
  * permalink) into the pane. Errors land in the store.
  */
 const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
+  const load = beginThreadLoad(threadId);
+
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
@@ -47,6 +50,11 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     ],
     { concurrency: 2 },
   );
+
+  // A newer load (a resync, or another Try again) decides what the pane shows.
+  if (!isLatestThreadLoad(threadId, load)) {
+    return;
+  }
 
   if (Result.isFailure(detail) || detail.success.outcome !== "installed") {
     mutations.setThreadPaneError(
