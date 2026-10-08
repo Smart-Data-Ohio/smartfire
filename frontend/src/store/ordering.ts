@@ -45,10 +45,26 @@ export function insertOrdered(
   return [...ids.slice(0, low), message.id, ...ids.slice(low)];
 }
 
+/** The users-row fields of two copies agree (everything but the observation-merged ones). */
+export function sameUserRow(left: User, right: User): boolean {
+  return (
+    left.name === right.name &&
+    left.role === right.role &&
+    left.status === right.status &&
+    left.bio === right.bio &&
+    left.avatarUrl === right.avatarUrl &&
+    left.createdAt === right.createdAt &&
+    left.updatedAt === right.updatedAt
+  );
+}
+
 /**
- * User row fields compare server revisions. Status expiry, avatar metadata and agent badges
- * depend on other state, so their newest request/event observation wins independently.
- * An unchanged observation still advances history, without mutating a held snapshot.
+ * User row fields compare server revisions. The classic `updated_at` keeps Rails' `now` stamp,
+ * so a repeated or regressed server clock can give two different rows one revision (a ban and
+ * its unban); at an equal revision the row whose request or event was observed last wins.
+ * Status expiry, avatar metadata and agent badges depend on other state, so their newest
+ * request/event observation wins independently. An unchanged observation still advances
+ * history, without mutating a held snapshot.
  */
 export function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
   let next: Record<number, User> | null = null;
@@ -66,6 +82,7 @@ export function mergeUserList(users: State["users"], list: readonly User[]): Sta
     const previousRow = held === undefined ? 0 : (rowObservationOf(held) ?? 0);
     const incomingRow = rowObservationOf(user) ?? observation;
     const rowCurrent = !sameRevision || incomingRow >= previousRow;
+    // The row's own fields, too: at a tie the later observation, otherwise the later revision.
     const rowPresentation = sameRevision ? (rowCurrent ? user : held) : revision;
 
     const row =
@@ -85,19 +102,14 @@ export function mergeUserList(users: State["users"], list: readonly User[]): Sta
     const badgeAt = Math.max(previousBadge, incomingBadge);
 
     const agent =
-      revision.role !== "bot" || badge === null
+      rowPresentation.role !== "bot" || badge === null
         ? null
         : observationOf(badge) === badgeAt
           ? badge
           : observeObject({ ...badge }, badgeAt);
 
-    const merged = {
-      ...revision,
-      customStatus: rowPresentation.customStatus,
-      hasAvatar: presentation.hasAvatar,
-      avatarIcon: rowPresentation.avatarIcon,
-      agent,
-    };
+    // Custom status and avatar icon follow the row presentation; the rest have their own order.
+    const merged = { ...rowPresentation, hasAvatar: presentation.hasAvatar, agent };
 
     if (held !== undefined && sameRecord(held, merged)) {
       if (

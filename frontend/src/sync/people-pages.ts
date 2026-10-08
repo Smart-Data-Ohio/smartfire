@@ -3,6 +3,7 @@ import type { PeopleDirectory } from "../gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { User } from "../gen/User.ts";
+import { sameUserRow } from "../store/ordering.ts";
 import { landsOver } from "../store/revision.ts";
 import { mutations, store } from "../store/store.ts";
 
@@ -70,11 +71,14 @@ export function peoplePagesOver(requests: PeopleRequests) {
     mutations.setDndAllowance(userId, allowed);
   }
 
-  /** Whether the store holds a later copy of this user than `user`. */
+  /**
+   * Whether the store holds a later copy of this user than `user`: a later revision, or, at the
+   * same revision (a repeated server clock), a different row observed later.
+   */
   function overtaken(user: User): boolean {
     const held = store.getState().users[user.id];
 
-    return !landsOver(held, user);
+    return !landsOver(held, user) || (held !== undefined && !sameUserRow(held, user));
   }
 
   const pages = {

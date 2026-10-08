@@ -594,7 +594,9 @@ impl User {
         }
         // Rails stamps `updated_at = now`, even when a frozen clock repeats the stored value, and
         // classic responses hash it (the avatar ETag is `users/<id>-<updated_at>`). Keep that
-        // value; only never move it backwards past a later persisted change.
+        // value; only never move it backwards past a later persisted change. Two different rows
+        // can therefore share a revision (a ban and its unban on a repeated clock); the SPA
+        // orders those by request observation (`mergeUserList` in frontend/src/store/ordering.ts).
         let revision = Self::revision_for_touch(tx, self.id, tx.now())?;
         sets.push(("updated_at", Box::new(revision)));
         let assignments: Vec<String> = sets.iter().map(|(c, _)| format!(r#""{c}" = ?"#)).collect();

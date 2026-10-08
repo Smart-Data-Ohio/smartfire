@@ -127,6 +127,39 @@ describe("the people pages", () => {
     expect(store.getState().users[SAM]?.status).toBe("active");
   });
 
+  it("keep an unban over a held banned page at the same user revision", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+    const stale = held<PersonProfile>();
+
+    // A repeated server clock stamps the ban and its unban with one revision, 10:02.
+    mutations.mergeUsers([sam(2, "banned")]);
+
+    const staleBanned = page(sam(2, "banned"));
+    const unbanned = page(sam(2));
+    const fresh = page(sam(2));
+
+    observeResponse(staleBanned, nextObservation());
+    fake.profiles.push(stale.promise);
+
+    const loading = pages.profile(SAM);
+
+    observeResponse(unbanned, nextObservation());
+    fake.bans.push(Promise.resolve(unbanned));
+    expect((await pages.setBanned(SAM, false)).user.status).toBe("active");
+
+    observeResponse(fresh, nextObservation());
+    fake.profiles.push(Promise.resolve(fresh));
+    stale.release(staleBanned);
+
+    const profile = await loading;
+
+    expect(profile.user.status).toBe("active");
+    expect(profile.transferUrl).not.toBeNull();
+    expect(fake.profileCalls()).toBe(2);
+    expect(store.getState().users[SAM]?.status).toBe("active");
+  });
+
   it("fetch the page again when a ban's reply is older than the store's copy", async () => {
     const fake = fakeRequests();
     const pages = peoplePagesOver(fake.requests);

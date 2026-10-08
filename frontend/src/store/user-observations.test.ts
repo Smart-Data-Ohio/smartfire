@@ -48,4 +48,39 @@ describe("immutable User observations within each row revision", () => {
     expect(earlierBranch[USER]?.hasAvatar).toBe(true);
     expect(latestBranch[USER]?.hasAvatar).toBe(false);
   });
+
+  it("keeps an unban over a ban read earlier at the same revision (a repeated server clock)", () => {
+    const at = "2026-10-07T10:00:00.000000Z";
+    const banned = { ...userFixture(USER), status: "banned" as const, updatedAt: at };
+    const banStarted = nextObservation();
+    const readStarted = nextObservation();
+    const unbanStarted = nextObservation();
+    const heldBanned = mergeUserList({}, [observeObject({ ...banned }, banStarted)]);
+    const staleRead = observeObject({ ...banned }, readStarted);
+    const unbanned = observeObject({ ...banned, status: "active" as const }, unbanStarted);
+    const afterUnban = mergeUserList(heldBanned, [unbanned]);
+    const afterRead = mergeUserList(afterUnban, [staleRead]);
+
+    expect(afterUnban[USER]?.status).toBe("active");
+    expect(afterRead[USER]?.status).toBe("active");
+    expect(afterRead[USER]?.updatedAt).toBe(at);
+
+    // The other way round: a ban answered after an earlier read of the active row still holds.
+    const rebanStarted = nextObservation();
+    const banReply = observeObject({ ...banned }, rebanStarted);
+    const lateActive = observeObject({ ...banned, status: "active" as const }, unbanStarted);
+
+    expect(mergeUserList(mergeUserList(afterRead, [banReply]), [lateActive])[USER]?.status).toBe(
+      "banned",
+    );
+  });
+
+  it("lets a later event land a different row at the same revision", () => {
+    const at = "2026-10-07T10:00:00.000000Z";
+    const read = observeObject({ ...userFixture(USER), updatedAt: at }, nextObservation());
+    const held = mergeUserList({}, [read]);
+    const event = { ...userFixture(USER), status: "banned" as const, updatedAt: at };
+
+    expect(mergeUserList(held, [event])[USER]?.status).toBe("banned");
+  });
 });
