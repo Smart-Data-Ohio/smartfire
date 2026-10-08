@@ -26,6 +26,12 @@ describe("links to classic pages", () => {
     expect(inPlaceTarget(link("/rooms/12/events/34/attendance"), origin)).toBe(
       "/app/r/12/events/34/attendance",
     );
+    expect(inPlaceTarget(link("/rooms/12/messages/34/fizzy_cards/new"), origin)).toBe(
+      "/app/r/12/m/34/fizzy/new",
+    );
+    expect(inPlaceTarget(link("/rooms/12/threads/5/messages/34/fizzy_cards/new"), origin)).toBe(
+      "/app/r/12/t/5/m/34/fizzy/new",
+    );
   });
 
   it("leave everything else to the browser", () => {

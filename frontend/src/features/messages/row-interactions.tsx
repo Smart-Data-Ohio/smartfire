@@ -17,6 +17,7 @@ import { readDurationMs } from "../../motion/durations.ts";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { MessageDTO } from "../../store/model.ts";
+import { useOpenFizzyCard } from "../fizzy/open-fizzy-card.ts";
 import {
   copyLink,
   copyText,
@@ -130,6 +131,7 @@ export interface RowInteractions {
  */
 export function useRowInteractions(message: MessageDTO, inThread: boolean): RowInteractions {
   const navigate = useNavigate();
+  const openFizzyCard = useOpenFizzyCard();
   const permissions = useMessagePermissions(message);
   const saved = useSavedItemId(message.id) !== null;
   const editing = useEditingId() === message.id;
@@ -287,6 +289,10 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
         return;
       case "unread":
         if (permissions.markUnread) markUnread(message);
+
+        return;
+      case "fizzy":
+        if (permissions.fizzy) openFizzyCard(message);
 
         return;
       case "delete":

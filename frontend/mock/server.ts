@@ -77,6 +77,7 @@ import {
 } from "./s3/seed.ts";
 import { createHuddles } from "./s5/huddles.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
+import { createFizzy } from "./s8/fizzy.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -707,11 +708,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const huddles = createHuddles(ctx, simulate);
   const events = createEvents(ctx);
   const cards = createCards(ctx, events);
+  const fizzy = createFizzy(ctx, threads);
 
   const routes = [
     ...events.routes,
     ...huddles.routes,
     ...cards.routes,
+    ...fizzy.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -973,6 +976,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "fizzy":
+        return { status: 200, json: fizzy.control(body) };
       case "cards":
         return { status: 200, json: cards.control(body) };
       case "reset":

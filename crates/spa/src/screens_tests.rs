@@ -487,3 +487,38 @@ fn event_pages_open_in_the_spa_and_fall_back_to_classic() {
         None
     );
 }
+
+#[test]
+fn fizzy_card_forms_open_over_the_conversation_and_fall_back_to_classic() {
+    for (classic, spa) in [
+        (
+            "/rooms/12/messages/34/fizzy_cards/new",
+            "/app/r/12/m/34/fizzy/new",
+        ),
+        (
+            "/rooms/12/threads/5/messages/34/fizzy_cards/new",
+            "/app/r/12/t/5/m/34/fizzy/new",
+        ),
+    ] {
+        assert_eq!(
+            spa_url("rooms/fizzy/message_cards#new", classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // The room's permalink and thread rows don't take the form's longer URLs.
+    assert_eq!(
+        classic_url("/app/r/12/m/34", None).as_deref(),
+        Some("/rooms/12/@34")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms/fizzy/message_cards#new",
+            "/rooms/12/messages/new/fizzy_cards/new",
+            None
+        ),
+        None
+    );
+}

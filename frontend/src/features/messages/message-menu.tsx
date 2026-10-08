@@ -16,6 +16,7 @@ export type MenuCommand =
   | "save"
   | "forward"
   | "unread"
+  | "fizzy"
   | "delete";
 
 /** One entry in the message menu, before it's rendered. */
@@ -94,6 +95,10 @@ export function menuSections(context: MenuContext): readonly (readonly MenuEntry
 
   if (permissions.markUnread) {
     keep.push(entry("unread", "Mark unread", "message-dot"));
+  }
+
+  if (permissions.fizzy) {
+    keep.push(entry("fizzy", "Create Fizzy card", "list-checks"));
   }
 
   if (permissions.remove) {

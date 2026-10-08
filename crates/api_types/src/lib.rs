@@ -27,6 +27,7 @@ mod conversation;
 mod direct;
 mod error;
 mod events;
+mod fizzy;
 mod huddle;
 mod me;
 mod message;
@@ -99,6 +100,7 @@ pub use conversation::ConversationName;
 pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
+pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};
 pub use events::{
     CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,

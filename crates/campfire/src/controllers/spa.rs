@@ -82,3 +82,7 @@ mod people_tests;
 #[cfg(test)]
 #[path = "spa_api_events_tests.rs"]
 mod spa_api_events_tests;
+
+#[cfg(test)]
+#[path = "spa_api_fizzy_tests.rs"]
+mod api_fizzy_tests;

@@ -20,6 +20,7 @@ macro_rules! endpoint {
 pub mod activity;
 pub mod agents;
 pub mod cards;
+pub mod fizzy;
 pub mod composer;
 mod cursor;
 pub mod directory;
@@ -69,6 +70,22 @@ pub fn install(app: &Arc<AppState>) {
 pub fn routes(app: &AppState) -> Router<Kit> {
     Router::new()
         .route("/api/v1/me", get(action(endpoints::me)))
+        .route(
+            "/api/v1/rooms/{room_id}/messages/{message_id}/fizzy_cards/new",
+            get(action(fizzy::new)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}/fizzy_cards/new",
+            get(action(fizzy::new)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/messages/{message_id}/fizzy_cards",
+            post(unparsed_action(fizzy::create)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/threads/{thread_id}/messages/{message_id}/fizzy_cards",
+            post(unparsed_action(fizzy::create)),
+        )
         .route("/api/v1/sidebar", get(action(endpoints::sidebar)))
         .route("/api/v1/rooms/{room_id}", get(action(endpoints::room)))
         .route(
