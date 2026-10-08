@@ -24,7 +24,7 @@ import {
   timelineItems,
 } from "./timeline-items.ts";
 
-/** Within this many px of the end counts as "at the bottom" (live messages keep it pinned). */
+/** Within this many px of the end, clear unread and new-message indicators. */
 const BOTTOM_SLOP = 40;
 
 /** Start fetching the next page when this close to an edge. */
@@ -156,6 +156,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     isPlacing,
     canFollow,
     followEnd,
+    takeControl,
   } = useViewportAnchor({
     containerRef,
     listRef,
@@ -207,7 +208,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const last = items.at(-1);
     const mine = last?.kind === "pending";
 
-    if (canFollow(previous.last) || mine) {
+    if (canFollow() || mine) {
       if (mine) followEnd();
 
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
@@ -246,6 +247,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     );
 
     if (index >= 0) {
+      takeControl();
       listRef.current?.scrollToIndex(index, { align: "nearest" });
     }
   }, [editingId]);
@@ -300,7 +302,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
-    captureAnchor(atBottomRef.current);
+    captureAnchor();
 
     if (atBottomRef.current) {
       setNewBelow(0);
@@ -332,6 +334,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
+    followEnd();
     listRef.current?.scrollToIndex(items.length - 1, { align: "end", smooth: true });
   };
 

@@ -23,9 +23,6 @@ import {
 } from "../room/timeline-items.ts";
 import { replyCountLabel } from "./thread-format.ts";
 
-/** Within this many px of the end counts as "at the bottom": new replies keep it pinned. */
-const BOTTOM_SLOP = 40;
-
 /** Fetch the next page when this close to an edge. */
 const PAGE_AHEAD = 600;
 
@@ -206,7 +203,7 @@ export function ThreadTimeline({
       appended &&
       placed === placement &&
       !isPlacing() &&
-      (canFollow(previous.last) || items.at(-1)?.kind === "pending")
+      (canFollow() || items.at(-1)?.kind === "pending")
     ) {
       if (items.at(-1)?.kind === "pending") followEnd();
 
@@ -243,7 +240,7 @@ export function ThreadTimeline({
 
     const distance = list.scrollSize - offset - list.viewportSize;
 
-    captureAnchor(distance < BOTTOM_SLOP);
+    captureAnchor();
 
     if (offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
       void actions.threads.loadOlder(threadId);

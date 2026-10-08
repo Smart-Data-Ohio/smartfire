@@ -7,6 +7,7 @@ import {
   matrix,
   postMessage,
   ROOM_IDS,
+  scrollByWheel,
   shot,
   type Theme,
   test,
@@ -310,21 +311,24 @@ test("the sync welcome's refetch leaves a reader on the unread divider", async (
   const divider = log.locator(".unread-divider");
 
   await expect(divider).toBeInViewport();
+  await expect(log).toHaveAttribute("data-placement-settled", "true");
+  await expect(log).toHaveAttribute("data-scroll-settled", "true");
 
   // Page down to the present and back up to the divider before the welcome arrives.
-  const top = await log.evaluate((element) => {
-    const at = element.scrollTop;
+  const top = await log.evaluate((element) => element.scrollTop);
 
-    element.scrollTop = element.scrollHeight;
-
-    return at;
-  });
+  await scrollByWheel(page, log, 10_000);
 
   await (await newer).finished();
   await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
-  await log.evaluate((element, at) => {
-    element.scrollTop = at;
-  }, top);
+
+  const remaining = await log.evaluate(
+    (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+  );
+
+  if (remaining > 1) await scrollByWheel(page, log, remaining);
+
+  await scrollByWheel(page, log, top - (await log.evaluate((element) => element.scrollTop)));
   await expect(divider).toBeInViewport();
 
   // Someone posts while the socket is held. The welcome refetches the newest page, which holds

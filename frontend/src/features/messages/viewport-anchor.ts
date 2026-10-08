@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { VListHandle } from "virtua";
 import type { TimelineItem } from "../room/timeline-items.ts";
+import { rowCommand } from "./keyboard.ts";
 
 type Anchor =
   | { readonly placement: string; readonly kind: "end" }
@@ -28,14 +29,14 @@ type PlacementState = { readonly placement: string } & (
       readonly offset: number;
     }
   | { readonly kind: "settled"; readonly messageId: number | null }
-  | { readonly kind: "cancelled" }
+  | { readonly kind: "cancelled"; readonly allowEnd: boolean }
 );
 
 function wrapperOf(row: HTMLElement): HTMLElement | null {
   return row.closest(".thread-parent")?.parentElement ?? row.parentElement;
 }
 
-/** Keep a visible message in place when the cards chunk grows rows above it. */
+/** Keep a visible message through the cards reveal, and a bottom reader through later growth. */
 export function useViewportAnchor({
   containerRef,
   listRef,
@@ -54,7 +55,7 @@ export function useViewportAnchor({
   readonly parentId?: number | null;
 }) {
   const anchorRef = useRef<Anchor | null>(null);
-  const stopRef = useRef<(() => void) | null>(null);
+  const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
   const placementRef = useRef<PlacementState | null>(null);
 
@@ -83,7 +84,7 @@ export function useViewportAnchor({
     );
   }, [placement]);
 
-  const canFollow = (lastKey: string | null) => {
+  const canFollow = () => {
     if (!placed || isPlacing()) return false;
 
     const state = placementRef.current;
@@ -96,21 +97,9 @@ export function useViewportAnchor({
     )
       return false;
 
-    const list = listRef.current;
-    const element = viewport();
-    const index = lastKey === null ? undefined : itemIndices.get(lastKey);
-
-    if (list === null || !element || index === undefined || element.clientHeight === 0)
-      return false;
-
-    // Measure the previous end: the new rows must not make a bottom reader appear scrolled up.
-    return (
-      list.getItemOffset(index) +
-        list.getItemSize(index) -
-        element.scrollTop -
-        element.clientHeight <
-      40
-    );
+    // Layout growth can move the end without a scroll event. Follow the reader's captured
+    // intent, rather than interpreting the enlarged previous end as reader movement.
+    return anchorRef.current?.placement === placement && anchorRef.current.kind === "end";
   };
 
   const followEnd = () => {
@@ -124,7 +113,7 @@ export function useViewportAnchor({
     if (element) element.dataset.placementSettled = "true";
   };
 
-  const capture = (atBottom: boolean) => {
+  const capture = () => {
     const state = placementRef.current;
 
     if (!placed || state?.placement !== placement || isPlacing()) return;
@@ -132,7 +121,8 @@ export function useViewportAnchor({
     let targetId = state.kind === "settled" ? state.messageId : null;
 
     if (targetId !== null && !indices.has(targetId)) {
-      placementRef.current = { kind: "cancelled", placement };
+      placementRef.current = { kind: "settled", placement, messageId: null };
+      anchorRef.current = null;
       targetId = null;
     }
 
@@ -143,26 +133,32 @@ export function useViewportAnchor({
 
     correctedOffsetRef.current = null;
 
-    // A fitting placeholder window says nothing about permalink intent. Keep its placed
-    // offset until reader input takes over, including scroll events caused by the reveal.
+    if (anchorRef.current?.kind === "message" && !indices.has(anchorRef.current.id))
+      anchorRef.current = null;
+
+    // Scroll and scroll-end callbacks also come from layout changes. Only reader input
+    // takes over end or permalink intent; ordinary row anchors track continued scrolling.
     if (
-      targetId !== null &&
-      anchorRef.current?.kind === "message" &&
-      anchorRef.current.placement === placement &&
-      anchorRef.current.id === targetId
+      anchorRef.current?.placement === placement &&
+      (anchorRef.current.kind === "end" ||
+        (state.kind === "settled" &&
+          anchorRef.current.kind === "message" &&
+          anchorRef.current.id === targetId))
     )
       return;
 
+    // A native scroll can arrive while Virtua's cached total still describes an earlier
+    // layout. Capture from the viewport so layout changes do not discard end intent.
+    const distance = element
+      ? element.scrollHeight - element.scrollTop - element.clientHeight
+      : Number.POSITIVE_INFINITY;
+
     // Small native keyboard scrolls start inside the follow threshold. Once input has
     // cancelled placement, keep their row rather than pulling them back to the end.
-    const atEnd =
-      atBottom &&
-      (state.kind !== "cancelled" ||
-        (element !== undefined &&
-          element !== null &&
-          element.scrollHeight - element.scrollTop - element.clientHeight <= 1));
+    const atEnd = state.kind === "cancelled" ? distance <= 1 : distance < 40;
+    const allowEnd = state.kind !== "cancelled" || state.allowEnd;
 
-    if (atEnd && targetId === null) {
+    if (allowEnd && atEnd && targetId === null) {
       anchorRef.current = { kind: "end", placement };
 
       return;
@@ -230,7 +226,7 @@ export function useViewportAnchor({
     const list = listRef.current;
 
     if (list !== null && list.viewportSize > 0 && anchorRef.current?.placement !== placement) {
-      capture(list.scrollSize - list.scrollOffset - list.viewportSize < 40);
+      capture();
     }
   });
 
@@ -238,14 +234,14 @@ export function useViewportAnchor({
     if (!placed || isPlacing()) return;
 
     if (placementRef.current?.placement !== placement)
-      placementRef.current = { kind: "cancelled", placement };
+      placementRef.current = { kind: "cancelled", placement, allowEnd: true };
 
     correctedOffsetRef.current = null;
     const element = viewport();
 
     if (element) {
       element.dataset.placementSettled = "true";
-      capture(element.scrollHeight - element.scrollTop - element.clientHeight < 40);
+      capture();
     }
   };
 
@@ -268,11 +264,15 @@ export function useViewportAnchor({
     if (element) element.dataset.placementSettled = "false";
   };
 
-  const cancelPlacement = useEffectEvent(() => {
-    placementRef.current = { kind: "cancelled", placement };
+  const cancelPlacement = useEffectEvent((readerInput = false, allowEnd = true) => {
+    placementRef.current = readerInput
+      ? { kind: "cancelled", placement, allowEnd }
+      : { kind: "settled", placement, messageId: null };
     anchorRef.current = null;
     settle();
   });
+
+  const takeControl = () => cancelPlacement(true, false);
 
   const finishPlacement = useEffectEvent(() => {
     const state = placementRef.current;
@@ -290,6 +290,7 @@ export function useViewportAnchor({
       };
     } else if (state.kind === "placing-at-end") {
       placementRef.current = { kind: "settled", placement, messageId: null };
+      anchorRef.current = { kind: "end", placement };
     }
 
     settle();
@@ -360,11 +361,11 @@ export function useViewportAnchor({
     if (
       placed &&
       state?.placement === placement &&
-      state.kind === "placing-at-target" &&
-      !itemIndices.has(state.key)
+      ((state.kind === "placing-at-target" && !itemIndices.has(state.key)) ||
+        (state.kind === "settled" && state.messageId !== null && !indices.has(state.messageId)))
     )
       cancelPlacement();
-  }, [placed, placement, itemIndices]);
+  }, [placed, placement, itemIndices, indices]);
 
   useLayoutEffect(() => {
     if (!placed) return;
@@ -400,30 +401,174 @@ export function useViewportAnchor({
       frame = requestAnimationFrame(tick);
     };
 
-    const takeControl = (event: Event) => {
-      if (
-        event instanceof KeyboardEvent &&
-        !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)
-      )
-        return;
+    let touchY: number | null = null;
+
+    let pointer: {
+      readonly id: number;
+      readonly y: number;
+      readonly offset: number;
+      allowEnd: boolean;
+    } | null = null;
+
+    const onInput = (event: Event) => {
+      let away = false;
+
+      if (event instanceof KeyboardEvent) {
+        if (!(event.target instanceof HTMLElement)) return;
+
+        const command = event.target.matches("[data-message-row]") ? rowCommand(event) : null;
+        const navigates = command !== null && ["up", "down", "first", "last"].includes(command);
+
+        if (
+          (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
+            event.key,
+          ) &&
+            !navigates) ||
+          (event.target !== element && event.target.closest("[data-message-row]") === null) ||
+          event.target.isContentEditable ||
+          event.target.closest('input, textarea, select, video, audio, [role="textbox"]') !==
+            null ||
+          (event.key === " " && event.target.closest('button, [role="button"], summary') !== null)
+        )
+          return;
+
+        away =
+          command === "up" ||
+          command === "first" ||
+          ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
+          (event.key === " " && event.shiftKey);
+      } else if (typeof WheelEvent !== "undefined" && event instanceof WheelEvent) {
+        if (event.deltaY === 0 || event.ctrlKey) return;
+
+        away = event.deltaY < 0;
+      } else if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+        touchY = event.touches[0]?.clientY ?? null;
+      } else if (typeof PointerEvent !== "undefined" && event instanceof PointerEvent) {
+        const bounds = element.getBoundingClientRect();
+        const gutter = Math.max(16, element.offsetWidth - element.clientWidth);
+
+        if (
+          event.button !== 0 ||
+          event.target !== element ||
+          event.clientX < bounds.right - gutter ||
+          element.scrollHeight <= element.clientHeight
+        )
+          return;
+
+        const thumb = Math.max(20, element.clientHeight ** 2 / element.scrollHeight);
+
+        const thumbTop =
+          ((element.clientHeight - thumb) * element.scrollTop) /
+          (element.scrollHeight - element.clientHeight);
+
+        pointer =
+          event.clientY >= bounds.top + thumbTop && event.clientY <= bounds.top + thumbTop + thumb
+            ? { id: event.pointerId, y: event.clientY, offset: element.scrollTop, allowEnd: false }
+            : null;
+
+        // Native scrollbar drags suppress DOM pointermove. Relinquish end intent on
+        // the thumb, then retarget from the release coordinates once the drag finishes.
+        away = event.clientY <= bounds.top + thumbTop + thumb;
+      }
 
       // Cancel our placement before the input scrolls. No Virtua imperative target remains
       // to reassert the initial position when another row measurement arrives.
       cancelAnimationFrame(frame);
-      cancelPlacement();
+      // An away gesture must relinquish end intent before its first scroll event.
+      cancelPlacement(true, !away);
+    };
+
+    const onMove = (event: Event) => {
+      if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent && touchY !== null) {
+        const y = event.touches[0]?.clientY;
+
+        if (y === undefined || y === touchY) return;
+
+        cancelPlacement(true, y < touchY);
+        touchY = y;
+      } else if (
+        typeof PointerEvent !== "undefined" &&
+        event instanceof PointerEvent &&
+        pointer !== null &&
+        event.pointerId === pointer.id
+      ) {
+        if (event.buttons === 0) {
+          pointer = null;
+
+          return;
+        }
+
+        const y = event.clientY;
+
+        if (y === pointer.y) return;
+
+        const allowEnd = y > pointer.y;
+
+        if (allowEnd !== pointer.allowEnd) {
+          pointer.allowEnd = allowEnd;
+          cancelPlacement(true, allowEnd);
+        }
+      }
+    };
+
+    const onRelease = (event: Event) => {
+      if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
+        touchY = null;
+
+        return;
+      }
+
+      if (
+        typeof PointerEvent === "undefined" ||
+        !(event instanceof PointerEvent) ||
+        pointer === null ||
+        event.pointerId !== pointer.id
+      )
+        return;
+
+      if (event.type === "pointerup") {
+        const allowEnd =
+          event.clientY > pointer.y ||
+          (event.clientY === pointer.y &&
+            (element.scrollTop > pointer.offset ||
+              (element.scrollTop === pointer.offset &&
+                element.scrollHeight - element.clientHeight - element.scrollTop <= 1)));
+
+        if (allowEnd !== pointer.allowEnd) cancelPlacement(true, allowEnd);
+      }
+
+      pointer = null;
     };
 
     const inputs = ["wheel", "touchstart", "keydown", "pointerdown"];
 
     for (const input of inputs)
-      element.addEventListener(input, takeControl, { capture: true, passive: true });
+      element.addEventListener(input, onInput, { capture: true, passive: true });
+
+    element.addEventListener("touchmove", onMove, { capture: true, passive: true });
+    element.ownerDocument.addEventListener("pointermove", onMove, { capture: true, passive: true });
+
+    for (const release of ["touchend", "touchcancel"])
+      element.addEventListener(release, onRelease, { capture: true, passive: true });
+
+    for (const release of ["pointerup", "pointercancel"])
+      element.ownerDocument.addEventListener(release, onRelease, { capture: true, passive: true });
 
     frame = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(frame);
 
-      for (const input of inputs) element.removeEventListener(input, takeControl, true);
+      for (const input of inputs) element.removeEventListener(input, onInput, true);
+
+      element.removeEventListener("touchmove", onMove, true);
+      element.ownerDocument.removeEventListener("pointermove", onMove, true);
+
+      for (const release of ["touchend", "touchcancel"])
+        element.removeEventListener(release, onRelease, true);
+
+      for (const release of ["pointerup", "pointercancel"])
+        element.ownerDocument.removeEventListener(release, onRelease, true);
 
       if (placementRef.current?.placement === placement) placementRef.current = null;
     };
@@ -480,7 +625,7 @@ export function useViewportAnchor({
 
     correctedOffsetRef.current = null;
 
-    if (!placed || chunkLoaded()) return;
+    if (!placed) return;
 
     const element = containerRef.current?.querySelector<HTMLElement>('[role="log"]');
     const content = element?.firstElementChild;
@@ -488,6 +633,7 @@ export function useViewportAnchor({
     if (!element || !content) return;
 
     const heights = new Map<Element, number>();
+    let correctingCards = !chunkLoaded();
 
     const resizes = new ResizeObserver((entries) => {
       seed();
@@ -501,15 +647,19 @@ export function useViewportAnchor({
 
         // Remounting a cached row during reader scrolling is not a height change.
         // Virtua owns initial measurements; a first delivery after reveal can still grow a card.
-        if (previous !== entry.contentRect.height && (previous !== undefined || chunkLoaded()))
+        if (
+          previous !== entry.contentRect.height &&
+          (previous !== undefined || chunkLoaded()) &&
+          (entry.target !== content || anchorRef.current?.kind === "end")
+        )
           changed = true;
       }
 
-      // Virtua observes these wrappers first and applies its measurements and native jump
-      // synchronously. Correct the remainder before its resulting scroll event captures it.
-      if (changed) correct();
+      // Wrapper and content measurements can arrive separately. Correct the remaining
+      // distance after Virtua updates the content height as well as when a row grows.
+      if (changed && (correctingCards || anchorRef.current?.kind === "end")) correct();
 
-      if (chunkLoaded()) {
+      if (correctingCards && chunkLoaded()) {
         // The reveal can span resize deliveries; wait until every rendered card wrapper has
         // delivered its current height before ending the correction.
         const cards = content.querySelectorAll<HTMLElement>(".message-cards:not(:empty)");
@@ -525,7 +675,7 @@ export function useViewportAnchor({
           );
         });
 
-        if (measured) stopRef.current?.();
+        if (measured) finishCardsRef.current?.();
       }
     });
 
@@ -553,14 +703,24 @@ export function useViewportAnchor({
 
     const mutations = new MutationObserver(observeRows);
 
+    const finishCards = () => {
+      // A delayed image or font can still grow a bottom reader's rows after the chunk.
+      // Keep observing for that intent; message-position correction ends with the reveal.
+      correctingCards = false;
+      finishCardsRef.current = null;
+      mutations.disconnect();
+      mutations.observe(content, { childList: true });
+    };
+
     const stop = () => {
       resizes.disconnect();
       mutations.disconnect();
-      stopRef.current = null;
+      finishCardsRef.current = null;
     };
 
-    stopRef.current = stop;
+    finishCardsRef.current = finishCards;
     resizes.observe(element);
+    resizes.observe(content);
     mutations.observe(content, {
       childList: true,
       subtree: true,
@@ -575,8 +735,8 @@ export function useViewportAnchor({
   useLayoutEffect(() => {
     // A successful chunk can reveal nothing in this timeline, including suppressed cards.
     if (cardsLoaded && !viewport()?.querySelector(".message-cards:not(:empty)"))
-      stopRef.current?.();
+      finishCardsRef.current?.();
   });
 
-  return { capture, settle, place, isPlacing, canFollow, followEnd };
+  return { capture, settle, place, isPlacing, canFollow, followEnd, takeControl };
 }
