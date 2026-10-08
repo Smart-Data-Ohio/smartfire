@@ -7,7 +7,7 @@
  */
 interface Load {
   readonly ticket: number;
-  /** The reply this load opens the replies around (a permalink's), until it lands. */
+  /** The reply this load opens the replies around (a permalink's), until that page is in. */
   readonly focus: number | null;
 }
 
@@ -33,7 +33,7 @@ export function pendingThreadFocus(threadId: number): number | null {
   return latest.get(threadId)?.focus ?? null;
 }
 
-/** The load holding `ticket` has landed (or failed): nothing is pending a focus any longer. */
+/** The load holding `ticket` installed its page: its reply is in view, so no later load keeps the focus. */
 export function finishThreadLoad(threadId: number, ticket: number): void {
   const load = latest.get(threadId);
 
