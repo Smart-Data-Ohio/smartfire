@@ -96,8 +96,13 @@ try {
 
   console.log(`PWA_MANIFEST_FETCHES ${JSON.stringify(receipts)}`)
   for (const receipt of receipts) {
-    assert.equal(receipt.sessionCookie, true, `${receipt.layout}: Chromium's manifest request carries the session cookie`)
-    assert.equal(receipt.profileShortcut, "/users/me/profile", `${receipt.layout}: saved classic choice overrides SPA_DEFAULT=next`)
+    if (receipt.layout === "spa") {
+      assert.equal(receipt.sessionCookie, true, "spa: Chromium's manifest request carries the session cookie")
+      assert.equal(receipt.profileShortcut, "/users/me/profile", "spa: saved classic choice overrides SPA_DEFAULT=next")
+    } else {
+      // Classic layouts keep Rails' exact manifest link, which sends no credentials.
+      assert.equal(receipt.sessionCookie, false, `${receipt.layout}: Rails' manifest link sends no session cookie`)
+    }
   }
   console.log(`PWA_MANIFEST_RECEIPT ${JSON.stringify({ defaultUi: "next", savedUi: "classic", fetches: receipts })}`)
 } finally {

@@ -13,7 +13,7 @@
     {{ h::page_title_tag(self.page_title().as_deref()) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "icon").attr("href", ctx.account.logo_url.as_str()).type_("image/png")) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "apple-touch-icon").attr("href", ctx.account.logo_url.as_str())) }}
-    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice())).attr("crossorigin", "use-credentials")) }}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice()))) }}
     {{ h::auth_stylesheet_tag() }}
     {{ h::auth_script_tag() }}
     {{ h::custom_styles_tag(ctx) }}

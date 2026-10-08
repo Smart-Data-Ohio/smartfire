@@ -1,6 +1,5 @@
 //! Page parity permits stale fingerprints only in identified local pipeline URL fields.
-//! The personalized manifest also requires credentials on the recorded layout's exact link.
-//! All other HTML/JSON/header bytes and explicitly frozen fixture fields stay exact.
+//! All surrounding HTML/JSON/header bytes and explicitly frozen fixture fields stay exact.
 
 use std::{ops::Range, sync::LazyLock};
 
@@ -52,12 +51,6 @@ fn matching_bytes(actual: &str, expected: &str) -> Result<(), String> {
 }
 
 fn matching_fields(actual: &str, expected: &str, frozen: &[usize]) -> Result<(), String> {
-    // Keep the Rails recordings frozen while requiring this intentional PWA change in Rust.
-    let expected = expected.replace(
-        r#"<link rel="manifest" href="/webmanifest.json">"#,
-        r#"<link rel="manifest" href="/webmanifest.json" crossorigin="use-credentials">"#,
-    );
-    let expected = expected.as_str();
     let actual_fields = url_fields(actual);
     let expected_fields = url_fields(expected);
     if actual_fields.len() != expected_fields.len() {
@@ -362,21 +355,6 @@ mod tests {
 #[cfg(test)]
 mod reviewed_mutations {
     use super::*;
-
-    #[test]
-    fn personalized_manifest_requires_credentials_against_frozen_rails_link() {
-        let expected = r#"<link rel="manifest" href="/webmanifest.json">"#;
-        let actual = r#"<link rel="manifest" href="/webmanifest.json" crossorigin="use-credentials">"#;
-        assert!(matching_bytes(actual, expected).is_ok());
-        for wrong in [
-            expected.to_string(),
-            actual.replace("use-credentials", "anonymous"),
-            actual.replace("use-credentials", "use-credential"),
-            actual.replace("webmanifest.json", "wrong.json"),
-        ] {
-            assert!(matching_bytes(&wrong, expected).is_err());
-        }
-    }
 
     fn rejected(wrapper: &str) {
         let current = campfire_assets::stylesheet_path("people");

@@ -32,7 +32,7 @@
       {{ h::builder_tag("meta", h::attrs().name("time-zone-url").attr("content", h::routes::user_time_zone())) }}
       {{ h::notification_sound_meta_tags(ctx) }}
 {% endif %}
-    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice())).attr("crossorigin", "use-credentials")) }}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice()))) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "icon").attr("href", ctx.account.logo_url.as_str()).type_("image/png")) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "apple-touch-icon").attr("href", ctx.account.logo_url.as_str())) }}
 
