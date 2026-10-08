@@ -70,7 +70,7 @@ matrix("pull request cards: open, merged, draft, loading, failed", async ({ page
   await expect(open.getByText("Open", { exact: true })).toBeVisible();
   await expect(open.getByText("Approved")).toBeVisible();
   await expect(open.getByText("Checks passing")).toBeVisible();
-  await expect(open.getByRole("link", { name: "Discuss" })).toBeVisible();
+  await expect(open.getByRole("button", { name: "Discuss" })).toBeVisible();
 
   await expect(
     row(page, messages.drive).getByRole("link", { name: /Google Drive file/ }),
@@ -537,19 +537,13 @@ test("unknown kinds and suppressed previews render nothing", async ({ page }) =>
 
 matrix("a pull request's discussion thread lists its files", async ({ page, theme }) => {
   await openAt(page, messages.githubOpen, theme);
-  await row(page, messages.githubOpen).getByRole("link", { name: "Discuss" }).click();
-  await expect(page).toHaveURL(new RegExp(`/r/${ROOM}/t/new\\?parent=${messages.githubOpen}`));
-
-  const reply = page.locator("aside.right-pane").getByRole("textbox", { name: "Reply…" });
-
-  await reply.fill("Looking at the limiter now");
-  await reply.press("Enter");
-  await expect(page).toHaveURL(new RegExp(`/r/${ROOM}/t/\\d+$`));
+  await row(page, messages.githubOpen).getByRole("button", { name: "Discuss" }).click();
+  await expect(page).toHaveURL(new RegExp(`/r/${ROOM}/t/\\d+`));
 
   const header = page.locator("aside.right-pane .github-card");
 
   await expect(header.getByText("4 files changed")).toBeVisible();
-  await expect(header.getByRole("link", { name: "Discuss" })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: "Discuss" })).toHaveCount(0);
   await settle(page);
   await shot(page, "cards-github-thread", theme);
 });

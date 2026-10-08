@@ -95,6 +95,10 @@ export const validation = (field: string, message: string) =>
 export const refused = (message: string) =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
 
+/** 422 `Validation` whose message is that sentence, also attached to `field`. */
+export const refusal = (field: string, message: string) =>
+  new HttpError(422, { _tag: VALIDATION, message, fields: { [field]: [message] } });
+
 const RATE_LIMITED: ApiError["_tag"] = "RateLimited";
 
 /** 429 `RateLimited` with the classic alert (`retryAfter` 0: the classic limit names no time). */

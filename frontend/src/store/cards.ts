@@ -13,6 +13,7 @@
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
 import type { MessageCard } from "../gen/MessageCard.ts";
 import type { MessageCards } from "../gen/MessageCards.ts";
@@ -52,7 +53,11 @@ export interface PreviewValues {
 
 export type PreviewKind = keyof PreviewValues;
 
-/** One per-viewer fetch: the last good value stays while it reloads. */
+/**
+ * One per-viewer fetch: the last good value stays while it reloads. `generation` moves on when a
+ * fetch starts and when a GitHub preview is invalidated, so a response applies only while it is
+ * still the latest.
+ */
 export interface Preview<T> {
   readonly status: "loading" | "ready" | "error";
   readonly value: T | null;
@@ -61,6 +66,19 @@ export interface Preview<T> {
   readonly ref: number;
   /** When the value arrived (ms); 0 until one has. */
   readonly fetchedAt: number;
+  readonly generation: number;
+}
+
+/**
+ * One `/actions` read for a room and pull request, shared by every mounted copy. `token` drops a
+ * response that a later read has already replaced. `reason` is the completed preview generation
+ * (and a retry), so two copies of the same load share the request in flight.
+ */
+export interface GithubActionsEntry {
+  readonly token: number;
+  readonly reason: string;
+  readonly status: "loading" | "ready" | "error";
+  readonly value: GithubPullRequestActions | null;
 }
 
 /** Previews by key (see `githubKey`, `fizzyKey`, `quoteKey`, `attendanceKey`). */
@@ -79,6 +97,8 @@ export interface CardsState {
   /** Event answers on their way per event id (see `PendingAnswer`). */
   readonly pendingAnswers: Readonly<Record<number, PendingAnswer>>;
   readonly previews: PreviewTables;
+  /** `/actions` by `githubActionsKey`, so mounted copies share one request. */
+  readonly githubActions: Readonly<Record<string, GithubActionsEntry>>;
 }
 
 export const emptyCards: CardsState = {
@@ -87,6 +107,7 @@ export const emptyCards: CardsState = {
   pollLoads: {},
   pendingAnswers: {},
   previews: { github: {}, fizzy: {}, quotes: {}, attendance: {} },
+  githubActions: {},
 };
 
 /** A ready preview older than this is fetched again when its card mounts. */
@@ -113,6 +134,11 @@ export function quoteKey(roomId: number, referenceId: number): string {
 
 export function attendanceKey(eventId: number): string {
   return String(eventId);
+}
+
+/** The shared `/actions` read for this room and pull request. */
+export function githubActionsKey(roomId: number, pullRequestId: number): string {
+  return `${roomId}:${pullRequestId}`;
 }
 
 // --- ordering ---------------------------------------------------------------------------------
@@ -303,9 +329,49 @@ function withoutRefs<T>(
 }
 
 /**
+ * A GitHub preview stays on screen across `message.cards` (the value kept, marked stale) so a
+ * comment or an open dialog is not unmounted. `generation` moves on: a fetch that started
+ * earlier cannot land over the one this invalidation starts.
+ */
+function restaleGithub(
+  table: Readonly<Record<string, Preview<GithubPullRequestCard>>>,
+  refs: ReadonlySet<number>,
+): Readonly<Record<string, Preview<GithubPullRequestCard>>> {
+  if (refs.size === 0) {
+    return table;
+  }
+
+  const entries = Object.entries(table);
+
+  if (!entries.some(([, preview]) => refs.has(preview.ref))) {
+    return table;
+  }
+
+  return Object.fromEntries(
+    entries.map(([key, preview]): [string, Preview<GithubPullRequestCard>] => {
+      if (!refs.has(preview.ref)) {
+        return [key, preview];
+      }
+
+      const stale: Preview<GithubPullRequestCard> = {
+        status: "ready",
+        value: preview.value,
+        error: null,
+        ref: preview.ref,
+        fetchedAt: 0,
+        generation: preview.generation + 1,
+      };
+
+      return [key, stale];
+    }),
+  );
+}
+
+/**
  * The `message.cards` event: the message's cards are replaced unless the held ones are newer.
  * The previews its old and new cards point at are dropped, so mounted cards fetch them again (a
- * fetch finished, a pull request was refreshed, an event changed).
+ * fetch finished, a pull request was refreshed, an event changed). A GitHub preview is the
+ * exception: it stays visible and is marked stale (see `restaleGithub`).
  */
 export function applyMessageCards(state: State, change: MessageCards): State {
   const held = state.messages[change.messageId];
@@ -320,7 +386,7 @@ export function applyMessageCards(state: State, change: MessageCards): State {
   return withCards(withMessage(state, { ...held, cards: change.cards, cardsAsOf: change.asOf }), {
     ...state.cards,
     previews: {
-      github: withoutRefs(previews.github, refs.github),
+      github: restaleGithub(previews.github, refs.github),
       fizzy: withoutRefs(previews.fizzy, refs.fizzy),
       quotes: withoutRefs(previews.quotes, refs.quotes),
       attendance: withoutRefs(previews.attendance, refs.attendance),
@@ -345,7 +411,7 @@ export function setPreview<Kind extends PreviewKind>(
   });
 }
 
-/** A fetch started: the last good value stays on screen. */
+/** A fetch started: the last good value stays on screen, and this fetch's generation is current. */
 export function previewLoading<Kind extends PreviewKind>(
   state: State,
   kind: Kind,
@@ -360,10 +426,14 @@ export function previewLoading<Kind extends PreviewKind>(
     error: null,
     ref,
     fetchedAt: held?.fetchedAt ?? 0,
+    generation: (held?.generation ?? 0) + 1,
   });
 }
 
-/** A fetch answered. */
+/**
+ * A fetch answered. Ignored when `generation` is no longer the preview's: a slower get from
+ * before an invalidation must not overwrite the one that followed it.
+ */
 export function previewLoaded<Kind extends PreviewKind>(
   state: State,
   kind: Kind,
@@ -371,19 +441,38 @@ export function previewLoaded<Kind extends PreviewKind>(
   ref: number,
   value: PreviewValues[Kind],
   now: number,
+  generation: number,
 ): State {
-  return setPreview(state, kind, key, { status: "ready", value, error: null, ref, fetchedAt: now });
+  const held: Preview<PreviewValues[Kind]> | undefined = state.cards.previews[kind][key];
+
+  if (held !== undefined && held.generation !== generation) {
+    return state;
+  }
+
+  return setPreview(state, kind, key, {
+    status: "ready",
+    value,
+    error: null,
+    ref,
+    fetchedAt: now,
+    generation,
+  });
 }
 
-/** A fetch failed; a value already shown stays. */
+/** A fetch failed; a value already shown stays. A stale `generation` is ignored, as in `previewLoaded`. */
 export function previewFailed<Kind extends PreviewKind>(
   state: State,
   kind: Kind,
   key: string,
   ref: number,
   error: string,
+  generation: number,
 ): State {
   const held: Preview<PreviewValues[Kind]> | undefined = state.cards.previews[kind][key];
+
+  if (held !== undefined && held.generation !== generation) {
+    return state;
+  }
 
   return setPreview(state, kind, key, {
     status: "error",
@@ -391,6 +480,66 @@ export function previewFailed<Kind extends PreviewKind>(
     error,
     ref,
     fetchedAt: held?.fetchedAt ?? 0,
+    generation,
+  });
+}
+
+/** A shared `/actions` read started. The previous value stays until this one settles. */
+export function beginGithubActions(
+  state: State,
+  key: string,
+  reason: string,
+  token: number,
+): State {
+  const held = state.cards.githubActions[key];
+
+  return withCards(state, {
+    ...state.cards,
+    githubActions: {
+      ...state.cards.githubActions,
+      [key]: { token, reason, status: "loading", value: held?.value ?? null },
+    },
+  });
+}
+
+/**
+ * The read `token` answered. A newer read (`token` moved on) is left alone. `null` is a refusal
+ * (no discussion yet, or the account can't be read): the controls hide.
+ */
+export function settleGithubActions(
+  state: State,
+  key: string,
+  token: number,
+  value: GithubPullRequestActions | null,
+): State {
+  const held = state.cards.githubActions[key];
+
+  if (held === undefined || held.token !== token) {
+    return state;
+  }
+
+  return withCards(state, {
+    ...state.cards,
+    githubActions: {
+      ...state.cards.githubActions,
+      [key]: {
+        token,
+        reason: held.reason,
+        status: value === null ? "error" : "ready",
+        value,
+      },
+    },
+  });
+}
+
+/** Mark every mounted preview of this pull request stale, so each one loads again. */
+export function invalidateGithub(state: State, pullRequestId: number): State {
+  return withCards(state, {
+    ...state.cards,
+    previews: {
+      ...state.cards.previews,
+      github: restaleGithub(state.cards.previews.github, new Set([pullRequestId])),
+    },
   });
 }
 
@@ -459,10 +608,20 @@ export function settleAnswer(
   reply: EventAttendance | null,
   now: number,
 ): State {
+  const key = attendanceKey(eventId);
+
   const landed =
     reply === null
       ? state
-      : previewLoaded(state, "attendance", attendanceKey(eventId), eventId, reply, now);
+      : previewLoaded(
+          state,
+          "attendance",
+          key,
+          eventId,
+          reply,
+          now,
+          state.cards.previews.attendance[key]?.generation ?? 0,
+        );
 
   return landed.cards.pendingAnswers[eventId] === answer
     ? setPendingAnswer(landed, eventId, null)

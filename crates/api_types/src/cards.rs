@@ -535,6 +535,113 @@ pub enum GithubChecks {
     Failing,
 }
 
+/// `GET /api/v1/rooms/:roomId/github/pull_requests/:id/actions`: what this viewer can do on the
+/// pull request from its card. The same gate as the classic write-actions page
+/// (`rooms/github/pull_request_write_actions#show`): the viewer is a member of the room, the
+/// room has a discussion thread for this pull request, and their linked GitHub account is
+/// usable. All three flags are on together, or all off. The pull request's [`status`] does not
+/// hide them (a closed pull request still shows the forms); GitHub refuses a review the state
+/// doesn't allow, and that refusal is the error on the write.
+///
+/// 404 unless that membership and thread mapping exist.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GithubPullRequestActions {
+    /// The viewer's GitHub login when an account is linked, including one whose token was rejected.
+    pub login: Option<String>,
+    pub account: GithubAccountLink,
+    pub can_comment: bool,
+    pub can_review: bool,
+    pub can_request_reviewers: bool,
+    pub status: GithubPullRequestStatus,
+}
+
+/// Whether the viewer has a GitHub account the write actions can use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum GithubAccountLink {
+    /// No linked account: the classic page says "Connect GitHub".
+    None,
+    /// Linked, and the stored token can be used.
+    Connected,
+    /// Linked, but the token was rejected or can't be read: "Reconnect GitHub".
+    Rejected,
+}
+
+/// `POST /api/v1/rooms/:roomId/github/pull_requests/:id/comments`
+/// (`rooms/github/pull_request_comments#create`). Posts an issue comment as the viewer.
+/// Answers [`GithubWriteResult`]. 422 when the body is blank, GitHub refuses, or the account
+/// can't be used.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateGithubComment {
+    pub body: String,
+}
+
+/// The review the SPA dialog submits. `comment` is a GitHub review event `COMMENT` (a note on
+/// the pull request); the classic form only offers approve and request-changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum GithubReviewKind {
+    Approve,
+    RequestChanges,
+    Comment,
+}
+
+/// `POST /api/v1/rooms/:roomId/github/pull_requests/:id/reviews`
+/// (`rooms/github/pull_request_reviews#create`, plus a `comment` review). `body` may be empty
+/// for an approval; requesting changes or commenting requires it. Answers [`GithubWriteResult`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateGithubReview {
+    pub event: GithubReviewKind,
+    #[serde(default)]
+    pub body: String,
+}
+
+/// `POST /api/v1/rooms/:roomId/github/pull_requests/:id/review_requests`
+/// (`rooms/github/pull_request_review_requests#create`). GitHub usernames separated by commas
+/// or whitespace; a leading `@` is optional. Answers [`GithubWriteResult`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateGithubReviewRequest {
+    pub reviewers: String,
+}
+
+/// The confirmation the classic page shows after a write (`Outcome::notice`). The card itself
+/// updates when GitHub's webhook publishes `message.cards`, the same way the classic card frame
+/// is replaced on the `github_cards` channel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GithubWriteResult {
+    pub notice: String,
+}
+
+/// `POST /api/v1/rooms/:roomId/github/pull_requests/:id/discussion`
+/// (`github/pull_request_threads#create`). The message that links this pull request.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateGithubDiscussion {
+    pub message_id: i64,
+}
+
+/// The room's discussion thread for the pull request, created or reused by
+/// [`CreateGithubDiscussion`]. `threadId` is that thread.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GithubDiscussion {
+    pub thread_id: i64,
+}
+
 /// A LinkedIn post (a `link_embeds` row for a LinkedIn URL;
 /// `crates/app/src/integrations/linkedin.rs`). Unlike [`LinkCard`] it's always shown: without
 /// a title or description it's the classic "View post on LinkedIn" chip.
