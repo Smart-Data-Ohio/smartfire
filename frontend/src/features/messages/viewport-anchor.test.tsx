@@ -1,5 +1,5 @@
 import { act, fireEvent, render } from "@testing-library/react";
-import { createRef, type RefObject, useImperativeHandle, useRef } from "react";
+import { createRef, type ReactNode, type RefObject, useImperativeHandle, useRef } from "react";
 import type { VListHandle } from "virtua";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
@@ -80,6 +80,7 @@ interface HarnessProps {
   readonly virtual?: typeof import("virtua").VList;
   readonly onSettled?: () => void;
   readonly introFirst?: boolean;
+  readonly introControls?: ReactNode;
 }
 
 /** The virtualiser's geometry is explicit because jsdom does not lay out the rows. */
@@ -96,6 +97,7 @@ function Harness({
   virtual: VirtualList,
   onSettled,
   introFirst = false,
+  introControls,
 }: HarnessProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
@@ -269,6 +271,7 @@ function Harness({
                 <div className="message-body">
                   {introFirst && id === geometry.ids[0] ? "Work header" : `Message ${id}`}
                 </div>
+                {introFirst && id === geometry.ids[0] ? introControls : null}
                 <a href="/">Read message {id}</a>
                 {hasCards ? <div className="message-cards">Card</div> : null}
                 {popupId === id ? <span className="message-popup-anchor" /> : null}
@@ -1526,6 +1529,150 @@ describe("useViewportAnchor reader control", () => {
         fireEvent.scroll(viewport());
         act(() => apiRef.current?.settle());
         expect(apiRef.current?.canFollow()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each([
+    { key: "End", target: "button" },
+    { key: "PageDown", target: "button" },
+    { key: "Home", target: "link" },
+    { key: "PageUp", target: "link" },
+    { key: "ArrowDown", target: "link" },
+    { key: "ArrowUp", target: "link" },
+    { key: " ", target: "link" },
+  ])(
+    "$key from a focused intro $target relinquishes its hold through reveal and growth",
+    ({ key, target }) => {
+      vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2], heights: new Map([[1, 400]]) };
+
+        const controls =
+          target === "button" ? <button type="button">Steps</button> : <a href="/">Intro link</a>;
+
+        const away = ["Home", "PageUp", "ArrowUp"].includes(key);
+        const readerOffset = away ? 0 : 200;
+
+        const view = render(
+          <Harness
+            apiRef={apiRef}
+            geometry={geometry}
+            introFirst
+            introControls={controls}
+            cardsLoaded={false}
+          />,
+        );
+
+        act(() =>
+          apiRef.current?.place(0, { align: "start", offset: away ? 100 : 0, follow: false }),
+        );
+        act(() => vi.advanceTimersToNextFrame());
+        act(() => vi.advanceTimersToNextFrame());
+        expect(apiRef.current?.isPlacing()).toBe(false);
+        expect(apiRef.current?.canFollow()).toBe(false);
+        act(() => measureRows(geometry));
+
+        const control =
+          target === "button"
+            ? view.getByRole("button", { name: "Steps" })
+            : view.getByRole("link", { name: "Intro link" });
+
+        act(() => control.focus());
+        expect(document.activeElement).toBe(control);
+        fireEvent.keyDown(control, { key });
+        viewport().scrollTop = readerOffset;
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+
+        view.rerender(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst introControls={controls} />,
+        );
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(readerOffset);
+
+        geometry.heights.set(1, 500);
+        geometry.ids = [1, 2, 3];
+        view.rerender(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst introControls={controls} />,
+        );
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(readerOffset);
+        expect(apiRef.current?.canFollow()).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(["input", "composer", "contenteditable", "button"] as const)(
+    "typing or activating an intro %s preserves its hold",
+    (target) => {
+      vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+        const geometry: Geometry = { ids: [1, 2], heights: new Map([[1, 400]]) };
+
+        const controls = {
+          input: <input aria-label="Draft" />,
+          composer: <textarea className="composer-input" aria-label="Draft" />,
+          button: <button type="button">Steps</button>,
+          contenteditable: (
+            <div contentEditable suppressContentEditableWarning>
+              Draft text
+            </div>
+          ),
+        }[target];
+
+        const view = render(
+          <Harness
+            apiRef={apiRef}
+            geometry={geometry}
+            introFirst
+            introControls={controls}
+            cardsLoaded={false}
+          />,
+        );
+
+        act(() => apiRef.current?.place(0, { align: "start", follow: false }));
+        act(() => vi.advanceTimersToNextFrame());
+        act(() => vi.advanceTimersToNextFrame());
+        act(() => measureRows(geometry));
+
+        const editor =
+          target === "contenteditable"
+            ? view.getByText("Draft text")
+            : view.getByRole(target === "button" ? "button" : "textbox", {
+                name: target === "button" ? "Steps" : "Draft",
+              });
+
+        // jsdom omits the browser's editing-state property.
+        if (target === "contenteditable")
+          Object.defineProperty(editor, "isContentEditable", { configurable: true, value: true });
+
+        act(() => editor.focus());
+
+        const keys =
+          target === "button"
+            ? [" ", "Enter"]
+            : ["a", " ", "End", "PageDown", "Home", "PageUp", "ArrowDown", "ArrowUp"];
+
+        for (const key of keys) fireEvent.keyDown(editor, { key });
+
+        geometry.heights.set(1, 500);
+        view.rerender(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst introControls={controls} />,
+        );
+        viewport().scrollTop = 100;
+        fireEvent.scroll(viewport());
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(0);
+        expect(apiRef.current?.canFollow()).toBe(false);
       } finally {
         vi.useRealTimers();
       }

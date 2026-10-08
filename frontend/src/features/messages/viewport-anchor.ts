@@ -956,7 +956,6 @@ export function useViewportAnchor({
             event.key,
           ) &&
             !navigates) ||
-          (event.target !== element && event.target.closest("[data-message-row]") === null) ||
           event.target.isContentEditable ||
           event.target.closest('input, textarea, select, video, audio, [role="textbox"]') !==
             null ||

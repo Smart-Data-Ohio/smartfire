@@ -1,6 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { BOARD_POST_IDS, BOARD_ROOM_ID, LONG_DISCUSSION } from "../../mock/s6/seed.ts";
-import { DESKTOP, expect, matrix, openApp, shot, syncWelcomed, test } from "./support.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
+import { DESKTOP, expect, matrix, openApp, shot, syncWelcomed, test, USER_IDS } from "./support.ts";
 
 const BOARD = BOARD_ROOM_ID;
 
@@ -143,6 +144,83 @@ matrix("a post opens with its work above the discussion", async ({ page, theme, 
   await page.mouse.move(0, 0);
   await shot(page, phone ? "board-post-phone" : "board-post", theme);
 });
+
+for (const key of ["End", "PageDown"] as const) {
+  test(`${key} from a post's focused Steps button takes over before an incoming reply`, async ({
+    page,
+  }) => {
+    const threadId = BOARD_POST_IDS.retryBug;
+
+    await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+      const response = await route.fetch();
+      const body: MessagePage = await response.json();
+
+      body.messages = body.messages.map((message) => ({
+        ...message,
+        bodyHtml: `<div style="height:500px">${message.bodyHtml}</div>`,
+      }));
+      await route.fulfill({ response, json: body });
+    });
+    const welcomed = syncWelcomed(page);
+
+    await openApp(page, `r/${BOARD}/t/${threadId}`);
+    await welcomed;
+    const list = pane(page).getByRole("log", { name: "Replies" });
+    const steps = list.getByRole("button", { name: "Steps (2)" });
+
+    await expect(list).toHaveAttribute("data-placement-settled", "true");
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+    await steps.focus();
+    await expect(steps).toBeFocused();
+    await list.evaluate((element) => {
+      element.setAttribute("data-key-scroll-settled", "false");
+      element.addEventListener(
+        "scrollend",
+        () => element.setAttribute("data-key-scroll-settled", "true"),
+        { once: true },
+      );
+    });
+    await steps.press(key);
+    await expect(list).toHaveAttribute("data-key-scroll-settled", "true");
+
+    const before = await list.evaluate((element) => ({
+      offset: element.scrollTop,
+      height: element.scrollHeight,
+    }));
+
+    expect(before.offset).toBeGreaterThan(0);
+    const state = await (await page.request.get("/__mock/state")).json();
+
+    const posted = await page.request.post("/__mock/thread-post", {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: { threadId, userId: USER_IDS.maya, markdown: "A reply after the Steps scrolling key" },
+    });
+
+    expect(posted.ok()).toBe(true);
+    await expect
+      .poll(() => list.evaluate((element) => element.scrollHeight))
+      .toBeGreaterThan(before.height);
+
+    if (key === "End") {
+      await expect(
+        list.getByText("A reply after the Steps scrolling key", { exact: true }),
+      ).toBeInViewport();
+      await expect
+        .poll(() =>
+          list.evaluate(
+            (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+          ),
+        )
+        .toBeLessThanOrEqual(1);
+    } else {
+      await expect
+        .poll(() =>
+          list.evaluate((element, offset) => Math.abs(element.scrollTop - offset), before.offset),
+        )
+        .toBeLessThanOrEqual(3);
+    }
+  });
+}
 
 test("a post with more replies than one page still opens at its work", async ({ page }) => {
   await page.setViewportSize(DESKTOP);
