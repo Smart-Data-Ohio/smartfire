@@ -61,7 +61,7 @@ export class HttpError extends Error {
 }
 
 /** The `ApiError` variants that carry only a message. */
-type PlainErrorTag = Exclude<ApiError["_tag"], "Validation" | "RateLimited">;
+type PlainErrorTag = Exclude<ApiError["_tag"], "Validation" | "RateLimited" | "FizzyReplyFailed">;
 
 /**
  * An error body exactly as the Rust server serializes it. This is wire JSON, not an Effect

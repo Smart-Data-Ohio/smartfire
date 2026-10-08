@@ -22,3 +22,16 @@ Rails at the current reference pin (`parity/reference.sha`, including #151) rend
 `external/install-edge.svg`. Neither app ships a root `install-edge.svg` override.
 
 Adding one needs the lead's approval: it is a deliberate divergence from the reference.
+
+S8's installed SPA adds worker-aware variants of `initializers/service_worker.js`,
+`controllers/notifications_controller.js`, and `controllers/turbo_frame_controller.js`.
+The initializer and notifications controller read the worker URL rendered by the classic
+layout's provisional head metadata and register it at scope `/`. When switching an existing
+controller to another worker script, the initializer waits for notification startup, its frame
+render, and public static images before registration. The frame controller follows native
+reloads so an aborted frame request cannot leave that startup wait pending. These startup
+waits share a five-second deadline so a stalled controller, frame, or image cannot prevent
+registration. The initializer reconciles after page loads and Turbo visits, including sign-in
+when a stored preference overrides the signed-out default. The root registration stays
+registered, preserving its push subscription when the UI changes. The copied `web/` assets
+remain unchanged.

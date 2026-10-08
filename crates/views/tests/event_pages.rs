@@ -1,6 +1,8 @@
 use askama::Template;
 use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers as h, layouts};
 use serde_json::Value;
+#[path = "../../../test-support/asset_goldens.rs"]
+mod asset_goldens;
 fn fixture(path: &str) -> String {
     std::fs::read_to_string(format!(
         "{}/tests/golden/core/{path}",
@@ -174,7 +176,7 @@ fn compare_pages(source: &str) {
             })
         };
         let expected = vector["html"].as_str().unwrap();
-        if actual != expected {
+        if !asset_goldens::compare(&format!("event page {index}"), &actual, expected) {
             let byte = actual
                 .bytes()
                 .zip(expected.bytes())

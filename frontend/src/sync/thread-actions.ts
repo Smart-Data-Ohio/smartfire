@@ -12,7 +12,14 @@ import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
 import { paneProblem, refetchThread, settled, settledDetail } from "./settle.ts";
-import { beginThreadLoad, finishThreadLoad, isLatestThreadLoad } from "./thread-loads.ts";
+import {
+  beginThreadLoad,
+  finishThreadLoad,
+  isGoneFocus,
+  isLatestThreadLoad,
+  loadThreadHeader,
+  openAtNewest,
+} from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -31,18 +38,9 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
-  // The header installs as soon as it's settled, not after the replies: a removal landing
-  // while they load would otherwise make it uncertain again with nobody left to ask.
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(
-        settled(
-          api.thread(threadId),
-          () => refetchThread(threadId),
-          (answer) => [answer.thread.id],
-          (answer, since) => mutations.loadThreadDetail(answer, since),
-        ),
-      ),
+      loadThreadHeader(threadId, load),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -64,12 +62,14 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  if (Result.isFailure(page)) {
-    mutations.setThreadPageFailed(threadId);
-  } else {
+  if (Result.isSuccess(page)) {
     mutations.applyThreadPage(threadId, page.success, "replace");
     // Only now is a permalink's reply in view; until then a later load still opens around it.
     finishThreadLoad(threadId, load);
+  } else if (focusMessageId !== null && isGoneFocus(page.failure)) {
+    yield* openAtNewest(threadId, load);
+  } else {
+    mutations.setThreadPageFailed(threadId);
   }
 });
 

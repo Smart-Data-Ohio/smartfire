@@ -1,3 +1,4 @@
+import { loadForUpdate } from "../../service-worker/update-required.ts";
 /**
  * The emoji catalogue: the repo's gemoji file (`web/app/assets/emoji/emoji.json`, the same
  * shortcodes the server expands), copied here and loaded on demand so the 100 KB never lands in
@@ -114,7 +115,7 @@ let loading: Promise<EmojiData> | null = null;
 
 /** The catalogue, fetched as its own chunk the first time anything asks, then kept. */
 export function loadEmojiData(): Promise<EmojiData> {
-  loading ??= import("./emoji.json").then(
+  loading ??= loadForUpdate(() => import("./emoji.json")).then(
     (module) => buildEmojiData(module.default),
     (error: Error) => {
       loading = null;
