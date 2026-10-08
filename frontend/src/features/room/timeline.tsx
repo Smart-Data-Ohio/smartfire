@@ -35,13 +35,13 @@ const LIVE_WINDOW_MS = 8000;
 /** Frames to wait for a permalink list to report a viewport before leaving newer paging held. */
 const FOCUS_ANCHOR_ATTEMPTS = 30;
 
-interface FocusAnchor {
-  readonly id: number | null;
-  readonly attempt: number;
+/**
+ * The permalink placement belongs to: the focused message and the window generation it is being
+ * placed in. An `around` replacement bumps the generation, so that window is placed again.
+ */
+function focusKey(focusMessageId: number | null, generation: number): string | null {
+  return focusMessageId === null ? null : `${focusMessageId}:${generation}`;
 }
-
-/** No permalink has been centred on a measured list yet. */
-const UNANCHORED_FOCUS: FocusAnchor = { id: null, attempt: 0 };
 
 const NO_PENDING: readonly string[] = [];
 
@@ -102,6 +102,22 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const listRef = useRef<VListHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
+  // The (focus, generation) whose placement attempt has ended. Newer paging waits on the current
+  // pair, then follows the present. Released on every ending: centred, a fallback, the target
+  // gone, the retry cap, or the reader scrolling or jumping away.
+  const settledKeyRef = useRef<string | null>(null);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+
+  // Frames spent waiting for this pair's list to measure.
+  const [anchorAttempt, setAnchorAttempt] = useState<{ readonly key: string; readonly n: number }>({
+    key: "",
+    n: 0,
+  });
+
+  // Set while a scrollToIndex from here is what will move the list, so that scroll is not the
+  // reader taking over.
+  const placingRef = useRef(false);
+  const placeTokenRef = useRef(0);
 
   const committedRef = useRef<
     CommittedEdges & { readonly last: string | null; readonly count: number }
@@ -114,14 +130,6 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   // The window last placed (`room:generation:focus`).
   const [placed, setPlaced] = useState<string | null>(null);
-  // The permalink centred once the list has measured (`scrollSize` and a viewport). Reset when
-  // the focused message changes. Newer paging waits for this, then follows the present as usual.
-  const [focusAnchor, setFocusAnchor] = useState(UNANCHORED_FOCUS);
-
-  if (focusAnchor.id !== null && focusAnchor.id !== focusMessageId) {
-    setFocusAnchor(UNANCHORED_FOCUS);
-  }
-
   const [farFromPresent, setFarFromPresent] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
   const [floatingDay, setFloatingDay] = useState<string | null>(null);
@@ -157,9 +165,45 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   // Older rows went in above the previous first row: keep the view anchored from the end.
   const shift = prepended(items, committedRef.current);
+  const anchor = focusKey(focusMessageId, timeline.generation);
 
-  // Place the view once per loaded window: on the permalinked message, on the unread divider
-  // (clamped, so a short unread run just lands at the bottom), or at the bottom.
+  /** Ends placement for `key`, so newer paging is allowed to follow the present. */
+  const releasePlacement = (key: string) => {
+    if (settledKeyRef.current === key) {
+      return;
+    }
+
+    settledKeyRef.current = key;
+    setSettledKey(key);
+  };
+
+  /** Scrolls programmatically. The scroll event this raises is not the reader taking over. */
+  const scrollList = (
+    index: number,
+    options: { align: "center" | "start" | "end" | "nearest"; offset?: number; smooth?: boolean },
+  ) => {
+    const list = listRef.current;
+
+    if (list === null) {
+      return;
+    }
+
+    const token = placeTokenRef.current + 1;
+
+    placeTokenRef.current = token;
+    placingRef.current = true;
+    list.scrollToIndex(index, options);
+    requestAnimationFrame(() => {
+      if (placeTokenRef.current === token) {
+        placingRef.current = false;
+      }
+    });
+  };
+
+  // Place the view once per (focus, generation): on the permalinked message, on the unread
+  // divider (clamped, so a short unread run just lands at the bottom), or at the bottom. The
+  // attempt ends on every outcome, which releases newer paging; only an unmeasured list keeps
+  // retrying, and only for a few frames.
   useLayoutEffect(() => {
     const list = listRef.current;
     let frame = 0;
@@ -172,25 +216,36 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
               (item) => item.kind === "message" && item.message.id === focusMessageId,
             );
 
+      const tries = anchorAttempt.key === anchor ? anchorAttempt.n : 0;
+
       // Centre once the list has measured. An unmeasured list reports no viewport, so this retries
-      // for a few frames; paging newer stays held until the centre lands.
-      if (focusMessageId !== null && focusIndex >= 0 && focusAnchor.id !== focusMessageId) {
+      // for a few frames; paging newer stays held until the attempt ends.
+      if (anchor !== null && settledKeyRef.current !== anchor && focusIndex >= 0) {
+        const key = anchor;
         const measured = list.scrollSize > 0 && list.viewportSize > 0;
 
         // Not the bottom: a page that arrives after this must not yank back to the end.
         atBottomRef.current = false;
 
         if (measured) {
-          list.scrollToIndex(focusIndex, { align: "center" });
-          setFocusAnchor({ id: focusMessageId, attempt: focusAnchor.attempt });
-        } else if (focusAnchor.attempt < FOCUS_ANCHOR_ATTEMPTS) {
-          list.scrollToIndex(focusIndex, { align: "center" });
+          scrollList(focusIndex, { align: "center" });
+          releasePlacement(key);
+        } else if (tries < FOCUS_ANCHOR_ATTEMPTS) {
+          scrollList(focusIndex, { align: "center" });
           frame = requestAnimationFrame(() => {
-            setFocusAnchor((current) =>
-              current.id === focusMessageId ? current : { id: null, attempt: current.attempt + 1 },
-            );
+            setAnchorAttempt((current) => {
+              const n = current.key === key ? current.n : 0;
+
+              return { key, n: n + 1 };
+            });
           });
+        } else {
+          // The list never measured. Stop retrying and let paging follow the present.
+          releasePlacement(key);
         }
+      } else if (anchor !== null && settledKeyRef.current !== anchor) {
+        // The target is missing or was deleted before it could be centred.
+        releasePlacement(anchor);
       }
 
       if (frame === 0 && placed !== placement) {
@@ -200,9 +255,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
           const unreadIndex = items.findIndex((item) => item.kind === "unread");
 
           if (unreadIndex >= 0) {
-            list.scrollToIndex(unreadIndex, { align: "start", offset: -8 });
+            scrollList(unreadIndex, { align: "start", offset: -8 });
           } else {
-            list.scrollToIndex(items.length - 1, { align: "end" });
+            scrollList(items.length - 1, { align: "end" });
           }
         }
       }
@@ -231,7 +286,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const mine = last?.kind === "pending";
 
     if (atBottomRef.current || mine) {
-      listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
+      scrollList(items.length - 1, { align: "end" });
     } else if (timeline.after === null) {
       setNewBelow((count) => count + Math.max(1, items.length - previous.count));
     }
@@ -241,10 +296,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   // A resync can leave the window short of the present with the reader at its end (more was
   // posted than a page holds while they were away): page on and offer the jump without a scroll.
-  // Until the permalink has been centred on a measured list, an unmeasured list looks like the
-  // bottom and paging newer walks off the message. After that centre, this follows the present
-  // even while the message stays focused.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: when the window's end moves or the permalink finishes centring, not on every render
+  // Until this focus and generation finish placing, an unmeasured list looks like the bottom and
+  // paging newer walks off the message. Once the attempt ends, this follows the present.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when placement ends or the window's end moves, not every render
   useEffect(() => {
     const list = listRef.current;
 
@@ -254,12 +308,12 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
     setFarFromPresent(true);
 
-    if (focusMessageId !== null && focusAnchor.id !== focusMessageId) {
+    if (anchor !== null && settledKeyRef.current !== anchor) {
       return;
     }
 
     loadNewerNear(list.scrollSize - list.scrollOffset - list.viewportSize);
-  }, [ready, timeline.after, focusMessageId, focusAnchor.id]);
+  }, [ready, timeline.after, timeline.generation, focusMessageId, settledKey]);
 
   // An edit opened from elsewhere (the composer's ↑) brings its row into view.
   const editingId = useEditingId();
@@ -275,7 +329,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     );
 
     if (index >= 0) {
-      listRef.current?.scrollToIndex(index, { align: "nearest" });
+      scrollList(index, { align: "nearest" });
     }
   }, [editingId]);
 
@@ -326,6 +380,18 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
+    // A scroll we didn't ask for means the reader has the list. Placement stops here.
+    if (
+      anchor !== null &&
+      settledKeyRef.current !== anchor &&
+      !placingRef.current &&
+      !awaitingCards &&
+      list.scrollSize > 0 &&
+      list.viewportSize > 0
+    ) {
+      releasePlacement(anchor);
+    }
+
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
@@ -350,6 +416,10 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const jumpToPresent = () => {
     setNewBelow(0);
 
+    if (anchor !== null) {
+      releasePlacement(anchor);
+    }
+
     if (focusMessageId !== null) {
       void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
     }
@@ -360,7 +430,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
-    listRef.current?.scrollToIndex(items.length - 1, { align: "end", smooth: true });
+    scrollList(items.length - 1, { align: "end", smooth: true });
   };
 
   const renderItem = (item: TimelineItem) => {
