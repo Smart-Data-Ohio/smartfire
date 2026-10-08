@@ -25,6 +25,9 @@ fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<
             let mut object = serde_json::Map::new();
             for (i, name) in columns.iter().enumerate() {
                 use rusqlite::types::ValueRef;
+                if crate::controllers::presenters::test_support::rust_only_column(table, name) {
+                    continue;
+                }
                 object.insert(
                     name.clone(),
                     match r.get_ref(i)? {

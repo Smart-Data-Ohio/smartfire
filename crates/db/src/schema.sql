@@ -195,7 +195,7 @@ FOREIGN KEY ("user_id")
 );
 CREATE UNIQUE INDEX "index_calendar_push_channels_on_channel_id" ON "calendar_push_channels" ("channel_id");
 CREATE UNIQUE INDEX "index_calendar_push_channels_on_user_id" ON "calendar_push_channels" ("user_id");
-CREATE TABLE "channel_threads" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "auto_archive_after_minutes" integer DEFAULT 4320 NOT NULL, "closed_at" datetime(6), "created_at" datetime(6) NOT NULL, "creator_id" integer NOT NULL, "last_activity_at" datetime(6) NOT NULL, "locked_at" datetime(6), "messages_count" integer DEFAULT 0 NOT NULL, "name" varchar NOT NULL, "parent_message_id" integer, "result_markdown" text, "result_updated_at" datetime(6), "result_updated_by_id" integer, "room_id" integer NOT NULL, "run_url" varchar, "updated_at" datetime(6) NOT NULL, "work_owner_id" integer, "work_status" varchar, "work_status_changed_at" datetime(6), CONSTRAINT "fk_rails_f494e709ed"
+CREATE TABLE "channel_threads" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "auto_archive_after_minutes" integer DEFAULT 4320 NOT NULL, "closed_at" datetime(6), "created_at" datetime(6) NOT NULL, "creator_id" integer NOT NULL, "last_activity_at" datetime(6) NOT NULL, "locked_at" datetime(6), "messages_count" integer DEFAULT 0 NOT NULL, "name" varchar NOT NULL, "parent_message_id" integer, "result_markdown" text, "result_updated_at" datetime(6), "result_updated_by_id" integer, "room_id" integer NOT NULL, "run_url" varchar, "updated_at" datetime(6) NOT NULL, "work_owner_id" integer, "work_status" varchar, "work_status_changed_at" datetime(6), "client_post_id" varchar, CONSTRAINT "fk_rails_f494e709ed"
 FOREIGN KEY ("creator_id")
   REFERENCES "users" ("id")
 , CONSTRAINT "fk_rails_bb889ed91c"
@@ -657,3 +657,4 @@ CREATE INDEX "index_workspace_presence_leases_on_user_id" ON "workspace_presence
 CREATE VIRTUAL TABLE message_search_index USING fts5 (body, tokenize=porter);
 CREATE TABLE "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
 CREATE TABLE "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE UNIQUE INDEX "index_channel_threads_on_room_creator_client_post_id" ON "channel_threads" ("room_id", "creator_id", "client_post_id") WHERE client_post_id IS NOT NULL;

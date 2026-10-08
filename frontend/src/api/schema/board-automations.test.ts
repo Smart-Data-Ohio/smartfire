@@ -54,6 +54,7 @@ describe("board automation schemas", () => {
     };
 
     expect(decode(UpdateBoardSlaTimers)(input)).toEqual(input);
+    expect(decode(UpdateBoardSlaTimers)({ blocked: off })).toEqual({ blocked: off });
     expect(decode(BoardSlaTimerInput)({ ...off, nudgeAfterMinutes: 60 })).toEqual({
       nudgeAfterMinutes: 60,
       escalateAfterMinutes: null,
@@ -74,7 +75,7 @@ describe("board automation schemas", () => {
     ).toThrow();
     expect(() => decode(CreateBoardTagRule)({ tag: "bug" })).toThrow();
     expect(() =>
-      decode(UpdateBoardSlaTimers)({ planned: off, in_progress: off, blocked: off }),
+      decode(UpdateBoardSlaTimers)({ planned: off, inProgress: null, blocked: off }),
     ).toThrow();
     expect(() => decode(BoardAutomations)({ ...boardAutomations(), candidates: ["7"] })).toThrow();
     const { users: _users, ...missing } = boardAutomations();

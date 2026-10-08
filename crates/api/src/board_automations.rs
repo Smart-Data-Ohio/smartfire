@@ -166,6 +166,7 @@ async fn post_tag_rule(c: &mut Ctx) -> Result {
         }
         Err(error) => return Err(db_error(error)),
     };
+    c.app().broadcasts.board_automations_changed(room.id);
     audit_room(
         c,
         &room,
@@ -205,6 +206,7 @@ async fn delete_tag_rule(c: &mut Ctx) -> Result {
             },
         ));
     };
+    c.app().broadcasts.board_automations_changed(room.id);
     audit_room(
         c,
         &room,
@@ -282,6 +284,8 @@ async fn put_sla_timers(c: &mut Ctx) -> Result {
             let updates: Vec<_> = SLA_STATUSES
                 .into_iter()
                 .zip([input.planned, input.in_progress, input.blocked])
+                // A row the client left out leaves its status's timer alone.
+                .filter_map(|(row, values)| values.map(|values| (row, values)))
                 .map(|((status, field, label), values)| {
                     (
                         field,
@@ -340,6 +344,9 @@ async fn put_sla_timers(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     let audits = result.map_err(|error| fail(c, error))?;
+    if !audits.is_empty() {
+        c.app().broadcasts.board_automations_changed(room.id);
+    }
     // As classic, audits follow the committed domain writes; an audit failure cannot undo them.
     for changes in audits {
         audit_room(c, &room, "board.automation.change", changes).await?;

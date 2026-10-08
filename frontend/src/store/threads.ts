@@ -57,11 +57,39 @@ export function upsertThread(state: State, thread: Thread): State {
   };
 }
 
-/** Forgets that `threadId` was removed: an HTTP load just showed it. */
+/**
+ * The thread may have been removed after a request sent at `since` (the `removalCount` then), so
+ * its reply mustn't bring it back: its removal is newer, or a removal that may be its own has been
+ * forgotten and the thread isn't held now.
+ */
+export function removedSince(state: State, threadId: number, since: number): boolean {
+  const removed = state.removedThreads[threadId];
+
+  if (removed !== undefined) {
+    return removed > since;
+  }
+
+  return uncertainSince(state, threadId, since);
+}
+
+/**
+ * A reply to a request sent at `since` can't tell whether `threadId` was removed meanwhile: no
+ * removal of it is remembered, but removals after `since` have been forgotten and it isn't held.
+ * The reducers drop such a thread; the actions ask again first (see `settled`), since a fresh
+ * request's `since` is past every forgotten removal.
+ */
+export function uncertainSince(state: State, threadId: number, since: number): boolean {
+  return (
+    state.removedThreads[threadId] === undefined &&
+    since < state.forgottenRemoval &&
+    state.threads[threadId] === undefined
+  );
+}
+
+/** Forgets that `threadId` was removed: a reply to a request sent after the removal showed it. */
 export function revive(state: State, threadId: number, since: number): State {
   const removed = state.removedThreads[threadId];
 
-  // A reply to a request sent before the removal says nothing about the thread now.
   if (removed === undefined || removed > since) {
     return state;
   }
@@ -71,21 +99,25 @@ export function revive(state: State, threadId: number, since: number): State {
   return { ...state, removedThreads };
 }
 
-/** The most removals remembered; enough to cover any reply still in flight. */
+/** The most removals remembered; older ones only count through `forgottenRemoval`. */
 export const MAX_REMOVED_THREADS = 500;
 
-function tombstone(
-  removed: Readonly<Record<number, number>>,
-  threadId: number,
-  count: number,
-): Readonly<Record<number, number>> {
-  const entries = Object.entries({ ...removed, [threadId]: count });
+function tombstone(state: State, threadId: number): Partial<State> {
+  const count = state.removalCount + 1;
+  const entries = Object.entries({ ...state.removedThreads, [threadId]: count });
 
-  return Object.fromEntries(
-    entries.length <= MAX_REMOVED_THREADS
-      ? entries
-      : entries.sort(([, a], [, b]) => b - a).slice(0, MAX_REMOVED_THREADS),
-  );
+  if (entries.length <= MAX_REMOVED_THREADS) {
+    return { removedThreads: Object.fromEntries(entries), removalCount: count };
+  }
+
+  const newest = entries.sort(([, a], [, b]) => b - a);
+  const dropped = newest.slice(MAX_REMOVED_THREADS);
+
+  return {
+    removedThreads: Object.fromEntries(newest.slice(0, MAX_REMOVED_THREADS)),
+    removalCount: count,
+    forgottenRemoval: Math.max(state.forgottenRemoval, ...dropped.map(([, removal]) => removal)),
+  };
 }
 
 /** A moderator deleted the thread: it leaves the lists, its pane says so, the indicator goes. */
@@ -98,19 +130,22 @@ export function removeThread(state: State, threadId: number, roomId: number): St
 
   return {
     ...removeBoardPost(state, roomId, threadId),
-    removedThreads: tombstone(state.removedThreads, threadId, state.removalCount + 1),
-    removalCount: state.removalCount + 1,
+    ...tombstone(state, threadId),
     threads,
-    threadPanes: {
-      ...state.threadPanes,
-      [threadId]: {
-        status: "error",
-        error: "This thread was deleted.",
-        permissions: null,
-        work: null,
-        workFacts: null,
-      },
-    },
+    // Only a pane someone opened says so; others aren't kept for every removal.
+    threadPanes:
+      state.threadPanes[threadId] === undefined
+        ? state.threadPanes
+        : {
+            ...state.threadPanes,
+            [threadId]: {
+              status: "error",
+              error: "This thread was deleted.",
+              permissions: null,
+              work: null,
+              workFacts: null,
+            },
+          },
     roomThreads:
       list === undefined
         ? state.roomThreads
@@ -209,12 +244,12 @@ export function setThreadPaneError(state: State, threadId: number, error: string
  */
 export function loadThreadDetail(state: State, detail: ThreadDetail, since: number): State {
   const threadId = detail.thread.id;
-  const revived = revive(state, threadId, since);
 
-  if (revived.removedThreads[threadId] !== undefined) {
+  if (removedSince(state, threadId, since)) {
     return state;
   }
 
+  const revived = revive(state, threadId, since);
   const parent = detail.parentMessage;
   const held = parent === null ? undefined : state.messages[parent.id];
   const next = upsertThread(revived, detail.thread);
@@ -276,13 +311,23 @@ export function setThreadListFailed(state: State, roomId: number, filter: Thread
   };
 }
 
-/** `GET /rooms/:id/threads` landed for `filter`. */
+/**
+ * `GET /rooms/:id/threads` landed for `filter`. `since` is the `removalCount` when it was sent: a
+ * thread removed after that stays out, and one it shows that was removed before is back.
+ */
 export function loadThreadList(
   state: State,
   roomId: number,
   filter: ThreadFilter,
-  list: ThreadList,
+  page: ThreadList,
+  since: number,
 ): State {
+  const list = {
+    ...page,
+    threads: page.threads.filter(({ thread }) => !removedSince(state, thread.id, since)),
+  };
+
+  state = list.threads.reduce((revived, { thread }) => revive(revived, thread.id, since), state);
   const current = state.roomThreads[roomId];
   // A response for a filter the pane has since left (an earlier tab answering late) still
   // teaches us its threads, but mustn't replace the current tab's list.

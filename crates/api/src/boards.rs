@@ -176,7 +176,6 @@ async fn new_post(c: &mut Ctx) -> Result {
 }
 
 /// The receipt kind for a board post made with a `clientPostId`.
-const RECEIPT: &str = "board_post";
 /// The longest `clientPostId` honoured.
 const CLIENT_POST_ID_LIMIT: usize = 255;
 
@@ -295,7 +294,6 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
-    let app = c.app().clone();
     let outcome = c
         .app()
         .db
@@ -314,15 +312,10 @@ async fn create_post(c: &mut Ctx) -> Result {
                 return Ok((thread.id, false));
             }
             if let Some(key) = post_key.as_deref()
-                && let Some(id) = app.receipts.find(RECEIPT, room_id, creator_id, key)
+                && let Some(thread) =
+                    ChannelThread::find_by_client_post_id(tx.conn(), room_id, creator_id, key)?
             {
-                match ChannelThread::find(tx.conn(), id) {
-                    Ok(thread) if thread.room_id == room_id && thread.creator_id == creator_id => {
-                        return Ok((thread.id, false));
-                    }
-                    Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => {}
-                    Err(error) => return Err(error),
-                }
+                return Ok((thread.id, false));
             }
             let blob = attachment_blob(tx, attachment)?;
             let message = message.map(|message| NewMessage {
@@ -342,6 +335,7 @@ async fn create_post(c: &mut Ctx) -> Result {
                     work_status: Some(crate::work::stored_status(input.status).to_string()),
                     work_owner_id: input.owner_id,
                     tag_names: Some(input.tags),
+                    client_post_id: post_key,
                     ..Default::default()
                 },
                 message,
@@ -351,14 +345,6 @@ async fn create_post(c: &mut Ctx) -> Result {
                     attachments::enqueue_analysis(tx, blob);
                 }
                 campfire_db::models::message_attachment_processing::schedule_message(tx, opener)?;
-            }
-            // Only a committed post earns a receipt: a rolled-back id may be reused.
-            if let Some(key) = post_key.clone() {
-                let app = app.clone();
-                let id = thread.id;
-                tx.on_commit_success(move || {
-                    app.receipts.record(RECEIPT, room_id, creator_id, &key, id);
-                });
             }
             Ok((thread.id, true))
         })

@@ -81,7 +81,7 @@ pub use board::{
     CreateBoardPost,
 };
 pub use board_automations::{
-    BoardAutomations, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
+    BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
     UpdateBoardSlaTimers,
 };
 pub use bots::{

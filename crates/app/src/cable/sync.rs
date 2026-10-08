@@ -14,6 +14,7 @@
 use std::sync::{Arc, OnceLock};
 
 use campfire_api_types::{
+    BoardAutomationsChanged,
     MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     Presence, RoomRead, RoomUnread, SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload,
     Thread, ThreadIndicator, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
@@ -910,6 +911,20 @@ pub fn thread_removed(server: &Cable, thread_id: i64, room_id: i64) {
             unsubscribe: Some(thread_topic(thread_id)),
             ..publication
         },
+    );
+}
+
+/// `board.automations.changed` on the board's room topic, which only its members follow.
+pub fn board_automations_changed(server: &Cable, room_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let payload = SyncPayload::BoardAutomationsChanged(BoardAutomationsChanged { room_id });
+    send(
+        server,
+        Audience::Topic(room_topic(room_id)),
+        &payload,
+        |publication| publication,
     );
 }
 

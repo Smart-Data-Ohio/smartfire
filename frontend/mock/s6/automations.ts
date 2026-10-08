@@ -35,7 +35,12 @@ function eligibleAssignee(world: World, roomId: number, userId: number): boolean
   );
 }
 
-/** Rules run in creation order, and an unavailable assignee's rule stops applying. */
+/** The board's rules by tag, as `BoardTagAssignment::for_room` orders them (SQLite's binary order). */
+function byTag<Rule extends { readonly tag: string }>(rules: readonly Rule[]): Rule[] {
+  return [...rules].sort((a, b) => (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0));
+}
+
+/** The first rule by tag that matches applies, and an unavailable assignee's rule stops applying. */
 export function autoAssignedBoardOwner(
   world: World,
   roomId: number,
@@ -45,14 +50,16 @@ export function autoAssignedBoardOwner(
 
   if (room?.room.kind !== "board") return null;
 
-  const rule = room.boardAutomations?.tagRules.find((candidate) => tags.includes(candidate.tag));
+  const rule = byTag(room.boardAutomations?.tagRules ?? []).find((candidate) =>
+    tags.includes(candidate.tag),
+  );
 
   return rule === undefined || !eligibleAssignee(world, roomId, rule.assigneeId)
     ? null
     : (world.users.get(rule.assigneeId) ?? null);
 }
 
-type AutomationsContext = Pick<S2Context, "world" | "roomOr404" | "usersFor">;
+type AutomationsContext = Pick<S2Context, "world" | "roomOr404" | "usersFor" | "publish">;
 
 export function createBoardAutomations(ctx: AutomationsContext) {
   const board = (roomId: number) => {
@@ -87,7 +94,7 @@ export function createBoardAutomations(ctx: AutomationsContext) {
 
     return {
       roomId,
-      tagRules: state.tagRules.map((rule) => ({ ...rule })),
+      tagRules: byTag(state.tagRules).map((rule) => ({ ...rule })),
       slaTimers: SLA_ROWS.flatMap(({ status }) =>
         state.slaTimers.filter((timer) => timer.status === status).map((timer) => ({ ...timer })),
       ),
@@ -95,6 +102,10 @@ export function createBoardAutomations(ctx: AutomationsContext) {
       users: ctx.usersFor([...candidates, ...state.tagRules.map((rule) => rule.assigneeId)]),
     };
   };
+
+  /** `board.automations.changed` on the room topic, so the board's other open panes refetch. */
+  const changed = (roomId: number) =>
+    ctx.publish([{ topic: `room:${roomId}`, type: "board.automations.changed", data: { roomId } }]);
 
   const addTagRule = (roomId: number, body: Json | undefined) => {
     const state = board(roomId);
@@ -131,6 +142,7 @@ export function createBoardAutomations(ctx: AutomationsContext) {
 
     if (assigneeId === null) throw new Error("Validated assignee missing");
     state.tagRules.push({ id: state.nextTagRuleId++, tag, assigneeId });
+    changed(roomId);
 
     return ok(settings(roomId), 201);
   };
@@ -141,6 +153,7 @@ export function createBoardAutomations(ctx: AutomationsContext) {
 
     if (index === -1) throw notFound("Rule not found.");
     state.tagRules.splice(index, 1);
+    changed(roomId);
 
     return ok(settings(roomId));
   };
@@ -153,6 +166,13 @@ export function createBoardAutomations(ctx: AutomationsContext) {
 
     for (const { key, status, label } of SLA_ROWS) {
       const row = field(body, key);
+
+      if (row === undefined) {
+        // A row left out leaves its status's timer as it stands.
+        timers.push(...state.slaTimers.filter((timer) => timer.status === status));
+        continue;
+      }
+
       const nudge = intField(row, "nudgeAfterMinutes");
       const escalate = intField(row, "escalateAfterMinutes");
 
@@ -183,7 +203,24 @@ export function createBoardAutomations(ctx: AutomationsContext) {
     if (messages.length > 0)
       throw new HttpError(422, { _tag: VALIDATION, message: sentence(messages), fields });
 
-    state.slaTimers = timers;
+    const same = (a: readonly BoardSlaTimer[], b: readonly BoardSlaTimer[]) =>
+      JSON.stringify(a) === JSON.stringify(b);
+
+    const ordered = SLA_ROWS.flatMap(({ status }) =>
+      timers.filter((timer) => timer.status === status),
+    );
+
+    if (
+      !same(
+        ordered,
+        SLA_ROWS.flatMap(({ status }) =>
+          state.slaTimers.filter((timer) => timer.status === status),
+        ),
+      )
+    ) {
+      state.slaTimers = ordered;
+      changed(roomId);
+    }
 
     return ok(settings(roomId));
   };

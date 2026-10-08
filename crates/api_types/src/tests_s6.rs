@@ -177,17 +177,20 @@ fn board_automations_round_trip() {
     };
     assert_wire(
         &UpdateBoardSlaTimers {
-            planned: BoardSlaTimerInput {
+            planned: Some(BoardSlaTimerInput {
                 nudge_after_minutes: Some(30),
                 escalate_after_minutes: Some(90),
-            },
-            in_progress: off,
-            blocked: off,
+            }),
+            in_progress: Some(off),
+            blocked: None,
         },
         json!({
             "planned": {"nudgeAfterMinutes": 30, "escalateAfterMinutes": 90},
             "inProgress": {"nudgeAfterMinutes": null, "escalateAfterMinutes": null},
-            "blocked": {"nudgeAfterMinutes": null, "escalateAfterMinutes": null},
         }),
+    );
+    assert_wire(
+        &SyncPayload::BoardAutomationsChanged(BoardAutomationsChanged { room_id: 40 }),
+        json!({"type": "board.automations.changed", "data": {"roomId": 40}}),
     );
 }

@@ -786,6 +786,15 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId);
         break;
+      case "board.automations.changed":
+        next = {
+          ...next,
+          boardAutomationsChanged: {
+            ...next.boardAutomationsChanged,
+            [event.data.roomId]: (next.boardAutomationsChanged[event.data.roomId] ?? 0) + 1,
+          },
+        };
+        break;
       case "thread.unread":
         next = event.data.refreshOnly
           ? next
