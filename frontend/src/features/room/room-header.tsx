@@ -4,6 +4,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { useWorkingPresence } from "../agents/working.ts";
 import { DirectHeaderActions } from "../directs/direct-header-actions.tsx";
+import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
 import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { agentKindLabel, agentTone, identityOf, toneLabel } from "../people/agent-identity.ts";
@@ -99,6 +100,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
         <HuddleLauncher roomId={roomId} />
         <NotificationsButton roomId={roomId} />
+        {kind === null ? null : <EventsLink roomId={roomId} />}
         <PaneButtons roomId={roomId} />
         <HeaderSearch />
       </div>

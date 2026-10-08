@@ -1,6 +1,7 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
@@ -9,13 +10,19 @@ import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { CancelEvent } from "../gen/CancelEvent.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
+import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { EventAttendance } from "../gen/EventAttendance.ts";
+import type { EventDetail } from "../gen/EventDetail.ts";
+import type { EventForm } from "../gen/EventForm.ts";
+import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
@@ -32,6 +39,7 @@ import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
@@ -46,6 +54,7 @@ import * as agentActions from "./agent-actions.ts";
 import * as approvalActions from "./approval-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
+import * as eventActions from "./event-actions.ts";
 import * as fizzyActions from "./fizzy-actions.ts";
 import { SyncServices } from "./layers.ts";
 import * as ledgerActions from "./ledger-actions.ts";
@@ -60,11 +69,14 @@ import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
+
+export type { EventPrefill };
 
 const API_BASE = "/api/v1";
 
@@ -366,6 +378,60 @@ const cards = {
     runAction(cardActions.loadQuote(roomId, referenceId)),
 };
 
+/** Calendar reads and writes return current facts; failures reject with field-aware ActionError. */
+const events = {
+  list: (roomId: number): Promise<EventList> => runAction(eventActions.list(roomId)),
+  /** The new-event form, with a prefilled link's values if any. */
+  newForm: (roomId: number, prefill: EventPrefill | null = null): Promise<EventForm> =>
+    runAction(eventActions.newForm(roomId, prefill)),
+  read: (roomId: number, eventId: number): Promise<EventDetail> =>
+    runAction(eventActions.read(roomId, eventId)),
+  editForm: (roomId: number, eventId: number): Promise<EventForm> =>
+    runAction(eventActions.editForm(roomId, eventId)),
+  create: (roomId: number, body: CreateEvent): Promise<EventDetail> =>
+    runAction(eventActions.create(roomId, body)),
+  update: (roomId: number, eventId: number, body: UpdateEvent): Promise<EventDetail> =>
+    runAction(eventActions.update(roomId, eventId, body)),
+  cancel: (roomId: number, eventId: number, body: CancelEvent): Promise<EventDetail> =>
+    runAction(eventActions.cancel(roomId, eventId, body)),
+  attendance: (roomId: number, eventId: number): Promise<EventAttendance> =>
+    runAction(eventActions.attendance(roomId, eventId)),
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture = false,
+  ): Promise<EventDetail> =>
+    runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
+  /**
+   * Calls `onChange` after each applied batch that changes an event in `roomId` (see
+   * `changesRoomEvents`), and whenever the room's topic is resynced (its events since the last
+   * one were lost, so any of them might have changed the calendar), holding the room's topic
+   * meanwhile, so an open calendar screen can read itself again. Returns the stop.
+   */
+  watch(roomId: number, onChange: () => void): () => void {
+    runtime.runFork(eventActions.holdRoom(roomId));
+
+    const stopEvents = onSyncEvents((applied) => {
+      if (applied.some((event) => eventActions.changesRoomEvents(event, roomId))) {
+        onChange();
+      }
+    });
+
+    const stopResyncs = onResync((topics) => {
+      if (eventActions.resyncsRoom(topics, roomId)) {
+        onChange();
+      }
+    });
+
+    return () => {
+      stopEvents();
+      stopResyncs();
+      runtime.runFork(eventActions.releaseRoom(roomId));
+    };
+  },
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -380,6 +446,7 @@ export const actions = {
   search,
   organize,
   cards,
+  events,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

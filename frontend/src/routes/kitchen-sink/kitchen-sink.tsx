@@ -3,7 +3,7 @@ import {
   type MotionPreference,
   setDensity,
   setMotion,
-  setTheme,
+  setThemeOverride,
   type ThemePreference,
   useAppearance,
 } from "../../lib/appearance.ts";
@@ -65,7 +65,12 @@ export default function KitchenSink() {
           <span className="ks-version">v0</span>
         </div>
         <div className="ks-switches">
-          <Choice label="Theme" options={THEMES} value={appearance.theme} onChange={setTheme} />
+          <Choice
+            label="Theme"
+            options={THEMES}
+            value={appearance.theme}
+            onChange={setThemeOverride}
+          />
           <Choice label="Motion" options={MOTIONS} value={appearance.motion} onChange={setMotion} />
           <div className="ks-toggle">
             <Toggle
