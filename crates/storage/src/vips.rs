@@ -9,6 +9,11 @@ use std::sync::Once;
 
 use crate::{Error, Result};
 
+mod cancellation;
+pub use cancellation::Cancellation;
+#[cfg(feature = "test-support")]
+pub use cancellation::StallPhase;
+
 #[repr(C)]
 struct VipsImage {
     _private: [u8; 0],
@@ -35,6 +40,12 @@ unsafe extern "C" {
     fn vips_operation_new(name: *const c_char) -> *mut c_void;
     fn vips_object_get_argument_flags(object: *mut c_void, name: *const c_char) -> c_int;
     fn vips_image_new_from_file(name: *const c_char, ...) -> *mut VipsImage;
+    fn vips_pngload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_jpegload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_gifload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_webpload_source(source: *mut c_void, out: *mut *mut VipsImage, ...) -> c_int;
+    fn vips_foreign_find_load_source(source: *mut c_void) -> *const c_char;
+    fn vips_image_new_from_source(source: *mut c_void, options: *const c_char, ...) -> *mut VipsImage;
     fn vips_image_new_matrix_from_array(width: c_int, height: c_int, array: *const c_double, size: c_int) -> *mut VipsImage;
     fn vips_image_set_double(image: *mut VipsImage, name: *const c_char, d: c_double);
     fn vips_image_get_width(image: *const VipsImage) -> c_int;
@@ -80,6 +91,69 @@ impl Drop for Image {
 }
 
 impl Image {
+    /// Header-only until evaluated, with sequential access, strict error handling and at
+    /// most one page. Use the loader matching the magic bytes, never a fallback loader.
+    pub fn open_branding(path: &Path, content_type: &str, cancel: &Cancellation) -> Result<Image> {
+        init();
+        let source = cancellation::Source::open(path, cancel)?;
+        let mut out = std::ptr::null_mut();
+        const FAIL_ON_ERROR: c_int = 2;
+        macro_rules! load {
+            ($loader:ident $(, $option:expr, $value:expr)*) => {
+                unsafe {
+                    $loader(
+                        source.0, &mut out,
+                        c"access".as_ptr(), VIPS_ACCESS_SEQUENTIAL,
+                        c"fail_on".as_ptr(), FAIL_ON_ERROR,
+                        $($option.as_ptr(), $value as c_int,)*
+                        std::ptr::null::<c_char>(),
+                    )
+                }
+            };
+        }
+        let status = match content_type {
+            "image/png" => load!(vips_pngload_source),
+            "image/jpeg" => load!(vips_jpegload_source),
+            "image/gif" => load!(vips_gifload_source, c"page", 0, c"n", 1),
+            "image/webp" => load!(vips_webpload_source, c"page", 0, c"n", 1),
+            _ => return Err(Error::Vips("unsupported branding format".into())),
+        };
+        let image = Image::wrap_out(status, out)?;
+        image.cancel_on(cancel)?;
+        Ok(image)
+    }
+
+    /// The classic loader selection and first page, with cancellable header and pixel reads.
+    pub fn open_legacy_branding(path: &Path, cancel: &Cancellation) -> Result<Image> {
+        init();
+        let source = cancellation::Source::open(path, cancel)?;
+        let loader = unsafe { vips_foreign_find_load_source(source.0) };
+        if loader.is_null() {
+            return Err(Error::Vips(take_error()));
+        }
+        let page = unsafe {
+            let operation = vips_operation_new(loader);
+            if operation.is_null() {
+                return Err(Error::Vips(take_error()));
+            }
+            let flags = vips_object_get_argument_flags(operation, c"page".as_ptr());
+            g_object_unref(operation);
+            flags & VIPS_ARGUMENT_INPUT != 0 && flags & VIPS_ARGUMENT_REQUIRED == 0
+        };
+        let options = if page { c"[page=0]" } else { c"" };
+        let image = Image::wrap(unsafe {
+            vips_image_new_from_source(
+                source.0,
+                options.as_ptr(),
+                c"access".as_ptr(),
+                VIPS_ACCESS_SEQUENTIAL,
+                std::ptr::null::<c_char>(),
+            )
+        })?;
+        image.cancel_on(cancel)?;
+        Ok(image)
+    }
+
     fn wrap(ptr: *mut VipsImage) -> Result<Image> {
         if ptr.is_null() { Err(Error::Vips(take_error())) } else { Ok(Image(ptr)) }
     }

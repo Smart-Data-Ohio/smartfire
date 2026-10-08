@@ -17,10 +17,12 @@ import type { PersonChange as GeneratedPersonChange } from "../../gen/PersonChan
 import type { PersonRemoved as GeneratedPersonRemoved } from "../../gen/PersonRemoved.ts";
 import type { PersonRole as GeneratedPersonRole } from "../../gen/PersonRole.ts";
 import type { PushChannelExpiry as GeneratedPushChannelExpiry } from "../../gen/PushChannelExpiry.ts";
+import type { UpdateBanner as GeneratedUpdateBanner } from "../../gen/UpdateBanner.ts";
 import type { UpdateLogo as GeneratedUpdateLogo } from "../../gen/UpdateLogo.ts";
 import type { UpdatePerson as GeneratedUpdatePerson } from "../../gen/UpdatePerson.ts";
 import type { UpdateWorkspace as GeneratedUpdateWorkspace } from "../../gen/UpdateWorkspace.ts";
 import type { Workspace as GeneratedWorkspace } from "../../gen/Workspace.ts";
+import type { WorkspaceBranding as GeneratedWorkspaceBranding } from "../../gen/WorkspaceBranding.ts";
 import type { WorkspaceIcon as GeneratedWorkspaceIcon } from "../../gen/WorkspaceIcon.ts";
 import type { WorkspaceIconList as GeneratedWorkspaceIconList } from "../../gen/WorkspaceIconList.ts";
 import { AuditLogEntryId, UserId, WorkspaceIconId } from "./ids.ts";
@@ -32,6 +34,12 @@ export const Workspace = Schema.Struct({
   name: Schema.String,
   logoUrl: Schema.String,
   logoAttached: Schema.Boolean,
+  /** An animated logo's first frame; `null` when the logo isn't animated. */
+  logoStillUrl: Schema.NullOr(Schema.String),
+  /** The banner behind the sidebar's workspace name; `null` when none is uploaded. */
+  bannerUrl: Schema.NullOr(Schema.String),
+  /** An animated banner's first frame; `null` when the banner isn't animated. */
+  bannerStillUrl: Schema.NullOr(Schema.String),
   joinUrl: Schema.String,
   canAdminister: Schema.Boolean,
   restrictRoomCreationToAdministrators: Schema.Boolean,
@@ -56,6 +64,29 @@ export type UpdateWorkspacePin = Assert<Pinned<typeof UpdateWorkspace, Generated
 export const UpdateLogo = Schema.Struct({ signedId: Schema.String });
 
 export type UpdateLogoPin = Assert<Pinned<typeof UpdateLogo, GeneratedUpdateLogo>>;
+
+/** `PUT /admin/workspace/banner`. */
+export const UpdateBanner = Schema.Struct({ signedId: Schema.String });
+
+export type UpdateBannerPin = Assert<Pinned<typeof UpdateBanner, GeneratedUpdateBanner>>;
+
+/**
+ * `workspace.updated`, on everyone's `user` topic: the workspace's name, logo or banner changed.
+ * A `null` image means none is uploaded; a still is set only for an animated image.
+ */
+export const WorkspaceBranding = Schema.Struct({
+  name: Schema.String,
+  logoUrl: Schema.NullOr(Schema.String),
+  logoStillUrl: Schema.NullOr(Schema.String),
+  bannerUrl: Schema.NullOr(Schema.String),
+  bannerStillUrl: Schema.NullOr(Schema.String),
+});
+
+export type WorkspaceBranding = typeof WorkspaceBranding.Type;
+
+export type WorkspaceBrandingPin = Assert<
+  Pinned<typeof WorkspaceBranding, GeneratedWorkspaceBranding>
+>;
 
 /** A role an administrator can give someone. */
 export const PersonRole = Schema.Literals(["member", "administrator"]);

@@ -52,7 +52,18 @@ export type { UserPresence } from "../gen/UserPresence.ts";
  */
 export interface Boot {
   readonly user: { readonly id: number; readonly name: string; readonly avatarUrl: string };
-  readonly account: { readonly name: string | null };
+  /**
+   * The workspace: its name (`null` only before first run), and its logo and banner images when
+   * an administrator has uploaded them (`null` falls back to initials and the plain header). An
+   * animated image also has a still of its first frame, shown at rest and under reduced motion.
+   */
+  readonly account: {
+    readonly name: string | null;
+    readonly logoUrl: string | null;
+    readonly logoStillUrl: string | null;
+    readonly bannerUrl: string | null;
+    readonly bannerStillUrl: string | null;
+  };
   readonly theme: "system" | "light" | "dark";
   readonly textSize: "smaller" | "small" | "default" | "large" | "larger";
   readonly cableUrl: string;

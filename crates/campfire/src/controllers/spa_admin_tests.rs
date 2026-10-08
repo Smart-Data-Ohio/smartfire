@@ -677,33 +677,105 @@ async fn the_workspace_saves_as_the_classic_form_does() {
 #[tokio::test]
 async fn a_logo_attaches_and_goes_as_the_classic_forms_do() {
     let prepare = async |a: &TestApp, _: &mut Browser<'_>| json!(upload(a, "logo.png").await);
-    assert_parity(
-        prepare,
-        async |b, signed| {
-            let signed = signed.as_str().unwrap().to_string();
-            classic(b, Method::PATCH, "/account", &[("account[logo]", &signed)]).await;
-            classic(b, Method::DELETE, "/account/logo", &[]).await;
-        },
-        async |b, signed| {
-            let attached: api::Workspace = spa(
-                b,
-                Method::PUT,
-                "/api/v1/admin/workspace/logo",
-                json!({"signedId": signed}),
-            )
-            .await;
-            assert!(attached.logo_attached);
-            let removed: api::Workspace = spa(
-                b,
-                Method::DELETE,
-                "/api/v1/admin/workspace/logo",
-                Value::Null,
-            )
-            .await;
-            assert!(!removed.logo_attached);
-        },
-    )
-    .await;
+    let Some(mut classic_side) = outcome_with_app(&app, &prepare, async |b, signed| {
+        let signed = signed.as_str().unwrap().to_string();
+        classic(b, Method::PATCH, "/account", &[("account[logo]", &signed)]).await;
+        classic(b, Method::DELETE, "/account/logo", &[]).await;
+    })
+    .await
+    else {
+        return;
+    };
+    let Some(spa_side) = outcome_with_app(&app, &prepare, async |b, signed| {
+        let attached: api::Workspace = spa(
+            b,
+            Method::PUT,
+            "/api/v1/admin/workspace/logo",
+            json!({"signedId": signed}),
+        )
+        .await;
+        assert!(attached.logo_attached);
+        let removed: api::Workspace = spa(
+            b,
+            Method::DELETE,
+            "/api/v1/admin/workspace/logo",
+            Value::Null,
+        )
+        .await;
+        assert!(!removed.logo_attached);
+    })
+    .await
+    else {
+        return;
+    };
+    // The API's bounded validation supplies analyzer metadata, so only the classic
+    // assignment enqueues analysis. Both still enqueue the same purge on removal.
+    let spa_blob: Value = spa_side.rows["active_storage_blobs"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| serde_json::from_str::<Value>(row.as_str().unwrap()).unwrap())
+        .find(|blob| blob["filename"] == "logo.png")
+        .unwrap();
+    // Both removals leave the server's branding mark (verified in the branding analysis tests).
+    let without_mark = |metadata: &str| {
+        let mut metadata: Value = serde_json::from_str(metadata).unwrap();
+        let mark = metadata.as_object_mut().unwrap().remove("branding_mark").unwrap();
+        let mark = mark.as_str().unwrap();
+        assert!(mark.len() == 64 && mark.bytes().all(|byte| byte.is_ascii_hexdigit()), "{mark}");
+        metadata
+    };
+    let spa_metadata = without_mark(spa_blob["metadata"].as_str().unwrap());
+    assert_eq!(
+        spa_metadata,
+        json!({
+            "identified": true, "width": 64, "height": 64, "analyzed": true,
+            "branding_animated": false,
+        })
+    );
+    let mut logos = 0;
+    for row in classic_side.rows["active_storage_blobs"]
+        .as_array_mut()
+        .unwrap()
+    {
+        let mut blob: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
+        if blob["filename"] == "logo.png" {
+            // While attached the classic blob keeps Rails' metadata.
+            assert_eq!(without_mark(blob["metadata"].as_str().unwrap()), json!({"identified": true}));
+            assert_eq!(blob["id"], spa_blob["id"]);
+            blob["metadata"] = spa_blob["metadata"].clone();
+            *row = json!(blob.to_string());
+            logos += 1;
+        }
+    }
+    assert_eq!(logos, 1);
+    let classic_jobs = classic_side.rows["background_jobs"].as_array_mut().unwrap();
+    assert_eq!(classic_jobs.len(), 2);
+    let analysis = classic_jobs
+        .iter()
+        .position(|row| {
+            let job: Value = serde_json::from_str(row.as_str().unwrap()).unwrap();
+            job["job_class"] == "ActiveStorage::AnalyzeJob"
+        })
+        .unwrap();
+    let analysis: Value =
+        serde_json::from_str(classic_jobs.remove(analysis).as_str().unwrap()).unwrap();
+    let arguments: Value = serde_json::from_str(analysis["arguments"].as_str().unwrap()).unwrap();
+    assert_eq!(arguments, json!({"blob_id": spa_blob["id"]}));
+    assert_eq!(
+        spa_side.rows["background_jobs"].as_array().unwrap().len(),
+        1
+    );
+    let mut purge: Value = serde_json::from_str(classic_jobs[0].as_str().unwrap()).unwrap();
+    assert_eq!(purge["job_class"], "ActiveStorage::PurgeJob");
+    // Skipping the analysis enqueue also skips its autoincremented job ID.
+    purge["id"] = json!(purge["id"].as_i64().unwrap() - 1);
+    classic_jobs[0] = json!(purge.to_string());
+    assert_eq!(
+        spa_side.rows, classic_side.rows,
+        "rows including prepared metadata and the shared purge lifecycle"
+    );
+    assert_eq!(spa_side.frames, classic_side.frames, "frames");
 
     let Some(a) = app().await else { return };
     let mut b = a.sign_in(DAVID).await;

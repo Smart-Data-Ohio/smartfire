@@ -29,6 +29,7 @@ import type { ThreadList } from "../gen/ThreadList.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkList } from "../gen/WorkList.ts";
+import type { WorkspaceBranding } from "../gen/WorkspaceBranding.ts";
 import * as activity from "./activity.ts";
 import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
@@ -63,6 +64,7 @@ import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 import * as work from "./work.ts";
+import { setWorkspaceBranding } from "./workspace.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -155,6 +157,8 @@ export const mutations = {
     }));
   },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
+  setWorkspaceBranding: (branding: WorkspaceBranding) =>
+    apply((state) => setWorkspaceBranding(state, branding)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
