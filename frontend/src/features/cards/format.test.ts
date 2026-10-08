@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ago, closesLabel, compactCount, eventTile, eventWhen, hostOf, percent } from "./format.ts";
+import {
+  ago,
+  closesLabel,
+  compactCount,
+  eventTile,
+  eventWhen,
+  hostOf,
+  localEventWhen,
+  percent,
+} from "./format.ts";
 
 const NOW = Date.parse("2026-10-06T12:00:00.000Z");
 
@@ -49,6 +58,34 @@ describe("card formatting", () => {
   it("keeps each time in one piece", () => {
     expect(eventWhen("2026-10-08T15:00:00Z", null, "America/New_York")).toBe(
       "Thu, Oct 8, 2026 · 11:00\u00a0AM\u00a0EDT",
+    );
+  });
+
+  it("reads a Rails zone name as its IANA zone, not as an unknown one", () => {
+    // Two zones half a day apart, so a fall back to the viewer's own can't pass for either.
+    expect(spaced(eventWhen("2026-10-08T15:00:00Z", null, "Eastern Time (US & Canada)"))).toBe(
+      "Thu, Oct 8, 2026 · 11:00 AM EDT",
+    );
+    expect(spaced(eventWhen("2026-10-08T15:00:00Z", null, "Tokyo"))).toBe(
+      "Fri, Oct 9, 2026 · 12:00 AM GMT+9",
+    );
+    expect(eventTile("2026-10-09T02:30:00Z", "Eastern Time (US & Canada)")).toEqual({
+      month: "Oct",
+      day: "8",
+    });
+    expect(eventTile("2026-10-08T15:30:00Z", "Tokyo")).toEqual({ month: "Oct", day: "9" });
+  });
+
+  it("shows an event in the viewer's own zone without naming it", () => {
+    const viewer = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const named = spaced(eventWhen("2026-10-08T15:00:00Z", "2026-10-08T15:45:00Z", viewer));
+    const local = spaced(localEventWhen("2026-10-08T15:00:00Z", "2026-10-08T15:45:00Z"));
+
+    // The same times as in the viewer's zone by name, less the name after the last one.
+    expect(named.startsWith(local)).toBe(true);
+    expect(local).toMatch(/[AP]M$/);
+    expect(eventTile("2026-10-08T15:00:00Z", null)).toEqual(
+      eventTile("2026-10-08T15:00:00Z", viewer),
     );
   });
 

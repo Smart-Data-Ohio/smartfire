@@ -29,7 +29,7 @@ async function openKitchenSink(page: Page, look: Look, errors: string[]) {
     (appearance) => {
       localStorage.setItem("smartfire.appearance", JSON.stringify(appearance));
     },
-    { theme: look.theme, density: look.density, motion: look.motion },
+    { themeOverride: look.theme, density: look.density, motion: look.motion },
   );
 
   await page.goto("/app/_kitchen-sink");
