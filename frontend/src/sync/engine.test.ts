@@ -749,6 +749,71 @@ describe("resync", () => {
 
         expect(store.getState().threadTimelines[1]?.ids).toEqual([6, 7, 8]);
         expect(store.getState().threadPanes[1]?.status).toBe("ready");
+
+        // The reply is in view: a later resync asks for the newest replies again.
+        const before = (yield* api.requests).length;
+
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+
+        const pages = (yield* api.requests)
+          .slice(before)
+          .filter((request) => request.path === "/threads/1/messages");
+
+        expect(pages[0]?.query).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("keeps a permalink's reply pending through a resync that fails to load it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const entered = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let focused = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1", boardDetail());
+        yield* api.route("GET /threads/1/messages", (request) => {
+          if (request.query?.around !== "7") {
+            return Effect.succeed(threadReplies([20, 21]));
+          }
+
+          focused += 1;
+
+          if (focused === 1) {
+            return Effect.andThen(
+              Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+              Effect.succeed(threadReplies([6, 7, 8])),
+            );
+          }
+
+          return focused === 2
+            ? Effect.fail(new ServerError({ status: 500, message: "boom" }))
+            : Effect.succeed(threadReplies([6, 7, 8]));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        const open = yield* Effect.forkChild(threadActions.open(1, 7));
+
+        yield* Deferred.await(entered);
+        // The resync takes over the permalink's load, and its page around the reply fails.
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(open);
+        expect(store.getState().threadTimelines[1]?.status).toBe("error");
+
+        // The next resync still opens around the reply, not at the newest replies.
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+
+        expect(focused).toBe(3);
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([6, 7, 8]);
+        expect(store.getState().threadTimelines[1]?.status).toBe("ready");
       }),
     ),
   );
