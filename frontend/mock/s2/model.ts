@@ -39,6 +39,8 @@ export const DEFAULT_AUTO_ARCHIVE_MINUTES = 1440;
 export interface ThreadRecord {
   readonly id: number;
   readonly roomId: number;
+  isBoard?: boolean;
+  updatedAt?: string;
   /** `null` once the parent message is deleted. */
   parentMessageId: number | null;
   readonly creatorId: number;
@@ -246,7 +248,7 @@ export function threadStatus(thread: ThreadRecord, now: number): ThreadStatus {
 
   const archiveAt = Date.parse(thread.lastActivityAt) + thread.autoArchiveAfterMinutes * 60_000;
 
-  return thread.closed || archiveAt <= now ? "closed" : "active";
+  return thread.closed || (!thread.isBoard && archiveAt <= now) ? "closed" : "active";
 }
 
 /** Replies that count: not system notes, not still streaming. */
@@ -267,7 +269,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
-    work: workFacts(thread.work),
+    work: workFacts(thread.work, thread.messages.length),
   };
 }
 

@@ -1,5 +1,6 @@
 import { useMatchRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import {
   closeStep,
   isPaneShowing,
@@ -43,9 +44,11 @@ export function useRightPaneView(): RightPaneView | null {
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
   // The notification URL is the room with its header menu open, never under a side pane. Read
   // at render, so the conversation is not inert when the menu mounts and takes focus.
+  const posting = matchRoute({ to: "/r/$roomId/posts/new" }) !== false;
   const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   return selectRightPaneView({
+    newBoardPost: posting,
     threadId: params.threadId ?? null,
     newThreadParent: drafting ? (search.parent ?? null) : null,
     routePane,
@@ -71,6 +74,7 @@ export function useRoomPaneLifecycle(roomId: number): void {
   const params = useParams({ strict: false });
   const matchRoute = useMatchRoute();
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
+  const posting = matchRoute({ to: "/r/$roomId/posts/new" }) !== false;
   const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   // Browser Back and room changes must not leave a URL pane as a local pane on the base room.
@@ -86,10 +90,10 @@ export function useRoomPaneLifecycle(roomId: number): void {
   // on the notification URL (see useRightPaneView); this forgets it, so it doesn't reappear when
   // the menu closes.
   useEffect(() => {
-    if (notifying) {
+    if (notifying || posting) {
       openPane(null);
     }
-  }, [notifying]);
+  }, [notifying, posting]);
 
   useEffect(() => () => clearRoutePane(roomId), [roomId]);
 }
@@ -102,7 +106,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
   const returnPane = useRoutePaneReturn(roomId);
 
   const leaveThread = () => {
-    void navigate({ to: "/r/$roomId", params: { roomId } });
+    void navigate({ to: "/r/$roomId", params: { roomId }, search: parseBoardSearch });
   };
 
   return {
@@ -115,6 +119,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       void navigate({
         to: "/r/$roomId/t/$threadId",
         params: { roomId, threadId },
+        search: parseBoardSearch,
         replace: options?.replace ?? false,
       });
     },
@@ -128,7 +133,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
           const to = paneRoute(returnPane);
 
           if (to !== null) {
-            void navigate({ to, params: { roomId } });
+            void navigate({ to, params: { roomId }, search: parseBoardSearch });
           }
         }
       } else if (step === "close-pane") {
@@ -162,7 +167,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
           openPane(pane);
           leaveThread();
         } else {
-          void navigate({ to, params: { roomId } });
+          void navigate({ to, params: { roomId }, search: parseBoardSearch });
         }
 
         return;

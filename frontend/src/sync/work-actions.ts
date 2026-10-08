@@ -17,6 +17,7 @@ import type { WorkStatus } from "../gen/WorkStatus.ts";
 import { mutations, store } from "../store/store.ts";
 import { captureWorkRead, optimisticFacts, workDetailStale, workListOf } from "../store/work.ts";
 import { keyedSerial } from "./serial.ts";
+import { settledDetail } from "./settle.ts";
 
 /** Loads (or reloads) a filter's list; a failure lands as the list's error. */
 export const loadList = Effect.fn("work.loadList")(function* (filter: WorkFilter) {
@@ -58,7 +59,7 @@ export const refresh = Effect.fn("work.refresh")(function* (threadId: number) {
 
       const detail = yield* fetchThread(threadId);
 
-      mutations.loadThreadDetail(detail, read);
+      mutations.loadThreadDetail(detail, read.since, read);
 
       const after = store.getState();
 
@@ -106,7 +107,6 @@ const write = <E, R>(
   serial.run(
     threadId,
     Effect.gen(function* () {
-      const read = captureWorkRead(store.getState());
       const before = store.getState().threads[threadId]?.work ?? null;
       const optimistic = shown === null ? undefined : shown(before);
 
@@ -122,12 +122,14 @@ const write = <E, R>(
         }
       });
 
-      const detail = yield* request(before).pipe(
+      const reply = yield* settledDetail(request(before), (detail, _since, read) =>
+        mutations.landWorkReply(detail, optimistic, read),
+      ).pipe(
         Effect.tapError(() => rollBack),
         Effect.onInterrupt(() => rollBack),
       );
 
-      mutations.landWorkReply(detail, optimistic, read);
+      const detail = reply.answer;
 
       if (store.getState().work.overlays[threadId] !== undefined) {
         // An outdated reply left no confirmed copy of this successful local change.
@@ -137,6 +139,16 @@ const write = <E, R>(
 
           mutations.landWorkReply(copy, optimistic, read);
         } while (store.getState().work.overlays[threadId] !== undefined);
+      }
+
+      const current = store.getState().threads[threadId]?.work;
+
+      if (
+        current != null &&
+        detail.thread.work !== null &&
+        current.updatedAt > detail.thread.work.updatedAt
+      ) {
+        yield* refresh(threadId);
       }
 
       return detail;
@@ -196,4 +208,9 @@ export const handOff = Effect.fn("work.handOff")(function* (
   body: CreateWorkHandoff,
 ) {
   return yield* write(threadId, null, () => api.handOffWork(threadId, body));
+});
+
+/** Updates board work fields through the same serialized write path as the work controls. */
+export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
+  return yield* write(threadId, null, () => api.updateWork(threadId, body));
 });

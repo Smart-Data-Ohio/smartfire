@@ -7,6 +7,7 @@
 
 pub mod analyze;
 pub mod blob;
+pub mod branding;
 pub mod content_types;
 pub mod disk;
 pub mod disposition;

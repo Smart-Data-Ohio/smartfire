@@ -154,7 +154,13 @@ describe("the thread pane's work section", () => {
         ...state,
         threadPanes: {
           ...state.threadPanes,
-          [WORK.agentOwned]: { status: "ready", error: null, permissions },
+          [WORK.agentOwned]: {
+            status: "ready",
+            error: null,
+            permissions,
+            work: null,
+            workFacts: null,
+          },
         },
       })),
     );

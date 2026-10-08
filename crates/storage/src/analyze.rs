@@ -55,6 +55,10 @@ impl Analyzer {
 /// Files libvips can't read yield `{}`.
 fn image_metadata(path: &Path) -> Json {
     let Ok(image) = Image::open_sequential(path) else { return Json::object() };
+    image_dimensions(&image)
+}
+
+pub(crate) fn image_dimensions(image: &Image) -> Json {
     let rotated = image
         .get_string("exif-ifd0-Orientation")
         .is_some_and(|o| ["Right-top", "Left-bottom", "Top-right", "Bottom-left"].iter().any(|r| o.contains(r)));
