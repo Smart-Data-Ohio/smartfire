@@ -280,7 +280,9 @@ async fn board_lists_posts_and_new_posts_redirect_to_the_spa() {
             reply.location(),
             Some(to(&format!("/app/r/{BOARD}?{filter}")).as_str())
         );
-        assert!(!redirected_to_spa(&david.get("/work").await));
+        let reply = david.get("/work").await;
+        assert_eq!(reply.status, StatusCode::FOUND);
+        assert_eq!(reply.location(), Some(to("/app/work").as_str()));
         let opted_out = post_ui(
             &mut david,
             &[
