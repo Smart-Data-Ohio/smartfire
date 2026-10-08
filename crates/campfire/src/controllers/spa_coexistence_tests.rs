@@ -773,6 +773,8 @@ const WATERCOOLER: i64 = 486777696;
 const DESIGNERS_ROOM: i64 = 654632876;
 const LAUNCH_THREAD: i64 = 1;
 const BOARD_THREAD: i64 = 4;
+/// The release board. Thread 4 lives here. Kevin is not a member; David is.
+const RELEASE_BOARD: i64 = 699448332;
 const SPA_BOOT: &str = "<script type=\"application/json\" id=\"boot\"";
 const CLASSIC_SHELL: &str = "data-controller=\"local-time lightbox";
 
@@ -853,6 +855,22 @@ async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
     assert_eq!(
         inaccessible.location(),
         Some(to(&format!("/app/r/{DESIGNERS_ROOM}?thread={BOARD_THREAD}")).as_str())
+    );
+    // The thread belongs to this room. David can open it. Kevin cannot, because he
+    // isn't a member: dropping the membership check would send him to the thread.
+    let member = david
+        .get(&format!("/rooms/{RELEASE_BOARD}?thread={BOARD_THREAD}"))
+        .await;
+    assert_eq!(
+        member.location(),
+        Some(to(&format!("/app/r/{RELEASE_BOARD}/t/{BOARD_THREAD}")).as_str())
+    );
+    let non_member = kevin
+        .get(&format!("/rooms/{RELEASE_BOARD}?thread={BOARD_THREAD}"))
+        .await;
+    assert_eq!(
+        non_member.location(),
+        Some(to(&format!("/app/r/{RELEASE_BOARD}?thread={BOARD_THREAD}")).as_str())
     );
     let (thread_id, message_id) = a
         .db()
@@ -939,6 +957,82 @@ async fn settings_and_profile_aliases_follow_through_for_each_ui() {
     assert!(
         page.text().contains("Jason"),
         "the person page, not the viewer's profile"
+    );
+}
+
+/// A pending flash, an XHR, or a Turbo frame keeps the settings and own-profile aliases
+/// classic. The same URLs go to the SPA on an ordinary navigation once nothing is waiting.
+#[tokio::test]
+async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frames() {
+    let Some(a) = enabled().await else { return };
+    let closed = WATERCOOLER;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut b = a.sign_in(DAVID).await;
+    let settings = format!("/rooms/{closed}/settings");
+    let edit = format!("/rooms/closeds/{closed}/edit?classic=1");
+    let profile = format!("/users/{DAVID}/profile");
+    let guards = [
+        ("xhr", "x-requested-with", "XMLHttpRequest"),
+        ("turbo", "turbo-frame", "alias"),
+    ];
+    for (label, name, value) in guards {
+        let settings_reply = b
+            .send(Req::new(Method::GET, &settings).header(name, value))
+            .await;
+        assert_eq!(
+            settings_reply.location(),
+            Some(to(&edit).as_str()),
+            "{label}"
+        );
+        let profile_reply = b
+            .send(Req::new(Method::GET, &profile).header(name, value))
+            .await;
+        assert_eq!(
+            profile_reply.status,
+            StatusCode::OK,
+            "{label}: {:?}",
+            profile_reply.location()
+        );
+        assert!(!redirected_to_spa(&profile_reply), "{label}");
+        let body = profile_reply.text();
+        assert!(!body.contains(SPA_BOOT), "{label} opened the SPA");
+        // A Turbo frame renders the frame layout, not the application shell.
+        if label == "turbo" {
+            assert!(body.contains("<turbo-frame"), "{label}: {body}");
+        } else {
+            assert!(
+                body.contains(CLASSIC_SHELL),
+                "{label} rendered the classic profile"
+            );
+        }
+    }
+
+    let saved = b
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    let flashed = b.get(&settings).await;
+    assert_eq!(flashed.location(), Some(to(&edit).as_str()));
+    let shown = b.get(&edit).await;
+    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
+    assert!(shown.text().contains(CLASSIC_SHELL));
+    assert!(redirected_to_spa(&b.get(&settings).await));
+
+    let saved = b
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    let flashed_profile = b.get(&profile).await;
+    assert_eq!(
+        flashed_profile.status,
+        StatusCode::OK,
+        "{:?}",
+        flashed_profile.location()
+    );
+    assert!(flashed_profile.text().contains(CLASSIC_SHELL));
+    assert_eq!(
+        b.get(&profile).await.location(),
+        Some(to("/app/settings").as_str())
     );
 }
 

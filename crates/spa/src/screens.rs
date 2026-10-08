@@ -426,10 +426,13 @@ pub struct ConfirmedRoomQuery {
     pub message: Option<u64>,
 }
 
-/// The first well-formed `thread` and `message_id` in `query`. Names and values are
-/// percent-decoded (`+` is a space) before the id check, so `thread=%39` is thread 9. The first
-/// well-formed id wins; a later duplicate of that name is ignored, and a value that doesn't
-/// decode to an id is skipped so a later one can still win.
+/// The `thread` and `message_id` a classic room page would open from `query`.
+///
+/// Names and values are percent-decoded (`+` is a space) before the id check, so `thread=%39`
+/// is thread 9. `thread` is the first value, which is what the thread panel reads with
+/// `URLSearchParams.get`. `message_id` is the last value, which is what the room controller
+/// reads from params. Only that value is parsed: another duplicate is not a fallback when the
+/// effective one isn't an id.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct RoomQueryIds {
     pub thread: Option<u64>,
@@ -445,15 +448,11 @@ pub fn room_show_id(path: &str) -> Option<i64> {
 }
 
 pub fn room_query_ids(query: Option<&str>) -> RoomQueryIds {
-    let mut ids = RoomQueryIds::default();
-    for pair in query_pairs(query) {
-        match pair.class {
-            PairClass::Thread(id) if ids.thread.is_none() => ids.thread = Some(id),
-            PairClass::Message(id) if ids.message.is_none() => ids.message = Some(id),
-            _ => {}
-        }
+    let parsed = parse_room_query(query);
+    RoomQueryIds {
+        thread: parsed.thread,
+        message: parsed.message,
     }
-    ids
 }
 
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.
@@ -497,44 +496,25 @@ fn spa_url_inner(
 
 /// Notification links open a room as `/rooms/:id?thread=&message_id=`. The SPA reads a thread at
 /// `/app/r/:id/t/:thread` (`?m=` scrolls to a reply) and a timeline message at `/app/r/:id/m/:id`.
-/// `None` when the query has neither as a record id the caller accepts, so the plain room URL
-/// keeps the query.
+/// `None` when neither effective value is a record id the caller accepts, so the plain room URL
+/// keeps the query. A duplicate of a rejected value is not tried.
 fn room_notification_url(
     spa: &str,
     query: Option<&str>,
     confirmed: Option<ConfirmedRoomQuery>,
 ) -> Option<String> {
-    let allows = |class: PairClass| match (confirmed, class) {
-        (None, PairClass::Thread(_) | PairClass::Message(_)) => true,
-        (Some(confirmed), PairClass::Thread(id)) => confirmed.thread == Some(id),
-        (Some(confirmed), PairClass::Message(id)) => confirmed.message == Some(id),
-        _ => false,
+    let parsed = parse_room_query(query);
+    let accepted = |id, message: bool| match confirmed {
+        None => true,
+        Some(confirmed) if message => confirmed.message == Some(id),
+        Some(confirmed) => confirmed.thread == Some(id),
     };
-    let mut thread = None;
-    let mut message = None;
-    let mut rest = Vec::new();
-    for pair in query_pairs(query) {
-        if pair.class == PairClass::Classic {
-            continue;
-        }
-        if matches!(pair.class, PairClass::Thread(_)) && thread.is_none() && allows(pair.class) {
-            thread = Some(pair.id());
-            continue;
-        }
-        if matches!(pair.class, PairClass::Message(_)) && message.is_none() && allows(pair.class) {
-            message = Some(pair.id());
-            continue;
-        }
-        rest.push(pair.raw);
-    }
+    let thread = parsed.thread.filter(|id| accepted(*id, false));
+    let message = parsed.message.filter(|id| accepted(*id, true));
     if thread.is_none() && message.is_none() {
         return None;
     }
-    rest.retain(|pair| {
-        let name = pair.split_once('=').map_or(pair.as_str(), |(name, _)| name);
-        let name = query_component(name).unwrap_or_else(|| name.to_string());
-        name != "thread" && name != "message_id"
-    });
+    let mut rest = parsed.rest;
     let mut url = spa.to_string();
     match (thread, message) {
         (Some(thread), message) => {
@@ -557,51 +537,36 @@ fn room_notification_url(
     Some(url)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum PairClass {
-    Classic,
-    Thread(u64),
-    Message(u64),
-    Other,
+/// `thread` (first value) and `message_id` (last value) from `query`, plus every other pair.
+/// `classic` is dropped. A parameter whose effective value isn't an id stays `None`.
+struct ParsedRoomQuery {
+    thread: Option<u64>,
+    message: Option<u64>,
+    rest: Vec<String>,
 }
 
-struct QueryPair {
-    raw: String,
-    class: PairClass,
-}
-
-impl QueryPair {
-    fn id(&self) -> u64 {
-        match self.class {
-            PairClass::Thread(id) | PairClass::Message(id) => id,
-            PairClass::Classic | PairClass::Other => 0,
+fn parse_room_query(query: Option<&str>) -> ParsedRoomQuery {
+    let mut thread_pair: Option<Option<u64>> = None;
+    let mut message: Option<u64> = None;
+    let mut rest = Vec::new();
+    for pair in query.unwrap_or("").split('&') {
+        if pair.is_empty() {
+            continue;
+        }
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match query_component(name).as_deref() {
+            Some("classic") => {}
+            Some("thread") if thread_pair.is_none() => thread_pair = Some(record_id(value)),
+            Some("thread") => {}
+            Some("message_id") => message = record_id(value),
+            _ => rest.push(pair.to_string()),
         }
     }
-}
-
-fn query_pairs(query: Option<&str>) -> Vec<QueryPair> {
-    query
-        .unwrap_or("")
-        .split('&')
-        .filter(|pair| !pair.is_empty())
-        .map(|pair| {
-            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-            let class = match query_component(name).as_deref() {
-                Some("classic") => PairClass::Classic,
-                Some("thread") => record_id(value)
-                    .map(PairClass::Thread)
-                    .unwrap_or(PairClass::Other),
-                Some("message_id") => record_id(value)
-                    .map(PairClass::Message)
-                    .unwrap_or(PairClass::Other),
-                _ => PairClass::Other,
-            };
-            QueryPair {
-                raw: pair.to_string(),
-                class,
-            }
-        })
-        .collect()
+    ParsedRoomQuery {
+        thread: thread_pair.flatten(),
+        message,
+        rest,
+    }
 }
 
 /// A record id from a query component, percent-decoded first.

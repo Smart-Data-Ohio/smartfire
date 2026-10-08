@@ -99,13 +99,14 @@ function recordId(raw: string): string | null {
 
 /**
  * A room notification's `thread` and `message_id` query, as the SPA's thread and message routes.
- * `null` when neither is a record id, so the plain room URL keeps the query. The first well-formed
- * id wins; a later duplicate of that name is ignored, and a value that doesn't decode to an id is
- * skipped so a later one can still win. The same rules as the server translator.
+ * `null` when neither effective value is a record id, so the plain room URL keeps the query.
+ * `thread` is the first value (the classic thread panel's `URLSearchParams.get`). `message_id`
+ * is the last value (the room controller's params). Only that value is parsed; another duplicate
+ * is not a fallback when it isn't an id. The same rules as the server translator.
  */
 function roomNotificationUrl(spa: string, search: string): string | null {
-  let thread: string | undefined;
-  let message: string | undefined;
+  let threadRaw: string | undefined;
+  let messageRaw: string | undefined;
   const rest: string[] = [];
 
   for (const pair of search.replace(/^\?/, "").split("&")) {
@@ -122,22 +123,25 @@ function roomNotificationUrl(spa: string, search: string): string | null {
       continue;
     }
 
-    const id = recordId(rawValue);
-
-    if (name === "thread" && thread === undefined && id !== null) {
-      thread = id;
+    if (name === "thread") {
+      if (threadRaw === undefined) {
+        threadRaw = rawValue;
+      }
 
       continue;
     }
 
-    if (name === "message_id" && message === undefined && id !== null) {
-      message = id;
+    if (name === "message_id") {
+      messageRaw = rawValue;
 
       continue;
     }
 
     rest.push(pair);
   }
+
+  const thread = threadRaw === undefined ? undefined : (recordId(threadRaw) ?? undefined);
+  const message = messageRaw === undefined ? undefined : (recordId(messageRaw) ?? undefined);
 
   if (thread === undefined && message === undefined) {
     return null;
@@ -167,7 +171,7 @@ function roomNotificationUrl(spa: string, search: string): string | null {
 
 /**
  * `search` less any `classic` parameter, keeping every other pair as it was written.
- * The server's room redirect does the same, so a broken escape (`thread=%ZZ`) stays `%ZZ`.
+ * The server's room redirect does the same when it leaves the query on the plain room URL.
  */
 function rawKeptSearch(search: string): string {
   const kept = search

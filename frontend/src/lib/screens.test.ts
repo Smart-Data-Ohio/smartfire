@@ -96,14 +96,21 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12", "?thread=nope&x=1")).toBe("/app/r/12?thread=nope&x=1");
   });
 
-  it("decodes room notification ids and keeps the first one", () => {
+  it("decodes room notification ids and uses the classic duplicate", () => {
     expect(spaUrlFor("/rooms/12", "?thread=%39")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("/rooms/12", "?message_id=%34")).toBe("/app/r/12/m/4");
     expect(spaUrlFor("/rooms/12", "?th%72ead=%39")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("/rooms/12", "?thread=9&thread=8")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("/rooms/12", "?thread=%39&thread=8")).toBe("/app/r/12/t/9");
-    expect(spaUrlFor("/rooms/12", "?thread=nope&thread=9")).toBe("/app/r/12/t/9");
-    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=5")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?thread=nope&thread=9")).toBe("/app/r/12?thread=nope&thread=9");
+    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=5")).toBe("/app/r/12/m/5");
+    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=nope")).toBe(
+      "/app/r/12?message_id=4&message_id=nope",
+    );
+    expect(spaUrlFor("/rooms/12", "?thread=9&thread=8&message_id=4&message_id=5")).toBe(
+      "/app/r/12/t/9?m=5",
+    );
+    // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins the translator.
     expect(spaUrlFor("/rooms/12", "?thread=%ZZ&x=1")).toBe("/app/r/12?thread=%ZZ&x=1");
   });
 
