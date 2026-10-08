@@ -173,6 +173,12 @@ try {
       process.env.PWA_ALLOW_PUSH_UNAVAILABLE === "1",
       `Chromium could not create a push subscription, so preservation is unproven: ${JSON.stringify(enrollment)}`,
     )
+    // Only a missing push service may be skipped: a hang, no push support, or Chromium's push
+    // service registration error. Anything else (a bad key, a script error) still fails.
+    const unavailable = enrollment.name === "Pending"
+      || enrollment.name === "NotSupportedError"
+      || (enrollment.name === "AbortError" && /push service/i.test(enrollment.message ?? ""))
+    assert.ok(unavailable, `push subscription failed for a reason other than a missing push service: ${JSON.stringify(enrollment)}`)
     await activeWorker("/app/service-worker.js")
     console.log(`PWA_PUSH_PRESERVATION_SKIPPED ${JSON.stringify(enrollment)}`)
   }
