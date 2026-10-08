@@ -1,5 +1,6 @@
-import { useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -10,6 +11,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { PostWork } from "../boards/post-work.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
@@ -18,6 +20,19 @@ import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
 const DELETED = "This thread was deleted.";
+
+/** "thread", or "post" in a board, whose threads are posts. */
+type Noun = "thread" | "post";
+
+function useNoun(roomId: number): Noun {
+  return useStore((state) =>
+    state.rooms[roomId]?.detail?.room.kind === "board" ? "post" : "thread",
+  );
+}
+
+function capitalized(noun: Noun): string {
+  return noun === "post" ? "Post" : "Thread";
+}
 
 /** The absolute URL of a thread, for "Copy link". */
 export function threadLink(roomId: number, threadId: number): string {
@@ -103,14 +118,16 @@ interface ThreadMenuProps {
   readonly roomId: number;
   readonly threadId: number;
   readonly permissions: ThreadPermissions | null;
+  readonly noun: Noun;
   readonly onRename: () => void;
+  readonly onDelete: () => void;
 }
 
 /**
  * Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock,
- * and track as work.
+ * delete, and track as work.
  */
-function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps) {
+function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
 
   const update = (body: Parameters<typeof actions.threads.update>[1], failure: string) =>
@@ -121,17 +138,29 @@ function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps
   const canLock = permissions?.canLock === true && status !== "locked";
   const canUnlock = permissions?.canUnlock === true && status === "locked";
 
+  const canDelete = permissions?.canDelete === true;
   const canConvert = permissions?.canConvertWork === true;
 
   const moderates =
-    permissions?.canRename === true || canClose || canReopen || canLock || canUnlock || canConvert;
+    permissions?.canRename === true ||
+    canClose ||
+    canReopen ||
+    canLock ||
+    canUnlock ||
+    canDelete ||
+    canConvert;
 
   return (
     <Menu
       placement="bottom-end"
-      label="Thread actions"
+      label={`${capitalized(noun)} actions`}
       trigger={(props) => (
-        <IconButton {...props} icon="more" label="Thread actions" tooltipPlacement="bottom" />
+        <IconButton
+          {...props}
+          icon="more"
+          label={`${capitalized(noun)} actions`}
+          tooltipPlacement="bottom"
+        />
       )}
     >
       <MenuItem icon="link" onSelect={() => copyLink(roomId, threadId)}>
@@ -140,39 +169,45 @@ function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps
       {moderates ? <MenuSeparator /> : null}
       {permissions?.canRename === true ? (
         <MenuItem icon="pencil" onSelect={onRename}>
-          Rename thread…
+          Rename {noun}…
         </MenuItem>
       ) : null}
       {canClose ? (
         <MenuItem
           icon="archive"
-          onSelect={() => update({ name: null, status: "closed" }, "Couldn't close the thread")}
+          onSelect={() => update({ name: null, status: "closed" }, `Couldn't close the ${noun}`)}
         >
-          Close thread
+          Close {noun}
         </MenuItem>
       ) : null}
       {canReopen ? (
         <MenuItem
           icon="rotate-ccw"
-          onSelect={() => update({ name: null, status: "active" }, "Couldn't reopen the thread")}
+          onSelect={() => update({ name: null, status: "active" }, `Couldn't reopen the ${noun}`)}
         >
-          Reopen thread
+          Reopen {noun}
         </MenuItem>
       ) : null}
       {canLock ? (
         <MenuItem
           icon="lock"
-          onSelect={() => update({ name: null, status: "locked" }, "Couldn't lock the thread")}
+          onSelect={() => update({ name: null, status: "locked" }, `Couldn't lock the ${noun}`)}
         >
-          Lock thread
+          Lock {noun}
         </MenuItem>
       ) : null}
       {canUnlock ? (
         <MenuItem
           icon="lock-open"
-          onSelect={() => update({ name: null, status: "active" }, "Couldn't unlock the thread")}
+          onSelect={() => update({ name: null, status: "active" }, `Couldn't unlock the ${noun}`)}
         >
-          Unlock thread
+          Unlock {noun}
+        </MenuItem>
+      ) : null}
+      {canDelete ? <MenuSeparator /> : null}
+      {canDelete ? (
+        <MenuItem icon="trash" tone="danger" onSelect={onDelete}>
+          Delete {noun}…
         </MenuItem>
       ) : null}
       {canConvert ? <TrackAsWorkItem threadId={threadId} /> : null}
@@ -183,10 +218,12 @@ function ThreadMenu({ roomId, threadId, permissions, onRename }: ThreadMenuProps
 /** Renames the thread: 1 to 100 characters. */
 function RenameDialog({
   threadId,
+  noun,
   open,
   onOpenChange,
 }: {
   readonly threadId: number;
+  readonly noun: Noun;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
 }) {
@@ -210,7 +247,7 @@ function RenameDialog({
     const trimmed = name.trim();
 
     if (trimmed === "" || trimmed.length > 100) {
-      setError(trimmed === "" ? "Give the thread a name." : "Keep it to 100 characters.");
+      setError(trimmed === "" ? `Give the ${noun} a name.` : "Keep it to 100 characters.");
       setAttempts((count) => count + 1);
 
       return;
@@ -234,7 +271,7 @@ function RenameDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Rename thread"
+      title={`Rename ${noun}`}
       size="sm"
       footer={
         <>
@@ -271,7 +308,7 @@ function RenameDialog({
  * A locked thread refuses every reply, moderators' too, so the composer gives way to a disabled
  * bar that says why; whoever may unlock it gets the button right there.
  */
-function LockedComposer({ threadId }: { readonly threadId: number }) {
+function LockedComposer({ threadId, noun }: { readonly threadId: number; readonly noun: Noun }) {
   const canUnlock = useStore(
     (state) => state.threadPanes[threadId]?.permissions?.canUnlock === true,
   );
@@ -282,7 +319,7 @@ function LockedComposer({ threadId }: { readonly threadId: number }) {
     setBusy(true);
     void attempt(
       actions.threads.update(threadId, { name: null, status: "active" }),
-      "Couldn't unlock the thread",
+      `Couldn't unlock the ${noun}`,
     ).then(() => setBusy(false));
   };
 
@@ -290,7 +327,7 @@ function LockedComposer({ threadId }: { readonly threadId: number }) {
     <div className="thread-locked" role="note">
       <Icon name="lock" size={16} />
       <span className="thread-locked-text">
-        <strong>This thread is locked.</strong>{" "}
+        <strong>This {noun} is locked.</strong>{" "}
         {canUnlock ? "Unlock it to allow replies." : "No one can reply."}
       </span>
       {canUnlock ? (
@@ -306,14 +343,16 @@ function LockedComposer({ threadId }: { readonly threadId: number }) {
 function ThreadFooter({
   roomId,
   threadId,
+  noun,
 }: {
   readonly roomId: number;
   readonly threadId: number;
+  readonly noun: Noun;
 }) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
 
   if (status === "locked") {
-    return <LockedComposer threadId={threadId} />;
+    return <LockedComposer threadId={threadId} noun={noun} />;
   }
 
   return (
@@ -321,11 +360,67 @@ function ThreadFooter({
       {status === "closed" ? (
         <p className="thread-composer-note">
           <Icon name="archive" size={12} />
-          This thread is closed. Replying reopens it.
+          This {noun} is closed. Replying reopens it.
         </p>
       ) : null}
       <Composer roomId={roomId} threadId={threadId} placeholder="Reply…" />
     </>
+  );
+}
+
+/** "Delete post": confirms, deletes, and goes back to the room (the board keeps its filters). */
+function DeleteDialog({
+  roomId,
+  threadId,
+  noun,
+  open,
+  onOpenChange,
+}: {
+  readonly roomId: number;
+  readonly threadId: number;
+  readonly noun: Noun;
+  readonly open: boolean;
+  readonly onOpenChange: (open: boolean) => void;
+}) {
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+
+  const remove = () => {
+    setBusy(true);
+    void attempt(actions.threads.remove(threadId), `Couldn't delete the ${noun}`).then((done) => {
+      setBusy(false);
+
+      if (done) {
+        onOpenChange(false);
+        toast({ title: `${capitalized(noun)} deleted`, tone: "success" });
+        void navigate({ to: "/r/$roomId", params: { roomId }, search: parseBoardSearch });
+      }
+    });
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      role="alertdialog"
+      size="sm"
+      title={`Delete ${noun}`}
+      description={
+        noun === "post"
+          ? "Delete this post and its discussion? This can't be undone."
+          : "Delete this thread and its replies? This can't be undone."
+      }
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" loading={busy} onClick={remove}>
+            Delete {noun}
+          </Button>
+        </>
+      }
+    />
   );
 }
 
@@ -356,6 +451,8 @@ export function ThreadPane({
 
   const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const noun = useNoun(roomId);
   const status = pane?.status ?? "loading";
   // A reply's permalink: the pane opens around it and highlights it.
   const focusMessageId = useSearch({ strict: false }).m ?? null;
@@ -392,7 +489,10 @@ export function ThreadPane({
     const deleted = message === DELETED;
 
     return (
-      <PaneFrame title="Thread" subtitle={<ThreadSubtitle roomId={roomId} threadId={threadId} />}>
+      <PaneFrame
+        title={capitalized(noun)}
+        subtitle={<ThreadSubtitle roomId={roomId} threadId={threadId} />}
+      >
         <PaneError
           message={message}
           onRetry={
@@ -407,7 +507,7 @@ export function ThreadPane({
 
   return (
     <PaneFrame
-      title={thread === undefined ? "Thread" : threadTitle(thread)}
+      title={thread === undefined ? capitalized(noun) : threadTitle(thread)}
       subtitle={<ThreadSubtitle roomId={roomId} threadId={threadId} />}
       tools={
         status === "ready" ? (
@@ -417,13 +517,19 @@ export function ThreadPane({
               roomId={roomId}
               threadId={threadId}
               permissions={pane?.permissions ?? null}
+              noun={noun}
               onRename={() => setRenaming(true)}
+              onDelete={() => setDeleting(true)}
             />
           </>
         ) : null
       }
-      toolbar={status === "ready" && tracked ? <WorkBar threadId={threadId} /> : undefined}
-      footer={<ThreadFooter roomId={roomId} threadId={threadId} />}
+      toolbar={
+        status === "ready" && tracked && noun !== "post" ? (
+          <WorkBar threadId={threadId} />
+        ) : undefined
+      }
+      footer={<ThreadFooter roomId={roomId} threadId={threadId} noun={noun} />}
     >
       <ThreadTimeline
         threadId={threadId}
@@ -431,8 +537,16 @@ export function ThreadPane({
         replyCount={thread?.replyCount ?? 0}
         ready={status === "ready"}
         focusMessageId={focusMessageId}
+        intro={noun === "post" ? <PostWork threadId={threadId} /> : undefined}
       />
-      <RenameDialog threadId={threadId} open={renaming} onOpenChange={setRenaming} />
+      <RenameDialog threadId={threadId} noun={noun} open={renaming} onOpenChange={setRenaming} />
+      <DeleteDialog
+        roomId={roomId}
+        threadId={threadId}
+        noun={noun}
+        open={deleting}
+        onOpenChange={setDeleting}
+      />
       <WorkLive threadId={threadId} />
     </PaneFrame>
   );

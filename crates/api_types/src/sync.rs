@@ -154,12 +154,15 @@ pub enum SyncPayload {
     ThreadIndicator(ThreadIndicatorChanged),
     /// On `room:<id>` only: a thread was started there (a new thread has no followers yet but
     /// its creator, whose tab has the `POST` response). New: the classic app shows new threads
-    /// only through the parent's indicator. Board posts don't publish it.
+    /// only through the parent's indicator. A board post publishes it too, however it was created
+    /// (the JSON twin of the classic board-row prepend).
     #[serde(rename = "thread.created")]
     ThreadCreated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was renamed, closed, reopened, locked or
     /// unlocked, or its reply count or last activity moved, or its work changed (status, owner,
-    /// result, run URL, links, a handoff; see [`crate::WorkFacts`]). New, as `thread.created`.
+    /// result, run URL, links, a handoff, a board post's tags; see [`crate::WorkFacts`]). New, as
+    /// `thread.created`; on a board it is the JSON twin of the board-row replace, so a board
+    /// post's reply also publishes it (its `replyCount` and `lastActivityAt` moved).
     #[serde(rename = "thread.updated")]
     ThreadUpdated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was deleted. Connections following

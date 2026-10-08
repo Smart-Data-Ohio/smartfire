@@ -1,8 +1,7 @@
 /**
  * The S4 work seed: tracked threads in the rooms the earlier seeds made (owned by people, by
  * Ember the agent, by a deactivated person, and unassigned), links of every kind, a result, a
- * history with each entry kind, agent steps, and board posts in a board the viewer can't open
- * here.
+ * history with each entry kind, agent steps, and board posts that open in the SPA.
  */
 
 import type { AgentStep } from "../../src/gen/AgentStep.ts";
@@ -10,6 +9,7 @@ import type { WorkHistoryEntry } from "../../src/gen/WorkHistoryEntry.ts";
 import type { WorkLink } from "../../src/gen/WorkLink.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import { type Mentionable, renderMarkdown } from "../markdown.ts";
+import type { ThreadRecord } from "../s2/model.ts";
 import { DEFAULT_AUTO_ARCHIVE_MINUTES, iso } from "../s2/model.ts";
 import { THREAD_IDS } from "../s2/seed.ts";
 import { S3_THREAD_IDS } from "../s3/seed.ts";
@@ -493,13 +493,27 @@ export function seedWork(world: World, now: number): World {
     thread.work = buildWork(world, state, thread.roomId, threadId, seed, now, people);
   }
 
+  const board = world.rooms.get(ROOM_IDS.general);
+
+  if (board === undefined) throw new Error("Board seed missing");
+
+  world.rooms.set(S4_BOARD.roomId, {
+    ...board,
+    room: { ...board.room, id: S4_BOARD.roomId, kind: "board", name: S4_BOARD.name },
+    memberIds: [...board.memberIds],
+    membership: { ...board.membership, id: 9901, roomId: S4_BOARD.roomId },
+    messages: [],
+    boardDigest: null,
+  });
+
   for (const post of BOARD_POSTS) {
     const createdAt = iso(now - post.createdAgo);
     const updatedAt = iso(now - post.work.updatedAgo);
 
-    state.boardPosts.push({
+    const thread: ThreadRecord = {
       id: post.id,
       roomId: S4_BOARD.roomId,
+      isBoard: true,
       parentMessageId: null,
       creatorId: post.creatorId,
       name: post.name,
@@ -513,7 +527,10 @@ export function seedWork(world: World, now: number): World {
       memberIds: new Set([post.creatorId]),
       viewerMembership: null,
       work: buildWork(world, state, S4_BOARD.roomId, post.id, post.work, now, people),
-    });
+    };
+
+    state.boardPosts.push(thread);
+    world.threads.set(thread.id, thread);
   }
 
   return world;

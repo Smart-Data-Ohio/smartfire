@@ -960,3 +960,193 @@ async fn a_board_posts_owner_may_rename_it_and_boards_take_no_threads() {
     );
     server.abort();
 }
+
+#[tokio::test]
+async fn board_post_permissions_follow_each_classic_role_and_lifecycle() {
+    use campfire_db::{NewUser, Room, ThreadMembership, User};
+
+    let a = app(true)
+        .await
+        .expect("the default frozen seed is required");
+    let other = a
+        .db()
+        .write(|tx| {
+            let other = User::create(
+                tx,
+                NewUser {
+                    name: "Board reader".into(),
+                    email_address: Some("board-reader@example.test".into()),
+                    ..Default::default()
+                },
+            )?;
+            // Give each authority to a different person. Jason is a human member who created
+            // the board, JZ authored its post, Kevin owns it, and David is an administrator.
+            tx.conn().execute("UPDATE users SET role = 0 WHERE id = ?", [JASON])?;
+            tx.conn().execute("UPDATE rooms SET creator_id = ? WHERE id = ?", [JASON, BOARD])?;
+            Room::find(tx.conn(), BOARD)?.grant_to(tx, &[KEVIN, JZ, other.id])?;
+            tx.conn().execute(
+                "UPDATE channel_threads SET creator_id = ?, work_owner_id = ?, closed_at = NULL, locked_at = NULL WHERE id = ?",
+                [JZ, KEVIN, BOARD_THREAD],
+            )?;
+            tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ?", [BOARD_THREAD])?;
+            Ok(other.id)
+        })
+        .await
+        .unwrap();
+    let path = format!("/api/v1/threads/{BOARD_THREAD}");
+    let flags = |permissions: api::ThreadPermissions| {
+        [
+            permissions.can_rename,
+            permissions.can_close,
+            permissions.can_reopen,
+            permissions.can_lock,
+            permissions.can_unlock,
+            permissions.can_delete,
+            permissions.can_convert_work,
+            permissions.can_manage_work,
+            permissions.can_update_work_status,
+            permissions.can_assign_work,
+            permissions.can_remove_work,
+        ]
+    };
+    // Rename, close, reopen, lock, unlock, delete, convert, manage, status, assign, remove.
+    for (user, wanted) in [
+        (
+            JZ,
+            [
+                true, false, false, false, false, false, false, true, true, true, false,
+            ],
+        ),
+        (
+            KEVIN,
+            [
+                true, false, false, false, false, false, false, true, true, false, false,
+            ],
+        ),
+        (
+            JASON,
+            [
+                true, true, false, true, false, true, false, true, true, true, false,
+            ],
+        ),
+        (
+            DAVID,
+            [
+                true, true, false, true, false, true, false, true, true, true, false,
+            ],
+        ),
+        (other, [false; 11]),
+    ] {
+        let mut browser = a.sign_in(user).await;
+        let detail: api::ThreadDetail = parse(&browser.send(get(&path)).await);
+        assert_eq!(flags(detail.permissions), wanted, "user {user}: {detail:?}");
+    }
+    for user in [JZ, KEVIN, other] {
+        let mut browser = a.sign_in(user).await;
+        for status in ["closed", "locked"] {
+            let reply = browser
+                .write(json_body(Method::PATCH, &path, &json!({"status": status})))
+                .await;
+            assert_eq!(
+                reply.status,
+                StatusCode::FORBIDDEN,
+                "user {user}, {status}: {}",
+                reply.text()
+            );
+        }
+        let reply = browser
+            .write(json_body(Method::DELETE, &path, &json!({})))
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::FORBIDDEN,
+            "user {user}: {}",
+            reply.text()
+        );
+    }
+
+    let mut creator = a.sign_in(JASON).await;
+    let reply = creator
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"status": "closed"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    // Closing does not join the moderator. Even author/creator/admin authority cannot reopen
+    // a closed post until the person joins it; a joined ordinary member can reopen it.
+    for user in [JZ, JASON, DAVID, other] {
+        let mut browser = a.sign_in(user).await;
+        let detail: api::ThreadDetail = parse(&browser.send(get(&path)).await);
+        assert!(!detail.permissions.can_reopen, "user {user}: {detail:?}");
+        let reply = browser
+            .write(json_body(
+                Method::PATCH,
+                &path,
+                &json!({"status": "active"}),
+            ))
+            .await;
+        assert_eq!(
+            reply.status,
+            StatusCode::FORBIDDEN,
+            "user {user}: {}",
+            reply.text()
+        );
+    }
+    a.db()
+        .write(move |tx| ThreadMembership::join(tx, BOARD_THREAD, other).map(|_| ()))
+        .await
+        .unwrap();
+    let mut reader = a.sign_in(other).await;
+    let detail: api::ThreadDetail = parse(&reader.send(get(&path)).await);
+    assert!(detail.permissions.can_reopen, "{detail:?}");
+    assert!(!detail.permissions.can_manage_work);
+    let reply = reader
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"status": "active"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+
+    let reply = creator
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"status": "locked"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&reader.send(get(&path)).await);
+    assert!(
+        !detail.permissions.can_reopen && !detail.permissions.can_unlock,
+        "{detail:?}"
+    );
+    let reply = reader
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"status": "active"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::FORBIDDEN, "{}", reply.text());
+    let detail: api::ThreadDetail = parse(&creator.send(get(&path)).await);
+    assert!(
+        detail.permissions.can_unlock && !detail.permissions.can_lock,
+        "{detail:?}"
+    );
+    let reply = creator
+        .write(json_body(
+            Method::PATCH,
+            &path,
+            &json!({"status": "active"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let reply = creator
+        .write(json_body(Method::DELETE, &path, &json!({})))
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+}

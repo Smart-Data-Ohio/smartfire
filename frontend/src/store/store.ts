@@ -11,6 +11,7 @@ import type { AgentApprovalPage } from "../gen/AgentApprovalPage.ts";
 import type { AgentDirectory } from "../gen/AgentDirectory.ts";
 import type { AgentLedgerPage } from "../gen/AgentLedgerPage.ts";
 import type { AgentProfile } from "../gen/AgentProfile.ts";
+import type { BoardListing } from "../gen/BoardListing.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { HuddlePresenceList } from "../gen/HuddlePresenceList.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
@@ -32,6 +33,7 @@ import type { WorkspaceBranding } from "../gen/WorkspaceBranding.ts";
 import * as activity from "./activity.ts";
 import * as agents from "./agents.ts";
 import * as approvals from "./approvals.ts";
+import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
 import * as ledger from "./ledger.ts";
@@ -99,6 +101,41 @@ const apply = (change: (state: State) => State) =>
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
+  setBoardLoading: (roomId: number, query: boards.BoardQuery, more = false) =>
+    apply((state) => boards.setBoardLoading(state, roomId, query, more)),
+  setBoardError: (roomId: number, generation: number, error: string) =>
+    apply((state) => boards.setBoardError(state, roomId, generation, error)),
+  loadBoardListing: (listing: BoardListing, generation: number, read?: work.WorkRead) =>
+    apply((state) => {
+      const held = state.boards[listing.roomId];
+
+      if (held === undefined || held.generation !== generation) return state;
+      let next = state;
+
+      for (const { thread } of listing.posts) {
+        if (!held.removedPostIds.includes(thread.id) && !held.changedPostIds.includes(thread.id)) {
+          next = work.receiveWorkThread(
+            threads.revive(next, thread.id, read?.since ?? state.removalCount),
+            thread,
+            read,
+            "read",
+          );
+        }
+      }
+
+      return boards.loadBoardListing(
+        next,
+        {
+          ...listing,
+          posts: listing.posts.map((summary) => ({
+            ...summary,
+            thread: next.threads[summary.thread.id] ?? summary.thread,
+          })),
+        },
+        generation,
+      );
+    }),
+  addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
   startRead: (list: string, reload = true) => {
     const read = freshness.startRead(store.getState().freshness, list, reload);
 
@@ -190,16 +227,32 @@ export const mutations = {
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
     apply((state) => threads.setThreadPaneError(state, threadId, error)),
-  loadThreadDetail: (detail: ThreadDetail, read?: work.WorkRead) =>
-    apply((state) => work.loadWorkThreadDetail(state, detail, read)),
+  /** `since`: the state's `removalCount` when the request was sent. */
+  loadThreadDetail: (
+    detail: ThreadDetail,
+    since: number = store.getState().removalCount,
+    read?: work.WorkRead,
+  ) => apply((state) => work.loadWorkThreadDetail(state, detail, read, since)),
   /** A thread started here: its pane data, and the first reply on its (new) timeline. */
-  threadCreated: (created: ThreadCreated, read?: work.WorkRead) =>
+  threadCreated: (
+    created: ThreadCreated,
+    since: number = store.getState().removalCount,
+    read?: work.WorkRead,
+  ) =>
     apply((state) =>
       reduce.receiveMessage(
-        work.loadWorkThreadDetail(state, created.detail, read),
+        work.loadWorkThreadDetail(state, created.detail, read, since),
         created.message,
       ),
     ),
+  mergeWorkFacts: (thread: Thread, read: work.WorkRead) =>
+    apply((state) => {
+      const held = state.threads[thread.id];
+
+      return held === undefined || threads.removedSince(state, thread.id, read.since)
+        ? state
+        : work.receiveWorkThread(state, { ...held, work: thread.work }, read, "read");
+    }),
   upsertThread: (thread: Thread) => apply((state) => work.receiveWorkThread(state, thread)),
   setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
@@ -207,17 +260,30 @@ export const mutations = {
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
   setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
-  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList, read?: work.WorkRead) =>
+  loadThreadList: (
+    roomId: number,
+    filter: ThreadFilter,
+    list: ThreadList,
+    since: number = store.getState().removalCount,
+    read?: work.WorkRead,
+  ) =>
     apply((state) => {
       let next = state;
 
-      const summaries = list.threads.map((summary) => {
-        next = work.receiveWorkThread(next, summary.thread, read, "read");
+      const summaries = list.threads
+        .filter(({ thread }) => !threads.removedSince(state, thread.id, since))
+        .map((summary) => {
+          next = work.receiveWorkThread(
+            threads.revive(next, summary.thread.id, since),
+            summary.thread,
+            read,
+            "read",
+          );
 
-        return { ...summary, thread: next.threads[summary.thread.id] ?? summary.thread };
-      });
+          return { ...summary, thread: next.threads[summary.thread.id] ?? summary.thread };
+        });
 
-      return threads.loadThreadList(next, roomId, filter, { ...list, threads: summaries });
+      return threads.loadThreadList(next, roomId, filter, { ...list, threads: summaries }, since);
     }),
   setHuddlePresence: (presence: HuddlePresence) =>
     apply((state) => huddles.setHuddlePresence(state, presence)),

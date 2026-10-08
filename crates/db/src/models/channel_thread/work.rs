@@ -2,7 +2,7 @@
 use crate::Room;
 use super::ChannelThread;
 use crate::{
-    Agent, Error, Errors, Membership, NewChannelThread, NewMessage, Result, Tx, User,
+    Agent, Error, Errors, Membership, Message, NewChannelThread, NewMessage, Result, Tx, User,
     WorkThreadEvent,
 };
 use rusqlite::Connection;
@@ -127,9 +127,27 @@ impl ChannelThread {
 
     pub fn create_board_post(
         tx: &mut Tx<'_>,
-        mut attributes: NewChannelThread,
+        attributes: NewChannelThread,
         first_message: Option<String>,
     ) -> Result<Self> {
+        let message = first_message
+            .filter(|message| {
+                !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(message))
+            })
+            .map(|source| NewMessage {
+                markdown_source: Some(source),
+                ..Default::default()
+            });
+        Self::create_board_post_with_message(tx, attributes, message).map(|(thread, _)| thread)
+    }
+
+    /// The board creation write with an optional opener's full message attributes. The SPA
+    /// supplies a client message id and may attach a direct upload to the brief.
+    pub fn create_board_post_with_message(
+        tx: &mut Tx<'_>,
+        mut attributes: NewChannelThread,
+        message: Option<NewMessage>,
+    ) -> Result<(Self, Option<Message>)> {
         tx.savepoint(move |tx| {
             attributes.run_url = attributes
                 .run_url
@@ -137,21 +155,10 @@ impl ChannelThread {
             let creator_id = attributes.creator_id;
             let mut thread = Self::create(tx, attributes)?;
             crate::ThreadMembership::join(tx, thread.id, creator_id)?;
-            let opener = first_message
-                .filter(|message| {
-                    !campfire_richtext::ruby::is_blank(campfire_richtext::ruby::strip(message))
-                })
-                .map(|message| {
-                    thread.post_message_with_agent_delivery(
-                        tx,
-                        creator_id,
-                        NewMessage {
-                            markdown_source: Some(message),
-                            board_post_opener: true,
-                            ..Default::default()
-                        },
-                        true,
-                    )
+            let opener = message
+                .map(|mut message| {
+                    message.board_post_opener = true;
+                    thread.post_message_with_agent_delivery(tx, creator_id, message, true)
                 })
                 .transpose()?;
             if thread.work_owner_id.is_some() {
@@ -167,8 +174,8 @@ impl ChannelThread {
                     Some(creator_id),
                 )?;
             }
-            if let Some(message) = opener {
-                crate::models::agent_delivery::enqueue_for_message(tx, &message)?;
+            if let Some(message) = &opener {
+                crate::models::agent_delivery::enqueue_for_message(tx, message)?;
                 for (membership, user) in
                     Membership::for_room_with_users(tx.conn(), thread.room_id)?
                 {
@@ -185,11 +192,11 @@ impl ChannelThread {
                     if membership.involvement == Some(crate::Involvement::Everything)
                         || Some(user.id) == thread.work_owner_id
                     {
-                        crate::ActivityItem::record_authorized_board_opener(tx, &user, &message)?;
+                        crate::ActivityItem::record_authorized_board_opener(tx, &user, message)?;
                     }
                 }
             }
-            Ok(thread)
+            Ok((thread, opener))
         })
     }
 
