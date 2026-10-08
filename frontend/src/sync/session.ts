@@ -71,7 +71,6 @@ export const start = Effect.fn("session.start")(function* () {
 /** The room's detail, then its first page: at the focused message, the unread divider or the end. */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: number | null) {
   mutations.setRoomLoading(roomId);
-  mutations.setPageReplacing(roomId);
 
   const detail = yield* room(roomId).pipe(
     Effect.tapError((error) =>
@@ -89,6 +88,9 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: nu
 
   mutations.setRoomDetail(detail.value);
 
+  if (detail.value.room.kind === "board") return;
+
+  mutations.setPageReplacing(roomId);
   const unread = detail.value.unread;
   let cursor: PageCursor = null;
 
@@ -146,6 +148,7 @@ export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: numbe
 });
 
 const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older" | "newer") {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   const timeline = store.getState().timelines[roomId];
 
   if (timeline === undefined) {
@@ -175,6 +178,7 @@ export const loadAround = Effect.fn("session.loadAround")(function* (
   roomId: number,
   messageId: number,
 ) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, { around: messageId }).pipe(
@@ -199,6 +203,7 @@ export const loadNewer = Effect.fn("session.loadNewer")(function* (roomId: numbe
 
 /** Replaces the window with the newest page. */
 export const jumpToPresent = Effect.fn("session.jumpToPresent")(function* (roomId: number) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, null).pipe(

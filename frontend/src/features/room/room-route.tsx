@@ -4,6 +4,7 @@ import { classicPageFor } from "../../lib/screens.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
+import { BoardView } from "../boards/board-view.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { FizzyCardOverlay } from "../fizzy/fizzy-card-overlay.tsx";
 import { JoinBanner } from "../huddle/call-alerts.tsx";
@@ -18,8 +19,9 @@ import "./room.css";
 
 /**
  * `/app/r/$roomId` (and its permalink, thread and "Create Fizzy card" children): opens the room on
- * the sync engine while it's on screen, then lays out header, timeline and composer. Switching rooms keys the pane, so each
- * conversation starts fresh and the header cross-fades in.
+ * the sync engine while it's on screen, then lays out header, timeline and composer (a board shows
+ * its posts instead). Switching rooms keys the pane, so each conversation starts fresh and the
+ * header cross-fades in.
  */
 export function RoomRoute() {
   const params = useParams({ strict: false });
@@ -71,17 +73,6 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
     }
   }, [roomId, kind]);
 
-  // Boards aren't ported yet (their own route comes later): the classic board opens instead.
-  useEffect(() => {
-    if (kind === "board") {
-      window.location.replace(classicPage);
-    }
-  }, [kind, classicPage]);
-
-  if (kind === "board") {
-    return null;
-  }
-
   if (status === "error") {
     return (
       <section className="room room-error enter-fade" aria-label="Room unavailable">
@@ -119,8 +110,14 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
         <RoomHeader roomId={roomId} />
         <CallView roomId={roomId} />
         <JoinBanner roomId={roomId} />
-        <Timeline roomId={roomId} focusMessageId={focusMessageId} />
-        <Composer roomId={roomId} />
+        {kind === "board" ? (
+          <BoardView roomId={roomId} />
+        ) : (
+          <>
+            <Timeline roomId={roomId} focusMessageId={focusMessageId} />
+            <Composer roomId={roomId} />
+          </>
+        )}
       </section>
       <RightPane roomId={roomId} />
       <RoomSettingsHost roomId={roomId} />

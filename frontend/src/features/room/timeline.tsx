@@ -358,6 +358,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
         return <DayDivider key={item.key} label={item.label} />;
       case "unread":
         return <UnreadDivider key={item.key} count={item.count} />;
+      case "earlier":
+        // Room timelines page older messages on scroll; only a board post's thread has this row.
+        return <div key={item.key} />;
       case "pending":
         return <PendingRow key={item.key} pending={item.pending} groupStart={item.groupStart} />;
       case "message": {

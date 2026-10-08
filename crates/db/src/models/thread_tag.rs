@@ -73,7 +73,7 @@ impl ThreadTag {
             params![thread_id, now, name, now],
             |r| r.get(0),
         )?;
-        Self::register_row_callback(tx, id, thread_id);
+        Self::register_row_callback(tx, id, thread_id)?;
         Ok(Self { id, channel_thread_id: thread_id, name: name.into(), created_at: now, updated_at: now })
     }
 
@@ -111,17 +111,26 @@ impl ThreadTag {
     /// `destroy`
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(r#"DELETE FROM "thread_tags" WHERE "thread_tags"."id" = ?"#, [self.id])?;
-        Self::register_row_callback(tx, self.id, self.channel_thread_id);
+        Self::register_row_callback(tx, self.id, self.channel_thread_id)?;
         Ok(())
     }
 
-    fn register_row_callback(tx: &mut Tx<'_>, id: i64, thread_id: i64) {
+    fn register_row_callback(tx: &mut Tx<'_>, id: i64, thread_id: i64) -> Result<()> {
+        // A work-field save may already have queued this thread's final sync snapshot.
+        if !tx.has_commit_record("board_post_creation", thread_id)
+            && !crate::models::channel_thread::ThreadWorkChange::pending(tx, thread_id)
+            && let Some(thread) = ChannelThread::find_by_id(tx.conn(), thread_id)?
+            && thread.board_post(tx.conn())?
+        {
+            crate::models::channel_thread::ThreadWorkChange::emit(tx, thread_id);
+        }
         tx.after_commit_record_latest("thread_tag_board_row", id, move |tx| {
             if let Some(thread) = ChannelThread::find_by_id(tx.conn(), thread_id)? && thread.board_post(tx.conn())? {
                 thread.broadcast_board_row_replace(tx)?;
             }
             Ok(())
         });
+        Ok(())
     }
 }
 

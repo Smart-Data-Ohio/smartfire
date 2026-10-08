@@ -31,12 +31,13 @@ type Anchor =
     };
 
 type PlacementState = { readonly placement: string } & (
-  | { readonly kind: "placing-at-end" }
+  | { readonly kind: "placing-at-end"; readonly follow: boolean }
   | {
       readonly kind: "placing-at-target";
       readonly key: string;
       readonly align: "start" | "center";
       readonly offset: number;
+      readonly follow: boolean;
     }
   | { readonly kind: "settled"; readonly messageId: number | null }
   | {
@@ -644,7 +645,15 @@ export function useViewportAnchor({
 
   const place = (
     index: number,
-    { align, offset = 0 }: { readonly align: "start" | "center" | "end"; readonly offset?: number },
+    {
+      align,
+      offset = 0,
+      follow = true,
+    }: {
+      readonly align: "start" | "center" | "end";
+      readonly offset?: number;
+      readonly follow?: boolean;
+    },
   ) => {
     const item = items[index];
 
@@ -652,8 +661,8 @@ export function useViewportAnchor({
 
     placementRef.current =
       align === "end"
-        ? { kind: "placing-at-end", placement }
-        : { kind: "placing-at-target", placement, key: item.key, align, offset };
+        ? { kind: "placing-at-end", placement, follow }
+        : { kind: "placing-at-target", placement, key: item.key, align, offset, follow };
     anchorRef.current = null;
 
     const element = viewport();
@@ -687,7 +696,15 @@ export function useViewportAnchor({
 
     if (state?.placement !== placement) return;
 
-    if (state.kind === "placing-at-target") {
+    if ((state.kind === "placing-at-target" || state.kind === "placing-at-end") && !state.follow) {
+      // A post's intro stays put even when it fits; only reader input or a send can follow.
+      placementRef.current = {
+        kind: "cancelled",
+        placement,
+        allowEnd: false,
+        awaitEndInput: true,
+      };
+    } else if (state.kind === "placing-at-target") {
       const index = itemIndices.get(state.key);
       const item = index === undefined ? undefined : items[index];
 

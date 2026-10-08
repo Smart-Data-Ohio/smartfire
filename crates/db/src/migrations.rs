@@ -54,9 +54,17 @@ pub enum Error {
     #[error("{0}")]
     Schema(crate::schema::SchemaMismatch),
     #[error("migration {version}: {source}")]
-    Migration { version: String, source: rusqlite::Error },
+    Migration {
+        version: String,
+        source: rusqlite::Error,
+    },
     #[error("the migrations left foreign key violations (table {0}); nothing was applied")]
     ForeignKeys(String),
+    #[error(
+        "table {0} breaks a foreign key, and as a WITHOUT ROWID table its offending rows can't be told \
+         apart from ones a migration adds; fix those rows, then migrate"
+    )]
+    UncheckedForeignKeys(String),
     #[error("another process changed schema_migrations while migrating; nothing was applied")]
     Concurrent,
     #[error(transparent)]
@@ -77,12 +85,20 @@ pub fn pending<'a>(
     validate(manifest, catalog)?;
     let mut mismatch = crate::schema::schema_mismatch_against(conn, manifest)?;
     let in_catalog = |version: &String| catalog.iter().any(|m| &m.version == version);
-    let pending: BTreeSet<String> = mismatch.missing.iter().filter(|v| in_catalog(v)).cloned().collect();
+    let pending: BTreeSet<String> = mismatch
+        .missing
+        .iter()
+        .filter(|v| in_catalog(v))
+        .cloned()
+        .collect();
     mismatch.missing.retain(|version| !in_catalog(version));
     if !mismatch.missing.is_empty() || !mismatch.unknown.is_empty() {
         return Err(Error::Schema(mismatch));
     }
-    let mut pending: Vec<_> = catalog.iter().filter(|m| pending.contains(&m.version)).collect();
+    let mut pending: Vec<_> = catalog
+        .iter()
+        .filter(|m| pending.contains(&m.version))
+        .collect();
     pending.sort_by(|a, b| version_order(&a.version, &b.version));
     Ok(pending)
 }
@@ -114,7 +130,8 @@ pub fn migrate_preserving_existing_foreign_key_violations(
 /// Brings the database to `manifest` by applying the pending part of `catalog`, oldest first, in
 /// one transaction with their `schema_migrations` rows: either all of them commit or none do.
 /// Foreign key enforcement is off while they run (so a migration can rebuild a table the way
-/// SQLite documents), then `PRAGMA foreign_key_check` must come back empty before the commit.
+/// SQLite documents), then `PRAGMA foreign_key_check` must report no violations before the commit.
+/// Only the explicit frozen-seed entry point may preserve existing violations.
 /// Migration SQL can't end the transaction, attach databases, set pragmas or touch
 /// `schema_migrations`. Writes nothing when nothing is pending.
 pub fn migrate_with(
@@ -179,35 +196,106 @@ fn apply(
         let result = tx.execute_batch(&migration.sql);
         tx.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
         result.map_err(failed)?;
-        tx.execute(r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#, [&migration.version])
-            .map_err(failed)?;
+        tx.execute(
+            r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#,
+            [&migration.version],
+        )
+        .map_err(failed)?;
     }
     let violation = foreign_key_violations(&tx)?
         .into_iter()
         .find(|violation| !before.contains(violation));
-    if let Some((table, ..)) = violation {
-        return Err(Error::ForeignKeys(table));
+    if let Some(violation) = violation {
+        return Err(Error::ForeignKeys(violation.table));
     }
     tx.commit()?;
     Ok(())
 }
 
-/// One `PRAGMA foreign_key_check` row: (table, rowid, parent table, key index).
-type Violation = (String, Option<i64>, String, i64);
+/// A row that breaks a foreign key, told apart from every other: its table and primary key (the
+/// rowid when none is declared), the constraint (parent table, then child and parent columns), and
+/// the values the row holds in the child columns. Keys and values are typed, lossless text (see `quote` below).
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Violation {
+    table: String,
+    key: Vec<String>,
+    parent: String,
+    columns: Vec<(String, String)>,
+    values: Vec<String>,
+}
 
+/// `PRAGMA foreign_key_check`: each violating row. SQLite reports no rowid for a WITHOUT ROWID
+/// table's rows, so two of them can't be told apart; any such violation is refused.
 fn foreign_key_violations(conn: &Connection) -> Result<BTreeSet<Violation>, Error> {
-    let mut stmt = conn.prepare("PRAGMA foreign_key_check")?;
-    let rows = stmt.query_map([], |row| {
-        Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
-    })?;
-    Ok(rows.collect::<Result<_, _>>()?)
+    let mut check = conn.prepare("PRAGMA foreign_key_check")?;
+    let rows: Vec<(String, Option<i64>, String, i64)> = check
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })?
+        .collect::<Result<_, _>>()?;
+    let mut constraints = conn.prepare(
+        r#"SELECT "from", coalesce("to", '') FROM pragma_foreign_key_list(?1) WHERE id = ?2 ORDER BY seq"#,
+    )?;
+    let mut keys =
+        conn.prepare("SELECT name FROM pragma_table_info(?1) WHERE pk > 0 ORDER BY pk")?;
+    let mut violations = BTreeSet::new();
+    for (table, rowid, parent, constraint) in rows {
+        let Some(rowid) = rowid else {
+            return Err(Error::UncheckedForeignKeys(table));
+        };
+        let columns: Vec<(String, String)> = constraints
+            .query_map(rusqlite::params![table, constraint], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+            .collect::<Result<_, _>>()?;
+        let mut key_columns: Vec<String> = keys
+            .query_map([&table], |row| row.get(0))?
+            .collect::<Result<_, _>>()?;
+        if key_columns.is_empty() {
+            key_columns.push("rowid".to_owned());
+        }
+        // Lossless and typed: `quote()` stops TEXT at its first NUL, so TEXT and BLOB compare by
+        // their bytes; `hex()` would render a REAL with 15 digits, so numbers use `quote()`.
+        let quote = |name: &str| {
+            let column = format!("\"{}\"", name.replace('"', "\"\""));
+            format!(
+                "CASE WHEN typeof({column}) IN ('text', 'blob') THEN typeof({column}) || ':' || hex({column}) \
+                 ELSE typeof({column}) || ':' || quote({column}) END"
+            )
+        };
+        let selected: Vec<String> = key_columns
+            .iter()
+            .map(|name| quote(name))
+            .chain(columns.iter().map(|(from, _)| quote(from)))
+            .collect();
+        let sql = format!(
+            "SELECT {} FROM \"{}\" WHERE rowid = ?1",
+            selected.join(", "),
+            table.replace('"', "\"\"")
+        );
+        let mut quotes: Vec<String> = conn.query_row(&sql, [rowid], |row| {
+            (0..selected.len()).map(|index| row.get(index)).collect()
+        })?;
+        let values = quotes.split_off(key_columns.len());
+        violations.insert(Violation {
+            table,
+            key: quotes,
+            parent,
+            columns,
+            values,
+        });
+    }
+    Ok(violations)
 }
 
 fn validate(manifest: &[&str], catalog: &[Migration]) -> Result<(), Error> {
     let mut seen = BTreeSet::new();
     for migration in catalog {
         let version = &migration.version;
-        if version.is_empty() || version.starts_with('0') || !version.bytes().all(|b| b.is_ascii_digit()) {
+        if version.is_empty()
+            || version.starts_with('0')
+            || !version.bytes().all(|b| b.is_ascii_digit())
+        {
             return Err(Error::Catalog(format!("noncanonical version {version:?}")));
         }
         if !seen.insert(version.as_str()) {
@@ -262,7 +350,11 @@ mod tests {
             .map(|entry| {
                 let file = entry.file_name().into_string().unwrap();
                 let (version, name) = file.strip_suffix(".sql").unwrap().split_once('_').unwrap();
-                Migration::new(version, name, &std::fs::read_to_string(entry.path()).unwrap())
+                Migration::new(
+                    version,
+                    name,
+                    &std::fs::read_to_string(entry.path()).unwrap(),
+                )
             })
             .collect();
         on_disk.sort_by(|a, b| version_order(&a.version, &b.version));
@@ -281,9 +373,13 @@ mod tests {
         assert!(build.contains("cargo::rerun-if-env-changed=CAMPFIRE_MIGRATIONS_DIGEST"));
         assert!(build.contains("cargo::rerun-if-changed={}\", dir.display()"));
         let dockerfile = std::fs::read_to_string(root.join("../../Dockerfile")).unwrap();
-        let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
+        let build_step = dockerfile
+            .split("RUN --mount=type=cache")
+            .find(|step| step.contains("cargo build"))
+            .unwrap();
         assert!(
-            build_step.contains("export CAMPFIRE_MIGRATIONS_DIGEST=") && build_step.contains("crates/db/migrations"),
+            build_step.contains("export CAMPFIRE_MIGRATIONS_DIGEST=")
+                && build_step.contains("crates/db/migrations"),
             "Dockerfile's cargo build must export CAMPFIRE_MIGRATIONS_DIGEST from crates/db/migrations"
         );
         assert!(build_step.find("CAMPFIRE_MIGRATIONS_DIGEST") < build_step.find("cargo build"));
@@ -297,7 +393,9 @@ mod tests {
 
     /// This build's manifest plus `extra`, as a build that ships those migrations would have it.
     fn manifest(extra: &[&'static str]) -> Vec<&'static str> {
-        schema::migration_versions().chain(extra.iter().copied()).collect()
+        schema::migration_versions()
+            .chain(extra.iter().copied())
+            .collect()
     }
 
     fn migration(version: &str, sql: &str) -> Migration {
@@ -355,7 +453,10 @@ mod tests {
     fn applies_in_integer_order_once_and_records_rails_strings() {
         let mut conn = prepared();
         let catalog = [
-            migration("29991231235959", "INSERT INTO ws18_order VALUES ('second');"),
+            migration(
+                "29991231235959",
+                "INSERT INTO ws18_order VALUES ('second');",
+            ),
             migration(
                 "29990101000000",
                 "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');",
@@ -374,8 +475,15 @@ mod tests {
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         assert_eq!(values, ["first", "second"]);
-        assert_eq!(versions_like(&conn, "2999%"), ["29990101000000", "29991231235959"]);
-        assert!(migrate_with(&mut conn, &manifest, &catalog).unwrap().is_empty());
+        assert_eq!(
+            versions_like(&conn, "2999%"),
+            ["29990101000000", "29991231235959"]
+        );
+        assert!(
+            migrate_with(&mut conn, &manifest, &catalog)
+                .unwrap()
+                .is_empty()
+        );
         let mismatch = schema::schema_mismatch_against(&conn, &manifest).unwrap();
         assert!(mismatch.missing.is_empty() && mismatch.unknown.is_empty());
     }
@@ -385,7 +493,10 @@ mod tests {
         let mut conn = prepared();
         let catalog = [
             migration("10", "INSERT INTO ws18_order VALUES ('second');"),
-            migration("9", "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');"),
+            migration(
+                "9",
+                "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');",
+            ),
         ];
         assert_eq!(
             migrate_with(&mut conn, &manifest(&["9", "10"]), &catalog).unwrap(),
@@ -397,7 +508,10 @@ mod tests {
     fn a_failure_anywhere_applies_nothing() {
         let versions = ["29990101000000", "29991231235959"];
         for (second, block_version_insert) in [
-            ("CREATE TABLE ws18_failure(id INTEGER); SELECT missing FROM ws18_failure;", false),
+            (
+                "CREATE TABLE ws18_failure(id INTEGER); SELECT missing FROM ws18_failure;",
+                false,
+            ),
             ("CREATE TABLE ws18_failure(id INTEGER);", true),
         ] {
             let mut conn = prepared();
@@ -409,9 +523,14 @@ mod tests {
                 migration(versions[1], second),
             ];
             assert!(migrate_with(&mut conn, &manifest(&versions), &catalog).is_err());
-            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name IN ('ws18_success', 'ws18_failure')"));
+            assert!(!exists(
+                &conn,
+                "SELECT 1 FROM sqlite_schema WHERE name IN ('ws18_success', 'ws18_failure')"
+            ));
             assert!(versions_like(&conn, "2999%").is_empty());
-            let foreign_keys: bool = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
+            let foreign_keys: bool = conn
+                .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+                .unwrap();
             assert!(foreign_keys, "enforcement is restored after a failure");
         }
     }
@@ -426,8 +545,14 @@ mod tests {
              INSERT INTO ws18_child VALUES (42);",
         )];
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
-        assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
-        assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"));
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(!exists(
+            &conn,
+            "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"
+        ));
     }
 
     fn database_with_an_orphan() -> Connection {
@@ -506,6 +631,138 @@ mod tests {
         );
     }
 
+    /// An old orphan pointed at another missing parent is a new violation: same row, new value.
+    #[test]
+    fn an_old_orphan_given_another_missing_parent_is_a_new_violation() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES ws18_parent(id)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "UPDATE ws18_child SET parent_id = 8 WHERE id = 1;",
+        )];
+        let error = migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true)
+            .unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(exists(
+            &conn,
+            "SELECT 1 FROM ws18_child WHERE parent_id = 7"
+        ));
+    }
+
+    /// Values are compared whole: two TEXT values differing only after a NUL are told apart.
+    #[test]
+    fn an_old_orphan_repointed_past_a_nul_is_a_new_violation() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(code TEXT PRIMARY KEY); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, code TEXT REFERENCES ws18_parent(code)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 'a' || char(0) || 'b'); \
+             PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "UPDATE ws18_child SET code = 'a' || char(0) || 'c' WHERE id = 1;",
+        )];
+        let error = migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true)
+            .unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(exists(
+            &conn,
+            "SELECT 1 FROM ws18_child WHERE hex(code) = '610062'"
+        ));
+    }
+
+    /// REAL values are compared at full precision.
+    #[test]
+    fn an_old_orphan_repointed_to_a_nearby_real_is_a_new_violation() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(code REAL PRIMARY KEY); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, code REAL REFERENCES ws18_parent(code)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 1.0000000000000002); \
+             PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "UPDATE ws18_child SET code = 1.0000000000000004 WHERE id = 1;",
+        )];
+        let error = migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true)
+            .unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(exists(
+            &conn,
+            "SELECT 1 FROM ws18_child WHERE code = 1.0000000000000002"
+        ));
+    }
+
+    /// An old orphan under a rebuilt constraint (another parent column) is a new violation.
+    #[test]
+    fn an_old_orphan_under_a_changed_constraint_is_a_new_violation() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY, code INTEGER UNIQUE); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES ws18_parent(id)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_new(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES ws18_parent(code)); \
+             INSERT INTO ws18_new SELECT id, parent_id FROM ws18_child; \
+             DROP TABLE ws18_child; ALTER TABLE ws18_new RENAME TO ws18_child;",
+        )];
+        let error = migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true)
+            .unwrap_err();
+        assert!(
+            matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(!exists(
+            &conn,
+            "SELECT 1 FROM sqlite_schema WHERE name='ws18_new'"
+        ));
+    }
+
+    /// SQLite reports no rowid for a WITHOUT ROWID table's violations, so a second orphan there
+    /// would look like the first: any such violation is refused instead.
+    #[test]
+    fn violations_in_a_without_rowid_table_are_refused() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES ws18_parent(id)) WITHOUT ROWID; \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "INSERT INTO ws18_child VALUES (2, 8);",
+        )];
+        let error = migrate_with_policy(&mut conn, &manifest(&["29990101000000"]), &catalog, true)
+            .unwrap_err();
+        assert!(
+            matches!(error, Error::UncheckedForeignKeys(ref table) if table == "ws18_child"),
+            "{error}"
+        );
+        assert!(!exists(&conn, "SELECT 1 FROM ws18_child WHERE id = 2"));
+    }
+
     #[test]
     fn a_table_rebuild_runs_with_enforcement_off_and_is_checked_after() {
         let mut conn = prepared();
@@ -525,19 +782,35 @@ mod tests {
              ALTER TABLE ws18_parent_new RENAME TO ws18_parent;",
         )];
         migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap();
-        let children: i64 = conn.query_row("SELECT count(*) FROM ws18_child", [], |r| r.get(0)).unwrap();
+        let children: i64 = conn
+            .query_row("SELECT count(*) FROM ws18_child", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(children, 1);
     }
 
     #[test]
     fn refuses_unknown_versions_as_a_downgrade_before_writing() {
         let mut conn = prepared();
-        conn.execute("INSERT INTO schema_migrations(version) VALUES ('29991231235959')", [])
-            .unwrap();
-        let catalog = [migration("29990101000000", "CREATE TABLE ws18_failure(id INTEGER);")];
+        conn.execute(
+            "INSERT INTO schema_migrations(version) VALUES ('29991231235959')",
+            [],
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_failure(id INTEGER);",
+        )];
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
-        assert!(error.to_string().contains("unknown migrations 29991231235959"), "{error}");
-        assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"));
+        assert!(
+            error
+                .to_string()
+                .contains("unknown migrations 29991231235959"),
+            "{error}"
+        );
+        assert!(!exists(
+            &conn,
+            "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"
+        ));
         // The shipped build refuses it too.
         assert!(migrate(&mut conn).is_err());
     }
@@ -549,13 +822,21 @@ mod tests {
         conn.execute("DELETE FROM schema_migrations WHERE version=?", [newest])
             .unwrap();
         let error = migrate(&mut conn).unwrap_err();
-        assert!(error.to_string().contains(&format!("missing migrations {newest}")), "{error}");
+        assert!(
+            error
+                .to_string()
+                .contains(&format!("missing migrations {newest}")),
+            "{error}"
+        );
     }
 
     #[test]
     fn rejects_duplicate_noncanonical_and_unlisted_versions_before_writes() {
         for (versions, listed) in [
-            (vec!["29990101000000", "29990101000000"], vec!["29990101000000"]),
+            (
+                vec!["29990101000000", "29990101000000"],
+                vec!["29990101000000"],
+            ),
             (vec!["029990101000000"], vec!["029990101000000"]),
             (vec!["version"], vec!["version"]),
             (vec!["0"], vec!["0"]),
@@ -568,10 +849,16 @@ mod tests {
                 .collect();
             let manifest: Vec<&str> = schema::migration_versions().chain(listed).collect();
             assert!(
-                matches!(migrate_with(&mut conn, &manifest, &catalog), Err(Error::Catalog(_))),
+                matches!(
+                    migrate_with(&mut conn, &manifest, &catalog),
+                    Err(Error::Catalog(_))
+                ),
                 "{versions:?}"
             );
-            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"));
+            assert!(!exists(
+                &conn,
+                "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"
+            ));
         }
     }
 
@@ -586,8 +873,17 @@ mod tests {
         ] {
             let mut conn = prepared();
             let catalog = [migration("29990101000000", sql)];
-            assert!(migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).is_err(), "{sql}");
-            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"), "{sql}");
+            assert!(
+                migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).is_err(),
+                "{sql}"
+            );
+            assert!(
+                !exists(
+                    &conn,
+                    "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"
+                ),
+                "{sql}"
+            );
             assert!(versions_like(&conn, "2999%").is_empty(), "{sql}");
         }
     }

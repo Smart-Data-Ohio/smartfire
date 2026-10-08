@@ -94,7 +94,9 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
             .iter()
             .enumerate()
             .filter(|(i, name)| {
-                if table == "rooms" && name.as_str() == "client_room_id" {
+                if (table == "rooms" && name.as_str() == "client_room_id")
+                    || (table == "channel_threads" && name.as_str() == "client_post_id")
+                {
                     let key: Option<String> = row.get(*i).unwrap();
                     assert_eq!(key, None, "classic fixtures never set API creation keys");
                     false

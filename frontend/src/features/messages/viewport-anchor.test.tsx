@@ -79,6 +79,7 @@ interface HarnessProps {
   readonly placement?: string;
   readonly virtual?: typeof import("virtua").VList;
   readonly onSettled?: () => void;
+  readonly introFirst?: boolean;
 }
 
 /** The virtualiser's geometry is explicit because jsdom does not lay out the rows. */
@@ -94,6 +95,7 @@ function Harness({
   placement = "room:12",
   virtual: VirtualList,
   onSettled,
+  introFirst = false,
 }: HarnessProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
@@ -121,12 +123,16 @@ function Harness({
     scrollBy: () => undefined,
   });
 
-  const items: TimelineItem[] = geometry.ids.map((id) => ({
-    kind: "message",
-    key: `c-${id}`,
-    message: messageFixture(id, 12),
-    groupStart: true,
-  }));
+  const items: TimelineItem[] = geometry.ids.map((id, index) =>
+    introFirst && index === 0
+      ? { kind: "intro", key: "intro" }
+      : {
+          kind: "message",
+          key: `c-${id}`,
+          message: messageFixture(id, 12),
+          groupStart: true,
+        },
+  );
 
   const anchor = useViewportAnchor({
     containerRef,
@@ -1465,6 +1471,54 @@ describe("useViewportAnchor reader control", () => {
       fireEvent.scroll(viewport());
       act(() => apiRef.current?.settle());
       expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
+
+  it.each(["reader", "send"] as const)(
+    "a short post intro keeps follow off through settlement and growth until a %s takes over",
+    (input) => {
+      vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+
+        const geometry: Geometry = {
+          ids: [1, 2],
+          heights: new Map([
+            [1, 200],
+            [2, 100],
+          ]),
+        };
+
+        const view = render(<Harness apiRef={apiRef} geometry={geometry} introFirst />);
+
+        act(() => apiRef.current?.place(0, { align: "start", follow: false }));
+        act(() => vi.advanceTimersToNextFrame());
+        act(() => vi.advanceTimersToNextFrame());
+        expect(apiRef.current?.isPlacing()).toBe(false);
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        expect(apiRef.current?.canFollow()).toBe(false);
+
+        geometry.heights.set(1, 400);
+        geometry.heights.set(2, 300);
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst />);
+        act(() => measureRows(geometry));
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        expect(viewport().scrollTop).toBe(0);
+        expect(apiRef.current?.canFollow()).toBe(false);
+
+        if (input === "reader") fireEvent.keyDown(viewport(), { key: "End" });
+        else act(() => apiRef.current?.followEnd());
+
+        viewport().scrollTop = 400;
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        expect(apiRef.current?.canFollow()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     },
   );
 

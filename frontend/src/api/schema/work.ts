@@ -65,6 +65,7 @@ export const UpdateWork = Schema.Struct({
   status: Schema.optionalKey(Schema.NullOr(WorkStatus)),
   ownerId: Schema.optionalKey(Schema.NullOr(UserId)),
   resultMarkdown: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  tags: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 export type UpdateWork = typeof UpdateWork.Type;

@@ -14,7 +14,7 @@ use crate::*;
 fn boot() -> Boot {
     Boot {
         user: BootUser { id: 7, name: "David".into(), avatar_url: "/users/abc/avatar?v=1".into() },
-        account: BootAccount { name: Some("Smart Data".into()) },
+        account: BootAccount { name: Some("Smart Data".into()), logo_url: None, logo_still_url: None, banner_url: None, banner_still_url: None },
         theme: theme(Some("dark")),
         text_size: text_size(None),
         cable_url: "/cable".into(),
@@ -288,7 +288,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
         boot_json(&page),
         serde_json::json!({
             "user": {"id": 7, "name": "David", "avatarUrl": "/users/abc/avatar?v=1"},
-            "account": {"name": "Smart Data"},
+            "account": {"name": "Smart Data", "logoUrl": null, "logoStillUrl": null, "bannerUrl": null, "bannerStillUrl": null},
             "theme": "dark",
             "textSize": "default",
             "cableUrl": "/cable",

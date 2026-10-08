@@ -1,16 +1,17 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
 import { useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
-import { Spinner } from "../../ui/button.tsx";
+import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useCardsChunkLoaded } from "../cards/card-slot.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
+import { PaneError } from "../panes/pane-states.tsx";
 import { DayDivider } from "../room/dividers.tsx";
 import { useFollowPosted } from "../room/follow-posted.ts";
 import { MessageRow, PendingRow } from "../room/message-row.tsx";
@@ -23,6 +24,8 @@ import {
 } from "../room/timeline-items.ts";
 import { replyCountLabel } from "./thread-format.ts";
 
+export const REPLIES_FAILED = "These replies couldn't be loaded.";
+
 /** Fetch the next page when this close to an edge. */
 const PAGE_AHEAD = 600;
 
@@ -33,6 +36,28 @@ const NO_PENDING: readonly string[] = [];
 
 function mentionsViewer(bodyHtml: string, viewerId: number | null): boolean {
   return viewerId !== null && bodyHtml.includes(`data-user-id="${viewerId}"`);
+}
+
+/** A board post's top: its work, then the discussion rule ("No messages yet…" while empty). */
+function PostIntro({
+  intro,
+  replyCount,
+}: {
+  readonly intro: ReactNode;
+  readonly replyCount: number;
+}) {
+  return (
+    <div className="thread-parent thread-post-intro">
+      {intro}
+      <div className="thread-replies-rule">
+        <span className="thread-replies-label tabular">
+          {replyCount === 0
+            ? "No messages yet. Start the discussion below."
+            : `Discussion · ${replyCountLabel(replyCount)}`}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 /** The root message on top of the thread, then the "N replies" rule. */
@@ -98,6 +123,27 @@ interface ThreadTimelineProps {
   readonly ready: boolean;
   /** A reply's permalink: placed in view and highlighted instead of opening at the newest. */
   readonly focusMessageId: number | null;
+  /** In place of the parent message: a board post's work (posts have no parent). */
+  readonly intro?: ReactNode;
+}
+
+/** Under a post's work while the discussion's start isn't loaded: brings in the replies before. */
+function EarlierReplies({
+  hidden,
+  onLoad,
+}: {
+  readonly hidden: number;
+  readonly onLoad: () => void;
+}) {
+  return (
+    <div className="thread-earlier">
+      <Button variant="ghost" size="sm" icon="chevron-down" onClick={onLoad}>
+        {hidden > 0
+          ? `Show ${hidden} earlier ${hidden === 1 ? "reply" : "replies"}`
+          : "Show earlier replies"}
+      </Button>
+    </div>
+  );
 }
 
 /**
@@ -112,6 +158,7 @@ export function ThreadTimeline({
   replyCount,
   ready,
   focusMessageId,
+  intro,
 }: ThreadTimelineProps) {
   const timeline = useStore((state) => state.threadTimelines[threadId] ?? emptyTimeline);
   const messages = useMessagesIn(timeline.ids);
@@ -137,7 +184,8 @@ export function ThreadTimeline({
 
   const now = Date.now();
   const loaded = ready && timeline.status === "ready";
-  const items = loaded ? timelineItems({ timeline, messages, pending, now }) : [];
+  const introFirst = intro !== undefined;
+  const items = loaded ? timelineItems({ timeline, messages, pending, now, introFirst }) : [];
 
   useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
@@ -169,7 +217,7 @@ export function ThreadTimeline({
     parentId: parent?.id ?? null,
   });
 
-  // Place the view once per loaded window: on the permalinked reply, else at the newest.
+  // Place each loaded window on its permalink, a post's work, or the newest reply.
   useLayoutEffect(() => {
     const list = listRef.current;
 
@@ -184,6 +232,9 @@ export function ThreadTimeline({
 
     if (focusIndex >= 0) {
       placeAnchor(focusIndex, { align: "center" });
+    } else if (intro !== undefined) {
+      // A board post opens at its work, as the classic post page does; the discussion follows.
+      placeAnchor(0, { align: "start", follow: false });
     } else {
       placeAnchor(items.length - 1, { align: "end" });
     }
@@ -243,7 +294,8 @@ export function ThreadTimeline({
 
     captureAnchor();
 
-    if (offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
+    // A post's work leads its pane and earlier replies load on request, under it.
+    if (!introFirst && offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
       void actions.threads.loadOlder(threadId);
     }
 
@@ -253,12 +305,22 @@ export function ThreadTimeline({
   const renderItem = (item: TimelineItem) => {
     switch (item.kind) {
       case "intro":
-        return (
+        return intro === undefined ? (
           <ThreadParent
             key={item.key}
             parent={parent}
             replyCount={replyCount}
             viewerId={viewerId}
+          />
+        ) : (
+          <PostIntro key={item.key} intro={intro} replyCount={replyCount} />
+        );
+      case "earlier":
+        return (
+          <EarlierReplies
+            key={item.key}
+            hidden={replyCount - timeline.ids.length}
+            onLoad={() => void actions.threads.loadOlder(threadId)}
           />
         );
       case "loading":
@@ -292,6 +354,22 @@ export function ThreadTimeline({
     }
   };
 
+  // The header loaded but the replies didn't (a resync after a failed open, say): say so, with a
+  // way to try again, instead of a skeleton that never resolves.
+  if (ready && timeline.status === "error") {
+    return (
+      <div className="thread-timeline" ref={containerRef}>
+        {intro}
+        <PaneError
+          message={REPLIES_FAILED}
+          onRetry={() =>
+            void actions.threads.reload(threadId, focusMessageId).catch(() => undefined)
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="thread-timeline" ref={containerRef}>
       <SkeletonReveal loading={!loaded} skeleton={<ThreadSkeleton />}>
@@ -299,7 +377,8 @@ export function ThreadTimeline({
           <VList
             ref={listRef}
             className="thread-timeline-list"
-            shift={shift}
+            // Earlier replies open under a post's work, where the reader asked for them.
+            shift={shift && !introFirst}
             bufferSize={400}
             keepMounted={keepMounted}
             onScroll={onScroll}

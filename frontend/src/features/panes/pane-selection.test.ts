@@ -3,6 +3,17 @@ import { closeStep, isPaneShowing, selectRightPaneView, viewKey } from "./pane-s
 import { clampPaneWidth } from "./right-pane.tsx";
 
 describe("selectRightPaneView", () => {
+  it("opens posts/new without a remembered right pane", () => {
+    expect(
+      selectRightPaneView({
+        newBoardPost: true,
+        threadId: null,
+        newThreadParent: null,
+        routePane: "files",
+        openPane: "pins",
+      }),
+    ).toBeNull();
+  });
   it("opens a URL pane ahead of a locally remembered pane", () => {
     expect(
       selectRightPaneView({

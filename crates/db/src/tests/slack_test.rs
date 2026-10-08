@@ -204,7 +204,9 @@ fn huddle_snapshot(conn: &crate::Connection, selectors: &Value) -> crate::Result
             .query_map([], |row| {
                 let mut value = json!({});
                 for (index, column) in columns.iter().enumerate() {
-                    if table == "rooms" && column == "client_room_id" {
+                    if (table == "rooms" && column == "client_room_id")
+                        || (table == "channel_threads" && column == "client_post_id")
+                    {
                         assert!(
                             matches!(row.get_ref(index)?, ValueRef::Null),
                             "classic fixture has an API creation key"

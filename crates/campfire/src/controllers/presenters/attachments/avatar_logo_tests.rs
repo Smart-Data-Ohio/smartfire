@@ -95,11 +95,12 @@ async fn avatar_bot_logo_uploads_match_pinned_rails() {
         );
         assert_eq!(response.location(), expected_response["location"].as_str());
         let kind = expected["kind"].as_str().unwrap().to_owned();
+        let secrets = app.booted.app.secrets.clone();
         let snapshot=app.db().read(move |conn| {
             let (record,name) = match kind.as_str() {
                 "avatar" => (Record::user(DAVID),"avatar"),
                 "bot" => (Record::user(BENDER),"avatar"),
-                _ => (Record::account(campfire_db::Account::first(conn)?.unwrap().id),"logo"),
+                _ => (Record::account(campfire_db::Account::first(conn)?.unwrap().id, &secrets),"logo"),
             };
             let record_name:String=conn.query_row(&format!("SELECT name FROM {} WHERE id=?",record.table),[record.id],|r|r.get(0))?;
             let blob=attached_blob(conn,record.record_type,record.id,name)?.unwrap_or_else(|| panic!("missing {kind} attachment; name={record_name}"));

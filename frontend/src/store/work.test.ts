@@ -113,6 +113,8 @@ describe("work in the store", () => {
   it("builds optimistic facts for a start, a move and a stop", () => {
     expect(optimisticFacts(null, "planned")).toEqual({
       updatedAt: "0001-01-01T00:00:00.000000Z",
+      tags: [],
+      messageCount: 0,
       status: "planned",
       owner: null,
       ownerActive: false,
@@ -580,5 +582,70 @@ describe("work in the store", () => {
         "done",
       ).status,
     ).toBe("error");
+  });
+});
+
+describe("board work metadata with tied revisions", () => {
+  it("keeps event tags and a decreased message count over a late detail read", () => {
+    const facts = factsFixture({ tags: ["api"], messageCount: 5 });
+    const before = held(facts);
+    const read = captureWorkRead(before);
+    const live = updated(before, { ...facts, tags: ["infra"], messageCount: 2 });
+
+    const landed = loadWorkThreadDetail(
+      live,
+      threadDetailFixture(THREAD, facts, workDetailFixture()),
+      read,
+    );
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({ tags: ["infra"], messageCount: 2 });
+    expect(workDetailStale(landed, THREAD)).toBe(false);
+  });
+
+  it("accepts freshly read tags and counts without treating them as a detail change", () => {
+    const facts = factsFixture({ tags: ["api"], messageCount: 5 });
+    const before = held(facts);
+    const read = captureWorkRead(before);
+
+    const landed = loadWorkThreadDetail(
+      before,
+      threadDetailFixture(THREAD, { ...facts, tags: [], messageCount: 1 }, workDetailFixture()),
+      read,
+    );
+
+    expect(landed.threads[THREAD]?.work).toMatchObject({ tags: [], messageCount: 1 });
+    expect(workDetailStale(landed, THREAD)).toBe(false);
+  });
+});
+
+it("keeps live thread headers over a late detail while accepting an unchanged field's reply", () => {
+  const before = held();
+  const read = captureWorkRead(before);
+  const old = threadDetailFixture(THREAD, factsFixture(), workDetailFixture());
+
+  const live = applyEvents(
+    before,
+    [
+      {
+        seq: 3,
+        topic: `thread:${THREAD}`,
+        type: "thread.updated",
+        data: { ...old.thread, name: "Live name", status: "locked", parentMessageId: null },
+      },
+    ],
+    0,
+  );
+
+  const landed = loadWorkThreadDetail(
+    live,
+    { ...old, thread: { ...old.thread, autoArchiveAfterMinutes: 60 } },
+    read,
+  );
+
+  expect(landed.threads[THREAD]).toMatchObject({
+    name: "Live name",
+    status: "locked",
+    parentMessageId: null,
+    autoArchiveAfterMinutes: 60,
   });
 });
