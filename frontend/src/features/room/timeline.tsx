@@ -210,7 +210,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const mine = last?.kind === "pending";
 
     if (canFollow() || mine) {
-      if (mine) followEnd();
+      followEnd();
 
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     } else if (timeline.after === null) {

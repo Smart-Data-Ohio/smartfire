@@ -206,7 +206,7 @@ export function ThreadTimeline({
       !isPlacing() &&
       (canFollow() || items.at(-1)?.kind === "pending")
     ) {
-      if (items.at(-1)?.kind === "pending") followEnd();
+      followEnd();
 
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
