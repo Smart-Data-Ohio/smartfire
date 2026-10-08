@@ -110,8 +110,8 @@ export const S3_MESSAGE_IDS = {
   savedDmReminded: seededMessageId(ROOM_IDS.dmMaya, 6),
 } as const;
 
-/** Ember's agent record id (`/agents/:id/approvals`). */
-const EMBER_AGENT_ID = 1;
+/** Ember's agent id (`/agents/:id/approvals`): the mock reuses each bot user's id as its agent id. */
+const EMBER_AGENT_ID = BOT_ID;
 
 /** #general messages from this index up stay exactly as S1 and S2 left them. */
 const GENERAL_PINNED_FROM = 280;
@@ -129,7 +129,8 @@ const PR_TITLES: readonly (readonly [number, string, number])[] = [
 
 const KEYWORDS = /\b(deploy|release|launch|ship|pricing|onboarding|migration|staging)/i;
 
-const APPROVALS: readonly (readonly [string, AgentApprovalStatus])[] = [
+/** Ember's approval requests in the inbox, newest first (S4's approvals mock seeds the same). */
+export const APPROVALS: readonly (readonly [string, AgentApprovalStatus])[] = [
   ["Run `deploy production` for release 2.0.1", "pending"],
   ["Merge PR #318 into main", "pending"],
   ["Post the weekly metrics digest to #announcements", "approved"],
@@ -138,6 +139,19 @@ const APPROVALS: readonly (readonly [string, AgentApprovalStatus])[] = [
   ["Close 14 stale issues labelled `needs-repro`", "approved"],
   ["Invite the design contractors to #design", "cancelled"],
 ];
+
+/**
+ * The approval id of `APPROVALS[index]`: counting down from 100, so the newest has the highest id,
+ * as the approvals page orders them.
+ */
+export function seededApprovalId(index: number): number {
+  return 100 - index;
+}
+
+/** When `APPROVALS[index]` was requested. */
+export function seededApprovalAt(now: number, index: number): number {
+  return now - (index * 19 + 2) * HOUR;
+}
 
 const BUDGETS: readonly (readonly [AgentBudgetCap, string, number])[] = [
   ["messages", "messages", 200],
@@ -798,14 +812,14 @@ export function seedS3(world: World, now: number, random: Random): void {
   // --- agents: approvals and budget notices ---
 
   APPROVALS.forEach(([summary, status], index) => {
-    const at = now - (index * 19 + 2) * HOUR;
+    const at = seededApprovalAt(now, index);
     const title = conversationTitle(names, ROOM_IDS.engineering, null, "Ember");
 
     add(
       "agent_approval_request",
       sourceOf(
         "agent_approval",
-        index + 1,
+        seededApprovalId(index),
         title,
         summary,
         at,

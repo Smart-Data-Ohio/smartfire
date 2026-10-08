@@ -204,7 +204,7 @@ fn ported_classic_pages_map_to_their_spa_urls() {
 }
 
 #[test]
-fn board_pages_are_ported_and_workspace_work_stays_classic() {
+fn board_pages_and_workspace_work_are_ported() {
     for (endpoint, classic, spa) in [
         ("rooms#show", "/rooms/12", "/app/r/12"),
         (
@@ -226,7 +226,7 @@ fn board_pages_are_ported_and_workspace_work_stays_classic() {
         assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
         assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
     }
-    assert_eq!(spa_url("work_threads#index", "/work", None), None);
+    assert_eq!(spa_url("work_threads#index", "/work", None).as_deref(), Some("/app/work"));
     assert_eq!(classic_url("/app/work", None).as_deref(), Some("/work"));
 }
 

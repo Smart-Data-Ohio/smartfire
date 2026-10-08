@@ -22,6 +22,7 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
+import { HandoffDialog } from "../work/handoff-dialog.tsx";
 import {
   classicWorkUrl,
   parseTags,
@@ -561,28 +562,45 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/** Links and handoff are still classic pages (steps 9 and 10 bring them here). */
-function ClassicWorkLinks({ threadId }: { readonly threadId: number }) {
+/** Link management stays classic; handoffs use the shared work dialog. */
+function PostWorkActions({
+  threadId,
+  detail,
+}: {
+  readonly threadId: number;
+  readonly detail: WorkDetail | null;
+}) {
+  const [handingOff, setHandingOff] = useState(false);
+  const name = useStore((state) => state.threads[threadId]?.name ?? "Post");
+
   return (
-    <p className="post-classic">
-      <span>Links and handoff open in classic.</span>
+    <div className="post-classic">
       <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
         Manage links
         <Icon name="arrow-up-right" size={12} />
       </a>
-      <a className="post-classic-link" href={classicWorkUrl(threadId, "handoff")}>
-        Hand off
-        <Icon name="arrow-up-right" size={12} />
-      </a>
-    </p>
+      {detail === null || detail.handoffReceivers.length === 0 ? null : (
+        <>
+          <Button variant="secondary" size="sm" icon="send" onClick={() => setHandingOff(true)}>
+            Hand off to an agent
+          </Button>
+          <HandoffDialog
+            threadId={threadId}
+            threadName={name}
+            work={detail}
+            open={handingOff}
+            onOpenChange={setHandingOff}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, the agent's steps, the work history, and the way to the classic links and handoff
- * pages.
+ * its editor, the agent's steps, the work history, and link management and handoff controls.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
@@ -651,7 +669,9 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
       />
       <Steps steps={detail?.steps ?? []} />
       <History history={detail?.history ?? []} />
-      {permissions?.canManageWork === true ? <ClassicWorkLinks threadId={threadId} /> : null}
+      {permissions?.canManageWork === true ? (
+        <PostWorkActions threadId={threadId} detail={detail} />
+      ) : null}
     </div>
   );
 }

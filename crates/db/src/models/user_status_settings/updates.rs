@@ -43,10 +43,11 @@ impl UserStatusSettings {
         active: bool,
         now: Timestamp,
     ) -> Result<bool> {
+        let revision = crate::User::revision_for_touch(tx, self.user.id, now)?;
         let affected = if active {
-            tx.conn().execute("UPDATE users SET ooo_broadcast=1,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=1)", rusqlite::params![tx.now(),self.user.id])?
+            tx.conn().execute("UPDATE users SET ooo_broadcast=1,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=1)", rusqlite::params![revision,self.user.id])?
         } else {
-            tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)", rusqlite::params![tx.now(),self.user.id,now])?
+            tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)", rusqlite::params![revision,self.user.id,now])?
         };
         Ok(affected == 1)
     }
@@ -153,12 +154,14 @@ impl UserStatusSettings {
                     tx.conn()
                         .execute("DELETE FROM calendar_meeting_caches WHERE id=?", [cache.id])?;
                 }
-                self.claim_ooo_broadcast(tx, self.out_of_office(tx.now()), tx.now())?;
+                let now = tx.now();
+                self.claim_ooo_broadcast(tx, self.out_of_office(now), now)?;
                 self.announce_ooo(tx)?;
             }
         }
         if manual_changed {
-            self.claim_ooo_broadcast(tx, self.out_of_office(tx.now()), tx.now())?;
+            let now = tx.now();
+            self.claim_ooo_broadcast(tx, self.out_of_office(now), now)?;
             self.announce_ooo(tx)?;
         }
         Ok(())

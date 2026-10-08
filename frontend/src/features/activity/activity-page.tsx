@@ -4,6 +4,7 @@ import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
+import { spaUrlFor } from "../../lib/screens.ts";
 import { useActivityList, useActivityUnread } from "../../store/inbox-hooks.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -105,10 +106,21 @@ function useFollowTarget(): (target: ActivityTarget) => void {
         void navigate({ to: "/saved" });
 
         return;
-      case "classic":
-        openClassic(target.href);
+      case "classic": {
+        // A classic page the SPA has since ported (an agent's approvals) opens in place.
+        const url = new URL(target.href, window.location.origin);
+        const spa = isSitePath(target.href) ? spaUrlFor(url.pathname, url.search) : null;
+
+        if (spa === null) {
+          openClassic(target.href);
+        } else {
+          // `href` is the public path: the router strips its `/app/` basepath itself.
+          void navigate({ href: spa });
+        }
 
         return;
+      }
+
       case "none":
         return;
     }

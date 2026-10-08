@@ -225,8 +225,8 @@ describe("mock boards and work", () => {
     ).toBe(true);
     expect(events.some(({ type }) => type === "thread.removed")).toBe(true);
     const work = await get<WorkList>(server, "/api/v1/work?state=boards");
-    expect(work.threads).toHaveLength(11);
+    expect(work.threads).toHaveLength(14);
     expect(work.threads.every(({ board }) => board)).toBe(true);
-    expect((await get<WorkList>(server, "/api/v1/work?state=agents")).threads).toHaveLength(2);
+    expect((await get<WorkList>(server, "/api/v1/work?state=agents")).threads).toHaveLength(3);
   });
 });

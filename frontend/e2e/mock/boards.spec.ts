@@ -232,3 +232,22 @@ test("another member's changes move rows live", async ({ page, request }) => {
   });
   await expect(posts(page).getByRole("link").first()).toContainText("Live post from Maya");
 });
+
+test("a board post uses the shared work handoff dialog", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `r/${BOARD}/t/${BOARD_POST_IDS.onboardingChecklist}`);
+  await pane(page).getByRole("button", { name: "Hand off to an agent" }).click();
+
+  const dialog = page.getByRole("dialog", { name: /^Hand off/ });
+
+  await expect(dialog.getByRole("radio", { name: /Ember/ })).toBeFocused();
+  await dialog.getByRole("textbox", { name: "Summary" }).fill("Finish the checklist rollout.");
+  await dialog.getByRole("button", { name: "Hand off", exact: true }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(pane(page).getByRole("button", { name: "Hand off to an agent" })).toHaveCount(0);
+  await pane(page)
+    .getByRole("button", { name: /^Work history/ })
+    .click();
+  await expect(pane(page).getByText(/handed off owner .* → Ember/)).toBeVisible();
+});

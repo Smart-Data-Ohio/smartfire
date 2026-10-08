@@ -3,6 +3,7 @@ import { userFixture } from "../api/testing.ts";
 import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { User } from "../gen/User.ts";
+import { nextObservation, observeResponse } from "../lib/request-observation.ts";
 import { mutations, store } from "../store/store.ts";
 import { type PeopleRequests, PROFILE_OUT_OF_DATE, peoplePagesOver } from "./people-pages.ts";
 
@@ -81,6 +82,30 @@ const SETTINGS = {} as Settings;
 describe("the people pages", () => {
   afterEach(() => mutations.reset());
 
+  it("answers the canonical presentation after a delayed profile at the same user revision", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+    const stale = held<PersonProfile>();
+
+    const captured = page({
+      ...sam(1),
+      customStatus: { emoji: "🌴", text: "Away", expiresAt: null },
+    });
+
+    observeResponse(captured, nextObservation());
+    fake.profiles.push(stale.promise);
+
+    const loading = pages.profile(SAM);
+
+    mutations.mergeUsers([sam(1)]);
+    stale.release(captured);
+
+    const profile = await loading;
+
+    expect(profile.user.customStatus).toBeNull();
+    expect(profile.user).toBe(store.getState().users[SAM]);
+  });
+
   it("fetch a held banned page again once a later unban reached the store", async () => {
     const fake = fakeRequests();
     const pages = peoplePagesOver(fake.requests);
@@ -93,6 +118,39 @@ describe("the people pages", () => {
     // A resync lands the unban (10:03) while the page's request still holds the ban (10:02).
     mutations.mergeUsers([sam(3)]);
     stale.release(page(sam(2, "banned")));
+
+    const profile = await loading;
+
+    expect(profile.user.status).toBe("active");
+    expect(profile.transferUrl).not.toBeNull();
+    expect(fake.profileCalls()).toBe(2);
+    expect(store.getState().users[SAM]?.status).toBe("active");
+  });
+
+  it("keep an unban over a held banned page at the same user revision", async () => {
+    const fake = fakeRequests();
+    const pages = peoplePagesOver(fake.requests);
+    const stale = held<PersonProfile>();
+
+    // A repeated server clock stamps the ban and its unban with one revision, 10:02.
+    mutations.mergeUsers([sam(2, "banned")]);
+
+    const staleBanned = page(sam(2, "banned"));
+    const unbanned = page(sam(2));
+    const fresh = page(sam(2));
+
+    observeResponse(staleBanned, nextObservation());
+    fake.profiles.push(stale.promise);
+
+    const loading = pages.profile(SAM);
+
+    observeResponse(unbanned, nextObservation());
+    fake.bans.push(Promise.resolve(unbanned));
+    expect((await pages.setBanned(SAM, false)).user.status).toBe("active");
+
+    observeResponse(fresh, nextObservation());
+    fake.profiles.push(Promise.resolve(fresh));
+    stale.release(staleBanned);
 
     const profile = await loading;
 

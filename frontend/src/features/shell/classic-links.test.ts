@@ -23,6 +23,7 @@ describe("links to classic pages", () => {
     );
     expect(inPlaceTarget(link("/users/me/profile"), origin)).toBe("/app/settings");
     expect(inPlaceTarget(link("/activity"), origin)).toBe("/app/activity");
+    expect(inPlaceTarget(link("/work?state=done"), origin)).toBe("/app/work?state=done");
     expect(inPlaceTarget(link("/rooms/12/events/34/attendance"), origin)).toBe(
       "/app/r/12/events/34/attendance",
     );

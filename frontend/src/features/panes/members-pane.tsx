@@ -7,6 +7,9 @@ import { panes } from "../../sync/panes.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useAgentIdOf } from "../agents/agent-link.tsx";
+import { useWorkingPresence } from "../agents/working.ts";
+import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { canStar, groupMembers, type MemberEntry } from "./members.ts";
 import { PaneFrame } from "./pane-frame.tsx";
@@ -31,7 +34,17 @@ interface MemberRowProps {
 }
 
 function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
-  const status = member.statusText ?? (member.bot ? null : PRESENCE_WORD[member.presence]);
+  const working = useWorkingPresence(member.bot ? member.userId : undefined);
+  const agentId = useAgentIdOf(member.bot ? member.userId : undefined);
+
+  const status =
+    working ?? member.statusText ?? (member.bot ? null : PRESENCE_WORD[member.presence]);
+
+  const label = member.viewer
+    ? `${member.name} (you)`
+    : agentId === null
+      ? `Message ${member.name}`
+      : `Open ${member.name}'s profile`;
 
   return (
     <li className="member-row" data-offline={member.presence === "offline" || undefined}>
@@ -39,7 +52,7 @@ function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
         type="button"
         className="member-row-main"
         disabled={member.viewer}
-        aria-label={member.viewer ? `${member.name} (you)` : `Message ${member.name}`}
+        aria-label={label}
         onClick={() => onOpen(member)}
       >
         <UserAvatar userId={member.userId} size={32} presence decorative />
@@ -47,7 +60,7 @@ function MemberRow({ member, onOpen, onStar }: MemberRowProps) {
           <span className="member-row-name">
             <span className="member-row-label">{member.name}</span>
             {member.viewer ? <span className="member-row-you">(you)</span> : null}
-            {member.bot ? <span className="message-agent-tag">Agent</span> : null}
+            {member.bot ? <AgentBadge userId={member.userId} status /> : null}
           </span>
           {status === null ? null : <span className="member-row-status">{status}</span>}
         </span>
@@ -128,6 +141,15 @@ export function MembersPane({ roomId }: { readonly roomId: number }) {
   };
 
   const open = (member: MemberEntry) => {
+    const agentId = users[member.userId]?.agent?.agentId;
+
+    // An agent's row opens its profile, which has its own Message button.
+    if (agentId !== undefined) {
+      void navigate({ to: "/agents/$agentId", params: { agentId } });
+
+      return;
+    }
+
     directs.create([member.userId]).then(
       (row) => void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } }),
       (error: Error) =>

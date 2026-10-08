@@ -21,7 +21,8 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
-import { threadPermissions, workDetail } from "../s6/work.ts";
+import { workDetail, workUserIds } from "../s4/work-model.ts";
+import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -51,7 +52,6 @@ export interface Threads {
   readonly routes: readonly Route[];
   /** The thread, if the viewer belongs to its room; 404 otherwise. */
   threadOr404(threadId: number): ThreadRecord;
-  detail(thread: ThreadRecord): ThreadDetail;
   /** Posts a reply with everything that follows: indicator, thread events, unread. */
   postReply(thread: ThreadRecord, draft: MessageDraft, fresh?: boolean): MessageDTO;
   /** After a reply was deleted: the recount and the refresh events. */
@@ -60,6 +60,10 @@ export interface Threads {
   parentRemoved(messageId: number): void;
   /** Starts or stops `userId` typing in a thread (fanned out to `thread:<id>`). */
   typing(threadId: number, userId: number, on: boolean): void;
+  /** The viewer's `ThreadDetail`, as `GET /threads/:id` answers it. */
+  detail(thread: ThreadRecord): ThreadDetail;
+  /** The `thread.updated` events for the thread, on `room:<id>` and `thread:<id>`. */
+  updated(thread: ThreadRecord): Outgoing[];
 }
 
 /** Creates the threads module. `held` applies the send hold to posting requests. */
@@ -90,25 +94,19 @@ export function createThreads(
 
   const detail = (thread: ThreadRecord): ThreadDetail => {
     const parent = parentOf(thread);
-    const work = workDetail(ctx, thread);
+    const allowed = permissions(thread);
+    const work = workDetail(ctx.world(), thread, allowed);
 
     return {
       thread: threadDto(thread, ctx.now()),
       membership: thread.viewerMembership,
       parentMessage: parent,
-      permissions: permissions(thread),
+      permissions: allowed,
       work,
       users: ctx.usersFor([
         thread.creatorId,
         ...(parent === null ? [] : [parent.creatorId]),
-        ...(work?.ownerCandidates ?? []).map((candidate) => candidate.userId),
-        ...(work?.handoffReceivers ?? []).map((candidate) => candidate.userId),
-        ...(thread.workDetail?.history ?? []).flatMap((entry) =>
-          entry.actorId === null ? [] : [entry.actorId],
-        ),
-        ...(thread.workDetail?.resultUpdatedById == null
-          ? []
-          : [thread.workDetail.resultUpdatedById]),
+        ...workUserIds(thread, work),
       ]),
     };
   };
@@ -529,7 +527,6 @@ export function createThreads(
       route("POST", /^\/threads\/(\d+)\/read$/, (request) => ok(read(firstId(request)))),
     ],
     threadOr404,
-    detail,
     postReply: (thread, draft, fresh) => postReply(thread, draft, fresh),
     replyRemoved(thread) {
       const events = [...syncIndicator(thread), ...updated(thread)];
@@ -549,5 +546,7 @@ export function createThreads(
     typing(threadId, userId, on) {
       ctx.publish([{ topic: `thread:${threadId}`, type: "typing", data: { userId, on } }]);
     },
+    detail,
+    updated,
   };
 }

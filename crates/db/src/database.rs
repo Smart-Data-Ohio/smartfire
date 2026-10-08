@@ -214,6 +214,12 @@ impl<'c> Tx<'c> {
         self.env.now()
     }
 
+    /// A row change sorts after its persisted version, even when the clock repeats or regresses.
+    pub fn revision_after(&self, previous: Timestamp) -> Timestamp {
+        self.now()
+            .max(previous.since(jiff::SignedDuration::from_micros(1)))
+    }
+
     pub fn rich_text(&self) -> &'c dyn RichText {
         &*self.env.rich_text
     }

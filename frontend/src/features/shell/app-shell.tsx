@@ -45,7 +45,8 @@ function useDocumentTitle(roomId: number | null, page: Page): void {
 
 /**
  * Which column a phone shows: the conversation list, a tab's page beside the tab bar (the
- * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search).
+ * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search, Work, the
+ * agent pages).
  */
 function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
   const matchRoute = useMatchRoute();
@@ -54,7 +55,9 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/saved" }) !== false ||
     matchRoute({ to: "/scheduled" }) !== false ||
     matchRoute({ to: "/search" }) !== false ||
-    matchRoute({ to: "/m/$messageId" }) !== false;
+    matchRoute({ to: "/m/$messageId" }) !== false ||
+    matchRoute({ to: "/work" }) !== false ||
+    matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {
     return "room";

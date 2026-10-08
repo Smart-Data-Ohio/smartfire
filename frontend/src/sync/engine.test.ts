@@ -3054,7 +3054,7 @@ describe("boards and open work panes", () => {
           (request) => request.path === "/rooms/900/board",
         ).length;
 
-        const changed = boardDetail(boardThread(1, "done", 7, ["api"]));
+        const changed = boardDetail(boardThread(1, "done", 7, ["api"], 1));
 
         if (changed.work !== null) changed.work.resultMarkdown = "Finished";
         yield* api.reply("GET /threads/1", changed);

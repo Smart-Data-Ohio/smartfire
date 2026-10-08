@@ -37,7 +37,7 @@ import {
   UserId,
 } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { Timestamp } from "./time.ts";
+import { RowTimestamp, Timestamp } from "./time.ts";
 import { tolerantLiterals } from "./tolerant.ts";
 import { User } from "./user.ts";
 
@@ -55,6 +55,7 @@ export const AgentDirectoryRow = Schema.Struct({
   createdAt: Timestamp,
   statusChangedAt: Schema.NullOr(Timestamp),
   lastSeenAt: Schema.NullOr(Timestamp),
+  updatedAt: RowTimestamp,
 });
 
 export type AgentDirectoryRow = typeof AgentDirectoryRow.Type;
@@ -183,6 +184,7 @@ export const AgentStatusChanged = Schema.Struct({
   suspended: Schema.Boolean,
   workingPresence: Schema.NullOr(Schema.String),
   workingPresenceExpiresAt: Schema.NullOr(Timestamp),
+  updatedAt: RowTimestamp,
 });
 
 export type AgentStatusChanged = typeof AgentStatusChanged.Type;
@@ -260,6 +262,7 @@ export const AgentApproval = Schema.Struct({
   adminOnly: Schema.Boolean,
   approvable: Schema.Boolean,
   deniable: Schema.Boolean,
+  updatedAt: RowTimestamp,
 });
 
 export type AgentApproval = typeof AgentApproval.Type;

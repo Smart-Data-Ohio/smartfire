@@ -8,6 +8,8 @@ import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
@@ -55,17 +57,23 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkList } from "../gen/WorkList.ts";
+import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
+import type { ApprovalFilter } from "../store/approvals.ts";
 import type { BoardQuery } from "../store/boards.ts";
+import type { LedgerFilter } from "../store/ledger.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
+import * as agentActions from "./agent-actions.ts";
+import * as approvalActions from "./approval-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
 import * as eventActions from "./event-actions.ts";
 import * as fizzyActions from "./fizzy-actions.ts";
 import { SyncServices } from "./layers.ts";
+import * as ledgerActions from "./ledger-actions.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
@@ -83,6 +91,7 @@ import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
+import * as workActions from "./work-actions.ts";
 
 export type { EventPrefill };
 
@@ -252,10 +261,73 @@ const scheduled = {
   cancel: (id: number): Promise<void> => runAction(scheduledActions.cancel(id)),
 };
 
+/** The agent screens (S4). Loads land in the store (failures as its error) and never reject. */
+const agents = {
+  /** Loads (or reloads) the directory. */
+  loadDirectory: (): Promise<void> => runAction(agentActions.loadDirectory()),
+  /** Loads (or reloads) an agent's profile. */
+  loadProfile: (agentId: number): Promise<void> => runAction(agentActions.loadProfile(agentId)),
+};
+
+/**
+ * Agents' approval requests (S4). Loads never reject; a decision shows at once and rejects (put
+ * back) when the server refuses it.
+ */
+const approvals = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.loadMore(agentId, filter)),
+  /** Approves or denies, with an optional note; answers the server's copy. */
+  decide: (id: number, decision: ApprovalDecision, note: string | null): Promise<AgentApproval> =>
+    runAction(approvalActions.decide(id, decision, note)),
+};
+
+/** Agents' event ledgers (S4). Loads land in the store (a 403 too) and never reject. */
+const ledger = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.loadMore(agentId, filter)),
+};
+
 /** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
 export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
 }
+
+/**
+ * Whether a work URL from the server (a link, the run) is safe in an `href`: `https://` or
+ * site-relative. The decoder drops the rest already; components check again.
+ */
+export { isSafeWorkHref } from "../api/schema/work.ts";
+
+/** Work tracking (S4). Loads and refreshes never reject; writes reject on failure. */
+const work = {
+  update: (threadId: number, body: UpdateWork): Promise<void> =>
+    runAction(boardActions.update(threadId, body)),
+  handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
+    runAction(boardActions.handoff(threadId, body)),
+  list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
+  /** Loads (or reloads) a filter of the work list. */
+  loadList: (filter: WorkFilter): Promise<void> => runAction(workActions.loadList(filter)),
+  /** Refetches a thread's detail after live work facts moved past the pane's. */
+  refresh: (threadId: number): Promise<void> => runAction(workActions.refresh(threadId)),
+  /** Moves, starts (on an untracked thread) or stops (`null`) tracking; optimistic. */
+  setStatus: (threadId: number, status: WorkStatus | null): Promise<ThreadDetail> =>
+    runAction(workActions.setStatus(threadId, status)),
+  /** Assigns (or, with `null`, unassigns) the owner; optimistic. */
+  assign: (threadId: number, ownerId: number | null): Promise<ThreadDetail> =>
+    runAction(workActions.assign(threadId, ownerId)),
+  /** Records the result, or clears it (`null`). */
+  saveResult: (threadId: number, markdown: string | null): Promise<ThreadDetail> =>
+    runAction(workActions.saveResult(threadId, markdown)),
+  /** Hands the work to an agent from `handoffReceivers`. */
+  handOff: (threadId: number, body: CreateWorkHandoff): Promise<ThreadDetail> =>
+    runAction(workActions.handOff(threadId, body)),
+};
 
 /**
  * Global search (S3). Loads land in the search store (errors too) and never reject; writes to
@@ -413,18 +485,15 @@ export const actions = {
     createPost: (roomId: number, input: boardActions.BoardPostInput): Promise<ThreadDetail> =>
       runAction(boardActions.createPost(roomId, input)),
   },
-  work: {
-    update: (threadId: number, body: UpdateWork): Promise<void> =>
-      runAction(boardActions.update(threadId, body)),
-    handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
-      runAction(boardActions.handoff(threadId, body)),
-    list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
-  },
   messages,
   threads,
   activity,
   saved,
   scheduled,
+  work,
+  agents,
+  approvals,
+  ledger,
   search,
   organize,
   rooms,

@@ -15,10 +15,9 @@ import type { ThreadIndicator } from "../../src/gen/ThreadIndicator.ts";
 import type { ThreadMembership } from "../../src/gen/ThreadMembership.ts";
 import type { ThreadStatus } from "../../src/gen/ThreadStatus.ts";
 import type { User } from "../../src/gen/User.ts";
-import type { WorkDetail } from "../../src/gen/WorkDetail.ts";
-import type { WorkFacts } from "../../src/gen/WorkFacts.ts";
 import { notFound, validation } from "../http.ts";
 import { escapeHtml, type Mentionable, renderMarkdown } from "../markdown.ts";
+import { type WorkRecord, workFacts } from "../s4/work-model.ts";
 import type { RoomRecord, World } from "../seed.ts";
 
 /** Messages per page, as `Message::PAGE_SIZE`. */
@@ -41,8 +40,6 @@ export interface ThreadRecord {
   readonly id: number;
   readonly roomId: number;
   isBoard?: boolean;
-  work?: WorkFacts | null;
-  workDetail?: WorkDetail | null;
   updatedAt?: string;
   /** `null` once the parent message is deleted. */
   parentMessageId: number | null;
@@ -61,6 +58,8 @@ export interface ThreadRecord {
   readonly memberIds: Set<number>;
   /** The viewer's membership; `null` when they never touched the thread. */
   viewerMembership: ThreadMembership | null;
+  /** Its work columns, once anyone tracked it (s4/work-model.ts); absent for most threads. */
+  work?: WorkRecord;
 }
 
 /** One stored blob: what `POST /uploads` declared and, once `PUT`, the bytes. */
@@ -270,7 +269,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
-    work: thread.work == null ? null : { ...thread.work, messageCount: thread.messages.length },
+    work: workFacts(thread.work, thread.messages.length),
   };
 }
 

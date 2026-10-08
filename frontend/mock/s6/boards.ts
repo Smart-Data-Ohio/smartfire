@@ -1,28 +1,19 @@
 import type { BoardListing } from "../../src/gen/BoardListing.ts";
 import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { BoardStatusFilter } from "../../src/gen/BoardStatusFilter.ts";
-import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
-import type { WorkHistoryEntry } from "../../src/gen/WorkHistoryEntry.ts";
-import type { WorkList } from "../../src/gen/WorkList.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
-import { forbidden, notFound, ok, validation } from "../http.ts";
-import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
-import { renderMarkdown } from "../markdown.ts";
+import { notFound, ok, validation } from "../http.ts";
+import { field, intField, type Json, stringField } from "../json.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
-import { iso, plainDraft, type ThreadRecord, threadDto, touched } from "../s2/model.ts";
+import { iso, plainDraft, type ThreadRecord, threadDto } from "../s2/model.ts";
 import { clientMessageIdOf, parseMessage } from "../s2/posting.ts";
 import type { Threads } from "../s2/threads.ts";
 import type { Uploads } from "../s2/uploads.ts";
-import { VIEWER_ID } from "../seed.ts";
+import type { Work } from "../s4/work.ts";
+import { rowTimestamp, VIEWER_ID } from "../seed.ts";
 import { autoAssignedBoardOwner, createBoardAutomations } from "./automations.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
-import {
-  emptyWorkDetail,
-  newWorkFacts,
-  ownerCandidates,
-  threadPermissions,
-  workDetail,
-} from "./work.ts";
+import { emptyWorkDetail, newWorkFacts, ownerCandidates, tagsOf } from "./work.ts";
 
 const STATUSES: readonly WorkStatus[] = ["planned", "in_progress", "blocked", "done"];
 
@@ -35,28 +26,7 @@ function statusOf(raw: Json | undefined, fallback: WorkStatus): WorkStatus {
   return status ?? fallback;
 }
 
-function tagsOf(body: Json | undefined): string[] {
-  const input = stringArrayField(body, "tags");
-
-  if (input === null && field(body, "tags") !== undefined)
-    throw validation("tags", "Tags must be a list");
-
-  const tags = [
-    ...new Set((input ?? []).map((tag) => tag.trim().toLowerCase()).filter((tag) => tag !== "")),
-  ].sort();
-
-  if (tags.length > 5) throw validation("tags", "Tags must have at most 5 entries");
-
-  if (tags.some((tag) => [...tag].length > 30))
-    throw validation("tags", "Tags are too long (maximum is 30 characters)");
-
-  if (tags.some((tag) => !/^[a-z0-9][a-z0-9-]*$/.test(tag)))
-    throw validation("tags", "Tags must contain only letters, numbers and hyphens");
-
-  return tags;
-}
-
-export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads) {
+export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads, work: Work) {
   const boardRoom = (roomId: number) => {
     const room = ctx.roomOr404(roomId);
 
@@ -186,14 +156,6 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     return id;
   };
 
-  const publishUpdate = (thread: ThreadRecord) => {
-    const data = threadDto(thread, ctx.now());
-    ctx.publish([
-      { topic: `room:${thread.roomId}`, type: "thread.updated", data },
-      { topic: `thread:${thread.id}`, type: "thread.updated", data },
-    ]);
-  };
-
   /** Posts by `room:creator:clientPostId`, so a retry answers the post its first attempt made. */
   const postsByClientId = new Map<string, number>();
 
@@ -261,8 +223,14 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
         actorId === VIEWER_ID
           ? { threadId: 0, involvement: "mentions", unreadAt: null, joinedAt: at }
           : null,
-      work: { ...newWorkFacts(status), owner, ownerActive: owner !== null, tags },
-      workDetail: { ...emptyWorkDetail },
+      work: {
+        ...newWorkFacts(status, rowTimestamp(ctx.now())),
+        ...emptyWorkDetail,
+        ownerId: owner?.id ?? null,
+        owner,
+        ownerActive: owner !== null,
+        tags,
+      },
     };
 
     if (thread.viewerMembership !== null)
@@ -291,275 +259,6 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     return ok(threads.detail(thread), 201);
   };
 
-  const historyEntry = (
-    thread: ThreadRecord,
-    kind: WorkHistoryEntry["kind"],
-    actorId: number,
-  ): WorkHistoryEntry => {
-    const work = thread.work;
-    const owner = work?.owner;
-
-    return {
-      id: Math.max(0, ...(thread.workDetail?.history ?? []).map(({ id }) => id)) + 1,
-      kind,
-      createdAt: touched(ctx.now(), thread.updatedAt ?? thread.createdAt),
-      actorId,
-      fromStatus: work?.status ?? null,
-      toStatus: work?.status ?? null,
-      fromOwner: owner == null ? null : { userId: owner.id, name: owner.name },
-      toOwner: owner == null ? null : { userId: owner.id, name: owner.name },
-      note: null,
-      handoff: null,
-    };
-  };
-
-  /** Validate every requested change before mutating, so a rejected multi-field write is atomic. */
-  const updateWork = (
-    threadId: number,
-    body: Json | undefined,
-    actorId = VIEWER_ID,
-    remote = false,
-  ): ThreadDetail => {
-    const thread = threads.threadOr404(threadId);
-    const viewer = ctx.world().users.get(VIEWER_ID);
-
-    if (viewer?.status !== "active" || viewer.role === "bot") throw notFound();
-    const allowed = threadPermissions(ctx, thread);
-    const rawStatus = field(body, "status");
-    const rawOwner = field(body, "ownerId");
-    const rawResult = field(body, "resultMarkdown");
-    const rawTags = field(body, "tags");
-
-    const status =
-      rawStatus === undefined
-        ? (thread.work?.status ?? null)
-        : rawStatus === null
-          ? null
-          : statusOf(rawStatus, "planned");
-
-    if (!remote) {
-      if (
-        rawStatus !== undefined &&
-        !(thread.work == null
-          ? allowed.canConvertWork
-          : rawStatus === null
-            ? allowed.canAssignWork
-            : allowed.canUpdateWorkStatus)
-      )
-        throw forbidden();
-
-      if (rawOwner !== undefined && !allowed.canAssignWork) throw forbidden();
-
-      if ((rawResult !== undefined || rawTags !== undefined) && !allowed.canManageWork)
-        throw forbidden();
-    }
-
-    const ownerId =
-      rawOwner === undefined ? (thread.work?.owner?.id ?? null) : checkedOwner(thread.roomId, body);
-
-    if (status === null && ownerId !== null) throw validation("ownerId", "requires work tracking");
-
-    if (
-      rawResult !== undefined &&
-      rawResult !== null &&
-      stringField(body, "resultMarkdown") === null
-    )
-      throw validation("resultMarkdown", "Result must be Markdown text");
-
-    const source = stringField(body, "resultMarkdown");
-
-    const result =
-      rawResult === undefined
-        ? (thread.workDetail?.resultMarkdown ?? null)
-        : source === null || source.trim() === ""
-          ? null
-          : source;
-
-    if (result !== null && [...result].length > 20000)
-      throw validation("resultMarkdown", "Result is too long (maximum is 20000 characters)");
-
-    if (rawTags !== undefined && !thread.isBoard)
-      throw validation("tags", "Tags are only available on board posts");
-    const tags = rawTags === undefined ? (thread.work?.tags ?? []) : tagsOf(body);
-
-    const addedTags = tags.filter((tag) => !(thread.work?.tags ?? []).includes(tag));
-
-    const owner =
-      ownerId === null
-        ? rawTags === undefined
-          ? null
-          : autoAssignedBoardOwner(ctx.world(), thread.roomId, addedTags)
-        : (ctx.world().users.get(ownerId) ?? null);
-
-    const before = thread.work;
-    const detail = thread.workDetail ?? emptyWorkDetail;
-    const statusChanged = status !== (before?.status ?? null);
-    const ownerChanged = (owner?.id ?? null) !== (before?.owner?.id ?? null);
-    const resultChanged = result !== detail.resultMarkdown;
-    const tagsChanged = JSON.stringify(tags) !== JSON.stringify(before?.tags ?? []);
-
-    if (!statusChanged && !ownerChanged && !resultChanged && !tagsChanged)
-      return threads.detail(thread);
-    const entry = historyEntry(thread, statusChanged ? "update" : "assignment", actorId);
-    entry.toStatus = status;
-    entry.toOwner = owner === null ? null : { userId: owner.id, name: owner.name };
-    const at = entry.createdAt;
-    thread.work =
-      status === null
-        ? null
-        : {
-            ...(before ?? newWorkFacts()),
-            status,
-            owner,
-            ownerActive:
-              owner !== null &&
-              ownerCandidates(ctx.world(), thread.roomId).some(({ userId }) => userId === owner.id),
-            tags,
-            resultUpdatedAt: resultChanged
-              ? result === null
-                ? null
-                : at
-              : (before?.resultUpdatedAt ?? null),
-          };
-    thread.workDetail = {
-      ...detail,
-      resultMarkdown: result,
-      resultHtml: result === null ? null : renderMarkdown(result, ctx.mentionables()),
-      resultUpdatedById: resultChanged
-        ? result === null
-          ? null
-          : actorId
-        : detail.resultUpdatedById,
-      history: [...(statusChanged || ownerChanged ? [entry] : []), ...detail.history],
-    };
-
-    if (resultChanged) {
-      const resultEntry = historyEntry(thread, "result", actorId);
-      thread.workDetail.history.unshift(resultEntry);
-    }
-
-    thread.updatedAt = at;
-    publishUpdate(thread);
-
-    return threads.detail(thread);
-  };
-
-  const handoff = (threadId: number, body: Json | undefined): ThreadDetail => {
-    const thread = threads.threadOr404(threadId);
-
-    const viewer = ctx.world().users.get(VIEWER_ID);
-
-    if (viewer?.status !== "active" || viewer.role === "bot") throw notFound();
-
-    if (thread.work == null) throw validation("base", "This thread is not tracked as work");
-
-    if (!threadPermissions(ctx, thread).canManageWork) throw forbidden();
-
-    if (thread.work.owner?.agent?.agentId === intField(body, "receiverAgentId"))
-      throw validation("receiverAgentId", "Receiver is already the owner of this work");
-
-    const receiver = workDetail(ctx, thread)?.handoffReceivers.find(
-      ({ agentId }) => agentId === intField(body, "receiverAgentId"),
-    );
-
-    if (receiver === undefined)
-      throw validation(
-        "receiverAgentId",
-        "Receiver must be an active agent member of this room with permission to post",
-      );
-    const summary = stringField(body, "summary")?.trim() ?? "";
-
-    if (summary === "" || [...summary].length > 2000)
-      throw validation(
-        "summary",
-        summary === ""
-          ? "Summary can't be blank"
-          : "Summary is too long (maximum is 2000 characters)",
-      );
-
-    const packageList = (key: string) => {
-      const values = stringArrayField(body, key);
-
-      if (values === null) throw validation(key, `${key} must be a list`);
-
-      const normalized = [
-        ...new Set(values.map((value) => value.trim()).filter((value) => value !== "")),
-      ];
-
-      if (normalized.length > 10 || normalized.some((value) => [...value].length > 500))
-        throw validation(key, `${key} must have at most 10 entries of 500 characters`);
-
-      if (key === "links" && normalized.some((value) => !/^https?:\/\//i.test(value)))
-        throw validation(key, "Links must be HTTP or HTTPS URLs");
-
-      return normalized;
-    };
-
-    const links = packageList("links");
-    const questions = packageList("openQuestions");
-    const owner = ctx.world().users.get(receiver.userId);
-
-    if (owner === undefined) throw notFound();
-    const entry = historyEntry(thread, "handoff", VIEWER_ID);
-    entry.toOwner = { userId: owner.id, name: owner.name };
-    entry.handoff = {
-      summary: summary.length > 200 ? `${summary.slice(0, 197)}...` : summary,
-      linkCount: links.length,
-      questionCount: questions.length,
-    };
-    thread.work = { ...thread.work, owner, ownerActive: true };
-    thread.workDetail = {
-      ...(thread.workDetail ?? emptyWorkDetail),
-      history: [entry, ...(thread.workDetail?.history ?? [])],
-    };
-    thread.updatedAt = entry.createdAt;
-    publishUpdate(thread);
-
-    return threads.detail(thread);
-  };
-
-  const workList = (query: URLSearchParams): WorkList => {
-    const viewer = ctx.world().users.get(VIEWER_ID);
-
-    if (viewer?.status !== "active" || viewer.role === "bot") throw notFound();
-    const raw = query.get("state");
-
-    const state =
-      raw === "done" || raw === "all" || raw === "agents" || raw === "boards" ? raw : "open";
-
-    const rows = [...ctx.world().threads.values()]
-      .filter((thread) => {
-        const room = ctx.world().rooms.get(thread.roomId);
-
-        if (room === undefined || !room.memberIds.includes(VIEWER_ID) || thread.work == null)
-          return false;
-
-        if (state === "open") return thread.work.status !== "done";
-
-        if (state === "done") return thread.work.status === "done";
-
-        if (state === "agents")
-          return thread.work.owner?.role === "bot" || thread.work.owner?.agent != null;
-
-        return state !== "boards" || room.room.kind === "board";
-      })
-      .sort(
-        (a, b) =>
-          Date.parse(b.updatedAt ?? b.lastActivityAt) -
-            Date.parse(a.updatedAt ?? a.lastActivityAt) || b.id - a.id,
-      );
-
-    return {
-      threads: rows.map((thread) => ({
-        thread: threadDto(thread, ctx.now()),
-        roomName: ctx.world().rooms.get(thread.roomId)?.room.name ?? "",
-        board: !!thread.isBoard,
-        updatedAt: thread.updatedAt ?? thread.lastActivityAt,
-      })),
-      users: ctx.usersFor(rows.map((thread) => thread.creatorId)),
-    };
-  };
-
   return {
     routes: [
       ...createBoardAutomations(ctx).routes,
@@ -570,19 +269,12 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
       route("POST", /^\/rooms\/(\d+)\/posts$/, (request) =>
         createPost(firstId(request), request.body),
       ),
-      route("PATCH", /^\/threads\/(\d+)\/work$/, (request) =>
-        ok(updateWork(firstId(request), request.body)),
-      ),
-      route("POST", /^\/threads\/(\d+)\/work\/handoff$/, (request) =>
-        ok(handoff(firstId(request), request.body), 201),
-      ),
-      route("GET", /^\/work$/, (request) => ok(workList(request.query))),
     ],
     control(action: string, body: Json | undefined) {
       const actorId = intField(body, "userId") ?? 2;
 
       if (action === "board-update")
-        return ok(updateWork(intField(body, "threadId") ?? 9001, body, actorId, true));
+        return ok(work.updateAs(intField(body, "threadId") ?? 9001, body, actorId));
 
       if (action === "board-create")
         return createPost(

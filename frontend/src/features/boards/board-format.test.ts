@@ -30,6 +30,7 @@ function facts(owner: User | null, ownerActive: boolean): WorkFacts {
     links: [],
     tags: [],
     messageCount: 0,
+    updatedAt: "2026-10-07T10:00:00.000000Z",
   };
 }
 

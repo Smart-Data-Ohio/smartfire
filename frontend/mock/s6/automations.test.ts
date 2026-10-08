@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BoardAutomations } from "../../src/gen/BoardAutomations.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
+import type { WorkList } from "../../src/gen/WorkList.ts";
 import { HttpError, type MockResponse, notFound } from "../http.ts";
 import { field, type Json } from "../json.ts";
 import { dispatch } from "../s2/context.ts";
@@ -424,6 +425,12 @@ describe("mock board automations", () => {
     );
 
     expect(tagged.thread.work?.owner?.id).toBe(BOT_ID);
+
+    const agentWork = await get<WorkList>(server, "/api/v1/work?state=agents");
+
+    expect(agentWork.threads.map(({ thread }) => thread.id)).toEqual(
+      expect.arrayContaining([created.thread.id, tagged.thread.id]),
+    );
 
     const kept = await expectStatus<ThreadDetail>(
       server,
