@@ -129,6 +129,8 @@ pub fn migrate_with(
 
 fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planned: &[String]) -> Result<(), Error> {
     let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    // Rows that already broke a foreign key (an old database's orphans) aren't the migrations'.
+    let before = foreign_key_violations(&tx)?;
     // Plan again while holding the write lock: another runner may have got there first.
     let migrations = pending(&tx, manifest, catalog)?;
     if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
@@ -146,16 +148,24 @@ fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planne
         tx.execute(r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#, [&migration.version])
             .map_err(failed)?;
     }
-    let violation: Option<String> = {
-        let mut stmt = tx.prepare("PRAGMA foreign_key_check")?;
-        let mut rows = stmt.query([])?;
-        rows.next()?.map(|row| row.get(0)).transpose()?
-    };
-    if let Some(table) = violation {
+    let violation = foreign_key_violations(&tx)?
+        .into_iter()
+        .find(|violation| !before.contains(violation));
+    if let Some((table, ..)) = violation {
         return Err(Error::ForeignKeys(table));
     }
     tx.commit()?;
     Ok(())
+}
+
+/// One `PRAGMA foreign_key_check` row: (table, rowid, parent table, key index).
+type Violation = (String, Option<i64>, String, i64);
+
+/// `PRAGMA foreign_key_check`: each violating row.
+fn foreign_key_violations(conn: &Connection) -> Result<BTreeSet<Violation>, Error> {
+    let mut stmt = conn.prepare("PRAGMA foreign_key_check")?;
+    let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?;
+    Ok(rows.collect::<Result<_, _>>()?)
 }
 
 fn validate(manifest: &[&str], catalog: &[Migration]) -> Result<(), Error> {
@@ -383,6 +393,34 @@ mod tests {
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
         assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
         assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"));
+    }
+
+    #[test]
+    fn violations_the_database_already_had_dont_stop_a_migration() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(parent_id INTEGER REFERENCES ws18_parent(id)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration("29990101000000", "CREATE TABLE ws18_other(id INTEGER PRIMARY KEY);")];
+        migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap();
+        assert!(exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_other'"));
+
+        // A new violation in the same table still rolls back.
+        let catalog = [
+            migration("29990101000000", "CREATE TABLE ws18_other(id INTEGER PRIMARY KEY);"),
+            migration("29990102000000", "INSERT INTO ws18_child VALUES (8);"),
+        ];
+        let error = migrate_with(
+            &mut conn,
+            &manifest(&["29990101000000", "29990102000000"]),
+            &catalog,
+        )
+        .unwrap_err();
+        assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
+        assert!(!exists(&conn, "SELECT 1 FROM ws18_child WHERE parent_id = 8"));
     }
 
     #[test]

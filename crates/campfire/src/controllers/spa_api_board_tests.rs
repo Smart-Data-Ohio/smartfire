@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    BENDER, Browser, DAVID, HQ, JASON, KEVIN, Reply, Req, TestApp,
+    BENDER, Browser, DAVID, HQ, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
 };
 
 const BOARD: i64 = 699448332;
@@ -1553,7 +1553,27 @@ async fn spa_api_board_briefless_creation_retries_by_client_post_id() {
 }
 
 #[tokio::test]
-async fn spa_api_board_creation_whose_commit_fails_leaves_no_receipt() {
+async fn spa_api_board_briefless_retry_after_a_restart_answers_the_first_post() {
+    let a = app(true).await.expect("the frozen default seed");
+    let path = format!("/api/v1/rooms/{BOARD}/posts");
+    let mut body = new_post("Lost reply before a restart");
+    body["clientPostId"] = json!("0192a3b4-0000-7000-8000-00000000b0a3");
+    let id = {
+        let mut david = a.sign_in(DAVID).await;
+        let reply = david.write(json_body(Method::POST, &path, &body)).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        parse::<api::ThreadDetail>(&reply).thread.id
+    };
+
+    let a = a.restart(seed_clock(), &[("SPA_ENABLED", "1")]).await;
+    let mut david = a.sign_in(DAVID).await;
+    let retry = david.write(json_body(Method::POST, &path, &body)).await;
+    assert_eq!(retry.status, StatusCode::OK, "{}", retry.text());
+    assert_eq!(parse::<api::ThreadDetail>(&retry).thread.id, id);
+}
+
+#[tokio::test]
+async fn spa_api_board_creation_whose_commit_fails_leaves_its_key_free() {
     let a = app(true).await.expect("the frozen default seed");
     let mut david = a.sign_in(DAVID).await;
     let path = format!("/api/v1/rooms/{BOARD}/posts");

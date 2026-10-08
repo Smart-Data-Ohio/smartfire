@@ -149,6 +149,8 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
         tagCounts: listing.tagCounts,
         digest: listing.digest,
         canAdminister: listing.canAdminister,
+        changedPostIds: [],
+        removedPostIds: [],
       },
     },
   };
@@ -203,6 +205,8 @@ export function removeBoardPost(state: State, roomId: number, threadId: number):
   const held = state.boards[roomId];
 
   if (held === undefined) return state;
+  // Only a listing in flight needs to know: it may still show the post.
+  const loading = held.status === "loading" || held.loadingMore;
 
   return {
     ...state,
@@ -212,7 +216,10 @@ export function removeBoardPost(state: State, roomId: number, threadId: number):
         ...held,
         postIds: held.postIds.filter((id) => id !== threadId),
         livePostIds: held.livePostIds.filter((id) => id !== threadId),
-        removedPostIds: [...held.removedPostIds, threadId],
+        removedPostIds:
+          loading && !held.removedPostIds.includes(threadId)
+            ? [...held.removedPostIds, threadId]
+            : held.removedPostIds,
       },
     },
   };

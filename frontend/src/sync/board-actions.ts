@@ -96,7 +96,11 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   });
 
   mutations.loadThreadDetail(detail, since);
-  mutations.addBoardPost(detail.thread);
+
+  // Not when the reply was dropped: the post was removed while it was being created.
+  if (store.getState().threads[detail.thread.id] !== undefined) {
+    mutations.addBoardPost(detail.thread);
+  }
 
   return detail;
 });
