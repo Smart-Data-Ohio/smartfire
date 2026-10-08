@@ -1,5 +1,5 @@
 //! rooms/events_controller.rb and rooms/events/attendances_controller.rb.
-mod input;
+pub mod input;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, db_error as default_db_error};
@@ -454,7 +454,7 @@ pub async fn cancel(c: &mut Ctx) -> Result {
     )
 }
 
-async fn viewer_zone(c: &Ctx, id: i64) -> Result<String> {
+pub async fn viewer_zone(c: &Ctx, id: i64) -> Result<String> {
     c.app()
         .db
         .read(move |conn| {

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = Number(process.env.SMARTFIRE_E2E_PORT ?? 4316);
+// SMARTFIRE_E2E_PORT keeps parallel worktrees off one another's preview server.
+const port = Number(process.env.SMARTFIRE_E2E_PORT ?? 4173);
 
 // Until the SPA has an API to talk to, the specs run against `vite preview` of the production
 // build. Later slices point them at the Rust binary with the SPA embedded and a frozen seed.

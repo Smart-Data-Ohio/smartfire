@@ -17,7 +17,7 @@ import type { Poll } from "../../src/gen/Poll.ts";
 import type { PollResults } from "../../src/gen/PollResults.ts";
 import type { QuotePreview } from "../../src/gen/QuotePreview.ts";
 import type { QuotePreviewResult } from "../../src/gen/QuotePreviewResult.ts";
-import { forbidden, notFound, ok, validation } from "../http.ts";
+import { forbidden, type MockResponse, notFound, ok, validation } from "../http.ts";
 import {
   booleanField,
   field,
@@ -900,7 +900,16 @@ function optionIdsOf(body: Json | undefined): number[] {
   return raw.flatMap((value: Json) => (Number.isInteger(value) ? [Number(value)] : []));
 }
 
-export function createCards(ctx: S2Context): CardsModule {
+export interface CalendarAttendance {
+  readonly readAttendance: (roomId: number, eventId: number) => MockResponse | null;
+  readonly respond: (
+    roomId: number,
+    eventId: number,
+    body: Json | undefined,
+  ) => MockResponse | null;
+}
+
+export function createCards(ctx: S2Context, calendar?: CalendarAttendance): CardsModule {
   const state = () => cardsOf(ctx.world());
 
   const pollOr404 = (roomId: number, pollId: number): PollRecord => {
@@ -1230,12 +1239,14 @@ export function createCards(ctx: S2Context): CardsModule {
       "GET",
       /^\/rooms\/(\d+)\/events\/(\d+)\/attendance$/,
       ({ ids: [roomId = 0, eventId = 0] }) =>
+        calendar?.readAttendance(roomId, eventId) ??
         ok(attendanceOf(eventOr404(roomId, eventId), viewerIsHuman())),
     ),
     route(
       "PUT",
       /^\/rooms\/(\d+)\/events\/(\d+)\/attendance$/,
-      ({ ids: [roomId = 0, eventId = 0], body }) => respondTo(roomId, eventId, body),
+      ({ ids: [roomId = 0, eventId = 0], body }) =>
+        calendar?.respond(roomId, eventId, body) ?? respondTo(roomId, eventId, body),
     ),
     route(
       "GET",
