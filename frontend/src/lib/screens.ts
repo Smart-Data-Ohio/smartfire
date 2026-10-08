@@ -79,8 +79,29 @@ function fill(pattern: string, captured: Map<string, string>): string {
 }
 
 /**
+ * One application/x-www-form-urlencoded component (`+` is a space). `null` when the encoding is
+ * broken, so the value cannot be a record id. Matches the server's query decoder.
+ */
+function queryComponent(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    return null;
+  }
+}
+
+/** A record id from a query component, percent-decoded first (`thread=%39` is 9). */
+function recordId(raw: string): string | null {
+  const decoded = queryComponent(raw);
+
+  return decoded !== null && isId(decoded) ? String(Number(decoded)) : null;
+}
+
+/**
  * A room notification's `thread` and `message_id` query, as the SPA's thread and message routes.
- * `null` when neither is a record id, so the plain room URL keeps the query.
+ * `null` when neither is a record id, so the plain room URL keeps the query. The first well-formed
+ * id wins; a later duplicate of that name is ignored, and a value that doesn't decode to an id is
+ * skipped so a later one can still win. The same rules as the server translator.
  */
 function roomNotificationUrl(spa: string, search: string): string | null {
   let thread: string | undefined;
@@ -93,21 +114,24 @@ function roomNotificationUrl(spa: string, search: string): string | null {
     }
 
     const eq = pair.indexOf("=");
-    const name = eq === -1 ? pair : pair.slice(0, eq);
-    const value = eq === -1 ? "" : pair.slice(eq + 1);
+    const rawName = eq === -1 ? pair : pair.slice(0, eq);
+    const rawValue = eq === -1 ? "" : pair.slice(eq + 1);
+    const name = queryComponent(rawName);
 
     if (name === "classic") {
       continue;
     }
 
-    if (name === "thread" && thread === undefined && isId(value)) {
-      thread = String(Number(value));
+    const id = recordId(rawValue);
+
+    if (name === "thread" && thread === undefined && id !== null) {
+      thread = id;
 
       continue;
     }
 
-    if (name === "message_id" && message === undefined && isId(value)) {
-      message = String(Number(value));
+    if (name === "message_id" && message === undefined && id !== null) {
+      message = id;
 
       continue;
     }
@@ -120,7 +144,8 @@ function roomNotificationUrl(spa: string, search: string): string | null {
   }
 
   const kept = rest.filter((pair) => {
-    const name = pair.split("=")[0] ?? "";
+    const rawName = pair.split("=")[0] ?? "";
+    const name = queryComponent(rawName) ?? rawName;
 
     return name !== "thread" && name !== "message_id";
   });
@@ -138,6 +163,19 @@ function roomNotificationUrl(spa: string, search: string): string | null {
   const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
 
   return `${spa}/m/${message}${query}`;
+}
+
+/**
+ * `search` less any `classic` parameter, keeping every other pair as it was written.
+ * The server's room redirect does the same, so a broken escape (`thread=%ZZ`) stays `%ZZ`.
+ */
+function rawKeptSearch(search: string): string {
+  const kept = search
+    .replace(/^\?/, "")
+    .split("&")
+    .filter((pair) => pair !== "" && (pair.split("=")[0] ?? "") !== "classic");
+
+  return kept.length === 0 ? "" : `?${kept.join("&")}`;
 }
 
 /** `search` (with or without its `?`) less any `classic` parameter, as `?...` or "". */
@@ -172,6 +210,8 @@ export function spaUrlFor(path: string, search = ""): string | null {
         if (translated !== null) {
           return translated;
         }
+
+        return `${filled}${rawKeptSearch(search)}`;
       }
 
       return `${filled}${keptSearch(search)}`;

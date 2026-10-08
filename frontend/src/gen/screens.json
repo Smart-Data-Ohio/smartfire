@@ -23,7 +23,6 @@
   { "endpoint": "rooms/closeds#edit", "classic": "/rooms/closeds/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
   { "endpoint": "rooms/voices#edit", "classic": "/rooms/voices/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
   { "endpoint": "rooms/stages#edit", "classic": "/rooms/stages/:id/edit", "spa": "/app/r/:id/settings", "ported": true },
-  { "endpoint": "rooms/settings#show", "classic": "/rooms/:room_id/settings", "spa": "/app/r/:room_id/settings", "ported": true },
   { "endpoint": "rooms/events#index", "classic": "/rooms/:room_id/events", "spa": "/app/r/:room_id/events", "ported": true },
   { "endpoint": "rooms/events#new", "classic": "/rooms/:room_id/events/new", "spa": "/app/r/:room_id/events/new", "ported": true },
   { "endpoint": "rooms/events#show", "classic": "/rooms/:room_id/events/:id", "spa": "/app/r/:room_id/events/:id", "ported": true },

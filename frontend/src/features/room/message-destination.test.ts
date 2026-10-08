@@ -1,16 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { messageDestination } from "./message-destination.ts";
+import type { MessageDTO } from "../../gen/MessageDTO.ts";
+import { messageAnchor } from "./message-destination.ts";
 
-describe("messageDestination", () => {
-  it("opens a room message at its permalink and keeps the query and hash", () => {
-    expect(
-      messageDestination({ id: 23, roomId: 4, threadId: null }, "?filter=all&filter=mine", "top"),
-    ).toBe("/app/r/4/m/23?filter=all&filter=mine#top");
+const message: Pick<MessageDTO, "id" | "roomId" | "threadId"> = {
+  id: 4,
+  roomId: 8,
+  threadId: null,
+};
+
+describe("messageAnchor", () => {
+  it("stays on a root message of the URL's room", () => {
+    expect(messageAnchor(8, message)).toEqual({ kind: "here" });
   });
 
-  it("opens a reply in its thread, replacing an old focus id and keeping other query values", () => {
-    expect(messageDestination({ id: 23, roomId: 4, threadId: 7 }, "?m=9&filter=all")).toBe(
-      "/app/r/4/t/7?m=23&filter=all",
-    );
+  it("opens another room's message there", () => {
+    expect(messageAnchor(1, message)).toEqual({
+      kind: "elsewhere",
+      href: "/app/r/8/m/4",
+    });
+  });
+
+  it("opens a reply on its thread", () => {
+    expect(messageAnchor(8, { ...message, threadId: 9 })).toEqual({
+      kind: "elsewhere",
+      href: "/app/r/8/t/9?m=4",
+    });
   });
 });

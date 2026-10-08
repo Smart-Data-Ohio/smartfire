@@ -178,15 +178,11 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:id/settings",
         true,
     ),
-    // The declared `/rooms/:id/settings` route has no classic controller. SPA users land on the
-    // settings screen; classic users are redirected to the room type's edit form. The rooms#show
-    // row above stays the classic fallback for the shared settings URL.
-    screen(
-        "rooms/settings#show",
-        "/rooms/:room_id/settings",
-        "/app/r/:room_id/settings",
-        true,
-    ),
+    // `/rooms/:id/settings` is not a row here. Open, closed, voice and stage settings are this
+    // screen; a board or a direct message is not (the room page bounces a board to classic, and a
+    // direct's settings URL collapses to the conversation). The controller resolves the type and
+    // sends the others to that type's edit form. The rooms#show row above stays the classic
+    // fallback for `/app/r/:id/settings`.
     // S8: a room's calendar, an event's page, its form and the viewer's response.
     screen(
         "rooms/events#index",
@@ -420,11 +416,70 @@ pub const SCREENS: &[Screen] = &[
     ),
 ];
 
+/// A room-query id the server has checked: it belongs to that room, and the viewer can see it.
+/// The screen map passes none of these and translates every well-formed id; it has no database.
+/// A well-formed id that isn't confirmed is left on the plain room route, as a value that isn't
+/// an id is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ConfirmedRoomQuery {
+    pub thread: Option<u64>,
+    pub message: Option<u64>,
+}
+
+/// The first well-formed `thread` and `message_id` in `query`. Names and values are
+/// percent-decoded (`+` is a space) before the id check, so `thread=%39` is thread 9. The first
+/// well-formed id wins; a later duplicate of that name is ignored, and a value that doesn't
+/// decode to an id is skipped so a later one can still win.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RoomQueryIds {
+    pub thread: Option<u64>,
+    pub message: Option<u64>,
+}
+
+/// The room id of a `/rooms/:id` path, when the path is exactly that.
+pub fn room_show_id(path: &str) -> Option<i64> {
+    captures("/rooms/:id", path)?
+        .into_iter()
+        .find(|(name, _)| *name == "id")
+        .map(|(_, id)| id as i64)
+}
+
+pub fn room_query_ids(query: Option<&str>) -> RoomQueryIds {
+    let mut ids = RoomQueryIds::default();
+    for pair in query_pairs(query) {
+        match pair.class {
+            PairClass::Thread(id) if ids.thread.is_none() => ids.thread = Some(id),
+            PairClass::Message(id) if ids.message.is_none() => ids.message = Some(id),
+            _ => {}
+        }
+    }
+    ids
+}
+
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.
 /// `query` (without its `?`) carries over, less `classic`. A room's `thread` and `message_id`
 /// parameters become the thread and message routes (`/app/r/:id/t/:thread` with `m` for a reply,
 /// or `/app/r/:id/m/:message` when there is no thread).
 pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
+    spa_url_inner(endpoint, path, query, None)
+}
+
+/// [`spa_url`], translating a room's `thread` and `message_id` only when `confirmed` names them.
+pub fn spa_url_confirmed(
+    endpoint: &str,
+    path: &str,
+    query: Option<&str>,
+    confirmed: ConfirmedRoomQuery,
+) -> Option<String> {
+    spa_url_inner(endpoint, path, query, Some(confirmed))
+}
+
+fn spa_url_inner(
+    endpoint: &str,
+    path: &str,
+    query: Option<&str>,
+    confirmed: Option<ConfirmedRoomQuery>,
+) -> Option<String> {
     SCREENS
         .iter()
         .filter(|screen| screen.ported && screen.endpoint == endpoint)
@@ -432,7 +487,7 @@ pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String
             let spa = fill(screen.spa, &captures(screen.classic, path)?);
             if screen.classic == "/rooms/:id"
                 && screen.spa == "/app/r/:id"
-                && let Some(url) = room_notification_url(&spa, query)
+                && let Some(url) = room_notification_url(&spa, query, confirmed)
             {
                 return Some(url);
             }
@@ -442,41 +497,42 @@ pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String
 
 /// Notification links open a room as `/rooms/:id?thread=&message_id=`. The SPA reads a thread at
 /// `/app/r/:id/t/:thread` (`?m=` scrolls to a reply) and a timeline message at `/app/r/:id/m/:id`.
-/// `None` when the query has neither as a record id, so the plain room URL keeps the query.
-fn room_notification_url(spa: &str, query: Option<&str>) -> Option<String> {
+/// `None` when the query has neither as a record id the caller accepts, so the plain room URL
+/// keeps the query.
+fn room_notification_url(
+    spa: &str,
+    query: Option<&str>,
+    confirmed: Option<ConfirmedRoomQuery>,
+) -> Option<String> {
+    let allows = |class: PairClass| match (confirmed, class) {
+        (None, PairClass::Thread(_) | PairClass::Message(_)) => true,
+        (Some(confirmed), PairClass::Thread(id)) => confirmed.thread == Some(id),
+        (Some(confirmed), PairClass::Message(id)) => confirmed.message == Some(id),
+        _ => false,
+    };
     let mut thread = None;
     let mut message = None;
     let mut rest = Vec::new();
-    for pair in query
-        .unwrap_or("")
-        .split('&')
-        .filter(|pair| !pair.is_empty())
-    {
-        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
-        if name == "classic" {
+    for pair in query_pairs(query) {
+        if pair.class == PairClass::Classic {
             continue;
         }
-        if name == "thread"
-            && thread.is_none()
-            && let Some(id) = id(value)
-        {
-            thread = Some(id);
+        if matches!(pair.class, PairClass::Thread(_)) && thread.is_none() && allows(pair.class) {
+            thread = Some(pair.id());
             continue;
         }
-        if name == "message_id"
-            && message.is_none()
-            && let Some(id) = id(value)
-        {
-            message = Some(id);
+        if matches!(pair.class, PairClass::Message(_)) && message.is_none() && allows(pair.class) {
+            message = Some(pair.id());
             continue;
         }
-        rest.push(pair.to_string());
+        rest.push(pair.raw);
     }
     if thread.is_none() && message.is_none() {
         return None;
     }
     rest.retain(|pair| {
         let name = pair.split_once('=').map_or(pair.as_str(), |(name, _)| name);
+        let name = query_component(name).unwrap_or_else(|| name.to_string());
         name != "thread" && name != "message_id"
     });
     let mut url = spa.to_string();
@@ -499,6 +555,95 @@ fn room_notification_url(spa: &str, query: Option<&str>) -> Option<String> {
         url.push_str(&rest.join("&"));
     }
     Some(url)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PairClass {
+    Classic,
+    Thread(u64),
+    Message(u64),
+    Other,
+}
+
+struct QueryPair {
+    raw: String,
+    class: PairClass,
+}
+
+impl QueryPair {
+    fn id(&self) -> u64 {
+        match self.class {
+            PairClass::Thread(id) | PairClass::Message(id) => id,
+            PairClass::Classic | PairClass::Other => 0,
+        }
+    }
+}
+
+fn query_pairs(query: Option<&str>) -> Vec<QueryPair> {
+    query
+        .unwrap_or("")
+        .split('&')
+        .filter(|pair| !pair.is_empty())
+        .map(|pair| {
+            let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+            let class = match query_component(name).as_deref() {
+                Some("classic") => PairClass::Classic,
+                Some("thread") => record_id(value)
+                    .map(PairClass::Thread)
+                    .unwrap_or(PairClass::Other),
+                Some("message_id") => record_id(value)
+                    .map(PairClass::Message)
+                    .unwrap_or(PairClass::Other),
+                _ => PairClass::Other,
+            };
+            QueryPair {
+                raw: pair.to_string(),
+                class,
+            }
+        })
+        .collect()
+}
+
+/// A record id from a query component, percent-decoded first.
+fn record_id(raw: &str) -> Option<u64> {
+    id(&query_component(raw)?)
+}
+
+/// One application/x-www-form-urlencoded component (`+` is a space). `None` when the encoding
+/// is broken, so the value cannot be a record id.
+fn query_component(raw: &str) -> Option<String> {
+    let mut out = Vec::with_capacity(raw.len());
+    let bytes = raw.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'+' => {
+                out.push(b' ');
+                index += 1;
+            }
+            b'%' if index + 2 < bytes.len() => {
+                let hi = from_hex(bytes[index + 1])?;
+                let lo = from_hex(bytes[index + 2])?;
+                out.push((hi << 4) | lo);
+                index += 3;
+            }
+            b'%' => return None,
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+fn from_hex(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 /// The classic URL for an SPA `path` (under `/app/`), ported or not: where "Switch to classic"

@@ -47,14 +47,16 @@ async fn other_person(c: &Ctx, viewer_id: i64) -> Result<Option<i64>> {
     Ok(Some(id))
 }
 
-async fn redirect_to_person(c: &mut Ctx, viewer: &campfire_db::User, id: i64) -> Result {
-    let classic = format!("/users/{id}");
-    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
-    let path = if concerns::next_ui(c, viewer).await? && !concerns::classic_requested(query) {
-        concerns::ported_page("users#show", &classic, query).unwrap_or(classic)
-    } else {
-        classic
-    };
+/// Another person's profile alias. The hop is their page, query included (`classic=1` and the
+/// rest). That page's coexistence redirect applies the navigation and pending-flash guards; this
+/// action doesn't choose the UI itself.
+async fn redirect_to_person(c: &mut Ctx, _viewer: &campfire_db::User, id: i64) -> Result {
+    let mut path = format!("/users/{id}");
+    let query = c.request.query_string();
+    if !query.is_empty() {
+        path.push('?');
+        path.push_str(query);
+    }
     c.redirect_to(&c.url_for(&path))
 }
 

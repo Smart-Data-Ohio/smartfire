@@ -1,5 +1,6 @@
 {
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "notes": "The shows entries are an intentional departure from the recorded Rails responses. Rails raised 500 (NoMethodError on a nil room) for GET /rooms/directs/:id. This port redirects to the room, or to / when the direct is missing or inaccessible, matching the other room-namespace show aliases.",
   "names": [
     {
       "namespace": "opens",

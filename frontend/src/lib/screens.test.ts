@@ -96,6 +96,17 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12", "?thread=nope&x=1")).toBe("/app/r/12?thread=nope&x=1");
   });
 
+  it("decodes room notification ids and keeps the first one", () => {
+    expect(spaUrlFor("/rooms/12", "?thread=%39")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=%34")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?th%72ead=%39")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=9&thread=8")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=%39&thread=8")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=nope&thread=9")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=5")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?thread=%ZZ&x=1")).toBe("/app/r/12?thread=%ZZ&x=1");
+  });
+
   it("carries the query over without classic", () => {
     expect(spaUrlFor("/rooms/12", "?a=1&classic=0&b=2")).toBe("/app/r/12?a=1&b=2");
     expect(classicUrlFor("/app/search", "q=fire&classic=1")).toBe("/searches?q=fire");

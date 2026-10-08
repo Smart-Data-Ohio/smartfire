@@ -1,4 +1,4 @@
-import { useLocation, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { classicPageFor } from "../../lib/screens.ts";
 import { useStore } from "../../store/store.ts";
@@ -12,6 +12,7 @@ import { RightPane } from "../panes/right-pane.tsx";
 import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes/use-right-pane.ts";
 import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
+import { messageAnchor } from "./message-destination.ts";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
 import "./room.css";
@@ -25,14 +26,59 @@ export function RoomRoute() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? 0;
   const focusMessageId = params.messageId ?? null;
+  const navigate = useNavigate();
+  const router = useRouter();
 
   useRoomPaneLifecycle(roomId);
 
   useEffect(() => {
-    void actions.openRoom(roomId, focusMessageId);
-  }, [roomId, focusMessageId]);
+    let live = true;
+    let opened = false;
 
-  useEffect(() => () => actions.closeRoom(roomId), [roomId]);
+    const open = (focus: number | null) => {
+      opened = true;
+      void actions.openRoom(roomId, focus);
+    };
+
+    if (focusMessageId === null) {
+      open(null);
+    } else {
+      // The timeline API only returns a message that is on this room. A message from another
+      // room (or a reply) would 404 the page; open it where it actually is, or drop the anchor.
+      void actions.messages.read(focusMessageId).then(
+        ({ message }) => {
+          if (!live) {
+            return;
+          }
+
+          const anchor = messageAnchor(roomId, message);
+
+          if (anchor.kind === "here") {
+            open(focusMessageId);
+
+            return;
+          }
+
+          router.history.replace(anchor.href);
+        },
+        () => {
+          if (!live) {
+            return;
+          }
+
+          void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
+        },
+      );
+    }
+
+    return () => {
+      live = false;
+
+      if (opened) {
+        actions.closeRoom(roomId);
+      }
+    };
+  }, [roomId, focusMessageId, navigate, router]);
 
   return (
     <>

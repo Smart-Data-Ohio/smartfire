@@ -111,7 +111,6 @@ fn only_intentional_aliases_share_a_url() {
                     ("rooms/closeds#edit", "/rooms/closeds/:id/edit"),
                     ("rooms/voices#edit", "/rooms/voices/:id/edit"),
                     ("rooms/stages#edit", "/rooms/stages/:id/edit"),
-                    ("rooms/settings#show", "/rooms/:room_id/settings"),
                 ],
             ),
         ]),
@@ -464,6 +463,59 @@ fn room_notification_queries_open_the_thread_or_message() {
     assert_eq!(
         spa_url("rooms#show", "/rooms/12", Some("thread=nope&x=1")).as_deref(),
         Some("/app/r/12?thread=nope&x=1")
+    );
+}
+
+#[test]
+fn room_notification_queries_decode_and_keep_the_first_id() {
+    // `%39` is `9`. The first well-formed id wins; a later duplicate is ignored.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=%34")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("th%72ead=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&thread=9")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4&message_id=5")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    // A broken escape isn't an id, so the plain room route keeps the query.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%ZZ&x=1")).as_deref(),
+        Some("/app/r/12?thread=%ZZ&x=1")
+    );
+    let refused = ConfirmedRoomQuery {
+        thread: None,
+        message: None,
+    };
+    assert_eq!(
+        spa_url_confirmed("rooms#show", "/rooms/12", Some("thread=9&x=1"), refused).as_deref(),
+        Some("/app/r/12?thread=9&x=1")
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=%39&thread=8&message_id=4")),
+        RoomQueryIds {
+            thread: Some(9),
+            message: Some(4),
+        }
     );
 }
 

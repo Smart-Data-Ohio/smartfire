@@ -858,7 +858,9 @@ mod tests {
         serde_json::from_str(json).unwrap()
     }
 
-    /// Controllers the reference routes to but doesn't define (recognize_path raises for them).
+    /// Controllers the reference route set names but doesn't define, so `recognize_path` raises
+    /// and these vectors still have a null endpoint. `rooms/settings` is one of them: the
+    /// recorded routes keep `missing_controller`, while the runtime handles the GET.
     const MISSING_CONTROLLERS: &[&str] = &["rooms/settings"];
 
     #[test]

@@ -2,6 +2,8 @@
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Room, RoomType};
+use rusqlite::OptionalExtension;
+use serde_json::json;
 const JZ: i64 = 773523953;
 
 async fn app() -> TestApp {
@@ -97,6 +99,17 @@ async fn board_route(name: &str) {
     }).await.unwrap();
     let mut browser = app.sign_in(case["actor"].as_i64().unwrap()).await;
     let token = browser.authenticity_token().await;
+    let deleted = matches!(name, "admin_json" | "creator_html" | "admin_turbo");
+    let before = if deleted {
+        None
+    } else {
+        Some(snapshot(&app).await)
+    };
+    let mut cable = if deleted {
+        None
+    } else {
+        Some(super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await)
+    };
     let accept = match case["format"].as_str().unwrap() {
         "json" => "application/json",
         "turbo_stream" => "text/vnd.turbo-stream.html, text/html",
@@ -109,7 +122,6 @@ async fn board_route(name: &str) {
                 .header(campfire_kit::csrf::HEADER, &token),
         )
         .await;
-    let deleted = matches!(name, "admin_json" | "creator_html" | "admin_turbo");
     match name {
         "admin_json" => {
             assert_eq!(reply.status, StatusCode::OK, "{name}");
@@ -134,6 +146,21 @@ async fn board_route(name: &str) {
             .await
             .unwrap();
         assert_eq!(marked, deleted, "{name}");
+    }
+    if let Some(before) = before {
+        assert_eq!(
+            snapshot(&app).await,
+            before,
+            "{name}: domain or queue rows changed"
+        );
+        let (mut client, _server) = cable.take().unwrap();
+        client.assert_silent().await;
+        let state = app.db().read(move |conn| {
+            let room = Room::find(conn, id)?;
+            let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1", [id], |row| Ok(json!({"action":row.get::<_,String>(0)?,"actor_id":row.get::<_,i64>(1)?,"target_type":row.get::<_,String>(2)?,"target_id":row.get::<_,i64>(3)?,"target_label":row.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&row.get::<_,String>(5)?).unwrap()}))).optional()?;
+            Ok(json!({"deleted":room.deleted_at.is_some(),"claimed":room.destroy_enqueued_at.is_some(),"memberships":room.user_ids(conn)?.len(),"audit":audit}))
+        }).await.unwrap();
+        assert_eq!(state, case["state"], "{name}");
     }
 }
 
