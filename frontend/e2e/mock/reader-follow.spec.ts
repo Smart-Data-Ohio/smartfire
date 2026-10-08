@@ -1,7 +1,16 @@
 import type { Locator, Page } from "@playwright/test";
 import { THREAD_IDS } from "../../mock/s2/seed.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
-import { expect, holdSync, openApp, postMessage, ROOM_IDS, test, USER_IDS } from "./support.ts";
+import {
+  expect,
+  holdSync,
+  openApp,
+  postMessage,
+  ROOM_IDS,
+  stopTrackingThread,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 async function position(row: Locator) {
   return row.evaluate(async (element) => {
@@ -185,6 +194,12 @@ for (const close of ["Esc", "outside click"] as const) {
 async function scenario(page: Page, conversation: "room" | "thread") {
   const releaseSync = await holdSync(page);
   const threadId = THREAD_IDS.generalActive;
+
+  if (conversation === "thread") {
+    // The work seed now tracks this thread. Keep the original ordinary-thread viewport so
+    // the older control is offscreen but still mounted in Virtua's buffer for native focus.
+    await stopTrackingThread(page.request, threadId);
+  }
 
   const messagesPath =
     conversation === "room"

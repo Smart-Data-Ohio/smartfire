@@ -13,6 +13,7 @@ import {
   ROOM_IDS,
   scrollByWheel,
   shot,
+  stopTrackingThread,
   syncWelcomed,
   type Theme,
   test,
@@ -924,6 +925,8 @@ async function shortThreadScenario(page: Page, permalink: boolean, pressEnd = fa
   const chunk = await holdCardsChunk(page);
   const threadId = THREAD_IDS.generalActive;
 
+  // The work toolbar would make this conversation overflow before its cards arrive.
+  await stopTrackingThread(page.request, threadId);
   expect(poll).toBeTruthy();
   await mockThreadParent(page, {
     threadId,

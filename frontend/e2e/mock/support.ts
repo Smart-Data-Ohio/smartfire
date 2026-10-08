@@ -124,6 +124,21 @@ export async function postMessage(request: APIRequestContext, body: MockPost): P
   await request.post("/__mock/post", { headers: { "X-CSRF-Token": state.csrfToken }, data: body });
 }
 
+/** Restores an ordinary thread for scenarios that need its full conversation viewport. */
+export async function stopTrackingThread(
+  request: APIRequestContext,
+  threadId: number,
+): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.patch(`/api/v1/threads/${threadId}/work`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { status: null, ownerId: null },
+  });
+
+  expect(response.ok()).toBe(true);
+}
+
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */
 /** Saves the account's appearance through the API, as another device (or person) would. */
 export async function saveAccountAppearance(
