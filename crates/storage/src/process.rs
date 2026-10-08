@@ -156,10 +156,16 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    let mut child = command
+    let child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .spawn()?;
+    collect_within(&program, child, timeout)
+}
+
+/// Watch a spawned child until it exits or `timeout` elapses. `ECHILD` from `waitid` means
+/// the leader was already collected; that path does not signal it.
+fn collect_within(program: &str, mut child: Child, timeout: Duration) -> std::io::Result<Output> {
     // Drain the pipes while waiting, so a chatty child can't stall on a full pipe.
     let stdout = drain(child.stdout.take());
     let stderr = drain(child.stderr.take());
@@ -189,7 +195,7 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
     if !saw_exit {
         stop_child(&mut child);
         release(child, stdout, stderr);
-        return Err(stuck(&program, timeout));
+        return Err(stuck(program, timeout));
     }
     match take_pipes(stdout, stderr, deadline) {
         Ok((stdout, stderr)) => match child.wait() {
@@ -208,7 +214,7 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
         Err((stdout, stderr)) => {
             stop_child(&mut child);
             release(child, stdout, stderr);
-            Err(stuck(&program, timeout))
+            Err(stuck(program, timeout))
         }
     }
 }
@@ -709,23 +715,42 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn output_within_does_not_signal_after_echild() {
-        SIGNALED_PIDS.lock().expect("signaled pids").clear();
-        // SAFETY: SIG_IGN auto-reaps this test process's children, so `waitid` returns ECHILD.
-        // The previous disposition is restored when the guard drops.
-        let previous = unsafe { libc::signal(libc::SIGCHLD, libc::SIG_IGN) };
-        assert_ne!(previous, libc::SIG_ERR);
-        struct Restore(libc::sighandler_t);
-        impl Drop for Restore {
-            fn drop(&mut self) {
-                // SAFETY: `self.0` is the disposition `signal` returned for SIGCHLD.
-                unsafe { libc::signal(libc::SIGCHLD, self.0) };
-            }
-        }
-        let _restore = Restore(previous);
         let mut command = Command::new("sh");
         command.args(["-c", "echo out"]);
+        {
+            use std::os::unix::process::CommandExt;
+            command.process_group(0);
+        }
+        let child = command
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        let ready = Instant::now() + Duration::from_secs(5);
+        loop {
+            match leader_waitable(pid) {
+                Ok(true) => break,
+                Ok(false) => {}
+                Err(err) => panic!("waitid failed before the reap: {err}"),
+            }
+            assert!(Instant::now() < ready, "child {pid} did not exit");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        // Collect this pid only, so the `Child` is stale and `waitid` returns ECHILD.
+        let mut status = 0;
+        let rc = loop {
+            // SAFETY: `pid` is the unreaped leader this test spawned in its own group.
+            // `waitpid` collects that pid and no other child.
+            let rc = unsafe { libc::waitpid(pid as libc::pid_t, &mut status, 0) };
+            if rc < 0 && std::io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            break rc;
+        };
+        assert_eq!(rc, pid as libc::pid_t, "waitpid did not collect {pid}");
         let started = Instant::now();
-        let error = output_within(&mut command, Duration::from_secs(5)).unwrap_err();
+        let error = collect_within("sh", child, Duration::from_secs(5)).unwrap_err();
         assert_eq!(error.raw_os_error(), Some(libc::ECHILD), "{error}");
         assert!(
             started.elapsed() < Duration::from_secs(2),
@@ -733,8 +758,8 @@ mod tests {
             started.elapsed()
         );
         assert!(
-            SIGNALED_PIDS.lock().expect("signaled pids").is_empty(),
-            "signaled after ECHILD"
+            !SIGNALED_PIDS.lock().expect("signaled pids").contains(&pid),
+            "signaled pid {pid} after ECHILD"
         );
     }
 }
