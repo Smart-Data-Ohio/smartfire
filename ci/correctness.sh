@@ -144,6 +144,9 @@ run_suite() {
       export SMARTFIRE_E2E_PORT=4320
       browser_images
       export PWA_PLAYWRIGHT_IMAGE="$WS13_PLAYWRIGHT_IMAGE"
+      # Hosted runners reach Chromium's push service only some of the time. Subscription
+      # preservation is checked whenever a subscription succeeds and is reported skipped otherwise.
+      export PWA_ALLOW_PUSH_UNAVAILABLE=1
       ignored
       ;;
     *) echo "Unknown correctness suite: $suite" >&2; return 1 ;;
