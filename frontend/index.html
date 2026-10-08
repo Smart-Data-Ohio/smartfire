@@ -48,6 +48,18 @@
           : "default";
         if (device.density === "compact") root.dataset.density = "compact";
         if (device.motion === "reduce" || device.motion === "full") root.dataset.motion = device.motion;
+        // Exactly src/lib/appearance.ts's FONTS; anything else in storage is ignored there too.
+        if (["system", "atkinson", "serif", "mono"].includes(device.font)) root.dataset.font = device.font;
+
+        // A colour palette, by name: its tokens are built in here from src/lib/palette.ts
+        // (vite.config.ts), the values the SPA sets when it starts. Nothing stored is applied.
+        const presets = {/*palettes*/};
+        const palette = device.palette;
+
+        if (typeof palette === "string" && Object.hasOwn(presets, palette)) {
+          root.dataset.palette = palette;
+          for (const [name, value] of Object.entries(presets[palette])) root.style.setProperty(name, value);
+        }
       })();
     </script>
   </head>
