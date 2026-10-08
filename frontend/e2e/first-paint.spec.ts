@@ -255,6 +255,27 @@ test("storage that isn't JSON is ignored: the account's appearance is painted", 
   expect(opened.refusals).toEqual([]);
 });
 
+for (const name of ["__proto__", "constructor", "toString"]) {
+  test(`a stored palette named ${name} paints no palette, before or after the SPA runs`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    // As text, so "__proto__" is an own key of the stored object, not its prototype.
+    await storeAppearance(page, `{"palette": ${JSON.stringify(name)}}`);
+
+    const opened = await openHeld(page, { theme: "light", textSize: "default" });
+    const html = page.locator("html");
+
+    await expect(html).not.toHaveAttribute("data-palette", /.*/);
+    expect(await inlineTokens(page)).toEqual(new Map());
+
+    await hydrate(page, opened);
+    await expect(html).not.toHaveAttribute("data-palette", /.*/);
+    expect(await inlineTokens(page)).toEqual(new Map());
+    expect(opened.refusals).toEqual([]);
+  });
+}
+
 test("corrupted choices on this device are ignored, at first paint and once the SPA runs", async ({
   page,
 }) => {
