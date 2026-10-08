@@ -27,6 +27,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod fizzy;
 mod huddle;
 mod me;
 mod message;
@@ -103,6 +104,7 @@ pub use conversation::ConversationName;
 pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
+pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
@@ -133,10 +135,10 @@ pub use search::{
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use settings::{
-    AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, DndAllowedPerson,
+    AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DndAllowedPerson,
     GoogleIntegration, InboxSwitch,
     IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
-    ProfileSettings, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
+    ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
     TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,
     UpdateNotifications, UpdateProfile, UpdateStatus,

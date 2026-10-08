@@ -66,6 +66,7 @@ let badgeValue = null
 globalThis.caches = {
   open: async (name) => openCache(name),
   keys: async () => [...cacheStore.keys()],
+  delete: async (name) => cacheStore.delete(name),
   match: async (key, { cacheName } = {}) => {
     if (cacheName) return (await openCache(cacheName)).match(key)
     for (const name of await globalThis.caches.keys()) {
@@ -145,9 +146,11 @@ async function fireNotificationClick(path) {
   return closed
 }
 
+// The SPA worker's build caches are planted by the SPA, not written by this worker.
 function cachedPaths() {
   const paths = []
-  for (const entries of cacheStore.values()) {
+  for (const [ name, entries ] of cacheStore) {
+    if (name.startsWith("smartfire-spa-")) continue
     for (const href of entries.keys()) paths.push(new URL(href).pathname)
   }
   return paths.sort()
@@ -164,8 +167,16 @@ fetchBehavior = async (url) => {
 await fireLifecycle("install")
 check("install precaches the offline shell", cachedPaths().includes("/offline.html"))
 
+// Another worker's leftovers: an SPA build cache that older SPA tabs still read, and junk.
+await (await caches.open("smartfire-spa-0123456789abcdef")).put(
+  "/app/assets/poll-dialog-AbCd1234.js",
+  { ok: true, body: "spa chunk", clone() { return this } }
+)
+await caches.open("someone-elses-cache")
 await fireLifecycle("activate")
 check("activate keeps the static cache", (await caches.keys()).includes("smartfire-static-v1"))
+check("activate keeps the SPA build caches", (await caches.keys()).includes("smartfire-spa-0123456789abcdef"))
+check("activate deletes other caches", !(await caches.keys()).includes("someone-elses-cache"))
 
 const roomResponse = await fireFetch("/rooms/123", { mode: "navigate" })
 check("navigations serve the network response", roomResponse.body === "network:/rooms/123")
@@ -185,6 +196,17 @@ await fireFetch("/assets/application-abc123.js")
 await fireFetch("/assets/application-abc123.js")
 check("static assets are cached after the first fetch", fetchCalls.length === 1, JSON.stringify(fetchCalls))
 check("static assets stay cached", cachedPaths().includes("/assets/application-abc123.js"))
+
+fetchCalls = []
+const spaChunk = await fireFetch("/app/assets/poll-dialog-AbCd1234.js", { mode: "cors" })
+check("SPA chunks are served from the SPA build caches", spaChunk.body === "spa chunk" && fetchCalls.length === 0)
+const spaMiss = await fireFetch("/app/assets/other-EfGh5678.js", { mode: "cors" })
+check("uncached SPA chunks go to the network", spaMiss.body === "network:/app/assets/other-EfGh5678.js")
+check(
+  "SPA chunks are never written by this worker",
+  !(await (await caches.open("smartfire-spa-0123456789abcdef")).keys()).some((key) => key.url.endsWith("other-EfGh5678.js")) &&
+    !cachedPaths().some((path) => path.startsWith("/app/"))
+)
 
 for (const [ name, init ] of [
   [ "API responses pass through", [ "/rooms/123/messages.json", { mode: "cors" } ] ],

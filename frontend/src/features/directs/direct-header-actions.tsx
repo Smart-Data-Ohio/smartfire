@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { useDirectFacts } from "./direct-facts.ts";

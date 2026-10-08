@@ -1,3 +1,4 @@
+import { loadForUpdate } from "../../../service-worker/update-required.ts";
 /**
  * RNNoise microphone noise suppression (the classic `lib/huddle_noise_suppressor.js`). LiveKit
  * Cloud's Krisp filter isn't available to a self-hosted deployment, so the call runs RNNoise as
@@ -24,11 +25,13 @@ let wasm: Promise<ArrayBuffer> | null = null;
 const contextsWithWorklet = new WeakSet<BaseAudioContext>();
 
 function loadSuppressor(): Promise<Suppressor> {
-  suppressor ??= import("@sapphi-red/web-noise-suppressor").catch((error: Error) => {
-    suppressor = null;
+  suppressor ??= loadForUpdate(() => import("@sapphi-red/web-noise-suppressor")).catch(
+    (error: Error) => {
+      suppressor = null;
 
-    throw error;
-  });
+      throw error;
+    },
+  );
 
   return suppressor;
 }

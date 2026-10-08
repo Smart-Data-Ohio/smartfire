@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useResolvedTheme } from "../lib/appearance.ts";
+import { loadForUpdate } from "../service-worker/update-required.ts";
 import { Icon } from "./icons/icon.tsx";
 import "./avatar.css";
 import "./effects.css";
@@ -25,7 +26,7 @@ export function AgentAvatar({ seed, name, size = 36, decorative = false }: Agent
   useEffect(() => {
     let current = true;
 
-    import("./bot-bitmap.ts")
+    loadForUpdate(() => import("./bot-bitmap.ts"))
       .then(({ botBitmap }) => botBitmap(seed, size, theme))
       .then((src) => {
         if (current && src !== "") {

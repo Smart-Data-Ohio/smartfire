@@ -1,6 +1,5 @@
 import {
   type ComponentPropsWithRef,
-  lazy,
   type MouseEvent,
   type ReactElement,
   Suspense,
@@ -8,6 +7,7 @@ import {
 } from "react";
 import { useResolvedTheme } from "../lib/appearance.ts";
 import { useReducedMotion } from "../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../service-worker/lazy.ts";
 import { Icon, type IconName } from "./icons/icon.tsx";
 import "./button.css";
 
