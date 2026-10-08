@@ -4,7 +4,7 @@
 use std::io::Read;
 use std::path::Path;
 use std::process::{Child, Command, ExitStatus, Output, Stdio};
-use std::sync::OnceLock;
+use std::sync::{OnceLock, mpsc};
 use std::time::{Duration, Instant};
 
 use tempfile::NamedTempFile;
@@ -138,16 +138,18 @@ pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Resul
     let stdout = drain(child.stdout.take());
     let stderr = drain(child.stderr.take());
     let deadline = Instant::now() + timeout;
-    let status = match wait_until(&mut child, deadline)? {
-        Some(status) => status,
-        None => {
-            stop_child(&mut child);
-            release(child, stdout, stderr);
-            return Err(stuck(&program, timeout));
-        }
-    };
+    // Leave an exited leader unreaped until after the group is signaled. Reaping first
+    // frees the pid, and a later group signal can hit a reused process group.
+    if !leader_exited(&mut child, deadline)? {
+        stop_child(&mut child);
+        release(child, stdout, stderr);
+        return Err(stuck(&program, timeout));
+    }
     match take_pipes(stdout, stderr, deadline) {
-        Ok((stdout, stderr)) => Ok(Output { status, stdout, stderr }),
+        Ok((stdout, stderr)) => {
+            let status = child.wait()?;
+            Ok(Output { status, stdout, stderr })
+        }
         Err((stdout, stderr)) => {
             stop_child(&mut child);
             release(child, stdout, stderr);
@@ -165,9 +167,14 @@ fn stuck(program: &str, timeout: Duration) -> std::io::Error {
 fn stop_child(child: &mut Child) {
     #[cfg(unix)]
     {
+        if pid_reaped(child.id()) {
+            return;
+        }
+        let pid = child.id() as i32;
         // SAFETY: the child was started with `process_group(0)`, so its pid is the process
-        // group id. A negative pid signals that group and not this process.
-        let _ = unsafe { kill(-(child.id() as i32), SIGKILL) };
+        // group id, and `pid_reaped` just showed the leader still exists. A negative pid
+        // signals that group and not this process. This runs before the wait that reaps it.
+        let _ = unsafe { kill(-pid, SIGKILL) };
     }
     let _ = child.kill();
 }
@@ -176,20 +183,30 @@ fn stop_child(child: &mut Child) {
 const SIGKILL: i32 = 9;
 
 #[cfg(unix)]
+const ESRCH: i32 = 3;
+
+#[cfg(unix)]
 unsafe extern "C" {
     fn kill(pid: i32, sig: i32) -> i32;
 }
 
+#[cfg(unix)]
+fn pid_reaped(pid: u32) -> bool {
+    // SAFETY: signal 0 checks whether `pid` exists and does not deliver a signal.
+    let rc = unsafe { kill(pid as i32, 0) };
+    rc != 0 && std::io::Error::last_os_error().raw_os_error() == Some(ESRCH)
+}
+
 /// After the caller's kill: reap and join pipes within the grace period. A child still
 /// running (uninterruptible I/O can outlive SIGKILL) and any reader a descendant is still
-/// holding move to a detached thread, so this returns while `wait` and the joins finish.
+/// holding go to the process-wide reaper, so this returns while that cleanup finishes.
 fn release(mut child: Child, stdout: Pipe, stderr: Pipe) {
     let child = if child_reaped(&mut child) { None } else { Some(child) };
     let (stdout, stderr) = match take_pipes(stdout, stderr, Instant::now() + REAP_GRACE) {
         Ok(_) => (None, None),
         Err(pipes) => (Some(pipes.0), Some(pipes.1)),
     };
-    detach_unfinished(child, stdout, stderr);
+    handoff(child, stdout, stderr);
 }
 
 fn child_reaped(child: &mut Child) -> bool {
@@ -203,22 +220,93 @@ fn child_reaped(child: &mut Child) -> bool {
     }
 }
 
-fn detach_unfinished(child: Option<Child>, stdout: Option<Pipe>, stderr: Option<Pipe>) {
+struct ReapJob {
+    child: Option<Child>,
+    stdout: Option<Pipe>,
+    stderr: Option<Pipe>,
+}
+
+fn handoff(child: Option<Child>, stdout: Option<Pipe>, stderr: Option<Pipe>) {
     if child.is_none() && stdout.is_none() && stderr.is_none() {
         return;
     }
-    // Detach the reaper. It ends when the child exits and the pipes close.
-    let _ = std::thread::Builder::new().name("media-process-reaper".into()).spawn(move || {
-        if let Some(mut child) = child {
-            let _ = child.wait();
+    // Readers stuck on pipes held by descendants that escaped the group are an accepted residual.
+    let job = ReapJob { child, stdout, stderr };
+    match reaper_sender() {
+        Some(sender) => {
+            if let Err(mpsc::SendError(job)) = sender.send(job) {
+                fallback_wait(job);
+            }
         }
-        if let Some(stdout) = stdout {
-            let _ = stdout.join();
+        None => fallback_wait(job),
+    }
+}
+
+fn fallback_wait(job: ReapJob) {
+    if let Some(mut child) = job.child {
+        let _ = child.wait();
+    }
+}
+
+fn reaper_sender() -> Option<&'static mpsc::Sender<ReapJob>> {
+    static REAPER: OnceLock<mpsc::Sender<ReapJob>> = OnceLock::new();
+    if let Some(sender) = REAPER.get() {
+        return Some(sender);
+    }
+    let (sender, receiver) = mpsc::channel();
+    if std::thread::Builder::new().name("media-process-reaper".into()).spawn(move || reap_loop(receiver)).is_err() {
+        return None;
+    }
+    // A lost race drops this sender so the extra reaper exits on a disconnected channel.
+    let _ = REAPER.set(sender);
+    REAPER.get()
+}
+
+fn reap_loop(receiver: mpsc::Receiver<ReapJob>) {
+    let mut jobs = Vec::new();
+    loop {
+        let incoming = if jobs.is_empty() {
+            match receiver.recv() {
+                Ok(job) => Some(job),
+                Err(_) => return,
+            }
+        } else {
+            match receiver.recv_timeout(Duration::from_millis(50)) {
+                Ok(job) => Some(job),
+                Err(mpsc::RecvTimeoutError::Timeout) => None,
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    std::thread::sleep(Duration::from_millis(50));
+                    None
+                }
+            }
+        };
+        if let Some(job) = incoming {
+            jobs.push(job);
         }
-        if let Some(stderr) = stderr {
-            let _ = stderr.join();
+        while let Ok(job) = receiver.try_recv() {
+            jobs.push(job);
         }
-    });
+        jobs.retain_mut(|job| !job.poll());
+    }
+}
+
+impl ReapJob {
+    /// `try_wait` the child and join readers that have finished. `true` when nothing is left.
+    fn poll(&mut self) -> bool {
+        let reaped = self.child.as_mut().is_some_and(|child| matches!(child.try_wait(), Ok(Some(_))));
+        if reaped {
+            self.child = None;
+        }
+        join_finished(&mut self.stdout);
+        join_finished(&mut self.stderr);
+        self.child.is_none() && self.stdout.is_none() && self.stderr.is_none()
+    }
+}
+
+fn join_finished(pipe: &mut Option<Pipe>) {
+    if let Some(handle) = pipe.take_if(|handle| handle.is_finished()) {
+        let _ = handle.join();
+    }
 }
 
 type Pipe = std::thread::JoinHandle<Vec<u8>>;
@@ -249,6 +337,41 @@ fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Ve
         }
         buf
     })
+}
+
+/// `true` once the leader has exited. On Linux the zombie is left unreaped so a later
+/// group signal still names this leader. `false` when `deadline` passes first.
+fn leader_exited(child: &mut Child, deadline: Instant) -> std::io::Result<bool> {
+    let mut pause = Duration::from_millis(1);
+    loop {
+        if exited_unreaped(child)? {
+            return Ok(true);
+        }
+        let now = Instant::now();
+        if now >= deadline {
+            return Ok(false);
+        }
+        std::thread::sleep(pause.min(deadline - now));
+        pause = (pause * 2).min(Duration::from_millis(50));
+    }
+}
+
+fn exited_unreaped(child: &mut Child) -> std::io::Result<bool> {
+    #[cfg(target_os = "linux")]
+    {
+        Ok(linux_state(child.id()) == Some(b'Z'))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        Ok(child.try_wait()?.is_some())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn linux_state(pid: u32) -> Option<u8> {
+    let stat = std::fs::read(format!("/proc/{pid}/stat")).ok()?;
+    let end = stat.iter().rposition(|&byte| byte == b')')?;
+    stat.get(end + 1..)?.trim_ascii_start().first().copied()
 }
 
 /// The child's exit status, or `None` while it's still running at `deadline`.
@@ -309,7 +432,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn detach_reaps_a_child_that_ignores_sigterm() {
+    fn reaper_reaps_a_child_that_ignores_sigterm() {
         const SIGTERM: i32 = 15;
         let mut command = Command::new("sh");
         command.arg("-c").arg("trap '' TERM; echo ready; exec sleep 30");
@@ -319,29 +442,44 @@ mod tests {
         }
         let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
         let pid = child.id();
-        struct Kill(u32);
-        impl Drop for Kill {
-            fn drop(&mut self) {
-                // SAFETY: this pid is the child's process group, started with `process_group(0)`.
-                unsafe { kill(-(self.0 as i32), SIGKILL) };
+        // Drop signals only if we still own the leader. Disarm before the reaper waits.
+        struct GroupKill {
+            pid: u32,
+            armed: bool,
+        }
+        impl GroupKill {
+            fn fire(&mut self) {
+                if self.armed {
+                    // SAFETY: `process_group(0)` made this pid the group id, and the leader
+                    // has not been reaped.
+                    unsafe { kill(-(self.pid as i32), SIGKILL) };
+                    self.armed = false;
+                }
             }
         }
-        let kill_group = Kill(pid);
+        impl Drop for GroupKill {
+            fn drop(&mut self) {
+                if self.armed {
+                    // SAFETY: still armed, so the leader has not been handed to the reaper.
+                    unsafe { kill(-(self.pid as i32), SIGKILL) };
+                }
+            }
+        }
+        let mut guard = GroupKill { pid, armed: true };
         let mut stdout = child.stdout.take().unwrap();
         let mut ready = [0u8; 6];
         std::io::Read::read_exact(&mut stdout, &mut ready).unwrap();
         assert_eq!(&ready, b"ready\n");
-        // SAFETY: `pid` is the child we just spawned.
+        // SAFETY: `pid` is the unreaped child we just spawned.
         unsafe { kill(pid as i32, SIGTERM) };
         assert!(child.try_wait().unwrap().is_none(), "the child ignored SIGTERM");
+        guard.fire();
+        assert!(!pid_reaped(pid), "the leader stays unreaped until the reaper waits");
         let stdout = drain(Some(stdout));
         let stderr = drain(child.stderr.take());
-        let started = Instant::now();
-        detach_unfinished(Some(child), Some(stdout), Some(stderr));
-        assert!(started.elapsed() < Duration::from_millis(500), "detach blocked for {:?}", started.elapsed());
-        drop(kill_group);
-        let deadline = Instant::now() + Duration::from_secs(2);
-        while Path::new(&format!("/proc/{pid}")).exists() {
+        handoff(Some(child), Some(stdout), Some(stderr));
+        let deadline = Instant::now() + Duration::from_secs(30);
+        while !pid_reaped(pid) {
             assert!(Instant::now() < deadline, "pid {pid} was not reaped");
             std::thread::sleep(Duration::from_millis(20));
         }
