@@ -712,6 +712,140 @@ describe("resync", () => {
       ),
   );
 
+  it.effect("keeps a Try again's permissions when an older resync's header answers after it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const entered = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        const fresh = boardDetail();
+        const stale = { ...fresh, permissions: { ...fresh.permissions, canClose: false } };
+        let details = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1/messages", threadReplies([5]));
+        yield* api.route("GET /threads/1", () => {
+          details += 1;
+
+          if (details === 1) {
+            return Effect.fail(new ServerError({ status: 500, message: "boom" }));
+          }
+
+          // The resync's header is asked for first and answers last, from before the change.
+          return details === 2
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+                Effect.succeed(stale),
+              )
+            : Effect.succeed(fresh);
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(1);
+        expect(store.getState().threadPanes[1]?.status).toBe("error");
+
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        yield* Deferred.await(entered);
+        yield* threadActions.reload(1);
+        expect(store.getState().threadPanes[1]?.permissions?.canClose).toBe(true);
+
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        expect(store.getState().threadPanes[1]?.permissions?.canClose).toBe(true);
+      }),
+    ),
+  );
+
+  it.effect("keeps a resync's error when the pane's older header answers after it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const entered = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let details = 0;
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/1/messages", threadReplies([5]));
+        yield* api.route("GET /threads/1", () => {
+          details += 1;
+
+          return details === 1
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+                Effect.succeed(boardDetail()),
+              )
+            : Effect.fail(new ServerError({ status: 503, message: "Try again later" }));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        const open = yield* Effect.forkChild(threadActions.open(1));
+
+        yield* Deferred.await(entered);
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        expect(store.getState().threadPanes[1]?.error).toBe("Try again later");
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(open);
+
+        expect(store.getState().threadPanes[1]).toMatchObject({
+          status: "error",
+          error: "Try again later",
+        });
+      }),
+    ),
+  );
+
+  it.effect("keeps a permalink's reply pending when access goes before its replies load", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        let details = 0;
+        let member = false;
+
+        yield* serve([]);
+        // The header answers while the viewer is still a member; everything after is a 404.
+        yield* api.route("GET /threads/1", () => {
+          details += 1;
+
+          return details === 1 || member
+            ? Effect.succeed(boardDetail())
+            : Effect.fail(new NotFound({ message: "Not found" }));
+        });
+        yield* api.route("GET /threads/1/messages", (request) => {
+          if (!member) {
+            return Effect.fail(new NotFound({ message: "Not found" }));
+          }
+
+          return Effect.succeed(
+            request.query?.around === "7" ? threadReplies([6, 7, 8]) : threadReplies([20, 21]),
+          );
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(1, 7);
+
+        // The reply isn't known to be gone, so the pane says why instead of opening elsewhere.
+        expect(store.getState().threadPanes[1]?.status).toBe("error");
+        expect(store.getState().threadTimelines[1]?.status).toBe("error");
+
+        // Access is back: the next resync still opens around the reply.
+        member = true;
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+
+        expect(store.getState().threadTimelines[1]?.ids).toEqual([6, 7, 8]);
+        expect(store.getState().threadTimelines[1]?.status).toBe("ready");
+      }),
+    ),
+  );
+
   it.effect("keeps a permalink's reply in view when a resync supersedes its load", () =>
     withSync(
       Effect.gen(function* () {
