@@ -14,6 +14,7 @@ import { followAccountAppearance } from "./sync/settings.ts";
 restoreAppearance();
 
 followAccountAppearance();
+
 watchWorkerRegistration();
 
 const container = document.getElementById("root");
