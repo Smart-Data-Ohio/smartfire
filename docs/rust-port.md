@@ -58,7 +58,7 @@ These contracts supersede the imported upstream operational claims:
   render ☒ ([renderer](../crates/richtext/src/attachables.rs#L364)).
 - **PWA manifest:** values retain Rails ERB HTML escaping, including `&amp;` in the small-logo URL;
   the former upstream JSON-escaping divergence is gone
-  ([manifest](../crates/views/src/pwa.rs#L11), [template](../crates/views/templates/pwa/manifest.json)).
+  ([manifest](../crates/spa/src/pwa.rs), [template](../crates/spa/templates/pwa/manifest.json)).
 
 ### Verification and CI
 

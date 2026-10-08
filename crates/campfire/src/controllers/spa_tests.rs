@@ -145,7 +145,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
             "theme": campfire_spa::theme(Some(&settings.theme)),
             "textSize": campfire_spa::text_size(Some(&settings.text_size)),
             "cableUrl": "/cable",
-            "serviceWorkerUrl": null,
+            "serviceWorkerUrl": "/service-worker.js",
             "version": "parity",
             "revision": "parity",
         })
@@ -301,7 +301,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         // Without the SPA the layout is the Rails layout and names no worker.
         let expected = match (enabled, next) {
             (false, _) => None,
-            (true, true) => Some("/app/service-worker.js"),
+            (true, true) => Some("/service-worker.js"),
             (true, false) => Some("/service-worker.js"),
         };
         let mut b = a.sign_in(DAVID).await;
@@ -319,11 +319,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         let shell = b.get("/app/").await;
         let boot = b.send(json_request("/api/v1/boot")).await;
         if enabled {
-            let expected = if next {
-                Value::from("/app/service-worker.js")
-            } else {
-                Value::Null
-            };
+            let expected = Value::from("/service-worker.js");
             assert_eq!(
                 boot_json(&shell.text())["serviceWorkerUrl"],
                 expected,
@@ -351,7 +347,7 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
         // With no signed-in user, SPA_DEFAULT selects the classic layout's worker.
         let expected = match (enabled, default_next) {
             (false, _) => None,
-            (true, true) => Some("/app/service-worker.js"),
+            (true, true) => Some("/service-worker.js"),
             (true, false) => Some("/service-worker.js"),
         };
         let signed_out = a.anonymous().get("/session/new").await;
@@ -369,38 +365,18 @@ async fn pwa_worker_selection_matches_every_effective_ui_case() {
 }
 
 #[tokio::test]
-async fn pwa_manifest_reuses_classic_fields_with_one_spa_start_and_scope() {
+async fn pwa_manifest_alias_and_shell_preserve_root_install_identity() {
     let Some(a) = app(true).await else { return };
-    let mut b = a.anonymous();
-    let classic = b.get("/webmanifest.json").await.json();
-    let manifest = b.get("/app/manifest.webmanifest").await;
-    assert_eq!(manifest.status, StatusCode::OK);
-    assert_eq!(
-        manifest.content_type(),
-        Some("application/manifest+json; charset=utf-8")
-    );
+    let manifest = a.anonymous().get("/webmanifest.json").await;
     let json = manifest.json();
-    assert_eq!(json["start_url"], campfire_spa::root_path());
-    assert_eq!(json["scope"], json["start_url"]);
-    for field in [
-        "name",
-        "icons",
-        "display",
-        "description",
-        "categories",
-        "theme_color",
-        "background_color",
-        "screenshots",
-    ] {
-        assert_eq!(json[field], classic[field], "{field}");
-    }
-    assert_eq!(json["shortcuts"][0]["url"], "/rooms/opens/new");
-    assert_eq!(json["shortcuts"][1]["url"], "/app/settings");
+    assert_eq!(json["start_url"], "/");
+    assert_eq!(json["scope"], "/");
+    assert!(json.get("id").is_none(), "the historical manifest uses start_url as its implicit id");
+    let alias = a.anonymous().get("/app/manifest.webmanifest").await;
+    assert_eq!(alias.status, StatusCode::FOUND);
+    assert_eq!(alias.header("location"), Some("http://campfire.test/webmanifest.json"));
     let shell = a.sign_in(DAVID).await.get("/app/").await;
-    assert!(shell.text().contains(&format!(
-        "<link rel=\"manifest\" href=\"{}manifest.webmanifest\"",
-        campfire_spa::root_path()
-    )));
+    assert!(shell.text().contains("<link rel=\"manifest\" href=\"/webmanifest.json\""));
     let classic = a.anonymous().get("/session/new").await;
     assert!(classic.text().contains("href=\"/webmanifest.json\""));
 }
@@ -474,36 +450,22 @@ async fn pwa_worker_and_offline_files_use_public_headers_without_becoming_the_sh
     }
     for path in ["service-worker.js", "offline.html"] {
         let reply = a.anonymous().get(&format!("/app/{path}")).await;
-        match campfire_spa::file(path, None) {
-            Some(served) => {
-                assert_eq!(reply.status, StatusCode::OK, "{path}");
-                assert_eq!(reply.body, served.body, "{path}");
-                assert_eq!(
-                    reply.content_type(),
-                    Some(served.file.content_type),
-                    "{path}"
-                );
-                assert_eq!(reply.header("set-cookie"), None, "{path}");
-                if path == "service-worker.js" {
-                    assert_eq!(reply.header("service-worker-allowed"), Some("/"));
-                    assert_eq!(
-                        reply.header("cache-control"),
-                        Some("no-cache, no-transform")
-                    );
-                }
-            }
-            None => assert_eq!(
-                reply.status,
-                StatusCode::NOT_FOUND,
-                "a stub never serves the shell for {path}"
-            ),
+        let root = a.anonymous().get(&format!("/{path}")).await;
+        let file = campfire_spa::pwa::file(path, true, None).unwrap();
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.content_type(), Some(file.file.content_type));
+        assert_eq!(reply.body, root.body, "older bundles use the same root resource");
+        assert_eq!(reply.body, file.body);
+        assert_eq!(reply.header("set-cookie"), None);
+        if path == "service-worker.js" {
+            assert_eq!(reply.header("service-worker-allowed"), Some("/"));
+            assert_eq!(reply.header("cache-control"), Some("no-cache, no-transform"));
         }
     }
 }
 
-/// Application startup owns every registration: real sign-in (a full page load from the auth
-/// pages) and UI preference forms, the unchanged classic worker, and the built SPA (not a
-/// registration fixture or stub).
+/// After seeding a legacy registration, real sign-in and UI preference forms update the
+/// shared root worker through application startup and the built SPA.
 #[tokio::test]
 #[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
 async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {

@@ -18,7 +18,7 @@ fn boot() -> Boot {
         theme: theme(Some("dark")),
         text_size: text_size(None),
         cable_url: "/cable".into(),
-        service_worker_url: Some("/app/service-worker.js".into()),
+        service_worker_url: Some("/service-worker.js".into()),
         version: "1.2.3".into(),
         flash: None,
         revision: Some("0123abc".into()),
@@ -246,7 +246,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <meta name=\"turbo-visit-control\" content=\"reload\" />\n\
-         <link rel=\"manifest\" href=\"/app/manifest.webmanifest\" />\n\
+         <link rel=\"manifest\" href=\"/webmanifest.json\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
@@ -261,7 +261,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
             "theme": "dark",
             "textSize": "default",
             "cableUrl": "/cable",
-            "serviceWorkerUrl": "/app/service-worker.js",
+            "serviceWorkerUrl": "/service-worker.js",
             "version": "1.2.3",
             "revision": "0123abc",
         })

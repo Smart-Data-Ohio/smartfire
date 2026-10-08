@@ -65,9 +65,7 @@ mod bundle;
 
 #[test]
 fn auth_bundle_recurses_in_order_deduplicates_and_resolves_font_urls_at_their_source() {
-    let scratch = std::path::PathBuf::from(std::env::var_os("HOME").unwrap()).join(".cache/s8");
-    std::fs::create_dir_all(&scratch).unwrap();
-    let dir = tempfile::tempdir_in(scratch).unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
     let crate_dir = root.join("crates/assets");
     let frontend = root.join("frontend/src");

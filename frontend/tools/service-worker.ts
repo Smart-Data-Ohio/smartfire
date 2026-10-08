@@ -21,7 +21,7 @@ export function precacheFiles(names: readonly string[], base: string): string[] 
     }
   }
 
-  return [...paths, `${base}offline.html`].sort();
+  return [...paths, "/offline.html"].sort();
 }
 
 export function buildVersion(precache: readonly string[]): string {
@@ -93,7 +93,7 @@ export function smartfireServiceWorker(): Plugin {
       const config = {
         version: buildVersion(precache),
         precache,
-        offline: `${base}offline.html`,
+        offline: "/offline.html",
         page: `${base}${page.fileName}`,
       };
 
@@ -207,24 +207,10 @@ export function smartfireServiceWorker(): Plugin {
           return;
         }
 
-        // The real classic worker (served verbatim by the Rust app) and the page it precaches, so
-        // switching tests exercise its activation against the SPA's caches.
-        if (testing && request.url === "/service-worker.js") {
-          response.setHeader("Content-Type", "text/javascript; charset=utf-8");
-          response.setHeader("Cache-Control", "no-cache");
-          response.end(
-            await readFile(
-              resolve(root, "../crates/views/templates/pwa/service_worker.js"),
-              "utf8",
-            ),
-          );
-
-          return;
-        }
-
-        if (testing && request.url === "/offline.html") {
+        // Root PWA URLs are shared by both UIs, as in the Rust server.
+        if (requested.pathname === "/offline.html") {
           response.setHeader("Content-Type", "text/html; charset=utf-8");
-          response.end("<!doctype html><title>Offline</title>");
+          response.end(await readFile(resolve(dist, "offline.html"), "utf8"));
 
           return;
         }
@@ -237,7 +223,10 @@ export function smartfireServiceWorker(): Plugin {
           return;
         }
 
-        if (request.url?.split("?")[0] !== `${base}service-worker.js`) {
+        if (
+          requested.pathname !== "/service-worker.js" &&
+          requested.pathname !== `${base}service-worker.js`
+        ) {
           next();
 
           return;

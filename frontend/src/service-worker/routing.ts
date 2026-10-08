@@ -17,7 +17,7 @@ interface RoutingInstallEvent extends Event {
 export function networkRoute(origin: string, build: WorkerBuild): NetworkRoute {
   const classicAssets = new URL("/assets/", origin).href;
   const offline = new URL(build.offline, origin).href;
-  const spaAssets = new URL("assets/", offline).href;
+  const spaAssets = new URL(".", new URL(build.page, origin)).href;
   const patterns = new Set([`${classicAssets}*`, `${spaAssets}*`, offline]);
 
   // The build's precache lives under assets/ plus offline.html. Preserve any future entries

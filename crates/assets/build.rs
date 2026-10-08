@@ -124,7 +124,7 @@ fn main() {
     let mut public_files = Vec::new();
     all_files(&public, &mut public_files);
     // A stray precompile inside the reference app mustn't shadow what we build.
-    public_files.retain(|file| !file.starts_with(public.join("assets")));
+    public_files.retain(|file| !file.starts_with(public.join("assets")) && file != &public.join("offline.html"));
     for (i, file) in public_files.iter().enumerate() {
         let url = format!("/{}", file.strip_prefix(&public).unwrap().display());
         writeln!(

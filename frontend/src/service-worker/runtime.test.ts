@@ -76,14 +76,49 @@ function build(version: string): WorkerBuild & { readonly precache: readonly [st
   return {
     version,
     page: `/app/assets/index-${version.repeat(8)}.js`,
-    offline: "/app/offline.html",
-    precache: [`/app/assets/chunk-${version.repeat(8)}.js`, "/app/offline.html"],
+    offline: "/offline.html",
+    precache: [`/app/assets/chunk-${version.repeat(8)}.js`, "/offline.html"],
   };
 }
 
 const network: typeof fetch = async () => new Response("complete asset bytes");
 
 describe("service worker cache lifecycle coordination", () => {
+  it("retains a live pre-cutover build when the offline URL moves to the root", async () => {
+    const storage = new MemoryStorage();
+
+    const legacy = {
+      ...build("a"),
+      offline: "/app/offline.html",
+      precache: [build("a").precache[0], "/app/offline.html"],
+    };
+
+    const old = new WorkerCache(legacy, origin, storage, network);
+    const live = [new URL(legacy.page, origin).href];
+
+    await old.install();
+    await old.activate(live);
+
+    const current = new WorkerCache(build("b"), origin, storage, network);
+
+    await current.install();
+    await current.activate(live);
+    await current.prune(live);
+
+    expect(await storage.keys()).toContain(cacheName("a"));
+    expect(current.handles(new Request(new URL(legacy.precache[0] ?? "", origin)))).toBe(true);
+
+    const response = await current.response(new Request(new URL(legacy.precache[0] ?? "", origin)));
+
+    expect(await response?.text()).toBe("complete asset bytes");
+
+    const marker = await storage.match(`${origin}/app/offline.html.activation`, {
+      cacheName: cacheName("a"),
+    });
+
+    expect(await marker?.json()).toMatchObject({ page: live[0], activation: 1 });
+  });
+
   it("pins an activated rollback cache while its installer fetches, without blocking serving or pruning", async () => {
     const storage = new MemoryStorage();
     const coordinator = new SharedCoordinator();
