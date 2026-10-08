@@ -255,6 +255,7 @@ export class Engine extends Context.Service<
         if (kind === "board") {
           if (held !== undefined) mutations.setBoardLoading(roomId, held.query);
           const generation = store.getState().boards[roomId]?.generation;
+
           const [available, listing] = yield* Effect.all(
             [
               resyncRoomDetail(roomId, revision),
@@ -468,6 +469,7 @@ export class Engine extends Context.Service<
         );
 
       const refreshingWork = new Set<number>();
+
       const refreshRoom = (roomId: number, revision: number) =>
         room(roomId).pipe(
           Effect.tap((detail) =>
