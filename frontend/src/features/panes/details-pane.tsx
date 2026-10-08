@@ -2,9 +2,13 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import type { RoomKind } from "../../gen/RoomKind.ts";
 import { useStore } from "../../store/store.ts";
+import { Badge } from "../../ui/badge.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Menu } from "../../ui/menu.tsx";
 import { useDirectActions } from "../directs/direct-header-actions.tsx";
+import { useRaisedHands } from "../huddle/stage-button.tsx";
+import { identityOf } from "../people/agent-identity.ts";
+import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { preloadRoomSettings, settingsOverState } from "../rooms/room-settings-host.tsx";
@@ -94,16 +98,45 @@ function NotificationsRow({ roomId }: { readonly roomId: number }) {
 }
 
 /**
+ * A 1:1 DM's way to the other side's page, where a wide header's subtitle leads: an agent's
+ * profile, or a person's.
+ */
+function ProfileRow({ userId }: { readonly userId: number }) {
+  const identity = identityOf(useUser(userId));
+
+  return (
+    <li>
+      {identity.kind === "agent" ? (
+        <Link
+          to="/agents/$agentId"
+          params={{ agentId: identity.agentId }}
+          className="details-row"
+          preload={false}
+        >
+          <RowContent icon="bot" label="Agent profile" />
+        </Link>
+      ) : (
+        <Link to="/people/$userId" params={{ userId }} className="details-row" preload={false}>
+          <RowContent icon="user" label="Profile" />
+        </Link>
+      )}
+    </li>
+  );
+}
+
+/**
  * A room's details, the screen a phone's room title opens (Slack's channel details, Discord's
  * channel info): who and what it is, then a row per thing about it. Members, threads, pins, files
  * and the stage open their panes over this one (Back returns here); the notification level opens
  * the bell's menu, events the room's calendar, and settings the room's settings dialog. A DM has
- * its people actions instead of members, threads and settings.
+ * its people actions instead of members, threads and settings, and a 1:1 DM the other side's
+ * profile.
  */
 export function DetailsPane({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
   const { push } = usePaneNavigation(roomId);
   const direct = useDirectActions(roomId);
+  const hands = useRaisedHands(roomId);
 
   if (detail === null) {
     return (
@@ -139,9 +172,17 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
           </p>
         </div>
         <ul className="details-rows" aria-label="About this conversation">
+          {otherId === undefined ? null : <ProfileRow userId={otherId} />}
           <NotificationsRow roomId={roomId} />
           {kind === "stage" ? (
-            <PaneRow icon="radio" label="Stage" onClick={() => push("stage")} />
+            <PaneRow
+              icon="radio"
+              label="Stage"
+              value={
+                hands > 0 ? <Badge count={hands} label={`${hands} raised hands`} /> : undefined
+              }
+              onClick={() => push("stage")}
+            />
           ) : null}
           {isDirect ? null : (
             <PaneRow

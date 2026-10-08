@@ -388,6 +388,13 @@
     pointer-events: none;
   }
 
+  /* The same count beside its ⋯ menu item's label (a phone's room header). */
+  .pane-menu-count {
+    display: inline-flex;
+    margin-inline-start: var(--space-2);
+    vertical-align: middle;
+  }
+
   /* A small pill on the button's corner, clear of the pin glyph. */
   .pane-button-wrap .badge-pill {
     min-width: 14px;

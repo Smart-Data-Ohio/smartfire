@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import {
   expect,
   expectNoHorizontalOverflow,
@@ -9,7 +9,9 @@ import {
   PHONE_TOUCH,
   ROOM_IDS,
   shot,
+  syncWelcomed,
   test,
+  USER_IDS,
 } from "./support.ts";
 
 /**
@@ -67,6 +69,22 @@ function pane(page: Page) {
 async function openRoom(page: Page, id: number, theme: "light" | "dark" = "light"): Promise<void> {
   await openApp(page, `r/${id}`, theme);
   await header(page).locator(".room-title-name").waitFor();
+}
+
+/** Calls one of the mock's controls with `data` (a stage's raised hand). */
+async function control(
+  request: APIRequestContext,
+  action: string,
+  data: Record<string, number | string | boolean>,
+): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.post(`/__mock/${action}`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data,
+  });
+
+  expect(response.ok(), await response.text()).toBe(true);
 }
 
 /**
@@ -230,6 +248,77 @@ test.describe("on a 360 px touch phone", () => {
     const more = await openOverflow(page);
 
     await expect(more.getByRole("menuitem")).toHaveText(ROOMS[0]?.items ?? []);
+  });
+
+  test("a raised hand marks the ⋯ button, its Stage item and the details' Stage row", async ({
+    page,
+    request,
+  }) => {
+    const welcomed = syncWelcomed(page);
+
+    await openRoom(page, ROOM_IDS.townHall);
+    await welcomed;
+    await expect(header(page).getByRole("button", { name: "More", exact: true })).toBeVisible();
+    await expect(header(page).locator(".page-header-overflow-wrap .badge")).toHaveAttribute(
+      "data-open",
+      "false",
+    );
+
+    await control(request, "stage-hand", {
+      roomId: ROOM_IDS.townHall,
+      userId: USER_IDS.jonah,
+      raised: true,
+    });
+
+    // A host sees the dot without opening the menu, and the count inside it.
+    await expect(header(page).getByRole("button", { name: "More (1 raised hands)" })).toBeVisible();
+    await expect(header(page).locator(".page-header-overflow-wrap .badge")).toHaveAttribute(
+      "data-open",
+      "true",
+    );
+    await expectTouchTargets(page, ".room-header");
+    await shot(page, "phone-header-hands", "light");
+
+    const menu = await openOverflow(page);
+
+    await expect(menu.getByRole("menuitem", { name: "Stage 1 raised hands" })).toBeVisible();
+    await shot(page, "phone-header-hands-overflow", "light");
+    await menu.getByRole("menuitem", { name: /^Stage/ }).click();
+    await expect(pane(page).getByRole("region", { name: "Listeners" })).toContainText(
+      "Hand raised",
+    );
+    await pane(page)
+      .getByRole("button", { name: /^Back to/ })
+      .click();
+
+    await header(page).locator(".room-title-button").click();
+    await expect(pane(page).getByRole("button", { name: "Stage 1 raised hands" })).toBeVisible();
+    await shot(page, "phone-header-hands-details", "light");
+
+    // Lowered, the dot goes.
+    await control(request, "stage-hand", {
+      roomId: ROOM_IDS.townHall,
+      userId: USER_IDS.jonah,
+      raised: false,
+    });
+    await expect(header(page).locator(".page-header-overflow-wrap .badge")).toHaveAttribute(
+      "data-open",
+      "false",
+    );
+    await expect(pane(page).getByRole("button", { name: "Stage", exact: true })).toBeVisible();
+  });
+
+  test("a DM's details lead to the agent's or the person's profile", async ({ page }) => {
+    await openRoom(page, ROOM_IDS.dmEmber);
+    await header(page).locator(".room-title-button").click();
+    await pane(page).getByRole("link", { name: "Agent profile" }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/agents/${USER_IDS.ember}$`));
+    await expect(page.getByRole("heading", { level: 2, name: "Ember" })).toBeVisible();
+
+    await openRoom(page, ROOM_IDS.dmMaya);
+    await header(page).locator(".room-title-button").click();
+    await pane(page).getByRole("link", { name: "Profile", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/people/${USER_IDS.maya}$`));
   });
 
   test("the details lead to each pane and back to the details", async ({ page }) => {

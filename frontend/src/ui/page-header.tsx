@@ -1,4 +1,5 @@
 import type { ComponentPropsWithRef, ReactElement, ReactNode } from "react";
+import { Badge } from "./badge.tsx";
 import { IconButton } from "./icon-button.tsx";
 import { Icon, type IconName } from "./icons/icon.tsx";
 import { Menu } from "./menu.tsx";
@@ -39,6 +40,11 @@ export interface PageHeaderProps extends Omit<ComponentPropsWithRef<"header">, "
   /** The ⋯ menu's items (`MenuItem`s): the tools that don't fit beside the title. */
   readonly overflow?: ReactNode | undefined;
   readonly overflowLabel?: string;
+  /**
+   * Something in the ⋯ menu that wants attention (raised hands on a stage): a dot on the button,
+   * and its label (`"2 raised hands"`) added to the button's name. Hidden without one.
+   */
+  readonly overflowAlert?: string | undefined;
   /** Opens the ⋯ menu from outside (a URL that names one of its items); uncontrolled without. */
   readonly overflowMenu?:
     | { readonly open: boolean; readonly onOpenChange: (open: boolean) => void }
@@ -81,6 +87,7 @@ export function PageHeader({
   actions,
   overflow,
   overflowLabel = "More",
+  overflowAlert,
   overflowMenu,
   className,
   ...rest
@@ -113,13 +120,20 @@ export function PageHeader({
               placement="bottom-end"
               label={overflowLabel}
               trigger={(props) => (
-                <IconButton
-                  {...props}
-                  icon="more"
-                  label={overflowLabel}
-                  tooltipPlacement="bottom-end"
-                  className="page-header-overflow"
-                />
+                <span className="page-header-overflow-wrap">
+                  <IconButton
+                    {...props}
+                    icon="more"
+                    label={
+                      overflowAlert === undefined
+                        ? overflowLabel
+                        : `${overflowLabel} (${overflowAlert})`
+                    }
+                    tooltipPlacement="bottom-end"
+                    className="page-header-overflow"
+                  />
+                  <Badge count={overflowAlert === undefined ? 0 : 1} dot floating label="" />
+                </span>
               )}
             >
               {overflow}

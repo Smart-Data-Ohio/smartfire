@@ -9,6 +9,7 @@ import { useWorkingPresence } from "../agents/working.ts";
 import { DirectHeaderActions, useDirectActions } from "../directs/direct-header-actions.tsx";
 import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
+import { useRaisedHands } from "../huddle/stage-button.tsx";
 import { PaneButtons, PaneMenuItems } from "../panes/pane-buttons.tsx";
 import { usePaneNavigation, usePhoneLayout } from "../panes/use-right-pane.ts";
 import { agentKindLabel, agentTone, identityOf, toneLabel } from "../people/agent-identity.ts";
@@ -227,6 +228,8 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
   // menu holding just the levels, as that menu.
   const notificationsMenu = useNotificationsMenuOpen(roomId);
   const notificationsRoute = useMatchRoute()({ to: "/r/$roomId/notifications" }) !== false;
+  // A stage's raised hands sit one tap deeper on phones (the ⋯ menu's Stage item), so ⋯ shows a dot.
+  const hands = useRaisedHands(roomId);
 
   const title =
     name === null || kind === null ? (
@@ -268,6 +271,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
           )
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}
+        overflowAlert={phone && hands > 0 ? `${hands} raised hands` : undefined}
         overflowMenu={phone ? notificationsMenu : undefined}
       />
       {phone ? direct.dialogs : null}

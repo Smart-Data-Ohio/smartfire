@@ -76,6 +76,19 @@
     gap: var(--space-1);
   }
 
+  /* The ⋯ button's dot: something inside wants attention (raised hands). */
+  .page-header-overflow-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .page-header-overflow-wrap .badge[data-floating] {
+    --badge-ring: var(--bg-pane);
+
+    top: 10px;
+    right: 10px;
+  }
+
   /* Off phones a page sits beside what it came from, so its back button goes. */
   @media (width >= 720px) {
     .page-header[data-back="phone"] .page-header-back {
