@@ -515,6 +515,7 @@ pub(crate) fn row() -> SidebarRow {
         direct_member_ids: vec![],
         unread_count: 4,
         mention_count: 1,
+        refresh_room: None,
     }
 }
 
@@ -744,7 +745,10 @@ fn s1_events_match_the_protocol() {
             json!({"type": "sidebar.row.upserted", "data": serde_json::to_value(row()).unwrap()}),
         ),
         (
-            SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id: 12 }),
+            SyncPayload::SidebarRowRemoved(SidebarRowRemoved {
+                room_id: 12,
+                refresh_room: None,
+            }),
             json!({"type": "sidebar.row.removed", "data": {"roomId": 12}}),
         ),
         (

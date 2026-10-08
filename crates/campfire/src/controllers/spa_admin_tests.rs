@@ -86,6 +86,8 @@ const VOLATILE: &[&str] = &[
     "join_code",
     "password_digest",
     "client_message_id",
+    // Classic room forms never set the API's per-attempt creation key.
+    "client_room_id",
     "bot_token",
     "bot_token_digest",
     "webhook_signing_secret",

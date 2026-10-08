@@ -58,6 +58,10 @@ pub struct SidebarRow {
     /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`); drives the numeric
     /// pill.
     pub mention_count: i64,
+    /// Management changed the room's metadata or membership; reload a loaded room's detail.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub refresh_room: Option<bool>,
 }
 
 /// `room_categories`: a person's own sidebar section.
@@ -80,4 +84,8 @@ pub struct RoomCategory {
 #[ts(export)]
 pub struct SidebarRowRemoved {
     pub room_id: i64,
+    /// Reload a loaded room: management changed a hidden row, or room access was lost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub refresh_room: Option<bool>,
 }

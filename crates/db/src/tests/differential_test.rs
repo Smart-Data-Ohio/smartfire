@@ -161,6 +161,14 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
                 continue;
             }
             let value: rusqlite::types::Value = row.get(i).unwrap();
+            if table == "rooms" && name == "client_room_id" {
+                assert_eq!(
+                    value,
+                    rusqlite::types::Value::Null,
+                    "classic creation never sets API keys"
+                );
+                continue;
+            }
             let rendered = match (name.as_str(), value) {
                 ("password_digest", rusqlite::types::Value::Text(s)) => {
                     format!("bcrypt:{}", &s[..4])

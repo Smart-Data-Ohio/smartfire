@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { TextSize } from "../gen/TextSize.ts";
 import { prefersReducedMotion } from "../motion/reduced-motion.ts";
+import { PALETTE_TOKEN_NAMES, PALETTES, type PalettePreset, paletteTokens } from "./palette.ts";
 
 /**
  * Appearance lives as attributes on <html> (`data-theme`, `data-text-size`, `data-density`,
@@ -11,12 +12,14 @@ import { prefersReducedMotion } from "../motion/reduced-motion.ts";
  * 1. a theme pinned on this device (Settings → Appearance → This device), when there is one;
  * 2. the account's theme, from the inline boot JSON and from `/me` after;
  * 3. the OS setting.
- * Text size is the account's alone. Density and motion are this device's alone.
+ * Text size is the account's alone. Density, motion, the colour palette (`data-palette`, its
+ * tokens set on <html>) and the font (`data-font`) are this device's alone.
  *
- * Only this device's own choices (the pin, density, motion) are stored, under one localStorage
- * key: never the account's, so the next person to sign in on this browser doesn't inherit them.
- * index.html's blocking script applies the stored choices and the inline boot's before the
- * stylesheet paints; the classic pages' script (crates/assets/auth/auth.js) applies the pin.
+ * Only this device's own choices (the pin, density, motion, palette, font) are stored, under one
+ * localStorage key: never the account's, so the next person to sign in on this browser doesn't
+ * inherit them. index.html's blocking script applies the stored choices and the inline boot's
+ * before the stylesheet paints; the classic pages' script (crates/assets/auth/auth.js) applies
+ * the pin.
  */
 export type ThemePreference = "system" | "light" | "dark";
 
@@ -26,7 +29,10 @@ export type MotionPreference = "system" | "reduce" | "full";
 
 export type ResolvedTheme = "light" | "dark";
 
-export type { TextSize };
+/** Inter is Smartfire's own; the rest are self-hosted presets (typography.css). */
+export type FontPreset = "inter" | "system" | "atkinson" | "serif" | "mono";
+
+export type { PalettePreset, TextSize };
 
 /** The appearance an account carries (boot, `/me`, the settings page). */
 export interface AccountAppearance {
@@ -43,6 +49,8 @@ export interface Appearance {
   readonly textSize: TextSize;
   readonly density: DensityPreference;
   readonly motion: MotionPreference;
+  readonly palette: PalettePreset;
+  readonly font: FontPreset;
 }
 
 const STORAGE_KEY = "smartfire.appearance";
@@ -55,6 +63,10 @@ const DENSITIES: readonly DensityPreference[] = ["comfortable", "compact"];
 
 const MOTIONS: readonly MotionPreference[] = ["system", "reduce", "full"];
 
+const PALETTE_VALUES: readonly PalettePreset[] = PALETTES.map((palette) => palette.value);
+
+const FONTS: readonly FontPreset[] = ["inter", "system", "atkinson", "serif", "mono"];
+
 function pick<T extends string>(options: readonly T[], value: string | undefined): T | null {
   return options.find((option) => option === value) ?? null;
 }
@@ -66,6 +78,8 @@ const DEFAULTS: Appearance = {
   textSize: "default",
   density: "comfortable",
   motion: "system",
+  palette: "smartfire",
+  font: "inter",
 };
 
 let current: Appearance = DEFAULTS;
@@ -94,13 +108,51 @@ function writeAttributes(appearance: Appearance): void {
   } else {
     dataset.motion = appearance.motion;
   }
+
+  if (appearance.font === "inter") {
+    delete dataset.font;
+  } else {
+    dataset.font = appearance.font;
+  }
+
+  writePalette(appearance.palette);
+}
+
+/**
+ * Sets the palette's tokens on <html> (through the CSSOM, which the shell's CSP allows), over the
+ * stylesheet's and the workspace's custom CSS; Smartfire's own palette removes them.
+ */
+function writePalette(palette: PalettePreset): void {
+  const root = document.documentElement;
+  const tokens = paletteTokens(palette);
+
+  if (palette === "smartfire") {
+    delete root.dataset.palette;
+  } else {
+    root.dataset.palette = palette;
+  }
+
+  for (const name of PALETTE_TOKEN_NAMES) {
+    const value = tokens.get(name);
+
+    if (value === undefined) {
+      root.style.removeProperty(name);
+    } else {
+      root.style.setProperty(name, value);
+    }
+  }
 }
 
 function store(appearance: Appearance): void {
-  const { themeOverride, density, motion } = appearance;
+  const { themeOverride, density, motion, palette, font } = appearance;
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ themeOverride, density, motion }));
+    // The palette by name only: index.html carries every palette's tokens. Whatever else an
+    // earlier version stored (a palette's tokens, an account's theme) goes with this write.
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ themeOverride, density, motion, palette, font }),
+    );
   } catch {
     // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
   }
@@ -128,14 +180,26 @@ function transition(change: () => void): void {
   change();
 }
 
+/**
+ * The text fields of the JSON object in `json`, as index.html's blocking script reads them: a
+ * corrupted `["dark"]` (which `String` would turn into "dark") is no choice in either place, and
+ * JSON that isn't an object has none. Throws on JSON that doesn't parse.
+ */
+function textFields(json: string): Map<string, string> {
+  const parsed: unknown = JSON.parse(json);
+
+  return parsed instanceof Object
+    ? new Map(
+        Object.entries(parsed).flatMap(([key, field]): [string, string][] =>
+          String(field) === field ? [[key, field]] : [],
+        ),
+      )
+    : new Map();
+}
+
 function readStored(): Map<string, string> {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
-
-    // Each field as text: a stored `null` reads "null", which no choice matches.
-    return parsed instanceof Object
-      ? new Map<string, string>(Object.entries(parsed).map(([key, field]) => [key, String(field)]))
-      : new Map();
+    return textFields(localStorage.getItem(STORAGE_KEY) ?? "null");
   } catch {
     return new Map();
   }
@@ -150,15 +214,7 @@ function readInlineBoot(): Partial<AccountAppearance> {
   }
 
   try {
-    const parsed: unknown = JSON.parse(text);
-
-    if (!(parsed instanceof Object)) {
-      return {};
-    }
-
-    const fields = new Map<string, string>(
-      Object.entries(parsed).map(([key, field]) => [key, String(field)]),
-    );
+    const fields = textFields(text);
 
     return {
       theme: pick(THEMES, fields.get("theme")) ?? "system",
@@ -185,6 +241,8 @@ export function restoreAppearance(): void {
     textSize: boot.textSize ?? "default",
     density: pick(DENSITIES, saved.get("density")) ?? "comfortable",
     motion: pick(MOTIONS, saved.get("motion")) ?? "system",
+    palette: pick(PALETTE_VALUES, saved.get("palette")) ?? "smartfire",
+    font: pick(FONTS, saved.get("font")) ?? "inter",
   });
 }
 
@@ -221,6 +279,15 @@ export function setDensity(density: DensityPreference): void {
 
 export function setMotion(motion: MotionPreference): void {
   commit({ ...current, motion });
+}
+
+/** Paints this device in `palette`, cross-fading like a theme change. */
+export function setPalette(palette: PalettePreset): void {
+  transition(() => commit({ ...current, palette }));
+}
+
+export function setFont(font: FontPreset): void {
+  commit({ ...current, font });
 }
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";

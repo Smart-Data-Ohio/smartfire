@@ -82,7 +82,7 @@ CREATE INDEX "index_memberships_on_user_id" ON "memberships" ("user_id");
 CREATE TABLE "room_categories" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "collapsed" boolean DEFAULT FALSE NOT NULL, "created_at" datetime(6) NOT NULL, "name" varchar NOT NULL, "position" integer DEFAULT 0 NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
 CREATE INDEX "index_room_categories_on_user_and_position" ON "room_categories" ("user_id", "position");
 CREATE INDEX "index_room_categories_on_user_id" ON "room_categories" ("user_id");
-CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar);
 CREATE UNIQUE INDEX "index_rooms_on_direct_member_key" ON "rooms" ("direct_member_key") WHERE direct_member_key IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX "index_rooms_on_inbound_email_token" ON "rooms" ("inbound_email_token");
 CREATE TABLE "streams" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "ended_at" datetime(6), "membership_id" integer NOT NULL, "quality" varchar NOT NULL, "room_id" integer NOT NULL, "started_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
@@ -961,3 +961,4 @@ BEGIN
     UPDATE users SET activity_revision = activity_revision + 1
     WHERE (id = OLD.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = OLD.id))) OR (id = NEW.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = NEW.id)));
 END;
+CREATE UNIQUE INDEX "index_rooms_on_creator_id_and_client_room_id" ON "rooms" ("creator_id", "client_room_id") WHERE client_room_id IS NOT NULL;

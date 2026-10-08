@@ -88,8 +88,17 @@ test("the sidebar's theme button saves to the account when nothing is pinned", a
 
   const button = page.getByRole("button", { name: /^Theme: / });
 
+  // The theme shows at once; the account has it once the save answers.
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().endsWith("/api/v1/settings/appearance") &&
+      response.ok(),
+  );
+
   await button.click();
   await expect(html(page)).toHaveAttribute("data-theme", /light|dark/);
+  await saved;
 
   const shown = await html(page).getAttribute("data-theme");
 
@@ -97,6 +106,75 @@ test("the sidebar's theme button saves to the account when nothing is pinned", a
   await expect(
     page.getByRole("radio", { name: shown === "dark" ? "Dark" : "Light" }),
   ).toBeChecked();
+});
+
+/** A custom property as the page resolves it on <html>. */
+function rootToken(page: Page, name: string): Promise<string> {
+  return page.evaluate(
+    (token) => getComputedStyle(document.documentElement).getPropertyValue(token).trim(),
+    name,
+  );
+}
+
+test("a colour palette and a font apply at once, and stay on this device", async ({ page }) => {
+  await openApp(page, "settings/appearance");
+
+  const before = await rootToken(page, "--accent");
+  const palettes = page.getByRole("group", { name: "Colour palette" });
+
+  await palettes.getByRole("radio", { name: "Ember" }).check();
+  await expect(html(page)).toHaveAttribute("data-palette", "ember");
+  expect(await rootToken(page, "--accent")).not.toBe(before);
+
+  const fonts = page.getByRole("group", { name: "Font" });
+
+  await fonts.getByRole("radio", { name: "Atkinson Hyperlegible" }).check();
+  await expect(html(page)).toHaveAttribute("data-font", "atkinson");
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).fontFamily))
+    .toMatch(/^"Atkinson Hyperlegible Next"/);
+
+  await page.reload();
+  await expect(html(page)).toHaveAttribute("data-palette", "ember");
+  await expect(html(page)).toHaveAttribute("data-font", "atkinson");
+  await expect(
+    page.getByRole("group", { name: "Colour palette" }).getByRole("radio", { name: "Ember" }),
+  ).toBeChecked();
+
+  await page
+    .getByRole("group", { name: "Colour palette" })
+    .getByRole("radio", { name: "Smartfire" })
+    .check();
+  await expect(html(page)).not.toHaveAttribute("data-palette", /./);
+  expect(await rootToken(page, "--accent")).toBe(before);
+});
+
+matrix("palettes and fonts", async ({ page, theme }) => {
+  await openApp(page, "settings/appearance");
+  await page.getByRole("radio", { name: theme === "dark" ? "Dark" : "Light", exact: true }).check();
+  await page
+    .getByRole("group", { name: "Colour palette" })
+    .getByRole("radio", { name: "Ocean" })
+    .check();
+  await page
+    .getByRole("group", { name: "Font" })
+    .getByRole("radio", { name: "Atkinson Hyperlegible" })
+    .check();
+  await page.mouse.move(0, 0);
+  await shot(page, "appearance-presets", theme);
+
+  await page
+    .getByRole("group", { name: "Colour palette" })
+    .getByRole("radio", { name: "Ember" })
+    .check();
+  await page
+    .getByRole("group", { name: "Font" })
+    .getByRole("radio", { name: "Source Serif" })
+    .check();
+  await page.goto("/app/");
+  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
+  await page.mouse.move(0, 0);
+  await shot(page, "appearance-ember-serif", theme);
 });
 
 test.describe("on a touch phone", () => {
@@ -115,6 +193,21 @@ test.describe("on a touch phone", () => {
     expect(
       await composer.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)),
     ).toBeGreaterThanOrEqual(16);
+  });
+
+  test("every colour palette fits on the screen", async ({ page }) => {
+    await openApp(page, "settings/appearance");
+
+    const swatches = page.getByRole("group", { name: "Colour palette" }).getByRole("radio");
+
+    await expect(swatches).toHaveCount(6);
+
+    for (const swatch of await swatches.all()) {
+      const box = await swatch.boundingBox();
+
+      expect(box, `${await swatch.getAttribute("value")}`).not.toBeNull();
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+    }
   });
 });
 

@@ -20,6 +20,8 @@ import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
+import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
+import { NEW_ROOM_SLUGS } from "./features/rooms/room-forms.ts";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
@@ -121,7 +123,18 @@ const roomControlRoutes = [
   createRoute({ getParentRoute: () => roomRoute, path: "files", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
+  // The room's settings dialog (`RoomSettingsHost`), over the conversation.
+  createRoute({ getParentRoute: () => roomRoute, path: "settings", component: () => null }),
 ];
+
+/** `/app/rooms/new/<kind>`: the create-a-room dialog, opened on that kind over the home screen. */
+const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
+  createRoute({
+    getParentRoute: () => shellRoute,
+    path: `rooms/new/${kind}`,
+    component: () => <NewRoomRoute kind={kind} />,
+  }),
+);
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -433,6 +446,7 @@ const routeTree = rootRoute.addChildren([
     peopleRoute,
     personRoute,
     messageRoute,
+    ...newRoomRoutes,
     roomRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,

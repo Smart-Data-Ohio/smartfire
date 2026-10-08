@@ -145,6 +145,8 @@ export interface AdminModule {
   readonly requireSudo: () => void;
   /** The workspace's name, logo and banner, for the boot JSON. */
   readonly branding: () => WorkspaceBranding;
+  readonly roomCreationRestricted: () => boolean;
+  readonly hasIcon: (name: string) => boolean;
 }
 
 /** Creates the admin module. */
@@ -551,6 +553,8 @@ export function createAdmin(ctx: S2Context, uploads: Uploads): AdminModule {
     },
     requireSudo,
     branding,
+    roomCreationRestricted: () => current().restrict,
+    hasIcon: (name) => current().icons.some((icon) => icon.name === name),
     routes: [
       route("GET", /^\/admin\/workspace$/, () => ok(workspace())),
       route("PATCH", /^\/admin\/workspace$/, ({ body }) => updateWorkspace(body)),
