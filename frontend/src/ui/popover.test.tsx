@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHEET_QUERY } from "./action-sheet.tsx";
@@ -30,7 +30,7 @@ describe("Popover", () => {
     expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Search emoji" }));
   });
 
-  it("opens as a sheet on a touch phone, leaving its text field for a tap", async () => {
+  it("opens as a sheet on a touch phone, leaving its text field for a tap, and drags away to its trigger", async () => {
     // jsdom has no matchMedia: this one answers the sheet query, and only that, yes.
     window.matchMedia = (query: string) =>
       Object.assign(new EventTarget(), {
@@ -51,5 +51,18 @@ describe("Popover", () => {
     expect(popover.classList.contains("action-sheet")).toBe(true);
     expect(popover.dataset.placement).toBeUndefined();
     expect(document.activeElement).toBe(popover);
+
+    const handle = popover.querySelector(".action-sheet-handle");
+
+    expect(handle).not.toBeNull();
+
+    if (handle !== null) {
+      fireEvent.pointerDown(handle, { pointerId: 3, button: 0, clientY: 0 });
+      fireEvent.pointerMove(handle, { pointerId: 3, clientY: 100 });
+      fireEvent.pointerUp(handle, { pointerId: 3, clientY: 100 });
+    }
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Insert emoji" })).toBeNull());
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Emoji" }));
   });
 });

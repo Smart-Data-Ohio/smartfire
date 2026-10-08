@@ -42,30 +42,83 @@ export function useActionSheet(): boolean {
   return useSyncExternalStore(subscribe, matches, () => false);
 }
 
-/** The rest of a press already handled: its release, and the click or menu it ends in. */
-const PRESS_TAIL = ["pointerup", "click", "contextmenu"] as const;
+/** How long after its release a press's click may still come; a tap's can lag a frame or two. */
+const CLICK_WAIT_MS = 1000;
 
-/** Swallows the tail of the current press, however late it comes; the next press stops it. */
-function swallowPressTail(): void {
+/**
+ * Swallows the rest of the press `pointerId` began, which has already done its work: its release,
+ * a long press's context menu, and the click it ends in. Only that pointer's events are touched.
+ * A cancelled press (a scroll, a lost capture) has no click to wait for, so it ends there; the
+ * click ends it otherwise, or the next press, or a second after the release. A click from a key
+ * or an assistive tool (detail 0, no pointer) is never swallowed.
+ */
+function swallowPressTail(pointerId: number): void {
+  let released = false;
+  let timer = 0;
+
+  const fromPointer = (event: Event) =>
+    !(event instanceof globalThis.PointerEvent) || event.pointerId === pointerId;
+
+  const ours = (event: Event) =>
+    event instanceof globalThis.PointerEvent && event.pointerId === pointerId;
+
   const swallow = (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
-  const stop = () => {
-    for (const type of PRESS_TAIL) {
-      window.removeEventListener(type, swallow, true);
+  const onUp = (event: Event) => {
+    if (!released && ours(event)) {
+      swallow(event);
+      released = true;
+      timer = window.setTimeout(stop, CLICK_WAIT_MS);
+    }
+  };
+
+  // After the release, a touch pointer's implicit capture is let go too, and the click still comes.
+  const onCancel = (event: Event) => {
+    if (!released && ours(event)) {
+      stop();
+    }
+  };
+
+  const onContextMenu = (event: Event) => {
+    if (!released && fromPointer(event)) {
+      swallow(event);
+    }
+  };
+
+  // Chromium sends a pointer's click as a PointerEvent with its pointerId; a key's has detail 0.
+  const onClick = (event: MouseEvent) => {
+    if (released && event.detail > 0 && fromPointer(event)) {
+      swallow(event);
+      stop();
+    }
+  };
+
+  const listeners = [
+    ["pointerup", onUp],
+    ["pointercancel", onCancel],
+    ["lostpointercapture", onCancel],
+    ["contextmenu", onContextMenu],
+    ["click", onClick],
+  ] as const;
+
+  function stop() {
+    window.clearTimeout(timer);
+
+    for (const [type, listener] of listeners) {
+      window.removeEventListener(type, listener, true);
     }
 
     window.removeEventListener("pointerdown", stop, true);
-  };
-
-  for (const type of PRESS_TAIL) {
-    window.addEventListener(type, swallow, true);
   }
 
-  window.addEventListener("click", stop, { capture: true, once: true });
-  // Registered after this press's own pointerdown has passed, so only the next one stops it.
+  for (const [type, listener] of listeners) {
+    window.addEventListener(type, listener, true);
+  }
+
+  // Registered once this press's own pointerdown has passed, so only the next press stops it.
   window.setTimeout(() => window.addEventListener("pointerdown", stop, true), 0);
 }
 
@@ -101,7 +154,7 @@ export function useSheetScrim(
 
       event.preventDefault();
       event.stopPropagation();
-      swallowPressTail();
+      swallowPressTail(event.pointerId);
       onDismissRef.current();
     };
 
@@ -155,7 +208,11 @@ export function SheetHandle({ onDismiss }: { readonly onDismiss: () => void }) {
           return;
         }
 
-        event.currentTarget.setPointerCapture(event.pointerId);
+        // jsdom (the unit tests) has no pointer capture.
+        if ("setPointerCapture" in event.currentTarget) {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }
+
         sheet.dataset.dragging = "";
         drag.current = { pointerId: event.pointerId, startY: event.clientY, sheet, distance: 0 };
       }}

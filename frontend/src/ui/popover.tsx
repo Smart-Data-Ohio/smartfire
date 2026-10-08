@@ -53,10 +53,6 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
   const sheet = useActionSheet();
 
   useFloating(id, triggerRef, presence.ref, placement, presence.mounted && !sheet);
-  useSheetScrim(sheet && open, presence.ref, () => {
-    dismissedAt.current = performance.now();
-    setOpen(false);
-  });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: where focus lands is settled on opening
   useLayoutEffect(() => {
@@ -123,6 +119,9 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
     triggerRef.current?.focus({ preventScroll: true });
   };
 
+  // A sheet's scrim and handle close it as Esc does, focus back to the trigger.
+  useSheetScrim(sheet && open, presence.ref, close);
+
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -162,7 +161,7 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
           data-origin={sheet ? undefined : originFor(placement)}
           onKeyDown={onKeyDown}
         >
-          {sheet ? <SheetHandle onDismiss={() => setOpen(false)} /> : null}
+          {sheet ? <SheetHandle onDismiss={close} /> : null}
           {children instanceof Function ? children(close) : children}
         </div>
       ) : null}

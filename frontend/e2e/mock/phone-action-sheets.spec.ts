@@ -201,6 +201,67 @@ test.describe("on a 360 px touch phone", () => {
     await expect(sheet).toBeHidden();
   });
 
+  test("a press on the scrim that is cancelled leaves the next key press alone", async ({
+    page,
+  }) => {
+    await openRoom(page, GENERAL);
+
+    const trigger = page.getByRole("button", { name: "Attach and more" });
+    const sheet = page.getByRole("menu", { name: "Attach and more" });
+
+    await trigger.click();
+    await expectBottomSheet(page, sheet);
+    // A press that turns into a scroll: the browser cancels it, and no click follows.
+    await page.evaluate(
+      ({ x, y }) => {
+        const target = document.elementFromPoint(x, y) ?? document.body;
+
+        const init = {
+          pointerId: 21,
+          pointerType: "touch",
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+        };
+
+        target.dispatchEvent(
+          new PointerEvent("pointerdown", { ...init, bubbles: true, cancelable: true }),
+        );
+        target.dispatchEvent(new PointerEvent("pointercancel", { ...init, bubbles: true }));
+      },
+      { x: PHONE_SMALL.width / 2, y: 20 },
+    );
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expectBottomSheet(page, sheet);
+  });
+
+  test("an open dropdown turned upright becomes a sheet, its fallback placement dropped", async ({
+    page,
+  }) => {
+    // Deny anchor positioning, as older engines do, so the measured fallback places the dropdown.
+    await page.addInitScript(() => {
+      const supports = CSS.supports.bind(CSS);
+
+      CSS.supports = (...query: [string]) =>
+        !/anchor|position-area/.test(query.join(" ")) && supports(...query);
+    });
+    await page.setViewportSize({ width: PHONE_SMALL.height, height: PHONE_SMALL.width });
+    await openRoom(page, GENERAL);
+    await page.getByRole("button", { name: "Attach and more" }).click();
+
+    const sheet = page.getByRole("menu", { name: "Attach and more" });
+
+    await expect(sheet).toHaveClass(/\bfloating\b/);
+    expect(await sheet.evaluate((menu) => menu.style.position)).toBe("fixed");
+    await page.setViewportSize(PHONE_SMALL);
+    await expectBottomSheet(page, sheet);
+    expect(
+      await sheet.evaluate((menu) => [menu.style.position, menu.style.left, menu.style.top]),
+    ).toEqual(["", "", ""]);
+  });
+
   for (const theme of ["light", "dark"] as const) {
     test(`the + menu is a sheet without shortcut hints (${theme})`, async ({ page }) => {
       await openRoom(page, GENERAL, theme);

@@ -53,7 +53,13 @@ type MenuProps = MenuBaseProps &
 /** Where focus lands when a menu opens: an item, or the menu itself (pointer opens). */
 type FocusTarget = "first" | "last" | "menu" | "none";
 
-type CloseReason = "escape" | "tab" | "select" | "dismiss" | "left";
+/** "sheet": an action sheet's own dismissal, by its scrim or its handle. */
+type CloseReason = "escape" | "tab" | "select" | "dismiss" | "left" | "sheet";
+
+/** Whether closing for `reason` hands focus back to the trigger, as Esc does. */
+function restoresFocus(reason: CloseReason): boolean {
+  return reason === "escape" || reason === "select" || reason === "sheet";
+}
 
 interface MenuContextValue {
   /** Closes the whole menu tree; with `restoreFocus`, focus goes back to the trigger. */
@@ -129,7 +135,7 @@ export function Menu({
       dismissedAt.current = performance.now();
     }
 
-    closeAll(reason === "escape" || reason === "select");
+    closeAll(restoresFocus(reason));
   };
 
   const triggerProps: MenuTriggerProps = {
@@ -216,7 +222,7 @@ function MenuSurface({
   header,
   children,
 }: MenuSurfaceProps) {
-  const { closeAll, sheet } = use(MenuContext);
+  const { sheet } = use(MenuContext);
   const typeahead = useRef({ buffer: "", timer: 0 });
   const onCloseRef = useRef(onClose);
 
@@ -227,7 +233,7 @@ function MenuSurface({
   // A sheet sits on the bottom edge, not beside its anchor. Its submenus sit inside it, so the
   // scrim is the root's alone.
   useFloating(id, anchorRef, surfaceRef, placement, !sheet);
-  useSheetScrim(sheet && !submenu, surfaceRef, () => onClose("dismiss"));
+  useSheetScrim(sheet && !submenu, surfaceRef, () => onClose("sheet"));
 
   // Show in the top layer and move focus in, once, when the surface mounts: where focus lands
   // depends on how the menu was opened, not on later renders.
@@ -391,7 +397,7 @@ function MenuSurface({
       data-origin={sheet ? undefined : originFor(placement)}
       onKeyDown={onKeyDown}
     >
-      {sheet ? <SheetHandle onDismiss={() => closeAll(false)} /> : null}
+      {sheet ? <SheetHandle onDismiss={() => onClose("sheet")} /> : null}
       {sheet && submenu ? (
         // A pushed submenu's title row, which goes back to the menu it replaced.
         // biome-ignore lint/a11y/useKeyWithClickEvents: the menu's keydown handler turns Enter and Space into this click
@@ -695,7 +701,7 @@ export function SubMenu({ label, icon, children }: SubMenuProps) {
     if (reason === "left") {
       itemRef.current?.focus({ preventScroll: true });
     } else if (reason !== "dismiss") {
-      closeAll(reason === "escape" || reason === "select");
+      closeAll(restoresFocus(reason));
     }
   };
 
