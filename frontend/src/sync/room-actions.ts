@@ -71,13 +71,15 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 const landMutation = Effect.fn("rooms.landMutation")(function* (
   result: RoomMutation,
   since: number,
-  started: number,
 ) {
   if (changedSince(result.room.id, since)) {
     yield* refetchSuperseded(result.room.id);
 
     return result;
   }
+
+  // The server confirmed this reply now. A read that started while the write was in flight is older.
+  const started = beginRoomRequest();
 
   const landed =
     result.detail === null
@@ -119,21 +121,19 @@ export const editForm = Effect.fn("rooms.editForm")(function* (roomId: number) {
 /** `body.clientRoomId` names the attempt: sending it again returns the room it already made. */
 export const create = Effect.fn("rooms.create")(function* (body: CreateRoom) {
   const since = managementEpoch();
-  const started = beginRoomRequest();
 
-  return yield* landMutation(yield* api.createRoom(body), since, started);
+  return yield* landMutation(yield* api.createRoom(body), since);
 });
 
 export const update = Effect.fn("rooms.update")(function* (roomId: number, body: UpdateRoom) {
   const since = managementEpoch();
-  const started = beginRoomRequest();
 
-  return yield* landMutation(yield* api.updateRoom(roomId, body), since, started);
+  return yield* landMutation(yield* api.updateRoom(roomId, body), since);
 });
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {
-  const started = beginRoomRequest();
   const result = yield* api.removeRoom(roomId);
+  const started = beginRoomRequest();
 
   if (mutations.setRoomUnavailable(result.roomId, started)) {
     invalidateRoom(result.roomId);
@@ -143,8 +143,8 @@ export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {
 });
 
 export const leaveDirect = Effect.fn("rooms.leaveDirect")(function* (roomId: number) {
-  const started = beginRoomRequest();
   const result = yield* api.leaveDirectRoom(roomId);
+  const started = beginRoomRequest();
 
   if (mutations.setRoomUnavailable(result.roomId, started)) {
     invalidateRoom(result.roomId);

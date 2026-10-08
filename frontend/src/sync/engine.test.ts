@@ -2961,6 +2961,127 @@ describe("room access refresh", () => {
       }),
     ),
   );
+
+  it.effect(
+    "a delete that finishes after a newer room read still clears the room while the socket is down",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* socket.drop;
+          yield* socket.setReachable(false);
+          yield* api.route("DELETE /rooms/12", () =>
+            Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.as({ roomId: 12, deleted: true }),
+            ),
+          );
+          yield* api.route("GET /rooms/12", () => Effect.succeed(roomDetailFixture(12)));
+
+          const removing = yield* Effect.forkChild(roomActions.remove(12));
+
+          yield* Deferred.await(started);
+          yield* session.reloadRoom(12, null);
+          expect(store.getState().rooms[12]?.detail?.membership.userId).toBe(7);
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(removing);
+
+          expect(yield* socket.isOpen).toBe(false);
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().rooms[12]?.status).toBe("error");
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        }),
+      ),
+  );
+
+  it.effect("a revocation during the first load is not restored by that load's member detail", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let reads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* api.reply("GET /rooms/12/preview", { id: 12, name: "general" });
+        yield* api.reply("GET /users", { users: [] });
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          return Effect.fail(new NotFound({ message: "Room not found" }));
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(started);
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 12, refreshRoom: true },
+        });
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        const view = store.getState().rooms[12];
+
+        expect(view?.detail).toBeNull();
+        expect(view?.status === "error" || view?.preview != null).toBe(true);
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("a room read started before a membership push keeps the pushed membership", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+        const row = sidebarRowFixture(12, "general");
+
+        yield* api.route("GET /rooms/12", () =>
+          Deferred.succeed(started, undefined).pipe(Effect.andThen(Deferred.await(release))),
+        );
+
+        const reloading = yield* Effect.forkChild(session.reloadRoom(12, null));
+
+        yield* Deferred.await(started);
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: {
+            ...row,
+            membership: { ...row.membership, involvement: "muted" },
+          },
+        });
+        yield* Deferred.succeed(release, roomDetailFixture(12));
+        yield* Fiber.join(reloading);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail?.membership.involvement).toBe("muted");
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+      }),
+    ),
+  );
 });
 
 describe("decoding", () => {

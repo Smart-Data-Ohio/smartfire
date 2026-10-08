@@ -167,8 +167,14 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
 function landRefreshedRoom(detail: RoomDetail, revision: number, started: number): void {
   const state = store.getState();
   const roomId = detail.room.id;
+  const view = state.rooms[roomId];
 
-  if (roomRevision(roomId) !== revision || state.rooms[roomId]?.detail == null) {
+  if (roomRevision(roomId) !== revision || view == null) {
+    return;
+  }
+
+  // Unavailable, or a join preview, has no detail this refresh may replace. A first load does.
+  if (view.detail == null && view.status !== "loading") {
     return;
   }
 
@@ -595,7 +601,12 @@ export class Engine extends Context.Service<
             roomId,
             revision: invalidateRoom(roomId),
           }))
-          .filter(({ roomId }) => store.getState().rooms[roomId]?.detail != null);
+          .filter(({ roomId }) => {
+            const view = store.getState().rooms[roomId];
+
+            // A revocation can arrive before the first GET installs detail. Refresh anyway.
+            return view?.detail != null || view?.status === "loading";
+          });
 
         if (refreshes.length > 0) {
           yield* Effect.forkIn(

@@ -859,6 +859,8 @@ function setDetailRow(state: State, row: SidebarRow): State {
       ...state.rooms,
       [row.room.id]: {
         ...loaded,
+        // The patch retired the read that had set loading; that read must not land later.
+        status: loaded.status === "loading" ? "ready" : loaded.status,
         detail: {
           ...loaded.detail,
           room: row.room,

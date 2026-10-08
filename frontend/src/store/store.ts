@@ -36,7 +36,7 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
-import { claimRoomOutcome, clearRoomJoin } from "./join-state.ts";
+import { beginRoomRequest, claimRoomOutcome, clearRoomJoin } from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -101,12 +101,28 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
 const apply = (change: (state: State) => State) =>
   store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
 
-/** A room outcome lands only when its request started after the one already applied. */
+/**
+ * A room outcome lands only when `started` is newer than the one already applied.
+ * Reads pass the sequence from when they started; confirmed facts pass one taken on arrival.
+ */
 function landRoom(roomId: number, started: number, change: (state: State) => State): boolean {
   if (!claimRoomOutcome(roomId, started)) return false;
   apply(change);
 
   return true;
+}
+
+/** A socket membership change names one room; other events do not. */
+function confirmedMembershipRoom(event: SyncEvent): number | null {
+  if (event.type === "sidebar.row.removed") {
+    return event.data.roomId;
+  }
+
+  if (event.type === "sidebar.row.upserted") {
+    return event.data.room.id;
+  }
+
+  return null;
 }
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
@@ -226,8 +242,17 @@ export const mutations = {
     apply((state) => reduce.discardPending(state, clientMessageId)),
   applyEvents: (events: readonly SyncEvent[], now: number) => {
     for (const event of events) {
+      const roomId = confirmedMembershipRoom(event);
+
+      if (roomId === null) {
+        continue;
+      }
+
+      // Confirmed at delivery, so a read that started earlier must not overwrite it.
+      claimRoomOutcome(roomId, beginRoomRequest());
+
       if (event.type === "sidebar.row.removed") {
-        clearRoomJoin(event.data.roomId);
+        clearRoomJoin(roomId);
       }
     }
 

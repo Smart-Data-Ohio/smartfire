@@ -380,7 +380,6 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
 export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
   const since = managementEpoch();
   const token = visits.get(roomId)?.token ?? null;
-  const started = beginRoomRequest();
   const joined = yield* postJoin(roomId);
   const topics = yield* Topics;
 
@@ -392,7 +391,7 @@ export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId:
     return;
   }
 
-  yield* installJoined(roomId, joined.detail, joined.row, started);
+  yield* installJoined(roomId, joined.detail, joined.row, beginRoomRequest());
 });
 
 /**

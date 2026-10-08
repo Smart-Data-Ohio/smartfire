@@ -7,8 +7,8 @@
 const joinedAt = new Map<number, number>();
 
 /**
- * Start sequence of the latest outcome applied for a room. Detail, a join preview, unavailable,
- * and a join or leave that changed the view all share it. An older start does not apply.
+ * Sequence of the latest outcome applied for a room. Detail, a join preview, unavailable,
+ * and a confirmed membership change all share it. An older sequence does not apply.
  */
 const appliedOutcome = new Map<number, number>();
 
@@ -25,7 +25,11 @@ export function clearRoomJoin(roomId: number): void {
   joinedAt.delete(roomId);
 }
 
-/** Taken immediately before a room read, join, recovery read, or room mutation. */
+/**
+ * Next outcome sequence. A room read takes one when the request starts. A server-confirmed
+ * fact — a mutation's success, or a socket membership change — takes one when it arrives,
+ * so any read that started earlier loses.
+ */
 export function beginRoomRequest(): number {
   return ++nextRequest;
 }
