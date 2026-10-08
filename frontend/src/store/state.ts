@@ -75,6 +75,12 @@ export interface State {
   readonly removedThreads: Readonly<Record<number, number>>;
   /** How many thread removals this session has seen: a request's `since` is the count at send. */
   readonly removalCount: number;
+  /**
+   * The newest removal dropped from `removedThreads`: a reply to a request sent before it can't
+   * tell whether a thread it shows was removed meanwhile, so it doesn't add threads (see
+   * `removedSince`).
+   */
+  readonly forgottenRemoval: number;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -136,6 +142,7 @@ export const initialState: State = {
   tombstones: {},
   removedThreads: {},
   removalCount: 0,
+  forgottenRemoval: 0,
   huddles: {},
   stages: {},
   activity: emptyActivity,

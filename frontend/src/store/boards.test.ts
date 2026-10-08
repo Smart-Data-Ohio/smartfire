@@ -205,7 +205,6 @@ describe("removed posts", () => {
 
     expect(state.threads[6]).toBeUndefined();
     expect(boardPostIds(state, BOARD)).not.toContain(6);
-    expect(state.threadPanes[6]?.status).toBe("error");
   });
 
   it("keeps the removal through a listing requested before it", () => {
@@ -249,7 +248,8 @@ describe("replies that began before a removal", () => {
   it("don't bring the post back, card or pane", () => {
     const post = boardThread(6, "planned");
     const since = loaded().removalCount;
-    const gone = removed(event(loaded(), "thread.created", post), 6);
+    const open = loadThreadDetail(event(loaded(), "thread.created", post), boardDetail(post), 0);
+    const gone = removed(open, 6);
     const state = addBoardPost(loadThreadDetail(gone, boardDetail(post), since), post);
 
     expect(state).toBe(gone);
@@ -267,6 +267,25 @@ describe("replies that began before a removal", () => {
     expect(loadThreadDetail(second, boardDetail(boardThread(6)), since).threads[6]).toBeDefined();
   });
 
+  it("stay stale after the removal that answers them is forgotten", () => {
+    const post = boardThread(6, "planned");
+    const since = loaded().removalCount;
+    let state = removed(event(loaded(), "thread.created", post), 6);
+
+    for (let id = 10_000; id < 10_000 + MAX_REMOVED_THREADS; id += 1) {
+      state = removed(state, id);
+    }
+
+    expect(state.removedThreads[6]).toBeUndefined();
+    const landed = addBoardPost(loadThreadDetail(state, boardDetail(post), since), post);
+
+    expect(landed.threads[6]).toBeUndefined();
+    expect(boardPostIds(landed, BOARD)).not.toContain(6);
+    expect(landed.threadPanes[6]).toBeUndefined();
+    // A request sent after every forgotten removal still shows it.
+    expect(loadThreadDetail(state, boardDetail(post), state.removalCount).threads[6]).toBeDefined();
+  });
+
   it("forget the oldest removals past the cap", () => {
     let state = loaded();
 
@@ -277,6 +296,9 @@ describe("replies that began before a removal", () => {
     expect(Object.keys(state.removedThreads)).toHaveLength(MAX_REMOVED_THREADS);
     expect(state.removedThreads[10_000]).toBeUndefined();
     expect(state.removedThreads[10_000 + MAX_REMOVED_THREADS + 4]).toBe(state.removalCount);
+    expect(state.forgottenRemoval).toBe(5);
+    // Only panes someone opened are kept.
+    expect(Object.keys(state.threadPanes)).toHaveLength(0);
   });
 });
 

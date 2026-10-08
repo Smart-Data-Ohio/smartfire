@@ -192,9 +192,12 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
   mutations.setThreadListLoading(roomId, filter);
+  const since = store.getState().removalCount;
 
   yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) => Effect.sync(() => mutations.loadThreadList(roomId, filter, threads))),
+    Effect.tap((threads) =>
+      Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, since)),
+    ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
 });

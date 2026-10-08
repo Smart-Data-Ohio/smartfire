@@ -123,6 +123,16 @@ pub fn rails_mismatch(actual: &str, expected: &str, label: &str) -> ! {
     );
 }
 
+/// Columns the Rust era added after the Rails app was frozen, as (table, column). Rails-recorded
+/// row oracles never have them, so the tests comparing whole rows with those oracles leave them
+/// out of the Rust side.
+pub const RUST_ONLY_COLUMNS: &[(&str, &str)] = &[("channel_threads", "client_post_id")];
+
+/// Whether `table.column` is in [`RUST_ONLY_COLUMNS`].
+pub fn rust_only_column(table: &str, column: &str) -> bool {
+    RUST_ONLY_COLUMNS.contains(&(table, column))
+}
+
 pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;
@@ -462,19 +472,7 @@ impl TestApp {
         )
         .unwrap();
         copy_dir(&seed.join("storage"), &dir.path().join("files"));
-        let root = dir.path().to_string_lossy().into_owned();
-        let secret = parity_env("SECRET_KEY_BASE").unwrap();
-        let mut config = Config::from_lookup(|name| match name {
-            "SECRET_KEY_BASE" => Some(secret.clone()),
-            "DISABLE_SSL" => Some("true".into()),
-            "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
-            "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => extra
-                .iter()
-                .find(|(key, _)| *key == name)
-                .map(|(_, value)| (*value).into()),
-        })
-        .unwrap();
+        let mut config = Self::config_for(&dir, extra);
         config.huddle = huddle;
         let intervals = crate::jobs::periodic::Intervals {
             periodic: None,
@@ -499,6 +497,42 @@ impl TestApp {
                 .unwrap(),
         }};
         Some(TestApp { booted, _dir: dir, publications: Default::default() })
+    }
+
+    fn config_for(dir: &tempfile::TempDir, extra: &[(&str, &str)]) -> Config {
+        let root = dir.path().to_string_lossy().into_owned();
+        let secret = parity_env("SECRET_KEY_BASE").unwrap();
+        Config::from_lookup(|name| match name {
+            "SECRET_KEY_BASE" => Some(secret.clone()),
+            "DISABLE_SSL" => Some("true".into()),
+            "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
+            "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
+            _ => extra
+                .iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).into()),
+        })
+        .unwrap()
+    }
+
+    /// Boots a new app on this one's database and files, as a restart does: nothing the old
+    /// process held in memory carries over.
+    pub async fn restart(self, clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> TestApp {
+        let (app, dir) = self.stop_jobs().await;
+        drop(app);
+        let intervals = crate::jobs::periodic::Intervals {
+            periodic: None,
+            huddle: None,
+        };
+        let booted = boot_with_services(
+            Self::config_for(&dir, extra),
+            clock,
+            crate::net::Network::system(),
+            intervals,
+        )
+        .await
+        .unwrap();
+        TestApp { booted, _dir: dir, publications: Default::default() }
     }
 
     pub async fn stop_jobs(self) -> (crate::app::App, tempfile::TempDir) {
