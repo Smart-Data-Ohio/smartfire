@@ -7,6 +7,7 @@ import {
   openApp,
   postMessage,
   ROOM_IDS,
+  scrollByWheel,
   stopTrackingThread,
   test,
   USER_IDS,
@@ -191,11 +192,11 @@ for (const close of ["Esc", "outside click"] as const) {
   });
 }
 
-async function scenario(page: Page, conversation: "room" | "thread") {
+async function scenario(page: Page, conversation: "room" | "thread", tracked = false) {
   const releaseSync = await holdSync(page);
   const threadId = THREAD_IDS.generalActive;
 
-  if (conversation === "thread") {
+  if (conversation === "thread" && !tracked) {
     // The work seed now tracks this thread. Keep the original ordinary-thread viewport so
     // the older control is offscreen but still mounted in Virtua's buffer for native focus.
     await stopTrackingThread(page.request, threadId);
@@ -244,7 +245,8 @@ async function scenario(page: Page, conversation: "room" | "thread") {
     page,
     conversation === "room" ? `r/${ROOM_IDS.engineering}` : `r/${ROOM_IDS.general}/t/${threadId}`,
   );
-  await imageRequested.promise;
+
+  if (!tracked) await imageRequested.promise;
 
   const refreshed = page.waitForResponse((response) => response.url().endsWith(messagesPath));
 
@@ -259,8 +261,11 @@ async function scenario(page: Page, conversation: "room" | "thread") {
   const older = list.locator(`[data-message-row][data-message-id="${olderId}"]`);
 
   await atEnd(list);
-  await stableTop(older);
-  await expect(older).not.toBeInViewport();
+
+  if (!tracked) {
+    await stableTop(older);
+    await expect(older).not.toBeInViewport();
+  }
 
   const post = async () => {
     const state = await (await page.request.get("/__mock/state")).json();
@@ -322,6 +327,32 @@ async function scenario(page: Page, conversation: "room" | "thread") {
 
   return { list, older, post, stays, grow: () => imageReleased.resolve() };
 }
+
+test("a tracked thread holds a reader's position after an older reply returns from outside overscan", async ({
+  page,
+}) => {
+  const { list, older, post, stays } = await scenario(page, "thread", true);
+  const work = page.getByRole("region", { name: "Work", exact: true });
+
+  await expect(work).toBeVisible();
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await expect(older).toHaveCount(0);
+
+  const distance = await list.evaluate((element) =>
+    Math.min(element.scrollTop, element.clientHeight + 450),
+  );
+
+  await scrollByWheel(page, list, -distance);
+  await expect(older).toBeAttached();
+  await readerScroll(list, older);
+  await expect(older).toBeInViewport();
+  const top = await stableTop(older);
+  const incoming = await post();
+
+  await stays(top);
+  await expect(work).toBeVisible();
+  await expect(incoming).not.toBeInViewport();
+});
 
 for (const conversation of ["room", "thread"] as const) {
   if (conversation === "room") {

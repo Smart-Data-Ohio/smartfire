@@ -256,8 +256,9 @@ function Harness({
               }}
             >
               <article
-                data-message-row
-                data-message-id={id}
+                data-message-row={introFirst && id === geometry.ids[0] ? undefined : true}
+                data-message-id={introFirst && id === geometry.ids[0] ? undefined : id}
+                data-intro-id={introFirst && id === geometry.ids[0] ? id : undefined}
                 data-editing={editingId === id ? true : undefined}
                 data-popup-pending={popupPendingId === id ? true : undefined}
                 tabIndex={-1}
@@ -265,7 +266,9 @@ function Harness({
                   if (element) element.getBoundingClientRect = () => rowBounds(id);
                 }}
               >
-                <div className="message-body">Message {id}</div>
+                <div className="message-body">
+                  {introFirst && id === geometry.ids[0] ? "Work header" : `Message ${id}`}
+                </div>
                 <a href="/">Read message {id}</a>
                 {hasCards ? <div className="message-cards">Card</div> : null}
                 {popupId === id ? <span className="message-popup-anchor" /> : null}
@@ -303,7 +306,8 @@ function measureRows(geometry: Geometry): void {
   MeasuringObserver.deliver([
     [content, offsetOf(geometry, geometry.ids.length)],
     ...Array.from(content.children, (wrapper): readonly [Element, number] => {
-      const id = Number(wrapper.firstElementChild?.getAttribute("data-message-id"));
+      const row = wrapper.firstElementChild;
+      const id = Number(row?.getAttribute("data-message-id") ?? row?.getAttribute("data-intro-id"));
 
       return [wrapper, heightOf(geometry, id)];
     }),
@@ -1474,8 +1478,8 @@ describe("useViewportAnchor reader control", () => {
     },
   );
 
-  it.each(["reader", "send"] as const)(
-    "a short post intro keeps follow off through settlement and growth until a %s takes over",
+  it.each(["wheel", "ArrowDown", "End", "send"] as const)(
+    "a short post intro keeps follow off through settlement and growth until %s takes over",
     (input) => {
       vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
 
@@ -1490,7 +1494,9 @@ describe("useViewportAnchor reader control", () => {
           ]),
         };
 
-        const view = render(<Harness apiRef={apiRef} geometry={geometry} introFirst />);
+        const view = render(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded={false} />,
+        );
 
         act(() => apiRef.current?.place(0, { align: "start", follow: false }));
         act(() => vi.advanceTimersToNextFrame());
@@ -1498,24 +1504,102 @@ describe("useViewportAnchor reader control", () => {
         expect(apiRef.current?.isPlacing()).toBe(false);
         fireEvent.scroll(viewport());
         act(() => apiRef.current?.settle());
+        act(() => measureRows(geometry));
         expect(apiRef.current?.canFollow()).toBe(false);
 
         geometry.heights.set(1, 400);
         geometry.heights.set(2, 300);
-        view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst />);
+        view.rerender(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded={false} />,
+        );
         act(() => measureRows(geometry));
         fireEvent.scroll(viewport());
         act(() => apiRef.current?.settle());
         expect(viewport().scrollTop).toBe(0);
         expect(apiRef.current?.canFollow()).toBe(false);
 
-        if (input === "reader") fireEvent.keyDown(viewport(), { key: "End" });
-        else act(() => apiRef.current?.followEnd());
+        if (input === "send") act(() => apiRef.current?.followEnd());
+        else if (input === "wheel") fireEvent.wheel(viewport(), { deltaY: 400 });
+        else fireEvent.keyDown(viewport(), { key: input });
 
         viewport().scrollTop = 400;
         fireEvent.scroll(viewport());
         act(() => apiRef.current?.settle());
         expect(apiRef.current?.canFollow()).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each([0, 32])(
+    "a post intro holds its placed offset %s through growth with the cards chunk pending",
+    (offset) => {
+      vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+      try {
+        const apiRef = createRef<AnchorApi>();
+
+        const geometry: Geometry = {
+          ids: [1, 2],
+          heights: new Map([
+            [1, 200],
+            [2, 100 + offset],
+          ]),
+        };
+
+        const view = render(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded={false} />,
+        );
+
+        const header = view.getByText("Work header").closest("article");
+
+        if (!header) throw new Error("The work header is not rendered");
+
+        act(() => apiRef.current?.place(0, { align: "start", offset, follow: false }));
+        act(() => vi.advanceTimersToNextFrame());
+        act(() => vi.advanceTimersToNextFrame());
+        expect(apiRef.current?.isPlacing()).toBe(false);
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        act(() => measureRows(geometry));
+        expect(apiRef.current?.canFollow()).toBe(false);
+
+        geometry.heights.set(1, 400);
+        geometry.heights.set(2, 300);
+        view.rerender(
+          <Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded={false} />,
+        );
+        act(() => measureRows(geometry));
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        expect(viewport().scrollTop).toBe(offset);
+        expect(header.getBoundingClientRect().top).toBeCloseTo(-offset);
+        expect(apiRef.current?.canFollow()).toBe(false);
+
+        // The hold survives chunk completion and later intro expansion.
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded />);
+        geometry.heights.set(1, 500);
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded />);
+        // A layout-driven scroll still cannot take over the intro after the reveal.
+        viewport().scrollTop = offset + 100;
+        fireEvent.scroll(viewport());
+        act(() => measureRows(geometry));
+        expect(viewport().scrollTop).toBe(offset);
+
+        fireEvent.wheel(viewport(), { deltaY: 200 });
+        viewport().scrollTop = 400;
+        fireEvent.scroll(viewport());
+        act(() => apiRef.current?.settle());
+        const replyTop = rowOf(2).getBoundingClientRect().top;
+
+        geometry.heights.set(1, 600);
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst cardsLoaded />);
+        act(() => measureRows(geometry));
+        // Message correction ends with the chunk; reader movement still relinquishes the hold.
+        expect(viewport().scrollTop).toBe(400);
+        expect(rowOf(2).getBoundingClientRect().top).toBe(replyTop + 100);
+        expect(apiRef.current?.canFollow()).toBe(false);
       } finally {
         vi.useRealTimers();
       }

@@ -15,6 +15,11 @@ import { rowCommand } from "./keyboard.ts";
 type Anchor =
   | {
       readonly placement: string;
+      readonly kind: "intro";
+      readonly scroll: number;
+    }
+  | {
+      readonly placement: string;
       readonly kind: "end";
       readonly scroll: number;
       readonly row: {
@@ -455,6 +460,10 @@ export function useViewportAnchor({
 
     if (!placed || state?.placement !== placement || isPlacing()) return;
 
+    // Layout scrolls cannot replace the post's work with a visible reply anchor.
+    // Reader takeover and sending clear this hold before normal capture resumes.
+    if (anchorRef.current?.placement === placement && anchorRef.current.kind === "intro") return;
+
     let targetId = state.kind === "settled" ? state.messageId : null;
 
     if (targetId !== null && !indices.has(targetId)) {
@@ -704,6 +713,16 @@ export function useViewportAnchor({
         allowEnd: false,
         awaitEndInput: true,
       };
+
+      const element = viewport();
+
+      if (
+        state.kind === "placing-at-target" &&
+        state.align === "start" &&
+        items[itemIndices.get(state.key) ?? -1]?.kind === "intro" &&
+        element
+      )
+        anchorRef.current = { kind: "intro", placement, scroll: element.scrollTop };
     } else if (state.kind === "placing-at-target") {
       const index = itemIndices.get(state.key);
       const item = index === undefined ? undefined : items[index];
@@ -1171,6 +1190,16 @@ export function useViewportAnchor({
     }
 
     correctionPendingRef.current = false;
+
+    if (anchor.kind === "intro") {
+      if (Math.abs(element.scrollTop - anchor.scroll) > 1) {
+        element.scrollTop = anchor.scroll;
+        correctedOffsetRef.current = element.scrollTop;
+      }
+
+      return;
+    }
+
     const index = indices.get(anchor.id);
 
     if (index === undefined) return;
@@ -1233,14 +1262,22 @@ export function useViewportAnchor({
         if (
           previous !== entry.contentRect.height &&
           (previous !== undefined || (correctingCards && chunkLoaded())) &&
-          (entry.target !== content || anchorRef.current?.kind === "end")
+          (entry.target !== content ||
+            anchorRef.current?.kind === "end" ||
+            anchorRef.current?.kind === "intro")
         )
           changed = true;
       }
 
       // Wrapper and content measurements can arrive separately. Correct the remaining
       // distance after Virtua updates the content height as well as when a row grows.
-      if (changed && (correctingCards || anchorRef.current?.kind === "end")) correct();
+      if (
+        changed &&
+        (correctingCards ||
+          anchorRef.current?.kind === "end" ||
+          anchorRef.current?.kind === "intro")
+      )
+        correct();
 
       if (correctingCards && chunkLoaded()) {
         // The reveal can span resize deliveries; wait until every rendered card wrapper has
@@ -1295,8 +1332,8 @@ export function useViewportAnchor({
     const mutations = new MutationObserver(observeRows);
 
     const finishCards = () => {
-      // A delayed image or font can still grow a bottom reader's rows after the chunk.
-      // Keep observing for that intent; message-position correction ends with the reveal.
+      // Delayed growth can still affect a bottom reader or a post's intro after the chunk.
+      // Keep observing those intents; message-position correction ends with the reveal.
       correctingCards = false;
       finishCardsRef.current = null;
       mutations.disconnect();
