@@ -253,9 +253,14 @@ describe("S4 client contracts", () => {
     vi.spyOn(actions.approvals, "decide").mockRejectedValue(
       Object.assign(new Error(message), { fields: { base: [message] } }),
     );
+    // The component compares expiry with the real clock, so the request must stay open from now.
     mutations.landApprovalPage(
       approvalListKey(9, "all"),
-      { approvals: [approval()], users: [], nextCursor: null },
+      {
+        approvals: [approval({ expiresAt: new Date(Date.now() + 2 * 24 * HOUR).toISOString() })],
+        users: [],
+        nextCursor: null,
+      },
       "replace",
     );
 
