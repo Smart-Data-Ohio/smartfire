@@ -1,4 +1,9 @@
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
+import {
+  ignoreModuleResourceLoadError,
+  loadForUpdate,
+} from "../../service-worker/update-required.ts";
 import { Spinner } from "../../ui/button.tsx";
 import type { EmojiPickerProps } from "./emoji-picker.tsx";
 import "./lazy-emoji-picker.css";
@@ -26,6 +31,8 @@ export function LazyEmojiPicker(props: EmojiPickerProps) {
 
 /** Starts fetching the picker's chunks early (on hover of an "add reaction" button). */
 export function preloadEmojiPicker(): void {
-  void import("./emoji-picker.tsx");
-  void import("./data.ts").then((module) => module.loadEmojiData());
+  void loadForUpdate(() => import("./emoji-picker.tsx")).catch(ignoreModuleResourceLoadError);
+  void loadForUpdate(() => import("./data.ts"))
+    .then((module) => module.loadEmojiData())
+    .catch(ignoreModuleResourceLoadError);
 }

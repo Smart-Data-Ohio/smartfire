@@ -42,6 +42,11 @@ pub async fn create(c: &mut Ctx) -> Result {
     c.wrap_parameters("push_subscription", None);
     concerns::before_actions(c, Before::default()).await?;
     let user_id = concerns::require_current_user(c)?.id;
+    enroll(c, user_id).await
+}
+
+/// The classic save path after the caller has authenticated the owner and supplied its params.
+pub async fn enroll(c: &mut Ctx, user_id: i64) -> Result {
     let params = push_subscription_params(c)?;
 
     let network = c.app().subscription_network.clone();
@@ -84,20 +89,52 @@ pub async fn create(c: &mut Ctx) -> Result {
                 .app()
                 .db
                 .write(move |tx| {
-                    PushSubscription::create(tx, &subscription, &|host| {
-                        resolved.get(host).cloned().flatten()
-                    })
+                    let resolve = |host: &str| resolved.get(host).cloned().flatten();
+                    // Two requests for one subscription (two tabs, or the SPA's retry) can both
+                    // find no row and then await DNS. The write lock serializes them here, so the
+                    // later one finds the row the earlier one saved. Like the existing-row path,
+                    // it must pass current validations (with its own resolution) before touching
+                    // that row instead of inserting a duplicate; the table has no unique index.
+                    if let Some(saved) = find_by(tx.conn(), user_id, &params)? {
+                        if !subscription.validate(&resolve).is_empty() {
+                            return Ok(Enrolled::OverlapRefused);
+                        }
+                        presenters::accounts::touch(
+                            tx.conn(),
+                            "push_subscriptions",
+                            saved.id,
+                            tx.now(),
+                        )?;
+                        return Ok(Enrolled::OverlapTouched);
+                    }
+                    PushSubscription::create(tx, &subscription, &resolve)?;
+                    Ok(Enrolled::Inserted)
                 })
                 .await;
+            if let Ok(outcome @ (Enrolled::OverlapTouched | Enrolled::OverlapRefused)) = &result {
+                tracing::debug!(
+                    ?outcome,
+                    "push subscription enrollment found the row an overlapping request saved"
+                );
+            }
             match result {
-                Ok(_) => Ok(c.head(StatusCode::OK)),
-                Err(campfire_db::Error::RecordInvalid(_)) => {
+                Ok(Enrolled::Inserted | Enrolled::OverlapTouched) => Ok(c.head(StatusCode::OK)),
+                Ok(Enrolled::OverlapRefused) | Err(campfire_db::Error::RecordInvalid(_)) => {
                     Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
                 }
                 Err(error) => Err(Error::internal(error)),
             }
         }
     }
+}
+
+/// How a new enrollment's write ended: its own row, or the row an overlapping request saved
+/// first (touched when this request's endpoint still validates, refused when it doesn't).
+#[derive(Debug, Clone, Copy)]
+enum Enrolled {
+    Inserted,
+    OverlapTouched,
+    OverlapRefused,
 }
 
 /// `@push_subscriptions.destroy_by(id: params[:id])`

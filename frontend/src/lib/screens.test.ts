@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classicPageFor,
+  classicToSpaUrl,
   classicUrlFor,
   SCREENS,
   spaUrlFor,
@@ -27,6 +28,45 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12/@345")).toBe("/app/r/12/m/345");
     expect(spaUrlFor("/rooms/12/threads/9")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("//rooms/12/")).toBe("/app/r/12");
+  });
+
+  it("maps notification rooms, permalinks, threads and settings through the screen map", () => {
+    const origin = "https://smartfire.example";
+
+    expect(classicToSpaUrl("/rooms/12", origin)).toBe("/app/r/12");
+    expect(classicToSpaUrl("/rooms/12/@345", origin)).toBe("/app/r/12/m/345");
+    expect(classicToSpaUrl("/rooms/12/threads/9", origin)).toBe("/app/r/12/t/9");
+    expect(classicToSpaUrl("/users/me/profile", origin)).toBe("/app/settings");
+    expect(classicToSpaUrl(`${origin}/users/me/sessions`, origin)).toBe("/app/settings/sessions");
+  });
+
+  it("preserves a notification's query and fragment without rewriting their encoding", () => {
+    expect(
+      classicToSpaUrl(
+        "/rooms/12/threads/9?m=4&label=a%20b&classic=1&label=c+d#reply",
+        "https://smartfire.example",
+      ),
+    ).toBe("/app/r/12/t/9?m=4&label=a%20b&classic=1&label=c+d#reply");
+  });
+
+  it("opens a person's notification path on their SPA page", () => {
+    expect(classicToSpaUrl("/users/7", "https://smartfire.example")).toBe("/app/people/7");
+  });
+
+  it("leaves unported rows and unknown notification paths to classic", () => {
+    const origin = "https://smartfire.example";
+
+    expect(classicToSpaUrl("/work?status=open", origin)).toBeNull();
+    expect(classicToSpaUrl("/nowhere", origin)).toBeNull();
+  });
+
+  it("never maps a foreign origin or malformed notification URL", () => {
+    const origin = "https://smartfire.example";
+
+    expect(classicToSpaUrl("https://foreign.example/rooms/12", origin)).toBeNull();
+    expect(classicToSpaUrl("//foreign.example/rooms/12", origin)).toBeNull();
+    expect(classicToSpaUrl("http://[", origin)).toBeNull();
+    expect(classicToSpaUrl("/rooms/12", "invalid origin")).toBeNull();
   });
 
   it.each([

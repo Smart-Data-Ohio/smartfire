@@ -340,6 +340,30 @@
     min-width: 0;
   }
 
+  /* This browser's push state: a quiet icon disc, accented only while notifications are on. */
+  .settings-push-row {
+    padding-block: var(--space-3);
+  }
+
+  .settings-push-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: color-mix(in oklch, var(--text) 8%, transparent);
+    color: var(--text-muted);
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      color var(--duration-small) var(--ease-enter);
+  }
+
+  .settings-push-row[data-state="on"] .settings-push-icon {
+    background: color-mix(in oklch, var(--success) 18%, transparent);
+    color: var(--success-text);
+  }
+
   .settings-endpoint {
     overflow: hidden;
     text-overflow: ellipsis;

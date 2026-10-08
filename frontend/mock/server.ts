@@ -339,6 +339,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       account: { name: "Smart Data" },
       ...settings.appearance(),
       cableUrl: "/cable",
+      serviceWorkerUrl: null,
       version: "mock",
       revision: null,
       csrfToken: csrf,

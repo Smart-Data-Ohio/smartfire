@@ -1,5 +1,4 @@
 import {
-  lazy,
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   Suspense,
@@ -10,6 +9,8 @@ import {
   useState,
 } from "react";
 import { usePresence } from "../../motion/presence.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
+import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { type PaneChrome, PaneChromeContext, PaneFrame } from "./pane-frame.tsx";
 import { PANE_TITLES, type RightPaneView, viewKey } from "./pane-selection.ts";
@@ -88,39 +89,61 @@ function escapeIsTaken(event: KeyboardEvent): boolean {
 
 // The panes load on demand: the first open fetches its chunk, and an idle moment after the right
 // pane first mounts fetches the rest.
-const loadThreadPane = () => import("../threads/thread-pane.tsx");
+const loadThreadPane = () => loadForUpdate(() => import("../threads/thread-pane.tsx"));
 
-const loadNewThreadPane = () => import("../threads/new-thread-pane.tsx");
+const loadNewThreadPane = () => loadForUpdate(() => import("../threads/new-thread-pane.tsx"));
 
-const loadThreadsPane = () => import("../threads/threads-pane.tsx");
+const loadThreadsPane = () => loadForUpdate(() => import("../threads/threads-pane.tsx"));
 
-const loadMembersPane = () => import("./members-pane.tsx");
+const loadMembersPane = () => loadForUpdate(() => import("./members-pane.tsx"));
 
-const loadPinsPane = () => import("./pins-pane.tsx");
+const loadPinsPane = () => loadForUpdate(() => import("./pins-pane.tsx"));
 
-const loadFilesPane = () => import("./files-pane.tsx");
+const loadFilesPane = () => loadForUpdate(() => import("./files-pane.tsx"));
 
-const loadStagePane = () => import("../huddle/stage-pane.tsx");
+const loadStagePane = () => loadForUpdate(() => import("../huddle/stage-pane.tsx"));
 
-const ThreadPane = lazy(() => loadThreadPane().then((module) => ({ default: module.ThreadPane })));
+const ThreadPane = lazy(async () => {
+  const module = await loadThreadPane();
 
-const NewThreadPane = lazy(() =>
-  loadNewThreadPane().then((module) => ({ default: module.NewThreadPane })),
-);
+  return { default: module.ThreadPane };
+});
 
-const ThreadsPane = lazy(() =>
-  loadThreadsPane().then((module) => ({ default: module.ThreadsPane })),
-);
+const NewThreadPane = lazy(async () => {
+  const module = await loadNewThreadPane();
 
-const MembersPane = lazy(() =>
-  loadMembersPane().then((module) => ({ default: module.MembersPane })),
-);
+  return { default: module.NewThreadPane };
+});
 
-const PinsPane = lazy(() => loadPinsPane().then((module) => ({ default: module.PinsPane })));
+const ThreadsPane = lazy(async () => {
+  const module = await loadThreadsPane();
 
-const FilesPane = lazy(() => loadFilesPane().then((module) => ({ default: module.FilesPane })));
+  return { default: module.ThreadsPane };
+});
 
-const StagePane = lazy(() => loadStagePane().then((module) => ({ default: module.StagePane })));
+const MembersPane = lazy(async () => {
+  const module = await loadMembersPane();
+
+  return { default: module.MembersPane };
+});
+
+const PinsPane = lazy(async () => {
+  const module = await loadPinsPane();
+
+  return { default: module.PinsPane };
+});
+
+const FilesPane = lazy(async () => {
+  const module = await loadFilesPane();
+
+  return { default: module.FilesPane };
+});
+
+const StagePane = lazy(async () => {
+  const module = await loadStagePane();
+
+  return { default: module.StagePane };
+});
 
 let preloaded = false;
 
