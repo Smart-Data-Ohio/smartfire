@@ -394,7 +394,7 @@ async fn pwa_manifest_reuses_classic_fields_with_one_spa_start_and_scope() {
     ] {
         assert_eq!(json[field], classic[field], "{field}");
     }
-    assert_eq!(json["shortcuts"][0]["url"], "/rooms/opens/new");
+    assert_eq!(json["shortcuts"][0]["url"], "/app/rooms/new/open");
     assert_eq!(json["shortcuts"][1]["url"], "/app/settings");
     let shell = a.sign_in(DAVID).await.get("/app/").await;
     assert!(shell.text().contains(&format!(
