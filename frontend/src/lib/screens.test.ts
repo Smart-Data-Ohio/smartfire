@@ -56,7 +56,7 @@ describe("the screen map", () => {
   it("leaves unported rows and unknown notification paths to classic", () => {
     const origin = "https://smartfire.example";
 
-    expect(classicToSpaUrl("/work?status=open", origin)).toBeNull();
+    expect(classicToSpaUrl("/rooms/12/events/7?view=week", origin)).toBeNull();
     expect(classicToSpaUrl("/nowhere", origin)).toBeNull();
   });
 

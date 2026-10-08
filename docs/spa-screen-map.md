@@ -42,10 +42,10 @@ A direct HTML document counts as a page even if Turbo can also request its conte
 | `/users/:user_id/status/edit` | `users/statuses#edit` | `/app/settings/status` (ported); only the `me` spelling maps; numeric user ids keep existing authorization/classic behavior |
 | `/users/:user_id/push_subscriptions` | `users/push_subscriptions#index` | `/app/settings/devices` (ported); only the `me` spelling maps; numeric user ids keep existing authorization/classic behavior |
 | `/users` | `users#index` | `/app/people` (ported, #329) |
-| `/users/:id` | `users#show` | `/app/people/:id` (ported, #329); bot/agent profiles stay classic pending PR #320 (/app/agents/:id) |
-| `/agents` | `agents/directory#index` | **gap** — agent directory has no SPA route or row |
-| `/agents/:id/events` | `agents/events#ledger` | **gap** — human agent event ledger has no SPA route or row |
-| `/agents/:id/approvals` | `agents/approvals#for_agent` | **gap** — human agent approvals history has no SPA route or row |
+| `/users/:id` | `users#show` | `/app/people/:id` (ported, #329); agent profiles open `/app/agents/:id` (SPA-only, #320); bots without an agent record stay classic |
+| `/agents` | `agents/directory#index` | `/app/agents` (ported, #320) |
+| `/agents/:id/events` | `agents/events#ledger` | `/app/agents/:id/events` (ported, #320) |
+| `/agents/:id/approvals` | `agents/approvals#for_agent` | `/app/agents/:id/approvals` (ported, #320) |
 | `/rooms/:room_id/messages/:message_id/fizzy_cards/new` | `rooms/fizzy/message_cards#new` | **gap** — Fizzy create-card form has no SPA page route or row |
 | `/rooms/:room_id/messages/:id/edit` | `messages#edit` | **gap** — SPA has inline editing, but no classic-edit page route/row |
 | `/rooms/:room_id/messages/:id` | `messages#show` | **gap** — individual message page has no SPA row (different from the /rooms/:room_id/@:message_id permalink) |
@@ -84,7 +84,7 @@ A direct HTML document counts as a page even if Turbo can also request its conte
 | `/scheduled_messages` | `scheduled_messages#index` | `/app/scheduled` (ported) |
 | `/searches` | `searches#index` | `/app/search` (ported) |
 | `/activity` | `activity_items#index` | `/app/activity` (ported) |
-| `/work` | `work_threads#index` | `/app/work` (unported) |
+| `/work` | `work_threads#index` | `/app/work` (ported, #320) |
 | `/threads/:thread_id/work/links` | `threads/work/links#index` | **gap** — work-link editor/list has no SPA route or row |
 | `/threads/:thread_id/work/handoff/new` | `threads/work/handoffs#new` | **gap** — work-handoff form has no SPA route or row |
 | `/github/app/connect` | `github/app_connections#connect` | **stays classic** — GitHub OAuth start (plain link/redirect); explicitly stays classic |
@@ -126,6 +126,7 @@ Each group lists every declaration it covers, paired with its endpoint. These ar
 
 - All currently built classic-backed SPA routes in `frontend/src/router.tsx` already have `screens.rs` rows. The two intentional SPA-only exceptions are the design gallery and `/app/r/:roomId/t/new?parent=...`; that draft is not the classic board-only `channel_threads#new` form. A new reverse-direction router test now checks this completeness in addition to the existing screen-to-router check.
 - No screen-map row was added and no existing row or ported flag changed. Existing `/work` remains unported; conditional board-room fallback remains in the room route.
+- #320 later added the `agents/directory#index`, `agents/approvals#for_agent` and `agents/events#ledger` rows, flipped `work_threads#index` to ported, and lists `/app/agents/:id` as SPA-only (classic has no agent profile page).
 - `/users` and `/users/:id` map to `/app/people` and `/app/people/:id` since #329, so `/users/:id` push clicks open the person page. Bot/agent profiles retain the requested classic decision until PR #320 lands.
 - Slack issues are **already ported here**: the classic administrator run page `/account/slack_import/runs/:id?page=N` is the `accounts/slack_import_runs#show` row, routed to `/app/admin/slack/runs/:id?page=N`. `frontend/src/features/slack/slack-run.tsx:326` implements issues with “Older issues” pagination, and the run router validates `page`. There is no separate classic issue-page GET declaration. The administrator and personal `/status` endpoints remain classic polling fragments and are grouped above; they do not need screen rows. No Slack behavior was changed by this audit.
 - `classicToSpaUrl(path, origin)` reads the same generated screen map through `spaUrlFor`; it maps only ported same-origin paths and appends the original parsed query and fragment without URLSearchParams rewriting. It returns null for unported/unknown/foreign/malformed paths, so the worker can keep them as given. Existing regular classic-link mapping still removes the `classic` parameter as before.
@@ -133,9 +134,6 @@ Each group lists every declaration it covers, paired with its endpoint. These ar
 ## Gaps (undecided)
 
 - `/first_run` — `first_runs#show`
-- `/agents` — `agents/directory#index`
-- `/agents/:id/events` — `agents/events#ledger`
-- `/agents/:id/approvals` — `agents/approvals#for_agent`
 - `/rooms/:room_id/messages/:message_id/fizzy_cards/new` — `rooms/fizzy/message_cards#new`
 - `/rooms/:room_id/messages/:id/edit` — `messages#edit`
 - `/rooms/:room_id/messages/:id` — `messages#show`
