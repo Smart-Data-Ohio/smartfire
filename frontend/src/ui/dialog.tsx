@@ -23,6 +23,12 @@ interface DialogProps {
   readonly children?: ReactNode;
   /** Where focus goes on close when whatever opened the dialog has gone (a deleted item's menu). */
   readonly returnFocus?: () => HTMLElement | null;
+  /**
+   * Close onto `returnFocus` even when the opener is still there: for a dialog whose opener is
+   * incidental (it opened with the page, over whatever had autofocus), and whose `returnFocus`
+   * knows the right place (and may move focus there itself once it mounts).
+   */
+  readonly returnFocusFirst?: boolean;
   /** Called once the dialog has finished closing (its exit animation done): drop what it showed. */
   readonly onExited?: () => void;
 }
@@ -71,10 +77,12 @@ export function Dialog({
   footer,
   children,
   returnFocus,
+  returnFocusFirst = false,
   onExited,
 }: DialogProps) {
   const id = useId();
   const returnFocusRef = useRef(returnFocus);
+  const returnFocusFirstRef = useRef(returnFocusFirst);
   const onExitedRef = useRef(onExited);
   const presence = usePresence<HTMLDialogElement>(open);
   const titleId = `${id}-title`;
@@ -82,6 +90,7 @@ export function Dialog({
 
   useLayoutEffect(() => {
     returnFocusRef.current = returnFocus;
+    returnFocusFirstRef.current = returnFocusFirst;
     onExitedRef.current = onExited;
   });
 
@@ -107,7 +116,10 @@ export function Dialog({
         dialog.close();
       }
 
-      if (opener instanceof HTMLElement && opener.isConnected) {
+      // The body isn't an opener (a dialog that opened with the page): use the fallback instead.
+      if (returnFocusFirstRef.current) {
+        returnFocusRef.current?.()?.focus({ preventScroll: true });
+      } else if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) {
         opener.focus({ preventScroll: true });
       } else {
         returnFocusRef.current?.()?.focus({ preventScroll: true });

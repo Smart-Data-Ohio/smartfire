@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from "react";
+import { Suspense, useState } from "react";
 import type { Attachment } from "../../gen/Attachment.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { PendingAttachment } from "../../store/model.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";

@@ -5,6 +5,8 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 import { isMockEnabled, smartfireMock } from "./mock/vite-plugin.ts";
 import { inlinePaletteTable } from "./src/lib/palette-table.ts";
+import { smartfirePreviewPolicy } from "./tools/preview-policy.ts";
+import { smartfireServiceWorker } from "./tools/service-worker.ts";
 
 // The Rust app serves the built SPA under /app/ (crates/spa). In development Vite serves it and
 // forwards everything the SPA asks the Rust app for to `cargo run` on :3000, keeping the request's
@@ -56,11 +58,18 @@ export default defineConfig(({ mode }) => {
       smartfireMock(),
       paletteTable,
       fontLicences,
+      smartfireServiceWorker(),
+      // The embedded files' policy under `vite preview`, so the browser suite exercises its
+      // same-origin script, worker, style and font rules (tools/preview-policy.ts).
+      smartfirePreviewPolicy(),
     ],
     build: {
       // The bundle-size report in CI reads the entry chunks from here.
       manifest: true,
       rolldownOptions: {
+        // The app's shell, and the page the service worker shows for a navigation that fails
+        // offline (src/features/offline).
+        input: { index: "index.html", offline: "offline.html" },
         output: {
           // Vendor code changes far less often than the app, so it ships in its own chunks and
           // stays cached across deploys. All three load with the entry (see the CI size report).
@@ -76,7 +85,12 @@ export default defineConfig(({ mode }) => {
     },
     server: { proxy: Object.fromEntries(proxy) },
     test: {
-      include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts"],
+      include: [
+        "src/**/*.test.{ts,tsx}",
+        "mock/**/*.test.ts",
+        "tools/service-worker.test.ts",
+        "tools/preview-policy.test.ts",
+      ],
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.
