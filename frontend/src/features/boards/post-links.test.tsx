@@ -45,13 +45,24 @@ const drive: WorkLink = {
 
 function deferred<T>() {
   let resolve: (value: T) => void = () => undefined;
+  let reject: (error: Error) => void = () => undefined;
 
-  const promise = new Promise<T>((done) => {
+  const promise = new Promise<T>((done, fail) => {
     resolve = done;
+    reject = fail;
   });
 
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
+
+const planning = {
+  id: 31,
+  title: "Planning",
+  startsAt: "2026-10-09T15:00:00.000Z",
+  timeZone: "UTC",
+};
+
+const retro = { id: 32, title: "Retro", startsAt: "2026-10-10T15:00:00.000Z", timeZone: "UTC" };
 
 const Links = createContext<readonly WorkLink[]>([]);
 
@@ -206,6 +217,40 @@ describe("a post's links", () => {
     expect(button("Remove link acme/api#12").disabled).toBe(false);
   });
 
+  it("leaves another post's draft and pending link alone when an earlier removal fails late", async () => {
+    vi.spyOn(actions.work, "linkForm").mockResolvedValue({ events: [] });
+
+    const removal = deferred<ThreadDetail>();
+    const saving = deferred<ThreadDetail>();
+
+    vi.spyOn(actions.work, "removeLink").mockReturnValue(removal.promise);
+    vi.spyOn(actions.work, "addLink").mockReturnValue(saving.promise);
+
+    const user = userEvent.setup();
+    const { router } = await mount("/app/r/4/t/7");
+
+    await user.click(button("Remove link acme/api#12"));
+
+    // The reader moves to another post and starts linking there while the removal is out.
+    await act(() =>
+      router.navigate({ to: "/r/$roomId/t/$threadId/links", params: { roomId: 4, threadId: 8 } }),
+    );
+    await user.type(urlField("Pull request URL"), "https://github.com/acme/web/pull/2");
+    await user.click(button("Link pull request"));
+    expect(button("Link pull request").disabled).toBe(true);
+
+    await act(async () =>
+      removal.reject(new ActionError("ServerError", "Something went wrong.", {})),
+    );
+
+    // The toast names the old post's link; this post's draft and pending link are untouched.
+    expect(toastSnapshot().at(-1)).toMatchObject({ title: "Couldn't remove acme/api#12" });
+    expect(router.history.location.pathname).toBe("/app/r/4/t/8/links");
+    expect(urlField("Pull request URL").value).toBe("https://github.com/acme/web/pull/2");
+    expect(button("Link pull request").disabled).toBe(true);
+    expect(button("Remove link acme/api#12").disabled).toBe(true);
+  });
+
   it("leaves another post's draft alone when an earlier link answers late", async () => {
     vi.spyOn(actions.work, "linkForm").mockResolvedValue({ events: [] });
 
@@ -237,15 +282,6 @@ describe("a post's links", () => {
   });
 
   it("offers the events again when the links change, keeping the draft", async () => {
-    const planning = {
-      id: 31,
-      title: "Planning",
-      startsAt: "2026-10-09T15:00:00.000Z",
-      timeZone: "UTC",
-    };
-
-    const retro = { id: 32, title: "Retro", startsAt: "2026-10-10T15:00:00.000Z", timeZone: "UTC" };
-
     const form = vi
       .spyOn(actions.work, "linkForm")
       .mockResolvedValueOnce({ events: [planning] })
@@ -266,6 +302,73 @@ describe("a post's links", () => {
 
     await user.click(screen.getByRole("tab", { name: "Event" }));
     expect(await screen.findByRole("option", { name: /Retro/ })).toBeDefined();
+  });
+
+  it("keeps the newest events when refreshes answer out of order", async () => {
+    const stale = deferred<{ events: (typeof planning)[] }>();
+    const fresh = deferred<{ events: (typeof planning)[] }>();
+
+    const form = vi
+      .spyOn(actions.work, "linkForm")
+      .mockResolvedValueOnce({ events: [planning] })
+      .mockReturnValueOnce(stale.promise)
+      .mockReturnValueOnce(fresh.promise);
+
+    const user = userEvent.setup();
+    const { relink } = await mount("/app/r/4/t/7/links");
+
+    await user.click(screen.getByRole("tab", { name: "Event" }));
+    await screen.findByRole("option", { name: /Planning/ });
+
+    relink([pr]);
+    relink([]);
+    await waitFor(() => expect(form).toHaveBeenCalledTimes(3));
+
+    await act(async () => fresh.resolve({ events: [planning, retro] }));
+    await act(async () => stale.resolve({ events: [planning] }));
+
+    expect(screen.getByRole("option", { name: /Retro/ })).toBeDefined();
+  });
+
+  it("keeps the events shown when a refresh fails", async () => {
+    const form = vi
+      .spyOn(actions.work, "linkForm")
+      .mockResolvedValueOnce({ events: [planning, retro] })
+      .mockRejectedValueOnce(new ActionError("NetworkError", "Offline", {}));
+
+    const user = userEvent.setup();
+    const { relink } = await mount("/app/r/4/t/7/links");
+
+    await user.click(screen.getByRole("tab", { name: "Event" }));
+    await screen.findByRole("option", { name: /Retro/ });
+
+    relink([pr]);
+    await waitFor(() => expect(form).toHaveBeenCalledTimes(2));
+
+    expect(screen.getByRole("option", { name: /Planning/ })).toBeDefined();
+    expect(screen.getByRole("option", { name: /Retro/ })).toBeDefined();
+    expect(screen.queryByText("Couldn't load this room's events.")).toBeNull();
+  });
+
+  it("keeps the event the reader chose through a refresh", async () => {
+    const form = vi
+      .spyOn(actions.work, "linkForm")
+      .mockResolvedValueOnce({ events: [planning, retro] })
+      .mockResolvedValueOnce({ events: [planning, retro] });
+
+    const user = userEvent.setup();
+    const { relink } = await mount("/app/r/4/t/7/links");
+
+    await user.click(screen.getByRole("tab", { name: "Event" }));
+    await user.selectOptions(await screen.findByRole("combobox", { name: "Event" }), "32");
+
+    relink([pr]);
+    await waitFor(() => expect(form).toHaveBeenCalledTimes(2));
+
+    // SAFETY: the "combobox" named Event is the <select>.
+    const select = screen.getByRole("combobox", { name: "Event" }) as HTMLSelectElement;
+
+    expect(select.value).toBe("32");
   });
 
   it("links one of the room's upcoming events, the first chosen to start with", async () => {
