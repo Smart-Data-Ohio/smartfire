@@ -9,6 +9,7 @@ import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
+import { PaneError } from "../panes/pane-states.tsx";
 import { DayDivider } from "../room/dividers.tsx";
 import { useFollowPosted } from "../room/follow-posted.ts";
 import { MessageRow, PendingRow } from "../room/message-row.tsx";
@@ -20,6 +21,8 @@ import {
   timelineItems,
 } from "../room/timeline-items.ts";
 import { replyCountLabel } from "./thread-format.ts";
+
+export const REPLIES_FAILED = "These replies couldn't be loaded.";
 
 /** Within this many px of the end counts as "at the bottom": new replies keep it pinned. */
 const BOTTOM_SLOP = 40;
@@ -324,6 +327,22 @@ export function ThreadTimeline({
       }
     }
   };
+
+  // The header loaded but the replies didn't (a resync after a failed open, say): say so, with a
+  // way to try again, instead of a skeleton that never resolves.
+  if (ready && timeline.status === "error") {
+    return (
+      <div className="thread-timeline" ref={containerRef}>
+        {intro}
+        <PaneError
+          message={REPLIES_FAILED}
+          onRetry={() =>
+            void actions.threads.reload(threadId, focusMessageId).catch(() => undefined)
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="thread-timeline" ref={containerRef}>
