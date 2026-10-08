@@ -254,8 +254,6 @@ export class Engine extends Context.Service<
           return;
         }
 
-        finishThreadLoad(threadId, load);
-
         const problem = paneProblem(detail);
         const pane = store.getState().threadPanes[threadId];
 
@@ -273,8 +271,10 @@ export class Engine extends Context.Service<
           return yield* Effect.fail(newest.failure);
         }
 
+        // Only once its page is in does a permalink's focus stop carrying over (see `loadPane`).
         if (focus !== null) {
           mutations.applyThreadPage(threadId, newest.success, "replace");
+          finishThreadLoad(threadId, load);
 
           return;
         }
