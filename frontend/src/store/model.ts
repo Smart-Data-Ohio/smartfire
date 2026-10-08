@@ -64,6 +64,7 @@ export interface Boot {
   readonly theme: "system" | "light" | "dark";
   readonly textSize: "smaller" | "small" | "default" | "large" | "larger";
   readonly cableUrl: string;
+  readonly serviceWorkerUrl: string | null;
   readonly version: string;
   readonly revision: string | null;
   /**

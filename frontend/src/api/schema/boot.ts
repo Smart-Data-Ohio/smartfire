@@ -20,6 +20,7 @@ export const Boot = Schema.Struct({
   theme: Theme,
   textSize: TextSize,
   cableUrl: Schema.String,
+  serviceWorkerUrl: Schema.NullOr(Schema.String),
   version: Schema.String,
   revision: Schema.NullOr(Schema.String),
   flash: Schema.optionalKey(

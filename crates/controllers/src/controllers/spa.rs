@@ -49,8 +49,11 @@ pub fn routes(enabled: bool, immutable_cache_control: &'static str) -> Router<Ki
     };
     Router::new()
         .route("/app/assets/{*path}", axum::routing::get(assets))
+        .route("/app/service-worker.js", axum::routing::get(assets))
+        .route("/app/offline.html", axum::routing::get(assets))
         .route("/app", axum::routing::get(campfire_kit::action(show)))
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
+        .route("/app/manifest.webmanifest", axum::routing::get(campfire_kit::action(super::pwa::spa_manifest)))
         .route("/app/{*path}", axum::routing::get(page))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
         .route("/app/ui_preference", axum::routing::post(campfire_kit::action(update_ui_preference)))
@@ -128,6 +131,10 @@ pub async fn boot(c: &mut Ctx) -> Result {
 async fn load_boot(c: &mut Ctx) -> Result<Boot> {
     let user = concerns::require_current_user(c)?.clone();
     let app = c.app();
+    let service_worker_url = match concerns::effective_ui(c).await? {
+        ui @ UiPreference::Next => Some(concerns::service_worker_url(ui)),
+        UiPreference::Classic => None,
+    };
     let avatar_url = presenters::avatar_path(&app.secrets, &user);
     let (version, revision) = (app.config.app_version.clone(), app.config.git_revision.clone());
     let user_id = user.id;
@@ -155,6 +162,7 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         theme: campfire_spa::theme(settings.as_ref().map(|s| s.theme.as_str())),
         text_size: campfire_spa::text_size(settings.as_ref().map(|s| s.text_size.as_str())),
         cable_url: campfire_cable::protocol::DEFAULT_MOUNT_PATH.to_string(),
+        service_worker_url,
         version,
         revision,
         flash: None,
@@ -170,13 +178,17 @@ fn file_response(kit: &Kit, request: &Request, immutable_cache_control: &'static
 }
 
 pub fn served_response(kit: &Kit, served: campfire_spa::Served, immutable_cache_control: &'static str) -> Response {
-    let cache_control = if served.file.immutable { immutable_cache_control } else { campfire_spa::REVALIDATE_CACHE_CONTROL };
+    let worker = served.file.path == "service-worker.js";
+    let cache_control = if worker { "no-cache" } else if served.file.immutable { immutable_cache_control } else { campfire_spa::REVALIDATE_CACHE_CONTROL };
     let cache_control = format!("{cache_control}, no-transform");
     let mut response = Response::new(axum::body::Body::from(served.body));
     let headers = response.headers_mut();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(served.file.content_type));
     headers.insert(header::CONTENT_LENGTH, HeaderValue::from(served.body.len()));
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_str(&cache_control).expect("a constant policy"));
+    if worker {
+        headers.insert(HeaderName::from_static("service-worker-allowed"), HeaderValue::from_static("/"));
+    }
     if let Some(encoding) = served.content_encoding {
         headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static(encoding));
     }

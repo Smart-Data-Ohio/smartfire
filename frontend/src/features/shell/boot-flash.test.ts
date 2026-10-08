@@ -15,6 +15,7 @@ const base: Boot = {
   theme: "system",
   textSize: "default",
   cableUrl: "/cable",
+  serviceWorkerUrl: null,
   version: "2.0.0",
   revision: null,
 };

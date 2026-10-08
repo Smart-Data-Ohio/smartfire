@@ -5,6 +5,7 @@
  */
 import { useStore as useZustand } from "zustand";
 import { createStore } from "zustand/vanilla";
+import { loadForUpdate } from "../../service-worker/update-required.ts";
 
 export type Overlay = "switcher" | "shortcuts" | "new-direct";
 
@@ -36,7 +37,7 @@ export function toggleOverlay(overlay: Overlay): void {
 
 /** The overlays' chunks, shared by `React.lazy` and the idle preload. */
 export const overlayChunks = {
-  switcher: () => import("./switcher-dialog.tsx"),
-  shortcuts: () => import("./shortcuts-dialog.tsx"),
-  "new-direct": () => import("../directs/new-direct-dialog.tsx"),
+  switcher: () => loadForUpdate(() => import("./switcher-dialog.tsx")),
+  shortcuts: () => loadForUpdate(() => import("./shortcuts-dialog.tsx")),
+  "new-direct": () => loadForUpdate(() => import("../directs/new-direct-dialog.tsx")),
 } as const;

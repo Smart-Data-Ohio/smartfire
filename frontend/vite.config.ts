@@ -3,6 +3,7 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig, type ProxyOptions } from "vite";
 import { isMockEnabled, smartfireMock } from "./mock/vite-plugin.ts";
+import { smartfireServiceWorker } from "./tools/service-worker.ts";
 
 // The Rust app serves the built SPA under /app/ (crates/spa). In development Vite serves it and
 // forwards everything the SPA asks the Rust app for to `cargo run` on :3000, keeping the request's
@@ -22,11 +23,19 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: "/app/",
-    plugins: [react(), babel({ presets: [reactCompilerPreset()] }), smartfireMock()],
+    plugins: [
+      react(),
+      babel({ presets: [reactCompilerPreset()] }),
+      smartfireMock(),
+      smartfireServiceWorker(),
+    ],
     build: {
       // The bundle-size report in CI reads the entry chunks from here.
       manifest: true,
       rolldownOptions: {
+        // The app's shell, and the page the service worker shows for a navigation that fails
+        // offline (src/features/offline).
+        input: { index: "index.html", offline: "offline.html" },
         output: {
           // Vendor code changes far less often than the app, so it ships in its own chunks and
           // stays cached across deploys. All three load with the entry (see the CI size report).
@@ -41,8 +50,16 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: { proxy: Object.fromEntries(proxy) },
+    preview: {
+      headers: {
+        // The embedded files use the app's nonce-free policy. Exercise its same-origin script,
+        // worker, style and font rules in the browser suite too.
+        "Content-Security-Policy":
+          "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:",
+      },
+    },
     test: {
-      include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts"],
+      include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts", "tools/service-worker.test.ts"],
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.

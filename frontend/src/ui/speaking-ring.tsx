@@ -1,6 +1,7 @@
-import { lazy, type ReactNode, Suspense } from "react";
+import { type ReactNode, Suspense } from "react";
 import { useResolvedTheme } from "../lib/appearance.ts";
 import { useReducedMotion } from "../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../service-worker/lazy.ts";
 import "./effects.css";
 
 interface SpeakingRingProps {
