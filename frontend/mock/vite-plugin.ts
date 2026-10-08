@@ -5,13 +5,16 @@
  *
  * - `/api/v1/*` and `/__mock/*` go to `MockServer.handle` (held sends hold the HTTP response).
  * - `/rails/active_storage/*` (the direct-upload `PUT`, blob and thumbnail downloads) and
- *   `/icons/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
+ *   `/icons/*` and `/assets/icons/brands/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
  * - `/api/v1/sync` upgrades to a WebSocket bridged to `MockServer.connect`; every other upgrade
  *   (Vite's HMR) is left alone.
  * - `/users/:id/avatar` answers with a picture for a couple of people and 404 for the rest, so
  *   the UI's initials fallback shows.
  * - The dev `index.html` gets `<meta name="csrf-param">` and `<meta name="csrf-token">` with the
  *   mock's current token, as the Rust shell writes them.
+ * - `vite preview --mode mock` serves the same backend in front of the built dist, and answers
+ *   `/app/*` page loads with dist/index.html and the csrf meta in place of `<!--boot-->`, as the
+ *   Rust shell does, so the production bundle (its CSS order, its chunking) can be checked too.
  * - `/__auth/*` serves the server-rendered pages the Rust tests write to
  *   e2e/fixtures/auth-pages (sign-in, joining, two-step sign-in...), byte for byte, so the
  *   Playwright pass can look at them without the Rust app.
@@ -20,7 +23,7 @@ import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
 import type { Duplex } from "node:stream";
-import type { Plugin } from "vite";
+import type { Plugin, PreviewServer, ViteDevServer } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
 import { type Json, parseJson } from "./json.ts";
 import { BOT_ID, USERS_WITH_PHOTOS } from "./seed.ts";
@@ -189,7 +192,29 @@ function bridgeSocket(mock: MockServer, socket: WebSocket) {
   socket.on("error", () => connection.close());
 }
 
-/** The Vite plugin. Only active for `vite serve` with the mock enabled. */
+/** The csrf meta the Rust shell writes into the page head. */
+function csrfMeta(token: string): string {
+  return `<meta name="csrf-param" content="authenticity_token" />\n<meta name="csrf-token" content="${token}" />`;
+}
+
+/**
+ * In preview, `/app/*` page loads (no file extension) get dist/index.html with the csrf meta in
+ * place of `<!--boot-->`; everything else (the hashed assets) falls through to the static server.
+ */
+async function servePreviewShell(
+  server: PreviewServer,
+  token: string,
+  response: ServerResponse,
+): Promise<void> {
+  const index = join(server.config.root, server.config.build.outDir, "index.html");
+  const html = (await readFile(index, "utf8")).replace("<!--boot-->", csrfMeta(token));
+
+  response.setHeader("Content-Type", "text/html; charset=utf-8");
+  response.setHeader("Cache-Control", "no-store");
+  response.end(html);
+}
+
+/** The Vite plugin. Only active for `vite serve` and `vite preview` with the mock enabled. */
 export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
   let mock: MockServer | null = null;
 
@@ -208,68 +233,30 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
     name: "smartfire-mock",
     apply: (_config, env) => env.command === "serve" && isMockEnabled(env.mode),
     configureServer(server) {
-      const backend = current();
-      const sockets = new WebSocketServer({ noServer: true });
-
+      attach(server);
+    },
+    configurePreviewServer(server) {
       server.middlewares.use((request, response, next) => {
         const path = new URL(request.url ?? "/", "http://localhost").pathname;
-        const avatar = /^\/users\/(\d+)\/avatar$/.exec(path);
 
-        if (path.startsWith(AUTH_PAGES_PREFIX)) {
-          serveAuthPage(path, response).catch(next);
-
-          return;
-        }
-
-        if (avatar !== null) {
-          const userId = Number(avatar[1]);
-
-          if (!USERS_WITH_PHOTOS.has(userId)) {
-            response.statusCode = 404;
-            response.end();
-
-            return;
-          }
-
-          response.setHeader("Content-Type", "image/svg+xml");
-          response.end(avatarSvg(userId));
+        if ((path === "/app" || path.startsWith("/app/")) && extname(path) === "") {
+          servePreviewShell(server, current().csrfToken(), response).catch(next);
 
           return;
         }
 
-        if (isBinaryPath(path)) {
-          serveBinary(backend, request, response).catch(next);
-
-          return;
-        }
-
-        if (!isMockPath(path) || path === SYNC_PATH) {
-          next();
-
-          return;
-        }
-
-        serveHttp(backend, request, response).catch(next);
+        next();
       });
-
-      server.httpServer?.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-        const path = new URL(request.url ?? "/", "http://localhost").pathname;
-
-        if (path !== SYNC_PATH) return;
-
-        sockets.handleUpgrade(request, socket, head, (ws) => bridgeSocket(backend, ws));
-      });
-
-      server.httpServer?.on("close", () => {
-        backend.dispose();
-        sockets.close();
-      });
-
-      server.config.logger.info(
-        "  smartfire mock: /api/v1 and /api/v1/sync are served in memory; controls at /__mock/state",
-      );
+      attach(server);
     },
     transformIndexHtml: () => [
+      // As the Rust shell renders it, ahead of index.html's blocking appearance script.
+      {
+        tag: "script",
+        attrs: { type: "application/json", id: "boot" },
+        children: current().inlineBoot(),
+        injectTo: "head-prepend",
+      },
       {
         tag: "meta",
         attrs: { name: "csrf-param", content: "authenticity_token" },
@@ -282,4 +269,67 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
       },
     ],
   };
+
+  function attach(server: ViteDevServer | PreviewServer) {
+    const backend = current();
+    const sockets = new WebSocketServer({ noServer: true });
+
+    server.middlewares.use((request, response, next) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname;
+      const avatar = /^\/users\/(\d+)\/avatar$/.exec(path);
+
+      if (path.startsWith(AUTH_PAGES_PREFIX)) {
+        serveAuthPage(path, response).catch(next);
+
+        return;
+      }
+
+      if (avatar !== null) {
+        const userId = Number(avatar[1]);
+
+        if (!USERS_WITH_PHOTOS.has(userId)) {
+          response.statusCode = 404;
+          response.end();
+
+          return;
+        }
+
+        response.setHeader("Content-Type", "image/svg+xml");
+        response.end(avatarSvg(userId));
+
+        return;
+      }
+
+      if (isBinaryPath(path)) {
+        serveBinary(backend, request, response).catch(next);
+
+        return;
+      }
+
+      if (!isMockPath(path) || path === SYNC_PATH) {
+        next();
+
+        return;
+      }
+
+      serveHttp(backend, request, response).catch(next);
+    });
+
+    server.httpServer?.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname;
+
+      if (path !== SYNC_PATH) return;
+
+      sockets.handleUpgrade(request, socket, head, (ws) => bridgeSocket(backend, ws));
+    });
+
+    server.httpServer?.on("close", () => {
+      backend.dispose();
+      sockets.close();
+    });
+
+    server.config.logger.info(
+      "  smartfire mock: /api/v1 and /api/v1/sync are served in memory; controls at /__mock/state",
+    );
+  }
 }

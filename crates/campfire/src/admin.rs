@@ -2,7 +2,7 @@
 use campfire_db::{Connection, additive, migrations, schema};
 use std::path::Path;
 
-const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE | verify-additive-sqlite-migration BEFORE AFTER | twitter-backfill-references DATABASE";
+const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate [--preserve-existing-foreign-key-violations] DATABASE | verify-additive-sqlite-migration BEFORE AFTER | twitter-backfill-references DATABASE";
 
 pub fn run(args: &[String]) -> Option<i32> {
     if !matches!(
@@ -50,6 +50,9 @@ fn execute(args: &[String]) -> Result<String, (i32, String)> {
         ["db-check", database] => check(Path::new(database), false).map_err(fail),
         ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
         ["db-migrate", database] => migrate(Path::new(database)).map_err(fail),
+        ["db-migrate", "--preserve-existing-foreign-key-violations", database] => {
+            migrate_database(Path::new(database), true).map_err(fail)
+        }
         ["verify-additive-sqlite-migration", before, after] => {
             additive::verify(Path::new(before), Path::new(after)).map_err(|error| {
                 let status = if matches!(error, additive::Error::Mismatch(_)) {
@@ -185,6 +188,13 @@ fn check(database: &Path, immutable: bool) -> anyhow::Result<String> {
 /// Applies this build's pending migrations (`crates/db/migrations`, compiled in) in one
 /// transaction. Refuses a database a newer build migrated. Writes nothing when it's up to date.
 fn migrate(database: &Path) -> anyhow::Result<String> {
+    migrate_database(database, false)
+}
+
+fn migrate_database(
+    database: &Path,
+    preserve_existing_foreign_keys: bool,
+) -> anyhow::Result<String> {
     // No CREATE: a mistyped path must never initialize a second production database.
     let mut conn =
         Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)?;
@@ -192,7 +202,11 @@ fn migrate(database: &Path) -> anyhow::Result<String> {
     conn.pragma_update(None, "foreign_keys", true)?;
     let integrity: String = conn.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
     anyhow::ensure!(integrity == "ok", "database integrity check failed");
-    let applied = migrations::migrate(&mut conn)?;
+    let applied = if preserve_existing_foreign_keys {
+        migrations::migrate_preserving_existing_foreign_key_violations(&mut conn)?
+    } else {
+        migrations::migrate(&mut conn)?
+    };
     let mut output = applied
         .iter()
         .map(|version| format!("MIGRATED: {version}\n"))
@@ -297,6 +311,54 @@ mod tests {
         assert_eq!(
             execute(&["db-migrate".into(), "a".into(), "b".into()]).unwrap_err().0,
             2
+        );
+    }
+
+    #[test]
+    fn frozen_seed_migration_requires_an_explicit_option_to_preserve_orphans() {
+        let dir = tempfile::tempdir().unwrap();
+        let database = dir.path().join("production.sqlite3");
+        let conn = Connection::open(&database).unwrap();
+        conn.execute_batch(include_str!("../../db/baseline/schema.sql"))
+            .unwrap();
+        for version in schema::baseline_versions() {
+            conn.execute("INSERT INTO schema_migrations VALUES (?)", [version])
+                .unwrap();
+        }
+        conn.execute_batch(
+            "PRAGMA foreign_keys=OFF; \
+             CREATE TABLE seed_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE seed_child(parent_id INTEGER REFERENCES seed_parent(id)); \
+             INSERT INTO seed_child VALUES (7); PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        drop(conn);
+
+        let strict = ["db-migrate".into(), database.display().to_string()];
+        let (status, error) = execute(&strict).unwrap_err();
+        assert_eq!(status, 2);
+        assert!(
+            error.contains("foreign key violations (table seed_child)"),
+            "{error}"
+        );
+
+        let preserve = [
+            "db-migrate".into(),
+            "--preserve-existing-foreign-key-violations".into(),
+            database.display().to_string(),
+        ];
+        let result = execute(&preserve).unwrap();
+        assert!(result.contains("MIGRATED: 20261008150000"), "{result}");
+        let conn = Connection::open(&database).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT parent_id FROM seed_child", [], |row| row
+                .get::<_, i64>(0))
+                .unwrap(),
+            7
+        );
+        assert_eq!(
+            schema::schema_mismatch(&conn).unwrap().missing,
+            Vec::<String>::new()
         );
     }
 

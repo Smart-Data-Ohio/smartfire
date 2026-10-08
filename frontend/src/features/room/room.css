@@ -98,9 +98,31 @@
     white-space: nowrap;
   }
 
+  /* The agent's name wins the header's width; its status line gives way first. */
+  .room-title:has(.room-header-agent) .room-title-name {
+    flex-shrink: 0;
+    max-width: 60%;
+  }
+
   .room-header-agent {
     color: var(--agent-text);
     font-weight: var(--weight-medium);
+  }
+
+  a.room-header-agent {
+    text-decoration: none;
+  }
+
+  a.room-header-agent:hover {
+    text-decoration: underline;
+  }
+
+  .room-header-agent:is([data-tone="suspended"], [data-tone="inactive"]) {
+    color: var(--text-muted);
+  }
+
+  .room-header-agent[data-tone="failed"] {
+    color: var(--danger-text);
   }
 
   .room-header-tools {
@@ -396,6 +418,11 @@
   }
 
   .message-main {
+    /* One gap between the body and whatever hangs under it (cards, attachments, the reactions
+       row), and between those, so a reaction row sits as far from a link preview as the preview
+       sits from the text. */
+    --message-accessory-gap: var(--space-1-5);
+
     min-width: 0;
   }
 
@@ -419,19 +446,6 @@
   .message-edited {
     color: var(--text-faint);
     font-size: 11px;
-  }
-
-  .message-agent-tag {
-    align-self: center;
-    padding: 0 var(--space-1);
-    border-radius: var(--radius-xs);
-    background: var(--agent-soft);
-    color: var(--agent-text);
-    font-size: 10px;
-    font-weight: var(--weight-semibold);
-    letter-spacing: 0.04em;
-    line-height: 16px;
-    text-transform: uppercase;
   }
 
   .message-body-row {
@@ -535,10 +549,32 @@
     padding-left: var(--space-5);
   }
 
+  /* A picture in the body (a rich-text paste's remote images) is bounded like a Slack preview,
+     whatever its natural size or width/height attributes, keeping its aspect ratio. The quiet
+     checkerboard shows only through transparent pixels. */
   .message-body img {
-    max-width: min(100%, 360px);
+    width: auto;
     height: auto;
+    max-width: min(100%, 360px);
+    max-height: 320px;
     border-radius: var(--radius-md);
+    background-image: repeating-conic-gradient(
+      var(--image-backdrop-a) 0 25%,
+      var(--image-backdrop-b) 0 50%
+    );
+    background-size: 16px 16px;
+  }
+
+  /* `:name:` brand and workspace icons (crates/richtext icon_node) sit in the text like an emoji,
+     as the classic icons.css has them: 1.2em tall, on the baseline, no backdrop. Brand icons
+     invert in the dark theme (base.css). */
+  .message-body img.icon {
+    display: inline;
+    height: 1.2em;
+    max-height: none;
+    vertical-align: -0.25em;
+    border-radius: 0;
+    background: none;
   }
 
   /* Mentions as the server renders them (users/_mention): an inline chip with the name. */

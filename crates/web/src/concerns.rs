@@ -292,14 +292,9 @@ pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_prefe
     Ok(UiPreference::effective(stored, app.config.spa_default_next))
 }
 
-/// One registration at scope `/`: both UIs choose the same script for the effective UI.
-pub fn service_worker_url(ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
-    use campfire_db::models::user::ui_preference::UiPreference;
-
-    match ui {
-        UiPreference::Classic => "/service-worker.js".into(),
-        UiPreference::Next => format!("{}service-worker.js", campfire_spa::root_path()),
-    }
+/// Both UIs update the same registration at scope `/`.
+pub fn service_worker_url(_ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
+    "/service-worker.js".into()
 }
 
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has

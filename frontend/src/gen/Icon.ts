@@ -4,19 +4,19 @@ import type { IconKind } from "./IconKind";
 /**
  * Something `:name:` expands to in a message, and a reaction can be.
  */
-export type Icon = { 
+export type Icon = {
 /**
  * Insert as `:name:` (lowercase `[a-z0-9_]`).
  */
-name: string, 
+name: string,
 /**
  * The human name: the icon's title, or the emoji alias with spaces, capitalised.
  */
-title: string, kind: IconKind, 
+title: string, kind: IconKind,
 /**
  * Emoji only: the character.
  */
-character: string | null, 
+character: string | null,
 /**
  * Brand and custom only: the image (`/icons/:name` for custom).
  */

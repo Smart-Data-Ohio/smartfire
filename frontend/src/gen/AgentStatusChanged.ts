@@ -15,17 +15,28 @@ import type { AgentStatus } from "./AgentStatus";
  * The client applies it to the agent's [`User::agent`] badge, its directory row and profile,
  * and the members pane.
  */
-export type AgentStatusChanged = { agentId: number, userId: number, status: AgentStatus, statusNote: string | null, statusChangedAt: string | null, suspended: boolean, 
+export type AgentStatusChanged = { agentId: number, userId: number, status: AgentStatus, statusNote: string | null, statusChangedAt: string | null, suspended: boolean,
 /**
  * What the agent says it's doing now (up to 140 characters); `null` when unset or expired.
  *
  * Filled only for a recipient who shares a room with the agent, the audience of the
  * classic members pane, the one place that shows it; `null` for everyone else.
  */
-workingPresence: string | null, 
+workingPresence: string | null,
 /**
  * When `workingPresence` lapses (5 minutes after it was set, `assign_working_presence`).
  * No event marks the lapse: the client hides the text at this time. `null` when
  * `workingPresence` is.
  */
-workingPresenceExpiresAt: string | null, };
+workingPresenceExpiresAt: string | null,
+/**
+ * The server's revision of the agent's status facts (status, note, suspension and working
+ * presence), as on [`AgentDirectoryRow::updated_at`].
+ * UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+ * millisecond rows are padded with zeros.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

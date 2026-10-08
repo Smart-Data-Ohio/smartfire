@@ -17,7 +17,7 @@ import { JoinPill } from "../huddle/call-alerts.tsx";
 import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
-import { ROOM_KIND_ICON } from "../room/room-icon.ts";
+import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { GroupAvatars } from "./group-avatars.tsx";
 import { rowPillCount, rowState } from "./sections.ts";
 
@@ -131,7 +131,12 @@ export function RowGlyph({ row }: { readonly row: Row }) {
     <DirectGlyph row={row} />
   ) : (
     <span className="sidebar-row-glyph">
-      <Icon name={ROOM_KIND_ICON[row.room.kind]} size={16} className="sidebar-row-icon" />
+      <RoomGlyph
+        kind={row.room.kind}
+        iconName={row.room.iconName}
+        size={16}
+        className="sidebar-row-icon"
+      />
     </span>
   );
 }

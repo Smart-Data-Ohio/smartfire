@@ -1676,32 +1676,6 @@
         "needle": "<details class=\"notifications-help hide-in-browser\" data-notifications-target=\"details\">"
       }
     },
-    "pwa/manifest.json": {
-      "status": "covered",
-      "evidence": [
-        "pwa_endpoints"
-      ],
-      "branch": "manifest and service worker complete body bytes, with fixture account logo and name",
-      "render_chain": [
-        "pwa/manifest.json"
-      ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
-    },
-    "pwa/service_worker.js": {
-      "status": "covered",
-      "evidence": [
-        "pwa_endpoints"
-      ],
-      "branch": "manifest and service worker complete body bytes, with fixture account logo and name",
-      "render_chain": [
-        "pwa/service_worker.js"
-      ],
-      "witness": {
-        "oracle": "crates/views/tests/golden/core/pages/pwa_service_worker.js",
-        "pointer": "",
-        "needle": ".then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))))"
-      }
-    },
     "rooms/boards/_form.html": {
       "status": "covered",
       "evidence": [
@@ -6302,25 +6276,29 @@
       "evidence": [
         "pwa_endpoints"
       ],
-      "branch": "manifest and service worker complete body bytes, with fixture account logo and name",
+      "branch": "PWA renderer extracted into campfire_spa; complete recorded manifest/worker bodies retain their Rails contract",
       "render_chain": [
-        "pwa/manifest.json"
+        "crates/spa/templates/pwa/manifest.json"
       ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "witness": {
+        "oracle": "vectors/users_pwa_default.json",
+        "pointer": "/responses/0/body",
+        "needle": "\"start_url\": \"/\""
+      }
     },
     "pwa/service_worker.js": {
       "status": "covered",
       "evidence": [
         "pwa_endpoints"
       ],
-      "branch": "manifest and service worker complete body bytes, with fixture account logo and name",
+      "branch": "PWA renderer extracted into campfire_spa; complete recorded manifest/worker bodies retain their Rails contract",
       "render_chain": [
-        "pwa/service_worker.js"
+        "crates/spa/pwa/service_worker.js"
       ],
       "witness": {
-        "oracle": "crates/views/tests/golden/core/pages/pwa_service_worker.js",
-        "pointer": "",
-        "needle": ".then((keys) => Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))))"
+        "oracle": "vectors/users_pwa_default.json",
+        "pointer": "/responses/1/body",
+        "needle": "self.addEventListener(\"notificationclick\""
       }
     },
     "rooms/boards/_form.html.erb": {
@@ -8694,13 +8672,13 @@
       "scenario": "exit_button false and true both render and compare the entire selection toolbar"
     },
     "pwa_endpoints": {
-      "test_file": "crates/views/tests/core.rs",
-      "test": "pwa_endpoints_match_rails",
+      "test_file": "crates/spa/src/pwa.rs",
+      "test": "pwa_endpoints_match_recorded_rails_before_and_after_first_run",
       "oracles": [
-        "crates/views/tests/golden/core/pages/pwa_manifest.json",
-        "crates/views/tests/golden/core/pages/pwa_service_worker.js"
+        "vectors/users_pwa_default.json",
+        "vectors/users_pwa_first_run.json"
       ],
-      "scenario": "manifest and service worker complete body bytes, with fixture account logo and name"
+      "scenario": "manifest and service worker complete body bytes before and after first run, rendered by campfire_spa independently of classic assets"
     },
     "icon_field": {
       "test_file": "crates/views/tests/core.rs",

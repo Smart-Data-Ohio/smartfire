@@ -197,7 +197,7 @@ export function createServerInboxAmbient(
             BOT_ID,
             conversationTitle(ctx, ROOM_IDS.engineering, null, "Ember"),
             summary,
-            "/agents/1/approvals",
+            `/agents/${BOT_ID}/approvals`,
             { approvalStatus: "pending" },
           ),
         });

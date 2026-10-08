@@ -82,7 +82,7 @@ CREATE INDEX "index_memberships_on_user_id" ON "memberships" ("user_id");
 CREATE TABLE "room_categories" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "collapsed" boolean DEFAULT FALSE NOT NULL, "created_at" datetime(6) NOT NULL, "name" varchar NOT NULL, "position" integer DEFAULT 0 NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
 CREATE INDEX "index_room_categories_on_user_and_position" ON "room_categories" ("user_id", "position");
 CREATE INDEX "index_room_categories_on_user_id" ON "room_categories" ("user_id");
-CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TABLE "rooms" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "creator_id" bigint NOT NULL, "deleted_at" datetime(6), "destroy_enqueued_at" datetime(6), "direct_member_key" varchar, "icon_name" varchar, "inbound_email_token" varchar, "name" varchar, "pins_changed_at" datetime(6), "type" varchar NOT NULL, "updated_at" datetime(6) NOT NULL, "client_room_id" varchar);
 CREATE UNIQUE INDEX "index_rooms_on_direct_member_key" ON "rooms" ("direct_member_key") WHERE direct_member_key IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX "index_rooms_on_inbound_email_token" ON "rooms" ("inbound_email_token");
 CREATE TABLE "streams" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "ended_at" datetime(6), "membership_id" integer NOT NULL, "quality" varchar NOT NULL, "room_id" integer NOT NULL, "started_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL);
@@ -93,7 +93,7 @@ CREATE UNIQUE INDEX "index_thread_tags_on_channel_thread_id_and_name" ON "thread
 CREATE INDEX "index_thread_tags_on_name" ON "thread_tags" ("name");
 CREATE TABLE "twitter_posts" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "author_avatar_url" varchar, "author_handle" varchar, "author_name" varchar, "created_at" datetime(6) NOT NULL, "fetch_error" varchar, "fetch_requested_at" datetime(6), "fetched_at" datetime(6), "likes" integer, "media" json, "post_id" varchar NOT NULL, "posted_at" datetime(6), "quote" json, "replies" integer, "reposts" integer, "text" text, "updated_at" datetime(6) NOT NULL, "url" varchar);
 CREATE UNIQUE INDEX "index_twitter_posts_on_post_id" ON "twitter_posts" ("post_id");
-CREATE TABLE "users" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "bio" text, "bot_token" varchar, "bot_token_digest" varchar, "created_at" datetime(6) NOT NULL, "custom_status_emoji" varchar, "custom_status_expires_at" datetime(6), "custom_status_text" varchar, "dnd_enabled" boolean DEFAULT FALSE NOT NULL, "dnd_until" datetime(6), "email_address" varchar, "email_self_changed_at" datetime(6), "github_login" varchar, "google_email_link_allowed" boolean DEFAULT FALSE NOT NULL, "icon_name" varchar, "inbox_preferences" json DEFAULT '{}', "meeting_dnd_enabled" boolean DEFAULT FALSE NOT NULL, "meeting_status_enabled" boolean DEFAULT FALSE NOT NULL, "name" varchar NOT NULL, "ooo_broadcast" boolean, "ooo_calendar_enabled" boolean DEFAULT FALSE NOT NULL, "ooo_note" varchar(140), "ooo_notify_enabled" boolean DEFAULT FALSE NOT NULL, "ooo_until" datetime(6), "password_digest" varchar, "presence_setting" varchar DEFAULT 'auto' NOT NULL, "push_to_talk_key" varchar, "quiet_hours_enabled" boolean DEFAULT FALSE NOT NULL, "quiet_hours_end_minute" integer, "quiet_hours_start_minute" integer, "role" integer DEFAULT 0 NOT NULL, "status" integer DEFAULT 0 NOT NULL, "text_size" varchar DEFAULT 'default' NOT NULL, "theme" varchar DEFAULT 'system' NOT NULL, "time_zone" varchar, "time_zone_explicit" boolean DEFAULT FALSE NOT NULL, "tour_completed_at" datetime(6), "updated_at" datetime(6) NOT NULL, "voice_mode" varchar);
+CREATE TABLE "users" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "bio" text, "bot_token" varchar, "bot_token_digest" varchar, "created_at" datetime(6) NOT NULL, "custom_status_emoji" varchar, "custom_status_expires_at" datetime(6), "custom_status_text" varchar, "dnd_enabled" boolean DEFAULT FALSE NOT NULL, "dnd_until" datetime(6), "email_address" varchar, "email_self_changed_at" datetime(6), "github_login" varchar, "google_email_link_allowed" boolean DEFAULT FALSE NOT NULL, "icon_name" varchar, "inbox_preferences" json DEFAULT '{}', "meeting_dnd_enabled" boolean DEFAULT FALSE NOT NULL, "meeting_status_enabled" boolean DEFAULT FALSE NOT NULL, "name" varchar NOT NULL, "ooo_broadcast" boolean, "ooo_calendar_enabled" boolean DEFAULT FALSE NOT NULL, "ooo_note" varchar(140), "ooo_notify_enabled" boolean DEFAULT FALSE NOT NULL, "ooo_until" datetime(6), "password_digest" varchar, "presence_setting" varchar DEFAULT 'auto' NOT NULL, "push_to_talk_key" varchar, "quiet_hours_enabled" boolean DEFAULT FALSE NOT NULL, "quiet_hours_end_minute" integer, "quiet_hours_start_minute" integer, "role" integer DEFAULT 0 NOT NULL, "status" integer DEFAULT 0 NOT NULL, "text_size" varchar DEFAULT 'default' NOT NULL, "theme" varchar DEFAULT 'system' NOT NULL, "time_zone" varchar, "time_zone_explicit" boolean DEFAULT FALSE NOT NULL, "tour_completed_at" datetime(6), "updated_at" datetime(6) NOT NULL, "voice_mode" varchar, activity_revision INTEGER NOT NULL DEFAULT 0);
 CREATE UNIQUE INDEX "index_users_on_lower_github_login" ON "users" (LOWER(github_login)) WHERE github_login IS NOT NULL;
 CREATE UNIQUE INDEX "index_users_on_bot_token" ON "users" ("bot_token");
 CREATE UNIQUE INDEX "index_users_on_bot_token_digest" ON "users" ("bot_token_digest");
@@ -657,3 +657,308 @@ CREATE INDEX "index_workspace_presence_leases_on_user_id" ON "workspace_presence
 CREATE VIRTUAL TABLE message_search_index USING fts5 (body, tokenize=porter);
 CREATE TABLE "schema_migrations" ("version" varchar NOT NULL PRIMARY KEY);
 CREATE TABLE "ar_internal_metadata" ("key" varchar NOT NULL PRIMARY KEY, "value" varchar, "created_at" datetime(6) NOT NULL, "updated_at" datetime(6) NOT NULL);
+CREATE TRIGGER activity_revision_activity_items_insert
+AFTER INSERT ON activity_items
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = NEW.user_id;
+END;
+CREATE TRIGGER activity_revision_activity_items_delete
+BEFORE DELETE ON activity_items
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = OLD.user_id;
+END;
+CREATE TRIGGER activity_revision_activity_items_update
+AFTER UPDATE OF user_id, source_type, source_id, event_type, read_at, handled_at, updated_at ON activity_items
+WHEN OLD.user_id IS NOT NEW.user_id OR OLD.source_type IS NOT NEW.source_type OR OLD.source_id IS NOT NEW.source_id OR OLD.event_type IS NOT NEW.event_type OR OLD.read_at IS NOT NEW.read_at OR OLD.handled_at IS NOT NEW.handled_at OR OLD.updated_at IS NOT NEW.updated_at
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id = OLD.user_id) OR (id = NEW.user_id);
+END;
+CREATE TRIGGER activity_revision_memberships_insert
+AFTER INSERT ON memberships
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = NEW.user_id;
+END;
+CREATE TRIGGER activity_revision_memberships_delete
+BEFORE DELETE ON memberships
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = OLD.user_id;
+END;
+CREATE TRIGGER activity_revision_memberships_update
+AFTER UPDATE OF id, user_id, room_id ON memberships
+WHEN OLD.id IS NOT NEW.id OR OLD.user_id IS NOT NEW.user_id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id = OLD.user_id) OR (id = NEW.user_id);
+END;
+CREATE TRIGGER activity_revision_messages_insert
+AFTER INSERT ON messages
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Message' AND ai.source_id = NEW.id) OR (ai.source_type = 'SavedItem' AND ai.source_id IN (SELECT id FROM saved_items WHERE message_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_messages_delete
+BEFORE DELETE ON messages
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Message' AND ai.source_id = OLD.id) OR (ai.source_type = 'SavedItem' AND ai.source_id IN (SELECT id FROM saved_items WHERE message_id = OLD.id)));
+END;
+CREATE TRIGGER activity_revision_messages_update
+AFTER UPDATE OF id, room_id ON messages
+WHEN OLD.id IS NOT NEW.id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Message' AND ai.source_id = OLD.id) OR (ai.source_type = 'SavedItem' AND ai.source_id IN (SELECT id FROM saved_items WHERE message_id = OLD.id)))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Message' AND ai.source_id = NEW.id) OR (ai.source_type = 'SavedItem' AND ai.source_id IN (SELECT id FROM saved_items WHERE message_id = NEW.id))));
+END;
+CREATE TRIGGER activity_revision_saved_items_insert
+AFTER INSERT ON saved_items
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'SavedItem' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_saved_items_delete
+BEFORE DELETE ON saved_items
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'SavedItem' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_saved_items_update
+AFTER UPDATE OF id, message_id ON saved_items
+WHEN OLD.id IS NOT NEW.id OR OLD.message_id IS NOT NEW.message_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'SavedItem' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'SavedItem' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_work_thread_events_insert
+AFTER INSERT ON work_thread_events
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'WorkThreadEvent' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_work_thread_events_delete
+BEFORE DELETE ON work_thread_events
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'WorkThreadEvent' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_work_thread_events_update
+AFTER UPDATE OF id, channel_thread_id ON work_thread_events
+WHEN OLD.id IS NOT NEW.id OR OLD.channel_thread_id IS NOT NEW.channel_thread_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'WorkThreadEvent' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'WorkThreadEvent' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_channel_threads_insert
+AFTER INSERT ON channel_threads
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'WorkThreadEvent' AND ai.source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_channel_threads_delete
+BEFORE DELETE ON channel_threads
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'WorkThreadEvent' AND ai.source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_channel_threads_update
+AFTER UPDATE OF id, room_id ON channel_threads
+WHEN OLD.id IS NOT NEW.id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'WorkThreadEvent' AND ai.source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'WorkThreadEvent' AND ai.source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_board_sla_nudges_insert
+AFTER INSERT ON board_sla_nudges
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'BoardSlaNudge' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_board_sla_nudges_delete
+BEFORE DELETE ON board_sla_nudges
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'BoardSlaNudge' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_board_sla_nudges_update
+AFTER UPDATE OF id, room_id ON board_sla_nudges
+WHEN OLD.id IS NOT NEW.id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'BoardSlaNudge' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'BoardSlaNudge' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_huddle_grants_insert
+AFTER INSERT ON huddle_grants
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'HuddleGrant' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_huddle_grants_delete
+BEFORE DELETE ON huddle_grants
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'HuddleGrant' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_huddle_grants_update
+AFTER UPDATE OF id, room_id ON huddle_grants
+WHEN OLD.id IS NOT NEW.id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'HuddleGrant' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'HuddleGrant' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_events_insert
+AFTER INSERT ON events
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Event' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_events_delete
+BEFORE DELETE ON events
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Event' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_events_update
+AFTER UPDATE OF id, room_id ON events
+WHEN OLD.id IS NOT NEW.id OR OLD.room_id IS NOT NEW.room_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Event' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Event' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_agent_approvals_insert
+AFTER INSERT ON agent_approvals
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_agent_approvals_delete
+BEFORE DELETE ON agent_approvals
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_agent_approvals_update
+AFTER UPDATE OF id, agent_id ON agent_approvals
+WHEN OLD.id IS NOT NEW.id OR OLD.agent_id IS NOT NEW.agent_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_agent_budget_notices_insert
+AFTER INSERT ON agent_budget_notices
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentBudgetNotice' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_agent_budget_notices_delete
+BEFORE DELETE ON agent_budget_notices
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentBudgetNotice' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_agent_budget_notices_update
+AFTER UPDATE OF id, agent_id ON agent_budget_notices
+WHEN OLD.id IS NOT NEW.id OR OLD.agent_id IS NOT NEW.agent_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentBudgetNotice' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentBudgetNotice' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_scheduled_messages_insert
+AFTER INSERT ON scheduled_messages
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'ScheduledMessage' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_scheduled_messages_delete
+BEFORE DELETE ON scheduled_messages
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'ScheduledMessage' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_scheduled_messages_update
+AFTER UPDATE OF id, user_id ON scheduled_messages
+WHEN OLD.id IS NOT NEW.id OR OLD.user_id IS NOT NEW.user_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'ScheduledMessage' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'ScheduledMessage' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_two_factor_credentials_insert
+AFTER INSERT ON two_factor_credentials
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'TwoFactorCredential' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_two_factor_credentials_delete
+BEFORE DELETE ON two_factor_credentials
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'TwoFactorCredential' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_two_factor_credentials_update
+AFTER UPDATE OF id, user_id ON two_factor_credentials
+WHEN OLD.id IS NOT NEW.id OR OLD.user_id IS NOT NEW.user_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'TwoFactorCredential' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'TwoFactorCredential' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_sessions_insert
+AFTER INSERT ON sessions
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Session' AND ai.source_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_sessions_delete
+BEFORE DELETE ON sessions
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Session' AND ai.source_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_sessions_update
+AFTER UPDATE OF id, user_id ON sessions
+WHEN OLD.id IS NOT NEW.id OR OLD.user_id IS NOT NEW.user_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Session' AND ai.source_id = OLD.id))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'Session' AND ai.source_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_agents_insert
+AFTER INSERT ON agents
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT id FROM agent_approvals WHERE agent_id = NEW.id)) OR (ai.source_type = 'AgentBudgetNotice' AND ai.source_id IN (SELECT id FROM agent_budget_notices WHERE agent_id = NEW.id)));
+END;
+CREATE TRIGGER activity_revision_agents_delete
+BEFORE DELETE ON agents
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT id FROM agent_approvals WHERE agent_id = OLD.id)) OR (ai.source_type = 'AgentBudgetNotice' AND ai.source_id IN (SELECT id FROM agent_budget_notices WHERE agent_id = OLD.id)));
+END;
+CREATE TRIGGER activity_revision_agents_update
+AFTER UPDATE OF id, owner_id, user_id ON agents
+WHEN OLD.id IS NOT NEW.id OR OLD.owner_id IS NOT NEW.owner_id OR OLD.user_id IS NOT NEW.user_id
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT id FROM agent_approvals WHERE agent_id = OLD.id)) OR (ai.source_type = 'AgentBudgetNotice' AND ai.source_id IN (SELECT id FROM agent_budget_notices WHERE agent_id = OLD.id)))) OR (id IN (SELECT ai.user_id FROM activity_items ai WHERE (ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT id FROM agent_approvals WHERE agent_id = NEW.id)) OR (ai.source_type = 'AgentBudgetNotice' AND ai.source_id IN (SELECT id FROM agent_budget_notices WHERE agent_id = NEW.id))));
+END;
+CREATE TRIGGER activity_revision_users_insert
+AFTER INSERT ON users
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = NEW.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = NEW.id));
+END;
+CREATE TRIGGER activity_revision_users_delete
+BEFORE DELETE ON users
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE id = OLD.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = OLD.id));
+END;
+CREATE TRIGGER activity_revision_users_update
+AFTER UPDATE OF id, status, role ON users
+WHEN OLD.id IS NOT NEW.id OR OLD.status IS NOT NEW.status OR OLD.role IS NOT NEW.role
+BEGIN
+    UPDATE users SET activity_revision = activity_revision + 1
+    WHERE (id = OLD.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = OLD.id))) OR (id = NEW.id OR id IN (SELECT ai.user_id FROM activity_items ai WHERE ai.source_type = 'AgentApproval' AND ai.source_id IN (SELECT ap.id FROM agent_approvals ap JOIN agents ag ON ag.id = ap.agent_id WHERE ag.user_id = NEW.id)));
+END;
+CREATE UNIQUE INDEX "index_rooms_on_creator_id_and_client_room_id" ON "rooms" ("creator_id", "client_room_id") WHERE client_room_id IS NOT NULL;

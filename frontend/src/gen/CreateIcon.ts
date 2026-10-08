@@ -4,7 +4,7 @@
  * `POST /api/v1/admin/icons` (`accounts/icons#create`). A refusal is `Validation` with `fields`
  * among `name`, `title` and `image`.
  */
-export type CreateIcon = { name: string, title: string, 
+export type CreateIcon = { name: string, title: string,
 /**
  * The uploaded SVG or PNG (`POST /api/v1/uploads`); `null` is refused as a missing image.
  */

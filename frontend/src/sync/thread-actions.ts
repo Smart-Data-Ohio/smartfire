@@ -11,23 +11,43 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
+import { captureWorkRead } from "../store/work.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
 
 /**
+ * The latest pane load per thread. Only the latest lands: an earlier load that answers late (the
+ * newest replies the pane opened on, say, after a reload around an older reply) would otherwise
+ * replace the window the later one put in place.
+ */
+const paneLoads = new Map<number, number>();
+
+/**
  * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
- * permalink) into the pane. Errors land in the store.
+ * permalink) into the pane. Errors land in the store. A later load of the same thread supersedes
+ * this one, whose results are then dropped.
  */
 const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
+  const load = (paneLoads.get(threadId) ?? 0) + 1;
+
+  paneLoads.set(threadId, load);
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
+  const read = captureWorkRead(store.getState());
+
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(api.thread(threadId)),
+      Effect.result(
+        api
+          .thread(threadId)
+          .pipe(
+            Effect.tap((detail) => Effect.sync(() => mutations.loadThreadDetail(detail, read))),
+          ),
+      ),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -35,14 +55,17 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     { concurrency: 2 },
   );
 
+  // A later load owns the pane (and its loading state) now.
+  if (paneLoads.get(threadId) !== load) {
+    return;
+  }
+
   if (Result.isFailure(detail)) {
     mutations.setThreadPaneError(threadId, detail.failure.message);
     mutations.setThreadPageFailed(threadId);
 
     return;
   }
-
-  mutations.loadThreadDetail(detail.success);
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
@@ -128,6 +151,8 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
+  const read = captureWorkRead(store.getState());
+
   const created = yield* api.createThread(roomId, {
     parentMessageId,
     name: options.name ?? null,
@@ -140,14 +165,17 @@ export const create = Effect.fn("threads.create")(function* (
     },
   });
 
-  mutations.threadCreated(created);
+  mutations.threadCreated(created, read);
 
   return created.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  mutations.loadThreadDetail(yield* api.updateThread(threadId, body));
+  const read = captureWorkRead(store.getState());
+  const detail = yield* api.updateThread(threadId, body);
+
+  mutations.loadThreadDetail(detail, read);
 });
 
 /** Follows (`everything`), mentions-only, or leaves (`null`). */
@@ -182,8 +210,12 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
   mutations.setThreadListLoading(roomId, filter);
 
+  const read = captureWorkRead(store.getState());
+
   yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) => Effect.sync(() => mutations.loadThreadList(roomId, filter, threads))),
+    Effect.tap((threads) =>
+      Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, read)),
+    ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
 });

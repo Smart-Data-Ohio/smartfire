@@ -41,6 +41,15 @@
     max-width: 100%;
   }
 
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from its own /assets/icons/brands/ and marks body ones `icon--brand`.
+     Anchored to that local prefix, so a remote image whose URL merely contains the path (a
+     full-colour link preview, say) is never inverted. */
+  img.icon--brand,
+  img[src^="/assets/icons/brands/"] {
+    filter: var(--brand-icon-filter);
+  }
+
   input,
   button,
   textarea,

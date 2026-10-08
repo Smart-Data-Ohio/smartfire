@@ -118,6 +118,110 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/notifications",
         true,
     ),
+    // S8: making rooms. Each kind's new page opens the create dialog on that kind (the installed
+    // app's "New chat room" shortcut is the open one).
+    screen(
+        "rooms/opens#new",
+        "/rooms/opens/new",
+        "/app/rooms/new/open",
+        true,
+    ),
+    screen(
+        "rooms/closeds#new",
+        "/rooms/closeds/new",
+        "/app/rooms/new/closed",
+        true,
+    ),
+    screen(
+        "rooms/voices#new",
+        "/rooms/voices/new",
+        "/app/rooms/new/voice",
+        true,
+    ),
+    screen(
+        "rooms/stages#new",
+        "/rooms/stages/new",
+        "/app/rooms/new/stage",
+        true,
+    ),
+    screen(
+        "rooms/boards#new",
+        "/rooms/boards/new",
+        "/app/rooms/new/board",
+        true,
+    ),
+    // S8: a room's settings. The classic edit pages are one per kind, and a kind's form saved on
+    // another kind's room would convert it, so the shared settings screen falls back to the room
+    // itself. Boards keep their classic edit page until boards are ported.
+    screen("rooms#show", "/rooms/:id", "/app/r/:id/settings", true),
+    screen(
+        "rooms/opens#edit",
+        "/rooms/opens/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/closeds#edit",
+        "/rooms/closeds/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/voices#edit",
+        "/rooms/voices/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/stages#edit",
+        "/rooms/stages/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    // S8: a room's calendar, an event's page, its form and the viewer's response.
+    screen(
+        "rooms/events#index",
+        "/rooms/:room_id/events",
+        "/app/r/:room_id/events",
+        true,
+    ),
+    screen(
+        "rooms/events#new",
+        "/rooms/:room_id/events/new",
+        "/app/r/:room_id/events/new",
+        true,
+    ),
+    screen(
+        "rooms/events#show",
+        "/rooms/:room_id/events/:id",
+        "/app/r/:room_id/events/:id",
+        true,
+    ),
+    screen(
+        "rooms/events#edit",
+        "/rooms/:room_id/events/:id/edit",
+        "/app/r/:room_id/events/:id/edit",
+        true,
+    ),
+    screen(
+        "rooms/events/attendances#show",
+        "/rooms/:room_id/events/:event_id/attendance",
+        "/app/r/:room_id/events/:event_id/attendance",
+        true,
+    ),
+    // S8: "Create Fizzy card" on a message, a dialog over its room or its thread.
+    screen(
+        "rooms/fizzy/message_cards#new",
+        "/rooms/:room_id/messages/:message_id/fizzy_cards/new",
+        "/app/r/:room_id/m/:message_id/fizzy/new",
+        true,
+    ),
+    screen(
+        "rooms/fizzy/message_cards#new",
+        "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards/new",
+        "/app/r/:room_id/t/:thread_id/m/:message_id/fizzy/new",
+        true,
+    ),
     // S3: workspace destinations (plan §4.7).
     screen("activity_items#index", "/activity", "/app/activity", true),
     screen("saved_items#index", "/saved", "/app/saved", true),
@@ -127,8 +231,22 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
+    // S4: agents.
+    screen("agents/directory#index", "/agents", "/app/agents", true),
+    screen(
+        "agents/approvals#for_agent",
+        "/agents/:id/approvals",
+        "/app/agents/:id/approvals",
+        true,
+    ),
+    screen(
+        "agents/events#ledger",
+        "/agents/:id/events",
+        "/app/agents/:id/events",
+        true,
+    ),
     screen("searches#index", "/searches", "/app/search", true),
-    screen("work_threads#index", "/work", "/app/work", false),
+    screen("work_threads#index", "/work", "/app/work", true),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(
         "users/profiles#show",
@@ -199,7 +317,12 @@ pub const SCREENS: &[Screen] = &[
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
     screen("accounts#edit", "/account/edit", "/app/admin/people", true),
-    screen("accounts/icons#index", "/account/icons", "/app/admin/icons", true),
+    screen(
+        "accounts/icons#index",
+        "/account/icons",
+        "/app/admin/icons",
+        true,
+    ),
     screen(
         "accounts/custom_styles#edit",
         "/account/custom_styles/edit",
@@ -219,8 +342,18 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // S7: the chat bot pages. Their writes stay classic; only the pages move.
-    screen("accounts/bots#index", "/account/bots", "/app/admin/bots", true),
-    screen("accounts/bots#new", "/account/bots/new", "/app/admin/bots/new", true),
+    screen(
+        "accounts/bots#index",
+        "/account/bots",
+        "/app/admin/bots",
+        true,
+    ),
+    screen(
+        "accounts/bots#new",
+        "/account/bots/new",
+        "/app/admin/bots/new",
+        true,
+    ),
     screen(
         "accounts/bots#edit",
         "/account/bots/:id/edit",

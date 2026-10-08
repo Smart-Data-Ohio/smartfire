@@ -2,13 +2,15 @@
 //! `test-support` feature.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, mpsc};
+use std::time::Duration;
 
 use tokio::sync::Barrier;
 
 static AFTER_DUPLICATE_CHECK: Mutex<Option<HashMap<String, Arc<Barrier>>>> = Mutex::new(None);
 
-/// Holds every message or poll post with this `clientMessageId` after its
+/// Holds every message, poll or room post with this `clientMessageId` / `clientRoomId` after its
 /// pre-transaction duplicate lookup misses, until `posts` of them have got that far. Other posts
 /// aren't held.
 pub fn hold_after_duplicate_check(client_message_id: &str, posts: usize) {
@@ -44,6 +46,7 @@ static BEFORE_INVOLVEMENT_WRITE: Holds = Mutex::new(None);
 static BEFORE_POLL_VOTE_WRITE: Holds = Mutex::new(None);
 static BEFORE_ATTENDANCE_WRITE: Holds = Mutex::new(None);
 static BEFORE_PROFILE_READ: Holds = Mutex::new(None);
+static AFTER_APPROVAL_PAGE_READ: Holds = Mutex::new(None);
 
 fn hold(holds: &Holds, id: i64) -> WriteHold {
     let held = WriteHold {
@@ -121,4 +124,59 @@ pub fn hold_before_profile_read(user_id: i64) -> WriteHold {
 
 pub(crate) async fn before_profile_read(user_id: i64) {
     wait(&BEFORE_PROFILE_READ, user_id).await;
+}
+
+/// Holds the next approvals page for this agent after its row read, before expiry/presentation.
+pub fn hold_after_approval_page_read(agent_id: i64) -> WriteHold {
+    hold(&AFTER_APPROVAL_PAGE_READ, agent_id)
+}
+
+pub(crate) async fn after_approval_page_read(agent_id: i64) {
+    wait(&AFTER_APPROVAL_PAGE_READ, agent_id).await;
+}
+
+/// Holds one rendered sync snapshot before publication, scoped to this app's database.
+pub struct ThreadSnapshotHold {
+    pub reached: tokio::sync::oneshot::Receiver<()>,
+    pub release: mpsc::Sender<()>,
+}
+
+struct ThreadSnapshotPause {
+    reached: tokio::sync::oneshot::Sender<()>,
+    release: mpsc::Receiver<()>,
+}
+
+type ThreadSnapshotHolds = Mutex<Option<HashMap<(PathBuf, i64), ThreadSnapshotPause>>>;
+static AFTER_THREAD_SNAPSHOT: ThreadSnapshotHolds = Mutex::new(None);
+
+pub fn hold_after_thread_snapshot(database: &Path, thread_id: i64) -> ThreadSnapshotHold {
+    let (reached, ready) = tokio::sync::oneshot::channel();
+    let (release, wait) = mpsc::channel();
+    AFTER_THREAD_SNAPSHOT
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert(
+            (database.to_owned(), thread_id),
+            ThreadSnapshotPause {
+                reached,
+                release: wait,
+            },
+        );
+    ThreadSnapshotHold {
+        reached: ready,
+        release,
+    }
+}
+
+pub(crate) fn after_thread_snapshot(database: &Path, thread_id: i64) {
+    let pause = AFTER_THREAD_SNAPSHOT
+        .lock()
+        .unwrap()
+        .as_mut()
+        .and_then(|holds| holds.remove(&(database.to_owned(), thread_id)));
+    if let Some(pause) = pause {
+        pause.reached.send(()).unwrap();
+        pause.release.recv_timeout(Duration::from_secs(10)).unwrap();
+    }
 }

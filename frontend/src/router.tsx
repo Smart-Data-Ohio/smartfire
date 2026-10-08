@@ -18,8 +18,11 @@ import { IntegrationsSection as AdminIntegrationsSection } from "./features/admi
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
+import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
+import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
+import { NEW_ROOM_SLUGS } from "./features/rooms/room-forms.ts";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
@@ -43,6 +46,7 @@ import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
+import { parseWorkSearch } from "./features/work/work-search.ts";
 import { lazyForUpdate as lazy } from "./service-worker/lazy.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
@@ -121,7 +125,18 @@ const roomControlRoutes = [
   createRoute({ getParentRoute: () => roomRoute, path: "files", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
+  // The room's settings dialog (`RoomSettingsHost`), over the conversation.
+  createRoute({ getParentRoute: () => roomRoute, path: "settings", component: () => null }),
 ];
+
+/** `/app/rooms/new/<kind>`: the create-a-room dialog, opened on that kind over the home screen. */
+const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
+  createRoute({
+    getParentRoute: () => shellRoute,
+    path: `rooms/new/${kind}`,
+    component: () => <NewRoomRoute kind={kind} />,
+  }),
+);
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -170,6 +185,31 @@ const threadRoute = createRoute({
     parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
     stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
   },
+  component: () => null,
+});
+
+/** A message's id in a "Create Fizzy card" URL (not `messageId`: that would refocus the room). */
+const sourceParams = {
+  parse: ({ sourceId }: { readonly sourceId: string }) => ({ sourceId: parseId(sourceId) }),
+  stringify: ({ sourceId }: { readonly sourceId: number }) => ({ sourceId: `${sourceId}` }),
+};
+
+/**
+ * `/app/r/$roomId/m/$sourceId/fizzy/new`: the room with "Create Fizzy card" open on a message of
+ * its timeline (the classic form page); `…/t/$threadId/m/$sourceId/fizzy/new` opens it on a reply,
+ * over the thread. The room draws the dialog (features/fizzy/fizzy-card-overlay.tsx).
+ */
+const fizzyCardRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
+  component: () => null,
+});
+
+const threadFizzyCardRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
   component: () => null,
 });
 
@@ -308,6 +348,79 @@ const scheduledRoute = createRoute({
   ),
 });
 
+/** `/app/work?state=`: every work thread, by tab (its own chunk). */
+const workRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "work",
+  validateSearch: parseWorkSearch,
+  component: lazy(() =>
+    import("./features/work/work-route.tsx").then((module) => ({
+      default: module.WorkRoute,
+    })),
+  ),
+});
+
+/** `/app/agents`: every agent in the workspace, with live status (S4). */
+const agentsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents",
+  component: lazy(() =>
+    import("./features/agents/agent-directory-page.tsx").then((module) => ({
+      default: module.AgentDirectoryPage,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: an agent's profile (S4). */
+const agentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents/$agentId",
+  params: {
+    parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
+    stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
+  },
+  component: lazy(() =>
+    import("./features/agents/agent-profile-route.tsx").then((module) => ({
+      default: module.AgentProfileRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: the profile's overview section. */
+const agentOverviewRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "/",
+  component: lazy(() =>
+    import("./features/agents/agent-profile-page.tsx").then((module) => ({
+      default: module.AgentOverviewRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/approvals?status=`: an agent's approval requests (S4). */
+const agentApprovalsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "approvals",
+  validateSearch: parseApprovalsSearch,
+  component: lazy(() =>
+    import("./features/agents/agent-approvals-tab.tsx").then((module) => ({
+      default: module.AgentApprovalsRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/events?outcome=`: an agent's activity ledger (S4). */
+const agentEventsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "events",
+  validateSearch: parseLedgerSearch,
+  component: lazy(() =>
+    import("./features/agents/agent-ledger-tab.tsx").then((module) => ({
+      default: module.AgentLedgerRoute,
+    })),
+  ),
+});
+
 /** `/app/people`: the workspace's people, to message or huddle with (its own chunk). */
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -331,6 +444,50 @@ const personRoute = createRoute({
     })),
   ),
 });
+
+/** `/app/r/$roomId/events`: a room's calendar (its own chunk); `…/new` opens the form over it. */
+const eventsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events",
+  params: {
+    parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
+    stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/events-page.tsx").then((module) => ({
+      default: module.EventsRoute,
+    })),
+  ),
+});
+
+const newEventRoute = createRoute({
+  getParentRoute: () => eventsRoute,
+  path: "new",
+  component: () => null,
+});
+
+/**
+ * `/app/r/$roomId/events/$eventId`: an event's page; `…/edit` opens the form over it and
+ * `…/attendance` opens it on the viewer's response.
+ */
+const eventRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events/$eventId",
+  params: {
+    parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
+    stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/event-page.tsx").then((module) => ({
+      default: module.EventRoute,
+    })),
+  ),
+});
+
+const eventChildRoutes = [
+  createRoute({ getParentRoute: () => eventRoute, path: "edit", component: () => null }),
+  createRoute({ getParentRoute: () => eventRoute, path: "attendance", component: () => null }),
+];
 
 /** The search page's query as the URL has it. */
 interface RawSearchPageSearch {
@@ -360,11 +517,23 @@ const routeTree = rootRoute.addChildren([
     activityRoute,
     savedRoute,
     scheduledRoute,
+    workRoute,
+    agentsRoute,
+    agentRoute.addChildren([agentOverviewRoute, agentApprovalsRoute, agentEventsRoute]),
     searchRoute,
     peopleRoute,
     personRoute,
     messageRoute,
-    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute, ...roomControlRoutes]),
+    ...newRoomRoutes,
+    roomRoute.addChildren([
+      permalinkRoute,
+      fizzyCardRoute,
+      newThreadRoute,
+      threadRoute.addChildren([threadFizzyCardRoute]),
+      ...roomControlRoutes,
+    ]),
+    eventsRoute.addChildren([newEventRoute]),
+    eventRoute.addChildren(eventChildRoutes),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),

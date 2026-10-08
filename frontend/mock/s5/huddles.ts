@@ -30,7 +30,7 @@ import {
 } from "../http.ts";
 import { intField, stringField } from "../json.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { type RoomRecord, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
+import { ROOM_IDS, type RoomRecord, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 
 /** The mock's LiveKit URL: the client swaps in its fake transport for it. */
@@ -76,6 +76,9 @@ export interface HuddleControlInput {
 
 export interface Huddles {
   readonly routes: readonly Route[];
+  readonly roomRoles: (record: RoomRecord) => ReadonlyMap<number, StageRole>;
+  readonly reviseRoom: (record: RoomRecord, previousMembers: readonly number[]) => void;
+  readonly removeRoom: (record: RoomRecord) => void;
   /** Answers a huddle control, or `null` when the action isn't one of these. */
   control(action: string, input: HuddleControlInput): MockResponse | null;
 }
@@ -186,7 +189,7 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
         const seeded =
           userId === VIEWER_ID
             ? (record.membership.stageRole ?? "listener")
-            : userId === USER_IDS.priya
+            : record.room.id === ROOM_IDS.townHall && userId === USER_IDS.priya
               ? "speaker"
               : "listener";
 
@@ -770,6 +773,42 @@ export function createHuddles(ctx: S2Context, simulate: boolean): Huddles {
 
   return {
     routes,
+    roomRoles: (record) => (record.room.kind === "stage" ? stageOf(record).roles : new Map()),
+    reviseRoom(record, previousMembers) {
+      for (const userId of previousMembers) {
+        if (!record.memberIds.includes(userId)) exit(record, userId);
+      }
+
+      if (record.room.kind !== "stage") return;
+
+      const stage = stageOf(record);
+
+      for (const userId of previousMembers) {
+        if (!record.memberIds.includes(userId)) {
+          stage.roles.delete(userId);
+          stage.hands.delete(userId);
+        }
+      }
+
+      for (const userId of record.memberIds) {
+        if (!stage.roles.has(userId)) {
+          stage.roles.set(
+            userId,
+            userId === record.room.creatorId && previousMembers.length === 0 ? "host" : "listener",
+          );
+        }
+      }
+
+      record.membership = { ...record.membership, stageRole: stage.roles.get(VIEWER_ID) ?? null };
+    },
+    removeRoom(record) {
+      for (const userId of [...(calls().calls.get(record.room.id)?.keys() ?? [])]) {
+        exit(record, userId);
+      }
+
+      if (record.room.kind === "stage") endStream(record, true);
+      calls().stages.delete(record.room.id);
+    },
     control(action, input) {
       switch (action) {
         case "huddle-join": {

@@ -7,9 +7,8 @@ use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_views::rooms::{ClosedFormView, ClosedsEdit, ClosedsNew, FormRoom};
 
 use super::{
-    Scope, ensure_can_administer, ensure_permission_to_create_rooms, existing_user_ids,
-    redirect_to_room, render_shared_room, room_icon_param, room_name_param, set_room,
-    user_ids_param,
+    Scope, ensure_can_administer, ensure_permission_to_create_rooms, redirect_to_room,
+    render_shared_room, room_icon_param, room_name_param, set_room, user_ids_param,
 };
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, require_current_user};
@@ -46,25 +45,17 @@ pub async fn create(c: &mut Ctx) -> Result {
     let name = room_name_param(c)?.flatten();
     let icon = room_icon_param(c)?.flatten();
     let draft = (name.clone(), icon.clone());
-    let user_id = require_current_user(c)?.id;
     let grantee_ids = user_ids_param(c);
     // Rooms::Closed.create_for(room_params, users: grantees)
-    let room = c
-        .app()
-        .db
-        .write(move |tx| {
-            let grantees = existing_user_ids(tx.conn(), &grantee_ids)?;
-            Room::create_for_with_icon(
-                tx,
-                RoomType::Closed,
-                name.as_deref(),
-                icon.as_deref(),
-                user_id,
-                &grantees,
-                crate::rich_text::room_icon_resolves,
-            )
-        })
-        .await;
+    let room = super::operations::create(
+        c,
+        RoomType::Closed,
+        name,
+        icon,
+        require_current_user(c)?.id,
+        grantee_ids,
+    )
+    .await;
     let room = match room {
         Ok(room) => room,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -168,21 +159,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     );
     let grantee_ids = user_ids_param(c);
     // force_room_type, then `@room.update! room_params`
-    let room = c
-        .app()
-        .db
-        .write(move |tx| {
-            let mut room = room;
-            room.update_with_icon(
-                tx,
-                name.as_ref().map(|name| name.as_deref()),
-                Some(RoomType::Closed),
-                icon.as_ref().map(|icon| icon.as_deref()),
-                crate::rich_text::room_icon_resolves,
-            )?;
-            Ok(room)
-        })
-        .await;
+    let room = super::operations::update(c, room, name, icon, Some(RoomType::Closed)).await;
     let room = match room {
         Ok(room) => room,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -192,50 +169,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         Err(error) => return Err(db_error(error)),
     };
     // `@room.memberships.revise(granted: grantees, revoked: revokees)`
-    let revised = room.clone();
-    let changes = c
-        .app()
-        .db
-        .write(move |tx| {
-            let before = revised.user_ids(tx.conn())?;
-            let granted = existing_user_ids(tx.conn(), &grantee_ids)?;
-            let revoked: Vec<i64> = before
-                .iter()
-                .copied()
-                .filter(|id| !grantee_ids.contains(id))
-                .collect();
-            revised.revise(tx, &granted, &revoked)?;
-            let after = revised.user_ids(tx.conn())?;
-            let granted: Vec<_> = after
-                .into_iter()
-                .filter(|id| !before.contains(id))
-                .collect();
-            if granted.is_empty() && revoked.is_empty() {
-                return Ok(None);
-            }
-            let users = User::where_ids(
-                tx.conn(),
-                &granted.iter().chain(&revoked).copied().collect::<Vec<_>>(),
-            )?;
-            let names = |ids: &[i64]| {
-                ids.iter()
-                    .filter_map(|id| {
-                        users
-                            .iter()
-                            .find(|user| user.id == *id)
-                            .map(|user| user.name.clone())
-                    })
-                    .collect::<Vec<_>>()
-            };
-            Ok(Some(
-                serde_json::json!({"granted":names(&granted),"revoked":names(&revoked)}),
-            ))
-        })
-        .await
-        .map_err(db_error)?;
-    if let Some(changes) = changes {
-        super::audit_room(c, &room, "room.membership.change", changes).await?;
-    }
+    super::operations::revise_members(c, &room, grantee_ids).await?;
     broadcast_to_members(c, &room, true).await?;
     redirect_to_room(c, room.id)
 }
@@ -254,6 +188,10 @@ async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<
             "Missing partial users/sidebars/rooms/shared for requested format"
         )));
     }
+    broadcast(c, room, update).await
+}
+
+pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let partials = render_shared_room(c, room).await?;
     let header = if update {
         Some(super::render_shared_header(c, room).await?)

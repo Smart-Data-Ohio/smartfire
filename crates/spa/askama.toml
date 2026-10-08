@@ -1,0 +1,4 @@
+# Keep the ERB escaping used by the recorded manifest, including apostrophes.
+[[escaper]]
+path = "crate::pwa::ManifestEscaper"
+extensions = ["json"]

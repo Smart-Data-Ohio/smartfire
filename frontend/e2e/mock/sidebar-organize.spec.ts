@@ -342,6 +342,9 @@ test("notifications from the room header: mute dims the row, hide takes it out w
   await bell.click();
   await page.getByRole("menuitemradio", { name: /Muted/ }).click();
   await expect(bell).toHaveAccessibleName("Notifications: Muted");
+  await expect(page.getByRole("menu", { name: "Notifications", includeHidden: true })).toHaveCount(
+    0,
+  );
 
   await bell.click();
   await page.getByRole("menuitemradio", { name: /Hidden/ }).click();
