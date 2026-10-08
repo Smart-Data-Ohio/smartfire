@@ -2,6 +2,7 @@ import { type Effect, Layer, ManagedRuntime } from "effect";
 import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
@@ -9,13 +10,20 @@ import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
+import type { CancelEvent } from "../gen/CancelEvent.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
+import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
+import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { EventAttendance } from "../gen/EventAttendance.ts";
+import type { EventDetail } from "../gen/EventDetail.ts";
+import type { EventForm } from "../gen/EventForm.ts";
+import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
@@ -25,6 +33,11 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
+import type { RoomForm } from "../gen/RoomForm.ts";
+import type { RoomKind } from "../gen/RoomKind.ts";
+import type { RoomLeft } from "../gen/RoomLeft.ts";
+import type { RoomMutation } from "../gen/RoomMutation.ts";
+import type { RoomRemoved } from "../gen/RoomRemoved.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -32,6 +45,8 @@ import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateEvent } from "../gen/UpdateEvent.ts";
+import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
@@ -45,6 +60,7 @@ import * as activityActions from "./activity-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
+import * as eventActions from "./event-actions.ts";
 import * as fizzyActions from "./fizzy-actions.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -53,15 +69,19 @@ import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import * as roomActions from "./room-actions.ts";
 import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
+
+export type { EventPrefill };
 
 const API_BASE = "/api/v1";
 
@@ -275,6 +295,17 @@ const organize = {
     runAction(organizeActions.setInvolvement(roomId, involvement)),
 };
 
+/** Room management plumbing; readable form facts and successful writes land before resolving. */
+const rooms = {
+  newForm: (type: RoomKind): Promise<RoomForm> => runAction(roomActions.newForm(type)),
+  editForm: (roomId: number): Promise<RoomForm> => runAction(roomActions.editForm(roomId)),
+  create: (body: CreateRoom): Promise<RoomMutation> => runAction(roomActions.create(body)),
+  update: (roomId: number, body: UpdateRoom): Promise<RoomMutation> =>
+    runAction(roomActions.update(roomId, body)),
+  remove: (roomId: number): Promise<RoomRemoved> => runAction(roomActions.remove(roomId)),
+  leaveDirect: (roomId: number): Promise<RoomLeft> => runAction(roomActions.leaveDirect(roomId)),
+};
+
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
 const cards = {
   fizzyForm: (scope: FizzyMessageScope): Promise<FizzyMessageCardForm> =>
@@ -307,6 +338,60 @@ const cards = {
     runAction(cardActions.loadQuote(roomId, referenceId)),
 };
 
+/** Calendar reads and writes return current facts; failures reject with field-aware ActionError. */
+const events = {
+  list: (roomId: number): Promise<EventList> => runAction(eventActions.list(roomId)),
+  /** The new-event form, with a prefilled link's values if any. */
+  newForm: (roomId: number, prefill: EventPrefill | null = null): Promise<EventForm> =>
+    runAction(eventActions.newForm(roomId, prefill)),
+  read: (roomId: number, eventId: number): Promise<EventDetail> =>
+    runAction(eventActions.read(roomId, eventId)),
+  editForm: (roomId: number, eventId: number): Promise<EventForm> =>
+    runAction(eventActions.editForm(roomId, eventId)),
+  create: (roomId: number, body: CreateEvent): Promise<EventDetail> =>
+    runAction(eventActions.create(roomId, body)),
+  update: (roomId: number, eventId: number, body: UpdateEvent): Promise<EventDetail> =>
+    runAction(eventActions.update(roomId, eventId, body)),
+  cancel: (roomId: number, eventId: number, body: CancelEvent): Promise<EventDetail> =>
+    runAction(eventActions.cancel(roomId, eventId, body)),
+  attendance: (roomId: number, eventId: number): Promise<EventAttendance> =>
+    runAction(eventActions.attendance(roomId, eventId)),
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture = false,
+  ): Promise<EventDetail> =>
+    runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
+  /**
+   * Calls `onChange` after each applied batch that changes an event in `roomId` (see
+   * `changesRoomEvents`), and whenever the room's topic is resynced (its events since the last
+   * one were lost, so any of them might have changed the calendar), holding the room's topic
+   * meanwhile, so an open calendar screen can read itself again. Returns the stop.
+   */
+  watch(roomId: number, onChange: () => void): () => void {
+    runtime.runFork(eventActions.holdRoom(roomId));
+
+    const stopEvents = onSyncEvents((applied) => {
+      if (applied.some((event) => eventActions.changesRoomEvents(event, roomId))) {
+        onChange();
+      }
+    });
+
+    const stopResyncs = onResync((topics) => {
+      if (eventActions.resyncsRoom(topics, roomId)) {
+        onChange();
+      }
+    });
+
+    return () => {
+      stopEvents();
+      stopResyncs();
+      runtime.runFork(eventActions.releaseRoom(roomId));
+    };
+  },
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   boards: {
@@ -331,7 +416,9 @@ export const actions = {
   scheduled,
   search,
   organize,
+  rooms,
   cards,
+  events,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

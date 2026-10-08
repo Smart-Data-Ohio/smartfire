@@ -18,7 +18,7 @@ fn boot() -> Boot {
         theme: theme(Some("dark")),
         text_size: text_size(None),
         cable_url: "/cable".into(),
-        service_worker_url: Some("/app/service-worker.js".into()),
+        service_worker_url: Some("/service-worker.js".into()),
         version: "1.2.3".into(),
         flash: None,
         revision: Some("0123abc".into()),
@@ -119,7 +119,10 @@ fn built_dist_is_embedded_whole() {
         if extension == "woff2" {
             assert_eq!((file.br, file.gz), (None, None), "{}: woff2 is compressed already", file.path);
         }
-        if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
+        // The fonts' licences keep their names, so they're found beside the fonts (and revalidated).
+        if file.path.starts_with("assets/LICENSE-") {
+            assert!(!file.immutable && extension == "txt", "{}", file.path);
+        } else if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
             assert!(file.immutable, "Vite hashes every asset's name: {}", file.path);
         }
         if let Some(br) = file.br {
@@ -234,6 +237,34 @@ fn lookups_are_exact() {
     }
 }
 
+/// The SIL Open Font License travels with each font the build ships: its licence sits beside the
+/// fonts in `assets/` (vite.config.ts copies them from `frontend/src/styles/fonts`).
+#[test]
+fn built_dist_ships_each_fonts_licence() {
+    if !built() {
+        return;
+    }
+    let licences = [
+        ("inter-", "LICENSE-Inter.txt"),
+        ("jetbrains-mono-", "LICENSE-JetBrainsMono.txt"),
+        ("atkinson-hyperlegible-next-", "LICENSE-AtkinsonHyperlegibleNext.txt"),
+        ("SourceSerif4-", "LICENSE-SourceSerif4.txt"),
+    ];
+    let fonts: Vec<&File> = files().iter().filter(|file| file.path.ends_with(".woff2")).collect();
+    assert!(!fonts.is_empty(), "the build ships fonts");
+    for font in fonts {
+        let name = font.path.rsplit('/').next().unwrap_or(font.path);
+        let (_, licence) = licences
+            .iter()
+            .find(|(prefix, _)| name.starts_with(prefix))
+            .unwrap_or_else(|| panic!("{name} has no licence listed here"));
+        let path = format!("assets/{licence}");
+        let file = files().iter().find(|file| file.path == path).unwrap_or_else(|| panic!("{path} isn't in the build, beside {name}"));
+        let text = std::str::from_utf8(file.identity).expect("the licence is text");
+        assert!(text.contains("SIL Open Font License"), "{path}");
+    }
+}
+
 // --- The shell -----------------------------------------------------------------------------------
 
 #[test]
@@ -246,7 +277,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <meta name=\"turbo-visit-control\" content=\"reload\" />\n\
-         <link rel=\"manifest\" href=\"/app/manifest.webmanifest\" />\n\
+         <link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");
@@ -261,7 +292,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
             "theme": "dark",
             "textSize": "default",
             "cableUrl": "/cable",
-            "serviceWorkerUrl": "/app/service-worker.js",
+            "serviceWorkerUrl": "/service-worker.js",
             "version": "1.2.3",
             "revision": "0123abc",
         })
@@ -273,6 +304,31 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
 
     let no_placeholder = render("<html><head><title>x</title></head></html>", &boot(), "token", None);
     assert!(no_placeholder.contains("id=\"boot\">{") && no_placeholder.contains("</script>\n</head>"), "{no_placeholder}");
+}
+
+/// Every `<script>` start tag in `page`, up to its `>`.
+fn script_tags(page: &str) -> Vec<&str> {
+    page.match_indices("<script").map(|(start, _)| &page[start..start + page[start..].find('>').unwrap() + 1]).collect()
+}
+
+/// `frontend/index.html`'s own scripts (the blocking appearance initializer before the stylesheet
+/// paints, and Vite's entry) run under the enforced policy only with the nonce; so does the built
+/// dist's, when one is embedded.
+#[test]
+fn every_script_in_the_spa_page_carries_the_nonce() {
+    let source = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../frontend/index.html")).unwrap();
+    let mut pages = vec![("frontend/index.html", render(&source, &boot(), "token", Some("n0nce")))];
+    if built() {
+        pages.push(("the embedded dist", render_shell(&boot(), "token", Some("n0nce"))));
+    }
+    for (name, page) in pages {
+        let tags = script_tags(&page);
+        assert!(page.contains("smartfire.appearance"), "{name} keeps the appearance initializer: {page}");
+        assert!(tags.len() >= 3, "{name}: the boot JSON, the initializer and the entry: {tags:?}");
+        for tag in tags {
+            assert!(tag.contains(" nonce=\"n0nce\""), "{name}: {tag} runs only with the nonce");
+        }
+    }
 }
 
 #[test]

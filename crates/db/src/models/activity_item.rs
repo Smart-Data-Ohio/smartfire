@@ -6,7 +6,7 @@ mod recorder;
 mod recording_source;
 pub use recording_source::{ActivityEventType, ActivityRecordingFacts, ActivityRecordingSource, AgentBudgetNoticeActivityReader, SourceAuthorization};
 pub use recorder::ActivitySource;
-pub use access::ActivityQuery;
+pub use access::{ActivityQuery, ActivityUnread};
 
 use rusqlite::{Connection, Row, params};
 

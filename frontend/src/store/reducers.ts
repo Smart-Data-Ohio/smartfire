@@ -22,7 +22,7 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
-import { removeCategory, setDetailMembership, upsertCategory } from "./organize.ts";
+import { removeCategory, upsertCategory } from "./organize.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -70,7 +70,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
     rows[row.room.id] = row;
   }
 
-  return {
+  let next: State = {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
@@ -83,6 +83,12 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
       overlay: state.sidebar.overlay,
     },
   };
+
+  for (const row of sidebar.rows) {
+    next = setDetailRow(next, row);
+  }
+
+  return next;
 }
 
 function updateRow(state: State, roomId: number, change: (row: SidebarRow) => SidebarRow): State {
@@ -693,12 +699,54 @@ function upsertRow(state: State, row: SidebarRow): State {
   const known = state.sidebar.rows[row.room.id] !== undefined;
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;
 
+  return setDetailRow(
+    {
+      ...state,
+      sidebar: {
+        ...state.sidebar,
+        rows,
+        order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+      },
+    },
+    row,
+  );
+}
+
+/** A synced row updates cached header facts without replacing its roster or unread divider. */
+function setDetailRow(state: State, row: SidebarRow): State {
+  const loaded = state.rooms[row.room.id];
+
+  if (loaded?.detail === null || loaded?.detail === undefined) {
+    return state;
+  }
+
   return {
     ...state,
-    sidebar: {
-      ...state.sidebar,
-      rows,
-      order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+    rooms: {
+      ...state.rooms,
+      [row.room.id]: {
+        ...loaded,
+        detail: {
+          ...loaded.detail,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+      },
+    },
+  };
+}
+
+/** A successful local delete, leave, or self-removal establishes that access was revoked. */
+export function setRoomUnavailable(state: State, roomId: number): State {
+  const next = removeRow(state, roomId);
+
+  return {
+    ...next,
+    rooms: {
+      ...next.rooms,
+      [roomId]: { detail: null, status: "error", error: "This room is no longer available" },
     },
   };
 }
@@ -763,10 +811,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        next = applyActivityItem(next, event.data.item, event.data);
         break;
       case "activity.removed":
-        next = removeActivityItem(next, event.data.id, event.data.unreadCount);
+        next = removeActivityItem(next, event.data.id, event.data);
         break;
       case "scheduled.changed":
         next = applyScheduled(next, event.data);
@@ -807,7 +855,7 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = markRoomRead(next, event.data.roomId);
         break;
       case "sidebar.row.upserted":
-        next = setDetailMembership(upsertRow(next, event.data), event.data.membership);
+        next = upsertRow(next, event.data);
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);

@@ -5,9 +5,9 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, MessageCards,
-    MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory,
-    RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
+    ApprovalUpdated, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
+    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
 };
@@ -207,6 +207,10 @@ pub enum SyncPayload {
     /// On the message's conversation topic: its cards changed (see [`MessageCards`]).
     #[serde(rename = "message.cards")]
     MessageCards(MessageCards),
+    /// On `room:<id>`: an event there was scheduled, edited, cancelled or removed (see
+    /// [`EventsChanged`]). New.
+    #[serde(rename = "events.changed")]
+    EventsChanged(EventsChanged),
     /// On every active human's `user` topic: an agent's status, note, suspension or working
     /// presence changed (see [`AgentStatusChanged`]).
     #[serde(rename = "agent.status")]

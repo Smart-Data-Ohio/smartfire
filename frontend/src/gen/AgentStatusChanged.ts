@@ -15,14 +15,14 @@ import type { AgentStatus } from "./AgentStatus";
  * The client applies it to the agent's [`User::agent`] badge, its directory row and profile,
  * and the members pane.
  */
-export type AgentStatusChanged = { agentId: number, userId: number, status: AgentStatus, statusNote: string | null, statusChangedAt: string | null, suspended: boolean, 
+export type AgentStatusChanged = { agentId: number, userId: number, status: AgentStatus, statusNote: string | null, statusChangedAt: string | null, suspended: boolean,
 /**
  * What the agent says it's doing now (up to 140 characters); `null` when unset or expired.
  *
  * Filled only for a recipient who shares a room with the agent, the audience of the
  * classic members pane, the one place that shows it; `null` for everyone else.
  */
-workingPresence: string | null, 
+workingPresence: string | null,
 /**
  * When `workingPresence` lapses (5 minutes after it was set, `assign_working_presence`).
  * No event marks the lapse: the client hides the text at this time. `null` when

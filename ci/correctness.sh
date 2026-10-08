@@ -3,6 +3,20 @@ set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo"
 suite=${1:?Expected acme, browsers, drive, livekit, messaging, agents-ui, or pwa}
+head=
+if [[ -n "${CI_SOURCE_SHA:-}" ]]; then
+  if [[ ! "$CI_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "CI_SOURCE_SHA must be a full 40-character Git SHA" >&2
+    exit 1
+  fi
+  head=$(git rev-parse --verify HEAD)
+  if [[ "$head" != "$CI_SOURCE_SHA" ]]; then
+    echo "CI_SOURCE_SHA does not match checkout HEAD: expected $CI_SOURCE_SHA, got $head" >&2
+    exit 1
+  fi
+elif [[ "${2:-}" != --execute ]]; then
+  head=$(git rev-parse --verify HEAD)
+fi
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
 # deterministic slice; ci/correctness_gate.py then requires the slices' receipts to
 # cover every selected test exactly once.
@@ -22,9 +36,13 @@ ignored() {
   local filter package selection=()
   [[ -z "$shard" ]] || selection=(--shard "$shard")
   filter=$(python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}")
-  package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
-  cargo nextest run --locked -p "$package" \
-    --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
+  if [[ -n "${CORRECTNESS_ARCHIVE:-}" ]]; then
+    python3 ci/nextest_archive.py --archive "$CORRECTNESS_ARCHIVE" --repo "$repo" --filter "$filter"
+  else
+    package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
+    cargo nextest run --locked -p "$package" --build-jobs 4 \
+      --profile ci -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
+  fi
   cp target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
   python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
 }
@@ -40,6 +58,10 @@ browser_images() {
 
 run_suite() {
   python3 ci/ignored_tests.py
+  if [[ -n "${CORRECTNESS_ARCHIVE:-}" && ! -s "$CORRECTNESS_ARCHIVE" ]]; then
+    echo "Correctness archive is missing or empty: $CORRECTNESS_ARCHIVE" >&2
+    return 1
+  fi
   case "$suite" in
     acme)
       local pebble="campfire-ci-pebble-$$"
@@ -58,6 +80,10 @@ run_suite() {
       ignored
       ;;
     browsers)
+      if [[ -n "${CORRECTNESS_ARCHIVE:-}" && ! -x "$repo/target/debug/campfire" ]]; then
+        echo "Prebuilt browser server is missing: $repo/target/debug/campfire" >&2
+        return 1
+      fi
       browser_images
       if first_shard; then
         docker run --rm --init --network none --ipc host --cpus 2 \
@@ -66,7 +92,9 @@ run_suite() {
       fi
       # The paired original-assertion wrappers launch the normal server, which
       # nextest's cfg(test) harness does not build.
-      cargo build --locked -p campfire --bin campfire
+      if [[ -z "${CORRECTNESS_ARCHIVE:-}" ]]; then
+        cargo build --locked -p campfire --bin campfire
+      fi
       export WS11UI_BROWSER_BINARY="$repo/target/debug/campfire"
       export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
       ignored
@@ -81,7 +109,9 @@ run_suite() {
       browser_images
       # Start the private media server after the cold compile so its lifetime
       # and logs cover the browser run rather than several minutes of rustc.
-      cargo test --locked -p campfire --no-run -j 4
+      if [[ -z "${CORRECTNESS_ARCHIVE:-}" ]]; then
+        cargo test --locked -p campfire --no-run -j 4
+      fi
       web/bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
       web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
@@ -134,6 +164,16 @@ run_suite() {
       docker rm "$pwa_container"
       trap - EXIT
       export SPA_DIST="$repo/frontend/dist"
+      # build.rs embeds the SPA at compile time; the shared archive holds the stub, so build here.
+      unset CORRECTNESS_ARCHIVE
+      # The SPA smoke boots the actual server binary (not the test harness's router), built
+      # here with the same production dist it asserts against.
+      cargo build --locked -j 4 -p campfire --bin campfire
+      # Ordinary Rust CI exercises the stub; this job also pins built-shell/asset responses.
+      cargo nextest run --locked -p campfire --build-jobs 4 -j 4 \
+        --no-tests fail --success-output final -E 'test(url_contract_tests)'
+      export SPA_SMOKE_BINARY="$repo/target/debug/campfire"
+      export SMARTFIRE_E2E_PORT=4320
       browser_images
       export PWA_PLAYWRIGHT_IMAGE="$WS13_PLAYWRIGHT_IMAGE"
       ignored
@@ -150,11 +190,11 @@ if [[ "${2:-}" == --execute ]]; then
 fi
 status=0
 bash "$0" "$suite" --execute 2>&1 | tee "$receipts/$tag.log" || status=$?
-python3 - "$suite" "$started" "$status" "$receipts/$tag.json" "$shard" <<'PY'
-import json, subprocess, sys, time
+python3 - "$suite" "$started" "$status" "$receipts/$tag.json" "$shard" "$head" <<'PY'
+import json, sys, time
 from pathlib import Path
-suite, started, status, output, shard = sys.argv[1:]
-Path(output).write_text(json.dumps(dict(suite=suite, shard=shard or None, head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+suite, started, status, output, shard, head = sys.argv[1:]
+Path(output).write_text(json.dumps(dict(suite=suite, shard=shard or None, head=head,
                                       duration_seconds=int(time.time())-int(started), exit_code=int(status)), indent=2)+'\n')
 PY
 exit "$status"

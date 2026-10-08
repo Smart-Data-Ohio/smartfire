@@ -6,17 +6,17 @@ import type { WorkOwnerCandidate } from "./WorkOwnerCandidate";
  * `GET /api/v1/rooms/:room_id/posts/new` (`channel_threads#new` on a board): what the new-post
  * form offers. 404 unless the room is a board the viewer belongs to.
  */
-export type BoardPostForm = { 
+export type BoardPostForm = {
 /**
  * The owner picker: the board's active humans, then its active agents allowed to post
  * there, each by lower-cased name (`work_owner_candidates_for`). "Unassigned" is the
  * default.
  */
-ownerCandidates: Array<WorkOwnerCandidate>, 
+ownerCandidates: Array<WorkOwnerCandidate>,
 /**
  * The tags already used on the board, by name, for the tags field's suggestions.
  */
-tagSuggestions: Array<string>, 
+tagSuggestions: Array<string>,
 /**
  * The owner candidates' users.
  */

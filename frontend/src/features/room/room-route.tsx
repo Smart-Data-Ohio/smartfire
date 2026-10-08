@@ -11,6 +11,7 @@ import { JoinBanner } from "../huddle/call-alerts.tsx";
 import { CallView } from "../huddle/call-view.tsx";
 import { RightPane } from "../panes/right-pane.tsx";
 import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes/use-right-pane.ts";
+import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
@@ -119,6 +120,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
         )}
       </section>
       <RightPane roomId={roomId} />
+      <RoomSettingsHost roomId={roomId} />
     </div>
   );
 }

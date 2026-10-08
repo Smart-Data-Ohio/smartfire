@@ -13,6 +13,12 @@ any job in `rust.yml` is missing from their `needs`. It reports on every pull re
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
 nightly and manual runs, empty diffs and unavailable history always run everything.
 
+`Rust source` resolves the requested ref once before these jobs start. Every checkout,
+artifact name and receipt uses that full commit SHA. Its first-attempt pin is retained
+for 90 days; full reruns restore it instead of resolving a branch or tag again. A missing
+or mismatched pin fails the run and requires a new workflow dispatch. Both gates require
+source resolution to succeed even when all source-dependent suites intentionally skip.
+
 The frontend auth inputs are exceptions: `frontend/src/{auth,styles,motion}/` (including
 fonts) and `frontend/src/ui/{button,text-field,checkbox}.css` feed
 `crates/assets/build/auth.rs`; keep the scope list in `rust.yml` in sync with that script
@@ -22,26 +28,31 @@ as is `frontend/src/gen/`, checked against the Rust type export by clippy.
 | Job | Runs |
 | --- | --- |
 | `Rust seeds` | `parity/bin/frozen-seeds check`: the committed seeds in `parity/seeds/frozen` match their manifest, the test keys and this checkout's schema migrations; its unit tests prove changed, missing, added or out-of-date seeds are rejected. |
-| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (the campfire crates on Cranelift; the nightly run builds them with LLVM, `--config ci/llvm.toml`). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
-| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with the campfire crates on LLVM (`ci/llvm.toml`, the `ci-llvm` nextest profile): Cranelift can't unwind. Fails unless exactly those four ran and passed. |
+| `Rust tests (K/2)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/2`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (the campfire crates on Cranelift; the nightly run builds them with LLVM, `--config ci/llvm.toml`). Shard 1 also lists the tests these shards must run and runs `verify-ignored.sh`, against the harnesses it compiled. |
+| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with the campfire crates on LLVM (`ci/llvm.toml`, the `ci-llvm` nextest profile): Cranelift can't unwind. Lists its own expected tests after running them, with the same packages, profile and compiler settings. Fails unless exactly those four ran and passed. |
 | `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
 | `Rust clippy, binaries and doctests` | ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
 
 Correctness builds run through `ci/exec.sh`, which selects the Dockerfile's stable release
 (`RUSTUP_TOOLCHAIN`) and hides `.cargo/config.toml`, so they use the stable toolchain and LLVM
 and restore their
-own `correctness` Cargo cache (saved on main by browsers shard 2/4); the test shards' cache
+own `correctness` Cargo cache (saved on main by `Rust correctness (agents-ui)`); the test shards' cache
 holds nightly artifacts. Cargo caches hold only registry dependencies, so their keys are the
 toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves one only when
-no entry with that key exists. Every artifact upload overwrites its earlier attempt's, so a
-failed job can be re-run on its own.
+no entry with that key exists. Build and result uploads overwrite their earlier attempt's,
+so a failed job can be re-run on its own. The source pin is written only on the first attempt.
+The shared test build finishes after publishing its archive. On a main push with a cache
+miss, the agents UI job lists the full `campfire` test harness after its suite and receipt
+upload, with the archive build's stable toolchain and `ci` profile. This compiles the full
+harness dependencies without running tests, then prunes and saves the dependency cache.
+Cache maintenance does not delay the archive consumers, and pull requests skip these steps.
 
 Test and correctness jobs restore the committed seeds (`frozen-seeds restore`, through the
 setup action's `parity: seeds`); nothing in the workflow runs Ruby, Rails or a reference
 image. Test failures are retained for the summary, then explicit gates fail the job.
 No advisory correctness group remains.
 
-The correctness jobs run on main, nightly, manual workflows, and PRs that change page
+The correctness jobs run on main, nightly, manual workflows, and PRs that change page or SPA
 inputs, through the same setup action. `Rust correctness` is their aggregator: every selected
 job must succeed, each must report exit 0 for the tested commit, the shards' JUnit receipts together must
 contain exactly each suite's registered ignored tests (`correctness_gate.py`), and the
@@ -52,27 +63,52 @@ seeds), `fixtures/`, `test-support/`, `vectors/`, `ci/`, `.cargo/`, `.config/`, 
 action, `rust.yml`, Cargo manifests/lockfile, the Rust toolchain, Dockerfile/`.dockerignore`,
 and the frontend auth/dist inputs above. Shared app, session, rendering and harness inputs
 use broad directories to avoid missing indirect dependencies. Page jobs start alongside
-ordinary Rust jobs; only messaging keeps its existing host-build prerequisite. PRs without
-page inputs skip these jobs and receipt collection; the correctness gate requires those
-skips and checks the seed job against the ordinary Rust scope. Branch protection is managed
-separately by the release lead.
+ordinary Rust jobs. Browsers, Drive and LiveKit wait for their shared test build and the
+independent `Rust correctness image build`. Browsers also need the application server;
+messaging needs both its application server and paused-jobs test host. SPA-only changes
+under `frontend/` or `crates/api/` run the correctness prerequisite image build and only the
+PWA matrix slot, including the binary-backed SPA smoke test; its receipts are required by
+the correctness gate's `spa` scope. Other page jobs remain skipped for those changes.
+PRs without page or SPA inputs skip these jobs and receipt collection; the correctness gate
+requires those skips and checks the seed job against the ordinary Rust scope. Branch protection
+is managed separately by the release lead.
 
 `CORRECTNESS_SHARD=K/N` runs one deterministic slice of a suite: browsers split their
 ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behaviour
 splits whole case batches, and the Drive job runs its 45 declarations on four nextest
 threads (each holds two: an app and a pinned Chromium container). The behaviour
 shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
-behavior-check.py's own commands, and load the prerequisite image the `app` job exports
-instead of building it sixteen times.
+behavior-check.py's own commands, and load the prerequisite image its own build job exports
+instead of building it four times. All correctness suites load the same image.
+`Rust correctness test build` compiles campfire's stable/LLVM harness into a nextest archive
+once. Those suites download it and run its executables with the current workspace remapped,
+without rebuilding. Browsers also download the normal server from `Rust messaging host (app)`.
+Producers and consumers use the same default checkout path. The harness embeds compile-time
+fixture paths, so changing that layout requires rebuilding it at the consumer's path.
+Shared archives, images and app/test messaging hosts are retained for seven days.
+Missing payloads or sidecars fail with `artifacts expired; re-run all jobs` before execution.
+Re-run all jobs to rebuild expired inputs at the run's pinned SHA. The source pin retains its
+90-day lifetime. Missing executables also fail the job; there is no rebuild fallback. Local suite runs
+without `CORRECTNESS_ARCHIVE` still build their own harnesses and server.
+
+Every shared archive, server, test host and image has a JSON sidecar with its producer SHA
+and payload SHA256. Consumers verify both against their pinned checkout and downloaded bytes
+before extraction or execution. `CI_SOURCE_SHA` also binds each suite's receipt to that checkout.
+
+`test_correctness_archive.py` builds a tiny dependency-free nextest archive, deletes its
+original target, and runs it through the same `nextest_archive.py` helper as the suites.
+It checks the extracted executable path, compile-time fixture path and real JUnit receipt.
+Local discovery skips that test when nextest is absent. The shared harness build requires
+it under the pinned toolchain with `CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1`.
 
 | Job suffix | Execution |
 | --- | --- |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
-| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
+| browsers (3 shards) | Pinned Playwright image, gateway `ws` lockfile, shared normal `campfire` binary (`WS11UI_BROWSER_BINARY`) and archived test harness, then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | drive | The pinned Chromium image, then exactly the 45 ignored Drive attachment, share, sudo and event-card declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
-| pwa | The production SPA from the Dockerfile's `spa` stage, frozen Rust seed and pinned Chromium image, then the real sign-in/UI-switch registration test; attempts a real push subscription and records the browser's exact outcome. |
-| messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
+| pwa | The production SPA from the Dockerfile's `spa` stage, frozen Rust seed and pinned Chromium image: the URL contract with built assets, real sign-in/UI-switch registration and a smoke test that starts the actual binary, opens a room, sends a message and verifies it after reload. Registration attempts a real push subscription and records the browser's exact outcome. Builds its own binary and harness: the SPA is embedded at compile time, so it can't use the shared archive. |
+| messaging behaviour (4 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/4`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
@@ -109,7 +145,7 @@ docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campf
 RUNNER_TEMP=/tmp/campfire-ci bash ci/verify-ignored.sh
 RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
 # Repeat the last command for browsers, drive, pwa, livekit, messaging, and agents-ui.
-# CI's slices: CORRECTNESS_SHARD=2/4 ... correctness.sh browsers (exec.sh passes it through).
+# CI's slices: CORRECTNESS_SHARD=2/3 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
 The ignored runner uses `cargo nextest run --locked -p PACKAGE
@@ -121,7 +157,7 @@ sequence and writer-control receipts. The first test shard additionally runs `ne
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(67 correctness tests + 6 compiled utilities). This covers expanded conditional
+(68 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the

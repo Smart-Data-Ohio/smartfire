@@ -13,6 +13,7 @@ import {
   sidebarRowFixture,
   userFixture,
 } from "../api/testing.ts";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
@@ -22,12 +23,16 @@ import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
+import * as activity from "./activity-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
+import * as roomActions from "./room-actions.ts";
+import { invalidateRoom, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
+import { onResync } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
@@ -117,6 +122,31 @@ function typingFrames(sent: readonly ClientFrame[]) {
   );
 }
 
+const activityItem: ActivityItem = {
+  id: 40,
+  eventType: "mention",
+  state: "unread",
+  readAt: null,
+  handledAt: null,
+  createdAt: "2026-10-06T09:00:00Z",
+  updatedAt: "2026-10-06T09:00:00Z",
+  source: {
+    sourceType: "message",
+    sourceId: 900,
+    roomId: 12,
+    threadId: null,
+    messageId: 900,
+    eventId: null,
+    creatorId: 8,
+    title: "general",
+    body: "@you have a look?",
+    occurredAt: "2026-10-06T09:00:00Z",
+    approvalStatus: null,
+    budgetCap: null,
+    path: "/rooms/12/@900",
+  },
+};
+
 const unreadCount = (roomId: number) => store.getState().sidebar.rows[roomId]?.unreadCount;
 
 const timelineIds = (roomId: number) => store.getState().timelines[roomId]?.ids;
@@ -128,6 +158,422 @@ beforeEach(() => {
 });
 
 describe("reconnecting", () => {
+  it.effect("retains a confirmed read interrupted while the socket reconnects", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const firstStarted = yield* Deferred.make<void>();
+        const secondStarted = yield* Deferred.make<void>();
+        const secondRelease = yield* Deferred.make<void>();
+        const secondItem = { ...activityItem, id: 41 };
+
+        const read: ActivityItem = {
+          ...activityItem,
+          state: "read",
+          readAt: "2026-10-06T09:01:00Z",
+          updatedAt: "2026-10-06T09:01:00Z",
+        };
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        mutations.landActivityPage(
+          "all",
+          "unread",
+          {
+            items: [activityItem, secondItem],
+            users: [],
+            unreadCount: 5,
+            unreadRevision: 1,
+            nextCursor: null,
+          },
+          "replace",
+        );
+        yield* fake.route("PATCH /activity/40", () =>
+          Deferred.succeed(firstStarted, undefined).pipe(Effect.andThen(Effect.never)),
+        );
+        yield* fake.route("PATCH /activity/41", () =>
+          Deferred.succeed(secondStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(secondRelease)),
+            Effect.andThen(Effect.fail(new NetworkError({ message: "Connection lost" }))),
+          ),
+        );
+        const first = yield* Effect.forkChild(activity.setState(40, "read"));
+
+        yield* Deferred.await(firstStarted);
+        expect(store.getState().activity.unreadCount).toBe(4);
+        const second = yield* Effect.forkChild(Effect.exit(activity.setState(41, "read")));
+
+        yield* Deferred.await(secondStarted);
+        expect(store.getState().activity.unreadCount).toBe(3);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "activity.item",
+          data: { item: read, unreadCount: 4, unreadRevision: 2 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(3);
+        yield* socket.drop;
+        yield* Fiber.interrupt(first);
+        expect(store.getState().activity.unreadCount).toBe(3);
+        expect(store.getState().activity.items[40]).toEqual(read);
+
+        // The welcome abandons B's unconfirmed optimism and installs A's authoritative count.
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 4, unreadRevision: 2 });
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(11, true);
+        expect(store.getState().activity.unreadCount).toBe(4);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+        expect(store.getState().activity.items[40]).toEqual(read);
+        expect(store.getState().activity.items[41]).toBe(secondItem);
+        yield* Deferred.succeed(secondRelease, undefined);
+        expect((yield* Fiber.join(second))._tag).toBe("Failure");
+        expect(store.getState().activity.unreadCount).toBe(4);
+        expect(store.getState().activity.items[40]).toEqual(read);
+      }),
+    ),
+  );
+
+  it.effect("processes replay and live events after a reconnect count refresh times out", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const cancelled = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Effect.never),
+            Effect.ensuring(Deferred.succeed(cancelled, undefined)),
+          ),
+        );
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(11, true);
+        yield* Deferred.await(started);
+        yield* pushEvents(
+          {
+            seq: 11,
+            topic: "user",
+            type: "activity.item",
+            data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+          },
+          unreadEvent(12),
+        );
+        expect(store.getState().activity.unreadCount).toBe(6);
+        yield* TestClock.adjust("15 seconds");
+        yield* settle;
+        expect(store.getState().activity.unreadCount).toBe(6);
+        expect(store.getState().activity.items[40]).toEqual(activityItem);
+        expect(unreadCount(12)).toBe(1);
+        expect(yield* Deferred.isDone(cancelled)).toBe(true);
+        yield* pushEvents({
+          seq: 13,
+          topic: "user",
+          type: "activity.item",
+          data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(7);
+        expect(store.getState().activity.items[41]).toBeDefined();
+      }),
+    ),
+  );
+
+  for (const resumed of [true, false]) {
+    it.effect(
+      `processes frames while the reconnect count refresh is pending (resumed=${resumed})`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            yield* serve([]);
+            const fake = yield* FakeApi;
+            const socket = yield* MemorySocket;
+            const started = yield* Deferred.make<void>();
+            const release = yield* Deferred.make<void>();
+
+            yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+            yield* startEngine;
+            yield* welcome(10, false);
+            yield* fake.route("GET /activity/unread_count", () =>
+              Deferred.succeed(started, undefined).pipe(
+                Effect.andThen(Deferred.await(release)),
+                Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+              ),
+            );
+            yield* socket.drop;
+            yield* TestClock.adjust("250 millis");
+            yield* welcome(11, resumed);
+            yield* Deferred.await(started);
+            yield* pushEvents(
+              {
+                seq: 12,
+                topic: "user",
+                type: "activity.item",
+                data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+              },
+              unreadEvent(13),
+            );
+            expect(store.getState().activity.unreadCount).toBe(6);
+            expect(store.getState().activity.items[40]).toEqual(activityItem);
+            expect(unreadCount(12)).toBe(1);
+            yield* pushEvents({
+              seq: 14,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+            });
+            expect(store.getState().activity.unreadCount).toBe(7);
+            expect(yield* Deferred.isDone(release)).toBe(false);
+            yield* Deferred.succeed(release, undefined);
+            yield* settle;
+            expect(store.getState().activity.unreadCount).toBe(7);
+          }),
+        ),
+    );
+  }
+
+  it.effect("ignores replay coverage from a count refresh in an old generation", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ unreadCount: 9, unreadRevision: 3 }),
+          ),
+        );
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(100, true);
+        yield* Deferred.await(started);
+        yield* socket.drop;
+        yield* TestClock.adjust("500 millis");
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
+        yield* welcome(10, false, "e2");
+        expect(store.getState().activity.unreadCount).toBe(2);
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+        expect(store.getState().activity.unreadCount).toBe(2);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "activity.item",
+          data: { item: activityItem, unreadCount: 3, unreadRevision: 2 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(3);
+        expect(store.getState().activity.items[40]).toEqual(activityItem);
+      }),
+    ),
+  );
+
+  for (const resumed of [true, false]) {
+    it.effect(`reconciles a stalled read on a same-epoch reconnect (resumed=${resumed})`, () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* serve([]);
+          const fake = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* startEngine;
+          yield* welcome(10, false);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 5,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* fake.route("PATCH /activity/40", () =>
+            Deferred.succeed(started, undefined).pipe(
+              Effect.andThen(Deferred.await(release)),
+              Effect.as({
+                item: {
+                  ...activityItem,
+                  state: "read",
+                  readAt: "2026-10-06T09:01:00Z",
+                  updatedAt: "2026-10-06T09:01:00Z",
+                },
+                unreadCount: 4,
+                unreadRevision: 2,
+              }),
+            ),
+          );
+          const changing = yield* Effect.forkChild(activity.setState(40, "read"));
+
+          yield* Deferred.await(started);
+          expect(store.getState().activity.unreadCount).toBe(4);
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 3 });
+          yield* activity.loadUnreadCount();
+          expect(store.getState().activity.unreadCount).toBe(4);
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(11, resumed);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.pendingUnread).toEqual({});
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+          expect(activityListOf(store.getState(), "all", "unread").stale).toBe(true);
+          const versions = store.getState().activity.versions;
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* activity.loadUnreadCount();
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.versions).toBe(versions);
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(changing);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+        }),
+      ),
+    );
+  }
+
+  for (const kind of ["page", "tokenless mutation"] as const) {
+    it.effect(`fences an old ${kind} on reconnect without pending reads`, () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* serve([]);
+          const fake = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const started = yield* Deferred.make<void>();
+          const release = yield* Deferred.make<void>();
+
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+          yield* startEngine;
+          yield* welcome(10, false);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 5,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+
+          const oldItem = { ...activityItem, updatedAt: "2026-10-06T09:01:00Z" };
+
+          const hold = Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+          );
+
+          if (kind === "page") {
+            yield* fake.route("GET /activity", () =>
+              hold.pipe(
+                Effect.as({
+                  items: [oldItem],
+                  users: [],
+                  unreadCount: 5,
+                  unreadRevision: 2,
+                  nextCursor: null,
+                }),
+              ),
+            );
+          } else {
+            yield* fake.route("PATCH /activity/40", () =>
+              hold.pipe(
+                Effect.as({
+                  item: oldItem,
+                  unreadCount: 5,
+                  unreadRevision: 2,
+                }),
+              ),
+            );
+          }
+
+          const oldRequest = yield* Effect.forkChild(
+            kind === "page"
+              ? activity.load("all", "unread")
+              : activity.setState(40, "unhandled").pipe(Effect.asVoid),
+          );
+
+          yield* Deferred.await(started);
+          expect(store.getState().activity.pendingUnread).toEqual({});
+          yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
+          yield* socket.drop;
+          yield* TestClock.adjust("250 millis");
+          yield* welcome(11, true);
+          yield* pushEvents({
+            seq: 12,
+            topic: "user",
+            type: "activity.item",
+            data: {
+              item: { ...activityItem, id: 41, updatedAt: "2026-10-06T09:02:00Z" },
+              unreadCount: 6,
+              unreadRevision: 3,
+            },
+          });
+          expect(activityListOf(store.getState(), "all", "unread").ids).toEqual([41, 40]);
+          yield* Deferred.succeed(release, undefined);
+          yield* Fiber.join(oldRequest);
+          expect(activityListOf(store.getState(), "all", "unread").ids).toEqual([41, 40]);
+          expect(store.getState().activity.items[40]).toBe(activityItem);
+          expect(store.getState().activity.unreadCount).toBe(6);
+          expect(activityListOf(store.getState(), "all", "unread").stale).toBe(true);
+        }),
+      ),
+    );
+  }
+
+  it.effect("replaces a fenced count request on a resumed reconnect without pending reads", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+          ),
+        );
+        const oldRequest = yield* Effect.forkChild(activity.loadUnreadCount());
+
+        yield* Deferred.await(started);
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 7, unreadRevision: 3 });
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(10, true);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+        expect(store.getState().activity.unreadCount).toBe(7);
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(oldRequest);
+        expect(store.getState().activity.unreadCount).toBe(7);
+      }),
+    ),
+  );
+
   it.effect("waits 250 ms, doubling to a 30 s cap; a minute online resets the backoff", () =>
     withSync(
       Effect.gen(function* () {
@@ -336,6 +782,333 @@ describe("resuming", () => {
     }),
   );
 
+  it.effect("excludes activity items and removals already covered by the initial snapshot", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 2,
+              unreadRevision: 2,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+          yield* startEngine;
+          yield* welcome(43, true);
+          yield* pushEvents(
+            {
+              seq: 41,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 0 },
+            },
+            {
+              seq: 42,
+              topic: "user",
+              type: "activity.removed",
+              data: { id: 40, unreadCount: 1, unreadRevision: 1 },
+            },
+          );
+
+          expect(store.getState().activity.items[40]).toBeDefined();
+          expect(store.getState().activity.items[41]).toBeUndefined();
+          expect(store.getState().activity.unreadCount).toBe(2);
+
+          yield* pushEvents(
+            {
+              seq: 44,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 3, unreadRevision: 3 },
+            },
+            {
+              seq: 45,
+              topic: "user",
+              type: "activity.removed",
+              data: { id: 40, unreadCount: 2, unreadRevision: 4 },
+            },
+          );
+
+          expect(store.getState().activity.items[40]).toBeUndefined();
+          expect(store.getState().activity.items[41]).toBeDefined();
+          expect(store.getState().activity.serverUnread).toEqual({
+            unreadCount: 2,
+            unreadRevision: 4,
+          });
+        }),
+      );
+    }),
+  );
+
+  it.effect("applies activity replay counts when the initial count refresh fails", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          mutations.landActivityPage(
+            "all",
+            "unread",
+            {
+              items: [activityItem],
+              users: [],
+              unreadCount: 1,
+              unreadRevision: 1,
+              nextCursor: null,
+            },
+            "replace",
+          );
+          yield* api.route("GET /activity/unread_count", () =>
+            Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+          );
+          yield* startEngine;
+          yield* welcome(41, true);
+          yield* pushEvents({
+            seq: 41,
+            topic: "user",
+            type: "activity.item",
+            data: {
+              item: {
+                ...activityItem,
+                state: "read",
+                readAt: "2026-10-06T10:00:00Z",
+                updatedAt: "2026-10-06T10:00:00Z",
+              },
+              unreadCount: 0,
+              unreadRevision: 2,
+            },
+          });
+
+          expect(store.getState().activity.items[40]?.state).toBe("read");
+          expect(store.getState().activity.serverUnread).toEqual({
+            unreadCount: 0,
+            unreadRevision: 2,
+          });
+        }),
+      );
+    }),
+  );
+
+  for (const refreshFails of [false, true]) {
+    it.effect(
+      `accepts a LOWER activity revision after a restore when refresh ${refreshFails ? "fails" : "succeeds"}`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            const api = yield* FakeApi;
+            const socket = yield* MemorySocket;
+
+            yield* serve([]);
+            yield* api.reply("GET /activity/unread_count", { unreadCount: 8, unreadRevision: 100 });
+            yield* startEngine;
+            yield* welcome(10, false);
+            expect(store.getState().activity.unreadCount).toBe(8);
+
+            yield* socket.drop;
+            yield* TestClock.adjust(250);
+
+            if (refreshFails) {
+              yield* api.route("GET /activity/unread_count", () =>
+                Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+              );
+            } else {
+              yield* api.reply("GET /activity/unread_count", {
+                unreadCount: 2,
+                unreadRevision: 50,
+              });
+            }
+
+            yield* welcome(0, false, "restored");
+            expect(store.getState().activity.unreadCount).toBe(refreshFails ? 8 : 2);
+            yield* pushEvents({
+              seq: 1,
+              topic: "user",
+              type: "activity.item",
+              data: { item: activityItem, unreadCount: 3, unreadRevision: 51 },
+            });
+
+            expect(store.getState().activity.serverUnread).toEqual({
+              unreadCount: 3,
+              unreadRevision: 51,
+            });
+          }),
+        ),
+    );
+
+    it.effect(
+      `accepts activity events after an epoch restart when refresh ${refreshFails ? "fails" : "succeeds"}`,
+      () =>
+        Effect.gen(function* () {
+          sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+          yield* withSync(
+            Effect.gen(function* () {
+              const api = yield* FakeApi;
+              const socket = yield* MemorySocket;
+
+              yield* serve([]);
+              yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 2 });
+              yield* startEngine;
+              yield* welcome(43, true);
+              yield* socket.drop;
+              yield* TestClock.adjust(250);
+
+              if (refreshFails) {
+                yield* api.route("GET /activity/unread_count", () =>
+                  Effect.fail(new ServerError({ status: 500, message: "Count unavailable" })),
+                );
+              }
+
+              yield* welcome(0, false, "e2");
+              yield* pushEvents({
+                seq: 1,
+                topic: "user",
+                type: "activity.item",
+                data: { item: activityItem, unreadCount: 3, unreadRevision: 3 },
+              });
+
+              expect(store.getState().activity.items[40]).toBeDefined();
+              expect(store.getState().activity.serverUnread).toEqual({
+                unreadCount: 3,
+                unreadRevision: 3,
+              });
+            }),
+          );
+        }),
+    );
+  }
+
+  for (const kind of ["count GET", "page", "mutation"] as const) {
+    for (const beforeSnapshot of [true, false]) {
+      it.effect(
+        `fences an old ${kind} ${beforeSnapshot ? "before" : "after"} the restored count snapshot`,
+        () =>
+          withSync(
+            Effect.gen(function* () {
+              const api = yield* FakeApi;
+              const socket = yield* MemorySocket;
+              const oldStarted = yield* Deferred.make<void>();
+              const oldRelease = yield* Deferred.make<void>();
+              const freshStarted = yield* Deferred.make<void>();
+              const freshRelease = yield* Deferred.make<void>();
+
+              yield* serve([]);
+              yield* api.reply("GET /activity/unread_count", {
+                unreadCount: 8,
+                unreadRevision: 100,
+              });
+              yield* startEngine;
+              yield* welcome(10, false);
+              mutations.landActivityPage(
+                "all",
+                "unread",
+                {
+                  items: [activityItem],
+                  users: [],
+                  unreadCount: 8,
+                  unreadRevision: 100,
+                  nextCursor: null,
+                },
+                "replace",
+              );
+
+              const oldCount = { unreadCount: 9, unreadRevision: 101 };
+
+              const oldItem: ActivityItem = {
+                ...activityItem,
+                state: "read",
+                readAt: "2026-10-06T10:00:00Z",
+                updatedAt: "2026-10-06T10:00:00Z",
+              };
+
+              const hold = Deferred.succeed(oldStarted, undefined).pipe(
+                Effect.andThen(Deferred.await(oldRelease)),
+              );
+
+              if (kind === "count GET") {
+                yield* api.route("GET /activity/unread_count", () =>
+                  hold.pipe(Effect.as(oldCount)),
+                );
+              } else if (kind === "page") {
+                yield* api.route("GET /activity", () =>
+                  hold.pipe(
+                    Effect.as({ ...oldCount, items: [oldItem], users: [], nextCursor: null }),
+                  ),
+                );
+              } else {
+                yield* api.route("PATCH /activity/40", () =>
+                  hold.pipe(Effect.as({ ...oldCount, item: oldItem })),
+                );
+              }
+
+              const requests = {
+                "count GET": activity.loadUnreadCount().pipe(Effect.asVoid),
+                page: activity.load("all", "unread"),
+                mutation: activity.setState(40, "read").pipe(Effect.asVoid),
+              };
+
+              const oldRequest = yield* Effect.forkChild(requests[kind]);
+
+              yield* Deferred.await(oldStarted);
+              yield* api.route("GET /activity/unread_count", () =>
+                Deferred.succeed(freshStarted, undefined).pipe(
+                  Effect.andThen(Deferred.await(freshRelease)),
+                  Effect.as({ unreadCount: 2, unreadRevision: 50 }),
+                ),
+              );
+              yield* socket.drop;
+              yield* TestClock.adjust(250);
+              yield* welcome(0, false, "restored");
+              yield* Deferred.await(freshStarted);
+
+              if (beforeSnapshot) {
+                yield* Deferred.succeed(oldRelease, undefined);
+                yield* Fiber.join(oldRequest);
+                expect(store.getState().activity.unreadCount).toBe(8);
+              }
+
+              yield* Deferred.succeed(freshRelease, undefined);
+              yield* settle;
+              expect(store.getState().activity.unreadCount).toBe(2);
+              yield* api.reply("GET /activity", {
+                items: [activityItem],
+                users: [],
+                unreadCount: 2,
+                unreadRevision: 50,
+                nextCursor: null,
+              });
+              yield* activity.load("all", "unread");
+
+              if (!beforeSnapshot) {
+                yield* Deferred.succeed(oldRelease, undefined);
+                yield* Fiber.join(oldRequest);
+              }
+
+              expect(store.getState().activity.items[40]?.state).toBe("unread");
+              expect(store.getState().activity.serverUnread).toEqual({
+                unreadCount: 2,
+                unreadRevision: 50,
+              });
+            }),
+          ),
+      );
+    }
+  }
+
   it.effect("applies replays normally on a later reconnect", () =>
     Effect.gen(function* () {
       sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
@@ -357,7 +1130,9 @@ describe("resuming", () => {
           yield* welcome(42, true);
           yield* pushEvents(unreadEvent(41), unreadEvent(42));
 
-          expect((yield* api.requests).length).toBe(before);
+          expect((yield* api.requests).slice(before)).toEqual([
+            { method: "GET", path: "/activity/unread_count" },
+          ]);
           expect(unreadCount(12)).toBe(2);
         }),
       );
@@ -427,15 +1202,44 @@ describe("resync", () => {
 
         yield* welcome(1, false, "e2");
 
-        expect((yield* api.requests).slice(before)).toEqual([
-          { method: "GET", path: "/sidebar" },
-          { method: "GET", path: "/activity/unread_count" },
-          { method: "GET", path: "/rooms/12/messages" },
-        ]);
+        const requests = (yield* api.requests).slice(before);
+
+        expect(requests).toHaveLength(4);
+        expect(requests).toEqual(
+          expect.arrayContaining([
+            { method: "GET", path: "/sidebar" },
+            { method: "GET", path: "/activity/unread_count" },
+            { method: "GET", path: "/rooms/12" },
+            { method: "GET", path: "/rooms/12/messages" },
+          ]),
+        );
         expect(timelineIds(12)).toEqual([1, 2, 3]);
         expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
           JSON.stringify({ epoch: "e2", seq: 1 }),
         );
+      }),
+    ),
+  );
+
+  it.effect("tells features the topics it resyncs, on a fresh welcome and a resync frame", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const told: (readonly string[])[] = [];
+        const stop = onResync((topics) => told.push(topics));
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        stop();
+
+        expect(told).toEqual([["user"], ["user", "room:12"], ["room:12"]]);
       }),
     ),
   );
@@ -461,6 +1265,7 @@ describe("resync", () => {
         yield* settle;
 
         expect((yield* api.requests).slice(before)).toEqual([
+          { method: "GET", path: "/rooms/12" },
           { method: "GET", path: "/rooms/12/messages" },
         ]);
         expect(timelineIds(12)).toEqual([1, 2]);
@@ -1210,13 +2015,14 @@ describe("resync", () => {
     ),
   );
 
-  it.effect("fetches nothing when the server resumes", () =>
+  it.effect("refreshes only the activity count when the server resumes", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
         const api = yield* FakeApi;
 
         yield* serve([]);
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
         yield* startEngine;
         yield* welcome(5, false);
 
@@ -1224,9 +2030,13 @@ describe("resync", () => {
 
         yield* socket.drop;
         yield* TestClock.adjust(250);
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 6, unreadRevision: 2 });
         yield* welcome(9, true);
 
-        expect((yield* api.requests).length).toBe(before);
+        expect((yield* api.requests).slice(before)).toEqual([
+          { method: "GET", path: "/activity/unread_count" },
+        ]);
+        expect(store.getState().activity.unreadCount).toBe(6);
       }),
     ),
   );
@@ -1594,30 +2404,8 @@ describe("people", () => {
           type: "activity.item",
           data: {
             unreadCount: 1,
-            item: {
-              id: 40,
-              eventType: "mention",
-              state: "unread",
-              readAt: null,
-              handledAt: null,
-              createdAt: "2026-10-06T09:00:00Z",
-              updatedAt: "2026-10-06T09:00:00Z",
-              source: {
-                sourceType: "message",
-                sourceId: 900,
-                roomId: 12,
-                threadId: null,
-                messageId: 900,
-                eventId: null,
-                creatorId: 8,
-                title: "general",
-                body: "@you have a look?",
-                occurredAt: "2026-10-06T09:00:00Z",
-                approvalStatus: null,
-                budgetCap: null,
-                path: "/rooms/12/@900",
-              },
-            },
+            unreadRevision: 1,
+            item: activityItem,
           },
         });
 
@@ -1651,13 +2439,13 @@ describe("activity follows the room list", () => {
     const api = yield* FakeApi;
 
     yield* serve([]);
-    yield* api.reply("GET /activity/unread_count", { unreadCount: 2 });
+    yield* api.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
     yield* startEngine;
     yield* welcome(0, false);
     mutations.landActivityPage(
       "all",
       "unread",
-      { items: [], users: [], unreadCount: 2, nextCursor: null },
+      { items: [], users: [], unreadCount: 2, unreadRevision: 1, nextCursor: null },
       "replace",
     );
   });
@@ -1675,7 +2463,7 @@ describe("activity follows the room list", () => {
 
         expect(unreadListStale()).toBe(false);
 
-        yield* api.reply("GET /activity/unread_count", { unreadCount: 5 });
+        yield* api.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 2 });
         yield* pushEvents(
           rowEvent(1, sidebarRowFixture(30, "design")),
           rowEvent(2, sidebarRowFixture(31, "ops")),
@@ -1723,6 +2511,456 @@ describe("activity follows the room list", () => {
   );
 });
 
+describe("room management refresh", () => {
+  const loaded = Effect.gen(function* () {
+    yield* serve([]);
+    yield* startEngine;
+    yield* welcome(0, false);
+    yield* session.openRoom(12, null);
+  });
+
+  const changed = (seq: number, roomId = 12): SyncEvent => ({
+    seq,
+    topic: "user",
+    type: "sidebar.row.upserted",
+    data: { ...sidebarRowFixture(roomId, "Edited room"), refreshRoom: true },
+  });
+
+  it.effect(
+    "refreshes loaded roster facts once per flagged batch and ignores ordinary hot rows",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const before = (yield* api.requests).length;
+          let reloads = 0;
+
+          const unsubscribe = onRoomRefresh(12, () => {
+            reloads++;
+          });
+
+          yield* api.reply("GET /rooms/12", {
+            ...roomDetailFixture(12),
+            memberCount: 8,
+            memberPreviewIds: [7, 8],
+          });
+          yield* pushEvents(changed(1), changed(2), changed(3, 30));
+
+          expect(
+            (yield* api.requests).slice(before).filter((request) => request.path === "/rooms/12"),
+          ).toHaveLength(1);
+          expect(
+            (yield* api.requests).slice(before).some((request) => request.path === "/rooms/30"),
+          ).toBe(false);
+          expect(store.getState().rooms[12]?.detail).toMatchObject({
+            memberCount: 8,
+            memberPreviewIds: [7, 8],
+            displayName: "Edited room",
+          });
+          expect(reloads).toBe(1);
+
+          const after = (yield* api.requests).length;
+
+          yield* pushEvents({
+            seq: 4,
+            topic: "user",
+            type: "sidebar.row.upserted",
+            data: { ...sidebarRowFixture(12, "Edited room"), unreadCount: 2 },
+          });
+
+          expect(
+            (yield* api.requests).slice(after).some((request) => request.path === "/rooms/12"),
+          ).toBe(false);
+          expect(reloads).toBe(1);
+          unsubscribe();
+          invalidateRoom(12);
+          expect(reloads).toBe(1);
+        }),
+      ),
+  );
+
+  it.effect("doesn't let a save that was on its way during a resync bring back a lost room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+
+        // The save is sent, then its reply is held until after the reconnect.
+        yield* api.route("PATCH /rooms/12", () => Deferred.await(release).pipe(Effect.as(stale)));
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+
+        // Meanwhile the viewer is removed; the server can't resume, so the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/12", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        const before = (yield* api.requests).length;
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect((yield* api.requests).slice(before)).toContainEqual({
+          method: "GET",
+          path: "/rooms/12",
+        });
+      }),
+    ),
+  );
+
+  it.effect(
+    "a repair read's NotFound that beats a pending resync leaves the resync to clear the room",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const releaseSave = yield* Deferred.make<void>();
+          const releaseRepair = yield* Deferred.make<void>();
+          const releaseResync = yield* Deferred.make<void>();
+          const row = sidebarRowFixture(12, "general");
+          const stale = { room: row.room, detail: roomDetailFixture(12), row };
+          const gone = new NotFound({ message: "gone" });
+          let reads = 0;
+
+          yield* api.route("PATCH /rooms/12", () =>
+            Deferred.await(releaseSave).pipe(Effect.as(stale)),
+          );
+          // The save's repair read and the resync's read both find the room deleted, each held.
+          yield* api.route("GET /rooms/12", () => {
+            reads += 1;
+
+            if (reads === 1)
+              return Deferred.await(releaseRepair).pipe(Effect.andThen(Effect.fail(gone)));
+
+            if (reads === 2)
+              return Deferred.await(releaseResync).pipe(Effect.andThen(Effect.fail(gone)));
+
+            return Effect.fail(gone);
+          });
+
+          const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+          yield* settle;
+          invalidateRoom(12);
+          yield* Deferred.succeed(releaseSave, undefined);
+          yield* settle;
+          expect(reads).toBe(1);
+
+          // Reconnect: the sidebar no longer lists the room, and its resync read is on its way.
+          yield* api.reply("GET /sidebar", sidebarFixture([]));
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(1, false, "e2");
+          expect(reads).toBe(2);
+
+          // The repair's NotFound arrives first: it's older than the snapshot, so it's dropped.
+          yield* Deferred.succeed(releaseRepair, undefined);
+          yield* Fiber.join(saving);
+          yield* settle;
+
+          // The resync's own NotFound still counts, and clears the room.
+          yield* Deferred.succeed(releaseResync, undefined);
+          yield* settle;
+
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          expect(reads).toBe(2);
+        }),
+      ),
+  );
+
+  it.effect("drops a repair read that was on its way during a resync", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const releaseSave = yield* Deferred.make<void>();
+        const releaseRepair = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const stale = { room: row.room, detail: roomDetailFixture(12), row };
+        let reads = 0;
+
+        yield* api.route("PATCH /rooms/12", () =>
+          Deferred.await(releaseSave).pipe(Effect.as(stale)),
+        );
+        // The save's repair read is held across the resync; later reads find the room gone.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Deferred.await(releaseRepair).pipe(Effect.as(roomDetailFixture(12)))
+            : Effect.fail(new NotFound({ message: "gone" }));
+        });
+
+        const saving = yield* Effect.forkChild(roomActions.update(12, { type: "open" }));
+
+        yield* settle;
+        // A management change lands while the save is on its way: its reply is superseded.
+        invalidateRoom(12);
+        yield* Deferred.succeed(releaseSave, undefined);
+        yield* settle;
+        expect(reads).toBe(1);
+
+        // While the repair read is held, the viewer loses the room and the client resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        yield* Deferred.succeed(releaseRepair, undefined);
+        yield* Fiber.join(saving);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("doesn't land a create that was on its way during a resync over the snapshot", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const release = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(40, "launch");
+        const made = { room: row.room, detail: roomDetailFixture(40), row };
+
+        yield* api.route("POST /rooms", () => Deferred.await(release).pipe(Effect.as(made)));
+
+        const creating = yield* Effect.forkChild(
+          roomActions.create({ type: "open", name: "launch", iconName: null, clientRoomId: "k1" }),
+        );
+
+        yield* settle;
+
+        // The snapshot doesn't list the new room: by then the viewer has lost it again.
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/40", () => Effect.fail(new NotFound({ message: "gone" })));
+        yield* socket.drop;
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(creating);
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[40]).toBeUndefined();
+        expect(store.getState().rooms[40]?.detail).toBeNull();
+      }),
+    ),
+  );
+
+  it.effect("refreshes a hidden row without revoking its still-readable room", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+
+        yield* api.reply("GET /rooms/12", { ...roomDetailFixture(12), memberCount: 5 });
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 12, refreshRoom: true },
+        });
+
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(5);
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+      }),
+    ),
+  );
+
+  it.effect("drops an older pending roster response after a newer management change", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const oldReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+        let requests = 0;
+
+        yield* api.route("GET /rooms/12", () =>
+          ++requests === 1
+            ? Deferred.await(oldReply)
+            : Effect.succeed({ ...roomDetailFixture(12), memberCount: 9 }),
+        );
+        yield* pushEvents(changed(1));
+        yield* pushEvents(changed(2));
+
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+        yield* Deferred.succeed(oldReply, { ...roomDetailFixture(12), memberCount: 4 });
+        yield* settle;
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+      }),
+    ),
+  );
+
+  it.effect("drops a pending response after a locally confirmed management reply", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const reply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(reply));
+        yield* pushEvents(changed(1));
+        mutations.setRoomDetail({ ...roomDetailFixture(12), memberCount: 11 });
+        invalidateRoom(12);
+        yield* Deferred.succeed(reply, { ...roomDetailFixture(12), memberCount: 4 });
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(11);
+      }),
+    ),
+  );
+});
+
+describe("room access refresh", () => {
+  const loaded = Effect.gen(function* () {
+    yield* serve([]);
+    yield* startEngine;
+    yield* welcome(0, false);
+    yield* session.openRoom(12, null);
+  });
+
+  it.effect(
+    "a flagged access loss clears detail and prevents a pending older success restoring it",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          yield* loaded;
+          const api = yield* FakeApi;
+          const oldReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+          let requests = 0;
+
+          yield* api.route("GET /rooms/12", () =>
+            ++requests === 1
+              ? Deferred.await(oldReply)
+              : Effect.fail(new NotFound({ message: "Room not found" })),
+          );
+          yield* pushEvents({
+            seq: 1,
+            topic: "user",
+            type: "sidebar.row.upserted",
+            data: { ...sidebarRowFixture(12, "Room"), refreshRoom: true },
+          });
+          yield* pushEvents({
+            seq: 2,
+            topic: "user",
+            type: "sidebar.row.removed",
+            data: { roomId: 12, refreshRoom: true },
+          });
+
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+          expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          yield* Deferred.succeed(oldReply, roomDetailFixture(12));
+          yield* settle;
+          expect(store.getState().rooms[12]?.detail).toBeNull();
+        }),
+      ),
+  );
+
+  it.effect("a disconnected access loss clears stale detail even when both REST reads fail", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+
+        yield* api.route("GET /rooms/12", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* api.route("GET /rooms/12/messages", () =>
+          Effect.fail(new NotFound({ message: "Room not found" })),
+        );
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+        expect(store.getState().rooms[12]?.status).toBe("error");
+        expect(store.getState().sidebar.rows[12]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("a delayed resync preserves later membership fields and ignores a local delete", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const reply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(reply));
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        const row = sidebarRowFixture(12, "Room");
+
+        mutations.applyEvents(
+          [
+            {
+              seq: 0,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: {
+                ...row,
+                membership: {
+                  ...row.membership,
+                  involvement: "muted",
+                  roomCategoryId: 4,
+                  lastReadMessageId: 90,
+                },
+              },
+            },
+          ],
+          0,
+        );
+        yield* Deferred.succeed(reply, roomDetailFixture(12));
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail?.membership).toMatchObject({
+          involvement: "muted",
+          roomCategoryId: 4,
+          lastReadMessageId: 90,
+        });
+
+        const deletedReply = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+
+        yield* api.route("GET /rooms/12", () => Deferred.await(deletedReply));
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+        mutations.setRoomUnavailable(12);
+        invalidateRoom(12);
+        yield* Deferred.succeed(deletedReply, roomDetailFixture(12));
+        yield* settle;
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+      }),
+    ),
+  );
+});
+
 describe("decoding", () => {
   it.effect("drops an event it doesn't know and applies the rest of the batch", () =>
     withSync(
@@ -1749,7 +2987,7 @@ describe("decoding", () => {
 });
 
 describe("boards and open work panes", () => {
-  it.effect("refetches changed work detail through sync without fetching a board timeline", () =>
+  it.effect("resyncs board metadata, access and work without fetching a board timeline", () =>
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
@@ -1796,14 +3034,28 @@ describe("boards and open work panes", () => {
           detailLoads + 1,
         );
         expect(requests.some((request) => request.path === "/rooms/900/messages")).toBe(false);
+        const roomLoads = requests.filter((request) => request.path === "/rooms/900").length;
+        yield* api.reply(`GET /rooms/${BOARD}`, { ...detail, memberCount: 7 });
         yield* socket.push({ t: "resync", topics: ["room:900"], reason: "missed" });
         yield* settle;
+        expect(store.getState().rooms[BOARD]?.detail?.memberCount).toBe(7);
+        expect(
+          (yield* api.requests).filter((request) => request.path === "/rooms/900"),
+        ).toHaveLength(roomLoads + 1);
         expect(
           (yield* api.requests).filter((request) => request.path === "/rooms/900/board"),
         ).toHaveLength(boardLoads + 1);
         expect(
           (yield* api.requests).some((request) => request.path === "/rooms/900/messages"),
         ).toBe(false);
+        yield* api.route(`GET /rooms/${BOARD}`, () =>
+          Effect.fail(new NotFound({ message: "gone" })),
+        );
+        yield* socket.push({ t: "resync", topics: ["room:900"], reason: "missed" });
+        yield* settle;
+        expect(store.getState().rooms[BOARD]?.detail).toBeNull();
+        expect(store.getState().sidebar.rows[BOARD]).toBeUndefined();
+        expect(store.getState().boards[BOARD]?.status).toBe("error");
       }),
     ),
   );

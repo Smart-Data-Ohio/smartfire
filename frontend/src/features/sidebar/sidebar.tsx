@@ -10,22 +10,25 @@ import {
   useRef,
   useState,
 } from "react";
-import { setTheme, useAppearance } from "../../lib/appearance.ts";
+import { setThemeOverride, useAppearance } from "../../lib/appearance.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
+import { saveAccountTheme } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { openNewRoom } from "../rooms/new-room-store.ts";
 import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
@@ -382,6 +385,8 @@ function WorkspaceHeader({
   readonly title: string;
   readonly onNewCategory?: (() => void) | undefined;
 }) {
+  const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
+
   return (
     <header className="sidebar-header">
       <Menu
@@ -405,6 +410,11 @@ function WorkspaceHeader({
         >
           New message
         </MenuItem>
+        {canCreateRooms ? (
+          <MenuItem icon="plus" onSelect={() => openNewRoom()}>
+            Create a channel…
+          </MenuItem>
+        ) : null}
         <MenuItem
           icon="search"
           shortcut={shortcutKeys("switcher")}
@@ -467,8 +477,23 @@ function YouPanel() {
   const me = useStore((state) => state.me);
   const bootUser = useStore((state) => state.boot?.user ?? null);
   const status = useStore((state) => (me === null ? null : (state.presence[me.user.id] ?? null)));
-  const { theme } = useAppearance();
+  const { theme, themeOverride } = useAppearance();
   const userId = me?.user.id ?? bootUser?.id;
+
+  // The next theme: pinned on this device when one is pinned, else saved to the account.
+  const cycleTheme = () => {
+    const next = THEME_NEXT[theme];
+
+    if (themeOverride !== null) {
+      setThemeOverride(next);
+
+      return;
+    }
+
+    saveAccountTheme(next).catch((error: Error) =>
+      toast({ title: "Couldn't save your theme", description: error.message, tone: "danger" }),
+    );
+  };
 
   if (userId === undefined) {
     return null;
@@ -489,7 +514,7 @@ function YouPanel() {
         icon={THEME_ICON[theme]}
         label={`Theme: ${theme}`}
         size="sm"
-        onClick={() => setTheme(THEME_NEXT[theme])}
+        onClick={cycleTheme}
       />
     </footer>
   );
@@ -606,6 +631,7 @@ export function Sidebar() {
   const selectedRoomId = params.roomId ?? null;
   const destination = useDestination();
   const view = organizedSidebar(sidebar);
+  const { canCreateRooms } = sidebar;
   const categories = view.categories;
   const all = sidebarSections(sidebar);
   const flip = useFlip(scrollRef);
@@ -789,6 +815,18 @@ export function Sidebar() {
     />
   );
 
+  /** The "+" on a section of rooms (Discord's): creates one of that section's kind. */
+  const createButton = (kind: "open" | "voice", label: string) =>
+    canCreateRooms ? (
+      <IconButton
+        icon="plus"
+        label={label}
+        size="sm"
+        className="sidebar-section-action"
+        onClick={() => openNewRoom(kind)}
+      />
+    ) : null;
+
   const emptyFor = (section: SidebarSection) => {
     switch (section.kind) {
       case "direct":
@@ -839,7 +877,14 @@ export function Sidebar() {
 
     switch (section.kind) {
       case "channels":
-        return newCategoryButton;
+        return (
+          <>
+            {createButton("open", "Create a channel")}
+            {newCategoryButton}
+          </>
+        );
+      case "voice":
+        return createButton("voice", "Create a voice channel") ?? undefined;
       case "direct":
         return newMessage;
       default:

@@ -18,11 +18,11 @@ import type { User } from "./User";
  * skipped, so a short or empty page can still have a `nextCursor`. No live updates, as in the
  * classic app: the ledger refetches its first page when it's shown again.
  */
-export type AgentLedgerPage = { events: Array<AgentLedgerEvent>, 
+export type AgentLedgerPage = { events: Array<AgentLedgerEvent>,
 /**
  * The agent's bot user and every `actorId`, once each.
  */
-users: Array<User>, 
+users: Array<User>,
 /**
  * Pass as `before` for the next page; `null` when this is the last. Opaque to clients, as on
  * [`AgentApprovalPage`]: it encodes the last scanned row's `(created_at, id)`, including an

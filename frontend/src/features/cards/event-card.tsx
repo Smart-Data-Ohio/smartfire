@@ -88,11 +88,6 @@ function Attendance({
   );
 }
 
-/** The event's classic page, as the classic card links it. */
-function eventPath(event: EventCardData): string {
-  return `/rooms/${event.roomId}/events/${event.eventId}`;
-}
-
 /** Where it's held: the voice room in the app, and/or a Meet link. */
 function Venue({ event }: { readonly event: EventCardData }) {
   if (event.venueRoomId === null && event.meetLink === null) {
@@ -162,10 +157,13 @@ export function EventCard({ event }: { readonly event: EventCardData }) {
       </div>
       <div className="event-main">
         <div className="event-heading">
-          {/* The classic event page: not an SPA route yet, so a plain link that leaves the app. */}
-          <a className="event-title" href={eventPath(event)}>
+          <Link
+            to="/r/$roomId/events/$eventId"
+            params={{ roomId: event.roomId, eventId: event.eventId }}
+            className="event-title"
+          >
             {event.title}
-          </a>
+          </Link>
           {event.cancelled ? (
             <span className="card-tag" data-tone="danger">
               Cancelled

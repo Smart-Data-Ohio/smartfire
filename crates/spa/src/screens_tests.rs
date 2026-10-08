@@ -103,20 +103,31 @@ fn only_intentional_aliases_share_a_url() {
                     ("messages/boosts#new", "/messages/:message_id/boosts/new"),
                 ],
             ),
+            (
+                "/app/r/7/settings".to_string(),
+                vec![
+                    ("rooms#show", "/rooms/:id"),
+                    ("rooms/opens#edit", "/rooms/opens/:id/edit"),
+                    ("rooms/closeds#edit", "/rooms/closeds/:id/edit"),
+                    ("rooms/voices#edit", "/rooms/voices/:id/edit"),
+                    ("rooms/stages#edit", "/rooms/stages/:id/edit"),
+                ],
+            ),
         ]),
-        "only the message permalink aliases may share SPA URLs, with show first"
+        "only the message permalink and room settings aliases may share SPA URLs, \
+         with their fallback first"
     );
     assert!(SCREENS.iter().all(|screen| {
         std::ptr::eq(first_for_spa(screen), screen)
             || (screen.ported && first_for_spa(screen).ported)
     }));
-    // A classic page shared by several rows: only the profile page's sections and the account
-    // page's people list, all ported.
+    // A classic page shared by several rows: only the profile page's sections, the account
+    // page's people list and the room page as the settings screen's fallback, all ported.
     for screen in SCREENS {
         let first = first_for(screen);
         if !std::ptr::eq(first, screen) {
             assert!(
-                ["users/profiles#show", "accounts#edit"].contains(&screen.endpoint),
+                ["users/profiles#show", "accounts#edit", "rooms#show"].contains(&screen.endpoint),
                 "{screen:?}"
             );
             assert!(screen.ported && first.ported, "{screen:?}");
@@ -302,6 +313,65 @@ fn message_aliases_and_room_tools_map_to_their_ported_screens() {
 }
 
 #[test]
+fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
+    for (endpoint, classic, spa) in [
+        ("rooms/opens#new", "/rooms/opens/new", "/app/rooms/new/open"),
+        (
+            "rooms/closeds#new",
+            "/rooms/closeds/new",
+            "/app/rooms/new/closed",
+        ),
+        (
+            "rooms/voices#new",
+            "/rooms/voices/new",
+            "/app/rooms/new/voice",
+        ),
+        (
+            "rooms/stages#new",
+            "/rooms/stages/new",
+            "/app/rooms/new/stage",
+        ),
+        (
+            "rooms/boards#new",
+            "/rooms/boards/new",
+            "/app/rooms/new/board",
+        ),
+    ] {
+        assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
+    }
+    for (endpoint, classic) in [
+        ("rooms/opens#edit", "/rooms/opens/12/edit"),
+        ("rooms/closeds#edit", "/rooms/closeds/12/edit"),
+        ("rooms/voices#edit", "/rooms/voices/12/edit"),
+        ("rooms/stages#edit", "/rooms/stages/12/edit"),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some("/app/r/12/settings")
+        );
+    }
+    // The room page still opens the room; its settings fall back to the room page, never to
+    // one kind's edit form.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", None).as_deref(),
+        Some("/app/r/12")
+    );
+    assert_eq!(
+        classic_url("/app/r/12/settings", None).as_deref(),
+        Some("/rooms/12")
+    );
+    assert_eq!(
+        spa_url("rooms/boards#edit", "/rooms/boards/12/edit", None),
+        None
+    );
+    assert_eq!(
+        spa_url("rooms/directs#edit", "/rooms/directs/12/edit", None),
+        None
+    );
+}
+
+#[test]
 fn only_record_ids_match_a_parameter() {
     // `GET /rooms/opens` is rooms#show with id "opens" in Rails; the SPA can't open it.
     for path in [
@@ -468,6 +538,46 @@ fn export_screens() {
     );
     let parsed: serde_json::Value = serde_json::from_str(&committed).unwrap();
     assert_eq!(parsed.as_array().map(Vec::len), Some(SCREENS.len()));
+}
+
+#[test]
+fn event_pages_open_in_the_spa_and_fall_back_to_classic() {
+    for (endpoint, classic, spa) in [
+        ("rooms/events#index", "/rooms/12/events", "/app/r/12/events"),
+        (
+            "rooms/events#new",
+            "/rooms/12/events/new",
+            "/app/r/12/events/new",
+        ),
+        (
+            "rooms/events#show",
+            "/rooms/12/events/34",
+            "/app/r/12/events/34",
+        ),
+        (
+            "rooms/events#edit",
+            "/rooms/12/events/34/edit",
+            "/app/r/12/events/34/edit",
+        ),
+        (
+            "rooms/events/attendances#show",
+            "/rooms/12/events/34/attendance",
+            "/app/r/12/events/34/attendance",
+        ),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // `new` is not an event id: the show row doesn't take it.
+    assert_eq!(
+        spa_url("rooms/events#show", "/rooms/12/events/new", None),
+        None
+    );
 }
 
 #[test]

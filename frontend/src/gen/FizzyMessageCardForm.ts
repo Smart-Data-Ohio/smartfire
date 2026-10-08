@@ -6,7 +6,7 @@ import type { FizzyBoard } from "./FizzyBoard";
  * Disconnected viewers still see the source and defaults, with no boards, like classic.
  * The menu item is available on every non-system message, regardless of connection or lock.
  */
-export type FizzyMessageCardForm = { connected: boolean, boards: Array<FizzyBoard>, title: string, description: string, 
+export type FizzyMessageCardForm = { connected: boolean, boards: Array<FizzyBoard>, title: string, description: string,
 /**
  * Plain text truncated to 280 characters with "...", as classic's blockquote.
  */

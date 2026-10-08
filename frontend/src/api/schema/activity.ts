@@ -158,6 +158,7 @@ export const ActivityList = Schema.Struct({
   items: Schema.Array(ActivityItem),
   users: Schema.Array(User),
   unreadCount: Schema.Int,
+  unreadRevision: Schema.Int,
   nextCursor: Schema.NullOr(Schema.String),
 });
 
@@ -166,7 +167,10 @@ export type ActivityList = typeof ActivityList.Type;
 export type ActivityListPin = Assert<Pinned<typeof ActivityList, GeneratedActivityList>>;
 
 /** `GET /api/v1/activity/unread_count`: the badge. */
-export const ActivityUnreadCount = Schema.Struct({ unreadCount: Schema.Int });
+export const ActivityUnreadCount = Schema.Struct({
+  unreadCount: Schema.Int,
+  unreadRevision: Schema.Int,
+});
 
 export type ActivityUnreadCount = typeof ActivityUnreadCount.Type;
 
@@ -191,7 +195,11 @@ export type UpdateActivityItemPin = Assert<
 >;
 
 /** A state change's or `open`'s reply, and the `activity.item` event. */
-export const ActivityItemChanged = Schema.Struct({ item: ActivityItem, unreadCount: Schema.Int });
+export const ActivityItemChanged = Schema.Struct({
+  item: ActivityItem,
+  unreadCount: Schema.Int,
+  unreadRevision: Schema.Int,
+});
 
 export type ActivityItemChanged = typeof ActivityItemChanged.Type;
 
@@ -200,7 +208,11 @@ export type ActivityItemChangedPin = Assert<
 >;
 
 /** The `activity.removed` event: the item went with its source. */
-export const ActivityItemRemoved = Schema.Struct({ id: ActivityItemId, unreadCount: Schema.Int });
+export const ActivityItemRemoved = Schema.Struct({
+  id: ActivityItemId,
+  unreadCount: Schema.Int,
+  unreadRevision: Schema.Int,
+});
 
 export type ActivityItemRemoved = typeof ActivityItemRemoved.Type;
 

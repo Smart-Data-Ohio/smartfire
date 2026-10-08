@@ -273,12 +273,13 @@ fn activity_round_trips() {
             items: vec![activity_item()],
             users: vec![user()],
             unread_count: 4,
+            unread_revision: 17,
             next_cursor: Some("MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ".into()),
         },
         json!({
             "items": [activity_item_wire()],
             "users": [serde_json::to_value(user()).unwrap()],
-            "unreadCount": 4,
+            "unreadCount": 4, "unreadRevision": 17,
             "nextCursor": "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
         }),
     );
@@ -314,8 +315,11 @@ fn activity_round_trips() {
     }
 
     assert_wire(
-        &ActivityUnreadCount { unread_count: 4 },
-        json!({"unreadCount": 4}),
+        &ActivityUnreadCount {
+            unread_count: 4,
+            unread_revision: 17,
+        },
+        json!({"unreadCount": 4, "unreadRevision": 17}),
     );
     assert_wire(
         &UpdateActivityItem {
@@ -336,15 +340,17 @@ fn activity_round_trips() {
         &ActivityItemChanged {
             item: activity_item(),
             unread_count: 3,
+            unread_revision: 17,
         },
-        json!({"item": activity_item_wire(), "unreadCount": 3}),
+        json!({"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17}),
     );
     assert_wire(
         &ActivityItemRemoved {
             id: 301,
             unread_count: 2,
+            unread_revision: 17,
         },
-        json!({"id": 301, "unreadCount": 2}),
+        json!({"id": 301, "unreadCount": 2, "unreadRevision": 17}),
     );
 }
 
@@ -978,16 +984,18 @@ fn s3_sync_events_round_trip() {
             SyncPayload::ActivityItem(ActivityItemChanged {
                 item: activity_item(),
                 unread_count: 3,
+                unread_revision: 17,
             }),
-            json!({"type": "activity.item", "data": {"item": activity_item_wire(), "unreadCount": 3}}),
+            json!({"type": "activity.item", "data": {"item": activity_item_wire(), "unreadCount": 3, "unreadRevision": 17}}),
         ),
         (
             "user",
             SyncPayload::ActivityRemoved(ActivityItemRemoved {
                 id: 301,
                 unread_count: 2,
+                unread_revision: 17,
             }),
-            json!({"type": "activity.removed", "data": {"id": 301, "unreadCount": 2}}),
+            json!({"type": "activity.removed", "data": {"id": 301, "unreadCount": 2, "unreadRevision": 17}}),
         ),
         (
             "user",

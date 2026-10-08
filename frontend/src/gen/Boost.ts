@@ -3,11 +3,11 @@
 /**
  * A free-text boost, e.g. "nice work".
  */
-export type Boost = { 
+export type Boost = {
 /**
  * For `DELETE /api/v1/messages/:id/boosts/:boostId`, which only its booster may do.
  */
-id: number, boosterId: number, 
+id: number, boosterId: number,
 /**
  * Up to 16 characters, whitespace-trimmed.
  */
