@@ -26,9 +26,9 @@ matrix("a board's automations open from its toolbar", async ({ page, theme, phon
     "1440",
   );
   await expect(automations.getByText("1 d", { exact: true })).toBeVisible();
-  await expect(
-    automations.getByRole("spinbutton", { name: "Blocked nudge minutes" }),
-  ).toHaveValue("");
+  await expect(automations.getByRole("spinbutton", { name: "Blocked nudge minutes" })).toHaveValue(
+    "",
+  );
   await expect(automations.getByRole("button", { name: "Save SLA timers" })).toBeDisabled();
   await page.mouse.move(0, 0);
   await shot(page, phone ? "board-automations-phone" : "board-automations", theme);
@@ -79,9 +79,9 @@ test("SLA timers save together and show the classic alert", async ({ page }) => 
   await expect(timers.getByRole("button", { name: "Save SLA timers" })).toBeDisabled();
 
   await page.reload();
-  await expect(
-    pane(page).getByRole("spinbutton", { name: "Blocked nudge minutes" }),
-  ).toHaveValue("90");
+  await expect(pane(page).getByRole("spinbutton", { name: "Blocked nudge minutes" })).toHaveValue(
+    "90",
+  );
 });
 
 test("Automations closes from its toolbar button", async ({ page }) => {

@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import type { BoardAutomations as GeneratedBoardAutomations } from "../../gen/BoardAutomations.ts";
+import type { BoardAutomationsChanged as GeneratedBoardAutomationsChanged } from "../../gen/BoardAutomationsChanged.ts";
 import type { BoardSlaTimer as GeneratedBoardSlaTimer } from "../../gen/BoardSlaTimer.ts";
 import type { BoardSlaTimerInput as GeneratedBoardSlaTimerInput } from "../../gen/BoardSlaTimerInput.ts";
 import type { BoardTagRule as GeneratedBoardTagRule } from "../../gen/BoardTagRule.ts";
@@ -66,14 +67,24 @@ export type BoardSlaTimerInputPin = Assert<
   Pinned<typeof BoardSlaTimerInput, GeneratedBoardSlaTimerInput>
 >;
 
+/** Only the rows the person changed: a row left out keeps its status's timer as it stands. */
 export const UpdateBoardSlaTimers = Schema.Struct({
-  planned: BoardSlaTimerInput,
-  inProgress: BoardSlaTimerInput,
-  blocked: BoardSlaTimerInput,
+  planned: Schema.optionalKey(BoardSlaTimerInput),
+  inProgress: Schema.optionalKey(BoardSlaTimerInput),
+  blocked: Schema.optionalKey(BoardSlaTimerInput),
 });
 
 export type UpdateBoardSlaTimers = typeof UpdateBoardSlaTimers.Type;
 
 export type UpdateBoardSlaTimersPin = Assert<
   Pinned<typeof UpdateBoardSlaTimers, GeneratedUpdateBoardSlaTimers>
+>;
+
+/** `board.automations.changed` on `room:<id>`: an open automations pane refetches. */
+export const BoardAutomationsChanged = Schema.Struct({ roomId: RoomId });
+
+export type BoardAutomationsChanged = typeof BoardAutomationsChanged.Type;
+
+export type BoardAutomationsChangedPin = Assert<
+  Pinned<typeof BoardAutomationsChanged, GeneratedBoardAutomationsChanged>
 >;

@@ -30,8 +30,11 @@ function permissionHarness() {
 
   if (board === undefined || viewer === undefined) throw new Error("Seed missing");
 
+  const published: unknown[] = [];
+
   const { routes } = createBoardAutomations({
     world: () => world,
+    publish: (events) => published.push(...events),
     roomOr404: (roomId) => {
       const room = world.rooms.get(roomId);
 
@@ -67,7 +70,7 @@ function permissionHarness() {
     }
   };
 
-  return { world, board, viewer, request };
+  return { world, board, viewer, request, published };
 }
 
 describe("mock board automations", () => {
@@ -88,7 +91,18 @@ describe("mock board automations", () => {
     expect(autoAssignedBoardOwner(world, BOARD_ROOM_ID, ["bug"])).toBeNull();
   });
 
-  it("seeds tag rules in creation order, one planned timer and candidates by lower-cased name", async () => {
+  it("applies the first matching rule by tag, whatever order the rules were added in", () => {
+    const { world, board } = permissionHarness();
+
+    if (board.boardAutomations === undefined) throw new Error("Seed missing");
+    board.boardAutomations.tagRules = [
+      { id: 1, tag: "zeta", assigneeId: USER_IDS.maya },
+      { id: 2, tag: "alpha", assigneeId: VIEWER_ID },
+    ];
+    expect(autoAssignedBoardOwner(world, BOARD_ROOM_ID, ["zeta", "alpha"])?.id).toBe(VIEWER_ID);
+  });
+
+  it("seeds tag rules in tag order, one planned timer and candidates by lower-cased name", async () => {
     const { server } = harness();
     const settings = await get<BoardAutomations>(server, root);
     expect(settings.roomId).toBe(BOARD_ROOM_ID);
@@ -106,7 +120,7 @@ describe("mock board automations", () => {
     expect(new Set(settings.users.map((user) => user.id)).size).toBe(settings.users.length);
   });
 
-  it("normalizes tags, appends rules, deletes only that board's rules and does not reuse ids", async () => {
+  it("normalizes tags, lists rules by tag, deletes only that board's rules and does not reuse ids", async () => {
     const { server } = harness();
 
     const added = await expectStatus<BoardAutomations>(
@@ -117,8 +131,8 @@ describe("mock board automations", () => {
       201,
     );
 
-    expect(added.tagRules.map((rule) => rule.tag)).toEqual(["bug", "design", "api-v2"]);
-    expect(added.tagRules.at(-1)?.id).toBe(9103);
+    expect(added.tagRules.map((rule) => rule.tag)).toEqual(["api-v2", "bug", "design"]);
+    expect(added.tagRules.find((rule) => rule.tag === "api-v2")?.id).toBe(9103);
 
     const deleted = await expectStatus<BoardAutomations>(
       server,
@@ -138,7 +152,7 @@ describe("mock board automations", () => {
       201,
     );
 
-    expect(again.tagRules.at(-1)?.id).toBe(9104);
+    expect(again.tagRules.find((rule) => rule.tag === "api-v2")?.id).toBe(9104);
     const missing = await send(server, "DELETE", `${root}/tag_rules/999`);
     expect(missing.status).toBe(404);
     expect(errorOf(missing.json)).toEqual({ tag: "NotFound", message: "Rule not found." });
@@ -241,6 +255,46 @@ describe("mock board automations", () => {
     );
 
     expect(disabled.slaTimers).toEqual([]);
+  });
+
+  it("signals each change on the board's room topic, and not a save that changes nothing", async () => {
+    const { request, published } = permissionHarness();
+
+    const signal = {
+      topic: `room:${BOARD_ROOM_ID}`,
+      type: "board.automations.changed",
+      data: { roomId: BOARD_ROOM_ID },
+    };
+
+    const path = `/rooms/${BOARD_ROOM_ID}/automations`;
+
+    expect(
+      (await request("POST", `${path}/tag_rules`, { tag: "ops", assigneeId: VIEWER_ID })).status,
+    ).toBe(201);
+    expect(published).toEqual([signal]);
+    expect((await request("DELETE", `${path}/tag_rules/9103`)).status).toBe(200);
+    expect(published).toEqual([signal, signal]);
+    expect((await request("PUT", `${path}/sla_timers`, { blocked: off })).status).toBe(200);
+    expect(published).toHaveLength(2);
+    expect((await request("PUT", `${path}/sla_timers`, { blocked: timer })).status).toBe(200);
+    expect(published).toEqual([signal, signal, signal]);
+  });
+
+  it("leaves the timers of rows the client left out", async () => {
+    const { server } = harness();
+
+    const saved = await expectStatus<BoardAutomations>(
+      server,
+      "PUT",
+      `${root}/sla_timers`,
+      { blocked: timer },
+      200,
+    );
+
+    expect(saved.slaTimers).toEqual([
+      { status: "planned", nudgeAfterMinutes: 1440, escalateAfterMinutes: 2880 },
+      { status: "blocked", ...timer },
+    ]);
   });
 
   it.each([

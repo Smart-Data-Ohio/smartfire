@@ -8,6 +8,7 @@ import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
 import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
 import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents.ts";
+import { BoardAutomationsChanged } from "./board-automations.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
@@ -78,6 +79,10 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ type: Schema.Literal("thread.updated"), data: Thread }),
   Schema.Struct({ type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({
+    type: Schema.Literal("board.automations.changed"),
+    data: BoardAutomationsChanged,
+  }),
   Schema.Struct({ type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ type: Schema.Literal("saved.changed"), data: SavedChanged }),
@@ -139,6 +144,11 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.updated"), data: Thread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("board.automations.changed"),
+    data: BoardAutomationsChanged,
+  }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("saved.changed"), data: SavedChanged }),

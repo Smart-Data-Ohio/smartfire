@@ -2,9 +2,11 @@
 import type { BoardSlaTimerInput } from "./BoardSlaTimerInput";
 
 /**
- * `PUT /api/v1/rooms/:room_id/automations/sla_timers` (`sla_rules#update`): the whole SLA form at
- * once. Every row is validated before anything is written; then each status's rule is created,
- * updated, deleted or left alone, with one audit entry per changed rule
+ * `PUT /api/v1/rooms/:room_id/automations/sla_timers` (`sla_rules#update`): the SLA form's rows.
+ * A missing row leaves its status's timer as it stands (the SPA sends only the rows the person
+ * changed, so a timer someone else saved meanwhile survives); the classic form always sends all
+ * three. Every row sent is validated before anything is written; then each status's rule is
+ * created, updated, deleted or left alone, with one audit entry per changed rule
  * (`{"sla_rule":"created"|"updated"|"removed",…}`, as classic). Answers [`BoardAutomations`]
  * (200).
  *
@@ -14,4 +16,4 @@ import type { BoardSlaTimerInput } from "./BoardSlaTimerInput";
  * blank", "… must be less than or equal to 43200"), and `message` the classic alert, e.g.
  * "Planned: Escalate after minutes must be after the nudge threshold".
  */
-export type UpdateBoardSlaTimers = { planned: BoardSlaTimerInput, inProgress: BoardSlaTimerInput, blocked: BoardSlaTimerInput, };
+export type UpdateBoardSlaTimers = { planned?: BoardSlaTimerInput, inProgress?: BoardSlaTimerInput, blocked?: BoardSlaTimerInput, };
