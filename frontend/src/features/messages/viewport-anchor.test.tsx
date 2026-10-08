@@ -544,32 +544,101 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
-  it("deleting a non-witness during an issued end jump preserves intent until settlement", async () => {
-    const apiRef = createRef<AnchorApi>();
-    const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
-    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+  it.each(["none", "growth", "menu"])(
+    "deleting a non-witness during an issued end jump preserves intent until settlement (%s)",
+    async (pause) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
 
-    act(() => measureRows(geometry));
-    viewport().scrollTop = 100;
-    act(() => apiRef.current?.followEnd());
-    viewport().scrollTop = 300;
-    geometry.ids = [1, 2, 3, 4];
-    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
-    await act(async () => undefined);
-    expect(apiRef.current?.canFollow()).toBe(true);
-    act(() => measureRows(geometry));
-    expect(viewport().scrollTop).toBe(300);
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 100;
+      act(() => apiRef.current?.followEnd());
+      viewport().scrollTop = 300;
 
-    viewport().scrollTop = 500;
-    act(() => apiRef.current?.settle());
-    expect(apiRef.current?.canFollow()).toBe(true);
-    geometry.ids = [1, 2, 3, 4, 6];
-    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
-    await act(async () => undefined);
-    act(() => measureRows(geometry));
-    expect(viewport().scrollTop).toBe(700);
-    expect(apiRef.current?.canFollow()).toBe(true);
-  });
+      if (pause === "growth") {
+        geometry.heights.set(5, 260);
+        act(() => measureRows(geometry));
+      }
+
+      if (pause === "menu")
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+
+      geometry.ids = [1, 2, 3, 4];
+      view.rerender(
+        <Harness
+          apiRef={apiRef}
+          geometry={geometry}
+          {...(pause === "menu" ? { popupId: 3 } : {})}
+        />,
+      );
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(300);
+
+      viewport().scrollTop = 500;
+      act(() => apiRef.current?.settle());
+
+      if (pause === "menu") {
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+        await act(async () => undefined);
+      }
+
+      expect(apiRef.current?.canFollow()).toBe(true);
+      geometry.ids = [1, 2, 3, 4, 6];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(700);
+      expect(apiRef.current?.canFollow()).toBe(true);
+    },
+  );
+
+  it.each(["none", "growth", "menu"])(
+    "eventless find away from an issued jump's trajectory surrenders before deletion settles (%s)",
+    async (pause) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      act(() => measureRows(geometry));
+      viewport().scrollTop = 100;
+      act(() => apiRef.current?.followEnd());
+      viewport().scrollTop = 300;
+      fireEvent.scroll(viewport());
+
+      if (pause === "growth") {
+        geometry.heights.set(5, 260);
+        act(() => measureRows(geometry));
+      }
+
+      if (pause === "menu")
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+
+      // Find moves backwards without delivering input or a scroll callback.
+      viewport().scrollTop = 100;
+      geometry.ids = [1, 2, 3, 4];
+      view.rerender(
+        <Harness
+          apiRef={apiRef}
+          geometry={geometry}
+          {...(pause === "menu" ? { popupId: 3 } : {})}
+        />,
+      );
+      await act(async () => undefined);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(viewport().scrollTop).toBe(100);
+      expect(apiRef.current?.canFollow()).toBe(false);
+      act(() => apiRef.current?.settle());
+      geometry.ids = [1, 2, 3, 4, 6];
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(100);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    },
+  );
 
   it.each([
     { deletion: "last", ids: [1, 2], remaining: [1] },

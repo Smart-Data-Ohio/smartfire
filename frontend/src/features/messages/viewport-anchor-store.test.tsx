@@ -61,6 +61,8 @@ class MeasuringObserver implements ResizeObserver {
 }
 
 function messageHeight(message: MessageDTO): number {
+  if (message.bodyHtml.includes("Jump growth")) return 260;
+
   return message.bodyHtml.includes("Grown message") ? 500 : 200;
 }
 
@@ -246,6 +248,44 @@ describe("store-backed deletion with real Virtua", () => {
     cleanup();
     vi.unstubAllGlobals();
     store.setState(initialState, true);
+  });
+
+  it("keeps an unfinished issued jump through growth and a store removal", async () => {
+    mutations.applyPage(
+      ROOM,
+      pageFixture([1, 2, 3, 4, 5].map((id) => messageFixture(id, ROOM))),
+      "replace",
+    );
+    const apiRef = createRef<AnchorApi>();
+
+    render(<StoreTimeline apiRef={apiRef} />);
+    await measure();
+    viewport().scrollTop = 100;
+    act(() => apiRef.current?.followEnd());
+    viewport().scrollTop = 300;
+    act(() =>
+      mutations.updateMessage(
+        messageFixture(5, ROOM, {
+          bodyHtml: "<p>Jump growth</p>",
+          updatedAt: "2026-10-06T00:01:00.000Z",
+        }),
+      ),
+    );
+    await measure();
+    expect(viewport().scrollHeight).toBe(1060);
+    expect(viewport().scrollTop).toBe(300);
+    act(() => remove(messageFixture(5, ROOM)));
+    expect(store.getState().timelines[ROOM]?.ids).toEqual([1, 2, 3, 4]);
+    await measure();
+    expect(viewport().scrollTop).toBe(300);
+    viewport().scrollTop = 500;
+    fireEvent.scroll(viewport());
+    act(() => apiRef.current?.settle());
+    expect(apiRef.current?.canFollow()).toBe(true);
+    act(() => mutations.receiveMessage(messageFixture(6, ROOM)));
+    await measure();
+    expect(viewport().scrollTop).toBe(700);
+    expect(apiRef.current?.canFollow()).toBe(true);
   });
 
   it("cannot repin an eventless find to the paused end after deleting a non-witness", async () => {

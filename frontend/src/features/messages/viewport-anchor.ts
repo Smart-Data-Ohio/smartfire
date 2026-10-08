@@ -54,6 +54,15 @@ function endOffset(element: HTMLElement): number {
   return Math.max(0, element.scrollHeight - element.clientHeight);
 }
 
+function followsMotion(scroll: number, end: number, reference: number, limit: number): boolean {
+  // Native smooth scrolling advances toward the issued end. Growth can compensate
+  // that path, but cannot explain a reversal or motion past its issued range.
+  return (
+    scroll >= Math.max(0, Math.min(end, reference)) - 1 &&
+    scroll <= Math.max(0, Math.min(end, limit)) + 1
+  );
+}
+
 function hasInteraction(element: HTMLElement | null | undefined): boolean {
   return Boolean(
     element?.querySelector("[data-editing], [data-popup-pending], .message-popup-anchor"),
@@ -81,7 +90,11 @@ export function useViewportAnchor({
   const anchorRef = useRef<Anchor | null>(null);
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
-  const issuedEndRef = useRef<number | null>(null);
+
+  const issuedEndRef = useRef<{ readonly destination: number; readonly limit: number } | null>(
+    null,
+  );
+
   const correctionPendingRef = useRef(false);
   const retainedIdRef = useRef<number | null>(null);
   const retentionPendingRef = useRef<number | null>(null);
@@ -150,10 +163,14 @@ export function useViewportAnchor({
     const reference = anchor.scroll + compensation;
     const expected = paused ? Math.max(0, Math.min(end, reference)) : reference;
     const continuous = (!anchor.row || offset !== undefined) && Math.abs(scrollTop - expected) <= 1;
+    const motion = issuedEndRef.current;
 
     return {
       anchor,
-      follows: continuous || (!paused && (atEnd || issuedEndRef.current !== null)),
+      follows: motion
+        ? (!anchor.row || offset !== undefined) &&
+          followsMotion(scrollTop, end, reference, motion.limit + compensation)
+        : continuous || (!paused && atEnd),
       allowEnd: atEnd || (Math.abs(compensation) > 1 && continuous),
     };
   }, [indices, itemIndices, placed, placement, containerRef, listRef]);
@@ -222,14 +239,46 @@ export function useViewportAnchor({
 
     const atEnd = endOffset(element) - element.scrollTop <= 1;
     const paused = interacting() || correctionPendingRef.current;
+    const motion = issuedEndRef.current;
+
+    if (motion !== null) {
+      const anchor = anchorRef.current;
+      const index = anchor.row ? indices.get(anchor.row.id) : undefined;
+      const offset = index !== undefined ? listRef.current?.getItemOffset(index) : undefined;
+      const compensation = anchor.row && offset !== undefined ? offset - anchor.row.offset : 0;
+
+      if (
+        (anchor.row && offset === undefined) ||
+        !followsMotion(
+          element.scrollTop,
+          endOffset(element),
+          anchor.scroll + compensation,
+          motion.limit + compensation,
+        )
+      ) {
+        cancelPlacement(true, false, null, true);
+
+        return false;
+      }
+
+      if (atEnd && !paused) pinEnd();
+      else {
+        anchorRef.current = {
+          ...anchor,
+          scroll: element.scrollTop,
+          row: endRow(element.scrollTop),
+        };
+        issuedEndRef.current = { ...motion, limit: motion.limit + compensation };
+      }
+
+      return true;
+    }
 
     if (atEnd && !paused) {
       pinEnd();
 
       return true;
     }
-
-    if (issuedEndRef.current !== null) return true;
 
     const witness = anchorRef.current.row;
     const index = witness === null ? undefined : indices.get(witness.id);
@@ -310,6 +359,14 @@ export function useViewportAnchor({
           ? { ...anchor.row, offset: list.getItemOffset(index) }
           : null,
     };
+
+    const motion = issuedEndRef.current;
+
+    if (motion !== null)
+      issuedEndRef.current = {
+        ...motion,
+        limit: motion.limit + element.scrollTop - measurement.before,
+      };
   });
 
   // Virtua creates its observer in child layout effects. Construct this one earlier,
@@ -341,6 +398,23 @@ export function useViewportAnchor({
       cancelPlacement(true, false, null, true);
 
       return;
+    }
+
+    if (removalSnapshot?.anchor === anchor && issuedEndRef.current !== null) {
+      const element = viewport();
+
+      if (element && removalSnapshot.follows === true) {
+        const end = endOffset(element);
+
+        issuedEndRef.current = { destination: end, limit: end };
+        anchorRef.current = {
+          ...anchor,
+          scroll: element.scrollTop,
+          row: endRow(element.scrollTop),
+        };
+
+        return;
+      }
     }
 
     // Without a surviving witness, a pause still cannot acquire a replacement pin.
@@ -381,13 +455,15 @@ export function useViewportAnchor({
     // Sending from a permalink explicitly takes the reader to the newest message.
     const element = viewport();
 
-    pinEnd(element ? endOffset(element) : undefined);
+    pinEnd();
     correctedOffsetRef.current = null;
 
     if (element) {
       element.dataset.placementSettled = "true";
 
-      if (endOffset(element) - element.scrollTop > 1) issuedEndRef.current = endOffset(element);
+      const end = endOffset(element);
+
+      if (end - element.scrollTop > 1) issuedEndRef.current = { destination: end, limit: end };
     }
   };
 
@@ -405,6 +481,8 @@ export function useViewportAnchor({
     }
 
     const element = viewport();
+
+    if (issuedEndRef.current !== null && !checkFollow()) return;
 
     // Focus restoration and layout scrolls during a popup/editor preserve its pause geometry.
     // Explicit reader input clears the anchor in cancelPlacement before capturing again.
@@ -547,7 +625,10 @@ export function useViewportAnchor({
       return;
     }
 
-    const issuedEnd = issuedEndRef.current;
+    const issuedEnd = issuedEndRef.current?.destination ?? null;
+
+    if (issuedEnd !== null && !checkFollow()) return;
+
     issuedEndRef.current = null;
 
     // App motion owns intent only until settlement. Reaching its issued destination
