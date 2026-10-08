@@ -8,11 +8,13 @@ import { me } from "../api/endpoints.ts";
 import {
   accountSettings,
   connectService,
+  createPushSubscription,
   disableTwoFactor,
   disconnectService,
   forgetDevices,
   settings as loadSettings,
   newBackupCodes,
+  pushPublicKey,
   pushSubscriptions,
   removeAvatar,
   removePushSubscription,
@@ -31,7 +33,9 @@ import {
 } from "../api/settings-endpoints.ts";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
+import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
+import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
@@ -43,6 +47,14 @@ import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
 import { mutations } from "../store/store.ts";
 import { runAction } from "./runtime.ts";
+
+export {
+  enablePushNotifications,
+  inspectPush,
+  type PushEnrollmentOutcome,
+  type PushPermission,
+  unsubscribePushEndpoint,
+} from "./push-enrollment.ts";
 
 /** Every key of a write body, unchanged (`null`), so a caller names only what it changes. */
 const UNCHANGED = {
@@ -141,6 +153,11 @@ export const settings = {
   revokeOtherSessions: (): Promise<SessionList> => runAction(revokeOtherSessions()),
 
   pushSubscriptions: (): Promise<PushSubscriptionList> => runAction(pushSubscriptions()),
+
+  pushPublicKey: (): Promise<PushPublicKey> => runAction(pushPublicKey()),
+
+  createPushSubscription: (body: CreatePushSubscription): Promise<PushSubscriptionList> =>
+    runAction(createPushSubscription(body)),
 
   removePushSubscription: (subscriptionId: number): Promise<PushSubscriptionList> =>
     runAction(removePushSubscription(subscriptionId)),

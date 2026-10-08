@@ -3,7 +3,6 @@ import {
   type AnimationEvent,
   type FocusEvent,
   type KeyboardEvent,
-  lazy,
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
@@ -16,6 +15,7 @@ import {
 import type { EmojiChoice } from "../../lib/emoji/recent.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import {
   copyLink,

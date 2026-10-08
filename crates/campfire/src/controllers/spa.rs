@@ -38,6 +38,10 @@ mod api_work_tests;
 mod settings_tests;
 
 #[cfg(test)]
+#[path = "spa_push_enrollment_tests.rs"]
+mod push_enrollment_tests;
+
+#[cfg(test)]
 #[path = "spa_coexistence_tests.rs"]
 mod coexistence_tests;
 #[cfg(test)]
