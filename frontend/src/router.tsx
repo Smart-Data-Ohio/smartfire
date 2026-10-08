@@ -206,6 +206,27 @@ const handoffResolverRoute = createRoute({
   ),
 });
 
+/** `/app/r/$roomId/t/$threadId/links`: the thread pane with its post's link form open. */
+const linksRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "links",
+  component: () => null,
+});
+
+/** The classic links page names only the thread: resolve its room, then open the form. */
+const linksResolverRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "t/$threadId/links",
+  params: {
+    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
+    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
+  },
+  component: lazyRouteComponent(
+    () => import("./features/work/handoff-resolver.tsx"),
+    "LinksResolver",
+  ),
+});
+
 /** `/app/settings`: the classic profile page's sections, the profile first. */
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -395,11 +416,12 @@ const routeTree = rootRoute.addChildren([
     personRoute,
     messageRoute,
     handoffResolverRoute,
+    linksResolverRoute,
     roomRoute.addChildren([
       permalinkRoute,
       newThreadRoute,
       newBoardPostRoute,
-      threadRoute.addChildren([handoffRoute]),
+      threadRoute.addChildren([handoffRoute, linksRoute]),
       ...roomControlRoutes,
     ]),
     settingsRoute.addChildren(settingsSections),

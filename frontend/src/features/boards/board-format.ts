@@ -4,7 +4,6 @@ import type { User } from "../../gen/User.ts";
 import type { WorkFacts } from "../../gen/WorkFacts.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import type { BoardSearch } from "../../lib/board-search.ts";
-import { withClassicBypass } from "../../lib/screens.ts";
 
 export const WORK_STATUSES = [
   "planned",
@@ -192,11 +191,6 @@ export function stepDuration(ms: number): string {
   const rounded = rest > 50 || (rest === 50 && tenths % 2 === 1) ? tenths + 1 : tenths;
 
   return `${Math.floor(rounded / 10)}.${rounded % 10}s`;
-}
-
-/** A post's classic links page, which the SPA doesn't have yet (step 10). */
-export function classicWorkUrl(threadId: number, page: "links"): string {
-  return withClassicBypass(`/threads/${threadId}/work/${page}`);
 }
 
 /** The longest SLA timer, in minutes (30 days), as the classic rule validates. */

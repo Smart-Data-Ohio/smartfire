@@ -10,7 +10,7 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
-import { HandoffResolver } from "./handoff-resolver.tsx";
+import { HandoffResolver, LinksResolver } from "./handoff-resolver.tsx";
 
 async function mount(path: string) {
   const root = createRootRoute({ component: Outlet });
@@ -31,8 +31,24 @@ async function mount(path: string) {
     component: () => <p>Handoff destination</p>,
   });
 
+  const linksResolver = createRoute({
+    getParentRoute: () => root,
+    path: "/t/$threadId/links",
+    params: {
+      parse: ({ threadId }) => ({ threadId: Number(threadId) }),
+      stringify: ({ threadId }) => ({ threadId: String(threadId) }),
+    },
+    component: LinksResolver,
+  });
+
+  const links = createRoute({
+    getParentRoute: () => root,
+    path: "/r/$roomId/t/$threadId/links",
+    component: () => <p>Links destination</p>,
+  });
+
   const router = createRouter({
-    routeTree: root.addChildren([resolver, handoff]),
+    routeTree: root.addChildren([resolver, handoff, linksResolver, links]),
     basepath: "/app",
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -45,7 +61,7 @@ async function mount(path: string) {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("HandoffResolver", () => {
+describe("the work page resolvers", () => {
   it("finds the thread's room and replaces itself with the thread's handoff dialog", async () => {
     const locate = vi.spyOn(actions.threads, "locate").mockResolvedValue(4);
     const router = await mount("/app/t/7/handoff");
@@ -62,5 +78,15 @@ describe("HandoffResolver", () => {
 
     await screen.findByRole("region", { name: "Page not found" });
     expect(router.history.location.href).toBe("/app/t/7/handoff");
+  });
+
+  it("finds the thread's room and replaces itself with the post's link form", async () => {
+    const locate = vi.spyOn(actions.threads, "locate").mockResolvedValue(4);
+    const router = await mount("/app/t/7/links");
+
+    await screen.findByText("Links destination");
+    expect(locate).toHaveBeenCalledWith(7);
+    expect(router.history.location.href).toBe("/app/r/4/t/7/links");
+    expect(router.history.length).toBe(1);
   });
 });

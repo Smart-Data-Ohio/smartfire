@@ -6,7 +6,6 @@ import {
   activeFilterCount,
   boardQuery,
   boardSearch,
-  classicWorkUrl,
   digestDate,
   MAX_SLA_MINUTES,
   minutesLabel,
@@ -115,10 +114,6 @@ describe("agent steps", () => {
     expect(stepDuration(1250)).toBe("1.2s");
     expect(stepDuration(1350)).toBe("1.4s");
     expect(stepDuration(61_051)).toBe("61.1s");
-  });
-
-  it("links a post's classic pages", () => {
-    expect(classicWorkUrl(9006, "links")).toBe("/threads/9006/work/links?classic=1");
   });
 });
 
