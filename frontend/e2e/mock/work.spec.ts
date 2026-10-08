@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
 import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS } from "../../mock/s4/seed.ts";
 import { expect, matrix, openApp, ROOM_IDS, shot, type Theme, test } from "./support.ts";
 
@@ -215,18 +216,25 @@ matrix("work on the Threads pane's rows", async ({ page, theme }) => {
 });
 
 test("a reply indicator carries the thread's work", async ({ page }) => {
-  await open(page, `r/${GENERAL}`);
-  await page.getByRole("button", { name: /^Jump to present$|new messages?$/ }).click();
+  // The root is above the present; its permalink loads and centers it in the virtualized list.
+  await open(page, `r/${GENERAL}/m/${MESSAGE_IDS.generalThreadRoot}`);
+  await expect(page.locator(".timeline > .t-skel")).toHaveAttribute("aria-busy", "false");
 
-  const work = page.locator(".thread-indicator-work").first();
+  const work = page
+    .locator(`[data-message-id="${MESSAGE_IDS.generalThreadRoot}"]`)
+    .locator(".thread-indicator-work");
 
-  await expect(work.locator(".work-status")).toBeVisible();
-  // The list remeasures rows (cards, polls) after the jump and may remount this one meanwhile.
+  // Thread work arrives separately, and list measurements can remount the row meanwhile.
   await expect(async () => {
     await work.scrollIntoViewIfNeeded({ timeout: 1000 });
-    await expect(work).toBeInViewport({ timeout: 500 });
+    await expect(work.locator(".work-status")).toBeVisible({ timeout: 500 });
+    await expect(work.locator(".work-status")).toHaveAttribute("data-status", "in_progress", {
+      timeout: 500,
+    });
+    await expect(work).toBeInViewport({ ratio: 1, timeout: 500 });
   }).toPass();
   await page.mouse.move(0, 0);
+  await settle(page);
   await shot(page, "work-indicator", "light");
 });
 
