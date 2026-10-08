@@ -55,8 +55,6 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  finishThreadLoad(threadId, load);
-
   const problem = paneProblem(detail);
 
   if (problem !== null) {
@@ -70,6 +68,8 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     mutations.setThreadPageFailed(threadId);
   } else {
     mutations.applyThreadPage(threadId, page.success, "replace");
+    // Only now is a permalink's reply in view; until then a later load still opens around it.
+    finishThreadLoad(threadId, load);
   }
 });
 
