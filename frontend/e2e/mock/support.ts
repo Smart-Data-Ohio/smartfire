@@ -1,7 +1,12 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, test as base, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  test as base,
+  expect as expectBase,
+  type Page,
+} from "@playwright/test";
 
 /** The seeded ids (mock/seed.ts). */
 export { ROOM_IDS, USER_IDS } from "../../mock/seed.ts";
@@ -9,6 +14,15 @@ export { ROOM_IDS, USER_IDS } from "../../mock/seed.ts";
 export const DESKTOP = { width: 1440, height: 900 } as const;
 
 export const PHONE = { width: 390, height: 844 } as const;
+
+/** The narrowest phone the layout is held to: every phone spec checks its screens here. */
+export const PHONE_SMALL = { width: 360, height: 740 } as const;
+
+/**
+ * `test.use(PHONE_TOUCH)`: a touch phone at PHONE_SMALL. Touch and mobile emulation make
+ * `(pointer: coarse)` and `(hover: none)` match, so the touch sizes and 16 px fields apply.
+ */
+export const PHONE_TOUCH = { viewport: PHONE_SMALL, hasTouch: true, isMobile: true } as const;
 
 /** Between the phone and desktop layouts: the right pane floats over the room as a sheet. */
 export const TABLET = { width: 900, height: 1000 } as const;
@@ -161,4 +175,128 @@ export function matrix(
       });
     }
   }
+}
+
+/** Asserts nothing scrolls the page sideways, naming the widest elements that stick out if so. */
+export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
+  const overflow = await page.evaluate(() => {
+    const width = window.innerWidth;
+
+    const wide = [...document.querySelectorAll("body *")]
+      .flatMap((element) => {
+        const right = element.getBoundingClientRect().right;
+
+        return right > width + 1
+          ? [{ right, name: `${element.tagName.toLowerCase()}.${element.className} ${right}` }]
+          : [];
+      })
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 5)
+      .map(({ name }) => name);
+
+    return { scrollWidth: document.documentElement.scrollWidth, width, wide };
+  });
+
+  expectBase(
+    overflow.scrollWidth,
+    `scrollWidth ${overflow.scrollWidth} > ${overflow.width}: ${overflow.wide.join(", ")}`,
+  ).toBeLessThanOrEqual(overflow.width);
+}
+
+const TAPPABLE = [
+  "a[href]",
+  "button",
+  'input:not([type="hidden"])',
+  "select",
+  "textarea",
+  "summary",
+  '[role="button"]',
+  '[role="link"]',
+  '[role="tab"]',
+  '[role="menuitem"]',
+  '[role="menuitemradio"]',
+  '[role="menuitemcheckbox"]',
+  '[role="option"]',
+  '[role="checkbox"]',
+  '[role="radio"]',
+  '[role="switch"]',
+].join(", ");
+
+/**
+ * Asserts every visible tappable thing under `selector` is at least `min` px (--touch-target) both
+ * ways. It measures the element's own box, so a pseudo-element hit area doesn't count: size the
+ * element itself. Visually hidden elements and links in running text (exempt in WCAG 2.5.8) are
+ * skipped; pass `ignore` (a selector) for anything else deliberately small.
+ */
+export async function expectTouchTargets(
+  page: Page,
+  selector = "body",
+  { min = 44, ignore }: { readonly min?: number; readonly ignore?: string } = {},
+): Promise<void> {
+  const small = await page.locator(selector).evaluate(
+    (element, { tappable, min, ignore }) =>
+      [...element.querySelectorAll<HTMLElement>(tappable)].flatMap((target) => {
+        const box = target.getBoundingClientRect();
+        const style = getComputedStyle(target);
+
+        const skipped =
+          box.width < 2 ||
+          box.height < 2 ||
+          style.visibility === "hidden" ||
+          (target.tagName === "A" && style.display === "inline") ||
+          (ignore !== undefined && target.matches(ignore));
+
+        if (skipped || (box.width >= min - 0.5 && box.height >= min - 0.5)) {
+          return [];
+        }
+
+        const name =
+          target.getAttribute("aria-label") ?? target.textContent?.trim().slice(0, 32) ?? "";
+
+        return [`${target.tagName.toLowerCase()} "${name}" ${box.width}x${box.height}`];
+      }),
+    { tappable: TAPPABLE, min, ignore },
+  );
+
+  expectBase(small, `tap targets under ${min}px`).toEqual([]);
+}
+
+/**
+ * Raises an on-screen keyboard `height` px tall that overlays the page, as iOS Safari's does: the
+ * visual viewport shrinks and the layout viewport holds. 0 lowers it. For a keyboard that resizes
+ * the page instead (Android), shrink the viewport with `page.setViewportSize`.
+ */
+export async function simulateKeyboard(page: Page, height: number): Promise<void> {
+  await page.evaluate((keyboard) => {
+    const viewport = window.visualViewport;
+
+    if (viewport === null) {
+      throw new Error("this browser has no visualViewport");
+    }
+
+    if (keyboard === 0) {
+      Reflect.deleteProperty(viewport, "height");
+    } else {
+      Object.defineProperty(viewport, "height", {
+        configurable: true,
+        get: () => window.innerHeight - keyboard,
+      });
+    }
+
+    viewport.dispatchEvent(new Event("resize"));
+  }, height);
+}
+
+/**
+ * Gives the page a notch and a home indicator (an iPhone's, by default). Chromium reports no safe
+ * areas, so this sets the --safe-* tokens that env() would, in the tokens layer, where an open
+ * keyboard still zeroes the bottom one.
+ */
+export async function simulateSafeAreas(
+  page: Page,
+  { top = 47, right = 0, bottom = 34, left = 0 } = {},
+): Promise<void> {
+  await page.addStyleTag({
+    content: `@layer tokens { :root { --safe-top: ${top}px; --safe-right: ${right}px; --safe-bottom: ${bottom}px; --safe-left: ${left}px; } }`,
+  });
 }
