@@ -6,10 +6,10 @@ import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import { boardPostIds } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
-import { MAX_REMOVED_THREADS, THREAD_DELETED } from "../store/threads.ts";
+import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boards from "./board-actions.ts";
-import { MAX_SETTLE_ATTEMPTS } from "./settle.ts";
+import { MAX_SETTLE_ATTEMPTS, UNAVAILABLE } from "./settle.ts";
 import * as threads from "./thread-actions.ts";
 
 afterEach(() => mutations.reset());
@@ -128,7 +128,7 @@ describe("replies that can't tell whether a thread was removed", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("says the thread was deleted when asking again finds it gone", () =>
+  it.effect("keeps a 404 on asking again retryable: it may be lost access, not a deletion", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
       yield* fake.reply("GET /threads/1/messages", pageFixture([]));
@@ -158,8 +158,13 @@ describe("replies that can't tell whether a thread was removed", () => {
       expect(store.getState().threads[1]).toBeUndefined();
       expect(store.getState().threadPanes[1]).toMatchObject({
         status: "error",
-        error: THREAD_DELETED,
+        error: UNAVAILABLE,
       });
+
+      // Access is back: Try again loads it.
+      yield* fake.reply("GET /threads/1", boardDetail());
+      yield* threads.reload(1);
+      expect(store.getState().threadPanes[1]?.status).toBe("ready");
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

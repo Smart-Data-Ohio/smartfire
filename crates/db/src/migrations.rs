@@ -166,7 +166,7 @@ fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planne
 
 /// A row that breaks a foreign key, told apart from every other: its table and primary key (the
 /// rowid when none is declared), the constraint (parent table, then child and parent columns), and
-/// the values the row holds in the child columns. Keys and values are `typeof:hex` text.
+/// the values the row holds in the child columns. Keys and values are typed, lossless text (see `quote` below).
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Violation {
     table: String,
@@ -199,10 +199,14 @@ fn foreign_key_violations(conn: &Connection) -> Result<BTreeSet<Violation>, Erro
         if key_columns.is_empty() {
             key_columns.push("rowid".to_owned());
         }
-        // Type and bytes: `quote()` stops a TEXT value at its first NUL, so it isn't lossless.
+        // Lossless and typed: `quote()` stops TEXT at its first NUL, so TEXT and BLOB compare by
+        // their bytes; `hex()` would render a REAL with 15 digits, so numbers use `quote()`.
         let quote = |name: &str| {
             let column = format!("\"{}\"", name.replace('"', "\"\""));
-            format!("typeof({column}) || ':' || hex({column})")
+            format!(
+                "CASE WHEN typeof({column}) IN ('text', 'blob') THEN typeof({column}) || ':' || hex({column}) \
+                 ELSE typeof({column}) || ':' || quote({column}) END"
+            )
         };
         let selected: Vec<String> = key_columns
             .iter()
@@ -518,6 +522,26 @@ mod tests {
         let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
         assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
         assert!(exists(&conn, "SELECT 1 FROM ws18_child WHERE hex(code) = '610062'"));
+    }
+
+    /// REAL values are compared at full precision.
+    #[test]
+    fn an_old_orphan_repointed_to_a_nearby_real_is_a_new_violation() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(code REAL PRIMARY KEY); \
+             CREATE TABLE ws18_child(id INTEGER PRIMARY KEY, code REAL REFERENCES ws18_parent(code)); \
+             PRAGMA foreign_keys=OFF; INSERT INTO ws18_child VALUES (1, 1.0000000000000002); \
+             PRAGMA foreign_keys=ON;",
+        )
+        .unwrap();
+        let catalog = [migration(
+            "29990101000000",
+            "UPDATE ws18_child SET code = 1.0000000000000004 WHERE id = 1;",
+        )];
+        let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
+        assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
+        assert!(exists(&conn, "SELECT 1 FROM ws18_child WHERE code = 1.0000000000000002"));
     }
 
     /// An old orphan under a rebuilt constraint (another parent column) is a new violation.

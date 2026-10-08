@@ -542,6 +542,35 @@ describe("resync", () => {
     ),
   );
 
+  it.effect(
+    "leaves a resynced pane's replies failed, for the timeline to retry, when they don't load",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const socket = yield* MemorySocket;
+          const api = yield* FakeApi;
+
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(5, false);
+          // The first open fails outright: no header, no replies.
+          yield* threadActions.open(1);
+          expect(store.getState().threadPanes[1]?.status).toBe("error");
+
+          // The resync gets the header, but the replies still fail.
+          yield* api.reply("GET /threads/1", boardDetail());
+          yield* api.route("GET /threads/1/messages", () =>
+            Effect.fail(new ServerError({ status: 500, message: "boom" })),
+          );
+          yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+          yield* settle;
+
+          expect(store.getState().threadPanes[1]?.status).toBe("ready");
+          expect(store.getState().threadTimelines[1]?.status).toBe("error");
+        }),
+      ),
+  );
+
   it.effect("re-reads a window that stops short of the present in place, dropping deletions", () =>
     withSync(
       Effect.gen(function* () {

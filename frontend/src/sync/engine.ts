@@ -22,12 +22,11 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
-import { THREAD_DELETED } from "../store/threads.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { refetchThread, settled } from "./settle.ts";
+import { refetchThread, settled, UNAVAILABLE } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
@@ -238,7 +237,7 @@ export class Engine extends Context.Service<
         );
 
         if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
-          mutations.setThreadPaneError(threadId, THREAD_DELETED);
+          mutations.setThreadPaneError(threadId, UNAVAILABLE);
         }
 
         mutations.applyThreadPage(threadId, newest, "resync");

@@ -10,8 +10,8 @@ import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
-import { setThreadUnread, THREAD_DELETED } from "../store/threads.ts";
-import { refetchThread, settled, settledDetail } from "./settle.ts";
+import { setThreadUnread } from "../store/threads.ts";
+import { refetchThread, settled, settledDetail, UNAVAILABLE } from "./settle.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -54,7 +54,7 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
       Result.isFailure(detail)
         ? detail.failure.message
         : detail.success.outcome === "gone"
-          ? THREAD_DELETED
+          ? UNAVAILABLE
           : UNSETTLED,
     );
     mutations.setThreadPageFailed(threadId);
