@@ -81,12 +81,9 @@ fn blank(value: &Value) -> bool {
 pub fn ffmpeg_exists() -> bool {
     static EXISTS: OnceLock<bool> = OnceLock::new();
     *EXISTS.get_or_init(|| {
-        Command::new(ffmpeg_path())
-            .arg("-version")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success())
+        let mut command = Command::new(ffmpeg_path());
+        command.arg("-version").stderr(Stdio::null());
+        output_within(&mut command, Duration::from_secs(5)).is_ok_and(|output| output.status.success())
     })
 }
 
@@ -95,7 +92,7 @@ pub fn video_preview(input: &Path) -> Result<Vec<u8>> {
     let mut command = Command::new(ffmpeg_path());
     command.arg("-i").arg(input).args(VIDEO_PREVIEW_ARGUMENTS).arg("-").stderr(Stdio::piped());
     let output = output_within(&mut command, FFMPEG_TIMEOUT).map_err(|error| match error.kind() {
-        std::io::ErrorKind::TimedOut => Error::Preview(format!("{} {error}", ffmpeg_path())),
+        std::io::ErrorKind::TimedOut => Error::Preview(error.to_string()),
         _ => error.into(),
     })?;
     if !output.status.success() {
@@ -110,19 +107,94 @@ pub fn video_preview(input: &Path) -> Result<Vec<u8>> {
 }
 
 /// `command.output()`, except that the child is killed (and reaped) once `timeout` passes, which
-/// is an `ErrorKind::TimedOut` error. Stdin is closed and stdout captured; stderr is captured
-/// only when the caller pipes it.
+/// is an `ErrorKind::TimedOut` error naming the program. Stdin is closed and stdout captured;
+/// stderr is captured only when the caller pipes it.
+///
+/// The child runs in its own process group. ffmpeg's preview graph uses `loop=-1`, and some
+/// builds exit the parent while a descendant keeps stdout open, so joining the pipe reader
+/// would wait forever. The deadline covers that reader too, and kills the whole group.
 pub fn output_within(command: &mut Command, timeout: Duration) -> std::io::Result<Output> {
+    let program = command.get_program().to_string_lossy().into_owned();
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
     let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).spawn()?;
     // Drain the pipes while waiting, so a chatty child can't stall on a full pipe.
     let stdout = drain(child.stdout.take());
     let stderr = drain(child.stderr.take());
-    let Some(status) = wait_until(&mut child, Instant::now() + timeout)? else {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("timed out after {:?}", timeout)));
+    let deadline = Instant::now() + timeout;
+    let status = match wait_until(&mut child, deadline)? {
+        Some(status) => status,
+        None => {
+            stop_child(&mut child);
+            let _ = reap(&mut child);
+            let _ = take_pipes(stdout, stderr, Instant::now() + REAP_GRACE);
+            return Err(stuck(&program, timeout));
+        }
     };
-    Ok(Output { status, stdout: stdout.join().unwrap_or_default(), stderr: stderr.join().unwrap_or_default() })
+    match take_pipes(stdout, stderr, deadline) {
+        Ok((stdout, stderr)) => Ok(Output { status, stdout, stderr }),
+        Err((stdout, stderr)) => {
+            stop_child(&mut child);
+            let _ = reap(&mut child);
+            let _ = take_pipes(stdout, stderr, Instant::now() + REAP_GRACE);
+            Err(stuck(&program, timeout))
+        }
+    }
+}
+
+const REAP_GRACE: Duration = Duration::from_millis(500);
+
+fn stuck(program: &str, timeout: Duration) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{program} timed out after {timeout:?}"))
+}
+
+fn stop_child(child: &mut Child) {
+    #[cfg(unix)]
+    {
+        // SAFETY: the child was started with `process_group(0)`, so its pid is the process
+        // group id. A negative pid signals that group and not this process.
+        let _ = unsafe { kill(-(child.id() as i32), SIGKILL) };
+    }
+    let _ = child.kill();
+}
+
+#[cfg(unix)]
+const SIGKILL: i32 = 9;
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn kill(pid: i32, sig: i32) -> i32;
+}
+
+fn reap(child: &mut Child) -> std::io::Result<()> {
+    if wait_until(child, Instant::now() + REAP_GRACE)?.is_none() {
+        let _ = child.kill();
+        let _ = child.try_wait();
+    }
+    Ok(())
+}
+
+type Pipe = std::thread::JoinHandle<Vec<u8>>;
+
+fn take_pipes(stdout: Pipe, stderr: Pipe, deadline: Instant) -> std::result::Result<(Vec<u8>, Vec<u8>), (Pipe, Pipe)> {
+    if !pipe_finished(&stdout, deadline) || !pipe_finished(&stderr, deadline) {
+        return Err((stdout, stderr));
+    }
+    Ok((stdout.join().unwrap_or_default(), stderr.join().unwrap_or_default()))
+}
+
+fn pipe_finished(handle: &Pipe, deadline: Instant) -> bool {
+    while !handle.is_finished() {
+        let now = Instant::now();
+        if now >= deadline {
+            return false;
+        }
+        std::thread::sleep(Duration::from_millis(5).min(deadline - now));
+    }
+    true
 }
 
 fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
@@ -176,5 +248,18 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
         let pid = std::fs::read_to_string(pid_file.path()).unwrap();
         assert!(!Path::new(&format!("/proc/{}", pid.trim())).exists(), "the child is still running");
+    }
+
+    #[test]
+    fn output_within_stops_a_writer_that_outlives_the_child() {
+        let started = Instant::now();
+        let mut command = Command::new("sh");
+        // The shell exits immediately. The background loop inherits its stdout and would
+        // otherwise keep the pipe reader joined forever.
+        command.arg("-c").arg("(while true; do echo x; done) & exit 0");
+        let error = output_within(&mut command, Duration::from_millis(300)).unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
+        assert!(error.to_string().contains("sh"), "{error}");
+        assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
     }
 }
