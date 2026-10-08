@@ -69,7 +69,21 @@ export function removedSince(state: State, threadId: number, since: number): boo
     return removed > since;
   }
 
-  return since < state.forgottenRemoval && state.threads[threadId] === undefined;
+  return uncertainSince(state, threadId, since);
+}
+
+/**
+ * A reply to a request sent at `since` can't tell whether `threadId` was removed meanwhile: no
+ * removal of it is remembered, but removals after `since` have been forgotten and it isn't held.
+ * The reducers drop such a thread; the actions ask again first (see `settled`), since a fresh
+ * request's `since` is past every forgotten removal.
+ */
+export function uncertainSince(state: State, threadId: number, since: number): boolean {
+  return (
+    state.removedThreads[threadId] === undefined &&
+    since < state.forgottenRemoval &&
+    state.threads[threadId] === undefined
+  );
 }
 
 /** Forgets that `threadId` was removed: a reply to a request sent after the removal showed it. */

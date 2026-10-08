@@ -26,6 +26,7 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
+import { settled } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
@@ -219,15 +220,22 @@ export class Engine extends Context.Service<
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
         mutations.setThreadPageReplacing(threadId);
 
-        const since = store.getState().removalCount;
-
         const [detail, newest] = yield* Effect.all(
-          [Effect.result(thread(threadId)), threadMessages(threadId, null)],
+          [
+            Effect.result(
+              settled(
+                thread(threadId),
+                () => thread(threadId),
+                (answer) => [answer.thread.id],
+              ),
+            ),
+            threadMessages(threadId, null),
+          ],
           { concurrency: 2 },
         );
 
-        if (Result.isSuccess(detail)) {
-          mutations.loadThreadDetail(detail.success, since);
+        if (Result.isSuccess(detail) && detail.success.since !== null) {
+          mutations.loadThreadDetail(detail.success.answer, detail.success.since);
         }
 
         mutations.applyThreadPage(threadId, newest, "resync");
