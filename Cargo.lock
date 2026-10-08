@@ -866,6 +866,7 @@ dependencies = [
 name = "campfire_spa"
 version = "0.1.0"
 dependencies = [
+ "askama",
  "brotli",
  "campfire_routes",
  "flate2",

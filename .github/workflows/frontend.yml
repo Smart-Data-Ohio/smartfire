@@ -51,6 +51,7 @@ jobs:
             .github/workflows/frontend.yml
             crates
             .cargo
+            vectors
 
       - name: Decide whether the frontend checks are needed
         id: scope

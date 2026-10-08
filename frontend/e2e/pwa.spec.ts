@@ -13,7 +13,7 @@ declare const self: ServiceWorkerGlobalScope & {
 
 declare const SmartfireWorker: { openNotification(path: string): Promise<WindowClient | null> };
 
-const workerPath = "/app/service-worker.js";
+const workerPath = "/service-worker.js";
 
 const cachePrefix = "smartfire-spa-";
 
@@ -238,7 +238,7 @@ test("offline navigation shows the designed offline page and recovers online", a
   await expect(page.getByRole("heading", { name: "You're offline" })).toHaveCount(0);
 });
 
-test("the production worker opens a classic push permalink on its SPA screen", async ({
+test("the production worker leaves classic push permalinks to the server aliases", async ({
   page,
   context,
 }) => {
@@ -260,7 +260,7 @@ test("the production worker opens a classic push permalink on its SPA screen", a
     }
   });
 
-  await expect(page).toHaveURL(/\/app\/r\/12\/m\/34\?highlight=1$/);
+  await expect(page).toHaveURL(/\/rooms\/12\/@34\?highlight=1$/);
 });
 
 test("no-store classic assets are fetched each time and never enter either cache", async ({
@@ -335,7 +335,7 @@ test("updates retain live A through B and C, then prune its closed page", async 
   await expect(current.getByRole("heading", { name: "Smartfire design system" })).toBeVisible();
   await page.close();
   // A later real fetch/messages performs pruning; there is no retention timer.
-  await current.evaluate(() => fetch("/app/offline.html"));
+  await current.evaluate(() => fetch("/offline.html"));
   await expect
     .poll(() => cacheNames(current))
     .toEqual([`${cachePrefix}pwa-e2e-b`, `${cachePrefix}pwa-e2e-c`]);
@@ -384,7 +384,7 @@ test("an A page opens its unloaded real poll chunk after B and C activate", asyn
   }
 });
 
-test("an A page keeps its unloaded chunk after another tab switches to the classic worker", async ({
+test("an A page keeps its unloaded chunk when a classic tab registers the shared worker", async ({
   page,
   context,
 }) => {
@@ -399,7 +399,7 @@ test("an A page keeps its unloaded chunk after another tab switches to the class
     await expect(page.getByRole("textbox", { name: /^Message #/ })).toBeVisible();
     const chunk = await pollChunk(page, cacheA);
 
-    // Another tab's person prefers classic: the real classic worker takes over the registration.
+    // A classic tab registers the same root script and retains the SPA page's cache.
     const other = await context.newPage();
 
     await other.goto("/app/_kitchen-sink");
@@ -531,7 +531,7 @@ test("a lazy-chunk failure after a deploy says Smartfire has been updated", asyn
   }
 });
 
-test("classic and SPA scripts replace one root registration in both directions", async ({
+test("legacy SPA worker aliases update the same root registration to the canonical script", async ({
   page,
   context,
 }) => {

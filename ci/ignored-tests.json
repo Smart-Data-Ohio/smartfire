@@ -7,6 +7,12 @@
       "test": "controllers::spa::tests::pwa_browser_reconciles_sign_in_and_preserves_root_registration"
     },
     {
+      "path": "crates/campfire/src/controllers/spa_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::spa::tests::pwa_browser_manifest_uses_session_for_saved_ui_preference"
+    },
+    {
       "path": "crates/campfire/src/controllers/spa_smoke_tests.rs",
       "package": "campfire",
       "binary": "campfire",
