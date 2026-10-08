@@ -22,7 +22,7 @@ use serde_json::Value;
 pub(crate) fn blank(value: &Value) -> bool {
     crate::integrations::fizzy::blank(value)
 }
-struct Source {
+pub struct Source {
     room_name: String,
     room: Room,
     thread: Option<ChannelThread>,
@@ -59,7 +59,7 @@ impl Source {
         )
     }
 }
-async fn source(c: &mut Ctx) -> Result<Source> {
+pub async fn source(c: &mut Ctx) -> Result<Source> {
     before_actions(c, Before::default()).await?;
     let viewer = require_current_user(c)?.id;
     let room = concerns::set_room(c).await?.1;
@@ -120,47 +120,110 @@ fn redirect(c: &mut Ctx, source: &Source, notice: bool, message: &str) -> Result
         .set(if notice { "notice" } else { "alert" }, message);
     c.redirect_to(&c.url_for(&source.path()))
 }
-async fn boards(c: &mut Ctx, source: &Source) -> campfire_kit::Result<Value> {
+/// Expected Fizzy failures, independent of the classic redirect or JSON adapter.
+#[derive(Debug)]
+pub enum Failure {
+    NotConnected,
+    Locked,
+    Invalid {
+        boards: Value,
+        board_missing: bool,
+        title_missing: bool,
+    },
+    Unreachable,
+    VerificationUnreachable,
+    CreateUnreachable(String),
+    Rejected,
+    ReadOnly,
+    Refused(String),
+    ReplyFailed {
+        number: String,
+        url: String,
+        details: String,
+    },
+}
+impl Failure {
+    pub fn message(&self) -> String {
+        match self {
+            Self::NotConnected => "Connect Fizzy on your profile first.".into(),
+            Self::Locked => "This thread is locked".into(),
+            Self::Invalid { .. } => "Choose a board and enter a title.".into(),
+            Self::Unreachable => "Could not reach Fizzy. Try again.".into(),
+            Self::VerificationUnreachable => {
+                "Could not reach Fizzy to verify the token. Try again.".into()
+            }
+            Self::Rejected => "Fizzy rejected the linked token. Reconnect on your profile.".into(),
+            Self::ReadOnly => {
+                "That Fizzy token is read-only. Generate a Read + Write token to create cards."
+                    .into()
+            }
+            Self::Refused(message) | Self::CreateUnreachable(message) => {
+                format!("Fizzy refused the new card ({message}).")
+            }
+            Self::ReplyFailed {
+                number, details, ..
+            } => format!(
+                "Fizzy card #{number} created, but the reply could not be posted ({details})."
+            ),
+        }
+    }
+}
+pub type Outcome<T> = Result<std::result::Result<T, Failure>>;
+
+impl Source {
+    pub fn connected(&self) -> bool {
+        self.token.is_some()
+    }
+}
+
+pub async fn boards(c: &mut Ctx, source: &Source) -> Outcome<Value> {
     match source
         .client()
         .boards(&source.account.as_ref().unwrap().account_id)
         .await
     {
-        Ok(value) => Ok(value),
-        Err(error) => {
-            let response = if error.kind == ErrorKind::Unauthorized {
-                rejected(c, source).await
-            } else {
-                redirect(c, source, false, "Could not reach Fizzy. Try again.")
-            };
-            // Preserve adapter errors rather than disguising them as successful redirects.
-            campfire_kit::halt(response?)
+        Ok(value) => Ok(Ok(value)),
+        Err(error) if error.kind == ErrorKind::Unauthorized => {
+            mark_rejected(c, source).await?;
+            Ok(Err(Failure::Rejected))
         }
+        Err(_) => Ok(Err(Failure::Unreachable)),
     }
 }
-async fn rejected(c: &mut Ctx, source: &Source) -> Result {
+async fn mark_rejected(c: &mut Ctx, source: &Source) -> Result<()> {
     let account = source.account.clone().expect("usable account");
     c.app()
         .db
         .write(move |tx| account.mark_disconnected(tx, REJECTED_TOKEN_REASON))
         .await
-        .map_err(db_error)?;
-    fizzy_connections::redirect(
-        c,
-        false,
-        "Fizzy rejected the linked token. Reconnect on your profile.",
-    )
+        .map_err(db_error)
+}
+fn classic_failure(c: &mut Ctx, source: &Source, failure: &Failure) -> Result {
+    let message = failure.message();
+    if matches!(failure, Failure::NotConnected | Failure::Rejected) {
+        fizzy_connections::redirect(c, false, &message)
+    } else {
+        redirect(c, source, false, &message)
+    }
 }
 pub async fn new(c: &mut Ctx) -> Result {
     let source = source(c).await?;
     let boards = if source.token.is_some() {
-        boards(c, &source).await?
+        match boards(c, &source).await? {
+            Ok(boards) => boards,
+            Err(failure) => return classic_failure(c, &source, &failure),
+        }
     } else {
         Value::Null
     };
     render(c, source, boards, StatusCode::OK).await
 }
-async fn render(c: &mut Ctx, source: Source, boards: Value, status: StatusCode) -> Result {
+/// The same defaults and display fields both forms use. Board names are a flat list.
+pub fn form_view(
+    c: &Ctx,
+    source: &Source,
+    boards: Value,
+) -> campfire_views::fizzy_message_cards::FormView {
     let title = c.param_str("title").map(str::to_owned).unwrap_or_else(|| {
         campfire_richtext::ruby::truncate(
             campfire_richtext::ruby::strip(source.plain.lines().next().unwrap_or("")),
@@ -179,16 +242,16 @@ async fn render(c: &mut Ctx, source: Source, boards: Value, status: StatusCode) 
                 format!("{}\n\n{link}", source.plain)
             }
         });
-    let view = campfire_views::fizzy_message_cards::FormView {
+    campfire_views::fizzy_message_cards::FormView {
         back_path: source.path(),
         action: format!(
             "{}/messages/{}/fizzy_cards",
             source.path(),
             source.message.id
         ),
-        room_name: source.room_name,
-        plain: source.plain,
-        creator: source.creator.name,
+        room_name: source.room_name.clone(),
+        plain: source.plain.clone(),
+        creator: source.creator.name.clone(),
         connected: source.token.is_some(),
         boards,
         board_id: c.param_str("board_id").unwrap_or("").into(),
@@ -204,32 +267,53 @@ async fn render(c: &mut Ctx, source: Source, boards: Value, status: StatusCode) 
             .as_ref()
             .and_then(|a| a.account_name.clone())
             .unwrap_or_default(),
-    };
+    }
+}
+async fn render(c: &mut Ctx, source: Source, boards: Value, status: StatusCode) -> Result {
+    let view = form_view(c, &source, boards);
     page::framed_page!(c, status, |ctx| campfire_views::fizzy_message_cards::New {
         ctx,
         view: &view
     })
     .await
 }
-pub async fn create(c: &mut Ctx) -> Result {
-    let source = source(c).await?;
+pub struct Created {
+    pub number: String,
+    pub url: String,
+    pub reply: Message,
+}
+
+/// Creates in Fizzy and posts through the classic room/thread write, webhook and broadcast path.
+pub async fn create_card(
+    c: &mut Ctx,
+    source: &Source,
+    board: String,
+    title: String,
+    description: String,
+) -> Outcome<Created> {
     if source.token.is_none() {
-        return fizzy_connections::redirect(c, false, "Connect Fizzy on your profile first.");
+        return Ok(Err(Failure::NotConnected));
     }
     if source
         .thread
         .as_ref()
         .is_some_and(|t| t.locked_at.is_some())
     {
-        return redirect(c, &source, false, "This thread is locked");
+        return Ok(Err(Failure::Locked));
     }
-    let board = c.param_str("board_id").unwrap_or("").to_owned();
-    let title = campfire_richtext::ruby::strip(c.param_str("title").unwrap_or("")).to_owned();
-    let description = c.param_str("description").unwrap_or("").to_owned();
-    if campfire_richtext::ruby::is_blank(&board) || campfire_richtext::ruby::is_blank(&title) {
-        let boards = boards(c, &source).await?;
-        c.flash().now("alert", "Choose a board and enter a title.");
-        return render(c, source, boards, StatusCode::UNPROCESSABLE_ENTITY).await;
+    let title = campfire_richtext::ruby::strip(&title).to_owned();
+    let board_missing = campfire_richtext::ruby::is_blank(&board);
+    let title_missing = campfire_richtext::ruby::is_blank(&title);
+    if board_missing || title_missing {
+        let boards = match boards(c, source).await? {
+            Ok(boards) => boards,
+            Err(failure) => return Ok(Err(failure)),
+        };
+        return Ok(Err(Failure::Invalid {
+            boards,
+            board_missing,
+            title_missing,
+        }));
     }
     let client = source.client();
     let card = match client
@@ -243,30 +327,20 @@ pub async fn create(c: &mut Ctx) -> Result {
     {
         Ok(card) => card,
         Err(error) if error.kind == ErrorKind::Unauthorized => {
-            return match client.identity().await {
-                Ok(_) => redirect(
-                    c,
-                    &source,
-                    false,
-                    "That Fizzy token is read-only. Generate a Read + Write token to create cards.",
-                ),
-                Err(probe) if probe.kind == ErrorKind::Unauthorized => rejected(c, &source).await,
-                Err(_) => redirect(
-                    c,
-                    &source,
-                    false,
-                    "Could not reach Fizzy to verify the token. Try again.",
-                ),
+            let failure = match client.identity().await {
+                Ok(_) => Failure::ReadOnly,
+                Err(probe) if probe.kind == ErrorKind::Unauthorized => {
+                    mark_rejected(c, source).await?;
+                    Failure::Rejected
+                }
+                Err(_) => Failure::VerificationUnreachable,
             };
+            return Ok(Err(failure));
         }
-        Err(error) => {
-            return redirect(
-                c,
-                &source,
-                false,
-                &format!("Fizzy refused the new card ({}).", error.message),
-            );
+        Err(error) if error.message.starts_with("Could not reach Fizzy (") => {
+            return Ok(Err(Failure::CreateUnreachable(error.message)));
         }
+        Err(error) => return Ok(Err(Failure::Refused(error.message))),
     };
     let number = card["number"]
         .as_str()
@@ -319,18 +393,14 @@ pub async fn create(c: &mut Ctx) -> Result {
     let reply = match posted {
         Ok(reply) => reply,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
-            return redirect(
-                c,
-                &source,
-                false,
-                &format!(
-                    "Fizzy card #{number} created, but the reply could not be posted ({}).",
-                    errors.full_messages().join(", ")
-                ),
-            );
+            return Ok(Err(Failure::ReplyFailed {
+                number,
+                url,
+                details: errors.full_messages().join(", "),
+            }));
         }
         Err(campfire_db::Error::Other(message)) if message == "This thread is locked" => {
-            return redirect(c, &source, false, &message);
+            return Ok(Err(Failure::Locked));
         }
         Err(error) => return Err(db_error(error)),
     };
@@ -338,5 +408,25 @@ pub async fn create(c: &mut Ctx) -> Result {
     if reply.thread_id.is_none() {
         messages::release_webhooks(c, &reply).await;
     }
-    redirect(c, &source, true, &format!("Fizzy card #{number} created."))
+    Ok(Ok(Created { number, url, reply }))
+}
+
+pub async fn create(c: &mut Ctx) -> Result {
+    let source = source(c).await?;
+    let board = c.param_str("board_id").unwrap_or("").to_owned();
+    let title = c.param_str("title").unwrap_or("").to_owned();
+    let description = c.param_str("description").unwrap_or("").to_owned();
+    match create_card(c, &source, board, title, description).await? {
+        Ok(created) => redirect(
+            c,
+            &source,
+            true,
+            &format!("Fizzy card #{} created.", created.number),
+        ),
+        Err(Failure::Invalid { boards, .. }) => {
+            c.flash().now("alert", "Choose a board and enter a title.");
+            render(c, source, boards, StatusCode::UNPROCESSABLE_ENTITY).await
+        }
+        Err(failure) => classic_failure(c, &source, &failure),
+    }
 }
