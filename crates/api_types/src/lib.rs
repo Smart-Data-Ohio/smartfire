@@ -65,7 +65,7 @@ pub use admin::{
     AuditLogEntry, AuditLogFilters, AuditLogPage, CreateIcon, CustomStyles, DeliveryHealth,
     EmailHealth, FizzyHealth, GithubHealth, GoogleHealth, HealthIssue,
     IntegrationsHealth, PeoplePage, Person, PersonChange, PersonRemoved, PersonRole,
-    PushChannelExpiry, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
+    PushChannelExpiry, UpdateBanner, UpdateLogo, UpdatePerson, UpdateWorkspace, Workspace, WorkspaceIcon,
     WorkspaceIconList,
 };
 pub use agents::{
@@ -159,7 +159,7 @@ pub use stage::{
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
 };
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
-pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
+pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing, WorkspaceBranding};
 pub use thread::{
     CreateThread, JoinThread, Thread, ThreadCreated, ThreadDetail, ThreadFilter, ThreadIndicator,
     ThreadIndicatorChanged, ThreadInvolvement, ThreadList, ThreadMembership, ThreadMembershipState,

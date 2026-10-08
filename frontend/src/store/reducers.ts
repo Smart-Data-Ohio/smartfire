@@ -29,6 +29,7 @@ import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
 import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
 import { receiveWorkThread } from "./work.ts";
+import { setWorkspaceBranding } from "./workspace.ts";
 
 export { compareMessages };
 
@@ -895,6 +896,9 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "message.cards":
         next = applyMessageCards(next, event.data);
+        break;
+      case "workspace.updated":
+        next = setWorkspaceBranding(next, event.data);
         break;
     }
   }
