@@ -1353,3 +1353,6 @@ mod template_coverage_tests;
 
 #[cfg(test)]
 mod drive_browser_tests;
+
+#[cfg(test)]
+mod spa_smoke_tests;

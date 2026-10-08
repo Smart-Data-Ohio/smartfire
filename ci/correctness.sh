@@ -134,6 +134,14 @@ run_suite() {
       docker rm "$pwa_container"
       trap - EXIT
       export SPA_DIST="$repo/frontend/dist"
+      # The SPA smoke boots the actual server binary (not the test harness's router), built
+      # here with the same production dist it asserts against.
+      cargo build --locked -j 4 -p campfire --bin campfire
+      # Ordinary Rust CI exercises the stub; this job also pins built-shell/asset responses.
+      cargo nextest run --locked -p campfire --build-jobs 4 -j 4 \
+        --no-tests fail --success-output final -E 'test(url_contract_tests)'
+      export SPA_SMOKE_BINARY="$repo/target/debug/campfire"
+      export SMARTFIRE_E2E_PORT=4320
       browser_images
       export PWA_PLAYWRIGHT_IMAGE="$WS13_PLAYWRIGHT_IMAGE"
       ignored
