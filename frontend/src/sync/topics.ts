@@ -68,11 +68,6 @@ export class Topics extends Context.Service<
     readonly acquire: (topic: string) => Effect.Effect<void>;
     readonly release: (topic: string) => Effect.Effect<void>;
     /**
-     * Sends `sub` again for a topic this client already holds. A join is refused until the
-     * membership exists, so the first `sub` from opening the preview does not stick.
-     */
-    readonly resubscribe: (topic: string) => Effect.Effect<void>;
-    /**
      * Forgets a room topic the server refused before the membership existed. A hot entry would
      * otherwise count as subscribed, so coming back would not send `sub` again. A view that
      * still holds the topic subscribes now.
@@ -96,13 +91,6 @@ export class Topics extends Context.Service<
             (frame) => (frame === null ? Effect.void : link.send(frame)),
           );
 
-      const resubscribe = (topic: string) =>
-        Effect.flatMap(Ref.get(interest), (current) => {
-          const held = (current.holders.get(topic) ?? 0) > 0 || current.hot.includes(topic);
-
-          return held ? link.send({ t: "sub", topics: [topic] }) : Effect.void;
-        });
-
       const forgetRejected = (topic: string) =>
         Effect.flatMap(
           Ref.modify(interest, (current) => {
@@ -122,7 +110,6 @@ export class Topics extends Context.Service<
       return Topics.of({
         acquire: change(acquireIn),
         release: change(releaseIn),
-        resubscribe,
         forgetRejected,
         subscribed: Effect.map(Ref.get(interest), (current) => [
           ...current.holders.keys(),

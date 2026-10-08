@@ -20,10 +20,8 @@ import type { Sidebar } from "../gen/Sidebar.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import {
   clearRoomJoin,
-  finishUnfinishedJoin,
-  hasUnfinishedJoin,
+  detailInstalledGeneration,
   joinedAtEpoch,
-  markUnfinishedJoin,
   noteJoined,
   resetJoinState,
 } from "../store/join-state.ts";
@@ -47,14 +45,16 @@ const roomTopic = (roomId: number) => `room:${roomId}`;
 interface RoomVisit {
   readonly token: number;
   readonly focusMessageId: number | null;
+  readonly load: number;
 }
 
 let nextVisitToken = 0;
+let nextLoad = 0;
 
 const visits = new Map<number, RoomVisit>();
 
 function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
-  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId };
+  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId, load: 0 };
 
   visits.set(roomId, visit);
 
@@ -65,11 +65,12 @@ function sameVisit(roomId: number, token: number): boolean {
   return visits.get(roomId)?.token === token;
 }
 
-/** Test isolation. Visit tokens and unfinished joins outlive the store. */
+/** Test isolation. Visit tokens and join epochs outlive the store. */
 export function resetRoomVisits(): void {
   visits.clear();
   resetJoinState();
   nextVisitToken = 0;
+  nextLoad = 0;
 }
 
 /** Everyone the sidebar shows a presence dot for: direct-message members and placeholders. */
@@ -173,11 +174,19 @@ function currentJoinDetail(roomId: number): RoomDetail | null {
 
 /**
  * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
- * room is unavailable. A result applies only while `token` is still this room's visit. Cached
- * membership never overrides a 404 — the one exception is detail this session's join installed
- * while that join's epoch is still current.
+ * room is unavailable. A preview applies only when its load is still the visit's latest and no
+ * detail has been installed since that load started. Cached membership never overrides a 404.
+ * The exception is detail this session's join installed while that join's epoch is still current.
  */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+  const open = visits.get(roomId);
+  const load = open?.token === token ? ++nextLoad : 0;
+  const detailAtStart = detailInstalledGeneration(roomId);
+
+  if (open !== undefined && open.token === token) {
+    visits.set(roomId, { ...open, load });
+  }
+
   mutations.setRoomLoading(roomId);
   mutations.setPageReplacing(roomId);
 
@@ -198,7 +207,6 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const kept = currentJoinDetail(roomId);
 
   if (kept !== null) {
-    finishUnfinishedJoin(roomId);
     mutations.setRoomDetail(kept);
     yield* loadFirstPage(roomId, token, kept.unread);
 
@@ -209,8 +217,9 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
   if (Predicate.isTagged(loaded.failure, "NotFound")) {
     const preview = yield* Effect.result(openRoomPreview(roomId));
+    const latest = sameVisit(roomId, token) && visits.get(roomId)?.load === load;
 
-    if (!sameVisit(roomId, token) || currentJoinDetail(roomId) !== null) {
+    if (!latest || detailInstalledGeneration(roomId) !== detailAtStart) {
       return;
     }
 
@@ -229,10 +238,6 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
     mutations.setRoomError(roomId, preview.failure.message);
 
-    return;
-  }
-
-  if (!sameVisit(roomId, token) || currentJoinDetail(roomId) !== null) {
     return;
   }
 
@@ -295,12 +300,9 @@ const installJoined = Effect.fnUntraced(function* (
       yield* presenceService.leave(roomId);
     }
 
-    markUnfinishedJoin(roomId);
-
     return;
   }
 
-  finishUnfinishedJoin(roomId);
   mutations.setPageReplacing(roomId);
   yield* loadFirstPage(roomId, visit.token, detail.unread);
 });
@@ -384,10 +386,6 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
   const visit = beginVisit(roomId, focusMessageId);
   const topics = yield* Topics;
   const presenceService = yield* Presence;
-
-  if (hasUnfinishedJoin(roomId)) {
-    yield* topics.forgetRejected(roomTopic(roomId));
-  }
 
   yield* topics.acquire(roomTopic(roomId));
   yield* presenceService.enter(roomId);

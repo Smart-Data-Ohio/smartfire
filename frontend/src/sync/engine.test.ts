@@ -20,7 +20,6 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
-import { hasUnfinishedJoin } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import * as activity from "./activity-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
@@ -2643,17 +2642,30 @@ describe("joining an open room", () => {
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
         const releaseJoin = yield* Deferred.make<void>();
         const releasePreview = yield* Deferred.make<void>();
+        const releaseRefresh = yield* Deferred.make<void>();
         let previews = 0;
+        let memberReads = 0;
         let member = false;
 
+        const refreshed = { ...roomDetailFixture(90), pinsCount: 4 };
+
         yield* serve([]);
-        yield* api.route("GET /rooms/90", () =>
-          member
-            ? Effect.succeed(roomDetailFixture(90))
-            : Effect.fail(new NotFound({ message: "Room not found" })),
-        );
+        yield* api.route("GET /rooms/90", () => {
+          if (!member) {
+            return Effect.fail(new NotFound({ message: "Room not found" }));
+          }
+
+          memberReads += 1;
+
+          if (memberReads === 1) {
+            return Effect.succeed(roomDetailFixture(90));
+          }
+
+          return Deferred.await(releaseRefresh).pipe(Effect.as(refreshed));
+        });
         yield* api.route("GET /rooms/90/preview", () => {
           previews += 1;
 
@@ -2692,11 +2704,31 @@ describe("joining an open room", () => {
         expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
         expect(store.getState().rooms[90]?.preview).toBeNull();
 
+        yield* socket.push({
+          t: "batch",
+          events: [
+            {
+              seq: 2,
+              topic: "user",
+              type: "sidebar.row.upserted",
+              data: { ...sidebarRowFixture(90, "campfire"), refreshRoom: true },
+            },
+          ],
+        });
+        yield* settle;
+        yield* Deferred.succeed(releaseRefresh, undefined);
+        yield* settle;
+
+        expect(store.getState().rooms[90]?.detail?.pinsCount).toBe(4);
+        expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
+        expect(store.getState().rooms[90]?.preview).toBeNull();
+
         yield* Deferred.succeed(releasePreview, undefined);
         yield* Fiber.join(returning);
         yield* settle;
 
         expect(store.getState().rooms[90]?.detail?.membership.userId).toBe(7);
+        expect(store.getState().rooms[90]?.detail?.pinsCount).toBe(4);
         expect(store.getState().rooms[90]?.preview).toBeNull();
         expect(timelineIds(90)).toEqual([9]);
         expect(
@@ -3109,55 +3141,4 @@ describe("joining an open room", () => {
     ),
   );
 
-  it.effect("leaving or losing the room forgets a join that never finished opening", () =>
-    withSync(
-      Effect.gen(function* () {
-        const api = yield* FakeApi;
-        let member = false;
-
-        yield* serve([]);
-        yield* api.reply("GET /rooms/90/preview", preview);
-        yield* api.route("GET /rooms/90", () =>
-          member
-            ? Effect.succeed(roomDetailFixture(90))
-            : Effect.fail(new NotFound({ message: "Room not found" })),
-        );
-        yield* api.route("POST /rooms/90/join", () =>
-          Effect.sync(() => {
-            member = true;
-
-            return joined();
-          }),
-        );
-        yield* startEngine;
-        yield* welcome(1, false);
-        yield* session.openRoom(90, null);
-        yield* session.closeRoom(90);
-        yield* session.joinOpenRoom(90);
-
-        expect(hasUnfinishedJoin(90)).toBe(true);
-
-        yield* session.closeRoom(90);
-
-        expect(hasUnfinishedJoin(90)).toBe(true);
-
-        mutations.setRoomUnavailable(90);
-
-        expect(hasUnfinishedJoin(90)).toBe(false);
-
-        yield* session.joinOpenRoom(90);
-
-        expect(hasUnfinishedJoin(90)).toBe(true);
-
-        yield* pushEvents({
-          seq: 2,
-          topic: "user",
-          type: "sidebar.row.removed",
-          data: { roomId: 90, refreshRoom: true },
-        });
-
-        expect(hasUnfinishedJoin(90)).toBe(false);
-      }),
-    ),
-  );
 });
