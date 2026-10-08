@@ -380,6 +380,14 @@ export function createEvents(ctx: S2Context) {
     }
   };
 
+  /**
+   * The room's `events.changed`: every write sends it, so screens hear about events no message
+   * links (a series' later occurrences) and ones a shortened series removed.
+   */
+  const publishChanged = (roomId: number) => {
+    ctx.publish([{ topic: `room:${roomId}`, type: "events.changed", data: { roomId } }]);
+  };
+
   const create = (roomId: number, body: Json | undefined) => {
     const record = room(roomId);
     const values = formValues(body, null);
@@ -433,6 +441,7 @@ export function createEvents(ctx: S2Context) {
 
     record.messages[index] = { ...message, cards: [{ kind: "event", data: card(event) }] };
     publishCards(event);
+    publishChanged(roomId);
 
     return ok(detail(event), 201);
   };
@@ -635,6 +644,8 @@ export function createEvents(ctx: S2Context) {
 
     for (const target of targets) publishCards(target);
 
+    publishChanged(event.roomId);
+
     return ok(detail(event));
   };
 
@@ -652,6 +663,8 @@ export function createEvents(ctx: S2Context) {
       target.cancelled = true;
       publishCards(target);
     }
+
+    publishChanged(event.roomId);
 
     return ok(detail(event));
   };

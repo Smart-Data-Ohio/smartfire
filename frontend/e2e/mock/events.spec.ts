@@ -3,9 +3,13 @@ import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } 
 
 const UPCOMING = 8001;
 
+const WEEKLY_HEAD = 8100;
+
 const WEEKLY_SECOND = 8101;
 
 const WEEKLY_THIRD = 8102;
+
+const WEEKLY_LAST = 8103;
 
 declare global {
   interface Window {
@@ -24,17 +28,21 @@ interface HeldRead {
 }
 
 /**
- * Holds the page's next read of `path` (under /api/v1) after the server has answered it, so the
- * page gets an old snapshot late, after newer ones.
+ * Holds the page's next `method` request to `path` (under /api/v1) after the server has answered
+ * it, so the page gets an old snapshot (a read's, or a save's reply) late, after newer ones.
  */
-async function holdNextRead(page: Page, path: string): Promise<HeldRead> {
+async function holdNextRead(
+  page: Page,
+  path: string,
+  method: "GET" | "PATCH" = "GET",
+): Promise<HeldRead> {
   const answered = Promise.withResolvers<void>();
   const released = Promise.withResolvers<void>();
   const delivered = Promise.withResolvers<void>();
   let holding = true;
 
   await page.route(`**/api/v1${path}`, async (route) => {
-    if (!holding || route.request().method() !== "GET") {
+    if (!holding || route.request().method() !== method) {
       return route.fallback();
     }
 
@@ -352,31 +360,122 @@ test.describe("a room's events", () => {
     });
   }
 
-  test("a new event that saves after Escape closed the form stays on the list", async ({
+  for (const dismissal of ["Escape", "Back"] as const) {
+    test(`a new event that saves after ${dismissal} closed the form stays on the list`, async ({
+      page,
+    }) => {
+      await openApp(page, `r/${ROOM_IDS.general}/events`);
+      await page.getByRole("link", { name: "New event" }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+
+      await dialog.getByLabel("Title").fill("Launch retro");
+
+      const release = await holdWrite(page, "POST", `/rooms/${ROOM_IDS.general}/events`);
+
+      await dialog.getByRole("button", { name: "Schedule event" }).click();
+
+      if (dismissal === "Escape") {
+        await page.keyboard.press("Escape");
+      } else {
+        await page.goBack();
+      }
+
+      await expect(dialog).toBeHidden();
+      await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
+
+      const historyCalls = await watchHistory(page);
+
+      release();
+      await expect(page.getByText("Event scheduled.")).toBeVisible();
+      await settle(page);
+      expect(await historyCalls()).toEqual([]);
+      await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
+      await expect(page.getByRole("link", { name: "Launch retro" })).toBeVisible();
+    });
+  }
+
+  test("a save whose reply lands after a newer answer doesn't take the answer back", async ({
     page,
   }) => {
-    await openApp(page, `r/${ROOM_IDS.general}/events`);
-    await page.getByRole("link", { name: "New event" }).click();
+    await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+    await page.getByRole("link", { name: "Edit" }).click();
 
-    const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+    const dialog = page.getByRole("dialog", { name: "Edit event" });
 
-    await dialog.getByLabel("Title").fill("Launch retro");
+    await dialog.getByLabel("Title").fill("Team check-in (moved)");
 
-    const release = await holdWrite(page, "POST", `/rooms/${ROOM_IDS.general}/events`);
+    const save = await holdNextRead(page, `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`, "PATCH");
 
-    await dialog.getByRole("button", { name: "Schedule event" }).click();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    // The save's reply (moved, not answered) is taken; the page gets it only after Going's.
+    await save.answered;
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
-    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
-
-    const historyCalls = await watchHistory(page);
-
-    release();
-    await expect(page.getByText("Event scheduled.")).toBeVisible();
+    await page.getByRole("button", { name: "Going" }).click();
+    await expect(page.getByText("Currently: Going")).toBeVisible();
+    // Let any read the answer's news set off finish first, so nothing newer than the save's reply
+    // can come along after it and paper over a reply that wrongly landed.
     await settle(page);
-    expect(await historyCalls()).toEqual([]);
-    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.general}/events$`));
-    await expect(page.getByRole("link", { name: "Launch retro" })).toBeVisible();
+
+    save.release();
+    await save.delivered;
+    await expect(page.getByText("Event updated.")).toBeVisible();
+    await settle(page);
+
+    await expect(page.getByText("Currently: Going")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Going" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Team check-in (moved)" }),
+    ).toBeVisible();
+  });
+
+  test("a save that lands while the next occurrence loads leaves that one to load", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
+    await page.getByRole("link", { name: "Edit" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Edit event" });
+
+    await dialog.getByLabel("Title").fill("Engineering weekly (this one)");
+
+    const save = await holdNextRead(
+      page,
+      `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`,
+      "PATCH",
+    );
+
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await save.answered;
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    // The room's news of the edit has already been read in.
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Engineering weekly (this one)" }),
+    ).toBeVisible();
+
+    const next = await holdNextRead(page, `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
+
+    await page.getByRole("link", { name: "Next" }).click();
+    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
+    await next.answered;
+
+    // The save finishes while the next occurrence's read is still out.
+    save.release();
+    await save.delivered;
+    await settle(page);
+    next.release();
+    await next.delivered;
+    await settle(page);
+
+    await expect(page.getByRole("status", { name: "Loading the event" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
   });
 
   test("another tab's edit and cancel reach an open list and event page", async ({
@@ -429,15 +528,77 @@ test.describe("a room's events", () => {
     await expect(page.getByText("This event was cancelled.", { exact: true })).toBeVisible();
     await other.close();
   });
+
+  test("another tab's edit of an occurrence no message links reaches an open event page", async ({
+    page,
+    context,
+  }) => {
+    const welcomed = syncWelcomed(page);
+
+    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
+    await welcomed;
+    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
+
+    const other = await context.newPage();
+
+    await openApp(other, `r/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
+    await other.getByRole("link", { name: "Edit" }).click();
+
+    const edit = other.getByRole("dialog", { name: "Edit event" });
+
+    await edit.getByLabel("Title").fill("Engineering weekly (third only)");
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toBeHidden();
+
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Engineering weekly (third only)" }),
+    ).toBeVisible();
+    await other.close();
+  });
+
+  test("another tab shortening the series takes a removed occurrence off an open page", async ({
+    page,
+    context,
+  }) => {
+    const welcomed = syncWelcomed(page);
+
+    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_LAST}`);
+    await welcomed;
+    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
+
+    const other = await context.newPage();
+
+    await openApp(other, `r/${ROOM_IDS.engineering}/events/${WEEKLY_HEAD}`);
+    await other.getByRole("link", { name: "Edit" }).click();
+
+    const edit = other.getByRole("dialog", { name: "Edit event" });
+    const until = edit.getByLabel("Until");
+
+    // A week earlier, the series has no slot left for its last occurrence.
+    const end = new Date(`${await until.inputValue()}T00:00:00Z`);
+
+    end.setUTCDate(end.getUTCDate() - 7);
+    await edit.getByRole("radio", { name: "This and following" }).check();
+    await until.fill(end.toISOString().slice(0, 10));
+    await edit.getByRole("button", { name: "Save changes" }).click();
+    await expect(edit).toBeHidden();
+
+    await expect(page.getByText("This event isn't here")).toBeVisible();
+    await other.close();
+  });
 });
 
 test.describe("a prefilled new-event link", () => {
   test.use({ timezoneId: "Europe/Berlin" });
 
-  test("the /event command's link opens the form with its title and start", async ({ page }) => {
+  test("a link shaped like the /event command's opens the form with its title and start", async ({
+    page,
+  }) => {
     await page.setViewportSize(DESKTOP);
 
-    // What the classic URL redirects to: Rails' nested keys, sorted, form-encoded.
+    // The mock has no classic pages: this is the URL the classic /event link redirects to, Rails'
+    // nested keys, sorted and form-encoded. The server test
+    // `the_event_commands_link_opens_the_spa_form_with_its_prefill` pins that shape.
     const query = [
       "event%5Bstarts_at%5D=2030-03-08T22%3A00%3A00Z",
       "event%5Btime_zone%5D=Eastern+Time+%28US+%26+Canada%29",

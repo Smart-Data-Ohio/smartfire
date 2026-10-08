@@ -133,10 +133,10 @@ export function EventsRoute() {
   const tabsId = useId();
   const panelId = useId();
   const [section, setSection] = useState<Section>("upcoming");
-  const { state, reload } = useLoad(`${roomId}`, () => actions.events.list(roomId));
+  const { state, reload, refresh } = useLoad(`${roomId}`, () => actions.events.list(roomId));
   const list = state.status === "ready" ? state.value : null;
 
-  useEventChanges(roomId, reload);
+  useEventChanges(roomId, refresh);
 
   const closeForm = useCloseOverlay(() => {
     void navigate({ to: "/r/$roomId/events", params: { roomId }, replace: true });

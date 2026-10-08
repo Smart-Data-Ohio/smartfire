@@ -1333,6 +1333,85 @@ fn cancelling_a_singleton_twice_preserves_timestamp_and_activity_rows() {
     );
 }
 
+/// The rooms the writes since the last `take` told their open calendar screens about, in order.
+fn rooms_told(t: &TestDb) -> Vec<i64> {
+    t.events()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Broadcast(request) => request
+                .decode::<crate::models::calendar_event::EventsChanged>()
+                .map(|change| change.unwrap().room_id),
+            _ => None,
+        })
+        .collect()
+}
+
+// Later occurrences of a series have no message linking them, so the card update can't reach
+// the single-page app's calendar screens for them: every write to an event tells its room,
+// once per transaction, including the occurrences a shortened recurrence destroys.
+#[test]
+fn every_event_write_tells_its_room_once() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let room = id("designers");
+    t.sink.take();
+    let head = series(&t);
+    assert_eq!(rooms_told(&t), [room], "scheduling a series");
+    let ids: Vec<i64> = t
+        .read(|c| head.series_events(c))
+        .iter()
+        .map(|e| e.id)
+        .collect();
+    assert_eq!(ids.len(), 3);
+
+    t.sink.take();
+    let later = ids[1];
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            later,
+            EventChanges {
+                title: Some("Planning, moved".into()),
+                ..Default::default()
+            },
+            "this_event",
+            Some(id("david")),
+        )
+    });
+    assert_eq!(rooms_told(&t), [room], "editing a later occurrence");
+
+    t.sink.take();
+    let (head_id, last) = (head.id, ids[2]);
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            head_id,
+            EventChanges {
+                recurrence_until: Some(Some("2026-09-29".parse().unwrap())),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )
+    });
+    assert_eq!(rooms_told(&t), [room], "shortening the recurrence");
+    assert!(
+        t.read(|c| Ok(CalendarEvent::find(c, last).is_err())),
+        "the occurrence past the new end is gone"
+    );
+
+    t.sink.take();
+    assert!(t.write(move |tx| {
+        CalendarEvent::cancel_with_scope(tx, later, "this_event", Some(id("david")))
+    }));
+    assert_eq!(rooms_told(&t), [room], "cancelling a later occurrence");
+
+    let single = create(&t);
+    t.sink.take();
+    t.write(move |tx| single.destroy(tx));
+    assert_eq!(rooms_told(&t), [room], "destroying an event");
+}
+
 mod cutover_reference_test;
 mod cutover_reminder_test;
 mod cutover_venue_test;

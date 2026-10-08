@@ -418,6 +418,7 @@ impl CalendarEvent {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.room_id,a.organizer_id,a.title,a.description,a.starts_at,a.ends_at,a.time_zone,a.venue_room_id,series_id,a.recurrence_rule,a.recurrence_until.map(|d|d.to_string()),a.meet_link_requested,now,now],|r|r.get(0))?;
         let event = Self::find(tx.conn(), id)?;
         attendance::EventAttendance::record_organizer(tx, &event)?;
+        broadcast_room_events(tx, event.room_id);
         Ok(event)
     }
     fn invite_after_commit(&self, after: &mut Tx<'_>) -> Result<()> {
@@ -498,6 +499,7 @@ impl CalendarEvent {
         // Rails resolves referencing_messages in after_update_commit, not at save.
         // The app consumer batches facts and renders; the domain carries only identity.
         tx.emit_broadcast_once("events", self.id, &CardUpdate { event_id: self.id });
+        broadcast_room_events(tx, self.room_id);
         Ok(())
     }
     pub(super) fn update_callbacks(&self, tx: &mut Tx<'_>) -> Result<()> {
@@ -524,9 +526,18 @@ impl CalendarEvent {
             ActivityItem::destroy_for_source(tx,"Event",self.id)?;
             tx.conn().execute("DELETE FROM event_references WHERE event_id=?",[self.id])?;
             tx.conn().execute("DELETE FROM events WHERE id=?",[self.id])?;
+            broadcast_room_events(tx, self.room_id);
             Ok(())
         })
     }
+}
+
+/// Tells the single-page app's open calendar screens on `room_id` to read again. Every write to
+/// an event's row comes through here: inserts, saves (edits, cancels, reminders, Meet links) via
+/// `broadcast_cards`, and destroys, including the occurrences a shortened recurrence drops. One
+/// per room per transaction is enough, as the screens read the facts themselves.
+fn broadcast_room_events(tx: &mut Tx<'_>, room_id: i64) {
+    tx.broadcast_after_commit_once(&EventsChanged { room_id });
 }
 
 pub(super) fn member(conn: &Connection, room_id: i64, user_id: i64) -> Result<bool> {
@@ -545,4 +556,15 @@ pub struct CardUpdate {
 }
 impl crate::Broadcast for CardUpdate {
     const KIND: &'static str = "Event#broadcast_event_card_updates";
+}
+
+/// Sync-only (the classic app has no broadcast for it): an event in `room_id` was scheduled,
+/// edited, cancelled or removed. Unlike [`CardUpdate`], it doesn't depend on a message linking the
+/// event, so it also covers a series' later occurrences, which no message references.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EventsChanged {
+    pub room_id: i64,
+}
+impl crate::Broadcast for EventsChanged {
+    const KIND: &'static str = "Event#sync_room_events_changed";
 }

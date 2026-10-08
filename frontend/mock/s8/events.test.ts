@@ -191,6 +191,61 @@ describe("S8 channel events mock", () => {
     ]);
   });
 
+  it("tells the room about every change, to occurrences no message links and removed ones", async () => {
+    const { server } = harness();
+    const path = base(ROOM_IDS.engineering);
+    const frames = collect(server, [`room:${ROOM_IDS.engineering}`]);
+
+    const told = () =>
+      frames.filter(
+        (frame) => frame.type === "events.changed" && frame.data.roomId === ROOM_IDS.engineering,
+      ).length;
+
+    const third = await get<EventForm>(server, `${path}/${EVENT_IDS.weeklyThird}/edit`);
+
+    await expectStatus<EventDetail>(
+      server,
+      "PATCH",
+      `${path}/${EVENT_IDS.weeklyThird}`,
+      updateBody(third, { title: "Engineering weekly (moved)", updateScope: "this_event" }),
+      200,
+    );
+    expect(told()).toBe(1);
+
+    await expectStatus<EventDetail>(
+      server,
+      "PATCH",
+      `${path}/${EVENT_IDS.weeklySecond}/cancel`,
+      { cancelScope: "this_event" },
+      200,
+    );
+    expect(told()).toBe(2);
+
+    // A week earlier, the series has no slot left for its last occurrence.
+    const head = await get<EventForm>(server, `${path}/${EVENT_IDS.weeklyHead}/edit`);
+    const until = head.values.recurrenceUntil ?? "";
+    const earlier = new Date(Date.parse(`${until}T00:00:00Z`) - 7 * 86_400_000);
+
+    await expectStatus<EventDetail>(
+      server,
+      "PATCH",
+      `${path}/${EVENT_IDS.weeklyHead}`,
+      updateBody(head, {
+        recurrenceRule: head.values.recurrenceRule,
+        recurrenceUntil: earlier.toISOString().slice(0, 10),
+        updateScope: "this_and_following",
+      }),
+      200,
+    );
+    expect(told()).toBe(3);
+    expect(
+      (await server.handle({ method: "GET", path: `${path}/${EVENT_IDS.weeklyLast}` })).status,
+    ).toBe(404);
+
+    await expectStatus<EventDetail>(server, "POST", path, createBody(), 201);
+    expect(told()).toBe(4);
+  });
+
   it("responds to heads automatically and followers with the future checkbox", async () => {
     const { server } = harness();
     const path = base(ROOM_IDS.engineering);

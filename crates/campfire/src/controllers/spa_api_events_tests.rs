@@ -1412,6 +1412,102 @@ async fn spa_api_events_edit_and_cancel_refresh_existing_message_cards_on_sync()
     server.abort();
 }
 
+/// `events.changed` on Designers' topic.
+fn designers_events_changed(event: &api::SyncEvent) -> bool {
+    matches!(&event.payload, api::SyncPayload::EventsChanged(change) if change.room_id == DESIGNERS)
+}
+
+/// The next `events.changed` on Designers, from its topic.
+async fn told(sync: &mut Sync, step: &str) {
+    let event = sync.until(designers_events_changed, |_| false).await;
+    assert_eq!(event.topic, format!("room:{DESIGNERS}"), "{step}");
+}
+
+// A series' later occurrences have no message linking them, so no `message.cards` speaks for
+// them: every event write, from the API and from the classic pages alike, tells the room's topic,
+// including the shortened recurrence that destroys an occurrence.
+#[tokio::test]
+async fn spa_api_events_tell_the_room_topic_about_every_change_classic_or_spa() {
+    let Some(a) = app().await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    david.authenticity_token().await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut sync =
+        Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{DESIGNERS}")]).await;
+    sync.welcome().await;
+
+    let mut body = event_body("Weekly sync", "2026-03-03T09:00", Some("2026-03-03T10:00"));
+    body["recurrenceRule"] = json!("weekly");
+    body["recurrenceUntil"] = json!("2026-03-24");
+    let created = send(
+        &mut david,
+        Method::POST,
+        &format!("/api/v1/rooms/{DESIGNERS}/events"),
+        &body,
+    )
+    .await;
+    assert_eq!(created.status, StatusCode::CREATED, "{}", created.text());
+    let head = parse::<Value>(&created)["event"]["id"].as_i64().unwrap();
+    told(&mut sync, "scheduling a series").await;
+    let ids = series_ids(&a, head).await;
+    assert_eq!(ids.len(), 4);
+    let third = ids[2];
+    let unlinked = a
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM event_references WHERE event_id = ?",
+                [third],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(unlinked, 0, "no message links a later occurrence");
+
+    let mut changes = editable_body(&mut david, ids[2], "this_event").await;
+    changes["title"] = json!("Weekly sync, moved");
+    let path = format!("/rooms/{DESIGNERS}/events/{}", ids[2]);
+    ok(&send(
+        &mut david,
+        Method::PATCH,
+        &format!("/api/v1{path}"),
+        &changes,
+    )
+    .await);
+    told(&mut sync, "an API edit of an unlinked occurrence").await;
+
+    let reply = david
+        .write(classic_form(
+            Method::PATCH,
+            &format!("{path}/cancel"),
+            &json!({"cancelScope": "this_event"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+    told(&mut sync, "a classic cancel of an unlinked occurrence").await;
+
+    // Ending the series a week after its head leaves no slot for the last occurrence.
+    let mut changes = editable_body(&mut david, head, "this_and_following").await;
+    changes["recurrenceUntil"] = json!("2026-03-10");
+    let reply = david
+        .write(classic_form(
+            Method::PATCH,
+            &format!("/rooms/{DESIGNERS}/events/{head}"),
+            &changes,
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+    told(&mut sync, "a classic edit that shortens the series").await;
+    let remaining = series_ids(&a, head).await;
+    assert!(
+        !remaining.contains(&ids[3]),
+        "the last occurrence is destroyed: {remaining:?}"
+    );
+    server.abort();
+}
+
 const WATERCOOLER: i64 = 411254270;
 /// An event arranged in the open "All Pets" room, which Kevin hasn't joined.
 const OPEN_ROOM_EVENT: i64 = 800000101;

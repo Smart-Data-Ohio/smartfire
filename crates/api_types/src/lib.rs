@@ -103,7 +103,7 @@ pub use error::{ApiError, ApiErrorResponse};
 pub use events::{
     CancelEvent, ChannelEvent, CreateEvent, EventAttendee, EventCounts, EventDetail, EventForm,
     EventLimits, EventList, EventRecurrenceRule, EventRepeatOption, EventScope, EventValues,
-    EventVenue, EventVenueOption, UpdateEvent,
+    EventVenue, EventVenueOption, EventsChanged, UpdateEvent,
 };
 pub use huddle::{
     HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,

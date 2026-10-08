@@ -24,6 +24,7 @@ import {
   venueGroups,
 } from "./event-form-model.ts";
 import { ScopeChoice } from "./scope-choice.tsx";
+import type { Landing } from "./use-load.ts";
 
 type Load =
   | { readonly status: "loading" }
@@ -42,11 +43,28 @@ interface EventFormDialogProps {
   readonly search?: string;
   readonly onClose: () => void;
   /**
+   * Takes the screen's turn for a save as it starts (see `useLoad`'s `begin`), so an answer or a
+   * save made while it's on its way wins over its reply. Its landing comes back with `onSaved`;
+   * a failed save rereads the screen through it.
+   */
+  readonly begin?: () => Landing<EventDetail>;
+  /**
    * The server's facts for the event it saved (the first one of a new series). `current` is false
    * when the viewer closed the dialog (or opened it again) before the save finished: the save
-   * stands, but the dialog's owner mustn't close or navigate for it a second time.
+   * stands, but the dialog's owner mustn't close or navigate for it a second time. `landing` is
+   * the turn `begin` took when the save started, if given.
    */
-  readonly onSaved: (detail: EventDetail, current: boolean) => void;
+  readonly onSaved: (
+    detail: EventDetail,
+    current: boolean,
+    landing: Landing<EventDetail> | null,
+  ) => void;
+}
+
+/** A save on its way: what becomes of its reply, or of its failure. */
+interface Saving {
+  readonly saved: (detail: EventDetail) => void;
+  readonly failed: () => void;
 }
 
 /** Reads the form each time the dialog opens: someone may have changed the event since. */
@@ -97,6 +115,7 @@ export function EventFormDialog({
   open,
   search = "",
   onClose,
+  begin,
   onSaved,
 }: EventFormDialogProps) {
   const formId = useId();
@@ -126,8 +145,17 @@ export function EventFormDialog({
     onClose();
   };
 
-  const saved = (submittedIn: string | null) => (detail: EventDetail) =>
-    onSaved(detail, submittedIn !== null && active.current === submittedIn);
+  // A save takes its turn as it starts, not when it finishes: a reply that comes back after a
+  // newer answer or save must lose to it.
+  const start = (submittedIn: string | null) => (): Saving => {
+    const landing = begin?.() ?? null;
+
+    return {
+      saved: (detail) =>
+        onSaved(detail, submittedIn !== null && active.current === submittedIn, landing),
+      failed: () => landing?.reread(),
+    };
+  };
 
   const footer = (
     <>
@@ -178,7 +206,7 @@ export function EventFormDialog({
           form={form}
           onBusy={setBusy}
           onDirty={setDirty}
-          onSaved={saved(opening)}
+          onSubmit={start(opening)}
           touched={touched}
         />
       )}
@@ -260,7 +288,8 @@ interface EventFormBodyProps {
   readonly form: EventForm;
   readonly onBusy: (busy: boolean) => void;
   readonly onDirty: (dirty: boolean) => void;
-  readonly onSaved: (detail: EventDetail) => void;
+  /** A save starts: returns what to do with its reply. */
+  readonly onSubmit: () => Saving;
   /** Whether the viewer clicked or typed while the form loaded. */
   readonly touched: { readonly current: boolean };
 }
@@ -317,7 +346,7 @@ export function Field({
   );
 }
 
-function EventFormBody({ formId, form, onBusy, onDirty, onSaved, touched }: EventFormBodyProps) {
+function EventFormBody({ formId, form, onBusy, onDirty, onSubmit, touched }: EventFormBodyProps) {
   const ids = {
     description: useId(),
     venue: useId(),
@@ -412,16 +441,24 @@ function EventFormBody({ formId, form, onBusy, onDirty, onSaved, touched }: Even
     onBusy(true);
     setSummary([]);
 
+    const saving = onSubmit();
+
     const saved =
       form.eventId === null
         ? actions.events.create(form.roomId, createBody(draft, timeZone))
         : actions.events.update(form.roomId, form.eventId, updateBody(form, draft));
 
-    saved.then((detail) => {
-      setBusy(false);
-      onBusy(false);
-      onSaved(detail);
-    }, fail);
+    saved.then(
+      (detail) => {
+        setBusy(false);
+        onBusy(false);
+        saving.saved(detail);
+      },
+      (failure: Error) => {
+        saving.failed();
+        fail(failure);
+      },
+    );
   };
 
   return (

@@ -11,6 +11,7 @@ import type { EventList as GeneratedEventList } from "../../gen/EventList.ts";
 import type { EventRecurrenceRule as GeneratedEventRecurrenceRule } from "../../gen/EventRecurrenceRule.ts";
 import type { EventRepeatOption as GeneratedEventRepeatOption } from "../../gen/EventRepeatOption.ts";
 import type { EventScope as GeneratedEventScope } from "../../gen/EventScope.ts";
+import type { EventsChanged as GeneratedEventsChanged } from "../../gen/EventsChanged.ts";
 import type { EventValues as GeneratedEventValues } from "../../gen/EventValues.ts";
 import type { EventVenue as GeneratedEventVenue } from "../../gen/EventVenue.ts";
 import type { EventVenueOption as GeneratedEventVenueOption } from "../../gen/EventVenueOption.ts";
@@ -202,3 +203,8 @@ export type UpdateEventPin = Assert<Pinned<typeof UpdateEvent, GeneratedUpdateEv
 export const CancelEvent = Schema.Struct({ cancelScope: Schema.NullOr(Schema.String) });
 
 export type CancelEventPin = Assert<Pinned<typeof CancelEvent, GeneratedCancelEvent>>;
+
+/** The `events.changed` event: an event in the room was scheduled, edited, cancelled or removed. */
+export const EventsChanged = Schema.Struct({ roomId: RoomId });
+
+export type EventsChangedPin = Assert<Pinned<typeof EventsChanged, GeneratedEventsChanged>>;

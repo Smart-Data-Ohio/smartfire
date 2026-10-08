@@ -287,10 +287,31 @@ pub struct CancelEvent {
     pub cancel_scope: Option<String>,
 }
 
+/// The `events.changed` event on `room:<id>`: an event there was scheduled, edited, cancelled or
+/// removed, whether or not a message links it. Open calendar screens read themselves again. New:
+/// the classic app has no broadcast for it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct EventsChanged {
+    pub room_id: i64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn events_changed_names_the_room() {
+        let payload = crate::SyncPayload::EventsChanged(EventsChanged { room_id: 12 });
+        let wire = json!({"type": "events.changed", "data": {"roomId": 12}});
+        assert_eq!(serde_json::to_value(&payload).unwrap(), wire);
+        assert_eq!(
+            serde_json::from_value::<crate::SyncPayload>(wire).unwrap(),
+            payload
+        );
+    }
 
     #[test]
     fn event_update_preserves_omitted_null_and_supplied_controls() {

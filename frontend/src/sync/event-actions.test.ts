@@ -47,6 +47,18 @@ describe("changesRoomEvents", () => {
     expect(changesRoomEvents(announced, ROOM)).toBe(true);
   });
 
+  it("hears the room's events changing, linked from a message or not", () => {
+    const changed = (roomId: number): SyncEvent => ({
+      type: "events.changed",
+      seq: 5,
+      topic: `room:${roomId}`,
+      data: { roomId },
+    });
+
+    expect(changesRoomEvents(changed(ROOM), ROOM)).toBe(true);
+    expect(changesRoomEvents(changed(ROOM + 1), ROOM)).toBe(false);
+  });
+
   it("ignores other rooms' events, other cards and other news", () => {
     expect(changesRoomEvents(cardsChanged([eventCard(ROOM + 1)]), ROOM)).toBe(false);
     expect(changesRoomEvents(cardsChanged([]), ROOM)).toBe(false);

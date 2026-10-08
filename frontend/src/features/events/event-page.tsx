@@ -198,7 +198,7 @@ function Response({
         (failure: Error) => {
           if (asked.current === mine) setPending(null);
 
-          landing.fail();
+          landing.reread();
           toast({
             title: "Couldn't save your response",
             description: failure.message,
@@ -334,7 +334,7 @@ function CancelDialog({
         },
         (failure: Error) => {
           setBusy(false);
-          landing.fail();
+          landing.reread();
           toast({
             title: "Couldn't cancel the event",
             description: failure.message,
@@ -431,22 +431,24 @@ export function EventRoute() {
   const answering = matchRoute({ to: "/r/$roomId/events/$eventId/attendance" }) !== false;
   const [cancelling, setCancelling] = useState(false);
   const read = () => actions.events.read(roomId, eventId);
-  const { state, reload, begin } = useLoad(`${roomId}/${eventId}`, read);
+  const { state, reload, refresh, begin } = useLoad(`${roomId}/${eventId}`, read);
   const detail = state.status === "ready" ? state.value : null;
 
-  useEventChanges(roomId, reload);
+  useEventChanges(roomId, refresh);
 
   const closeEdit = useCloseOverlay(() => {
     void navigate({ to: "/r/$roomId/events/$eventId", params: { roomId, eventId }, replace: true });
   });
 
   // `current` is false once the viewer dismissed the form while it saved: the dismissal already
-  // left the form, so only the page's facts change.
-  const saved = (next: EventDetail, current: boolean) => {
+  // left the form, so only the page's facts change. `landing` is the turn the save took when it
+  // started, so the reply loses to an answer or a save made meanwhile, and never lands on (or
+  // holds up) another event the viewer went to.
+  const saved = (next: EventDetail, current: boolean, landing: Landing<EventDetail> | null) => {
     toast({ title: "Event updated.", tone: "success" });
 
     if (next.event.id === eventId) {
-      begin().land(next);
+      landing?.land(next);
 
       if (current) closeEdit();
     } else if (current) {
@@ -457,7 +459,7 @@ export function EventRoute() {
         replace: true,
       });
     } else {
-      reload();
+      landing?.reread();
     }
   };
 
@@ -543,6 +545,7 @@ export function EventRoute() {
             eventId={eventId}
             open={editing && detail.manageable}
             onClose={closeEdit}
+            begin={begin}
             onSaved={saved}
           />
           <CancelDialog

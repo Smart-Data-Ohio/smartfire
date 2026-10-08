@@ -41,12 +41,15 @@ export const respond = Effect.fn("events.respond")(function* (
 });
 
 /**
- * Whether a sync event says an event in `roomId` changed elsewhere: a message linking one was
- * posted (a new event's announcement) or had its cards replaced (an edit, a cancel, a reminder).
- * The message cards update from these same events; the server sends none when someone answers.
+ * Whether a sync event says an event in `roomId` changed elsewhere: the room's `events.changed`
+ * (any event scheduled, edited, cancelled or removed, linked from a message or not), or a message
+ * linking one was posted (a new event's announcement) or had its cards replaced (an edit, a
+ * cancel, a reminder). The server sends none when someone answers.
  */
 export function changesRoomEvents(event: SyncEvent, roomId: number): boolean {
   switch (event.type) {
+    case "events.changed":
+      return event.data.roomId === roomId;
     case "message.created":
     case "message.cards":
       return event.data.cards.some((card) => card.kind === "event" && card.data.roomId === roomId);

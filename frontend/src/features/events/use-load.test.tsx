@@ -87,10 +87,71 @@ describe("useLoad", () => {
     rerender({ key: "8102" });
     await reads.answer(1, "8102");
     act(() => answer.land("8101 after answering"));
-    act(() => answer.fail());
+    act(() => answer.reread());
 
     expect(shownValue(result.current.state)).toBe("8102");
     expect(reads.pending).toHaveLength(2);
+  });
+
+  it("never holds up the shown screen's read for a save begun on a screen the viewer left", async () => {
+    const reads = new Reads();
+
+    const { result, rerender } = renderHook(({ key }) => useLoad(key, reads.read), {
+      initialProps: { key: "8101" },
+    });
+
+    await reads.answer(0, "8101");
+
+    // The save's callbacks were made on 8101's page; it finishes while 8102 is still loading.
+    const beginOn8101 = result.current.begin;
+
+    rerender({ key: "8102" });
+    act(() => beginOn8101().land("8101 saved"));
+    await reads.answer(1, "8102");
+
+    expect(shownValue(result.current.state)).toBe("8102");
+    expect(reads.pending).toHaveLength(2);
+  });
+
+  it("keeps a save's reply off newer answers when its turn was taken as it started", async () => {
+    const reads = new Reads();
+    const { result } = renderHook(() => useLoad("a", reads.read));
+
+    await reads.answer(0, "before");
+
+    // The save starts, the viewer answers while it's on its way, and the answer comes back first.
+    const save = result.current.begin();
+    const answer = result.current.begin();
+
+    act(() => answer.land("answered"));
+    act(() => save.land("saved, unanswered"));
+
+    expect(shownValue(result.current.state)).toBe("answered");
+    expect(reads.pending).toHaveLength(2);
+  });
+
+  it("reads once more after a burst of news rather than once per piece", async () => {
+    const reads = new Reads();
+    const { result } = renderHook(() => useLoad("a", reads.read));
+
+    await reads.answer(0, "first");
+
+    // With nothing on its way, news reads at once.
+    act(() => result.current.refresh());
+    expect(reads.pending).toHaveLength(2);
+
+    // More news while that read is out: one more read once it lands, not one each.
+    act(() => result.current.refresh());
+    act(() => result.current.refresh());
+    act(() => result.current.refresh());
+    expect(reads.pending).toHaveLength(2);
+
+    await reads.answer(1, "second");
+    expect(reads.pending).toHaveLength(3);
+
+    await reads.answer(2, "third");
+    expect(reads.pending).toHaveLength(3);
+    expect(shownValue(result.current.state)).toBe("third");
   });
 
   it("reads again after a write fails, keeping what it shows meanwhile", async () => {
@@ -98,7 +159,7 @@ describe("useLoad", () => {
     const { result } = renderHook(() => useLoad("a", reads.read));
 
     await reads.answer(0, "before");
-    act(() => result.current.begin().fail());
+    act(() => result.current.begin().reread());
 
     expect(shownValue(result.current.state)).toBe("before");
     await reads.answer(1, "after");
