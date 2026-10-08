@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { THREAD_IDS } from "../../mock/s2/seed.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
-import { expect, holdSync, openApp, ROOM_IDS, test, USER_IDS } from "./support.ts";
+import { expect, holdSync, openApp, postMessage, ROOM_IDS, test, USER_IDS } from "./support.ts";
 
 async function position(row: Locator) {
   return row.evaluate(async (element) => {
@@ -61,6 +61,125 @@ async function readerScroll(list: Locator, target: Locator) {
       }),
     id,
   );
+}
+
+async function bottomGrowth(page: Page, mixed = false) {
+  const releaseSync = await holdSync(page);
+  const requested = Promise.withResolvers<void>();
+  const released = Promise.withResolvers<void>();
+  const messagesPath = `/api/v1/rooms/${ROOM_IDS.engineering}/messages`;
+  let hiddenId = 0;
+  let newestId = 0;
+
+  await page.route("**/__bottom-growth.svg", async (route) => {
+    requested.resolve();
+    await released.promise;
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="180"><rect width="100" height="180" fill="teal"/></svg>',
+    });
+  });
+  await page.route(`**${messagesPath}**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    if (newestId === 0) {
+      hiddenId = body.messages.at(-3)?.id ?? 0;
+      newestId = body.messages.at(-1)?.id ?? 0;
+    }
+
+    body.messages = body.messages.map((message) => ({
+      ...message,
+      bodyHtml:
+        message.id > newestId
+          ? message.bodyHtml
+          : message.id === newestId
+            ? '<div style="height:560px">Newest tall row</div><img src="/__bottom-growth.svg" alt="Newest growth"><p>Newest row ends here</p>'
+            : mixed && message.id === hiddenId
+              ? '<p>Hidden overscan row</p><img src="/__bottom-growth.svg" alt="Hidden growth">'
+              : '<div style="height:100px">A preceding row</div>',
+      attachment: null,
+      cards: [],
+      poll: null,
+    }));
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  await openApp(page, `r/${ROOM_IDS.engineering}`);
+  await requested.promise;
+  const refreshed = page.waitForResponse((response) => response.url().endsWith(messagesPath));
+
+  releaseSync();
+  await (await refreshed).finished();
+  const list = page.getByRole("log", { name: "Messages" });
+  const newest = list.locator(`[data-message-id="${newestId}"]`);
+  const hidden = list.locator(`[data-message-id="${hiddenId}"]`);
+
+  await atEnd(list);
+  await stableTop(newest);
+
+  const post = async () => {
+    const text = "Another member posts after bottom growth";
+
+    await postMessage(page.request, {
+      roomId: ROOM_IDS.engineering,
+      userId: USER_IDS.jonah,
+      markdown: text,
+    });
+
+    return list.getByText(text, { exact: true });
+  };
+
+  return { list, newest, hidden, grow: () => released.resolve(), post };
+}
+
+test("mixed hidden and visible growth preserves follow for the next member's message", async ({
+  page,
+}) => {
+  const { list, newest, hidden, grow, post } = await bottomGrowth(page, true);
+  const hiddenHeight = await hidden.evaluate((element) => element.getBoundingClientRect().height);
+  const visibleHeight = await newest.evaluate((element) => element.getBoundingClientRect().height);
+
+  await expect(hidden).not.toBeInViewport();
+  await expect(newest).toBeInViewport();
+  grow();
+  await expect
+    .poll(() => hidden.evaluate((element) => element.getBoundingClientRect().height))
+    .toBeGreaterThan(hiddenHeight + 100);
+  await expect
+    .poll(() => newest.evaluate((element) => element.getBoundingClientRect().height))
+    .toBeGreaterThan(visibleHeight + 100);
+  await atEnd(list);
+  await expect(await post()).toBeInViewport();
+  await atEnd(list);
+});
+
+for (const close of ["Esc", "outside click"] as const) {
+  test(`newest-row menu defers image growth and replays follow after ${close}`, async ({
+    page,
+  }) => {
+    const { list, newest, grow, post } = await bottomGrowth(page);
+    const height = await newest.evaluate((element) => element.getBoundingClientRect().height);
+
+    await newest.getByText("Newest row ends here", { exact: true }).click({ button: "right" });
+    await expect(page.getByRole("menu", { name: "Message actions" })).toBeVisible();
+    const offset = await list.evaluate((element) => element.scrollTop);
+
+    grow();
+    await expect
+      .poll(() => newest.evaluate((element) => element.getBoundingClientRect().height))
+      .toBeGreaterThan(height + 100);
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(offset);
+
+    if (close === "Esc") await page.keyboard.press("Escape");
+    else await page.locator(".composer-input").first().click();
+
+    await expect(page.getByRole("menu", { name: "Message actions" })).not.toBeVisible();
+    await atEnd(list);
+    await expect(await post()).toBeInViewport();
+    await atEnd(list);
+  });
 }
 
 async function scenario(page: Page, conversation: "room" | "thread") {
@@ -190,6 +309,61 @@ async function scenario(page: Page, conversation: "room" | "thread") {
 }
 
 for (const conversation of ["room", "thread"] as const) {
+  if (conversation === "room") {
+    test("a forward external scroll interrupts Jump to present short of the end", async ({
+      page,
+    }) => {
+      const { list, older, post } = await scenario(page, conversation);
+
+      await readerScroll(list, older);
+      await list.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      await expect(list).toHaveAttribute("data-scroll-settled", "true");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await expect(page.getByRole("button", { name: "Jump to present" })).toBeVisible();
+
+      const interrupted = list.evaluate(
+        (element) =>
+          new Promise<number>((resolve) => {
+            const start = element.scrollTop;
+
+            const interrupt = () => {
+              const end = element.scrollHeight - element.clientHeight;
+
+              if (element.scrollTop <= start + 20 || element.scrollTop >= end - 120) return;
+
+              element.removeEventListener("scroll", interrupt);
+              // A forward external writer stands in for find-in-page during native smooth scroll.
+              const target = Math.min(end - 120, element.scrollTop + 80);
+
+              element.addEventListener("scrollend", () => resolve(element.scrollTop), {
+                once: true,
+              });
+              element.scrollTop = target;
+            };
+
+            element.addEventListener("scroll", interrupt);
+          }),
+      );
+
+      await page.getByRole("button", { name: "Jump to present" }).click();
+      const stopped = await interrupted;
+
+      await expect
+        .poll(() =>
+          list.evaluate(
+            (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+          ),
+        )
+        .toBeGreaterThan(80);
+      const incoming = await post();
+
+      await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(stopped);
+      await expect(incoming).not.toBeInViewport();
+    });
+  }
+
   for (const focus of ["programmatic focus", "Shift+Tab"] as const) {
     test(`a ${conversation} keeps an older control in view after ${focus} and another member's post`, async ({
       page,

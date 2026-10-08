@@ -231,6 +231,156 @@ describe("useViewportAnchor reader control", () => {
     vi.unstubAllGlobals();
   });
 
+  it("follows mixed hidden and visible growth after partial Virtua compensation", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    follow(apiRef, geometry);
+    fireEvent.scroll(viewport());
+    geometry.heights.set(1, 300);
+    geometry.heights.set(3, 300);
+    // Virtua compensates the hidden row before our observer sees both resizes.
+    viewport().scrollTop = 400;
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(500);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("a forward interruption of jump-to-latest stops short without snapping on growth", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    viewport().scrollTop = 100;
+    act(() => apiRef.current?.followEnd());
+    act(() => measureRows(geometry));
+    viewport().scrollTop = 500;
+    fireEvent.scroll(viewport());
+    viewport().scrollTop = 600;
+    fireEvent.scroll(viewport());
+    act(() => apiRef.current?.settle());
+    geometry.heights.set(5, 260);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(600);
+    expect(apiRef.current?.canFollow()).toBe(false);
+  });
+
+  it.each(["Esc", "outside click"])(
+    "replays newest-row menu growth on close by %s",
+    async (close) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      act(() => rowOf(3).focus());
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+      geometry.heights.set(3, 260);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(300);
+
+      if (close === "Esc") act(() => rowOf(3).querySelector<HTMLAnchorElement>("a")?.focus());
+      else act(() => rowOf(3).blur());
+
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(viewport().scrollTop).toBe(360);
+      expect(apiRef.current?.canFollow()).toBe(true);
+    },
+  );
+
+  it("releases row retention after blur", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    follow(apiRef, geometry);
+    act(() => rowOf(2).focus());
+    expect(apiRef.current?.keepMounted).toEqual([1]);
+    act(() => rowOf(2).blur());
+    expect(apiRef.current?.keepMounted).toEqual([]);
+  });
+
+  it.each(["menu", "editor"])(
+    "releases a blurred row when its %s interaction completes",
+    async (interaction) => {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      act(() => rowOf(2).focus());
+      view.rerender(
+        <Harness
+          apiRef={apiRef}
+          geometry={geometry}
+          {...(interaction === "menu" ? { popupId: 2 } : { editingId: 2 })}
+        />,
+      );
+      act(() => rowOf(2).blur());
+      expect(apiRef.current?.keepMounted).toEqual([1]);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(apiRef.current?.keepMounted).toEqual([]);
+    },
+  );
+
+  it("keeps a pressed context row through release until its deferred popup opens", async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) =>
+      frames.push(callback),
+    );
+    vi.stubGlobal("cancelAnimationFrame", () => undefined);
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    try {
+      const apiRef = createRef<AnchorApi>();
+      const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+      const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+      follow(apiRef, geometry);
+      fireEvent.contextMenu(rowOf(2), { button: 2, buttons: 2 });
+      // The production popup opens in the task after pointer release.
+      window.setTimeout(() => {
+        view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={2} />);
+      }, 0);
+      fireEvent(rowOf(2), new Event("pointerup", { bubbles: true }));
+      await act(async () => undefined);
+      expect(apiRef.current?.keepMounted).toEqual([1]);
+      await act(async () => vi.runOnlyPendingTimers());
+      expect(rowOf(2).querySelector(".message-popup-anchor")).not.toBeNull();
+      act(() => {
+        for (const callback of frames.splice(0)) callback(0);
+      });
+      expect(apiRef.current?.keepMounted).toEqual([1]);
+
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+      await act(async () => undefined);
+      expect(apiRef.current?.keepMounted).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("replays deferred end correction when the interacting newest row unmounts", async () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+    const view = render(<Harness apiRef={apiRef} geometry={geometry} />);
+
+    follow(apiRef, geometry);
+    act(() => rowOf(3).focus());
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} popupId={3} />);
+    geometry.heights.set(2, 500);
+    act(() => measureRows(geometry));
+    geometry.ids = [1, 2];
+    view.rerender(<Harness apiRef={apiRef} geometry={geometry} />);
+    await act(async () => undefined);
+    expect(viewport().scrollTop).toBe(400);
+    expect(apiRef.current?.keepMounted).toEqual([]);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
   it("ignores a cached row's first measurement after settle but follows subsequent growth", async () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
@@ -404,6 +554,7 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
     viewport().scrollTop = 300;
     fireEvent.scroll(viewport());
+    act(() => apiRef.current?.settle());
     expect(apiRef.current?.canFollow()).toBe(false);
     geometry.heights.set(3, 260);
     act(() => measureRows(geometry));
@@ -423,6 +574,63 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
+  it("a delivered layout shrink preserves follow at the clamped end", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    follow(apiRef, geometry);
+    fireEvent.scroll(viewport());
+    geometry.heights.set(3, 150);
+    viewport().scrollTop = 250;
+    act(() => measureRows(geometry));
+    expect(apiRef.current?.canFollow()).toBe(true);
+    geometry.heights.set(3, 260);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(360);
+  });
+
+  it("growth during an issued jump waits for settlement and then follows", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    viewport().scrollTop = 100;
+    act(() => apiRef.current?.followEnd());
+    act(() => measureRows(geometry));
+    viewport().scrollTop = 500;
+    fireEvent.scroll(viewport());
+    geometry.heights.set(5, 260);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(500);
+    expect(apiRef.current?.canFollow()).toBe(true);
+    // Native animation completes at the destination issued before that growth.
+    viewport().scrollTop = 700;
+    fireEvent.scroll(viewport());
+    act(() => apiRef.current?.settle());
+    expect(viewport().scrollTop).toBe(760);
+    expect(apiRef.current?.canFollow()).toBe(true);
+  });
+
+  it("an issued jump settles at the actual end after its destination shrinks", () => {
+    const apiRef = createRef<AnchorApi>();
+    const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
+
+    render(<Harness apiRef={apiRef} geometry={geometry} />);
+    viewport().scrollTop = 100;
+    act(() => apiRef.current?.followEnd());
+    act(() => measureRows(geometry));
+    geometry.heights.set(5, 150);
+    viewport().scrollTop = 650;
+    act(() => measureRows(geometry));
+    // Native scrollend can precede Virtua's scroll/capture callback.
+    fireEvent(viewport(), new Event("scrollend"));
+    expect(apiRef.current?.canFollow()).toBe(true);
+    geometry.heights.set(5, 260);
+    act(() => measureRows(geometry));
+    expect(viewport().scrollTop).toBe(760);
+  });
+
   it("returning to the end restores follow before its scroll callback", () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3], heights: new Map() };
@@ -435,7 +643,7 @@ describe("useViewportAnchor reader control", () => {
     expect(apiRef.current?.canFollow()).toBe(true);
   });
 
-  it("a recorded correction reaching the end retires issued follow motion", () => {
+  it("each correction rebases growth before the next eventless reader movement", () => {
     const apiRef = createRef<AnchorApi>();
     const geometry: Geometry = { ids: [1, 2, 3, 4, 5], heights: new Map() };
 
@@ -443,12 +651,17 @@ describe("useViewportAnchor reader control", () => {
     viewport().scrollTop = 100;
     act(() => apiRef.current?.followEnd());
     act(() => measureRows(geometry));
+    // The app's issued jump reaches the end; later growth has its own budget.
+    viewport().scrollTop = 700;
+    fireEvent.scroll(viewport());
     geometry.heights.set(3, 260);
     act(() => measureRows(geometry));
     expect(viewport().scrollTop).toBe(760);
     fireEvent.scroll(viewport());
     geometry.heights.set(5, 500);
-    viewport().scrollTop = 800;
+    // Above the last pin even after deducting this growth. The previous 60px
+    // correction must not remain available to explain this reader movement.
+    viewport().scrollTop = 700;
     expect(apiRef.current?.canFollow()).toBe(false);
   });
 

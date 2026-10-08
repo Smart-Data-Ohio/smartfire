@@ -37,6 +37,10 @@ function wrapperOf(row: HTMLElement): HTMLElement | null {
   return row.closest(".thread-parent")?.parentElement ?? row.parentElement;
 }
 
+function endOffset(element: HTMLElement): number {
+  return Math.max(0, element.scrollHeight - element.clientHeight);
+}
+
 /** Keep a visible message through the cards reveal, and a bottom reader through later growth. */
 export function useViewportAnchor({
   containerRef,
@@ -58,8 +62,11 @@ export function useViewportAnchor({
   const anchorRef = useRef<Anchor | null>(null);
   const finishCardsRef = useRef<(() => void) | null>(null);
   const correctedOffsetRef = useRef<number | null>(null);
-  const scrollOffsetRef = useRef<number | null>(null);
-  const followingFromRef = useRef<number | null>(null);
+  const growthRef = useRef({ end: 0, delta: 0 });
+  const issuedEndRef = useRef<number | null>(null);
+  const correctionPendingRef = useRef(false);
+  const retainedIdRef = useRef<number | null>(null);
+  const retentionPendingRef = useRef<number | null>(null);
   const placementRef = useRef<PlacementState | null>(null);
   const [retainedId, setRetainedId] = useState<number | null>(null);
 
@@ -79,8 +86,9 @@ export function useViewportAnchor({
 
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
 
-  const interacting = () =>
-    Boolean(viewport()?.querySelector("[data-editing], .message-popup-anchor"));
+  const interacting = useEffectEvent(() =>
+    Boolean(viewport()?.querySelector("[data-editing], .message-popup-anchor")),
+  );
 
   const isPlacing = useCallback(() => {
     const state = placementRef.current;
@@ -91,70 +99,65 @@ export function useViewportAnchor({
     );
   }, [placement]);
 
-  const observeScroll = () => {
+  const recordGrowth = useEffectEvent(() => {
     const element = viewport();
 
     if (!element) return;
 
-    const previous = scrollOffsetRef.current;
-    const offset = element.scrollTop;
-    const distance = element.scrollHeight - element.clientHeight - offset;
-    const followingFrom = followingFromRef.current;
+    const end = endOffset(element);
+    const growth = growthRef.current;
 
-    scrollOffsetRef.current = offset;
+    // The content and its wrappers report the same growth. Account for the net end
+    // extent once, including viewport changes and layout not yet delivered by RO.
+    growth.delta += end - growth.end;
+    growth.end = end;
+  });
 
-    // Corrections and placement write a known offset. Following can also animate toward
-    // the end; recognize that motion until it arrives, while allowing an away scroll.
-    if (isPlacing()) return;
+  const pinEnd = () => {
+    const element = viewport();
 
-    if (correctedOffsetRef.current !== null && Math.abs(offset - correctedOffsetRef.current) <= 1) {
-      if (distance <= 1) followingFromRef.current = null;
+    if (!element) return;
 
-      return;
+    growthRef.current = { end: endOffset(element), delta: 0 };
+    issuedEndRef.current = null;
+    placementRef.current = { kind: "settled", placement, messageId: null };
+    anchorRef.current = { kind: "end", placement };
+  };
+
+  const checkFollow = () => {
+    if (anchorRef.current?.placement !== placement || anchorRef.current.kind !== "end")
+      return false;
+
+    recordGrowth();
+    const element = viewport();
+
+    if (!element) return false;
+
+    if (endOffset(element) - element.scrollTop <= 1) {
+      pinEnd();
+
+      return true;
     }
 
-    if (
-      followingFrom !== null &&
-      offset >= Math.max(followingFrom, previous ?? followingFrom) - 1
-    ) {
-      if (distance <= 1) followingFromRef.current = null;
+    if (issuedEndRef.current !== null) return true;
 
-      return;
+    // Eventless browser movement is checked only when deciding to follow/correct.
+    // Growth can explain distance from the end; scroll deltas never change intent.
+    if (endOffset(element) - element.scrollTop > growthRef.current.delta + 1) {
+      cancelPlacement(true);
+
+      return false;
     }
 
-    if (previous === null || Math.abs(offset - previous) <= 1) return;
-
-    followingFromRef.current = null;
-    correctedOffsetRef.current = null;
-    const state = placementRef.current;
-
-    if (state?.placement !== placement) return;
-
-    if (distance <= 1 && (state.kind !== "settled" || state.messageId === null)) {
-      placementRef.current = { kind: "settled", placement, messageId: null };
-      anchorRef.current = { kind: "end", placement };
-
-      return;
-    }
-
-    // Ordinary row anchors already disable follow. Keep their pre-growth geometry
-    // through Virtua's partial compensation so correction can supply the remainder.
-    if (anchorRef.current?.placement === placement && anchorRef.current.kind === "message") return;
-
-    // Find-in-page and native focus scrolling have no input event we can rely on.
-    // A changed offset is reader movement; height growth at an unchanged offset is not.
-    placementRef.current = {
-      kind: "cancelled",
-      placement,
-      allowEnd: offset > previous || distance <= 1,
-    };
-    anchorRef.current = null;
+    return true;
   };
 
   const canFollow = () => {
-    observeScroll();
-
     if (!placed || isPlacing() || interacting()) return false;
+
+    const element = viewport();
+
+    if (element && endOffset(element) - element.scrollTop <= 1) capture(null, true);
 
     const state = placementRef.current;
 
@@ -166,27 +169,24 @@ export function useViewportAnchor({
     )
       return false;
 
-    // Layout growth can move the end without a scroll event. Follow the reader's captured
-    // intent, rather than interpreting the enlarged previous end as reader movement.
-    return anchorRef.current?.placement === placement && anchorRef.current.kind === "end";
+    return checkFollow();
   };
 
   const followEnd = () => {
     // Sending from a permalink explicitly takes the reader to the newest message.
-    placementRef.current = { kind: "settled", placement, messageId: null };
-    anchorRef.current = { kind: "end", placement };
+    pinEnd();
     correctedOffsetRef.current = null;
 
     const element = viewport();
 
-    if (element) element.dataset.placementSettled = "true";
+    if (element) {
+      element.dataset.placementSettled = "true";
 
-    scrollOffsetRef.current = element?.scrollTop ?? null;
-    followingFromRef.current = element?.scrollTop ?? null;
+      if (endOffset(element) - element.scrollTop > 1) issuedEndRef.current = endOffset(element);
+    }
   };
 
-  const capture = (preferredId: number | null = null) => {
-    observeScroll();
+  const capture = (preferredId: number | null = null, readerInput = false) => {
     const state = placementRef.current;
 
     if (!placed || state?.placement !== placement || isPlacing()) return;
@@ -200,6 +200,18 @@ export function useViewportAnchor({
     }
 
     const element = viewport();
+
+    if (
+      element &&
+      targetId === null &&
+      endOffset(element) - element.scrollTop <= 1 &&
+      (state.kind !== "cancelled" || state.allowEnd || !readerInput)
+    ) {
+      pinEnd();
+
+      return;
+    }
+
     const corrected = correctedOffsetRef.current;
 
     if (corrected !== null && element && Math.abs(element.scrollTop - corrected) < 1) return;
@@ -219,23 +231,6 @@ export function useViewportAnchor({
           anchorRef.current.id === targetId))
     )
       return;
-
-    // A native scroll can arrive while Virtua's cached total still describes an earlier
-    // layout. Capture from the viewport so layout changes do not discard end intent.
-    const distance = element
-      ? element.scrollHeight - element.scrollTop - element.clientHeight
-      : Number.POSITIVE_INFINITY;
-
-    // Small native keyboard scrolls start inside the follow threshold. Once input has
-    // cancelled placement, keep their row rather than pulling them back to the end.
-    const atEnd = state.kind === "cancelled" ? distance <= 1 : distance < 40;
-    const allowEnd = state.kind !== "cancelled" || state.allowEnd;
-
-    if (allowEnd && atEnd && targetId === null) {
-      anchorRef.current = { kind: "end", placement };
-
-      return;
-    }
 
     const list = viewport();
 
@@ -308,18 +303,41 @@ export function useViewportAnchor({
     }
   });
 
-  const settle = (preferredId: number | null = null) => {
+  const settle = (preferredId: number | null = null, readerInput = false) => {
     if (!placed || isPlacing()) return;
+
+    const issuedEnd = issuedEndRef.current;
+    issuedEndRef.current = null;
+    const element = viewport();
+
+    // App motion owns intent only until settlement. Reaching its issued destination
+    // permits deferred growth; stopping short relinquishes it in either direction.
+    if (
+      !readerInput &&
+      issuedEnd !== null &&
+      element &&
+      endOffset(element) - element.scrollTop > 1 &&
+      element.scrollTop < issuedEnd - 1
+    ) {
+      cancelPlacement(true);
+
+      return;
+    }
 
     if (placementRef.current?.placement !== placement)
       placementRef.current = { kind: "cancelled", placement, allowEnd: true };
 
+    if (!readerInput && !interacting()) {
+      checkFollow();
+
+      if (correctionPendingRef.current) correct();
+    }
+
     correctedOffsetRef.current = null;
-    const element = viewport();
 
     if (element) {
       element.dataset.placementSettled = "true";
-      capture(preferredId);
+      capture(preferredId, readerInput);
     }
   };
 
@@ -348,9 +366,9 @@ export function useViewportAnchor({
         ? { kind: "cancelled", placement, allowEnd }
         : { kind: "settled", placement, messageId: null };
       anchorRef.current = null;
-      followingFromRef.current = null;
-      scrollOffsetRef.current = viewport()?.scrollTop ?? null;
-      settle(preferredId);
+      issuedEndRef.current = null;
+      correctedOffsetRef.current = null;
+      settle(preferredId, readerInput);
     },
   );
 
@@ -371,8 +389,7 @@ export function useViewportAnchor({
         messageId: item?.kind === "message" ? item.message.id : null,
       };
     } else if (state.kind === "placing-at-end") {
-      placementRef.current = { kind: "settled", placement, messageId: null };
-      anchorRef.current = { kind: "end", placement };
+      pinEnd();
     }
 
     settle();
@@ -411,7 +428,6 @@ export function useViewportAnchor({
           target.offset;
 
     element.scrollTop = offset;
-    scrollOffsetRef.current = element.scrollTop;
     correctedOffsetRef.current = element.scrollTop;
 
     const item = items[index];
@@ -451,10 +467,42 @@ export function useViewportAnchor({
       cancelPlacement();
   }, [placed, placement, itemIndices, indices]);
 
+  const isNewest = useEffectEvent(
+    (id: number) => indices.get(id) === Math.max(...indices.values()),
+  );
+
+  const onNativeScrollEnd = useEffectEvent(() => settle());
+
+  const releaseRetention = useEffectEvent(
+    (focused: EventTarget | null = document.activeElement) => {
+      const id = retainedIdRef.current;
+
+      if (id === null) return;
+
+      const row = viewport()?.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
+
+      if (row && (row.matches("[data-editing]") || row.querySelector(".message-popup-anchor"))) {
+        retentionPendingRef.current = null;
+
+        return;
+      }
+
+      if (
+        retentionPendingRef.current === id ||
+        (row && focused instanceof Node && row.contains(focused))
+      )
+        return;
+
+      retainedIdRef.current = null;
+      setRetainedId(null);
+    },
+  );
+
   useLayoutEffect(() => {
     if (retainedId !== null && !indices.has(retainedId)) {
+      retainedIdRef.current = null;
+      retentionPendingRef.current = null;
       setRetainedId(null);
-      cancelPlacement();
     }
   }, [retainedId, indices]);
 
@@ -512,14 +560,17 @@ export function useViewportAnchor({
 
       // A prepend can briefly exclude this row from Virtua's visible range. Keep the same
       // DOM node while it owns focus, a popup, or an editor, including a right-click release.
+      retainedIdRef.current = id;
       setRetainedId(id);
-      const rows = element.querySelectorAll<HTMLElement>("[data-message-row][data-message-id]");
+      recordGrowth();
 
       // Focusing the newest row at the bottom (including End navigation) keeps follow.
       // Older rows surrender it before the focus scroll's event is delivered.
       if (
-        row === rows[rows.length - 1] &&
-        element.scrollHeight - element.clientHeight - element.scrollTop <= 1
+        isNewest(id) &&
+        (endOffset(element) - element.scrollTop <= 1 ||
+          (anchorRef.current?.kind === "end" &&
+            endOffset(element) - element.scrollTop <= growthRef.current.delta + 1))
       )
         return true;
 
@@ -531,6 +582,13 @@ export function useViewportAnchor({
 
     const onFocus = (event: Event) => {
       retainRow(event.target);
+
+      if (event.type === "contextmenu" && event instanceof MouseEvent && event.buttons !== 0)
+        retentionPendingRef.current = retainedIdRef.current;
+    };
+
+    const onBlur = (event: FocusEvent) => {
+      releaseRetention(event.relatedTarget);
     };
 
     const onInput = (event: Event) => {
@@ -578,7 +636,11 @@ export function useViewportAnchor({
         middlePressed = event.type !== "auxclick";
         away = true;
       } else if (typeof PointerEvent !== "undefined" && event instanceof PointerEvent) {
-        if (retainRow(event.target)) return;
+        if (retainRow(event.target)) {
+          retentionPendingRef.current = retainedIdRef.current;
+
+          return;
+        }
 
         const bounds = element.getBoundingClientRect();
         const gutter = Math.max(16, element.offsetWidth - element.clientWidth);
@@ -648,6 +710,18 @@ export function useViewportAnchor({
     };
 
     const onRelease = (event: Event) => {
+      if (event.type === "pointerup" || event.type === "pointercancel") {
+        const releasedId = retainedIdRef.current;
+
+        // Pressed context menus open in a task after release. Let their marker mount
+        // before checking ownership, and never release a newly retained row.
+        requestAnimationFrame(() => {
+          if (retentionPendingRef.current === releasedId) retentionPendingRef.current = null;
+
+          if (retainedIdRef.current === releasedId) releaseRetention();
+        });
+      }
+
       if (typeof TouchEvent !== "undefined" && event instanceof TouchEvent) {
         touchY = null;
 
@@ -682,7 +756,9 @@ export function useViewportAnchor({
       element.addEventListener(input, onInput, { capture: true, passive: true });
 
     element.addEventListener("focusin", onFocus, true);
+    element.addEventListener("focusout", onBlur, true);
     element.addEventListener("contextmenu", onFocus, true);
+    element.addEventListener("scrollend", onNativeScrollEnd);
 
     element.addEventListener("touchmove", onMove, { capture: true, passive: true });
     element.ownerDocument.addEventListener("pointermove", onMove, { capture: true, passive: true });
@@ -701,7 +777,9 @@ export function useViewportAnchor({
       for (const input of inputs) element.removeEventListener(input, onInput, true);
 
       element.removeEventListener("focusin", onFocus, true);
+      element.removeEventListener("focusout", onBlur, true);
       element.removeEventListener("contextmenu", onFocus, true);
+      element.removeEventListener("scrollend", onNativeScrollEnd);
 
       element.removeEventListener("touchmove", onMove, true);
       element.ownerDocument.removeEventListener("pointermove", onMove, true);
@@ -719,29 +797,31 @@ export function useViewportAnchor({
   const chunkLoaded = useEffectEvent(() => cardsLoaded);
 
   const correct = useEffectEvent(() => {
-    observeScroll();
+    recordGrowth();
     const anchor = anchorRef.current;
     const list = listRef.current;
     const element = viewport();
 
-    if (
-      anchor === null ||
-      anchor.placement !== placement ||
-      list === null ||
-      !element ||
-      interacting()
-    )
+    if (anchor === null || anchor.placement !== placement || list === null || !element) return;
+
+    if (interacting() || issuedEndRef.current !== null) {
+      correctionPendingRef.current = true;
+
       return;
+    }
+
+    correctionPendingRef.current = false;
 
     if (anchor.kind === "end") {
+      if (!checkFollow()) return;
       const offset = element.scrollHeight - element.clientHeight;
 
       if (Math.abs(offset - element.scrollTop) > 1) {
         element.scrollTop = offset;
         correctedOffsetRef.current = element.scrollTop;
-        scrollOffsetRef.current = element.scrollTop;
-        followingFromRef.current = null;
       }
+
+      pinEnd();
 
       return;
     }
@@ -768,7 +848,6 @@ export function useViewportAnchor({
 
       if (element.scrollTop !== before) {
         correctedOffsetRef.current = element.scrollTop;
-        scrollOffsetRef.current = element.scrollTop;
       }
     }
   });
@@ -779,8 +858,8 @@ export function useViewportAnchor({
     if (!placed || placementRef.current?.placement !== placement) placementRef.current = null;
 
     correctedOffsetRef.current = null;
-    scrollOffsetRef.current = null;
-    followingFromRef.current = null;
+    correctionPendingRef.current = false;
+    issuedEndRef.current = null;
 
     if (!placed) return;
 
@@ -793,6 +872,7 @@ export function useViewportAnchor({
     let correctingCards = !chunkLoaded();
 
     const resizes = new ResizeObserver((entries) => {
+      recordGrowth();
       seed();
 
       let changed = false;
@@ -856,6 +936,12 @@ export function useViewportAnchor({
       }
 
       seed();
+
+      if (!interacting()) {
+        if (correctionPendingRef.current) correct();
+      }
+
+      releaseRetention();
     };
 
     const mutations = new MutationObserver(observeRows);
@@ -866,7 +952,12 @@ export function useViewportAnchor({
       correctingCards = false;
       finishCardsRef.current = null;
       mutations.disconnect();
-      mutations.observe(content, { childList: true });
+      mutations.observe(content, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-editing"],
+      });
     };
 
     const stop = () => {
@@ -876,13 +967,14 @@ export function useViewportAnchor({
     };
 
     finishCardsRef.current = finishCards;
+    growthRef.current = { end: endOffset(element), delta: 0 };
     resizes.observe(element);
     resizes.observe(content);
     mutations.observe(content, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["style"],
+      attributeFilter: ["style", "data-editing"],
     });
     observeRows();
 
