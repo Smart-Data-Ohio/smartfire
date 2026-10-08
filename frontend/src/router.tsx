@@ -340,7 +340,11 @@ const eventsRoute = createRoute({
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
   },
-  component: lazyRouteComponent(() => import("./features/events/events-page.tsx"), "EventsRoute"),
+  component: lazy(() =>
+    import("./features/events/events-page.tsx").then((module) => ({
+      default: module.EventsRoute,
+    })),
+  ),
 });
 
 const newEventRoute = createRoute({
@@ -360,7 +364,11 @@ const eventRoute = createRoute({
     parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
     stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
   },
-  component: lazyRouteComponent(() => import("./features/events/event-page.tsx"), "EventRoute"),
+  component: lazy(() =>
+    import("./features/events/event-page.tsx").then((module) => ({
+      default: module.EventRoute,
+    })),
+  ),
 });
 
 const eventChildRoutes = [
