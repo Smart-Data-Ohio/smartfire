@@ -70,7 +70,13 @@ export function createDirects(ctx: S2Context): Directs {
     record.memberIds.length === members.size && record.memberIds.every((id) => members.has(id));
 
   const upserted = (record: RoomRecord) => {
-    ctx.publish([{ topic: "user", type: "sidebar.row.upserted", data: ctx.sidebarRow(record) }]);
+    ctx.publish([
+      {
+        topic: "user",
+        type: "sidebar.row.upserted",
+        data: { ...ctx.sidebarRow(record), refreshRoom: true },
+      },
+    ]);
   };
 
   const create = (body: Json | undefined): MockResponse => {

@@ -3,6 +3,7 @@ import {
   Context,
   Effect,
   Layer,
+  Predicate,
   Queue,
   Ref,
   Result,
@@ -11,9 +12,10 @@ import {
   Stream,
 } from "effect";
 import type { ApiClient } from "../api/client.ts";
-import { messages, sidebar, users } from "../api/endpoints.ts";
+import { messages, room, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
+import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
@@ -26,6 +28,13 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
+import {
+  invalidateRoom,
+  markRoomsChanged,
+  markSidebarSnapshot,
+  roomRefreshIds,
+  roomRevision,
+} from "./room-refresh.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
@@ -126,9 +135,41 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
         missing.add(creatorId);
       }
     }
+
+    if (event.type === "sidebar.row.upserted") {
+      for (const userId of event.data.directMemberIds) {
+        if (known[userId] === undefined) {
+          missing.add(userId);
+        }
+      }
+    }
   }
 
   return [...missing];
+}
+
+function landRefreshedRoom(detail: RoomDetail, revision: number): void {
+  const state = store.getState();
+  const roomId = detail.room.id;
+
+  if (roomRevision(roomId) !== revision || state.rooms[roomId]?.detail == null) {
+    return;
+  }
+
+  // A read/unread or placement row may have landed while this request was pending.
+  const row = state.sidebar.rows[roomId];
+
+  mutations.setRoomDetail(
+    row === undefined
+      ? detail
+      : {
+          ...detail,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+  );
 }
 
 /**
@@ -170,10 +211,33 @@ export class Engine extends Context.Service<
        */
       const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
         mutations.setPageReplacing(roomId);
+        const revision = roomRevision(roomId);
 
-        const newest = yield* messages(roomId, null);
+        const [detail, newest] = yield* Effect.all(
+          [Effect.result(room(roomId)), Effect.result(messages(roomId, null))],
+          { concurrency: 2 },
+        );
 
-        mutations.applyPage(roomId, newest, "resync");
+        if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
+          markRoomsChanged([roomId]);
+          landRefreshedRoom(detail.success, revision);
+        } else if (
+          Result.isFailure(detail) &&
+          roomRevision(roomId) === revision &&
+          Predicate.isTagged(detail.failure, "NotFound")
+        ) {
+          markRoomsChanged([roomId]);
+          mutations.setRoomUnavailable(roomId);
+          mutations.setPageFailed(roomId);
+
+          return;
+        }
+
+        if (Result.isFailure(newest)) {
+          return yield* Effect.fail(newest.failure);
+        }
+
+        mutations.applyPage(roomId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().timelines[roomId]);
 
@@ -255,7 +319,13 @@ export class Engine extends Context.Service<
 
           if (topic === "user") {
             yield* sidebar().pipe(
-              Effect.tap((data) => Effect.sync(() => mutations.loadSidebar(data))),
+              Effect.tap((data) =>
+                Effect.sync(() => {
+                  mutations.loadSidebar(data);
+                  // The snapshot is newer than any room write still on its way.
+                  markSidebarSnapshot();
+                }),
+              ),
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
               ),
@@ -291,6 +361,27 @@ export class Engine extends Context.Service<
         users(ids).pipe(
           Effect.tap((list) => Effect.sync(() => mutations.mergeUsers(list.users))),
           Effect.catch((error) => Effect.logWarning("sync: author lookup failed", error.message)),
+          Effect.provideContext(api),
+        );
+
+      const refreshRoom = (roomId: number, revision: number) =>
+        room(roomId).pipe(
+          Effect.tap((detail) =>
+            Effect.sync(() => {
+              landRefreshedRoom(detail, revision);
+            }),
+          ),
+          Effect.catch((error) =>
+            Effect.sync(() => {
+              if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
+                mutations.setRoomUnavailable(roomId);
+              }
+            }).pipe(
+              Effect.andThen(
+                Effect.logWarning("sync: room metadata refresh failed", error.message),
+              ),
+            ),
+          ),
           Effect.provideContext(api),
         );
 
@@ -341,6 +432,22 @@ export class Engine extends Context.Service<
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh);
+
+        const refreshes = roomRefreshIds(fresh)
+          .map((roomId) => ({
+            roomId,
+            revision: invalidateRoom(roomId),
+          }))
+          .filter(({ roomId }) => store.getState().rooms[roomId]?.detail != null);
+
+        if (refreshes.length > 0) {
+          yield* Effect.forkIn(
+            Effect.forEach(refreshes, ({ roomId, revision }) => refreshRoom(roomId, revision), {
+              concurrency: 4,
+            }),
+            scope,
+          );
+        }
 
         yield* cursor.set({ epoch: point?.epoch ?? "", seq });
 

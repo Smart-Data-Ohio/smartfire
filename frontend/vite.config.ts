@@ -1,8 +1,11 @@
 /// <reference types="vitest/config" />
+import { readdirSync, readFileSync } from "node:fs";
+import { basename } from "node:path";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import { defineConfig, type ProxyOptions } from "vite";
+import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 import { isMockEnabled, smartfireMock } from "./mock/vite-plugin.ts";
+import { inlinePaletteTable } from "./src/lib/palette-table.ts";
 import { smartfirePreviewPolicy } from "./tools/preview-policy.ts";
 import { smartfireServiceWorker } from "./tools/service-worker.ts";
 
@@ -10,6 +13,39 @@ import { smartfireServiceWorker } from "./tools/service-worker.ts";
 // forwards everything the SPA asks the Rust app for to `cargo run` on :3000, keeping the request's
 // Origin so the session cookie and the CSRF origin check line up.
 const rust = { target: "http://127.0.0.1:3000", changeOrigin: false };
+
+/**
+ * Every palette's tokens, built into index.html's blocking script (src/lib/palette-table.ts). Only
+ * the app shell carries that script; offline.html has no palette table.
+ */
+const paletteTable: Plugin = {
+  name: "smartfire-palette-table",
+  transformIndexHtml: {
+    order: "pre",
+    handler: (html, { filename }) =>
+      basename(filename) === "index.html" ? inlinePaletteTable(html) : html,
+  },
+};
+
+const fonts = new URL("./src/styles/fonts/", import.meta.url);
+
+/**
+ * Each self-hosted font's licence, beside the fonts in the build's assets/: the SIL Open Font
+ * License travels with the fonts (crates/spa's tests check every shipped font has its licence).
+ */
+const fontLicences: Plugin = {
+  name: "smartfire-font-licences",
+  apply: "build",
+  generateBundle() {
+    for (const name of readdirSync(fonts).filter((file) => file.startsWith("LICENSE-"))) {
+      this.emitFile({
+        type: "asset",
+        fileName: `assets/${name}`,
+        source: readFileSync(new URL(name, fonts)),
+      });
+    }
+  },
+};
 
 export default defineConfig(({ mode }) => {
   // With the mock (`SMARTFIRE_MOCK=1` or `--mode mock`) the dev server answers /api itself
@@ -28,6 +64,8 @@ export default defineConfig(({ mode }) => {
       react(),
       babel({ presets: [reactCompilerPreset()] }),
       smartfireMock(),
+      paletteTable,
+      fontLicences,
       smartfireServiceWorker(),
       // The embedded files' policy under `vite preview`, so the browser suite exercises its
       // same-origin script, worker, style and font rules (tools/preview-policy.ts).

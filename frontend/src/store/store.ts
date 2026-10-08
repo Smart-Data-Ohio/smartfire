@@ -137,6 +137,8 @@ export const mutations = {
   setRoomError: (roomId: number, error: string) =>
     apply((state) => reduce.setRoomError(state, roomId, error)),
   setRoomDetail: (detail: RoomDetail) => apply((state) => reduce.setRoomDetail(state, detail)),
+  setRoomUnavailable: (roomId: number) =>
+    apply((state) => reduce.setRoomUnavailable(state, roomId)),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode)),
   setPageLoading: (roomId: number, direction: "older" | "newer") =>

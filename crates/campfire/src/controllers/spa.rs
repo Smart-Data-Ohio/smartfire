@@ -88,6 +88,10 @@ mod account_tests;
 mod people_tests;
 
 #[cfg(test)]
+#[path = "spa_api_room_management_tests.rs"]
+mod api_room_management_tests;
+
+#[cfg(test)]
 #[path = "spa_api_events_tests.rs"]
 mod spa_api_events_tests;
 

@@ -15,6 +15,7 @@ import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
 import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
+import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
@@ -32,6 +33,11 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
+import type { RoomForm } from "../gen/RoomForm.ts";
+import type { RoomKind } from "../gen/RoomKind.ts";
+import type { RoomLeft } from "../gen/RoomLeft.ts";
+import type { RoomMutation } from "../gen/RoomMutation.ts";
+import type { RoomRemoved } from "../gen/RoomRemoved.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -40,6 +46,7 @@ import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
+import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
@@ -64,6 +71,7 @@ import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import * as roomActions from "./room-actions.ts";
 import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
@@ -346,6 +354,17 @@ const organize = {
     runAction(organizeActions.setInvolvement(roomId, involvement)),
 };
 
+/** Room management plumbing; readable form facts and successful writes land before resolving. */
+const rooms = {
+  newForm: (type: RoomKind): Promise<RoomForm> => runAction(roomActions.newForm(type)),
+  editForm: (roomId: number): Promise<RoomForm> => runAction(roomActions.editForm(roomId)),
+  create: (body: CreateRoom): Promise<RoomMutation> => runAction(roomActions.create(body)),
+  update: (roomId: number, body: UpdateRoom): Promise<RoomMutation> =>
+    runAction(roomActions.update(roomId, body)),
+  remove: (roomId: number): Promise<RoomRemoved> => runAction(roomActions.remove(roomId)),
+  leaveDirect: (roomId: number): Promise<RoomLeft> => runAction(roomActions.leaveDirect(roomId)),
+};
+
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
 const cards = {
   fizzyForm: (scope: FizzyMessageScope): Promise<FizzyMessageCardForm> =>
@@ -445,6 +464,7 @@ export const actions = {
   ledger,
   search,
   organize,
+  rooms,
   cards,
   events,
 

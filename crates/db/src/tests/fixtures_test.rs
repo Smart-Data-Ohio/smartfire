@@ -93,6 +93,15 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
         let fields: Vec<String> = names
             .iter()
             .enumerate()
+            .filter(|(i, name)| {
+                if table == "rooms" && name.as_str() == "client_room_id" {
+                    let key: Option<String> = row.get(*i).unwrap();
+                    assert_eq!(key, None, "classic fixtures never set API creation keys");
+                    false
+                } else {
+                    true
+                }
+            })
             // Port-only counter for the SPA activity badge that Rails doesn't have.
             .filter(|(_, name)| !(table == "users" && name.as_str() == "activity_revision"))
             .map(|(i, name)| {

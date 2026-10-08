@@ -2,7 +2,7 @@
 // The Rust test owns the private seed/server. After seeding a legacy registration,
 // sign-in and UI switches reconcile it through application code.
 import assert from "node:assert/strict"
-import { createHmac } from "node:crypto"
+import { createHmac, ECDH } from "node:crypto"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
@@ -173,6 +173,22 @@ try {
       process.env.PWA_ALLOW_PUSH_UNAVAILABLE === "1",
       `Chromium could not create a push subscription, so preservation is unproven: ${JSON.stringify(enrollment)}`,
     )
+    // Only a missing push service may be skipped: a hang, no push support, or Chromium's
+    // connection/push service errors. Chromium also reports a rejected key as a push service
+    // error, so that one counts only for a key that is a valid uncompressed P-256 point.
+    let validKey = false
+    try {
+      const key = Buffer.from(process.env.PWA_BROWSER_VAPID_KEY ?? "", "base64url")
+      validKey = key.length === 65 && key[0] === 4
+        && ECDH.convertKey(key, "prime256v1", undefined, undefined, "uncompressed").equals(key)
+    } catch {
+      validKey = false
+    }
+    const unavailable = enrollment.name === "Pending"
+      || enrollment.name === "NotSupportedError"
+      || (enrollment.name === "AbortError" && enrollment.message === "Registration failed - could not connect to push server")
+      || (enrollment.name === "AbortError" && enrollment.message === "Registration failed - push service error" && validKey)
+    assert.ok(unavailable, `push subscription failed for a reason other than a missing push service: ${JSON.stringify(enrollment)}`)
     await activeWorker("/app/service-worker.js")
     console.log(`PWA_PUSH_PRESERVATION_SKIPPED ${JSON.stringify(enrollment)}`)
   }

@@ -25,7 +25,12 @@ function inlineBoot(theme: string, textSize: string): void {
   document.head.append(script);
 }
 
-function stored(): Partial<Appearance> {
+/** What's stored: this device's choices, plus the chosen palette's derived tokens. */
+type Stored = Partial<Appearance> & {
+  readonly paletteTokens?: Readonly<Partial<Record<`--${string}`, string>>>;
+};
+
+function stored(): Stored {
   return JSON.parse(localStorage.getItem(KEY) ?? "{}");
 }
 
@@ -35,9 +40,11 @@ beforeEach(() => {
   localStorage.clear();
   document.getElementById("boot")?.remove();
 
-  for (const name of ["theme", "textSize", "density", "motion"]) {
+  for (const name of ["theme", "textSize", "density", "motion", "palette", "font"]) {
     delete html().dataset[name];
   }
+
+  html().removeAttribute("style");
 });
 
 afterEach(() => {
@@ -110,6 +117,44 @@ describe("restoreAppearance", () => {
     expect(html().dataset.theme).toBeUndefined();
     expect(html().dataset.textSize).toBe("default");
   });
+
+  it("ignores corrupted values that only read as a choice once turned into text", async () => {
+    // Each would read as a real choice through String(): ["dark"] is "dark".
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        themeOverride: ["dark"],
+        density: ["compact"],
+        motion: ["reduce"],
+        palette: ["ocean"],
+        font: ["serif"],
+      }),
+    );
+    const boot = document.createElement("script");
+
+    boot.type = "application/json";
+    boot.id = "boot";
+    boot.textContent = JSON.stringify({ theme: ["light"], textSize: ["larger"] });
+    document.head.append(boot);
+    const { restoreAppearance, appearanceSnapshot } = await load();
+
+    restoreAppearance();
+
+    expect(appearanceSnapshot()).toMatchObject({
+      theme: "system",
+      themeOverride: null,
+      accountTheme: "system",
+      textSize: "default",
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
+    });
+    expect(html().dataset.theme).toBeUndefined();
+    expect(html().dataset.textSize).toBe("default");
+    expect(html().dataset.density).toBeUndefined();
+    expect(html().dataset.palette).toBeUndefined();
+  });
 });
 
 describe("applyAccountAppearance", () => {
@@ -122,7 +167,13 @@ describe("applyAccountAppearance", () => {
     expect(html().dataset.textSize).toBe("smaller");
     // Only this device's own choices are stored: the classic pages read the pin, and the next
     // person to sign in on this browser must not inherit this account's theme.
-    expect(stored()).toEqual({ themeOverride: null, density: "comfortable", motion: "system" });
+    expect(stored()).toEqual({
+      themeOverride: null,
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
+    });
   });
 
   it("leaves a device's pinned theme on screen", async () => {
@@ -132,7 +183,13 @@ describe("applyAccountAppearance", () => {
     applyAccountAppearance({ theme: "dark", textSize: "default" });
 
     expect(html().dataset.theme).toBe("light");
-    expect(stored()).toEqual({ themeOverride: "light", density: "comfortable", motion: "system" });
+    expect(stored()).toEqual({
+      themeOverride: "light",
+      density: "comfortable",
+      motion: "system",
+      palette: "smartfire",
+      font: "inter",
+    });
   });
 });
 
@@ -164,5 +221,92 @@ describe("appearanceSnapshot", () => {
       accountTheme: "dark",
       textSize: "large",
     });
+  });
+});
+
+describe("palette and font", () => {
+  it("paints a palette's tokens on the page and remembers it for this device", async () => {
+    const { setPalette } = await load();
+
+    setPalette("ember");
+
+    expect(html().dataset.palette).toBe("ember");
+    expect(html().style.getPropertyValue("--bg-pane")).toMatch(/^light-dark\(oklch/);
+    expect(html().style.getPropertyValue("--accent")).toMatch(/^light-dark\(oklch/);
+    expect(stored()).toMatchObject({ palette: "ember" });
+    // Only the name: index.html carries every palette's tokens, built from the same presets.
+    expect(stored()).not.toHaveProperty("paletteTokens");
+  });
+
+  it("ignores tokens an earlier version stored, and drops them at the next change", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        palette: "ember",
+        paletteTokens: { "--text-body": "0px", "--accent": "light-dark(red, red)" },
+      }),
+    );
+    const { restoreAppearance, setFont } = await load();
+    const { paletteTokens } = await import("./palette.ts");
+
+    restoreAppearance();
+
+    expect(html().style.getPropertyValue("--text-body")).toBe("");
+    expect(html().style.getPropertyValue("--accent")).toBe(paletteTokens("ember").get("--accent"));
+
+    setFont("serif");
+
+    expect(stored()).toMatchObject({ palette: "ember", font: "serif" });
+    expect(stored()).not.toHaveProperty("paletteTokens");
+  });
+
+  it("goes back to the stylesheet's colours with Smartfire's palette", async () => {
+    const { setPalette } = await load();
+
+    setPalette("forest");
+    setPalette("smartfire");
+
+    expect(html().dataset.palette).toBeUndefined();
+    expect(html().style.getPropertyValue("--bg-pane")).toBe("");
+  });
+
+  it("sets the font on the page, Inter being the default", async () => {
+    const { setFont } = await load();
+
+    setFont("atkinson");
+    expect(html().dataset.font).toBe("atkinson");
+
+    setFont("inter");
+    expect(html().dataset.font).toBeUndefined();
+    expect(stored()).toMatchObject({ font: "inter" });
+  });
+
+  it("restores this device's palette and font before the first render", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ accountTheme: "dark", palette: "ocean", font: "serif" }),
+    );
+    inlineBoot("dark", "default");
+    const { restoreAppearance } = await load();
+
+    restoreAppearance();
+
+    expect(html().dataset.palette).toBe("ocean");
+    expect(html().style.getPropertyValue("--accent")).not.toBe("");
+    expect(html().dataset.font).toBe("serif");
+  });
+
+  it("ignores a palette or font it doesn't know", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ accountTheme: "light", palette: "neon", font: "comic" }),
+    );
+    const { restoreAppearance, appearanceSnapshot } = await load();
+
+    restoreAppearance();
+
+    expect(html().dataset.palette).toBeUndefined();
+    expect(html().dataset.font).toBeUndefined();
+    expect(appearanceSnapshot()).toMatchObject({ palette: "smartfire", font: "inter" });
   });
 });

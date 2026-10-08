@@ -16,6 +16,7 @@ export const SidebarRow = Schema.Struct({
   directMemberIds: Schema.Array(UserId),
   unreadCount: Schema.Int,
   mentionCount: Schema.Int,
+  refreshRoom: Schema.optionalKey(Schema.Boolean),
 });
 
 export type SidebarRow = typeof SidebarRow.Type;
@@ -48,7 +49,10 @@ export type Sidebar = typeof Sidebar.Type;
 export type SidebarPin = Assert<Pinned<typeof Sidebar, GeneratedSidebar>>;
 
 /** The `sidebar.row.removed` event's data. */
-export const SidebarRowRemoved = Schema.Struct({ roomId: RoomId });
+export const SidebarRowRemoved = Schema.Struct({
+  roomId: RoomId,
+  refreshRoom: Schema.optionalKey(Schema.Boolean),
+});
 
 export type SidebarRowRemovedPin = Assert<
   Pinned<typeof SidebarRowRemoved, GeneratedSidebarRowRemoved>

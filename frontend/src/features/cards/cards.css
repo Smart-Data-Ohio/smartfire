@@ -8,8 +8,8 @@
   .message-cards {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    margin-top: var(--space-1-5);
+    gap: var(--message-accessory-gap, var(--space-1-5));
+    margin-top: var(--message-accessory-gap, var(--space-1-5));
   }
 
   .message-cards:empty {

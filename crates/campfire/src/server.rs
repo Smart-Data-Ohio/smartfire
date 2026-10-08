@@ -429,7 +429,7 @@ impl campfire_db::Clock for DbClock {
 
 // --- Commands --------------------------------------------------------------------------------------
 
-const USAGE: &str = "usage: campfire [server|backup|db-check [--immutable] DATABASE|db-migrate DATABASE|verify-additive-sqlite-migration BEFORE AFTER|twitter-backfill-references DATABASE]";
+const USAGE: &str = "usage: campfire [server|backup|db-check [--immutable] DATABASE|db-migrate [--preserve-existing-foreign-key-violations] DATABASE|verify-additive-sqlite-migration BEFORE AFTER|twitter-backfill-references DATABASE]";
 
 /// The binary's entry point.
 ///
