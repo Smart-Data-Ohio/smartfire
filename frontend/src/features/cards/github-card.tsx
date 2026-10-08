@@ -120,9 +120,23 @@ interface LoadedProps {
   readonly scope: GithubCardScope;
   /** It heads the pull request's discussion thread: files instead of "Discuss". */
   readonly header: boolean;
+  /** Bumps when this preview is invalidated or fetched, so write actions are asked for again. */
+  readonly previewGeneration: number;
+  /** A refresh failed; the pull request above is the last one that loaded. */
+  readonly refreshError: string | null;
+  readonly onRetry: () => void;
 }
 
-function Loaded({ message, pull, pullRequestId, scope, header }: LoadedProps) {
+function Loaded({
+  message,
+  pull,
+  pullRequestId,
+  scope,
+  header,
+  previewGeneration,
+  refreshError,
+  onRetry,
+}: LoadedProps) {
   const now = useNow();
   const status = STATUS[pull.status];
 
@@ -210,7 +224,23 @@ function Loaded({ message, pull, pullRequestId, scope, header }: LoadedProps) {
         )}
       </div>
       {header && pull.files !== null ? <ChangedFiles files={pull.files} /> : null}
-      <GithubActions roomId={message.roomId} pullRequestId={pullRequestId} scope={scope} />
+      {refreshError === null ? null : (
+        <div className="github-refresh-error">
+          <div className="card-error" role="alert">
+            <Icon name="circle-alert" size={14} />
+            <span>Couldn't refresh this pull request. {refreshError}</span>
+          </div>
+          <Button variant="secondary" size="sm" icon="refresh-cw" onClick={onRetry}>
+            Retry
+          </Button>
+        </div>
+      )}
+      <GithubActions
+        roomId={message.roomId}
+        pullRequestId={pullRequestId}
+        scope={scope}
+        previewGeneration={previewGeneration}
+      />
     </section>
   );
 }
@@ -306,6 +336,9 @@ function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
           pullRequestId={card.pullRequestId}
           scope={scope}
           header={threadId !== null}
+          previewGeneration={preview?.generation ?? 0}
+          refreshError={preview?.status === "error" ? (preview.error ?? "") : null}
+          onRetry={retry}
         />
       );
   }

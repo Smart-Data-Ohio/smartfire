@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventAttendance } from "../../src/gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../../src/gen/FizzyCardPreview.ts";
+import type { GithubPullRequestActions } from "../../src/gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../../src/gen/GithubPullRequestCard.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
@@ -327,6 +328,34 @@ describe("previews", () => {
     });
 
     expect(other.status).toBe(404);
+  });
+
+  it("denies pull request writes until the room has a discussion", async () => {
+    const { server } = harness();
+    const { pullRequests: pr, messages } = cards;
+    const actions = `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/actions`;
+    const comment = `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/comments`;
+
+    expect((await server.handle({ method: "GET", path: actions })).status).toBe(404);
+    expect((await send(server, "POST", comment, { body: "Hi" })).status).toBe(404);
+
+    await expectStatus(
+      server,
+      "POST",
+      `/api/v1/rooms/${ROOM}/threads`,
+      {
+        parentMessageId: messages.githubOpen,
+        name: null,
+        message: messageBody("t-map", "Discuss"),
+      },
+      201,
+    );
+
+    expect(await get<GithubPullRequestActions>(server, actions)).toMatchObject({
+      canComment: true,
+      canReview: true,
+      canRequestReviewers: true,
+    });
   });
 
   it("serves every Fizzy state", async () => {

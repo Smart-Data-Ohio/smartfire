@@ -10,6 +10,7 @@ import {
   PREVIEW_TTL_MS,
   pollClosed,
   pollView,
+  previewFailed,
   previewLoaded,
   previewLoading,
   reconcileMessage,
@@ -231,6 +232,58 @@ describe("poll and card events", () => {
     expect(kept?.fetchedAt).toBe(0);
     expect(kept?.generation).toBe(1);
     expect(needsFetch(kept, Date.parse(at(59)))).toBe(true);
+  });
+
+  it("keeps a failed refresh on screen and fetches again once it is invalidated", () => {
+    const withPr = seeded({ ...message, cards: [github(9)] });
+    const key = githubKey(ROOM, 9, { messageId: 1 });
+    const now = Date.parse(at(11));
+    const loaded = previewLoaded(withPr, "github", key, 9, { state: "hidden" }, now, 0);
+    const generation = loaded.cards.previews.github[key]?.generation ?? 0;
+    const failed = previewFailed(loaded, "github", key, 9, "GitHub is down", generation);
+
+    expect(failed.cards.previews.github[key]).toMatchObject({
+      status: "error",
+      value: { state: "hidden" },
+      error: "GitHub is down",
+    });
+    expect(needsFetch(failed.cards.previews.github[key], now + PREVIEW_TTL_MS)).toBe(false);
+
+    const invalidated = events(failed, [
+      {
+        type: "message.cards",
+        seq: 1,
+        topic: `room:${ROOM}`,
+        data: {
+          messageId: 1,
+          roomId: ROOM,
+          threadId: null,
+          cards: [github(9)],
+          asOf: at(20),
+        },
+      },
+    ]);
+
+    const preview = invalidated.cards.previews.github[key];
+
+    expect(preview?.value).toEqual({ state: "hidden" });
+    expect(preview?.status).toBe("ready");
+    expect(needsFetch(preview, now + 1000)).toBe(true);
+
+    const replaced = previewLoaded(
+      invalidated,
+      "github",
+      key,
+      9,
+      { state: "failed", message: "gone" },
+      now + 1,
+      preview?.generation ?? 0,
+    );
+
+    expect(replaced.cards.previews.github[key]?.value).toEqual({
+      state: "failed",
+      message: "gone",
+    });
   });
 
   it("keeps a newer poll and cards when an older page or edit lands", () => {

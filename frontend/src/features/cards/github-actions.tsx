@@ -249,10 +249,14 @@ function ReviewDialog({
   );
 }
 
-function ReviewMenu(props: ScopeProps & FailureProps) {
+function ReviewMenu({
+  instanceId,
+  ...props
+}: ScopeProps & FailureProps & { readonly instanceId: string }) {
   const { roomId, pullRequestId } = props;
   const draft = useGithubDraft(roomId, pullRequestId);
   const choice = REVIEWS.find((review) => review.event === draft.review) ?? null;
+  const owned = choice !== null && draft.reviewOwner === instanceId;
 
   return (
     <>
@@ -267,19 +271,26 @@ function ReviewMenu(props: ScopeProps & FailureProps) {
         {REVIEWS.map((review) => (
           <MenuItem
             key={review.event}
-            onSelect={() => patchGithubDraft(roomId, pullRequestId, { review: review.event })}
+            onSelect={() =>
+              patchGithubDraft(roomId, pullRequestId, {
+                review: review.event,
+                reviewOwner: instanceId,
+              })
+            }
           >
             {review.label}
           </MenuItem>
         ))}
       </Menu>
-      {choice === null ? null : (
+      {owned && choice !== null ? (
         <ReviewDialog
           {...props}
           choice={choice}
-          onClose={() => patchGithubDraft(roomId, pullRequestId, { review: null })}
+          onClose={() =>
+            patchGithubDraft(roomId, pullRequestId, { review: null, reviewOwner: null })
+          }
         />
-      )}
+      ) : null}
     </>
   );
 }
@@ -380,23 +391,37 @@ function ReviewersDialog({
   );
 }
 
-function ReviewersButton(props: ScopeProps & FailureProps) {
+function ReviewersButton({
+  instanceId,
+  ...props
+}: ScopeProps & FailureProps & { readonly instanceId: string }) {
   const { roomId, pullRequestId } = props;
   const draft = useGithubDraft(roomId, pullRequestId);
+  const owned = draft.reviewersOpen && draft.reviewersOwner === instanceId;
 
   return (
     <>
       <Button
         variant="secondary"
         size="sm"
-        onClick={() => patchGithubDraft(roomId, pullRequestId, { reviewersOpen: true })}
+        onClick={() =>
+          patchGithubDraft(roomId, pullRequestId, {
+            reviewersOpen: true,
+            reviewersOwner: instanceId,
+          })
+        }
       >
         Request reviewers
       </Button>
-      {draft.reviewersOpen ? (
+      {owned ? (
         <ReviewersDialog
           {...props}
-          onClose={() => patchGithubDraft(roomId, pullRequestId, { reviewersOpen: false })}
+          onClose={() =>
+            patchGithubDraft(roomId, pullRequestId, {
+              reviewersOpen: false,
+              reviewersOwner: null,
+            })
+          }
         />
       ) : null}
     </>
@@ -413,13 +438,40 @@ interface FailureProps {
  * `GET .../actions` returns. A success refetches the card; GitHub's webhook also publishes
  * `message.cards`, which refetches the preview without unmounting a draft or an open dialog.
  * A write stays pending if its dialog is closed, so opening it again does not post twice.
+ * The dialog belongs to this mounted copy: the timeline and the discussion each have their own,
+ * and only the one that opened it renders the modal.
  */
-export function GithubActions({ roomId, pullRequestId, scope }: ScopeProps) {
+export function GithubActions({
+  roomId,
+  pullRequestId,
+  scope,
+  previewGeneration,
+}: ScopeProps & { readonly previewGeneration: number }) {
+  const instanceId = useId();
   const [capabilities, setCapabilities] = useState<GithubPullRequestActions | null>(null);
   const [generation, setGeneration] = useState(0);
 
-  // generation is the retry after a refused write, so a rejected token hides the controls.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: generation is the retry trigger, not an input
+  // The copy that opened a dialog unmounts: close it here, and leave the typed draft.
+  useEffect(() => {
+    return () => {
+      const current = readGithubDraft(roomId, pullRequestId);
+
+      if (current.reviewOwner === instanceId) {
+        patchGithubDraft(roomId, pullRequestId, { review: null, reviewOwner: null });
+      }
+
+      if (current.reviewersOwner === instanceId) {
+        patchGithubDraft(roomId, pullRequestId, {
+          reviewersOpen: false,
+          reviewersOwner: null,
+        });
+      }
+    };
+  }, [instanceId, roomId, pullRequestId]);
+
+  // generation retries after a refused write. previewGeneration moves when the preview is
+  // invalidated or fetched again, so a discussion created under a mounted card shows its controls.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: both counts are retry triggers, not inputs
   useEffect(() => {
     let live = true;
 
@@ -439,7 +491,7 @@ export function GithubActions({ roomId, pullRequestId, scope }: ScopeProps) {
     return () => {
       live = false;
     };
-  }, [roomId, pullRequestId, generation]);
+  }, [roomId, pullRequestId, generation, previewGeneration]);
 
   if (
     capabilities === null ||
@@ -460,8 +512,10 @@ export function GithubActions({ roomId, pullRequestId, scope }: ScopeProps) {
       {capabilities.canComment ? <CommentForm {...shared} /> : null}
       {capabilities.canReview || capabilities.canRequestReviewers ? (
         <div className="github-action-row">
-          {capabilities.canReview ? <ReviewMenu {...shared} /> : null}
-          {capabilities.canRequestReviewers ? <ReviewersButton {...shared} /> : null}
+          {capabilities.canReview ? <ReviewMenu {...shared} instanceId={instanceId} /> : null}
+          {capabilities.canRequestReviewers ? (
+            <ReviewersButton {...shared} instanceId={instanceId} />
+          ) : null}
         </div>
       ) : null}
     </div>

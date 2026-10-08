@@ -442,6 +442,9 @@ describe("card actions", () => {
         yield* Deferred.succeed(postWrite, stale);
         yield* Fiber.join(write);
 
+        // The post-write body arrived first. The webhook's get is already current, so it does not paint.
+        expect(shownPull()).toBeNull();
+
         yield* Deferred.succeed(webhook, fresh);
         yield* Fiber.join(refresh);
       }

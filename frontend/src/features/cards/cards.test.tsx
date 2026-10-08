@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { forbidden } from "../../../mock/http.ts";
 import { CARD_IDS } from "../../../mock/s3/cards.ts";
@@ -23,7 +23,12 @@ import { mutations, store, useStore } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { CreatePollDialog, filledOptions, pollProblems } from "./create-poll-dialog.tsx";
-import { resetGithubDrafts } from "./github-drafts.ts";
+import {
+  githubDraftCount,
+  patchGithubDraft,
+  readGithubDraft,
+  resetGithubDrafts,
+} from "./github-drafts.ts";
 import MessageCards from "./message-cards.tsx";
 
 // The cards render against the in-memory mock backend (mock/s3/cards.ts) through stubbed fetch:
@@ -727,6 +732,190 @@ describe("GitHub pull requests", () => {
     expect((await within(card).findByRole("status")).textContent).toBe(
       "Comment posted on GitHub as @maya.",
     );
+  });
+
+  it("keeps drafts apart by room and drops one that is empty and idle", () => {
+    const pullRequestId = CARD_IDS.pullRequests.open;
+
+    patchGithubDraft(ROOM, pullRequestId, { comment: "only here" });
+    expect(readGithubDraft(ROOM + 1, pullRequestId).comment).toBe("");
+    expect(readGithubDraft(ROOM, pullRequestId).comment).toBe("only here");
+    expect(githubDraftCount()).toBe(1);
+
+    patchGithubDraft(ROOM, pullRequestId, { comment: "", commentPending: true });
+    expect(githubDraftCount()).toBe(1);
+    expect(readGithubDraft(ROOM, pullRequestId).commentPending).toBe(true);
+
+    patchGithubDraft(ROOM, pullRequestId, { commentPending: false });
+    expect(githubDraftCount()).toBe(0);
+    expect(readGithubDraft(ROOM, pullRequestId).comment).toBe("");
+  });
+
+  it("shows write actions after a discussion is created on a mounted card", async () => {
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    expect(within(card).queryByRole("button", { name: "Comment" })).toBeNull();
+
+    await discuss(messages.githubOpen);
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    expect(await within(card).findByRole("button", { name: "Comment" })).toBeTruthy();
+  });
+
+  it("opens one dialog when the pull request is mounted twice", async () => {
+    const user = userEvent.setup();
+    const threadId = await discuss(messages.githubOpen);
+
+    function Both() {
+      return (
+        <>
+          <LiveRow id={messages.githubOpen} />
+          <LiveRow id={messages.githubOpen} threadId={threadId} />
+        </>
+      );
+    }
+
+    await inRouter(() => <Both />);
+
+    const cards = await screen.findAllByRole("region", { name: OPEN });
+
+    expect(cards).toHaveLength(2);
+
+    const timeline = cards[0];
+
+    if (timeline === undefined) {
+      throw new Error("expected the timeline card");
+    }
+
+    await user.click(within(timeline).getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Approve" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    await user.click(within(timeline).getByRole("button", { name: "Request reviewers" }));
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it("closes a dialog when the copy that opened it unmounts, and keeps the note", async () => {
+    const user = userEvent.setup();
+    const threadId = await discuss(messages.githubOpen);
+
+    function Pair() {
+      const [timeline, setTimeline] = useState(true);
+
+      return (
+        <>
+          <button type="button" onClick={() => setTimeline(false)}>
+            Hide timeline
+          </button>
+          {timeline ? <LiveRow id={messages.githubOpen} /> : null}
+          <LiveRow id={messages.githubOpen} threadId={threadId} />
+        </>
+      );
+    }
+
+    await inRouter(() => <Pair />);
+
+    const cards = await screen.findAllByRole("region", { name: OPEN });
+    const timeline = cards[0];
+
+    if (timeline === undefined) {
+      throw new Error("expected the timeline card");
+    }
+
+    await user.click(within(timeline).getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request changes" });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Note" }), "Keep the note.");
+    await user.click(screen.getByRole("button", { name: "Hide timeline" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getAllByRole("region", { name: OPEN })).toHaveLength(1);
+
+    const draft = readGithubDraft(ROOM, CARD_IDS.pullRequests.open);
+
+    expect(draft.review).toBeNull();
+    expect(draft.reviewNote).toBe("Keep the note.");
+  });
+
+  async function cardFetches(): Promise<number> {
+    const response = await fetch("/__mock/cards", {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ op: "fetches", roomId: ROOM }),
+    });
+
+    const fetches: Record<string, number> = await response.json();
+
+    return fetches[`github:${CARD_IDS.pullRequests.open}`] ?? 0;
+  }
+
+  it("keeps the pull request and offers Retry when a refresh fails", async () => {
+    const user = userEvent.setup();
+
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    const restore = refuse(
+      (method, path) => method === "GET" && path.includes("/card"),
+      "GitHub is down",
+    );
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    expect((await within(card).findByRole("alert")).textContent).toBe(
+      "Couldn't refresh this pull request. GitHub is down",
+    );
+    expect(within(card).getByText("Approved")).toBeTruthy();
+    expect(within(card).getByRole("button", { name: "Retry" })).toBeTruthy();
+
+    restore();
+    await user.click(within(card).getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(within(card).queryByRole("alert")).toBeNull());
+    expect(within(card).getByText("Approved")).toBeTruthy();
+  });
+
+  it("refetches a failed refresh when the preview is invalidated again", async () => {
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    const restore = refuse(
+      (method, path) => method === "GET" && path.includes("/card"),
+      "GitHub is down",
+    );
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    expect(await within(card).findByRole("alert")).toBeTruthy();
+
+    const before = await cardFetches();
+
+    restore();
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    await waitFor(async () => {
+      expect(await cardFetches()).toBeGreaterThan(before);
+    });
+    await waitFor(() => expect(within(card).queryByRole("alert")).toBeNull());
+    expect(within(card).getByText("Approved")).toBeTruthy();
   });
 });
 
