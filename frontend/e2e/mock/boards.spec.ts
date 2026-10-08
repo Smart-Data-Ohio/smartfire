@@ -222,6 +222,53 @@ for (const key of ["End", "PageDown"] as const) {
   });
 }
 
+test("Status menu navigation keeps a fitting board post at its work after a long reply", async ({
+  page,
+}) => {
+  const threadId = BOARD_POST_IDS.onboardingChecklist;
+  const welcomed = syncWelcomed(page);
+
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await openApp(page, `r/${BOARD}/t/${threadId}`);
+  await welcomed;
+  const list = pane(page).getByRole("log", { name: "Replies" });
+  const work = list.locator(".post-work");
+
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBe(0);
+  await work.getByRole("button", { name: /^Status:/ }).click();
+  const menu = page.getByRole("menu");
+
+  await expect(menu).toBeVisible();
+  await menu.press("End");
+  await menu.press("ArrowDown");
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const posted = await page.request.post("/__mock/thread-post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      threadId,
+      userId: USER_IDS.maya,
+      markdown: Array.from({ length: 100 }, (_, index) => `Board reply paragraph ${index}`).join(
+        "\n\n",
+      ),
+    },
+  });
+
+  expect(posted.ok()).toBe(true);
+  await expect(list.getByText("Board reply paragraph 99", { exact: true })).toBeAttached();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBeGreaterThan(500);
+  await expect(work).toBeInViewport();
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+});
+
 test("a post with more replies than one page still opens at its work", async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await openApp(page, `r/${BOARD}/t/${BOARD_POST_IDS.keyboardNavigation}`);

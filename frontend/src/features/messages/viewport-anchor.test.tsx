@@ -1609,6 +1609,66 @@ describe("useViewportAnchor reader control", () => {
     },
   );
 
+  it.each([
+    { target: "menu", key: "End" },
+    { target: "menu", key: "ArrowDown" },
+    { target: "listbox", key: "End" },
+    { target: "dialog", key: "End" },
+    { target: "dialog", key: "ArrowDown" },
+    { target: "trigger", key: "ArrowDown" },
+    { target: "trigger", key: "ArrowUp" },
+    { target: "consumed", key: "End" },
+  ])("$key in an intro $target preserves its hold after growth", ({ target, key }) => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+
+    try {
+      const apiRef = createRef<AnchorApi>();
+
+      const geometry: Geometry = {
+        ids: [1, 2],
+        heights: new Map([
+          [1, 150],
+          [2, 50],
+        ]),
+      };
+
+      const control = (
+        <button
+          type="button"
+          aria-haspopup={target === "trigger" ? "menu" : undefined}
+          onKeyDown={target === "consumed" ? (event) => event.preventDefault() : undefined}
+        >
+          Control
+        </button>
+      );
+
+      const controls =
+        target === "menu" || target === "listbox" || target === "dialog" ? (
+          <div role={target}>{control}</div>
+        ) : (
+          control
+        );
+
+      const view = render(
+        <Harness apiRef={apiRef} geometry={geometry} introFirst introControls={controls} />,
+      );
+
+      act(() => apiRef.current?.place(0, { align: "start", follow: false }));
+      act(() => vi.advanceTimersToNextFrame());
+      act(() => vi.advanceTimersToNextFrame());
+      act(() => view.getByRole("button", { name: "Control" }).focus());
+      fireEvent.keyDown(view.getByRole("button", { name: "Control" }), { key });
+
+      geometry.heights.set(2, 800);
+      view.rerender(<Harness apiRef={apiRef} geometry={geometry} introFirst />);
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(0);
+      expect(apiRef.current?.canFollow()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(["input", "composer", "contenteditable", "button"] as const)(
     "typing or activating an intro %s preserves its hold",
     (target) => {

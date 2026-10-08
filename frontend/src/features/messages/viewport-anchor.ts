@@ -10,7 +10,6 @@ import {
 } from "react";
 import type { VListHandle } from "virtua";
 import type { TimelineItem } from "../room/timeline-items.ts";
-import { rowCommand } from "./keyboard.ts";
 
 type Anchor =
   | {
@@ -946,16 +945,19 @@ export function useViewportAnchor({
       let away = false;
 
       if (event instanceof KeyboardEvent) {
-        if (!(event.target instanceof HTMLElement)) return;
-
-        const command = event.target.matches("[data-message-row]") ? rowCommand(event) : null;
-        const navigates = command !== null && ["up", "down", "first", "last"].includes(command);
+        if (
+          event.defaultPrevented ||
+          !(event.target instanceof HTMLElement) ||
+          !element.contains(event.target)
+        )
+          return;
 
         if (
-          (!["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
-            event.key,
-          ) &&
-            !navigates) ||
+          !["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) ||
+          event.target.closest('dialog, [role="menu"], [role="listbox"], [role="dialog"]') !==
+            null ||
+          (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key) &&
+            event.target.closest('[aria-haspopup]:not([aria-haspopup="false"])') !== null) ||
           event.target.isContentEditable ||
           event.target.closest('input, textarea, select, video, audio, [role="textbox"]') !==
             null ||
@@ -964,8 +966,6 @@ export function useViewportAnchor({
           return;
 
         away =
-          command === "up" ||
-          command === "first" ||
           ["ArrowUp", "PageUp", "Home"].includes(event.key) ||
           (event.key === " " && event.shiftKey);
       } else if (typeof WheelEvent !== "undefined" && event instanceof WheelEvent) {
@@ -1107,10 +1107,14 @@ export function useViewportAnchor({
       pointer = null;
     };
 
-    const inputs = ["wheel", "touchstart", "keydown", "pointerdown", "mousedown", "auxclick"];
+    const inputs = ["wheel", "touchstart", "pointerdown", "mousedown", "auxclick"];
 
     for (const input of inputs)
       element.addEventListener(input, onInput, { capture: true, passive: true });
+
+    // React delegates control handlers at its root. Check consumed keys after they run,
+    // while the target containment check keeps composer and sibling logs isolated.
+    element.ownerDocument.addEventListener("keydown", onInput);
 
     element.addEventListener("focusin", onFocus, true);
     element.addEventListener("focusout", onBlur, true);
@@ -1137,6 +1141,8 @@ export function useViewportAnchor({
       settlementFrameRef.current = 0;
 
       for (const input of inputs) element.removeEventListener(input, onInput, true);
+
+      element.ownerDocument.removeEventListener("keydown", onInput);
 
       element.removeEventListener("focusin", onFocus, true);
       element.removeEventListener("focusout", onBlur, true);

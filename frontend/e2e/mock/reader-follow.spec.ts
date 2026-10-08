@@ -1,5 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { THREAD_IDS } from "../../mock/s2/seed.ts";
+import { BOARD_POST_IDS, BOARD_ROOM_ID } from "../../mock/s6/seed.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import {
   expect,
@@ -9,6 +10,7 @@ import {
   ROOM_IDS,
   scrollByWheel,
   stopTrackingThread,
+  syncWelcomed,
   test,
   USER_IDS,
 } from "./support.ts";
@@ -328,6 +330,197 @@ async function scenario(page: Page, conversation: "room" | "thread", tracked = f
   return { list, older, post, stays, grow: () => imageReleased.resolve() };
 }
 
+async function fittingWork(page: Page) {
+  const threadId = BOARD_POST_IDS.onboardingChecklist;
+
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.messages = body.messages.slice(0, 1).map((message) => ({
+      ...message,
+      bodyHtml: "<p>A short reply</p>",
+      attachment: null,
+      cards: [],
+      poll: null,
+    }));
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, `r/${BOARD_ROOM_ID}/t/${threadId}`);
+  await welcomed;
+  const list = page.getByRole("log", { name: "Replies" });
+  const work = list.locator(".post-work");
+
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBe(0);
+  const top = await stableTop(work);
+
+  const staysAfterReply = async () => {
+    const state = await (await page.request.get("/__mock/state")).json();
+
+    const posted = await page.request.post("/__mock/thread-post", {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        threadId,
+        userId: USER_IDS.maya,
+        markdown: Array.from({ length: 100 }, (_, index) => `Long reply paragraph ${index}`).join(
+          "\n\n",
+        ),
+      },
+    });
+
+    expect(posted.ok()).toBe(true);
+    await expect(list.getByText("Long reply paragraph 99", { exact: true })).toBeAttached();
+    await expect
+      .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+      .toBeGreaterThan(500);
+    await expect(work).toBeInViewport();
+    await expect
+      .poll(async () => Math.abs((await position(work)).after - top))
+      .toBeLessThanOrEqual(3);
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+  };
+
+  return { list, work, staysAfterReply };
+}
+
+for (const control of ["Status", "Owner"] as const) {
+  for (const key of ["End", "ArrowDown"] as const) {
+    test(`${key} in the open ${control} menu keeps fitting work in place after a long reply`, async ({
+      page,
+    }) => {
+      const { list, work, staysAfterReply } = await fittingWork(page);
+
+      await work
+        .getByRole("button", { name: control === "Owner" ? "Change owner" : /^Status:/ })
+        .click();
+      const menu = page.getByRole("menu");
+
+      await expect(menu).toBeVisible();
+      await menu.press(key);
+      await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+      await page.keyboard.press("Escape");
+      await expect(menu).not.toBeVisible();
+      await staysAfterReply();
+    });
+  }
+}
+
+for (const key of ["End", "ArrowDown"] as const) {
+  test(`${key} on a handoff dialog button keeps fitting work in place after a long reply`, async ({
+    page,
+  }) => {
+    const { work, staysAfterReply } = await fittingWork(page);
+
+    await work.getByRole("button", { name: "Hand off to an agent" }).click();
+    const dialog = page.getByRole("dialog", { name: /^Hand off/ });
+
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancel", exact: true }).press(key);
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+    await staysAfterReply();
+  });
+}
+
+test("typing and navigation in the reply composer keep fitting work in place", async ({ page }) => {
+  const { staysAfterReply } = await fittingWork(page);
+  const composer = page.getByRole("textbox", { name: "Reply…" });
+
+  await composer.pressSequentially("Draft reply");
+  await composer.press("End");
+  await composer.press("ArrowDown");
+  await expect(composer).toHaveValue("Draft reply");
+  await staysAfterReply();
+});
+
+test("composer typing and thread-pane keys leave the room reader in place", async ({ page }) => {
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, `r/${ROOM_IDS.general}/t/${THREAD_IDS.generalActive}`);
+  await welcomed;
+  const room = page.getByRole("log", { name: "Messages" });
+  const replies = page.getByRole("log", { name: "Replies" });
+
+  await expect(room).toHaveAttribute("data-placement-settled", "true");
+  await expect(replies).toHaveAttribute("data-placement-settled", "true");
+
+  const id = await room.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+
+    return Array.from(element.querySelectorAll<HTMLElement>("[data-message-row]")).find((row) => {
+      const top = row.getBoundingClientRect().top;
+
+      return top > bounds.top + 100 && top < bounds.bottom - 100;
+    })?.dataset.messageId;
+  });
+
+  expect(id).toBeDefined();
+  const row = room.locator(`[data-message-id="${id}"]`);
+
+  await readerScroll(room, row);
+  await expect(row).toBeInViewport();
+  const top = await stableTop(row);
+  const offset = await room.evaluate((element) => element.scrollTop);
+  const composer = page.getByRole("textbox", { name: /^Message #general/ });
+
+  await composer.pressSequentially("Room draft");
+  await composer.press("End");
+  await composer.press("ArrowDown");
+  await replies.press("End");
+  await replies.press("ArrowDown");
+  await atEnd(replies);
+  await expect.poll(() => room.evaluate((element) => element.scrollTop)).toBe(offset);
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const posted = await page.request.post("/__mock/post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      roomId: ROOM_IDS.general,
+      userId: USER_IDS.jonah,
+      markdown: "Another member posts during thread navigation",
+    },
+  });
+
+  expect(posted.ok()).toBe(true);
+  const message: MessagePage["messages"][number] = await posted.json();
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async ({ roomId, id }) => {
+          const modulePath = "/app/src/store/store.ts";
+
+          // SAFETY: This fixed Vite URL serves the store.ts module named by the type import.
+          const { store } = (await import(modulePath)) as typeof import("../../src/store/store.ts");
+
+          return store.getState().timelines[roomId]?.ids.includes(id) ?? false;
+        },
+        { roomId: ROOM_IDS.general, id: message.id },
+      ),
+    )
+    .toBe(true);
+  await expect.poll(async () => Math.abs((await position(row)).after - top)).toBeLessThanOrEqual(3);
+  await expect.poll(() => room.evaluate((element) => element.scrollTop)).toBe(offset);
+  await expect(composer).toHaveValue("Room draft");
+});
+
 test("a tracked thread holds a reader's position after an older reply returns from outside overscan", async ({
   page,
 }) => {
@@ -484,6 +677,21 @@ for (const conversation of ["room", "thread"] as const) {
     await readerScroll(list, older);
     await list.focus();
     await list.press("End");
+    await atEnd(list);
+    const incoming = await post();
+
+    await expect(incoming).toBeInViewport();
+    await atEnd(list);
+  });
+
+  test(`a ${conversation} follows another member after a focused row handles End`, async ({
+    page,
+  }) => {
+    const { list, older, post } = await scenario(page, conversation);
+
+    await older.focus();
+    await expect(older).toBeInViewport();
+    await older.press("End");
     await atEnd(list);
     const incoming = await post();
 
