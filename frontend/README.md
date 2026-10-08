@@ -82,6 +82,17 @@ Each entry records `owner_today`, `after_cutover`, bookmark and notification dep
 and request `cases`. Update `cases[].expect` for a later step's status, redirect or content
 marker; `expect_stub` and `expect_built` distinguish a Cargo-only shell from the built SPA.
 Keep `after_cutover` as the final destination and retain cases for each older incoming URL.
+`known_bug.fix_before` identifies blockers for `default-next` or `classic-retirement`;
+`none` records an unrelated defect. Fixes should update the observed expectations alongside
+the implementation, rather than preserving a bug through the cutover.
+
+Authenticated integration cases use private fixture profiles and optional `before`/`after`
+HTTP steps to establish OAuth state or verify a successful mutation. Machine requests specify
+`csrf: false` so browser-session bootstrap cannot hide an accidental CSRF dependency. CSRF
+tokens come from the session cookie, with the retained sign-in page as a fallback. Successful
+file responses can pin their bytes with `body_sha256`; redirects compare both origin and path. The
+`browser_cases` array pins fragments and query strings through actual browser navigation,
+so later routing changes update these expectations in the same JSON file.
 
 Restore the frozen seeds before running the contract tests from the repository root:
 
@@ -93,7 +104,9 @@ cargo test -j 4 -p campfire url_contract_tests -- --nocapture
 The existing `pwa` Rust correctness job runs the contract with built assets, then a smoke
 test against the actual `campfire`
 binary with the production SPA embedded: real sign-in, room navigation, message send and
-reload. It uses the frozen default seed and pinned Chromium image, with no API mocks.
+reload, followed by the contract's fragment cases. Its receipt records the final SPA URL
+and the timeline assertion after reload. It uses the frozen default seed and pinned Chromium
+image, with no API mocks. CI fails when the contract selector matches no tests.
 Browser runs reserve `SMARTFIRE_E2E_PORT=4320` or `4321`.
 
 For a local smoke run, build the SPA first (`pnpm build` in `frontend/`), then from the root:

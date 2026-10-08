@@ -16,6 +16,24 @@ assert.ok(email, "the Rust test supplies the seed user's email")
 const room = process.env.SPA_SMOKE_ROOM
 assert.ok(room, "the Rust test supplies the room id")
 const labels = JSON.parse(await readFile(new URL("../parity/.seed/default/labels.json", import.meta.url), "utf8"))
+const contract = JSON.parse(await readFile(new URL("../crates/spa/compat/urls.json", import.meta.url), "utf8"))
+
+// Later cutover flips must need only JSON expectation edits: every browser-case URL and
+// expectation below comes from the contract, with its static placeholders expanded here.
+function expand(template, what) {
+  assert.equal(typeof template, "string", `browser case ${what} is a string`)
+  return template.replace(/\{([A-Z0-9_]+)\}/g, (match, name) => {
+    const value = contract.placeholders[name]
+    assert.ok(value !== undefined, `urls.json has no placeholder ${name} for browser case ${what}`)
+    return String(value)
+  })
+}
+
+function browserCases() {
+  assert.ok(Array.isArray(contract.browser_cases) && contract.browser_cases.length > 0,
+    "urls.json must declare browser navigation cases")
+  return contract.browser_cases
+}
 
 // The real setup page supplies its fresh secret; the Rust fixture uses the seed's frozen clock.
 function authenticatorCode(secret) {
@@ -98,8 +116,38 @@ try {
     await page.reload({ waitUntil: "load" })
     await page.getByRole("log", { name: "Messages" }).getByText(body).first().waitFor()
     step("message-persisted", body)
+    step("timeline-asserted", "role=log name=Messages after reload")
 
-    console.log(`SPA_SMOKE_RECEIPT ${JSON.stringify({ room: Number(room), landing, persisted: true })}`)
+    // Legacy message links keep their #message fragment through the server redirect into
+    // the SPA: the fragment never reaches the server, so the browser reapplies it to the
+    // redirect target, and the SPA must not strip it. Same signed-in session throughout.
+    const verifiedCases = []
+    for (const browserCase of await browserCases()) {
+      assert.equal(typeof browserCase.id, "string", "browser case has a string id")
+      const from = expand(browserCase.path, `${browserCase.id}.path`)
+      const expectPath = expand(browserCase.expect_path, `${browserCase.id}.expect_path`)
+      const expectHash = expand(browserCase.expect_hash, `${browserCase.id}.expect_hash`)
+      const expectQuery = browserCase.expect_query === undefined
+        ? null
+        : expand(browserCase.expect_query, `${browserCase.id}.expect_query`)
+      await page.goto(`${origin}${from}`, { waitUntil: "load" })
+      // The permalink child renders nothing itself (router.tsx): the room timeline below it
+      // is the assertion surface for every room/permalink case.
+      await page.getByRole("log", { name: "Messages" }).waitFor()
+      const location = new URL(page.url())
+      assert.equal(location.pathname, expectPath, `${browserCase.id}: SPA path after redirect`)
+      assert.equal(location.hash, expectHash, `${browserCase.id}: fragment preserved through redirect`)
+      if (expectQuery !== null) {
+        const actual = [...new URLSearchParams(location.search).entries()].sort()
+        const expected = [...new URLSearchParams(expectQuery).entries()].sort()
+        assert.deepEqual(actual, expected, `${browserCase.id}: query preserved through redirect`)
+      }
+      step("browser-case", `${browserCase.id} ${location.pathname}${location.search}${location.hash}`)
+      verifiedCases.push(browserCase.id)
+    }
+
+    const finalUrl = page.url()
+    console.log(`SPA_SMOKE_RECEIPT ${JSON.stringify({ room: Number(room), landing, persisted: true, timeline_asserted: true, final_url: finalUrl, browser_cases: verifiedCases })}`)
     assert.deepEqual(pageErrors, [], `the smoke ran without page errors: ${JSON.stringify(pageErrors)}`)
     await context.close()
   } catch (error) {

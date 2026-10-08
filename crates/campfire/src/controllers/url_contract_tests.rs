@@ -11,13 +11,15 @@ use campfire_db::models::user::ui_preference::{self, UiPreference};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::controllers::presenters::test_support::{
-    BENDER, DAVID, JASON, KEVIN, TestApp, encode, seed_clock,
+    BENDER, DAVID, JASON, KEVIN, TestApp, encode, masked_session_token, seed_clock,
 };
 
-const CONTRACT: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../spa/compat/urls.json"
-));
+const CONTRACT_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../spa/compat/urls.json");
+
+fn contract() -> Contract {
+    serde_json::from_str(&std::fs::read_to_string(CONTRACT_PATH).expect("read urls.json"))
+        .expect("urls.json parses")
+}
 
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -29,6 +31,8 @@ struct Contract {
     notes: String,
     placeholders: BTreeMap<String, String>,
     runtime_placeholders: Vec<String>,
+    #[serde(default)]
+    browser_cases: Vec<BrowserCase>,
     entries: Vec<Entry>,
 }
 
@@ -56,10 +60,28 @@ struct Entry {
     notification_notes: String,
     #[serde(default)]
     #[allow(dead_code)]
-    known_bug: bool,
+    known_bug: Option<KnownBug>,
     #[allow(dead_code)]
     notes: String,
     cases: Vec<Case>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct KnownBug {
+    fix_before: String,
+    reason: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BrowserCase {
+    id: String,
+    path: String,
+    expect_path: String,
+    expect_hash: String,
+    #[serde(default)]
+    expect_query: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -87,13 +109,15 @@ struct Case {
     #[serde(default)]
     spa_default_next: bool,
     #[serde(default)]
+    fixture_profile: String,
+    #[serde(default)]
     sudo: bool,
     #[serde(default)]
     headers: BTreeMap<String, String>,
     #[serde(default)]
     form: Option<BTreeMap<String, String>>,
     #[serde(default)]
-    csrf: bool,
+    csrf: Option<bool>,
     #[serde(default)]
     json: Option<String>,
     #[serde(default)]
@@ -104,6 +128,64 @@ struct Case {
     expect_stub: Option<Expect>,
     #[serde(default)]
     expect_built: Option<Expect>,
+    #[serde(default)]
+    before: Vec<Step>,
+    #[serde(default)]
+    after: Vec<Step>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Step {
+    #[serde(default = "get")]
+    method: String,
+    path: String,
+    #[serde(default)]
+    headers: BTreeMap<String, String>,
+    #[serde(default)]
+    form: Option<BTreeMap<String, String>>,
+    #[serde(default)]
+    json: Option<String>,
+    #[serde(default)]
+    csrf: Option<bool>,
+    expect: Expect,
+    #[serde(default)]
+    capture_query: BTreeMap<String, String>,
+}
+
+struct RequestSpec<'a> {
+    method: &'a str,
+    path: &'a str,
+    headers: &'a BTreeMap<String, String>,
+    form: Option<&'a BTreeMap<String, String>>,
+    json: Option<&'a str>,
+    csrf: Option<bool>,
+}
+
+impl<'a> From<&'a Case> for RequestSpec<'a> {
+    fn from(case: &'a Case) -> Self {
+        Self {
+            method: &case.method,
+            path: &case.path,
+            headers: &case.headers,
+            form: case.form.as_ref(),
+            json: case.json.as_deref(),
+            csrf: case.csrf,
+        }
+    }
+}
+
+impl<'a> From<&'a Step> for RequestSpec<'a> {
+    fn from(step: &'a Step) -> Self {
+        Self {
+            method: &step.method,
+            path: &step.path,
+            headers: &step.headers,
+            form: step.form.as_ref(),
+            json: step.json.as_deref(),
+            csrf: step.csrf,
+        }
+    }
 }
 
 fn get() -> String {
@@ -134,6 +216,10 @@ struct Expect {
     body_empty: bool,
     #[serde(default)]
     body_nonempty: bool,
+    #[serde(default)]
+    session: Option<serde_json::Value>,
+    #[serde(default)]
+    body_sha256: Option<String>,
 }
 
 /// Every entry has runnable cases, and the contract only says things the runner understands.
@@ -167,6 +253,15 @@ fn validate(contract: &Contract) -> Vec<String> {
         }
         if entry.cases.is_empty() {
             errors.push(format!("{} has no runnable cases", entry.id));
+        }
+        if let Some(bug) = &entry.known_bug
+            && (!["default-next", "classic-retirement", "none"].contains(&bug.fix_before.as_str())
+                || bug.reason.is_empty())
+        {
+            errors.push(format!(
+                "{} has an invalid known_bug deadline or reason",
+                entry.id
+            ));
         }
         for case in &entry.cases {
             let at = format!("{}.{}", entry.id, case.id);
@@ -248,6 +343,60 @@ fn validate(contract: &Contract) -> Vec<String> {
                     }
                 }
             }
+            for (phase, steps) in [("before", &case.before), ("after", &case.after)] {
+                for (index, step) in steps.iter().enumerate() {
+                    if !["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE"]
+                        .contains(&step.method.as_str())
+                        || !(100..=599).contains(&step.expect.status)
+                    {
+                        errors.push(format!("{at}.{phase}[{index}]: invalid method or status"));
+                    }
+                    for name in step.capture_query.keys() {
+                        if !contract.runtime_placeholders.contains(name) {
+                            errors.push(format!("{at}.{phase}[{index}]: unknown capture {name}"));
+                        }
+                    }
+                    for text in [&step.path]
+                        .into_iter()
+                        .chain(step.headers.values())
+                        .chain(step.form.iter().flat_map(|form| form.values()))
+                        .chain(step.json.iter())
+                    {
+                        for name in placeholders_in(text) {
+                            if !contract.placeholders.contains_key(&name)
+                                && !contract.runtime_placeholders.contains(&name)
+                            {
+                                errors.push(format!(
+                                    "{at}.{phase}[{index}]: unknown placeholder {{{name}}}"
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut browser_ids = std::collections::HashSet::new();
+    for case in &contract.browser_cases {
+        if !browser_ids.insert(&case.id)
+            || !case.path.starts_with('/')
+            || !case.expect_path.starts_with('/')
+            || !case.expect_hash.starts_with('#')
+        {
+            errors.push(format!("{}: invalid browser fragment case", case.id));
+        }
+        for text in [&case.path, &case.expect_path, &case.expect_hash]
+            .into_iter()
+            .chain(case.expect_query.iter())
+        {
+            for name in placeholders_in(text) {
+                if !contract.placeholders.contains_key(&name) {
+                    errors.push(format!(
+                        "{}: unknown browser placeholder {{{name}}}",
+                        case.id
+                    ));
+                }
+            }
         }
     }
     errors
@@ -277,7 +426,7 @@ fn placeholders_in(text: &str) -> Vec<String> {
 
 #[test]
 fn url_contract_entries_all_have_runnable_cases() {
-    let contract: Contract = serde_json::from_str(CONTRACT).expect("urls.json parses");
+    let contract = contract();
     let errors = validate(&contract);
     assert!(
         errors.is_empty(),
@@ -314,6 +463,91 @@ impl Reply {
 }
 
 impl Live {
+    async fn send(
+        &mut self,
+        app: &TestApp,
+        request: RequestSpec<'_>,
+        values: &BTreeMap<String, String>,
+    ) -> std::result::Result<(String, Reply), String> {
+        let mut headers: BTreeMap<_, _> = request
+            .headers
+            .iter()
+            .map(|(name, value)| (name.clone(), substitute(value, values)))
+            .collect();
+        let body = if let Some(form) = request.form {
+            form.iter()
+                .map(|(name, value)| {
+                    format!("{}={}", encode(name), encode(&substitute(value, values)))
+                })
+                .collect::<Vec<_>>()
+                .join("&")
+                .into_bytes()
+        } else {
+            request
+                .json
+                .map(|json| substitute(json, values).into_bytes())
+                .unwrap_or_default()
+        };
+        if request
+            .csrf
+            .unwrap_or(request.form.is_some() || !body.is_empty())
+        {
+            headers.insert(
+                campfire_kit::csrf::HEADER.to_string(),
+                self.csrf(app).await?,
+            );
+        }
+        let path = substitute(request.path, values);
+        Ok((
+            path.clone(),
+            self.request(request.method, &path, &headers, &body).await,
+        ))
+    }
+
+    fn session(&self, app: &TestApp) -> Option<serde_json::Value> {
+        use campfire_kit::Crypto;
+        let key = campfire_kit::session::SESSION_KEY;
+        let raw = rails_compat::cookies::unescape(self.jar.get(key)?);
+        campfire_kit::RailsCrypto::new(app.booted.app.secrets.clone()).decrypt_cookie(
+            key,
+            &raw,
+            app.booted.app.clock.now(),
+        )
+    }
+
+    async fn csrf(&mut self, app: &TestApp) -> std::result::Result<String, String> {
+        // Auth remains server-rendered through the cutover. Read the issued session token,
+        // following same-origin redirects if necessary; no classic profile HTML is required.
+        let mut path = "/session/new".to_string();
+        for _ in 0..6 {
+            if let Some(token) = self
+                .jar
+                .get(campfire_kit::session::SESSION_KEY)
+                .and_then(|raw| masked_session_token(&app.booted.app.secrets, raw))
+            {
+                return Ok(token);
+            }
+            let page = self.request("GET", &path, &BTreeMap::new(), &[]).await;
+            if let Some(location) = page.header("location") {
+                let base = url::Url::parse(ORIGIN).unwrap();
+                let next = base.join(location).map_err(|error| error.to_string())?;
+                if next.origin() != base.origin() {
+                    return Err(format!(
+                        "CSRF bootstrap redirects outside {ORIGIN}: {location}"
+                    ));
+                }
+                path = format!(
+                    "{}{}",
+                    next.path(),
+                    next.query().map(|q| format!("?{q}")).unwrap_or_default()
+                );
+            }
+        }
+        Err(format!(
+            "no session CSRF token after auth bootstrap at {path}"
+        ))
+    }
+
     async fn request(
         &mut self,
         method: &str,
@@ -440,12 +674,166 @@ fn substitute(text: &str, values: &BTreeMap<String, String>) -> String {
     out
 }
 
-/// The `Location` without its origin: `/app/r/1?x=2`, or the value itself when relative.
-fn location_path(location: &str) -> &str {
-    match location.find("://").map(|i| &location[i + 3..]) {
-        Some(after) => after.find('/').map(|i| &after[i..]).unwrap_or("/"),
-        None => location,
+const ORIGIN: &str = "http://campfire.test";
+
+fn matches_location(location: &str, expected: &str, prefix: bool) -> bool {
+    let base = url::Url::parse(ORIGIN).unwrap();
+    let (Ok(actual), Ok(expected)) = (base.join(location), base.join(expected)) else {
+        return false;
+    };
+    actual.origin() == expected.origin()
+        && if prefix {
+            actual.as_str().starts_with(expected.as_str())
+        } else {
+            actual == expected
+        }
+}
+
+fn subset(actual: &serde_json::Value, expected: &serde_json::Value) -> bool {
+    match expected {
+        serde_json::Value::Object(fields) => fields.iter().all(|(key, expected)| {
+            actual
+                .get(key)
+                .is_some_and(|actual| subset(actual, expected))
+        }),
+        _ => actual == expected,
     }
+}
+
+fn mismatches(
+    reply: &Reply,
+    expect: &Expect,
+    values: &BTreeMap<String, String>,
+    session: Option<&serde_json::Value>,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+    if reply.status != expect.status {
+        errors.push(format!("status {} != {}", reply.status, expect.status));
+    }
+    if let Some(expected) = expect.location.as_ref().or(expect.location_prefix.as_ref()) {
+        let expected = substitute(expected, values);
+        match reply.header("location") {
+            Some(actual)
+                if matches_location(actual, &expected, expect.location_prefix.is_some()) => {}
+            actual => errors.push(format!(
+                "location {actual:?} != {expected:?} (origin and path)"
+            )),
+        }
+    } else if expect.location_absent
+        && let Some(actual) = reply.header("location")
+    {
+        errors.push(format!("location {actual:?} should be absent"));
+    }
+    if let Some(prefix) = &expect.content_type_prefix {
+        match reply.header("content-type") {
+            Some(actual) if actual.starts_with(prefix.as_str()) => {}
+            actual => errors.push(format!("content-type {actual:?} has no prefix {prefix:?}")),
+        }
+    }
+    let text = reply.text();
+    for marker in &expect.markers {
+        let marker = substitute(marker, values);
+        if !text.contains(&marker) {
+            errors.push(format!("missing {marker:?}"));
+        }
+    }
+    for marker in &expect.absent {
+        let marker = substitute(marker, values);
+        if text.contains(&marker) {
+            errors.push(format!("should not contain {marker:?}"));
+        }
+    }
+    if expect.body_empty && !reply.body.is_empty() {
+        errors.push(format!(
+            "body should be empty, got {} bytes",
+            reply.body.len()
+        ));
+    }
+    if expect.body_nonempty && reply.body.is_empty() {
+        errors.push("body should not be empty".into());
+    }
+    if let Some(expected) = &expect.body_sha256 {
+        use sha2::Digest;
+        let expected = substitute(expected, values);
+        let actual = format!("{:x}", sha2::Sha256::digest(&reply.body));
+        if actual != expected {
+            errors.push(format!("body sha256 {actual} != {expected}"));
+        }
+    }
+    if let Some(expected) = &expect.session
+        && !session.is_some_and(|actual| subset(actual, expected))
+    {
+        errors.push(format!("session does not contain {expected}"));
+    }
+    errors
+}
+
+async fn run_steps(
+    client: &mut Live,
+    app: &TestApp,
+    steps: &[Step],
+    values: &mut BTreeMap<String, String>,
+) -> std::result::Result<usize, String> {
+    for (index, step) in steps.iter().enumerate() {
+        let (path, reply) = client.send(app, step.into(), values).await?;
+        let errors = mismatches(&reply, &step.expect, values, client.session(app).as_ref());
+        if !errors.is_empty() {
+            return Err(format!(
+                "step {index} ({} {path}): {}",
+                step.method,
+                errors.join("; ")
+            ));
+        }
+        if !step.capture_query.is_empty() {
+            let location = reply
+                .header("location")
+                .ok_or("capture_query needs a Location")?;
+            let url = url::Url::parse(ORIGIN)
+                .unwrap()
+                .join(location)
+                .map_err(|error| error.to_string())?;
+            for (name, query_key) in &step.capture_query {
+                let value = url
+                    .query_pairs()
+                    .find(|(key, _)| key == query_key)
+                    .ok_or_else(|| format!("Location lacks query {query_key}"))?
+                    .1
+                    .into_owned();
+                values.insert(name.clone(), encode(&value));
+            }
+        }
+    }
+    Ok(steps.len())
+}
+
+#[test]
+fn redirect_expectations_preserve_origins() {
+    assert!(matches_location(
+        "http://campfire.test/app/?q=1",
+        "/app/?q=1",
+        false
+    ));
+    assert!(matches_location("/app/?q=1", "/app/?q=1", false));
+    assert!(!matches_location(
+        "https://evil.test/app/?q=1",
+        "/app/?q=1",
+        false
+    ));
+    assert!(!matches_location(
+        "https://campfire.test/app/",
+        "/app/",
+        true
+    ));
+    assert!(matches_location(
+        "https://github.com/login?state=1",
+        "https://github.com/login",
+        true
+    ));
+    assert!(!matches_location(
+        "https://evil.test/login?state=1",
+        "https://github.com/login",
+        true
+    ));
 }
 
 fn user_id(auth: &str) -> i64 {
@@ -468,19 +856,12 @@ fn seed_cookies(header: &str) -> BTreeMap<String, String> {
     jar
 }
 
-fn csrf_token(html: &str) -> Option<String> {
-    html.split("<meta name=\"csrf-token\" content=\"")
-        .nth(1)?
-        .split('"')
-        .next()
-        .map(str::to_string)
-}
-
 struct Group {
     app: TestApp,
     addr: SocketAddr,
     values: BTreeMap<String, String>,
     _server: tokio::task::JoinHandle<()>,
+    _fixtures: super::url_contract_fixtures::FixtureContext,
 }
 
 async fn slack_fixtures(app: &TestApp) -> (i64, i64) {
@@ -517,7 +898,9 @@ impl Group {
         seed: &str,
         spa_enabled: bool,
         spa_default_next: bool,
+        fixture_profile: &str,
     ) -> Option<Group> {
+        let fixtures = super::url_contract_fixtures::FixtureContext::boot(fixture_profile).await;
         let mut env = Vec::new();
         if spa_enabled {
             env.push(("SPA_ENABLED", "1"));
@@ -525,10 +908,19 @@ impl Group {
         if spa_default_next {
             env.push(("SPA_DEFAULT", "next"));
         }
-        let app = TestApp::boot_seed_with_env(seed, seed_clock(), &env)
-            .await?
-            .without_job_runner()
-            .await;
+        env.extend(fixtures.env());
+        let app = match fixtures.github_network() {
+            Some(network) => {
+                assert_eq!(
+                    seed, "default",
+                    "GitHub OAuth fixture uses the default seed"
+                );
+                TestApp::boot_with_github_network_and_env(network, &env).await?
+            }
+            None => TestApp::boot_seed_with_env(seed, seed_clock(), &env).await?,
+        }
+        .without_job_runner()
+        .await;
         let join_code: String = app
             .db()
             .read(|conn| Ok(campfire_db::Account::first(conn)?.map(|account| account.join_code)))
@@ -537,11 +929,12 @@ impl Group {
             .unwrap_or_default();
         let mut values = contract.placeholders.clone();
         values.insert("JOIN_CODE".into(), join_code);
-        if seed == "default" {
+        if seed == "default" && fixture_profile.is_empty() {
             let (run, personal) = slack_fixtures(&app).await;
             values.insert("SLACK_RUN".into(), run.to_string());
             values.insert("SLACK_PERSONAL".into(), personal.to_string());
         }
+        values.extend(fixtures.prepare(&app).await);
         values.insert(
             "SPA_ASSET".into(),
             campfire_spa::files()
@@ -559,18 +952,19 @@ impl Group {
             addr,
             values,
             _server: server,
+            _fixtures: fixtures,
         })
     }
 }
 
 #[tokio::test]
 async fn url_contract_matches_over_real_http() {
-    let contract: Contract = serde_json::from_str(CONTRACT).expect("urls.json parses");
+    let contract = contract();
     let errors = validate(&contract);
     assert!(errors.is_empty(), "contract errors:\n{}", errors.join("\n"));
 
     let built = campfire_spa::built();
-    let mut groups: BTreeMap<(String, bool, bool), Group> = BTreeMap::new();
+    let mut groups: BTreeMap<(String, bool, bool, String), Group> = BTreeMap::new();
     let mut failures: Vec<String> = Vec::new();
     let mut ran = 0usize;
     let mut skipped = 0usize;
@@ -591,9 +985,14 @@ async fn url_contract_matches_over_real_http() {
                 skipped += 1;
                 continue;
             }
-            let key = (case.seed.clone(), case.spa_enabled, case.spa_default_next);
+            let key = (
+                case.seed.clone(),
+                case.spa_enabled,
+                case.spa_default_next,
+                case.fixture_profile.clone(),
+            );
             if !groups.contains_key(&key) {
-                match Group::boot(&contract, &key.0, key.1, key.2).await {
+                match Group::boot(&contract, &key.0, key.1, key.2, &key.3).await {
                     Some(group) => {
                         groups.insert(key.clone(), group);
                     }
@@ -632,118 +1031,27 @@ async fn url_contract_matches_over_real_http() {
                 }
                 client.jar = seed_cookies(&browser.cookie_header());
             }
-            // Writes carry the session's token, as the app's own pages send it.
-            let mut headers: BTreeMap<String, String> = case
-                .headers
-                .iter()
-                .map(|(name, value)| (name.clone(), substitute(value, &group.values)))
-                .collect();
-            let mut body = Vec::new();
-            if let Some(form) = &case.form {
-                body = form
-                    .iter()
-                    .map(|(name, value)| {
-                        format!(
-                            "{}={}",
-                            encode(name),
-                            encode(&substitute(value, &group.values))
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    .join("&")
-                    .into_bytes();
-            } else if let Some(json) = &case.json {
-                body = substitute(json, &group.values).into_bytes();
+            let mut values = group.values.clone();
+            if let Err(error) = run_steps(&mut client, &group.app, &case.before, &mut values).await
+            {
+                failures.push(format!("{}.{} before: {error}", entry.id, case.id));
+                continue;
             }
-            if case.form.is_some() || case.csrf || !body.is_empty() {
-                let scrape = if case.auth == "anonymous" {
-                    "/session/new"
-                } else {
-                    "/users/me/profile?classic=1"
-                };
-                let page = client.request("GET", scrape, &BTreeMap::new(), &[]).await;
-                match csrf_token(&page.text()) {
-                    Some(token) => {
-                        headers.insert(campfire_kit::csrf::HEADER.to_string(), token);
-                    }
-                    None => {
-                        failures.push(format!(
-                            "{}.{}: no CSRF token on {scrape} ({} {})",
-                            entry.id,
-                            case.id,
-                            page.status,
-                            snippet(&page.text())
-                        ));
-                        continue;
-                    }
+            let (path, reply) = match client.send(&group.app, case.into(), &values).await {
+                Ok(reply) => reply,
+                Err(error) => {
+                    failures.push(format!("{}.{}: {error}", entry.id, case.id));
+                    continue;
                 }
-            }
-            let path = substitute(&case.path, &group.values);
-            let reply = client.request(&case.method, &path, &headers, &body).await;
+            };
             ran += 1;
             *ran_per_entry.entry(entry.id.as_str()).or_default() += 1;
-            let mut mismatches = Vec::new();
-            if reply.status != expect.status {
-                mismatches.push(format!("status {} != {}", reply.status, expect.status));
-            }
-            match (
-                &expect.location,
-                &expect.location_prefix,
-                expect.location_absent,
-            ) {
-                (Some(want), _, _) => {
-                    let want = substitute(want, &group.values);
-                    match reply.header("location").map(location_path) {
-                        Some(got) if got == want => {}
-                        got => mismatches.push(format!("location {got:?} != {want:?}")),
-                    }
-                }
-                (_, Some(prefix), _) => {
-                    let prefix = substitute(prefix, &group.values);
-                    match reply.header("location").map(location_path) {
-                        Some(got) if got.starts_with(prefix.as_str()) => {}
-                        got => {
-                            mismatches.push(format!("location {got:?} has no prefix {prefix:?}"))
-                        }
-                    }
-                }
-                (_, _, true) => {
-                    if let Some(got) = reply.header("location") {
-                        mismatches.push(format!("location {got:?} should be absent"));
-                    }
-                }
-                _ => {}
-            }
-            if let Some(prefix) = &expect.content_type_prefix {
-                match reply.header("content-type") {
-                    Some(got) if got.starts_with(prefix.as_str()) => {}
-                    got => {
-                        mismatches.push(format!("content-type {got:?} has no prefix {prefix:?}"))
-                    }
-                }
+            let mut mismatches =
+                mismatches(&reply, expect, &values, client.session(&group.app).as_ref());
+            if let Err(error) = run_steps(&mut client, &group.app, &case.after, &mut values).await {
+                mismatches.push(format!("after: {error}"));
             }
             let text = reply.text();
-            for marker in &expect.markers {
-                let marker = substitute(marker, &group.values);
-                if !text.contains(marker.as_str()) {
-                    mismatches.push(format!("missing {marker:?}"));
-                }
-            }
-            for marker in &expect.absent {
-                let marker = substitute(marker, &group.values);
-                if text.contains(marker.as_str()) {
-                    mismatches.push(format!("should not contain {marker:?}"));
-                }
-            }
-            if expect.body_empty && !reply.body.is_empty() {
-                mismatches.push(format!(
-                    "body should be empty, got {} bytes",
-                    reply.body.len()
-                ));
-            }
-            if expect.body_nonempty && reply.body.is_empty() {
-                mismatches.push("body should not be empty".to_string());
-            }
             if !mismatches.is_empty() {
                 failures.push(format!(
                     "{}.{} ({} {}, auth={} pref={:?} seed={} spa={}/{})\n  {}\n  actual: status={} location={:?} content-type={:?} body={}",
@@ -788,8 +1096,8 @@ async fn url_contract_matches_over_real_http() {
 fn snippet(text: &str) -> String {
     const LIMIT: usize = 400;
     let flat: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    if flat.len() > LIMIT {
-        format!("{}…", &flat[..LIMIT])
+    if flat.chars().count() > LIMIT {
+        format!("{}…", flat.chars().take(LIMIT).collect::<String>())
     } else {
         flat
     }
