@@ -4,6 +4,7 @@
   { "endpoint": "rooms#show", "classic": "/rooms/:room_id/@:message_id", "spa": "/app/r/:room_id/m/:message_id", "ported": true },
   { "endpoint": "channel_threads#show", "classic": "/rooms/:room_id/threads/:id", "spa": "/app/r/:room_id/t/:id", "ported": true },
   { "endpoint": "channel_threads#new", "classic": "/rooms/:room_id/threads/new", "spa": "/app/r/:room_id/posts/new", "ported": true },
+  { "endpoint": "rooms/boards/automations#show", "classic": "/rooms/boards/:board_id/automations", "spa": "/app/r/:board_id/automations", "ported": true },
   { "endpoint": "messages#show", "classic": "/rooms/:room_id/messages/:id", "spa": "/app/r/:room_id/m/:id", "ported": true },
   { "endpoint": "messages#edit", "classic": "/rooms/:room_id/messages/:id/edit", "spa": "/app/r/:room_id/m/:id", "ported": true },
   { "endpoint": "messages#show", "classic": "/messages/:id", "spa": "/app/m/:id", "ported": true },

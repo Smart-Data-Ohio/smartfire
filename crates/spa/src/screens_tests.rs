@@ -206,6 +206,11 @@ fn board_pages_are_ported_and_workspace_work_stays_classic() {
             "/rooms/12/threads/new",
             "/app/r/12/posts/new",
         ),
+        (
+            "rooms/boards/automations#show",
+            "/rooms/boards/12/automations",
+            "/app/r/12/automations",
+        ),
     ] {
         assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
         assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
