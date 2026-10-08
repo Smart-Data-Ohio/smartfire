@@ -17,6 +17,27 @@ async function control(
   return request.post("/__mock/cards", { headers: { "X-CSRF-Token": state.csrfToken }, data });
 }
 
+/** The write API 404s until the pull request has a discussion thread in the room. */
+async function discuss(request: APIRequestContext) {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.post(`/api/v1/rooms/${ROOM}/threads`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      parentMessageId: messages.githubOpen,
+      name: null,
+      message: {
+        clientMessageId: "github-actions-e2e",
+        markdownSource: "On it",
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+      },
+    },
+  });
+
+  expect(response.ok()).toBeTruthy();
+}
+
 async function openCard(page: Page) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`/app/r/${ROOM}/m/${messages.githubOpen}`);
@@ -29,7 +50,12 @@ async function openCard(page: Page) {
   return card;
 }
 
-test("comments, reviews and requests reviewers from the pull request card", async ({ page }) => {
+test("comments, reviews and requests reviewers from the pull request card", async ({
+  page,
+  request,
+}) => {
+  await discuss(request);
+
   const card = await openCard(page);
 
   await expect(card.getByRole("button", { name: "Review", exact: true })).toBeVisible();
@@ -68,6 +94,7 @@ test("comments, reviews and requests reviewers from the pull request card", asyn
 });
 
 test("hides the write actions when the GitHub account can't be used", async ({ page, request }) => {
+  await discuss(request);
   await control(request, { op: "github-writes", enabled: 0 });
 
   const pending = page.waitForResponse((response) => response.url().includes("/actions"));

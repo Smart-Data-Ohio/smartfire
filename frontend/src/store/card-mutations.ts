@@ -31,9 +31,15 @@ export const cardMutations = {
     ref: number,
     value: cards.PreviewValues[Kind],
     now: number,
-  ) => apply((state) => cards.previewLoaded(state, kind, key, ref, value, now)),
-  previewFailed: (kind: cards.PreviewKind, key: string, ref: number, error: string) =>
-    apply((state) => cards.previewFailed(state, kind, key, ref, error)),
+    generation: number,
+  ) => apply((state) => cards.previewLoaded(state, kind, key, ref, value, now, generation)),
+  previewFailed: (
+    kind: cards.PreviewKind,
+    key: string,
+    ref: number,
+    error: string,
+    generation: number,
+  ) => apply((state) => cards.previewFailed(state, kind, key, ref, error, generation)),
   /** Shows an answer over the fetched attendance until its reply. */
   setPendingAnswer: (eventId: number, answer: cards.PendingAnswer) =>
     apply((state) => cards.setPendingAnswer(state, eventId, answer)),

@@ -17,11 +17,13 @@ import type { MessageCard } from "../../gen/MessageCard.ts";
 import type { MessagePage } from "../../gen/MessagePage.ts";
 import type { PollResults } from "../../gen/PollResults.ts";
 import type { ThreadCreated } from "../../gen/ThreadCreated.ts";
-import type { MessageDTO } from "../../store/model.ts";
+import { githubKey } from "../../store/cards.ts";
+import type { MessageDTO, SyncEvent } from "../../store/model.ts";
 import { mutations, store, useStore } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { CreatePollDialog, filledOptions, pollProblems } from "./create-poll-dialog.tsx";
+import { resetGithubDrafts } from "./github-drafts.ts";
 import MessageCards from "./message-cards.tsx";
 
 // The cards render against the in-memory mock backend (mock/s3/cards.ts) through stubbed fetch:
@@ -98,6 +100,15 @@ function LiveRow({ id, threadId }: { readonly id: number; readonly threadId?: nu
 
 async function renderCards(id: number, threadId: number | null = null) {
   return inRouter(() => <LiveRow id={id} threadId={threadId} />);
+}
+
+/** The text a comment or note field is holding. */
+function fieldValue(element: HTMLElement): string {
+  if (element instanceof HTMLTextAreaElement || element instanceof HTMLInputElement) {
+    return element.value;
+  }
+
+  throw new Error("expected a text field");
 }
 
 /** The poll's vote count as read aloud (the animated digits are hidden from it). */
@@ -180,9 +191,57 @@ beforeEach(async () => {
   const page: MessagePage = await (await fetch(`/api/v1/rooms/${ROOM}/messages`)).json();
 
   mutations.reset();
+  resetGithubDrafts();
   mutations.setMe(me);
   mutations.applyPage(ROOM, page, "replace");
 });
+
+/** Starts the pull request's discussion, which is what makes its write actions available. */
+async function discuss(parentMessageId: number): Promise<number> {
+  const response = await fetch(`/api/v1/rooms/${ROOM}/threads`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      parentMessageId,
+      name: null,
+      message: {
+        clientMessageId: `github-discuss-${parentMessageId}`,
+        markdownSource: "On it",
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+      },
+    }),
+  });
+
+  const created: ThreadCreated = await response.json();
+  const threadId = created.message.threadId;
+
+  if (threadId === null) {
+    throw new Error("expected a discussion thread");
+  }
+
+  return threadId;
+}
+
+/** A checks-style `message.cards`: the preview stays up and is fetched again. */
+function refreshPreview(id: number): void {
+  const message = held(id);
+
+  const event: SyncEvent = {
+    type: "message.cards",
+    seq: 1,
+    topic: `room:${ROOM}`,
+    data: {
+      messageId: id,
+      roomId: ROOM,
+      threadId: message.threadId,
+      cards: message.cards,
+      asOf: new Date(Date.parse(message.cardsAsOf) + 1000).toISOString(),
+    },
+  };
+
+  mutations.applyEvents([event], Date.now());
+}
 
 describe("polls", () => {
   it("votes from a radio group, then changes and takes the vote back", async () => {
@@ -467,24 +526,9 @@ describe("GitHub pull requests", () => {
   });
 
   it("lists the changed files when it heads the pull request's discussion thread", async () => {
-    const response = await fetch(`/api/v1/rooms/${ROOM}/threads`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({
-        parentMessageId: messages.githubOpen,
-        name: null,
-        message: {
-          clientMessageId: "cards-thread-1",
-          markdownSource: "On it",
-          replyToMessageId: null,
-          replyNotifyAuthor: null,
-        },
-      }),
-    });
+    const threadId = await discuss(messages.githubOpen);
 
-    const created: ThreadCreated = await response.json();
-
-    await renderCards(messages.githubOpen, created.message.threadId);
+    await renderCards(messages.githubOpen, threadId);
 
     expect(await screen.findByText("4 files changed")).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Discuss" })).toBeNull();
@@ -494,6 +538,7 @@ describe("GitHub pull requests", () => {
   it("comments, requests changes and asks for reviewers from the card", async () => {
     const user = userEvent.setup();
 
+    await discuss(messages.githubOpen);
     await renderCards(messages.githubOpen);
 
     const card = await screen.findByRole("region", {
@@ -539,6 +584,7 @@ describe("GitHub pull requests", () => {
   });
 
   it("hides comment, review and reviewer request when the account can't post", async () => {
+    await discuss(messages.githubOpen);
     await control({ op: "github-writes", roomId: ROOM, enabled: 0 });
     await renderCards(messages.githubOpen);
 
@@ -560,6 +606,127 @@ describe("GitHub pull requests", () => {
     expect(within(card).queryByRole("button", { name: "Comment" })).toBeNull();
     expect(within(card).queryByRole("button", { name: "Review" })).toBeNull();
     expect(within(card).queryByRole("button", { name: "Request reviewers" })).toBeNull();
+  });
+
+  const OPEN = "Pull request: Rate limit the sync endpoint with a token bucket";
+
+  it("keeps a typed comment and an open review dialog across a preview refresh", async () => {
+    const user = userEvent.setup();
+
+    await discuss(messages.githubOpen);
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    await user.type(within(card).getByRole("textbox", { name: "Comment" }), "Keep this.");
+    await user.click(within(card).getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request changes" });
+    const note = within(dialog).getByRole("textbox", { name: "Note" });
+
+    await user.type(note, "Don't lose me.");
+
+    const release = hold((method, path) => method === "GET" && path.includes("/card"));
+
+    act(() => {
+      refreshPreview(messages.githubOpen);
+    });
+
+    await waitFor(() => {
+      const preview =
+        store.getState().cards.previews.github[
+          githubKey(ROOM, CARD_IDS.pullRequests.open, { messageId: messages.githubOpen })
+        ];
+
+      expect(preview?.status).toBe("loading");
+    });
+
+    expect(document.querySelector('.github-card[aria-busy="true"]')).toBeNull();
+    expect(fieldValue(within(card).getByRole("textbox", { name: "Comment" }))).toBe("Keep this.");
+    expect(screen.getByRole("dialog", { name: "Request changes" })).toBeTruthy();
+    expect(fieldValue(within(dialog).getByRole("textbox", { name: "Note" }))).toBe(
+      "Don't lose me.",
+    );
+    expect(document.activeElement).toBe(note);
+
+    release();
+  });
+
+  it("does not post a review again when its dialog is reopened while the write is pending", async () => {
+    const user = userEvent.setup();
+
+    await discuss(messages.githubOpen);
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+    let posts = 0;
+
+    const release = hold((method, path) => {
+      const matched = method === "POST" && path.endsWith("/reviews");
+
+      if (matched) {
+        posts += 1;
+      }
+
+      return matched;
+    });
+
+    await user.click(within(card).getByRole("button", { name: "Review" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Request changes" });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Note" }), "Rename it.");
+    await user.click(within(dialog).getByRole("button", { name: "Request changes" }));
+    await waitFor(() => expect(posts).toBe(1));
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    // A pointer click in the menu's light-dismiss window is ignored; the keyboard opens it.
+    within(card).getByRole("button", { name: "Review" }).focus();
+    await user.keyboard("{ArrowDown}");
+    await user.click(await screen.findByRole("menuitem", { name: "Request changes" }));
+
+    const again = await screen.findByRole("dialog", { name: "Request changes" });
+
+    expect(fieldValue(within(again).getByRole("textbox", { name: "Note" }))).toBe("Rename it.");
+    await user.click(within(again).getByRole("button", { name: "Request changes" }));
+    expect(posts).toBe(1);
+
+    release();
+    await waitFor(() =>
+      expect(
+        toastSnapshot().some((item) => item.title === "Requested changes on GitHub as @maya."),
+      ).toBe(true),
+    );
+  });
+
+  it("keeps the comment draft and retries after the server refuses", async () => {
+    const user = userEvent.setup();
+
+    await discuss(messages.githubOpen);
+    await renderCards(messages.githubOpen);
+
+    const card = await screen.findByRole("region", { name: OPEN });
+
+    await user.type(within(card).getByRole("textbox", { name: "Comment" }), "Looks good.");
+
+    const restore = refuse(
+      (method, path) => method === "POST" && path.endsWith("/comments"),
+      "GitHub refused: no",
+    );
+
+    await user.click(within(card).getByRole("button", { name: "Comment" }));
+    expect((await within(card).findByRole("alert")).textContent).toBe("GitHub refused: no");
+    expect(fieldValue(within(card).getByRole("textbox", { name: "Comment" }))).toBe("Looks good.");
+    expect(toastSnapshot().some((item) => item.title === "GitHub refused: no")).toBe(true);
+
+    restore();
+    await user.click(within(card).getByRole("button", { name: "Comment" }));
+    expect((await within(card).findByRole("status")).textContent).toBe(
+      "Comment posted on GitHub as @maya.",
+    );
   });
 });
 

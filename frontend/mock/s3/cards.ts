@@ -1203,11 +1203,18 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
   };
 
   /**
-   * Actions don't require a discussion thread here: the open pull request is seeded without one,
-   * and starting one is what "Discuss" does. The real API 404s until that mapping exists.
+   * The real API 404s a write until this room has a discussion thread for the pull request
+   * (`PullRequestThread`). The open pull request is seeded without one; a test that posts
+   * starts that thread first.
    */
-  const githubActionFlags = (roomId: number, pullRequestId: number) => {
+  const requireDiscussion = (roomId: number, pullRequestId: number) => {
     ctx.roomOr404(roomId);
+
+    if (discussionOf(roomId, pullRequestId) === null) throw notFound("Pull request not found");
+  };
+
+  const githubActionFlags = (roomId: number, pullRequestId: number) => {
+    requireDiscussion(roomId, pullRequestId);
     countFetch(`github-actions:${pullRequestId}`);
 
     const card = state().pullRequests.get(pullRequestId);
@@ -1251,6 +1258,7 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
   };
 
   const githubComment = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
     loadedPullRequest(roomId, pullRequestId);
 
     const text = (stringField(body, "body") ?? "").trim();
@@ -1267,6 +1275,8 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
   };
 
   const githubReview = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
+
     const card = loadedPullRequest(roomId, pullRequestId);
     const event = stringField(body, "event");
     const text = (stringField(body, "body") ?? "").trim();
@@ -1333,6 +1343,7 @@ export function createCards(ctx: S2Context, calendar?: CalendarAttendance): Card
   };
 
   const githubReviewRequest = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
     loadedPullRequest(roomId, pullRequestId);
 
     const raw = stringField(body, "reviewers") ?? "";

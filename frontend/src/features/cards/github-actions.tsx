@@ -7,6 +7,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Menu, MenuItem } from "../../ui/menu.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { patchGithubDraft, readGithubDraft, useGithubDraft } from "./github-drafts.ts";
 
 interface ScopeProps {
   readonly roomId: number;
@@ -92,35 +93,43 @@ function posted(notice: string): void {
 }
 
 function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & FailureProps) {
-  const [body, setBody] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [notice, setNotice] = useState<string | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
+  const draft = useGithubDraft(roomId, pullRequestId);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (body.trim() === "") {
-      setError("Write a comment first.");
-      setNotice(undefined);
+    const current = readGithubDraft(roomId, pullRequestId);
+
+    if (current.commentPending) {
+      return;
+    }
+
+    if (current.comment.trim() === "") {
+      patchGithubDraft(roomId, pullRequestId, {
+        commentError: "Write a comment first.",
+        commentNotice: undefined,
+      });
 
       return;
     }
 
-    setBusy(true);
-    setError(undefined);
+    patchGithubDraft(roomId, pullRequestId, { commentPending: true, commentError: undefined });
 
-    actions.cards.commentOnGithub(roomId, pullRequestId, scope, body).then(
+    actions.cards.commentOnGithub(roomId, pullRequestId, scope, current.comment).then(
       (result) => {
-        setBusy(false);
-        setBody("");
-        setNotice(result.notice);
+        patchGithubDraft(roomId, pullRequestId, {
+          commentPending: false,
+          comment: "",
+          commentNotice: result.notice,
+        });
         posted(result.notice);
       },
       (failure: Error) => {
-        setBusy(false);
-        setNotice(undefined);
-        setError(failure.message);
+        patchGithubDraft(roomId, pullRequestId, {
+          commentPending: false,
+          commentNotice: undefined,
+          commentError: failure.message,
+        });
         onFailure(failure.message);
       },
     );
@@ -130,19 +139,24 @@ function CommentForm({ roomId, pullRequestId, scope, onFailure }: ScopeProps & F
     <form className="github-comment" onSubmit={submit} noValidate>
       <NoteField
         label="Comment"
-        value={body}
-        error={error}
+        value={draft.comment}
+        error={draft.commentError}
         onChange={(value) => {
-          setBody(value);
-          setError(undefined);
+          patchGithubDraft(roomId, pullRequestId, { comment: value, commentError: undefined });
         }}
       />
-      <Button type="submit" variant="secondary" size="sm" loading={busy} loadingLabel="Posting">
+      <Button
+        type="submit"
+        variant="secondary"
+        size="sm"
+        loading={draft.commentPending}
+        loadingLabel="Posting"
+      >
         Comment
       </Button>
-      {notice === undefined ? null : (
+      {draft.commentNotice === undefined ? null : (
         <p className="github-notice" role="status">
-          {notice}
+          {draft.commentNotice}
         </p>
       )}
     </form>
@@ -161,30 +175,40 @@ function ReviewDialog({
   readonly onClose: () => void;
   readonly onFailure: (message: string) => void;
 }) {
-  const [body, setBody] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
+  const draft = useGithubDraft(roomId, pullRequestId);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (choice.empty !== null && body.trim() === "") {
-      setError(choice.empty);
+    const current = readGithubDraft(roomId, pullRequestId);
+
+    if (current.reviewPending) {
+      return;
+    }
+
+    if (choice.empty !== null && current.reviewNote.trim() === "") {
+      patchGithubDraft(roomId, pullRequestId, { reviewError: choice.empty });
 
       return;
     }
 
-    setBusy(true);
-    setError(undefined);
+    patchGithubDraft(roomId, pullRequestId, { reviewPending: true, reviewError: undefined });
 
-    actions.cards.reviewGithub(roomId, pullRequestId, scope, choice.event, body).then(
+    actions.cards.reviewGithub(roomId, pullRequestId, scope, choice.event, current.reviewNote).then(
       (result) => {
+        patchGithubDraft(roomId, pullRequestId, {
+          reviewPending: false,
+          review: null,
+          reviewNote: "",
+          reviewError: undefined,
+        });
         posted(result.notice);
-        onClose();
       },
       (failure: Error) => {
-        setBusy(false);
-        setError(failure.message);
+        patchGithubDraft(roomId, pullRequestId, {
+          reviewPending: false,
+          reviewError: failure.message,
+        });
         onFailure(failure.message);
       },
     );
@@ -200,18 +224,23 @@ function ReviewDialog({
       <form className="github-comment" onSubmit={submit} noValidate>
         <NoteField
           label="Note"
-          value={body}
-          error={error}
+          value={draft.reviewNote}
+          error={draft.reviewError}
           onChange={(value) => {
-            setBody(value);
-            setError(undefined);
+            patchGithubDraft(roomId, pullRequestId, { reviewNote: value, reviewError: undefined });
           }}
         />
         <div className="github-dialog-actions">
           <Button variant="secondary" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" size="sm" loading={busy} loadingLabel="Posting">
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            loading={draft.reviewPending}
+            loadingLabel="Posting"
+          >
             {choice.submit}
           </Button>
         </div>
@@ -221,7 +250,9 @@ function ReviewDialog({
 }
 
 function ReviewMenu(props: ScopeProps & FailureProps) {
-  const [choice, setChoice] = useState<ReviewChoice | null>(null);
+  const { roomId, pullRequestId } = props;
+  const draft = useGithubDraft(roomId, pullRequestId);
+  const choice = REVIEWS.find((review) => review.event === draft.review) ?? null;
 
   return (
     <>
@@ -234,13 +265,20 @@ function ReviewMenu(props: ScopeProps & FailureProps) {
         )}
       >
         {REVIEWS.map((review) => (
-          <MenuItem key={review.event} onSelect={() => setChoice(review)}>
+          <MenuItem
+            key={review.event}
+            onSelect={() => patchGithubDraft(roomId, pullRequestId, { review: review.event })}
+          >
             {review.label}
           </MenuItem>
         ))}
       </Menu>
       {choice === null ? null : (
-        <ReviewDialog {...props} choice={choice} onClose={() => setChoice(null)} />
+        <ReviewDialog
+          {...props}
+          choice={choice}
+          onClose={() => patchGithubDraft(roomId, pullRequestId, { review: null })}
+        />
       )}
     </>
   );
@@ -253,33 +291,49 @@ function ReviewersDialog({
   onClose,
   onFailure,
 }: ScopeProps & { readonly onClose: () => void; readonly onFailure: (message: string) => void }) {
-  const [reviewers, setReviewers] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+  const draft = useGithubDraft(roomId, pullRequestId);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (reviewers.trim() === "") {
-      setError(REVIEWERS_EMPTY);
-      setAttempt((count) => count + 1);
+    const current = readGithubDraft(roomId, pullRequestId);
+
+    if (current.reviewersPending) {
+      return;
+    }
+
+    if (current.reviewers.trim() === "") {
+      patchGithubDraft(roomId, pullRequestId, {
+        reviewersError: REVIEWERS_EMPTY,
+        reviewersAttempt: current.reviewersAttempt + 1,
+      });
 
       return;
     }
 
-    setBusy(true);
-    setError(undefined);
+    patchGithubDraft(roomId, pullRequestId, {
+      reviewersPending: true,
+      reviewersError: undefined,
+    });
 
-    actions.cards.requestGithubReviewers(roomId, pullRequestId, scope, reviewers).then(
+    actions.cards.requestGithubReviewers(roomId, pullRequestId, scope, current.reviewers).then(
       (result) => {
+        patchGithubDraft(roomId, pullRequestId, {
+          reviewersPending: false,
+          reviewersOpen: false,
+          reviewers: "",
+          reviewersError: undefined,
+        });
         posted(result.notice);
-        onClose();
       },
       (failure: Error) => {
-        setBusy(false);
-        setError(failure.message);
-        setAttempt((count) => count + 1);
+        const latest = readGithubDraft(roomId, pullRequestId);
+
+        patchGithubDraft(roomId, pullRequestId, {
+          reviewersPending: false,
+          reviewersError: failure.message,
+          reviewersAttempt: latest.reviewersAttempt + 1,
+        });
         onFailure(failure.message);
       },
     );
@@ -296,13 +350,15 @@ function ReviewersDialog({
         <TextField
           label="Reviewers"
           hint="GitHub usernames, separated by commas."
-          value={reviewers}
-          error={error}
-          attempt={attempt}
+          value={draft.reviewers}
+          error={draft.reviewersError}
+          attempt={draft.reviewersAttempt}
           data-autofocus
           onChange={(event) => {
-            setReviewers(event.target.value);
-            setError(undefined);
+            patchGithubDraft(roomId, pullRequestId, {
+              reviewers: event.target.value,
+              reviewersError: undefined,
+            });
           }}
         />
         <div className="github-dialog-actions">
@@ -313,7 +369,7 @@ function ReviewersDialog({
             type="submit"
             variant="primary"
             size="sm"
-            loading={busy}
+            loading={draft.reviewersPending}
             loadingLabel="Requesting"
           >
             Request reviewers
@@ -325,14 +381,24 @@ function ReviewersDialog({
 }
 
 function ReviewersButton(props: ScopeProps & FailureProps) {
-  const [open, setOpen] = useState(false);
+  const { roomId, pullRequestId } = props;
+  const draft = useGithubDraft(roomId, pullRequestId);
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => patchGithubDraft(roomId, pullRequestId, { reviewersOpen: true })}
+      >
         Request reviewers
       </Button>
-      {open ? <ReviewersDialog {...props} onClose={() => setOpen(false)} /> : null}
+      {draft.reviewersOpen ? (
+        <ReviewersDialog
+          {...props}
+          onClose={() => patchGithubDraft(roomId, pullRequestId, { reviewersOpen: false })}
+        />
+      ) : null}
     </>
   );
 }
@@ -345,7 +411,8 @@ interface FailureProps {
 /**
  * Comment, review and request reviewers on a pull request, shown only for the flags
  * `GET .../actions` returns. A success refetches the card; GitHub's webhook also publishes
- * `message.cards`, which drops the preview so a mounted card fetches it again.
+ * `message.cards`, which refetches the preview without unmounting a draft or an open dialog.
+ * A write stays pending if its dialog is closed, so opening it again does not post twice.
  */
 export function GithubActions({ roomId, pullRequestId, scope }: ScopeProps) {
   const [capabilities, setCapabilities] = useState<GithubPullRequestActions | null>(null);

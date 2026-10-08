@@ -107,22 +107,46 @@ const loadPreview = <Kind extends PreviewKind, E extends { readonly message: str
 
     cardMutations.previewLoading(kind, key, ref);
 
+    const generation = store.getState().cards.previews[kind][key]?.generation ?? 0;
+
+    const current = () => store.getState().cards.previews[kind][key]?.generation === generation;
+
     let delay = FIRST_RETRY;
 
     for (let attempt = 0; ; attempt += 1) {
       const value = yield* fetch.pipe(
         Effect.tapError((error) =>
-          Effect.sync(() => cardMutations.previewFailed(kind, key, ref, error.message)),
+          Effect.sync(() => {
+            if (current()) {
+              cardMutations.previewFailed(kind, key, ref, error.message, generation);
+            }
+          }),
         ),
       );
 
-      cardMutations.previewLoaded(kind, key, ref, value, yield* Clock.currentTimeMillis);
+      if (!current()) {
+        return;
+      }
+
+      cardMutations.previewLoaded(
+        kind,
+        key,
+        ref,
+        value,
+        yield* Clock.currentTimeMillis,
+        generation,
+      );
 
       if (!stillLoading(value) || attempt >= STILL_LOADING_RETRIES) {
         return;
       }
 
       yield* Effect.sleep(delay);
+
+      if (!current()) {
+        return;
+      }
+
       delay = Duration.times(delay, 2);
     }
   });
@@ -156,7 +180,8 @@ export const githubActions = Effect.fn("cards.githubActions")(function* (
 
 /**
  * After a write, ask for the card again. A failure here doesn't undo the post: GitHub already
- * has it, and `message.cards` drops the preview so a mounted card fetches it too.
+ * has it, and `message.cards` marks the preview stale so a mounted card fetches it too. A get
+ * that started before that invalidation does not land if a newer one is in flight.
  */
 const refreshGithub = (roomId: number, pullRequestId: number, scope: api.GithubCardScope) =>
   loadGithub(roomId, pullRequestId, scope).pipe(Effect.catch(() => Effect.void));

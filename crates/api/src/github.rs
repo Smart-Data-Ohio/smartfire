@@ -145,24 +145,28 @@ async fn show_actions(c: &mut Ctx) -> Result {
 }
 
 async fn post_comment(c: &mut Ctx) -> Result {
+    let scoped = scope(c).await?;
     let input: api::CreateGithubComment = body(c).await?;
-    write(c, Action::Comment, &input.body, "", "", "body").await
+    write(c, scoped, Action::Comment, &input.body, "", "", "body").await
 }
 
 async fn post_review(c: &mut Ctx) -> Result {
+    let scoped = scope(c).await?;
     let input: api::CreateGithubReview = body(c).await?;
-    let (action, event, field) = match input.event {
-        api::GithubReviewKind::Approve => (Action::Review, "APPROVE", "body"),
-        api::GithubReviewKind::RequestChanges => (Action::Review, "REQUEST_CHANGES", "body"),
-        api::GithubReviewKind::Comment => (Action::ReviewComment, "", "body"),
+    let (action, event) = match input.event {
+        api::GithubReviewKind::Approve => (Action::Review, "APPROVE"),
+        api::GithubReviewKind::RequestChanges => (Action::Review, "REQUEST_CHANGES"),
+        api::GithubReviewKind::Comment => (Action::ReviewComment, ""),
     };
-    write(c, action, &input.body, event, "", field).await
+    write(c, scoped, action, &input.body, event, "", "body").await
 }
 
 async fn post_review_request(c: &mut Ctx) -> Result {
+    let scoped = scope(c).await?;
     let input: api::CreateGithubReviewRequest = body(c).await?;
     write(
         c,
+        scoped,
         Action::ReviewRequest,
         "",
         "",
@@ -174,18 +178,18 @@ async fn post_review_request(c: &mut Ctx) -> Result {
 
 async fn write(
     c: &mut Ctx,
+    scoped: Scope,
     action: Action,
     comment: &str,
     event: &str,
     reviewers: &str,
     field: &str,
 ) -> Result {
-    let scope = scope(c).await?;
     let result = writes::perform(
         &c.app().db,
         &c.app().github_accounts,
-        scope.user_id,
-        &scope.key,
+        scoped.user_id,
+        &scoped.key,
         writes::Input {
             action,
             body: comment,
@@ -208,7 +212,7 @@ async fn write(
     }
     // No account, or a linked one that isn't usable: `perform` makes no GitHub call and leaves
     // the alert empty. The classic page says which, from the account row.
-    let viewer = viewer_github(c, scope.user_id).await?;
+    let viewer = viewer_github(c, scoped.user_id).await?;
     let message = if viewer.link == api::GithubAccountLink::Rejected {
         "GitHub rejected your token. Reconnect GitHub to comment and review from here."
     } else {

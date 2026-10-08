@@ -347,6 +347,36 @@ async fn bot_credentials_are_forbidden_and_never_reach_github() {
     assert!(fresh.server.received().is_empty());
 }
 
+#[tokio::test]
+async fn an_unknown_review_event_is_authorized_before_the_body_is_parsed() {
+    for input in [
+        json!({"member": false, "linked": true}),
+        json!({"mapping": false, "linked": true}),
+    ] {
+        let fresh = Fresh::with_routes(&spa(input.clone()), vec![]).await;
+        let (status, _) = call(
+            &fresh,
+            "POST",
+            REVIEWS,
+            json!({"event": "shrug", "body": "hi"}),
+        )
+        .await;
+        assert_eq!(status, 404, "{input}");
+        assert!(fresh.server.received().is_empty(), "{input}");
+    }
+
+    let fresh = Fresh::with_routes(&spa(json!({"linked": true})), vec![]).await;
+    let (status, body) = call(
+        &fresh,
+        "POST",
+        REVIEWS,
+        json!({"event": "shrug", "body": "hi"}),
+    )
+    .await;
+    assert_eq!(status, 422, "{body}");
+    assert!(fresh.server.received().is_empty());
+}
+
 async fn message_count(fresh: &Fresh) -> i64 {
     fresh
         .app

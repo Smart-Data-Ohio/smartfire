@@ -278,6 +278,7 @@ function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
   const value = preview?.value ?? null;
   const retry = () => load().catch(() => undefined);
 
+  // A refresh keeps the last loaded value, so this skeleton is the first fetch only.
   if (value === null) {
     if (preview?.status !== "error") {
       return <GithubSkeleton card={card} />;
