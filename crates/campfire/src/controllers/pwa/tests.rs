@@ -1,6 +1,18 @@
 use crate::controllers::presenters::test_support::{TestApp, seed_clock};
 
 #[tokio::test]
+async fn unreleased_spa_manifest_redirects_to_single_root_identity() {
+    for env in [&[][..], &[("SPA_ENABLED", "1")][..]] {
+        let Some(app) = TestApp::boot_seed_with_env("default", seed_clock(), env).await else {
+            return;
+        };
+        let response = app.anonymous().get("/app/manifest.webmanifest").await;
+        assert_eq!(response.status, StatusCode::FOUND);
+        assert_eq!(response.header("location"), Some("http://campfire.test/webmanifest.json"));
+    }
+}
+
+#[tokio::test]
 async fn pwa_http_bodies_preserve_rails_contract_after_extraction() {
     for (seed, vectors) in [
         (

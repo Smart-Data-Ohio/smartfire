@@ -43,6 +43,8 @@ pub async fn manifest(c: &mut Ctx) -> Result {
 
 /// Compatibility for a manifest linked by an older SPA bundle; install identity stays at `/`.
 pub async fn spa_manifest(c: &mut Ctx) -> Result {
+    // The /app manifest from #331 never shipped in a release, so no installed PWA carries
+    // its implicit /app identity. Only that makes redirecting to the root identity safe.
     c.redirect_to("/webmanifest.json")
 }
 

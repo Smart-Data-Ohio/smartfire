@@ -86,6 +86,7 @@ const network: typeof fetch = async () => new Response("complete asset bytes");
 describe("service worker cache lifecycle coordination", () => {
   it("retains a live pre-cutover build when the offline URL moves to the root", async () => {
     const storage = new MemoryStorage();
+    const coordinator = new SharedCoordinator();
 
     const legacy = {
       ...build("a"),
@@ -93,30 +94,54 @@ describe("service worker cache lifecycle coordination", () => {
       precache: [build("a").precache[0], "/app/offline.html"],
     };
 
-    const old = new WorkerCache(legacy, origin, storage, network);
+    const old = new WorkerCache(legacy, origin, storage, network, coordinator);
     const live = [new URL(legacy.page, origin).href];
 
     await old.install();
     await old.activate(live);
 
-    const current = new WorkerCache(build("b"), origin, storage, network);
+    const previous = new WorkerCache(build("b"), origin, storage, network, coordinator);
+
+    await previous.install();
+    await previous.activate(live);
+
+    let legacyNetworkRequests = 0;
+
+    const currentNetwork: typeof fetch = async (input) => {
+      if (new Request(input).url === new URL(legacy.precache[0] ?? "", origin).href) {
+        legacyNetworkRequests += 1;
+        throw new Error("The pre-cutover chunk is no longer on the server");
+      }
+
+      return network(input);
+    };
+
+    const current = new WorkerCache(build("c"), origin, storage, currentNetwork, coordinator);
 
     await current.install();
     await current.activate(live);
     await current.prune(live);
 
-    expect(await storage.keys()).toContain(cacheName("a"));
+    expect((await storage.keys()).sort()).toEqual([cacheName("a"), cacheName("b"), cacheName("c")]);
     expect(current.handles(new Request(new URL(legacy.precache[0] ?? "", origin)))).toBe(true);
 
     const response = await current.response(new Request(new URL(legacy.precache[0] ?? "", origin)));
 
     expect(await response?.text()).toBe("complete asset bytes");
+    expect(legacyNetworkRequests).toBe(0);
 
     const marker = await storage.match(`${origin}/app/offline.html.activation`, {
       cacheName: cacheName("a"),
     });
 
     expect(await marker?.json()).toMatchObject({ page: live[0], activation: 1 });
+
+    await current.prune([]);
+    expect((await storage.keys()).sort()).toEqual([cacheName("b"), cacheName("c")]);
+    expect(await storage.match(new URL(legacy.precache[0] ?? "", origin).href)).toBeUndefined();
+    expect(
+      await current.response(new Request(new URL(legacy.precache[0] ?? "", origin))),
+    ).toBeNull();
   });
 
   it("pins an activated rollback cache while its installer fetches, without blocking serving or pruning", async () => {

@@ -246,7 +246,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
          <meta name=\"csrf-token\" content=\"masked+token/=\" />\n\
          <meta name=\"csp-nonce\" content=\"n0nce+/=\" />\n\
          <meta name=\"turbo-visit-control\" content=\"reload\" />\n\
-         <link rel=\"manifest\" href=\"/webmanifest.json\" />\n\
+         <link rel=\"manifest\" href=\"/webmanifest.json\" crossorigin=\"use-credentials\" />\n\
          <script type=\"application/json\" id=\"boot\" nonce=\"n0nce+/=\">"
     ), "{page}");
     assert!(page.contains("<script nonce=\"n0nce+/=\" type=\"module\" crossorigin src=\"/app/assets/index-B2x8Kq1f.js\"></script>"), "{page}");

@@ -501,6 +501,52 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
         .read(|conn| Ok(User::find(conn, DAVID)?.email_address.unwrap()))
         .await
         .unwrap();
+    let stdout = run_pwa_browser(&app, "pwa_registration_browser.mjs", &email, VAPID_PUBLIC_KEY).await;
+    assert!(
+        stdout.contains("PWA_REGISTRATION_RECEIPT "),
+        "browser completed every lifecycle assertion"
+    );
+    if stdout.contains("PWA_PUSH_PRESERVATION_SKIPPED ") {
+        let allow_unavailable = std::env::var("PWA_ALLOW_PUSH_UNAVAILABLE").as_deref() == Ok("1");
+        assert!(allow_unavailable, "subscription preservation was skipped without an opt-out");
+        println!("SKIPPED: push subscription preservation (no push service in this browser)");
+    } else {
+        assert!(
+            stdout.contains("\"subscription\":\"endpoint-and-keys-preserved\""),
+            "a real subscription survived every worker swap"
+        );
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires production SPA dist and Chromium; run ci/correctness.sh pwa"]
+async fn pwa_browser_manifest_uses_session_for_saved_ui_preference() {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    assert!(campfire_spa::built(), "build frontend/dist before compiling this browser test");
+    let app = TestApp::boot_frozen_with_env(&[
+        ("RAILS_ENV", "test"),
+        ("SPA_ENABLED", "1"),
+        ("SPA_DEFAULT", "next"),
+    ])
+    .await
+    .expect("PWA browser requires the restored default seed")
+    .without_job_runner()
+    .await;
+    unenroll(&app, DAVID).await;
+    app.db()
+        .write(|tx| ui_preference::store(tx, DAVID, UiPreference::Classic))
+        .await
+        .unwrap();
+    let email = app.db()
+        .read(|conn| Ok(User::find(conn, DAVID)?.email_address.unwrap()))
+        .await
+        .unwrap();
+    let stdout = run_pwa_browser(&app, "pwa_manifest_browser.mjs", &email, "").await;
+    assert!(stdout.contains("PWA_MANIFEST_RECEIPT "), "browser checked every manifest link");
+}
+
+async fn run_pwa_browser(app: &TestApp, script: &str, email: &str, vapid_public_key: &str) -> String {
     let listener = crate::test_support::bind_listener().await;
     let target = format!("http://{}", listener.local_addr().unwrap());
     let router = app.booted.router.clone();
@@ -530,7 +576,7 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
                 .status();
         }
     }
-    let container = (!local).then(|| Container(format!("pwa-browser-{}", std::process::id())));
+    let container = (!local).then(|| Container(format!("pwa-browser-{}-{script}", std::process::id())));
     let mut command = if local {
         tokio::process::Command::new("node")
     } else {
@@ -549,18 +595,18 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
             .arg("--env")
             .arg(format!("PWA_ALLOW_PUSH_UNAVAILABLE={allow_flag}"))
             .arg("--env")
-            .arg(format!("PWA_BROWSER_VAPID_KEY={VAPID_PUBLIC_KEY}"))
+            .arg(format!("PWA_BROWSER_VAPID_KEY={vapid_public_key}"))
             .arg(std::env::var("PWA_PLAYWRIGHT_IMAGE")
                 .expect("ci/correctness.sh pwa supplies the pinned browser image"))
             .arg("node");
         docker
     };
     let output = command
-        .arg(root.join("test-support/pwa_registration_browser.mjs"))
+        .arg(root.join("test-support").join(script))
         .env("PWA_BROWSER_TARGET", target)
         .env("PWA_BROWSER_EMAIL", email)
         .env("PWA_ALLOW_PUSH_UNAVAILABLE", allow_flag)
-        .env("PWA_BROWSER_VAPID_KEY", VAPID_PUBLIC_KEY)
+        .env("PWA_BROWSER_VAPID_KEY", vapid_public_key)
         .kill_on_drop(true).output();
     // Every browser wait is bounded; this catches anything that still hangs.
     let output = tokio::time::timeout(std::time::Duration::from_secs(300), output)
@@ -574,17 +620,5 @@ async fn pwa_browser_reconciles_sign_in_and_preserves_root_registration() {
         "real PWA browser failed\n{stdout}\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        stdout.contains("PWA_REGISTRATION_RECEIPT "),
-        "browser completed every lifecycle assertion"
-    );
-    if stdout.contains("PWA_PUSH_PRESERVATION_SKIPPED ") {
-        assert!(allow_unavailable, "subscription preservation was skipped without an opt-out");
-        println!("SKIPPED: push subscription preservation (no push service in this browser)");
-    } else {
-        assert!(
-            stdout.contains("\"subscription\":\"endpoint-and-keys-preserved\""),
-            "a real subscription survived every worker swap"
-        );
-    }
+    stdout.into_owned()
 }
