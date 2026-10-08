@@ -17,7 +17,13 @@ fn main() {
     }
     let boot = Boot {
         user: BootUser { id: 1, name: "Riel St. Amand".into(), avatar_url: "/avatar.svg".into() },
-        account: BootAccount { name: Some("Smart Data".into()) },
+        account: BootAccount {
+            name: Some("Smart Data".into()),
+            logo_url: None,
+            logo_still_url: None,
+            banner_url: None,
+            banner_still_url: None,
+        },
         theme: theme(Some(stored_theme)),
         text_size: text_size(Some(stored_size)),
         cable_url: "/cable".into(),
