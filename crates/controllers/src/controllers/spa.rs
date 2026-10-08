@@ -49,11 +49,8 @@ pub fn routes(enabled: bool, immutable_cache_control: &'static str) -> Router<Ki
     };
     Router::new()
         .route("/app/assets/{*path}", axum::routing::get(assets))
-        .route("/app/service-worker.js", axum::routing::get(assets))
-        .route("/app/offline.html", axum::routing::get(assets))
         .route("/app", axum::routing::get(campfire_kit::action(show)))
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
-        .route("/app/manifest.webmanifest", axum::routing::get(campfire_kit::action(super::pwa::spa_manifest)))
         .route("/app/{*path}", axum::routing::get(page))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
         .route("/app/ui_preference", axum::routing::post(campfire_kit::action(update_ui_preference)))
@@ -131,10 +128,7 @@ pub async fn boot(c: &mut Ctx) -> Result {
 async fn load_boot(c: &mut Ctx) -> Result<Boot> {
     let user = concerns::require_current_user(c)?.clone();
     let app = c.app();
-    let service_worker_url = match concerns::effective_ui(c).await? {
-        ui @ UiPreference::Next => Some(concerns::service_worker_url(ui)),
-        UiPreference::Classic => None,
-    };
+    let service_worker_url = Some("/service-worker.js".into());
     let avatar_url = presenters::avatar_path(&app.secrets, &user);
     let (version, revision) = (app.config.app_version.clone(), app.config.git_revision.clone());
     let user_id = user.id;

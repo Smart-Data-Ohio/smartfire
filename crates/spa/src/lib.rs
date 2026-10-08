@@ -14,6 +14,7 @@
 //! `controllers/spa.rs`); this crate knows nothing of requests or sessions.
 
 mod boot;
+pub mod pwa;
 pub mod screens;
 mod serve;
 mod shell;
@@ -32,7 +33,7 @@ pub use shell::render_shell;
 /// The URL prefix the SPA lives under (Vite's `base`, without its trailing slash).
 pub const PREFIX: &str = "/app";
 
-/// The installed SPA's start URL and manifest scope, derived from the same prefix.
+/// The SPA shell's URL. Installed PWAs keep their original root start URL and scope.
 pub fn root_path() -> String {
     format!("{PREFIX}/")
 }

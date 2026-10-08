@@ -22,4 +22,8 @@ export type ActivityItemChanged = { item: ActivityItem,
 /**
  * The owner's unread count afterwards.
  */
-unreadCount: number, };
+unreadCount: number,
+/**
+ * Per-user server revision of this count. Ignore counts from older revisions.
+ */
+unreadRevision: number, };

@@ -1,11 +1,12 @@
 /**
  * The activity inbox's actions as Effect programs. Loads land in the store (failures too, as the
  * list's error) unless the list reloaded meanwhile; state changes show at once, moving the item
- * between lists and the badge, and roll back if the server refuses. Every reply carries the item
- * and the unread count, which win.
+ * between lists and the badge, and roll back if the server refuses. Delayed replies keep newer
+ * items and counts already in the store.
  */
 import { Clock, Effect } from "effect";
 import * as api from "../api/activity-endpoints.ts";
+import { NetworkError } from "../api/errors.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
@@ -31,7 +32,13 @@ export const load = Effect.fn("activity.load")(function* (tab: ActivityTab, stat
     ),
     Effect.catch((error) =>
       Effect.sync(() =>
-        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+        mutations.setActivityListFailed(
+          tab,
+          status,
+          error.message,
+          start.generation,
+          start.activityGeneration,
+        ),
       ),
     ),
   );
@@ -58,19 +65,27 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
     ),
     Effect.catch((error) =>
       Effect.sync(() =>
-        mutations.setActivityListFailed(tab, status, error.message, start.generation),
+        mutations.setActivityListFailed(
+          tab,
+          status,
+          error.message,
+          start.generation,
+          start.activityGeneration,
+        ),
       ),
     ),
   );
 });
 
-/** Refreshes the badge. */
-export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
-  const { unreadCount } = yield* api.activityUnreadCount();
+/** Refreshes the badge. Server revisions order overlapping replies. */
+export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* (
+  generation = store.getState().activity.generation,
+) {
+  const unread = yield* api.activityUnreadCount();
 
-  mutations.setActivityUnreadCount(unreadCount);
+  mutations.setActivityUnreadCount(unread, generation);
 
-  return unreadCount;
+  return unread.unreadCount;
 });
 
 /** Changes to one item go one at a time, so each rolls back to a copy no other is holding. */
@@ -79,10 +94,30 @@ const serial = keyedSerial<number>();
 /** Tells the changes on their way apart in the badge. */
 let nextToken = 0;
 
+/** An unanswered request must not hold the badge, an item lock or sync frames indefinitely. */
+export const ACTIVITY_REQUEST_TIMEOUT = "15 seconds";
+
+const stalled = (generation: number) =>
+  Effect.gen(function* () {
+    if (generation === store.getState().activity.generation) {
+      mutations.beginActivityGeneration(false);
+      yield* Effect.forkDetach(
+        loadUnreadCount().pipe(
+          Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
+          Effect.catch((error) => Effect.logWarning("activity count refresh failed", error)),
+        ),
+      );
+    }
+
+    return yield* Effect.fail(
+      new NetworkError({ message: "The activity change timed out. Please try again." }),
+    );
+  });
+
 /**
  * Applies `action` here at once (the item moves lists, the badge follows), then on the server,
- * whose reply wins. A refusal puts the item back, unless something newer replaced it meanwhile,
- * and takes the change out of the badge.
+ * whose reply settles the change while preserving newer server values. A refusal drops an
+ * unconfirmed adjustment; confirmed adjustments stay until the displayed count includes them.
  */
 const change = (
   activityItemId: number,
@@ -92,6 +127,7 @@ const change = (
   serial.run(
     activityItemId,
     Effect.gen(function* () {
+      const generation = store.getState().activity.generation;
       const before = store.getState().activity.items[activityItemId];
       const token = nextToken++;
       let optimistic: ActivityItem | null = null;
@@ -106,26 +142,31 @@ const change = (
         }
       }
 
-      // A failure, or an interruption whose outcome is unknown, rolls back; the next event or
-      // reply corrects it if the server did take it.
+      // A failure or interruption removes only unconfirmed badge adjustments.
       const reply = yield* request(activityItemId).pipe(
+        Effect.timeoutOrElse({
+          duration: ACTIVITY_REQUEST_TIMEOUT,
+          orElse: () => stalled(generation),
+        }),
         Effect.onError(() =>
           Effect.sync(() =>
             mutations.endActivityChange({
+              generation,
               token,
               optimistic,
               settled: before ?? null,
-              unreadCount: null,
+              unread: null,
             }),
           ),
         ),
       );
 
       mutations.endActivityChange({
+        generation,
         token,
         optimistic,
         settled: reply.item,
-        unreadCount: reply.unreadCount,
+        unread: reply,
       });
 
       return reply.item;

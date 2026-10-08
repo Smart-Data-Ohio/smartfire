@@ -292,6 +292,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/github/webhooks.{format}", github_webhook())
         .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
+        .merge(controllers::pwa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
         .merge(controllers::spa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
         .merge(if app.config.spa_enabled { campfire_api::routes(app) } else { Router::new() })
         // DiskController reads params before the token, but file bytes remain spooled.

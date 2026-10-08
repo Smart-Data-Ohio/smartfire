@@ -83,9 +83,18 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
     let mut rows = stmt.query([]).unwrap();
     let mut out = Vec::new();
     while let Some(row) = rows.next().unwrap() {
+        // These rows pin the Rails-era schema, before port-owned migrations.
+        if table == "schema_migrations" {
+            let version: String = row.get("version").unwrap();
+            if !crate::schema::baseline_versions().any(|baseline| baseline == version) {
+                continue;
+            }
+        }
         let fields: Vec<String> = names
             .iter()
             .enumerate()
+            // Port-only counter for the SPA activity badge that Rails doesn't have.
+            .filter(|(_, name)| !(table == "users" && name.as_str() == "activity_revision"))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
@@ -184,4 +193,3 @@ fn fixtures_match_frozen_rails_rows() {
     assert_frozen_rows("fixtures_rails_rows.json", &rows);
     assert_eq!(fixture_sets().len(), 20);
 }
-

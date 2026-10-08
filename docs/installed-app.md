@@ -1,54 +1,32 @@
 # Installed app
 
-Smartfire has a classic worker at `/service-worker.js` and an SPA worker at
-`/app/service-worker.js`. Both register with scope `/`. The request's effective UI
-selects the worker: `SPA_ENABLED` off always means classic; otherwise the person's
-stored preference wins over `SPA_DEFAULT`. Signed-out requests use `SPA_DEFAULT`.
+Smartfire uses one service worker at `/service-worker.js`, registered with scope `/` by
+both UIs. `campfire_spa::pwa` owns the manifest, fallback worker, offline page and
+manifest illustrations. These responses do not use the classic template or asset crates.
+With `SPA_ENABLED` and a production build, the root worker serves the SPA's build-aware
+runtime; otherwise it serves the standalone fallback. A person's UI preference never
+changes the script URL. `/app/service-worker.js` remains a compatibility alias for old
+running bundles, serving the same worker bytes.
 
-Classic pages register the selected URL from their layout, including pages that
-remain classic for a person using the SPA. SPA pages register only for the next UI.
-The classic selection lives in a provisional head meta element, which Turbo replaces
-on each visit. The scripts that read it are Smartfire variants of the Rails
-service-worker initializer and notifications controller, kept as added assets under
-`crates/assets/overrides/smartfire/`. Only a layout that names a worker maps those two
-module names to them (`javascript_importmap_tags_selecting_worker()`). With
-`SPA_ENABLED` off the layout omits the meta and keeps the Rails import map, so classic
-page HTML stays byte-identical to Rails and registers `/service-worker.js` as Rails does (the
-classic worker script itself always carries the SPA-cache patch described below). Registration reconciles on both `load` and `turbo:load`. It
-never unregisters the root registration.
+Classic pages and auth pages register on load, with classic Turbo visits also reconciling
+the root registration. Test pages respect `data-service-worker="false"`. The SPA boot
+names `/service-worker.js` and quietly calls `registration.update()` on startup;
+development builds skip registration. No startup code unregisters the root worker or
+prompts for push permission. Updating the script at scope `/` preserves the registration
+and its existing push subscription.
 
-The sign-in, two-step, password confirmation, joining and first-run pages use the
-auth layout, which has no Turbo. That layout carries the same manifest link, meta and
-`data-service-worker` opt-out, and its `auth.js` registers the selected URL (or
-`/service-worker.js` when no meta names one) on `load`. A signed-out visitor
-therefore gets the `SPA_DEFAULT` worker. Signing in is a full page load, so the page
-it lands on, whether a classic page or two-step setup, registers the worker for the
-signed-in person's preference. The public About, Privacy and Terms pages load no
-script and register nothing.
-The boot JSON carries that URL, or null. Mock boot data leave it null, and
-development builds skip registration. Classic automatic registration still respects `data-service-worker="false"`
-in the test environment. The SPA quietly calls `registration.update()` on startup.
-
-Registering a different script at the same scope updates the existing registration;
-it does not create a second one or unregister the first. Existing push subscriptions
-remain associated with that registration. Switching to classic registers the
-classic script again. These behaviours follow the
-[Service Worker registration algorithm](https://w3c.github.io/ServiceWorker/#register-algorithm)
-and the [Push API's registration relationship](https://w3c.github.io/push-api/#relationship-to-service-worker-registrations).
-
-The SPA shell links to `/app/manifest.webmanifest`; classic pages keep their classic
-manifest. The SPA manifest reuses the classic name, icons, colours and shortcut fields.
-Its start URL and scope share one setting derived from `campfire_spa::PREFIX`.
-The profile shortcut maps to `/app/settings`. The classic New chat room URL is
-outside the SPA's scope, so browsers discard that shortcut under the
-[manifest shortcut rules](https://www.w3.org/TR/appmanifest/#processing-shortcut-items).
-It remains in the shared manifest data until room creation has a mapped SPA screen.
+Both UIs link to `/webmanifest.json`. It preserves the original absent `id` (the implicit
+identity derived from `start_url`), `start_url: "/"` and `scope: "/"`. The older
+`/app/manifest.webmanifest` URL redirects to that manifest. Shortcut destinations use the
+person's effective UI (`SPA_ENABLED`, their stored preference, then `SPA_DEFAULT`); a
+classic choice retains classic destinations. Unported shortcuts retain a working classic
+route until its SPA screen exists. Personalized manifests use private, revalidating caching.
 
 ## Offline shell and caching policy
 
-The classic worker retains its existing offline shell at `/offline.html` and
-runtime caching for `/assets/`. The SPA worker uses the page built from
-`frontend/offline.html`, served at `/app/offline.html`. Its module scripts and CSS
+The root offline page uses the standalone fallback or the page built from
+`frontend/offline.html`, according to `SPA_ENABLED` and build availability.
+`/app/offline.html` remains a compatibility alias. Its module scripts and CSS
 are same-origin content-hashed build assets, cached during installation. This page
 does not contain boot JSON or an authenticated shell.
 
@@ -82,7 +60,8 @@ version, and caches needed by every live window. Pages report the identity of th
 actual bundled entry script, including after a controller change. If an entry is
 shared by several builds, all matching caches survive. An unknown client keeps
 retention conservative, including tabs loaded before this reporting protocol.
-Activation records determine the previous version, including when a failed
+Activation records retain their original `/app/offline.html.activation` key across the
+move to the root offline URL. Activation records determine the previous version, including when a failed
 installation or a rollback creates caches out of order. Activation and later
 fetches/messages check live clients again; closed tabs stop retaining their builds.
 An unactivated cache also survives: another worker may still be installing it.
@@ -110,16 +89,15 @@ component render errors or API failures.
 
 The SPA worker cleans only its own cache namespace. It leaves the classic
 `smartfire-static-v1` cache in place so classic assets remain available and
-switching workers does not discard the classic cache.
+configuration rollback does not discard the classic cache.
 
-The classic worker is the Rails worker byte for byte except for one exception,
-kept as a documented patch (`SERVICE_WORKER_SPA_PATCH` in `crates/views/src/pwa.rs`)
+The standalone fallback is the Rails worker byte for byte except for one exception,
+kept as a documented patch (`SERVICE_WORKER_SPA_PATCH` in `crates/spa/src/pwa.rs`)
 that the parity tests apply to the Rails source before comparing. Its activation
 cleanup keeps `smartfire-spa-*` caches, and it answers `/app/assets/` requests from
 them (ignoring Vary, like the SPA worker) before falling back to the network. It
 never writes to those caches. An SPA tab still open on an older build can keep
-loading its unloaded chunks after another tab switches the origin to the classic
-worker.
+loading its unloaded chunks after the SPA is disabled.
 
 ## Notifications
 
@@ -127,12 +105,10 @@ Both workers use the classic push handler to show notifications and update the
 app badge. Push tags group room messages, event reminders, saved-item reminders
 and huddle invitations rather than stacking repeated notifications.
 
-The SPA worker maps a notification's classic path through the generated screen
-map. Only ported rows map to SPA routes, and the query string is retained. Unknown,
-unported and foreign-origin paths keep their original destination. Unmapped
-classic destinations can still redirect on the server according to the effective
-UI. The click handler navigates and focuses an existing workspace window, or
-opens one when none exists.
+Notification clicks open the payload's path unchanged. Existing server aliases select the
+person's UI and preserve old room, message and email links, including explicit classic
+choices. The handler navigates and focuses an existing workspace window, or opens one
+when none exists. Push handlers retain the same app badge behavior.
 
 Settings → Push devices has a "This browser" row: notifications off (with an
 "Enable notifications" button), on, blocked by the browser, or unsupported. "On"
@@ -148,7 +124,7 @@ the classic subscription creation path. `usePushEnrollment()` exposes permission
 subscription, endpoint and busy state for that row. The flow refreshes the
 existing Devices list. Removing the last saved subscription with the current
 browser's endpoint also unsubscribes it locally; another saved key triple for
-that endpoint keeps the browser subscribed. No enrollment control is rendered yet.
+that endpoint keeps the browser subscribed.
 
 `GET /api/v1/settings/push_subscriptions/key` returns the public key, and
 `POST /api/v1/settings/push_subscriptions` accepts endpoint, p256dhKey and authKey.
@@ -157,7 +133,7 @@ classic key-triple deduplication, user-agent and user-ownership rules; the exist
 subscription table has no session link. Deletion preserves the classic destroy
 behaviour.
 
-Unit tests cover URL mapping, request policy, no-store responses and cache
+Unit tests cover root registration, legacy activation metadata, request policy, no-store responses and cache
 retention. Rust tests cover selection, manifests, embedding and response headers.
 The production-preview Playwright suite exercises offline navigation, worker
 click handling and successive worker updates. It runs in the `Frontend` CI job;
@@ -166,6 +142,6 @@ The `pwa` Rust correctness job serves the embedded production build from a froze
 seed and drives the real registration code through sign-in and both UI
 switches. It checks a persistent Chromium profile's root registration identity
 and native push subscription. Locally, Chromium created a subscription and kept
-its endpoint and keys through SPA → classic → SPA → classic. A browser that
+its endpoint and keys through the legacy-to-canonical update, sign-in and both UI switches. A browser that
 cannot reach its push service reports that limitation and still checks the root
 registration's identity and scope; it does not substitute a fake subscription.

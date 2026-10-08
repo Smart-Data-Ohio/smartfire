@@ -3,7 +3,7 @@ import { canCache, requestPolicy } from "./policy.ts";
 
 const origin = "https://smartfire.test";
 
-const precached = new Set([`${origin}/app/assets/index-abcd1234.js`, `${origin}/app/offline.html`]);
+const precached = new Set([`${origin}/app/assets/index-abcd1234.js`, `${origin}/offline.html`]);
 
 function policy(path: string, method = "GET", mode: RequestMode = "cors") {
   return requestPolicy({ url: new URL(path, origin).href, method, mode }, origin, precached);
@@ -12,7 +12,7 @@ function policy(path: string, method = "GET", mode: RequestMode = "cors") {
 describe("service worker request policy", () => {
   it("cache-first serves only the exact precache and classic fingerprinted assets", () => {
     expect(policy("/app/assets/index-abcd1234.js")).toBe("precache");
-    expect(policy("/app/offline.html")).toBe("precache");
+    expect(policy("/offline.html")).toBe("precache");
     expect(policy("/assets/application-1234567890abcdef.css")).toBe("classic-asset");
     expect(policy("/assets/application.css")).toBe("network");
     expect(policy("/app/assets/not-in-precache-12345678.js")).toBe("network");
@@ -21,7 +21,7 @@ describe("service worker request policy", () => {
 
   it("always sends navigations to the network, including precached offline HTML", () => {
     expect(policy("/app/r/12", "GET", "navigate")).toBe("navigation");
-    expect(policy("/app/offline.html", "GET", "navigate")).toBe("navigation");
+    expect(policy("/offline.html", "GET", "navigate")).toBe("navigation");
     expect(policy("/account/settings", "GET", "navigate")).toBe("navigation");
   });
 
@@ -39,7 +39,7 @@ describe("service worker request policy", () => {
       "/session/transfers/secret",
       "/qr_code",
       "/uploads",
-      "/offline.html",
+      "/app/offline.html",
     ]) {
       expect(policy(path)).toBe("network");
     }

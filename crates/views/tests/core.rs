@@ -182,7 +182,7 @@ fn application_worker_selection_is_provisional_head_metadata() {
     let mut ctx = context(None, &asset, &signer, "");
     for (auto_register, url) in [
         (false, "/service-worker.js"),
-        (true, "/app/service-worker.js"),
+        (true, "/service-worker.js"),
     ] {
         ctx.chrome.service_worker_auto_register = auto_register;
         ctx.chrome.service_worker_url = Some(url.into());
@@ -338,38 +338,6 @@ fn multi_select_bar_matches_rails_with_both_controls() {
     }
 }
 
-#[test]
-fn pwa_endpoints_match_rails() {
-    let pages: Value = serde_json::from_str(&fixture("pages.json")).unwrap();
-    let logo = facts()["account"]["logo_path"]
-        .as_str()
-        .unwrap()
-        .to_string();
-    let asset = |path: &str| campfire_assets::asset_path(path);
-    let manifest = campfire_views::pwa::Manifest {
-        account_name: Some("37signals".into()),
-        logo_path_small: logo.replace("?v=", "?size=small&v="),
-        logo_path: logo,
-        base_url: "https://campfire.test".into(),
-        root: "/",
-        new_room_url: "rooms/opens/new".into(),
-        profile_url: "/users/me/profile".into(),
-        asset_path: &asset,
-    };
-    assert!(compare(
-        "pwa_manifest",
-        &manifest.render().unwrap(),
-        &fixture("pages/pwa_manifest.json")
-    ));
-    assert_eq!(pages["pwa_manifest"]["status"], 200);
-    assert!(compare(
-        "pwa_service_worker",
-        campfire_views::pwa::SERVICE_WORKER_JS,
-        &campfire_views::pwa::rails_service_worker_with_spa_patch(&fixture(
-            "pages/pwa_service_worker.js"
-        ))
-    ));
-}
 
 #[test]
 fn user_time_zone_uses_the_saved_rails_zone() {
