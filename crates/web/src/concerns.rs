@@ -273,6 +273,35 @@ pub async fn next_ui(c: &Ctx, user: &User) -> Result<bool> {
     Ok(UiPreference::effective(stored, config.spa_default_next) == UiPreference::Next)
 }
 
+/// The UI this request uses. A stored choice overrides `SPA_DEFAULT`; signed-out visitors
+/// use the default. Disabling the SPA always selects classic, including for an explicit choice.
+pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_preference::UiPreference> {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+
+    let app = c.app();
+    if !app.config.spa_enabled {
+        return Ok(UiPreference::Classic);
+    }
+    let stored = match current_user(c) {
+        Some(user) => {
+            let user_id = user.id;
+            app.db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?
+        }
+        None => None,
+    };
+    Ok(UiPreference::effective(stored, app.config.spa_default_next))
+}
+
+/// One registration at scope `/`: both UIs choose the same script for the effective UI.
+pub fn service_worker_url(ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
+    use campfire_db::models::user::ui_preference::UiPreference;
+
+    match ui {
+        UiPreference::Classic => "/service-worker.js".into(),
+        UiPreference::Next => format!("{}service-worker.js", campfire_spa::root_path()),
+    }
+}
+
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
 /// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
 /// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page

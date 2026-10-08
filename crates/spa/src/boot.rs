@@ -15,6 +15,8 @@ pub struct Boot {
     pub text_size: &'static str,
     /// The Action Cable endpoint, as the layout's `action-cable-url` meta tag gives it.
     pub cable_url: String,
+    /// The effective UI's worker. Classic users visiting the SPA register no worker.
+    pub service_worker_url: Option<String>,
     /// `X-Version` (`APP_VERSION`, falling back to `GIT_REVISION`).
     pub version: String,
     /// `X-Rev` (`GIT_REVISION`), when set.

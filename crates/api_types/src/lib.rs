@@ -130,10 +130,10 @@ pub use search::{
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use settings::{
-    AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, DndAllowedPerson,
+    AccountSettings, AppearanceSettings, BackupCodes, CallSettings, Connection, CreatePushSubscription, DndAllowedPerson,
     GoogleIntegration, InboxSwitch,
     IntegrationChange, IntegrationSettings, IntegrationToken, NotificationSettings, OooPreset,
-    ProfileSettings, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
+    ProfileSettings, PushPublicKey, PushSubscriptionInfo, PushSubscriptionList, Reauthentication, RememberedDevice,
     RoomMembershipRow, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings, TimeZoneChoice,
     TwoFactorChange, TwoFactorSettings, UpdateAppearance, UpdateAvatar, UpdateCalls,
     UpdateNotifications, UpdateProfile, UpdateStatus,
