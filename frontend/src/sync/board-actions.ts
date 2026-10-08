@@ -7,6 +7,7 @@ import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
+import { type Settled, settledDetail } from "./settle.ts";
 import { refreshWorkPane } from "./work-refresh.ts";
 
 /** Room sessions own room:<id>; changing board filters does not acquire another holder. */
@@ -75,27 +76,31 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   input: BoardPostInput,
 ) {
   // A post removed while its creation was in flight stays removed.
-  const since = store.getState().removalCount;
+  const reply = yield* settledDetail(
+    api.createBoardPost(roomId, {
+      name: input.name,
+      status: input.status,
+      ownerId: input.ownerId,
+      tags: [...input.tags],
+      clientPostId: input.clientId,
+      message:
+        input.brief.trim() === ""
+          ? null
+          : {
+              clientMessageId: input.clientId,
+              markdownSource: input.brief,
+              replyToMessageId: null,
+              replyNotifyAuthor: null,
+              attachmentSignedId: null,
+            },
+    }),
+  );
 
-  const detail = yield* api.createBoardPost(roomId, {
-    name: input.name,
-    status: input.status,
-    ownerId: input.ownerId,
-    tags: [...input.tags],
-    clientPostId: input.clientId,
-    message:
-      input.brief.trim() === ""
-        ? null
-        : {
-            clientMessageId: input.clientId,
-            markdownSource: input.brief,
-            replyToMessageId: null,
-            replyNotifyAuthor: null,
-            attachmentSignedId: null,
-          },
-  });
+  const detail = reply.answer;
 
-  mutations.loadThreadDetail(detail, since);
+  if (reply.since !== null) {
+    mutations.loadThreadDetail(detail, reply.since);
+  }
 
   // Not when the reply was dropped: the post was removed while it was being created.
   if (store.getState().threads[detail.thread.id] !== undefined) {
@@ -114,11 +119,14 @@ export const createPost = Effect.fn("boards.createPost")(function* (
 const installSaved = Effect.fnUntraced(function* (
   threadId: number,
   sent: Thread | undefined,
-  since: number,
-  detail: ThreadDetail,
+  { answer, since }: Settled<ThreadDetail>,
 ) {
+  if (since === null) {
+    return;
+  }
+
   if (store.getState().threads[threadId] === sent) {
-    mutations.loadThreadDetail(detail, since);
+    mutations.loadThreadDetail(answer, since);
 
     return;
   }
@@ -128,9 +136,8 @@ const installSaved = Effect.fnUntraced(function* (
 
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
   const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
 
-  yield* installSaved(threadId, sent, since, yield* api.updateWork(threadId, body));
+  yield* installSaved(threadId, sent, yield* settledDetail(api.updateWork(threadId, body)));
 });
 
 export const handoff = Effect.fn("work.handoff")(function* (
@@ -138,7 +145,6 @@ export const handoff = Effect.fn("work.handoff")(function* (
   body: CreateWorkHandoff,
 ) {
   const sent = store.getState().threads[threadId];
-  const since = store.getState().removalCount;
 
-  yield* installSaved(threadId, sent, since, yield* api.handoffWork(threadId, body));
+  yield* installSaved(threadId, sent, yield* settledDetail(api.handoffWork(threadId, body)));
 });

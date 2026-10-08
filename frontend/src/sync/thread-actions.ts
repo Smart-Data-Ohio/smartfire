@@ -3,7 +3,7 @@
  * through its replies, start one, rename/close/lock it, follow it and mark it read, and list a
  * room's threads.
  */
-import { Effect, Result } from "effect";
+import { Effect, Predicate, Result } from "effect";
 import * as api from "../api/thread-endpoints.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
@@ -11,10 +11,14 @@ import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
 import { setThreadUnread } from "../store/threads.ts";
+import { settled, settledDetail } from "./settle.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
+
+/** When removals kept outrunning the thread's replies (see `settled`); Try again asks afresh. */
+export const UNSETTLED = "This thread couldn't be loaded. Try again.";
 
 /**
  * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
@@ -25,11 +29,15 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
-  const since = store.getState().removalCount;
-
   const [detail, page] = yield* Effect.all(
     [
-      Effect.result(api.thread(threadId)),
+      Effect.result(
+        settled(
+          api.thread(threadId),
+          () => api.thread(threadId),
+          (answer) => [answer.thread.id],
+        ),
+      ),
       Effect.result(
         api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
       ),
@@ -44,7 +52,14 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  mutations.loadThreadDetail(detail.success, since);
+  if (detail.success.since === null) {
+    mutations.setThreadPaneError(threadId, UNSETTLED);
+    mutations.setThreadPageFailed(threadId);
+
+    return;
+  }
+
+  mutations.loadThreadDetail(detail.success.answer, detail.success.since);
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
@@ -130,30 +145,43 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
-  const since = store.getState().removalCount;
+  const reply = yield* settled(
+    api.createThread(roomId, {
+      parentMessageId,
+      name: options.name ?? null,
+      message: {
+        clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
+        markdownSource: markdown,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: options.attachmentSignedId ?? null,
+      },
+    }),
+    (previous) =>
+      api.thread(previous.detail.thread.id).pipe(
+        Effect.map((detail) => ({ ...previous, detail })),
+        Effect.catchIf(
+          (error) => Predicate.isTagged(error, "NotFound"),
+          () => Effect.succeed(null),
+        ),
+      ),
+    (answer) => [answer.detail.thread.id],
+  );
 
-  const created = yield* api.createThread(roomId, {
-    parentMessageId,
-    name: options.name ?? null,
-    message: {
-      clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
-      markdownSource: markdown,
-      replyToMessageId: null,
-      replyNotifyAuthor: null,
-      attachmentSignedId: options.attachmentSignedId ?? null,
-    },
-  });
+  if (reply.since !== null) {
+    mutations.threadCreated(reply.answer, reply.since);
+  }
 
-  mutations.threadCreated(created, since);
-
-  return created.detail.thread.id;
+  return reply.answer.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  const since = store.getState().removalCount;
+  const reply = yield* settledDetail(api.updateThread(threadId, body));
 
-  mutations.loadThreadDetail(yield* api.updateThread(threadId, body), since);
+  if (reply.since !== null) {
+    mutations.loadThreadDetail(reply.answer, reply.since);
+  }
 });
 
 /** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */
@@ -192,11 +220,19 @@ export const markRead = Effect.fn("threads.markRead")(function* (threadId: numbe
 /** The room's threads for one filter (the Threads pane). */
 export const list = Effect.fn("threads.list")(function* (roomId: number, filter: ThreadFilter) {
   mutations.setThreadListLoading(roomId, filter);
-  const since = store.getState().removalCount;
+  const ask = api.threads(roomId, filter);
 
-  yield* api.threads(roomId, filter).pipe(
-    Effect.tap((threads) =>
-      Effect.sync(() => mutations.loadThreadList(roomId, filter, threads, since)),
+  yield* settled(
+    ask,
+    () => ask,
+    (list) => list.threads.map(({ thread }) => thread.id),
+  ).pipe(
+    Effect.tap((reply) =>
+      Effect.sync(() =>
+        reply.since === null
+          ? mutations.setThreadListFailed(roomId, filter)
+          : mutations.loadThreadList(roomId, filter, reply.answer, reply.since),
+      ),
     ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
