@@ -3687,6 +3687,93 @@ describe("joining an open room", () => {
       }),
     ),
   );
+
+  const lateRefresh = (outcome: "join" | "unavailable") =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const releaseRefresh = yield* Deferred.make<ReturnType<typeof roomDetailFixture>>();
+        const releasePreview = yield* Deferred.make<void>();
+        let opened = false;
+        let holdRefresh = true;
+
+        yield* serve([]);
+        yield* api.route("GET /rooms/12", () => {
+          if (!opened) {
+            opened = true;
+
+            return Effect.succeed(roomDetailFixture(12));
+          }
+
+          if (holdRefresh) {
+            return Deferred.await(releaseRefresh);
+          }
+
+          return Effect.fail(new NotFound({ message: "Room not found" }));
+        });
+        yield* api.route("GET /rooms/12/preview", () =>
+          outcome === "join"
+            ? Deferred.await(releasePreview).pipe(Effect.as({ id: 12, name: "general" }))
+            : Deferred.await(releasePreview).pipe(
+                Effect.andThen(Effect.fail(new NotFound({ message: "Room not found" }))),
+              ),
+        );
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* startEngine;
+        yield* welcome(0, false);
+        yield* session.openRoom(12, null);
+
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: { ...sidebarRowFixture(12, "general"), refreshRoom: true },
+        });
+        yield* pushEvents({
+          seq: 2,
+          topic: "user",
+          type: "sidebar.row.removed",
+          data: { roomId: 12, refreshRoom: true },
+        });
+        yield* socket.drop;
+        yield* session.closeRoom(12);
+        holdRefresh = false;
+
+        const reopening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* settle;
+        yield* Deferred.succeed(releaseRefresh, roomDetailFixture(12));
+        yield* settle;
+        yield* Deferred.succeed(releasePreview, undefined);
+        yield* Fiber.join(reopening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.detail).toBeNull();
+
+        if (outcome === "join") {
+          expect(store.getState().rooms[12]).toMatchObject({
+            status: "ready",
+            preview: { id: 12, name: "general" },
+          });
+        } else {
+          expect(store.getState().rooms[12]).toMatchObject({
+            status: "error",
+            preview: null,
+          });
+        }
+      }),
+    );
+
+  it.effect(
+    "a refresh started before a leave cannot hide the join preview opened after disconnect",
+    () => lateRefresh("join"),
+  );
+
+  it.effect(
+    "a refresh started before a leave cannot hide an unavailable room opened after disconnect",
+    () => lateRefresh("unavailable"),
+  );
 });
 
 describe("boards and open work panes", () => {

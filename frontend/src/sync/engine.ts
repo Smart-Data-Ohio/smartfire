@@ -19,6 +19,7 @@ import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
@@ -163,7 +164,7 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   return [...missing];
 }
 
-function landRefreshedRoom(detail: RoomDetail, revision: number): void {
+function landRefreshedRoom(detail: RoomDetail, revision: number, started: number): void {
   const state = store.getState();
   const roomId = detail.room.id;
 
@@ -184,6 +185,7 @@ function landRefreshedRoom(detail: RoomDetail, revision: number): void {
           displayName: row.displayName,
           directMemberIds: row.directMemberIds,
         },
+    started,
   );
 }
 
@@ -222,11 +224,12 @@ export class Engine extends Context.Service<
 
       /** Refetch room metadata at its current management revision, including lost access. */
       const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const started = beginRoomRequest();
         const detail = yield* Effect.result(room(roomId));
 
         if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
           markRoomsChanged([roomId]);
-          landRefreshedRoom(detail.success, revision);
+          landRefreshedRoom(detail.success, revision, started);
         } else if (
           Result.isFailure(detail) &&
           roomRevision(roomId) === revision &&
@@ -497,11 +500,13 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
-      const refreshRoom = (roomId: number, revision: number) =>
-        room(roomId).pipe(
+      const refreshRoom = (roomId: number, revision: number) => {
+        const started = beginRoomRequest();
+
+        return room(roomId).pipe(
           Effect.tap((detail) =>
             Effect.sync(() => {
-              landRefreshedRoom(detail, revision);
+              landRefreshedRoom(detail, revision, started);
             }),
           ),
           Effect.catch((error) =>
@@ -517,6 +522,7 @@ export class Engine extends Context.Service<
           ),
           Effect.provideContext(api),
         );
+      };
 
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (

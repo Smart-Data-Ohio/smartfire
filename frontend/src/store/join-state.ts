@@ -7,17 +7,17 @@
 const joinedAt = new Map<number, number>();
 
 /**
- * Times detail has been installed for a room. A preview load captures this and applies only while
- * it is unchanged, so a preview from before the install cannot replace that membership.
+ * Start sequence of the request whose detail is installed. A preview applies unless a request that
+ * began later installed detail.
  */
 const detailInstalled = new Map<number, number>();
 
-let detailInstalls = 0;
+let nextRequest = 0;
 
 export function resetJoinState(): void {
   joinedAt.clear();
   detailInstalled.clear();
-  detailInstalls = 0;
+  nextRequest = 0;
 }
 
 /** A terminal outcome: the id must not keep a join alive for the rest of the page. */
@@ -25,9 +25,18 @@ export function clearRoomJoin(roomId: number): void {
   joinedAt.delete(roomId);
 }
 
-/** Detail landed for `roomId`. Previews that started earlier must not paint over it. */
-export function noteDetailInstalled(roomId: number): void {
-  detailInstalled.set(roomId, ++detailInstalls);
+/** Taken when a room load or metadata refresh begins. */
+export function beginRoomRequest(): number {
+  return ++nextRequest;
+}
+
+/** Detail from a request that began at `started`. An older start must not replace a newer one. */
+export function noteDetailInstalled(roomId: number, started: number): void {
+  const current = detailInstalled.get(roomId) ?? 0;
+
+  if (started > current) {
+    detailInstalled.set(roomId, started);
+  }
 }
 
 export function detailInstalledGeneration(roomId: number): number {

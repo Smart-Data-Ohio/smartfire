@@ -19,6 +19,7 @@ import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import {
+  beginRoomRequest,
   clearRoomJoin,
   detailInstalledGeneration,
   joinedAtEpoch,
@@ -189,13 +190,13 @@ function currentJoinDetail(roomId: number): RoomDetail | null {
 /**
  * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
  * room is unavailable. A preview applies only when its load is still the visit's latest and no
- * detail has been installed since that load started. Cached membership never overrides a 404.
+ * detail from a request that began later has been installed. Cached membership never overrides a 404.
  * The exception is detail this session's join installed while that join's epoch is still current.
  */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const open = visits.get(roomId);
   const load = open?.token === token ? ++nextLoad : 0;
-  const detailAtStart = detailInstalledGeneration(roomId);
+  const started = beginRoomRequest();
 
   if (open !== undefined && open.token === token) {
     visits.set(roomId, { ...open, load });
@@ -211,7 +212,7 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
   if (Result.isSuccess(loaded)) {
     clearRoomJoin(roomId);
-    mutations.setRoomDetail(loaded.success);
+    mutations.setRoomDetail(loaded.success, started);
     yield* loadTimeline(roomId, token, loaded.success);
 
     return;
@@ -220,7 +221,7 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   const kept = currentJoinDetail(roomId);
 
   if (kept !== null) {
-    mutations.setRoomDetail(kept);
+    mutations.setRoomDetail(kept, started);
     yield* loadTimeline(roomId, token, kept);
 
     return;
@@ -232,7 +233,7 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     const preview = yield* Effect.result(openRoomPreview(roomId));
     const latest = sameVisit(roomId, token) && visits.get(roomId)?.load === load;
 
-    if (!latest || detailInstalledGeneration(roomId) !== detailAtStart) {
+    if (!latest || detailInstalledGeneration(roomId) > started) {
       return;
     }
 
