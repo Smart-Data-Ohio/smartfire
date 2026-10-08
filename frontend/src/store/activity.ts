@@ -49,10 +49,26 @@ interface PendingUnread {
   readonly removed: boolean;
   /** A snapshot at this revision or later includes the change. */
   readonly coveredAtRevision: number | null;
+  /** The latest authoritative row, including confirmations at an unchanged timestamp. */
+  readonly serverItem: { readonly item: ActivityItem; readonly revision: number } | null;
   /** A request can finish before the shared count covers its confirmed adjustment. */
   readonly settled: boolean;
   readonly before: ActivityItem;
   readonly optimistic: ActivityItem;
+}
+
+function observedItem(
+  change: PendingUnread,
+  item: ActivityItem,
+  revision: number,
+): PendingUnread["serverItem"] {
+  const held = change.serverItem;
+
+  return held === null ||
+    newerThan(item.updatedAt, held.item.updatedAt) ||
+    (!newerThan(held.item.updatedAt, item.updatedAt) && revision > held.revision)
+    ? { item, revision }
+    : held;
 }
 
 export interface ActivitySlice {
@@ -200,33 +216,60 @@ function confirmedUnread(
     return activity.pendingUnread;
   }
 
+  const newestTokens = new Map<number, number>();
+
+  for (const [token, change] of Object.entries(activity.pendingUnread)) {
+    newestTokens.set(change.itemId, Math.max(newestTokens.get(change.itemId) ?? -1, Number(token)));
+  }
+
   return Object.fromEntries(
     Object.entries(activity.pendingUnread).map(([token, change]) => {
       const covered = change.revision === null || unread.unreadRevision >= change.revision;
       const removed = covered && change.itemId === removedId;
 
-      const confirmed =
-        covered &&
-        items.some((item) => {
-          const version = activity.versions[item.id];
+      const item = covered
+        ? items.find((item) => {
+            const version = activity.versions[item.id];
 
-          return (
-            item.id === change.itemId &&
-            (item.state === "unread") === change.unread &&
-            (change.version === undefined || !newerThan(change.version, item.updatedAt)) &&
-            (version === undefined || !newerThan(version, item.updatedAt))
-          );
-        });
+            return (
+              item.id === change.itemId &&
+              (change.version === undefined || !newerThan(change.version, item.updatedAt)) &&
+              (version === undefined || !newerThan(version, item.updatedAt))
+            );
+          })
+        : undefined;
+
+      const confirmed = item !== undefined && (item.state === "unread") === change.unread;
+
+      const serverItem =
+        item === undefined ? change.serverItem : observedItem(change, item, unread.unreadRevision);
+
+      // A later state can undo the confirmed change before the displayed base absorbs it.
+      // Earlier transitions on the same item keep their deltas so the newest step composes them.
+      const changedAfterConfirmation =
+        newestTokens.get(change.itemId) === Number(token) &&
+        !removed &&
+        !change.removed &&
+        change.coveredAtRevision !== null &&
+        serverItem !== null &&
+        serverItem.revision > change.coveredAtRevision &&
+        (activity.serverUnreadGeneration !== activity.generation ||
+          held === null ||
+          held.unreadRevision < change.coveredAtRevision);
 
       return [
         token,
-        removed || confirmed
+        removed || confirmed || serverItem !== change.serverItem
           ? {
               ...change,
-              coveredAtRevision: Math.min(
-                change.coveredAtRevision ?? Infinity,
-                unread.unreadRevision,
-              ),
+              serverItem,
+              delta: changedAfterConfirmation
+                ? unreadDelta(change.before, serverItem.item)
+                : change.delta,
+              coveredAtRevision:
+                removed || confirmed
+                  ? Math.min(change.coveredAtRevision ?? Infinity, unread.unreadRevision)
+                  : change.coveredAtRevision,
               removed: removed || change.removed,
             }
           : change,
@@ -240,8 +283,10 @@ export function beginActivityGeneration(state: State, newEpoch = true): State {
   let activity = state.activity;
 
   for (const change of Object.values(activity.pendingUnread)) {
-    if (change.coveredAtRevision === null && activity.items[change.itemId] === change.optimistic) {
-      activity = showItem(activity, change.before);
+    if (!change.removed && activity.items[change.itemId] === change.optimistic) {
+      const item = change.serverItem?.item ?? change.before;
+
+      activity = settleShownItem(activity, item);
     }
   }
 
@@ -511,6 +556,17 @@ function serverCopy(activity: ActivitySlice, item: ActivityItem): ActivitySlice 
   };
 }
 
+/** Settles a held optimistic row without lowering its recorded server timestamp. */
+function settleShownItem(activity: ActivitySlice, item: ActivityItem): ActivitySlice {
+  const held = activity.versions[item.id];
+  const version = held === undefined || newerThan(item.updatedAt, held) ? item.updatedAt : held;
+
+  return {
+    ...showItem(activity, item),
+    versions: { ...activity.versions, [item.id]: version },
+  };
+}
+
 /**
  * An item as the server has it now (a reply or an `activity.item` event): shown unless an equal
  * or newer copy is already held. `unread` is the server's snapshot afterwards (`null` keeps
@@ -554,6 +610,7 @@ export function showActivityChange(
         removed: false,
         version: state.activity.versions[item.id],
         coveredAtRevision: null,
+        serverItem: null,
         settled: false,
         before: state.activity.items[item.id] ?? item,
         optimistic: item,
@@ -586,9 +643,23 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
     return state;
   }
 
-  const change = state.activity.pendingUnread[end.token];
+  const pending =
+    end.unread !== null && end.settled !== null
+      ? confirmedUnread(state.activity, end.unread, [end.settled])
+      : state.activity.pendingUnread;
+
+  const heldChange = pending[end.token];
+
+  const change =
+    heldChange !== undefined && end.unread !== null && end.settled !== null
+      ? {
+          ...heldChange,
+          serverItem: observedItem(heldChange, end.settled, end.unread.unreadRevision),
+        }
+      : heldChange;
+
   const removed = change?.removed ?? false;
-  const { [end.token]: _done, ...others } = state.activity.pendingUnread;
+  const { [end.token]: _done, ...others } = pending;
   let pendingUnread = others;
   const coveredAtRevision = end.unread?.unreadRevision ?? change?.coveredAtRevision ?? null;
 
@@ -607,23 +678,16 @@ export function endActivityChange(state: State, end: ActivityChangeEnd): State {
   }
 
   let activity: ActivitySlice = state.activity;
+  const settled = change?.serverItem?.item ?? end.settled;
 
-  if (end.settled !== null && !removed) {
-    const id = end.settled.id;
+  if (settled !== null && !removed) {
+    const id = settled.id;
     const stillShown = end.optimistic !== null && activity.items[id] === end.optimistic;
 
     if (stillShown) {
-      const held = activity.versions[id];
-
-      const version =
-        held === undefined || newerThan(end.settled.updatedAt, held) ? end.settled.updatedAt : held;
-
-      activity = {
-        ...showItem(activity, end.settled),
-        versions: { ...activity.versions, [id]: version },
-      };
+      activity = settleShownItem(activity, settled);
     } else {
-      activity = serverCopy(activity, end.settled);
+      activity = serverCopy(activity, settled);
     }
   }
 

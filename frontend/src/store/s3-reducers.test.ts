@@ -392,6 +392,125 @@ describe("the activity inbox", () => {
     expect(next.activity.unreadCount).toBe(4);
   });
 
+  it("keeps the version of a confirmed row installed during reconnect", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+    const start = activityLoadStart(state, "all", "read");
+    const confirmed = item(5, 60, "mention", "read");
+
+    state = setActivityListLoading(state, "all", "read", false);
+    state = landActivityPage(
+      state,
+      "all",
+      "read",
+      activityPage([confirmed], 2, null, 2),
+      "replace",
+      start,
+    );
+    expect(state.activity.items[5]).toBe(optimistic);
+    state = beginActivityGeneration(state, false);
+    expect(state.activity.items[5]).toEqual(confirmed);
+    expect(state.activity.versions[5]).toBe(confirmed.updatedAt);
+    state = applyActivityItem(state, item(5, 56), null);
+    expect(state.activity.items[5]).toEqual(confirmed);
+  });
+
+  it("keeps a newer reply item when its count snapshot is stale", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+      unreadCount: 2,
+      unreadRevision: 2,
+    });
+    state = setActivityUnreadCount(state, { unreadCount: 8, unreadRevision: 5 });
+    const reply = item(5, 60, "mention", "handled");
+
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 1,
+      optimistic,
+      settled: reply,
+      unread: { unreadCount: 2, unreadRevision: 3 },
+    });
+    expect(state.activity.items[5]).toEqual(reply);
+    expect(state.activity.unreadCount).toBe(8);
+  });
+
+  it("reconciles the newest zero-delta transition without changing an earlier read adjustment", () => {
+    const before = item(5, 50);
+    const optimistic = nextActivityItem(before, "read", at(55));
+    let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+    state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+    const read = item(5, 50, "mention", "read");
+
+    state = applyActivityItem(state, read, { unreadCount: 2, unreadRevision: 2 });
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 1,
+      optimistic,
+      settled: before,
+      unread: null,
+    });
+    const handled = nextActivityItem(read, "handled", at(55));
+
+    state = showActivityChange(state, handled, 3, 0);
+    state = applyActivityItem(state, item(5, 50, "mention", "handled"), {
+      unreadCount: 2,
+      unreadRevision: 3,
+    });
+    expect(state.activity.unreadCount).toBe(1);
+    state = applyActivityItem(state, before, { unreadCount: 3, unreadRevision: 4 });
+    expect(state.activity.pendingUnread[1]?.delta).toBe(-1);
+    expect(state.activity.pendingUnread[3]?.delta).toBe(1);
+    expect(state.activity.unreadCount).toBe(2);
+    state = endActivityChange(state, {
+      generation: state.activity.generation,
+      token: 3,
+      optimistic: handled,
+      settled: read,
+      unread: null,
+    });
+    expect(state.activity.items[5]).toEqual(before);
+    expect(state.activity.unreadCount).toBe(2);
+  });
+
+  for (const latestState of ["handled", "unread"] as const) {
+    it(`keeps the latest equal-timestamp ${latestState} observation on failure`, () => {
+      const before = item(5, 50);
+      const optimistic = nextActivityItem(before, "read", at(55));
+      let state = showActivityChange(inbox(), optimistic, 1, -1);
+
+      state = showActivityChange(state, nextActivityItem(item(3, 30), "read", at(55)), 2, -1);
+      state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+        unreadCount: 2,
+        unreadRevision: 2,
+      });
+      const latest = item(5, 50, "mention", latestState);
+      const unreadCount = latestState === "unread" ? 3 : 2;
+
+      state = applyActivityItem(state, latest, { unreadCount, unreadRevision: 3 });
+      state = applyActivityItem(state, item(5, 50, "mention", "read"), {
+        unreadCount: 2,
+        unreadRevision: 2,
+      });
+      state = endActivityChange(state, {
+        generation: state.activity.generation,
+        token: 1,
+        optimistic,
+        settled: before,
+        unread: null,
+      });
+      expect(state.activity.items[5]).toEqual(latest);
+      expect(state.activity.unreadCount).toBe(latestState === "unread" ? 2 : 1);
+    });
+  }
+
   it("leaves an older item past a loaded window to the page that brings it", () => {
     const state = landActivityPage(
       initialState,

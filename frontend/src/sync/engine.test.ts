@@ -257,7 +257,7 @@ describe("reconnecting", () => {
           },
           unreadEvent(12),
         );
-        expect(store.getState().activity.unreadCount).toBe(5);
+        expect(store.getState().activity.unreadCount).toBe(6);
         yield* TestClock.adjust("15 seconds");
         yield* settle;
         expect(store.getState().activity.unreadCount).toBe(6);
@@ -272,6 +272,101 @@ describe("reconnecting", () => {
         });
         expect(store.getState().activity.unreadCount).toBe(7);
         expect(store.getState().activity.items[41]).toBeDefined();
+      }),
+    ),
+  );
+
+  for (const resumed of [true, false]) {
+    it.effect(
+      `processes frames while the reconnect count refresh is pending (resumed=${resumed})`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            yield* serve([]);
+            const fake = yield* FakeApi;
+            const socket = yield* MemorySocket;
+            const started = yield* Deferred.make<void>();
+            const release = yield* Deferred.make<void>();
+
+            yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+            yield* startEngine;
+            yield* welcome(10, false);
+            yield* fake.route("GET /activity/unread_count", () =>
+              Deferred.succeed(started, undefined).pipe(
+                Effect.andThen(Deferred.await(release)),
+                Effect.as({ unreadCount: 6, unreadRevision: 2 }),
+              ),
+            );
+            yield* socket.drop;
+            yield* TestClock.adjust("250 millis");
+            yield* welcome(11, resumed);
+            yield* Deferred.await(started);
+            yield* pushEvents(
+              {
+                seq: 12,
+                topic: "user",
+                type: "activity.item",
+                data: { item: activityItem, unreadCount: 6, unreadRevision: 2 },
+              },
+              unreadEvent(13),
+            );
+            expect(store.getState().activity.unreadCount).toBe(6);
+            expect(store.getState().activity.items[40]).toEqual(activityItem);
+            expect(unreadCount(12)).toBe(1);
+            yield* pushEvents({
+              seq: 14,
+              topic: "user",
+              type: "activity.item",
+              data: { item: { ...activityItem, id: 41 }, unreadCount: 7, unreadRevision: 3 },
+            });
+            expect(store.getState().activity.unreadCount).toBe(7);
+            expect(yield* Deferred.isDone(release)).toBe(false);
+            yield* Deferred.succeed(release, undefined);
+            yield* settle;
+            expect(store.getState().activity.unreadCount).toBe(7);
+          }),
+        ),
+    );
+  }
+
+  it.effect("ignores replay coverage from a count refresh in an old generation", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const fake = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const started = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 5, unreadRevision: 1 });
+        yield* startEngine;
+        yield* welcome(10, false);
+        yield* fake.route("GET /activity/unread_count", () =>
+          Deferred.succeed(started, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ unreadCount: 9, unreadRevision: 3 }),
+          ),
+        );
+        yield* socket.drop;
+        yield* TestClock.adjust("250 millis");
+        yield* welcome(100, true);
+        yield* Deferred.await(started);
+        yield* socket.drop;
+        yield* TestClock.adjust("500 millis");
+        yield* fake.reply("GET /activity/unread_count", { unreadCount: 2, unreadRevision: 1 });
+        yield* welcome(10, false, "e2");
+        expect(store.getState().activity.unreadCount).toBe(2);
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+        expect(store.getState().activity.unreadCount).toBe(2);
+        yield* pushEvents({
+          seq: 11,
+          topic: "user",
+          type: "activity.item",
+          data: { item: activityItem, unreadCount: 3, unreadRevision: 2 },
+        });
+        expect(store.getState().activity.unreadCount).toBe(3);
+        expect(store.getState().activity.items[40]).toEqual(activityItem);
       }),
     ),
   );
@@ -1063,11 +1158,16 @@ describe("resync", () => {
 
         yield* welcome(1, false, "e2");
 
-        expect((yield* api.requests).slice(before)).toEqual([
-          { method: "GET", path: "/sidebar" },
-          { method: "GET", path: "/activity/unread_count" },
-          { method: "GET", path: "/rooms/12/messages" },
-        ]);
+        const requests = (yield* api.requests).slice(before);
+
+        expect(requests).toHaveLength(3);
+        expect(requests).toEqual(
+          expect.arrayContaining([
+            { method: "GET", path: "/sidebar" },
+            { method: "GET", path: "/activity/unread_count" },
+            { method: "GET", path: "/rooms/12/messages" },
+          ]),
+        );
         expect(timelineIds(12)).toEqual([1, 2, 3]);
         expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
           JSON.stringify({ epoch: "e2", seq: 1 }),

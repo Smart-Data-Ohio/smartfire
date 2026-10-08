@@ -699,9 +699,23 @@ describe("activity actions", () => {
           }
 
           expect(store.getState().activity.unreadCount).toBe(3);
+          expect(store.getState().activity.items[3]).toEqual(read);
           expect(Object.values(store.getState().activity.pendingUnread)).toContainEqual(
             expect.objectContaining({ itemId: 3, delta: -1, coveredAtRevision: 2, settled: true }),
           );
+          yield* fake.route("PATCH /activity/3", () => {
+            expect(store.getState().activity.unreadCount).toBe(3);
+
+            return Effect.succeed({ item: read, unreadCount: 4, unreadRevision: 2 });
+          });
+          yield* activity.setState(3, "read");
+          expect(store.getState().activity.unreadCount).toBe(3);
+          expect(store.getState().activity.items[3]).toEqual(read);
+          expect(
+            Object.values(store.getState().activity.pendingUnread).filter(
+              (change) => change.itemId === 3,
+            ),
+          ).toHaveLength(1);
           yield* Deferred.succeed(secondRelease, undefined);
           expect((yield* Fiber.join(second))._tag).toBe("Failure");
           expect(store.getState().activity.unreadCount).toBe(4);
@@ -712,6 +726,113 @@ describe("activity actions", () => {
       );
     }
   }
+
+  it.effect("does not count a retry of an equal-timestamp confirmed read twice", () =>
+    Effect.gen(function* () {
+      seedInbox();
+      const fake = yield* FakeApi;
+      const firstStarted = yield* Deferred.make<void>();
+      const firstRelease = yield* Deferred.make<void>();
+      const secondStarted = yield* Deferred.make<void>();
+      const secondRelease = yield* Deferred.make<void>();
+      const read = item(3, 30, "read");
+
+      yield* fake.route("PATCH /activity/3", () =>
+        Deferred.succeed(firstStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(firstRelease)),
+          Effect.andThen(refuse()),
+        ),
+      );
+      yield* fake.route("PATCH /activity/2", () =>
+        Deferred.succeed(secondStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(secondRelease)),
+          Effect.andThen(refuse()),
+        ),
+      );
+      const first = yield* Effect.forkChild(Effect.exit(activity.setState(3, "read")));
+
+      yield* Deferred.await(firstStarted);
+      const second = yield* Effect.forkChild(Effect.exit(activity.setState(2, "read")));
+
+      yield* Deferred.await(secondStarted);
+      mutations.applyActivityItem(read, { unreadCount: 4, unreadRevision: 2 });
+      yield* Deferred.succeed(firstRelease, undefined);
+      yield* Fiber.join(first);
+      const counts = [store.getState().activity.unreadCount];
+
+      yield* fake.route("PATCH /activity/3", () => {
+        counts.push(store.getState().activity.unreadCount);
+
+        return Effect.succeed({ item: read, unreadCount: 4, unreadRevision: 2 });
+      });
+      yield* activity.setState(3, "read");
+      counts.push(store.getState().activity.unreadCount);
+      expect(counts).toEqual([3, 3, 3]);
+      expect(
+        Object.values(store.getState().activity.pendingUnread).filter(
+          (change) => change.itemId === 3,
+        ),
+      ).toHaveLength(1);
+      yield* Deferred.succeed(secondRelease, undefined);
+      yield* Fiber.join(second);
+      expect(store.getState().activity.unreadCount).toBe(4);
+      expect(store.getState().activity.pendingUnread).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect(
+    "composes a confirmed read with a subsequent local unread while another read is pending",
+    () =>
+      Effect.gen(function* () {
+        seedInbox();
+        const fake = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const firstRelease = yield* Deferred.make<void>();
+        const secondStarted = yield* Deferred.make<void>();
+        const secondRelease = yield* Deferred.make<void>();
+
+        yield* fake.route("PATCH /activity/3", () =>
+          Deferred.succeed(firstStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(firstRelease)),
+            Effect.andThen(refuse()),
+          ),
+        );
+        yield* fake.route("PATCH /activity/2", () =>
+          Deferred.succeed(secondStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(secondRelease)),
+            Effect.andThen(refuse()),
+          ),
+        );
+        const first = yield* Effect.forkChild(Effect.exit(activity.setState(3, "read")));
+
+        yield* Deferred.await(firstStarted);
+        const second = yield* Effect.forkChild(Effect.exit(activity.setState(2, "read")));
+
+        yield* Deferred.await(secondStarted);
+        mutations.applyActivityItem(item(3, 30, "read"), { unreadCount: 4, unreadRevision: 2 });
+        yield* Deferred.succeed(firstRelease, undefined);
+        yield* Fiber.join(first);
+        const counts = [store.getState().activity.unreadCount];
+
+        yield* fake.route("PATCH /activity/3", () => {
+          counts.push(store.getState().activity.unreadCount);
+          const reply = { item: item(3, 30), unreadCount: 5, unreadRevision: 3 };
+
+          mutations.applyActivityItem(reply.item, reply);
+          counts.push(store.getState().activity.unreadCount);
+
+          return Effect.succeed(reply);
+        });
+        yield* activity.setState(3, "unread");
+        counts.push(store.getState().activity.unreadCount);
+        expect(counts).toEqual([3, 4, 4, 4]);
+        expect(store.getState().activity.items[3]?.state).toBe("unread");
+        yield* Deferred.succeed(secondRelease, undefined);
+        yield* Fiber.join(second);
+        expect(store.getState().activity.unreadCount).toBe(5);
+        expect(store.getState().activity.pendingUnread).toEqual({});
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 
   it.effect("absorbs an already-counted no-op read while another read is unresolved", () =>
     Effect.gen(function* () {

@@ -78,8 +78,9 @@ export const loadMore = Effect.fn("activity.loadMore")(function* (
 });
 
 /** Refreshes the badge. Server revisions order overlapping replies. */
-export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* () {
-  const generation = store.getState().activity.generation;
+export const loadUnreadCount = Effect.fn("activity.loadUnreadCount")(function* (
+  generation = store.getState().activity.generation,
+) {
   const unread = yield* api.activityUnreadCount();
 
   mutations.setActivityUnreadCount(unread, generation);

@@ -157,7 +157,11 @@ export class Engine extends Context.Service<
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
-      const activitySnapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+
+      const activitySnapshotThrough = yield* Ref.make({
+        generation: store.getState().activity.generation,
+        through: Number.NEGATIVE_INFINITY,
+      });
 
       /**
        * A room's newest page, merged into the window the reader is on (`resync`); then, for a
@@ -212,17 +216,27 @@ export class Engine extends Context.Service<
       });
 
       /** The badge from the server; a failure keeps the count shown. */
-      const refreshUnreadCount = (through?: number) =>
-        loadUnreadCount().pipe(
+      const refreshUnreadCount = (through?: number) => {
+        const generation = store.getState().activity.generation;
+
+        return loadUnreadCount(generation).pipe(
           Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
           Effect.tap(() =>
-            through === undefined ? Effect.void : Ref.set(activitySnapshotThrough, through),
+            through === undefined
+              ? Effect.void
+              : Ref.update(activitySnapshotThrough, (held) =>
+                  held.generation === generation &&
+                  store.getState().activity.generation === generation
+                    ? { generation, through: Math.max(held.through, through) }
+                    : held,
+                ),
           ),
           Effect.catch((error) =>
             Effect.logWarning("sync: activity count refresh failed", error.message),
           ),
           Effect.provideContext(api),
         );
+      };
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (
@@ -244,7 +258,7 @@ export class Engine extends Context.Service<
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
-            yield* refreshUnreadCount(activityThrough);
+            yield* Effect.forkChild(refreshUnreadCount(activityThrough));
           } else if (roomId !== null) {
             yield* resyncRoom(roomId).pipe(
               Effect.catch((error) =>
@@ -281,7 +295,13 @@ export class Engine extends Context.Service<
       ) {
         const point = yield* cursor.get;
         const covered = yield* Ref.get(snapshotThrough);
-        const activityCovered = yield* Ref.get(activitySnapshotThrough);
+        const activitySnapshot = yield* Ref.get(activitySnapshotThrough);
+
+        const activityCovered =
+          activitySnapshot.generation === store.getState().activity.generation
+            ? activitySnapshot.through
+            : Number.NEGATIVE_INFINITY;
+
         const fresh: SyncEvent[] = [];
         const start = point?.seq ?? Number.NEGATIVE_INFINITY;
         let seq = start;
@@ -333,6 +353,10 @@ export class Engine extends Context.Service<
 
         // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
         mutations.beginActivityGeneration(newEpoch);
+        yield* Ref.set(activitySnapshotThrough, {
+          generation: store.getState().activity.generation,
+          through: Number.NEGATIVE_INFINITY,
+        });
 
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
@@ -343,13 +367,12 @@ export class Engine extends Context.Service<
             yield* Ref.set(snapshotThrough, frame.seq);
             yield* resync(["user"], frame.seq);
           } else {
-            yield* refreshUnreadCount(frame.seq);
+            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
           }
 
           return;
         }
 
-        yield* Ref.set(activitySnapshotThrough, Number.NEGATIVE_INFINITY);
         yield* cursor.set({ epoch: frame.epoch, seq: frame.seq });
         yield* resync(["user", ...(yield* topics.subscribed)], frame.seq);
       });
