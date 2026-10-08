@@ -36,7 +36,11 @@ const THUMBNAIL_VARIATION =
 
 /** Whether a path is one `handleBinary` serves. */
 export function isBinaryPath(path: string): boolean {
-  return path.startsWith("/rails/active_storage/") || path.startsWith("/icons/");
+  return (
+    path.startsWith("/rails/active_storage/") ||
+    path.startsWith("/icons/") ||
+    path.startsWith("/assets/icons/brands/")
+  );
 }
 
 /** `AttachmentView.preview` from the content type. */
@@ -260,7 +264,7 @@ export function createUploads(ctx: S2Context): Uploads {
   };
 
   const serveIcon = (path: string): MockBinaryResponse => {
-    const brand = /^\/icons\/brands\/([a-z0-9_]+)\.svg$/.exec(path)?.[1];
+    const brand = /^\/assets\/icons\/brands\/([a-z0-9_]+)\.svg$/.exec(path)?.[1];
     const custom = /^\/icons\/([a-z0-9_]+)$/.exec(path)?.[1];
 
     const known =
@@ -312,7 +316,9 @@ export function createUploads(ctx: S2Context): Uploads {
       if (representation !== null)
         return serveBlob(representation[1] ?? "", representation[2] ?? "", false);
 
-      return path.startsWith("/icons/") ? serveIcon(path) : empty(404);
+      return path.startsWith("/icons/") || path.startsWith("/assets/icons/")
+        ? serveIcon(path)
+        : empty(404);
     },
     attachment(signedId) {
       const blob = ctx.world().blobs.get(signedId);

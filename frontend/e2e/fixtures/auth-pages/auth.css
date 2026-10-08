@@ -102,6 +102,10 @@
     --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
     --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
     --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+    /* Behind an inline image: only its transparent pixels show it, so a dark logo on a
+       transparent ground still reads in the dark theme while a photo covers it entirely. */
+    --image-backdrop-a: light-dark(var(--neutral-0), var(--neutral-250));
+    --image-backdrop-b: light-dark(var(--neutral-100), var(--neutral-300));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
     --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
@@ -193,6 +197,10 @@
     --message-group-gap: var(--space-2);
     --sidebar-row-height: 28px;
     --sidebar-row-gap: 1px;
+
+    /* Brand icons (vendor/icons.yml) are one black glyph on transparency: inverted in the dark
+       theme, as the classic UI's --icon-filter does. A filter isn't a colour, so no light-dark(). */
+    --brand-icon-filter: none;
   }
 
   :root[data-theme="light"] {
@@ -201,6 +209,13 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
+    --brand-icon-filter: invert(1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand-icon-filter: invert(1);
+    }
   }
 
   /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
@@ -257,6 +272,71 @@
     U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
+/*
+ * The font presets people can pick for their device (Settings → Appearance), self-hosted by
+ * tools/fonts/subset.sh. A face downloads only once a page uses it.
+ */
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/*
+ * Source Serif 4 ships as upstream's own web fonts, unmodified (its licence reserves the name
+ * "Source" for the original): the Text optical size, regular and semibold, and their italics. The
+ * regular face also serves weight 500, as the type scale has no medium cut of it.
+ */
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-Regular.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-It.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-Semibold.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-SemiboldIt.ttf.woff2") format("woff2");
+}
+
 /* Arial tuned to Inter's metrics, so the swap from the fallback doesn't shift layout. */
 @font-face {
   font-family: "Inter Fallback";
@@ -269,7 +349,17 @@
 
 @layer tokens {
   :root {
-    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    /*
+     * Font presets (`<html data-font>`): each stack ends in the system's fonts, and only Inter
+     * takes Inter's character variants. Line heights are rem, so layout holds in every face.
+     */
+    --font-preset-inter: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-system: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    --font-preset-atkinson: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-serif: "Source Serif 4", "Iowan Old Style", Georgia, ui-serif, serif;
+    --font-preset-mono:
+      "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-sans: var(--font-preset-inter);
     --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     --font-features: "cv11", "ss01", "calt";
 
@@ -302,6 +392,26 @@
    * token above is in rem, so the root size scales all text together while spacing (px) holds.
    * Percentages stack on the browser's own default, so an OS or browser text size still applies.
    */
+  :root[data-font="system"] {
+    --font-sans: var(--font-preset-system);
+    --font-features: normal;
+  }
+
+  :root[data-font="atkinson"] {
+    --font-sans: var(--font-preset-atkinson);
+    --font-features: normal;
+  }
+
+  :root[data-font="serif"] {
+    --font-sans: var(--font-preset-serif);
+    --font-features: normal;
+  }
+
+  :root[data-font="mono"] {
+    --font-sans: var(--font-preset-mono);
+    --font-features: normal;
+  }
+
   :root[data-text-size="smaller"] {
     font-size: 87.5%;
   }
@@ -436,6 +546,15 @@
   video {
     display: block;
     max-width: 100%;
+  }
+
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from its own /assets/icons/brands/ and marks body ones `icon--brand`.
+     Anchored to that local prefix, so a remote image whose URL merely contains the path (a
+     full-colour link preview, say) is never inverted. */
+  img.icon--brand,
+  img[src^="/assets/icons/brands/"] {
+    filter: var(--brand-icon-filter);
   }
 
   input,
