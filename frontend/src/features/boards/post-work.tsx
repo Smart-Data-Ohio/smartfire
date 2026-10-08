@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import type { AgentStep } from "../../gen/AgentStep.ts";
 import type { User } from "../../gen/User.ts";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
@@ -22,8 +23,11 @@ import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
 import {
+  classicWorkUrl,
   parseTags,
   safeHttpsUrl,
+  stepDuration,
+  stepStatusLabel,
   tagsProblem,
   WORK_STATUS_LABEL,
   WORK_STATUSES,
@@ -517,10 +521,68 @@ function History({ history }: { readonly history: readonly WorkHistoryEntry[] })
   );
 }
 
+function Steps({ steps }: { readonly steps: readonly AgentStep[] }) {
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="post-history post-steps">
+      <Accordion title={`Steps (${steps.length})`}>
+        <ol className="post-step-list">
+          {steps.map((step) => (
+            <li key={step.id} className="post-step" data-status={step.status}>
+              <div className="post-step-head">
+                <strong className="post-step-name">{step.name}</strong>
+                <span className="post-step-status">{stepStatusLabel(step.status)}</span>
+                {step.durationMs === null ? null : (
+                  <span className="post-step-duration">{stepDuration(step.durationMs)}</span>
+                )}
+              </div>
+              <StepSummary label="In:" text={step.inputSummary} />
+              <StepSummary label="Out:" text={step.outputSummary} />
+            </li>
+          ))}
+        </ol>
+      </Accordion>
+    </div>
+  );
+}
+
+function StepSummary({ label, text }: { readonly label: string; readonly text: string | null }) {
+  if (text === null || text.trim() === "") {
+    return null;
+  }
+
+  return (
+    <p className="post-step-io">
+      <span className="post-step-io-label">{label}</span> {text}
+    </p>
+  );
+}
+
+/** Links and handoff are still classic pages (steps 9 and 10 bring them here). */
+function ClassicWorkLinks({ threadId }: { readonly threadId: number }) {
+  return (
+    <p className="post-classic">
+      <span>Links and handoff open in classic.</span>
+      <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
+        Manage links
+        <Icon name="arrow-up-right" size={12} />
+      </a>
+      <a className="post-classic-link" href={classicWorkUrl(threadId, "handoff")}>
+        Hand off
+        <Icon name="arrow-up-right" size={12} />
+      </a>
+    </p>
+  );
+}
+
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, and the work history.
+ * its editor, the agent's steps, the work history, and the way to the classic links and handoff
+ * pages.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
@@ -587,7 +649,9 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
         detail={detail}
         editable={permissions?.canManageWork === true}
       />
+      <Steps steps={detail?.steps ?? []} />
       <History history={detail?.history ?? []} />
+      {permissions?.canManageWork === true ? <ClassicWorkLinks threadId={threadId} /> : null}
     </div>
   );
 }

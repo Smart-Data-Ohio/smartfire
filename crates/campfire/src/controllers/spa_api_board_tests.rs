@@ -1497,3 +1497,84 @@ async fn spa_api_board_classic_and_agent_tag_writes_publish_new_tags_once() {
     .await;
     server.abort();
 }
+
+#[tokio::test]
+async fn spa_api_board_briefless_creation_retries_by_client_post_id() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    let path = format!("/api/v1/rooms/{BOARD}/posts");
+    let mut body = new_post("Retry me without a brief");
+    body["clientPostId"] = json!("0192a3b4-0000-7000-8000-00000000b0a1");
+    let reply = david.write(json_body(Method::POST, &path, &body)).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let id = parse::<api::ThreadDetail>(&reply).thread.id;
+
+    let retry = david.write(json_body(Method::POST, &path, &body)).await;
+    assert_eq!(retry.status, StatusCode::OK, "{}", retry.text());
+    assert_eq!(parse::<api::ThreadDetail>(&retry).thread.id, id);
+    let posts = a
+        .db()
+        .read(|conn| {
+            conn.query_row(
+                "SELECT COUNT(*) FROM channel_threads WHERE name='Retry me without a brief'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .map_err(Into::into)
+        })
+        .await
+        .unwrap();
+    assert_eq!(posts, 1);
+
+    // The key is the creator's: another member's post with it is their own.
+    let other = jason.write(json_body(Method::POST, &path, &body)).await;
+    assert_eq!(other.status, StatusCode::CREATED, "{}", other.text());
+    assert_ne!(parse::<api::ThreadDetail>(&other).thread.id, id);
+
+    // Once the post is gone, the key makes a new one.
+    let deleted = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/threads/{id}"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(deleted.status, StatusCode::NO_CONTENT, "{}", deleted.text());
+    let again = david.write(json_body(Method::POST, &path, &body)).await;
+    assert_eq!(again.status, StatusCode::CREATED, "{}", again.text());
+    assert_ne!(parse::<api::ThreadDetail>(&again).thread.id, id);
+
+    body["clientPostId"] = json!("x".repeat(256));
+    validation(
+        &david.write(json_body(Method::POST, &path, &body)).await,
+        "clientPostId",
+        "is too long (maximum is 255 characters)",
+    );
+}
+
+#[tokio::test]
+async fn spa_api_board_rows_count_every_message_as_classic() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let before = listing(&mut david, "?status=all").await;
+    let row = |list: &api::BoardListing| {
+        list.posts
+            .iter()
+            .find(|row| row.thread.id == PLANNED)
+            .map(|row| (row.thread.reply_count, row.thread.work.as_ref().unwrap().message_count))
+            .unwrap()
+    };
+    let (replies, messages) = row(&before);
+    sql(
+        &a,
+        format!("INSERT INTO messages(room_id,thread_id,creator_id,client_message_id,markdown_source,system_note,streaming,created_at,updated_at) VALUES
+         ({BOARD},{PLANNED},{DAVID},'board-count-note','A system note',1,0,'2026-03-01 15:00:00','2026-03-01 15:00:00'),
+         ({BOARD},{PLANNED},{DAVID},'board-count-stream','Streaming',0,1,'2026-03-01 15:00:00','2026-03-01 15:00:00');"),
+    )
+    .await;
+    let after = listing(&mut david, "?status=all").await;
+    assert_eq!(row(&after), (replies, messages + 2));
+    let detail: api::ThreadDetail =
+        parse(&david.send(get(&format!("/api/v1/threads/{PLANNED}"))).await);
+    assert_eq!(detail.thread.work.unwrap().message_count, messages + 2);
+}

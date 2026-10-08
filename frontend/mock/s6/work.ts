@@ -25,6 +25,7 @@ export function newWorkFacts(status: WorkFacts["status"] = "planned"): WorkFacts
     resultUpdatedAt: null,
     links: [],
     tags: [],
+    messageCount: 0,
   };
 }
 

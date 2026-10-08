@@ -102,8 +102,12 @@ describe("mock boards and work", () => {
     expect(created.parentMessage).toBeNull();
     const retry = await expectStatus<ThreadDetail>(server, "POST", `${root}/posts`, body, 200);
     expect(retry.thread.id).toBe(created.thread.id);
+    const briefless = { ...newPost, message: null, clientPostId: "retry-without-brief" };
+    const first = await expectStatus<ThreadDetail>(server, "POST", `${root}/posts`, briefless, 201);
+    const again = await expectStatus<ThreadDetail>(server, "POST", `${root}/posts`, briefless, 200);
+    expect(again.thread.id).toBe(first.thread.id);
     clock.advance(30);
-    expect(events.filter(({ type }) => type === "thread.created")).toHaveLength(1);
+    expect(events.filter(({ type }) => type === "thread.created")).toHaveLength(2);
 
     for (const invalid of [
       { name: " " },

@@ -117,6 +117,8 @@ export const WorkFacts = Schema.Struct({
   resultUpdatedAt: Schema.NullOr(Timestamp),
   links: WorkLinks,
   tags: Schema.Array(Schema.String),
+  /** Every message, streaming ones and system notes included, as classic board rows count. */
+  messageCount: Schema.Number,
 });
 
 export type WorkFacts = typeof WorkFacts.Type;

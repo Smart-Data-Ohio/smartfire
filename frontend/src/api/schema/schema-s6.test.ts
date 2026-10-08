@@ -47,7 +47,15 @@ describe("S6 board schemas", () => {
     expect(() => decode(UpdateWork)({ tags: null })).toThrow();
   });
   it("accepts optional briefs and strictly checks statuses and wire shapes", () => {
-    const body = { name: "A post", status: "planned", ownerId: null, tags: ["api"], message: null };
+    const body = {
+      name: "A post",
+      status: "planned",
+      ownerId: null,
+      tags: ["api"],
+      message: null,
+      clientPostId: "0192a3b4-0000-7000-8000-00000000c1ad",
+    };
+
     expect(decode(CreateBoardPost)(body)).toEqual(body);
     expect(() => decode(CreateBoardPost)({ ...body, status: "unknown" })).toThrow();
     expect(() => decode(BoardStatusFilter)("working")).toThrow();

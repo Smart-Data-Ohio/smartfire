@@ -171,6 +171,7 @@ fn work_facts() -> WorkFacts {
         result_updated_at: None,
         links: vec![pull_request_link()],
         tags: vec![],
+        message_count: 4,
     }
 }
 
@@ -193,6 +194,7 @@ fn work_facts_wire() -> serde_json::Value {
             "eventCancelled": false,
         }],
         "tags": [],
+        "messageCount": 4,
     })
 }
 

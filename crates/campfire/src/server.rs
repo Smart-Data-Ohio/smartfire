@@ -185,6 +185,7 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         agent_repositories,
         sudo: crate::concerns::sudo::State::default(),
         two_factor: crate::concerns::two_factor::State::default(),
+        receipts: Default::default(),
         google,
         errors: crate::errors::Reporter::default(),
         web_push,

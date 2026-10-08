@@ -45,8 +45,10 @@ function layout(
   list: readonly MessageDTO[],
   timeline: Partial<Timeline> = {},
   pending: readonly PendingMessage[] = [],
+  introFirst = false,
 ): TimelineItem[] {
   return timelineItems({
+    introFirst,
     timeline: {
       ...emptyTimeline,
       status: "ready",
@@ -183,5 +185,23 @@ describe("prepended", () => {
 
     expect(prepended(appended, edges(shown))).toBe(false);
     expect(prepended(layout(older, { before: 2 }), edges(shown))).toBe(false);
+  });
+
+  it("keeps an intro that leads first above a window short of the start", () => {
+    const list = [message(1, 7, local(6, 9, 0))];
+
+    expect(summary(layout(list, { before: 1 }, [], true))).toEqual([
+      "intro",
+      "earlier",
+      "day:Today",
+      "1*",
+    ]);
+    expect(summary(layout(list, { before: 1, loadingOlder: true }, [], true))).toEqual([
+      "intro",
+      "loading",
+      "day:Today",
+      "1*",
+    ]);
+    expect(summary(layout(list, {}, [], true))).toEqual(["intro", "day:Today", "1*"]);
   });
 });

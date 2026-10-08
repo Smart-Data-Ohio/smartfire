@@ -6,10 +6,13 @@ import {
   activeFilterCount,
   boardQuery,
   boardSearch,
+  classicWorkUrl,
   digestDate,
   ownerLabel,
   parseTags,
   safeHttpsUrl,
+  stepDuration,
+  stepStatusLabel,
   tagsProblem,
 } from "./board-format.ts";
 
@@ -24,6 +27,7 @@ function facts(owner: User | null, ownerActive: boolean): WorkFacts {
     resultUpdatedAt: null,
     links: [],
     tags: [],
+    messageCount: 0,
   };
 }
 
@@ -92,5 +96,27 @@ describe("words", () => {
     expect(safeHttpsUrl("https://ci.example.com/1")).toBe("https://ci.example.com/1");
     expect(safeHttpsUrl("javascript:alert(1)")).toBeNull();
     expect(safeHttpsUrl(null)).toBeNull();
+  });
+});
+
+describe("agent steps", () => {
+  it("labels a status as classic does", () => {
+    expect(stepStatusLabel("running")).toBe("Running");
+    expect(stepStatusLabel("in_progress")).toBe("In progress");
+  });
+
+  it("shows a duration in ms below a second, else in tenths of seconds", () => {
+    expect(stepDuration(0)).toBe("0ms");
+    expect(stepDuration(999)).toBe("999ms");
+    expect(stepDuration(1000)).toBe("1.0s");
+    expect(stepDuration(1249)).toBe("1.2s");
+    expect(stepDuration(1250)).toBe("1.2s");
+    expect(stepDuration(1350)).toBe("1.4s");
+    expect(stepDuration(61_051)).toBe("61.1s");
+  });
+
+  it("links a post's classic pages", () => {
+    expect(classicWorkUrl(9006, "links")).toBe("/threads/9006/work/links?classic=1");
+    expect(classicWorkUrl(9006, "handoff")).toBe("/threads/9006/work/handoff/new?classic=1");
   });
 });

@@ -66,6 +66,11 @@ export interface State {
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
+  /**
+   * Deleted thread ids: a `thread.created` or `thread.updated` published out of order after the
+   * `thread.removed` can't bring the thread back. Only a fresh HTTP load that shows it again does.
+   */
+  readonly removedThreads: Readonly<Record<number, true>>;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -125,6 +130,7 @@ export const initialState: State = {
   roomThreads: {},
   typing: {},
   tombstones: {},
+  removedThreads: {},
   huddles: {},
   stages: {},
   activity: emptyActivity,

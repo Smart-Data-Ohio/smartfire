@@ -57,6 +57,9 @@ pub struct WorkFacts {
     /// A board post's tags (`thread_tags`), by name: lower-case, at most 5. Empty for a thread
     /// outside a board, even if it has stored tags.
     pub tags: Vec<String>,
+    /// Every message in the thread, as the classic board and work rows count them: streaming
+    /// replies and system notes included, unlike [`Thread::reply_count`]. Board rows show it.
+    pub message_count: i64,
 }
 
 /// `work_thread_links.kind`.

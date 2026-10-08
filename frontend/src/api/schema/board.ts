@@ -78,6 +78,7 @@ export const CreateBoardPost = Schema.Struct({
   ownerId: Schema.NullOr(UserId),
   tags: Schema.Array(Schema.String),
   message: Schema.NullOr(CreateMessage),
+  clientPostId: Schema.NullOr(Schema.String),
 });
 
 export type CreateBoardPost = typeof CreateBoardPost.Type;

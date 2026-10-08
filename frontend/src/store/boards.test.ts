@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { meFixture } from "../api/testing.ts";
+import type { AgentStep } from "../gen/AgentStep.ts";
 import type { Thread } from "../gen/Thread.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import {
@@ -176,4 +177,107 @@ it("does not revert live updates or resurrect removals when a listing lands", ()
   expect(landed.threads[1]?.work?.tags).toEqual(["bug"]);
   expect(boardPostIds(landed, BOARD)).not.toContain(2);
   expect(landed.threads[2]).toBeUndefined();
+});
+
+describe("removed posts", () => {
+  function removed(state: State, threadId: number): State {
+    return applyEvents(
+      state,
+      [
+        {
+          seq: 2,
+          topic: `room:${BOARD}`,
+          type: "thread.removed",
+          data: { threadId, roomId: BOARD },
+        },
+      ],
+      0,
+    );
+  }
+
+  it("ignores a create or update published after the removal", () => {
+    const post = boardThread(6, "planned");
+    let state = removed(event(loaded(), "thread.created", post), 6);
+
+    state = event(state, "thread.created", post);
+    state = event(state, "thread.updated", { ...post, name: "Back again" });
+
+    expect(state.threads[6]).toBeUndefined();
+    expect(boardPostIds(state, BOARD)).not.toContain(6);
+    expect(state.threadPanes[6]?.status).toBe("error");
+  });
+
+  it("keeps the removal through a listing requested before it", () => {
+    const query = { ...defaultBoardQuery, status: "all" as const };
+    const asked = setBoardLoading({ ...initialState, me: meFixture }, BOARD, query);
+    const state = loadBoardListing(removed(asked, 3), { ...boardListing(threads), ...query }, 1);
+
+    expect(boardPostIds(state, BOARD)).not.toContain(3);
+    expect(state.removedThreads[3]).toBe(true);
+  });
+
+  it("lets a fresh load that shows the post bring it back", () => {
+    const post = boardThread(6, "planned");
+    const state = loadThreadDetail(removed(loaded(), 6), boardDetail(post));
+
+    expect(state.threads[6]?.name).toBe(post.name);
+    expect(state.removedThreads[6]).toBeUndefined();
+    expect(event(state, "thread.updated", { ...post, name: "Renamed" }).threads[6]?.name).toBe(
+      "Renamed",
+    );
+  });
+});
+
+describe("agent steps on a post", () => {
+  function step(id: number, status: AgentStep["status"], updatedAt: string, position = id) {
+    return {
+      id,
+      messageId: null,
+      threadId: 1,
+      name: `Step ${id}`,
+      status,
+      inputSummary: null,
+      outputSummary: null,
+      durationMs: null,
+      position,
+      createdAt: "2026-10-07T10:00:00Z",
+      updatedAt,
+    } satisfies AgentStep;
+  }
+
+  function steps(state: State, list: AgentStep[], messageId: number | null = null): State {
+    return applyEvents(
+      state,
+      [
+        {
+          seq: 3,
+          topic: "thread:1",
+          type: "agent.steps",
+          data: { roomId: BOARD, messageId, threadId: 1, steps: list },
+        },
+      ],
+      0,
+    );
+  }
+
+  it("merges a post's steps by id, keeping the later copy, in position order", () => {
+    let state = loadThreadDetail(loaded(), boardDetail(boardThread(1)));
+
+    state = steps(state, [step(2, "running", "2026-10-07T10:02:00Z", 1)]);
+    state = steps(state, [
+      step(1, "done", "2026-10-07T10:01:00Z", 0),
+      step(2, "pending", "2026-10-07T10:00:30Z", 1),
+    ]);
+
+    expect(state.threadPanes[1]?.work?.steps.map((s) => [s.id, s.status])).toEqual([
+      [1, "done"],
+      [2, "running"],
+    ]);
+  });
+
+  it("leaves a post alone for steps on a message in it", () => {
+    const state = loadThreadDetail(loaded(), boardDetail(boardThread(1)));
+
+    expect(steps(state, [step(1, "done", "2026-10-07T10:01:00Z")], 44)).toBe(state);
+  });
 });

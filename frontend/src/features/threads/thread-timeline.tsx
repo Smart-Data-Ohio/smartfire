@@ -5,7 +5,7 @@ import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
 import { useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
-import { Spinner } from "../../ui/button.tsx";
+import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
@@ -125,6 +125,25 @@ interface ThreadTimelineProps {
   readonly intro?: ReactNode;
 }
 
+/** Under a post's work while the discussion's start isn't loaded: brings in the replies before. */
+function EarlierReplies({
+  hidden,
+  onLoad,
+}: {
+  readonly hidden: number;
+  readonly onLoad: () => void;
+}) {
+  return (
+    <div className="thread-earlier">
+      <Button variant="ghost" size="sm" icon="chevron-down" onClick={onLoad}>
+        {hidden > 0
+          ? `Show ${hidden} earlier ${hidden === 1 ? "reply" : "replies"}`
+          : "Show earlier replies"}
+      </Button>
+    </div>
+  );
+}
+
 /**
  * A thread's conversation on virtua, the room timeline's approach in a narrower column: the
  * parent message at the start of history with the reply count under it, then the replies grouped
@@ -164,7 +183,8 @@ export function ThreadTimeline({
 
   const now = Date.now();
   const loaded = ready && timeline.status === "ready";
-  const items = loaded ? timelineItems({ timeline, messages, pending, now }) : [];
+  const introFirst = intro !== undefined;
+  const items = loaded ? timelineItems({ timeline, messages, pending, now, introFirst }) : [];
 
   useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
@@ -245,7 +265,8 @@ export function ThreadTimeline({
 
     atBottomRef.current = distance < BOTTOM_SLOP;
 
-    if (offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
+    // A post's work leads its pane and earlier replies load on request, under it.
+    if (!introFirst && offset < PAGE_AHEAD && timeline.before !== null && !timeline.loadingOlder) {
       void actions.threads.loadOlder(threadId);
     }
 
@@ -264,6 +285,14 @@ export function ThreadTimeline({
           />
         ) : (
           <PostIntro key={item.key} intro={intro} replyCount={replyCount} />
+        );
+      case "earlier":
+        return (
+          <EarlierReplies
+            key={item.key}
+            hidden={replyCount - timeline.ids.length}
+            onLoad={() => void actions.threads.loadOlder(threadId)}
+          />
         );
       case "loading":
         return (
@@ -303,7 +332,8 @@ export function ThreadTimeline({
           <VList
             ref={listRef}
             className="thread-timeline-list"
-            shift={shift}
+            // Earlier replies open under a post's work, where the reader asked for them.
+            shift={shift && !introFirst}
             bufferSize={400}
             onScroll={onScroll}
             data={items}

@@ -96,6 +96,7 @@ const ledgerEventJson = {
 
 const workFactsJson = {
   tags: [],
+  messageCount: 4,
   status: "in_progress",
   owner: agentUserJson,
   ownerActive: true,

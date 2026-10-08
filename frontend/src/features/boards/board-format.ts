@@ -4,6 +4,7 @@ import type { User } from "../../gen/User.ts";
 import type { WorkFacts } from "../../gen/WorkFacts.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import type { BoardSearch } from "../../lib/board-search.ts";
+import { withClassicBypass } from "../../lib/screens.ts";
 
 export const WORK_STATUSES = [
   "planned",
@@ -168,4 +169,34 @@ export function digestDate(date: string): string {
 /** Only an `https://` run URL goes into an `href`. */
 export function safeHttpsUrl(url: string | null): string | null {
   return url?.startsWith("https://") === true ? url : null;
+}
+
+/** A step's status as the classic list labels it ("Running"). */
+export function stepStatusLabel(status: string): string {
+  const words = status.replaceAll("_", " ").toLowerCase();
+
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * A step's duration as the classic list shows it: milliseconds below a second ("850ms"), else
+ * seconds to a tenth, a half rounding to the even tenth as Ruby's `format` does ("1.2s").
+ */
+export function stepDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+
+  const tenths = Math.floor(ms / 100);
+  const rest = ms % 100;
+  const rounded = rest > 50 || (rest === 50 && tenths % 2 === 1) ? tenths + 1 : tenths;
+
+  return `${Math.floor(rounded / 10)}.${rounded % 10}s`;
+}
+
+/** A post's classic links or handoff page, which the SPA doesn't have yet (steps 9 and 10). */
+export function classicWorkUrl(threadId: number, page: "links" | "handoff"): string {
+  return withClassicBypass(
+    page === "links" ? `/threads/${threadId}/work/links` : `/threads/${threadId}/work/handoff/new`,
+  );
 }
