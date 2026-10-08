@@ -12,9 +12,9 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
-import { isAgent } from "../people/people.ts";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { isAgent } from "../people/people.ts";
 import { MAX_SLA_MINUTES, MAX_TAG_LENGTH, minutesLabel } from "./board-format.ts";
 import { StatusChip, UserFace } from "./board-parts.tsx";
 

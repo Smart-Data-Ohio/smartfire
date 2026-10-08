@@ -5,7 +5,7 @@ import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { WorkHistoryEntry } from "../../src/gen/WorkHistoryEntry.ts";
 import type { WorkList } from "../../src/gen/WorkList.ts";
 import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
-import { forbidden, notFound, ok, validation } from "../http.ts";
+import { forbidden, notFound, ok, recordInvalid, sentence, validation } from "../http.ts";
 import { field, intField, type Json, stringArrayField, stringField } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { firstId, route, type S2Context } from "../s2/context.ts";
@@ -18,9 +18,11 @@ import { autoAssignedBoardOwner, createBoardAutomations } from "./automations.ts
 import { BOARD_ROOM_ID } from "./seed.ts";
 import {
   emptyWorkDetail,
+  HANDOFF_UNTRACKED,
   newWorkFacts,
   ownerCandidates,
   threadPermissions,
+  WORK_FORBIDDEN,
   workDetail,
 } from "./work.ts";
 
@@ -444,6 +446,11 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     return threads.detail(thread);
   };
 
+  /**
+   * `POST /threads/:id/work/handoff` (`api::work::create_handoff`): tracked, then managed by the
+   * viewer, then the receiver's policy, then the package (`WorkHandoff#validate`), each refused
+   * in the server's words.
+   */
   const handoff = (threadId: number, body: Json | undefined): ThreadDetail => {
     const thread = threads.threadOr404(threadId);
 
@@ -451,59 +458,70 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
 
     if (viewer?.status !== "active" || viewer.role === "bot") throw notFound();
 
-    if (thread.work == null) throw validation("base", "This thread is not tracked as work");
+    if (thread.work == null) throw sentence("base", HANDOFF_UNTRACKED);
 
-    if (!threadPermissions(ctx, thread).canManageWork) throw forbidden();
+    if (!threadPermissions(ctx, thread).canManageWork) throw forbidden(WORK_FORBIDDEN);
+    const agentId = intField(body, "receiverAgentId");
 
-    if (thread.work.owner?.agent?.agentId === intField(body, "receiverAgentId"))
-      throw validation("receiverAgentId", "Receiver is already the owner of this work");
+    if (thread.work.owner?.agent?.agentId === agentId)
+      throw sentence("receiverAgentId", "Receiver is already the owner of this work");
 
     const receiver = workDetail(ctx, thread)?.handoffReceivers.find(
-      ({ agentId }) => agentId === intField(body, "receiverAgentId"),
+      (candidate) => candidate.agentId === agentId,
     );
 
     if (receiver === undefined)
-      throw validation(
+      throw sentence(
         "receiverAgentId",
         "Receiver must be an active agent member of this room with permission to post",
       );
-    const summary = stringField(body, "summary")?.trim() ?? "";
-
-    if (summary === "" || [...summary].length > 2000)
-      throw validation(
-        "summary",
-        summary === ""
-          ? "Summary can't be blank"
-          : "Summary is too long (maximum is 2000 characters)",
-      );
+    const summary = stringField(body, "summary") ?? "";
 
     const packageList = (key: string) => {
       const values = stringArrayField(body, key);
 
       if (values === null) throw validation(key, `${key} must be a list`);
 
-      const normalized = [
-        ...new Set(values.map((value) => value.trim()).filter((value) => value !== "")),
-      ];
-
-      if (normalized.length > 10 || normalized.some((value) => [...value].length > 500))
-        throw validation(key, `${key} must have at most 10 entries of 500 characters`);
-
-      if (key === "links" && normalized.some((value) => !/^https?:\/\//i.test(value)))
-        throw validation(key, "Links must be HTTP or HTTPS URLs");
-
-      return normalized;
+      return [...new Set(values.map((value) => value.trim()).filter((value) => value !== ""))];
     };
 
     const links = packageList("links");
     const questions = packageList("openQuestions");
+    const errors: { field: string; label: string; message: string }[] = [];
+
+    const add = (field: string, label: string, message: string) =>
+      errors.push({ field, label, message });
+
+    if (summary.trim() === "") add("summary", "Summary", "can't be blank");
+
+    if ([...summary].length > 2000)
+      add("summary", "Summary", "is too long (maximum is 2000 characters)");
+
+    if (links.length > 10) add("links", "Links", "are limited to 10 per handoff");
+    const badLink = links.find((link) => [...link].length > 500 || !/^https?:\/\//i.test(link));
+
+    if (badLink !== undefined)
+      add(
+        "links",
+        "Links",
+        [...badLink].length > 500 ? "must be at most 500 characters each" : "must be http(s) URLs",
+      );
+
+    if (questions.length > 10)
+      add("openQuestions", "Open questions", "are limited to 10 per handoff");
+
+    if (questions.some((question) => [...question].length > 500))
+      add("openQuestions", "Open questions", "must be at most 500 characters each");
+
+    if (errors.length > 0) throw recordInvalid(errors);
     const owner = ctx.world().users.get(receiver.userId);
 
     if (owner === undefined) throw notFound();
     const entry = historyEntry(thread, "handoff", VIEWER_ID);
+    const trimmed = summary.trim();
     entry.toOwner = { userId: owner.id, name: owner.name };
     entry.handoff = {
-      summary: summary.length > 200 ? `${summary.slice(0, 197)}...` : summary,
+      summary: trimmed.length > 200 ? `${trimmed.slice(0, 197)}...` : trimmed,
       linkCount: links.length,
       questionCount: questions.length,
     };

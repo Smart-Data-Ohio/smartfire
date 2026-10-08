@@ -6,6 +6,12 @@ import type { S2Context } from "../s2/context.ts";
 import { type ThreadRecord, threadStatus } from "../s2/model.ts";
 import { VIEWER_ID, type World } from "../seed.ts";
 
+/** `api::work::UNTRACKED`: the classic bare 422 for an untracked thread, worded. */
+export const HANDOFF_UNTRACKED = "This thread isn't tracked as work";
+
+/** `WORK_UPDATE_FORBIDDEN`: a work change the viewer may not make. */
+export const WORK_FORBIDDEN = "You cannot manage work in this thread";
+
 export const emptyWorkDetail: WorkDetail = {
   resultMarkdown: null,
   resultHtml: null,

@@ -6,6 +6,7 @@ import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
+import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
@@ -176,4 +177,12 @@ export const handoff = Effect.fn("work.handoff")(function* (
   const since = store.getState().removalCount;
 
   yield* installSaved(threadId, sent, since, yield* api.handoffWork(threadId, body));
+});
+
+/** The work list (`GET /work?state=`); its creators join the store's people. */
+export const list = Effect.fn("work.list")(function* (state: WorkFilter) {
+  const work = yield* api.workList(state);
+  mutations.mergeUsers(work.users);
+
+  return work;
 });

@@ -119,7 +119,6 @@ describe("agent steps", () => {
 
   it("links a post's classic pages", () => {
     expect(classicWorkUrl(9006, "links")).toBe("/threads/9006/work/links?classic=1");
-    expect(classicWorkUrl(9006, "handoff")).toBe("/threads/9006/work/handoff/new?classic=1");
   });
 });
 

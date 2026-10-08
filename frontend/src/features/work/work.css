@@ -1,0 +1,203 @@
+/* Work: tracked threads from every room, each row its name, room, owner, links and status. */
+@layer app {
+  .work-row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 10px var(--space-3) 10px var(--space-4);
+  }
+
+  /* The status as a slim bar at the row's start, the board column's colour. */
+  .work-row::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: var(--space-1-5);
+    width: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--border-strong);
+    opacity: 0.8;
+  }
+
+  .work-row[data-status="in_progress"]::before {
+    background: var(--accent);
+  }
+
+  .work-row[data-status="blocked"]::before {
+    background: var(--danger);
+  }
+
+  .work-row[data-status="done"]::before {
+    background: var(--success);
+  }
+
+  .work-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .work-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5) var(--space-2);
+    min-width: 0;
+  }
+
+  .work-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-body);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .work-row[data-status="done"] .work-title {
+    color: var(--text-muted);
+  }
+
+  .work-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-1-5);
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .work-meta-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--text-faint);
+  }
+
+  .work-room {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  .work-room-glyph {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .work-room-name {
+    max-width: 24ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .work-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .work-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: 28ch;
+    height: 22px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  a.work-link:hover {
+    background: var(--bg-raised);
+    color: var(--text);
+    transition-duration: var(--duration-micro);
+  }
+
+  a.work-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .work-link-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .work-link-state {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    text-transform: capitalize;
+  }
+
+  .work-link-state[data-state="open"] {
+    color: var(--success-text);
+  }
+
+  .work-link-state[data-state="merged"] {
+    color: var(--accent);
+  }
+
+  .work-link-more {
+    align-self: center;
+    color: var(--text-faint);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .work-side {
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+
+  .work-time {
+    color: var(--text-faint);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    line-height: 14px;
+    white-space: nowrap;
+  }
+
+  /* Phones: the status and time move under the name instead of beside it. */
+  @media (width < 720px) {
+    .work-row {
+      flex-direction: column;
+      gap: var(--space-1-5);
+    }
+
+    .work-side {
+      flex-direction: row-reverse;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-2);
+    }
+  }
+}

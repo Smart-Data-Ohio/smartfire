@@ -10,8 +10,8 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
-import { PaneError } from "../panes/pane-states.tsx";
 import { isPaneShowing } from "../panes/pane-selection.ts";
+import { PaneError } from "../panes/pane-states.tsx";
 import { usePaneNavigation, useRightPaneView } from "../panes/use-right-pane.ts";
 import {
   type BoardQuery,

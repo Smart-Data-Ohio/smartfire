@@ -1,5 +1,4 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
-import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import { readMessage } from "../api/message-endpoints.ts";
@@ -146,6 +145,8 @@ const threads = {
   close(threadId: number): void {
     runtime.runFork(threadActions.close(threadId));
   },
+  /** The room a thread lives in (a bare thread link's resolver). */
+  locate: (threadId: number): Promise<number> => runAction(threadActions.locate(threadId)),
   loadOlder: (threadId: number): Promise<void> => runAction(threadActions.loadOlder(threadId)),
   loadNewer: (threadId: number): Promise<void> => runAction(threadActions.loadNewer(threadId)),
   create: (
@@ -324,7 +325,7 @@ export const actions = {
       runAction(boardActions.update(threadId, body)),
     handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
       runAction(boardActions.handoff(threadId, body)),
-    list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
+    list: (state: WorkFilter): Promise<WorkList> => runAction(boardActions.list(state)),
   },
   messages,
   threads,
