@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { readdirSync, readFileSync } from "node:fs";
+import { basename } from "node:path";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
@@ -13,10 +14,17 @@ import { smartfireServiceWorker } from "./tools/service-worker.ts";
 // Origin so the session cookie and the CSRF origin check line up.
 const rust = { target: "http://127.0.0.1:3000", changeOrigin: false };
 
-/** Every palette's tokens, built into index.html's blocking script (src/lib/palette-table.ts). */
+/**
+ * Every palette's tokens, built into index.html's blocking script (src/lib/palette-table.ts). Only
+ * the app shell carries that script; offline.html has no palette table.
+ */
 const paletteTable: Plugin = {
   name: "smartfire-palette-table",
-  transformIndexHtml: { order: "pre", handler: inlinePaletteTable },
+  transformIndexHtml: {
+    order: "pre",
+    handler: (html, { filename }) =>
+      basename(filename) === "index.html" ? inlinePaletteTable(html) : html,
+  },
 };
 
 const fonts = new URL("./src/styles/fonts/", import.meta.url);

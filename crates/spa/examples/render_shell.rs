@@ -21,6 +21,7 @@ fn main() {
         theme: theme(Some(stored_theme)),
         text_size: text_size(Some(stored_size)),
         cable_url: "/cable".into(),
+        service_worker_url: None,
         version: "test".into(),
         revision: None,
         flash: None,
