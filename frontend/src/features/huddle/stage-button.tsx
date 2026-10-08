@@ -6,6 +6,11 @@ import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 
+/** What a screen reader hears for the count: "1 raised hand", "3 raised hands". */
+export function raisedHandsLabel(count: number): string {
+  return count === 1 ? "1 raised hand" : `${count} raised hands`;
+}
+
 /**
  * The stage's raised hands, counted for the viewer only when they can act on them (a host or an
  * administrator); 0 for everyone else.

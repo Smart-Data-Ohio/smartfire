@@ -3,7 +3,7 @@ import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { MenuItem } from "../../ui/menu.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
-import { StageButton, useRaisedHands } from "../huddle/stage-button.tsx";
+import { raisedHandsLabel, StageButton, useRaisedHands } from "../huddle/stage-button.tsx";
 import { AvatarGroup } from "../threads/avatar-group.tsx";
 import { isPaneShowing } from "./pane-selection.ts";
 import { usePaneNavigation } from "./use-right-pane.ts";
@@ -132,7 +132,7 @@ export function PaneMenuItems({ roomId }: { readonly roomId: number }) {
           Stage
           {hands > 0 ? (
             <span className="pane-menu-count">
-              <Badge count={hands} label={`${hands} raised hands`} />
+              <Badge count={hands} label={raisedHandsLabel(hands)} />
             </span>
           ) : null}
         </MenuItem>

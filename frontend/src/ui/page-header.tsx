@@ -42,7 +42,7 @@ export interface PageHeaderProps extends Omit<ComponentPropsWithRef<"header">, "
   readonly overflowLabel?: string;
   /**
    * Something in the ⋯ menu that wants attention (raised hands on a stage): a dot on the button,
-   * and its label (`"2 raised hands"`) added to the button's name. Hidden without one.
+   * and its label (`"1 raised hand"`) added to the button's name. Hidden without one.
    */
   readonly overflowAlert?: string | undefined;
   /** Opens the ⋯ menu from outside (a URL that names one of its items); uncontrolled without. */

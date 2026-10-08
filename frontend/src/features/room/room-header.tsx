@@ -9,7 +9,7 @@ import { useWorkingPresence } from "../agents/working.ts";
 import { DirectHeaderActions, useDirectActions } from "../directs/direct-header-actions.tsx";
 import { EventsLink } from "../events/events-link.tsx";
 import { HuddleLauncher } from "../huddle/huddle-launcher.tsx";
-import { useRaisedHands } from "../huddle/stage-button.tsx";
+import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
 import { PaneButtons, PaneMenuItems } from "../panes/pane-buttons.tsx";
 import { usePaneNavigation, usePhoneLayout } from "../panes/use-right-pane.ts";
 import { agentKindLabel, agentTone, identityOf, toneLabel } from "../people/agent-identity.ts";
@@ -271,7 +271,7 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
           )
         }
         overflowLabel={phone && notificationsRoute ? "Notifications" : "More"}
-        overflowAlert={phone && hands > 0 ? `${hands} raised hands` : undefined}
+        overflowAlert={phone && hands > 0 ? raisedHandsLabel(hands) : undefined}
         overflowMenu={phone ? notificationsMenu : undefined}
       />
       {phone ? direct.dialogs : null}

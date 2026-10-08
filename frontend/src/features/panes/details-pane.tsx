@@ -6,7 +6,7 @@ import { Badge } from "../../ui/badge.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Menu } from "../../ui/menu.tsx";
 import { useDirectActions } from "../directs/direct-header-actions.tsx";
-import { useRaisedHands } from "../huddle/stage-button.tsx";
+import { raisedHandsLabel, useRaisedHands } from "../huddle/stage-button.tsx";
 import { identityOf } from "../people/agent-identity.ts";
 import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -179,7 +179,7 @@ export function DetailsPane({ roomId }: { readonly roomId: number }) {
               icon="radio"
               label="Stage"
               value={
-                hands > 0 ? <Badge count={hands} label={`${hands} raised hands`} /> : undefined
+                hands > 0 ? <Badge count={hands} label={raisedHandsLabel(hands)} /> : undefined
               }
               onClick={() => push("stage")}
             />

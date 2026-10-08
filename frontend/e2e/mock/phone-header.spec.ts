@@ -271,7 +271,10 @@ test.describe("on a 360 px touch phone", () => {
     });
 
     // A host sees the dot without opening the menu, and the count inside it.
-    await expect(header(page).getByRole("button", { name: "More (1 raised hands)" })).toBeVisible();
+    // One hand reads in the singular.
+    await expect(
+      header(page).getByRole("button", { name: "More (1 raised hand)", exact: true }),
+    ).toBeVisible();
     await expect(header(page).locator(".page-header-overflow-wrap .badge")).toHaveAttribute(
       "data-open",
       "true",
@@ -281,7 +284,9 @@ test.describe("on a 360 px touch phone", () => {
 
     const menu = await openOverflow(page);
 
-    await expect(menu.getByRole("menuitem", { name: "Stage 1 raised hands" })).toBeVisible();
+    await expect(
+      menu.getByRole("menuitem", { name: "Stage 1 raised hand", exact: true }),
+    ).toBeVisible();
     await shot(page, "phone-header-hands-overflow", "light");
     await menu.getByRole("menuitem", { name: /^Stage/ }).click();
     await expect(pane(page).getByRole("region", { name: "Listeners" })).toContainText(
@@ -292,7 +297,9 @@ test.describe("on a 360 px touch phone", () => {
       .click();
 
     await header(page).locator(".room-title-button").click();
-    await expect(pane(page).getByRole("button", { name: "Stage 1 raised hands" })).toBeVisible();
+    await expect(
+      pane(page).getByRole("button", { name: "Stage 1 raised hand", exact: true }),
+    ).toBeVisible();
     await shot(page, "phone-header-hands-details", "light");
 
     // Lowered, the dot goes.
