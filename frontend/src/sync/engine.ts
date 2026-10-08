@@ -22,11 +22,12 @@ import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { THREAD_DELETED } from "../store/threads.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { settled } from "./settle.ts";
+import { refetchThread, settled } from "./settle.ts";
 import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
@@ -223,10 +224,12 @@ export class Engine extends Context.Service<
         const [detail, newest] = yield* Effect.all(
           [
             Effect.result(
+              // Installed as soon as it's settled, not after the replies (see `loadPane`).
               settled(
                 thread(threadId),
-                () => thread(threadId),
+                () => refetchThread(threadId),
                 (answer) => [answer.thread.id],
+                (answer, since) => mutations.loadThreadDetail(answer, since),
               ),
             ),
             threadMessages(threadId, null),
@@ -234,8 +237,8 @@ export class Engine extends Context.Service<
           { concurrency: 2 },
         );
 
-        if (Result.isSuccess(detail) && detail.success.since !== null) {
-          mutations.loadThreadDetail(detail.success.answer, detail.success.since);
+        if (Result.isSuccess(detail) && detail.success.outcome === "gone") {
+          mutations.setThreadPaneError(threadId, THREAD_DELETED);
         }
 
         mutations.applyThreadPage(threadId, newest, "resync");

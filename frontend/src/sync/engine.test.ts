@@ -20,6 +20,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
 import { mutations, store } from "../store/store.ts";
+import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boardActions from "./board-actions.ts";
 import { CURSOR_STORAGE_KEY } from "./cursor.ts";
@@ -489,6 +490,54 @@ describe("resync", () => {
         expect(store.getState().threads[88]?.status).toBe("closed");
         expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
         expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  it.effect("installs a resynced thread's header before 501 removals land during its replies", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const entered = yield* Deferred.make<void>();
+        const release = yield* Deferred.make<void>();
+        let hold = false;
+
+        yield* serve([]);
+        yield* api.route("GET /threads/1/messages", () =>
+          hold
+            ? Effect.andThen(
+                Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+                Effect.succeed(pageFixture([])),
+              )
+            : Effect.succeed(pageFixture([])),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        // The pane is open but holds no thread: its first load failed.
+        yield* threadActions.open(1);
+        expect(store.getState().threads[1]).toBeUndefined();
+
+        yield* api.reply("GET /threads/1", boardDetail());
+        hold = true;
+        yield* socket.push({ t: "resync", topics: ["thread:1"], reason: "lagged" });
+        yield* settle;
+        yield* Deferred.await(entered);
+        yield* settle;
+        mutations.applyEvents(
+          Array.from({ length: MAX_REMOVED_THREADS + 1 }, (_, index) => ({
+            seq: 100 + index,
+            topic: `room:${BOARD}`,
+            type: "thread.removed" as const,
+            data: { threadId: 20_000 + index, roomId: BOARD },
+          })),
+          0,
+        );
+        yield* Deferred.succeed(release, undefined);
+        yield* settle;
+
+        expect(store.getState().threads[1]?.name).toBe("Post 1");
+        expect(store.getState().threadPanes[1]?.status).toBe("ready");
       }),
     ),
   );

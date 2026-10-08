@@ -3,15 +3,15 @@
  * through its replies, start one, rename/close/lock it, follow it and mark it read, and list a
  * room's threads.
  */
-import { Effect, Predicate, Result } from "effect";
+import { Effect, Result } from "effect";
 import * as api from "../api/thread-endpoints.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { uuid7 } from "../lib/uuid7.ts";
 import { mutations, store } from "../store/store.ts";
-import { setThreadUnread } from "../store/threads.ts";
-import { settled, settledDetail } from "./settle.ts";
+import { setThreadUnread, THREAD_DELETED } from "../store/threads.ts";
+import { refetchThread, settled, settledDetail } from "./settle.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -29,13 +29,16 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
+  // The header installs as soon as it's settled, not after the replies: a removal landing
+  // while they load would otherwise make it uncertain again with nobody left to ask.
   const [detail, page] = yield* Effect.all(
     [
       Effect.result(
         settled(
           api.thread(threadId),
-          () => api.thread(threadId),
+          () => refetchThread(threadId),
           (answer) => [answer.thread.id],
+          (answer, since) => mutations.loadThreadDetail(answer, since),
         ),
       ),
       Effect.result(
@@ -45,21 +48,19 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     { concurrency: 2 },
   );
 
-  if (Result.isFailure(detail)) {
-    mutations.setThreadPaneError(threadId, detail.failure.message);
+  if (Result.isFailure(detail) || detail.success.outcome !== "installed") {
+    mutations.setThreadPaneError(
+      threadId,
+      Result.isFailure(detail)
+        ? detail.failure.message
+        : detail.success.outcome === "gone"
+          ? THREAD_DELETED
+          : UNSETTLED,
+    );
     mutations.setThreadPageFailed(threadId);
 
     return;
   }
-
-  if (detail.success.since === null) {
-    mutations.setThreadPaneError(threadId, UNSETTLED);
-    mutations.setThreadPageFailed(threadId);
-
-    return;
-  }
-
-  mutations.loadThreadDetail(detail.success.answer, detail.success.since);
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
@@ -158,30 +159,21 @@ export const create = Effect.fn("threads.create")(function* (
       },
     }),
     (previous) =>
-      api.thread(previous.detail.thread.id).pipe(
-        Effect.map((detail) => ({ ...previous, detail })),
-        Effect.catchIf(
-          (error) => Predicate.isTagged(error, "NotFound"),
-          () => Effect.succeed(null),
-        ),
+      refetchThread(previous.detail.thread.id).pipe(
+        Effect.map((detail) => (detail === null ? null : { ...previous, detail })),
       ),
     (answer) => [answer.detail.thread.id],
+    (answer, since) => mutations.threadCreated(answer, since),
   );
-
-  if (reply.since !== null) {
-    mutations.threadCreated(reply.answer, reply.since);
-  }
 
   return reply.answer.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  const reply = yield* settledDetail(api.updateThread(threadId, body));
-
-  if (reply.since !== null) {
-    mutations.loadThreadDetail(reply.answer, reply.since);
-  }
+  yield* settledDetail(api.updateThread(threadId, body), (detail, since) =>
+    mutations.loadThreadDetail(detail, since),
+  );
 });
 
 /** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */
@@ -226,13 +218,14 @@ export const list = Effect.fn("threads.list")(function* (roomId: number, filter:
     ask,
     () => ask,
     (list) => list.threads.map(({ thread }) => thread.id),
+    (list, since) => mutations.loadThreadList(roomId, filter, list, since),
   ).pipe(
     Effect.tap((reply) =>
-      Effect.sync(() =>
-        reply.since === null
-          ? mutations.setThreadListFailed(roomId, filter)
-          : mutations.loadThreadList(roomId, filter, reply.answer, reply.since),
-      ),
+      Effect.sync(() => {
+        if (reply.outcome !== "installed") {
+          mutations.setThreadListFailed(roomId, filter);
+        }
+      }),
     ),
     Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );

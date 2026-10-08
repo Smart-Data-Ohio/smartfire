@@ -120,6 +120,9 @@ function tombstone(state: State, threadId: number): Partial<State> {
   };
 }
 
+/** What an open pane says once its thread is deleted. */
+export const THREAD_DELETED = "This thread was deleted.";
+
 /** A moderator deleted the thread: it leaves the lists, its pane says so, the indicator goes. */
 export function removeThread(state: State, threadId: number, roomId: number): State {
   const thread = state.threads[threadId];
@@ -140,7 +143,7 @@ export function removeThread(state: State, threadId: number, roomId: number): St
             ...state.threadPanes,
             [threadId]: {
               status: "error",
-              error: "This thread was deleted.",
+              error: THREAD_DELETED,
               permissions: null,
               work: null,
               workFacts: null,

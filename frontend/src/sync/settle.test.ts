@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, type Schema } from "effect";
+import { NotFound } from "../api/errors.ts";
 import { FakeApi, pageFixture } from "../api/testing.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
 import { boardPostIds } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
-import { MAX_REMOVED_THREADS } from "../store/threads.ts";
+import { MAX_REMOVED_THREADS, THREAD_DELETED } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as boards from "./board-actions.ts";
 import { MAX_SETTLE_ATTEMPTS } from "./settle.ts";
@@ -86,6 +87,79 @@ describe("replies that can't tell whether a thread was removed", () => {
       expect(store.getState().threadPanes[1]?.status).toBe("ready");
       expect(store.getState().threads[1]?.name).toBe("Post 1");
       expect(detail.calls()).toBe(2);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("installs the pane's header as it lands, before removals during the replies", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const entered = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      let details = 0;
+
+      yield* fake.route("GET /threads/1", () => {
+        details += 1;
+
+        return Effect.succeed(boardDetail());
+      });
+      yield* fake.route("GET /threads/1/messages", () =>
+        Effect.andThen(
+          Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(release)),
+          Effect.succeed(pageFixture([])),
+        ),
+      );
+
+      const load = yield* Effect.forkChild(threads.reload(1));
+
+      yield* Deferred.await(entered);
+
+      // The header answers while the replies are still out.
+      for (let turn = 0; turn < 50; turn += 1) {
+        yield* Effect.yieldNow;
+      }
+
+      remove();
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(load);
+
+      expect(store.getState().threadPanes[1]?.status).toBe("ready");
+      expect(store.getState().threads[1]?.name).toBe("Post 1");
+      expect(details).toBe(1);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("says the thread was deleted when asking again finds it gone", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      yield* fake.reply("GET /threads/1/messages", pageFixture([]));
+      const first = yield* Deferred.make<ThreadDetail>();
+      const entered = yield* Deferred.make<void>();
+      let details = 0;
+
+      yield* fake.route("GET /threads/1", () => {
+        details += 1;
+
+        return details === 1
+          ? Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(first))
+          : Effect.fail(new NotFound({ message: "Not found" }));
+      });
+
+      const load = yield* Effect.forkChild(threads.reload(1));
+
+      yield* Deferred.await(entered);
+      // Its own removal, then enough others that it's no longer remembered.
+      remove([1]);
+      remove(Array.from({ length: MAX_REMOVED_THREADS }, (_, index) => 30_000 + seq + index));
+      expect(store.getState().removedThreads[1]).toBeUndefined();
+      yield* Deferred.succeed(first, boardDetail());
+      yield* Fiber.join(load);
+
+      expect(details).toBe(2);
+      expect(store.getState().threads[1]).toBeUndefined();
+      expect(store.getState().threadPanes[1]).toMatchObject({
+        status: "error",
+        error: THREAD_DELETED,
+      });
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
