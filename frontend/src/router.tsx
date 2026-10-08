@@ -39,7 +39,11 @@ import { StatusSection } from "./features/settings/status-section.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
-import { ROUTE_PENDING_DELAY_MS, RoutePending } from "./features/shell/route-pending.tsx";
+import {
+  ROUTE_PENDING_DELAY_MS,
+  ROUTE_PENDING_MIN_MS,
+  RoutePending,
+} from "./features/shell/route-pending.tsx";
 import {
   PersonalSlackRunSection,
   PersonalSlackSection,
@@ -571,6 +575,8 @@ export const router = createRouter({
   // Loaders fetch the chunk. Until `pendingMs`, the current screen stays; Suspense then hides
   // only the incoming pane. Hover preloads still warm the module cache.
   defaultPendingMs: ROUTE_PENDING_DELAY_MS,
+  // 0, not TanStack's 500ms, including reduced motion: the 150ms wait and the ~300ms reveal already stop a flash.
+  defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
   defaultPendingComponent: RoutePending,
   // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
   defaultNotFoundComponent: NotFound,

@@ -15,7 +15,7 @@ import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
-import { ROUTE_PENDING_DELAY_MS } from "./route-pending.tsx";
+import { ROUTE_PENDING_DELAY_MS, ROUTE_PENDING_MIN_MS } from "./route-pending.tsx";
 import { UpdateBanner } from "./update-banner.tsx";
 import "./app-shell.css";
 
@@ -81,7 +81,10 @@ export function AppShell() {
 
   // Reduced motion shows the placeholder at once; otherwise the current screen stays briefly.
   useEffect(() => {
-    router.update({ defaultPendingMs: reduced ? 0 : ROUTE_PENDING_DELAY_MS });
+    router.update({
+      defaultPendingMs: reduced ? 0 : ROUTE_PENDING_DELAY_MS,
+      defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
+    });
   }, [reduced, router]);
 
   // Settings, the workspace pages and the people pages fill the main column, so phones show them

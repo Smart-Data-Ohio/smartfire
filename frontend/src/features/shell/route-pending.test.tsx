@@ -13,7 +13,7 @@ import { router as appRouter } from "../../router.tsx";
 import { mutations } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { AppShell } from "./app-shell.tsx";
-import { ROUTE_PENDING_DELAY_MS, RoutePending } from "./route-pending.tsx";
+import { ROUTE_PENDING_DELAY_MS, ROUTE_PENDING_MIN_MS, RoutePending } from "./route-pending.tsx";
 
 /** The shell around a route whose chunk never arrives, starting on a screen that is already up. */
 function renderHeldRoute() {
@@ -80,6 +80,7 @@ describe("a lazy route's chunk", () => {
     expect(appRouter.options.defaultPreload).toBe(false);
     expect(appRouter.options.defaultPendingComponent).toBe(RoutePending);
     expect(appRouter.options.defaultPendingMs).toBe(ROUTE_PENDING_DELAY_MS);
+    expect(appRouter.options.defaultPendingMinMs).toBe(ROUTE_PENDING_MIN_MS);
   });
 
   it("keeps the shell up and shows the pane placeholder only after a short wait", async () => {

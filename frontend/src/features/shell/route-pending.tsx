@@ -11,6 +11,9 @@ import "../panes/panes.css";
  */
 export const ROUTE_PENDING_DELAY_MS = 150;
 
+/** Once a placeholder is showing, do not keep it up any longer. */
+export const ROUTE_PENDING_MIN_MS = 0;
+
 /**
  * React will not reveal a committed fallback for about 300ms. Pane bones wait longer than that
  * hold, so a fast chunk is shown before they paint.
