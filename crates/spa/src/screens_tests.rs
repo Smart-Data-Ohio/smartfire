@@ -140,6 +140,18 @@ fn the_profile_sections_map_back_to_the_profile_page() {
 }
 
 #[test]
+fn work_links_map_to_the_thread_link_editor() {
+    assert_eq!(
+        spa_url("threads/work/links#index", "/threads/7/work/links", None).as_deref(),
+        Some("/app/t/7/links")
+    );
+    assert_eq!(
+        classic_url("/app/t/7/links", None).as_deref(),
+        Some("/threads/7/work/links")
+    );
+}
+
+#[test]
 fn the_account_pages_map_to_the_admin_sections() {
     for (endpoint, classic, spa) in [
         ("accounts#edit", "/account/edit", "/app/admin"),

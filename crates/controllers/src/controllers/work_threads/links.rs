@@ -8,7 +8,8 @@ use campfire_db::models::google_account::GoogleAccount;
 use campfire_db::{Event, NewWorkThreadLink, WorkThreadLink};
 use rails_compat::ar_encryption::ArEncryption;
 
-async fn resolve_drive_title(c: &Ctx, file_id: &str) -> Option<String> {
+/// Best-effort title lookup through the viewer's usable, Drive-enabled Google account.
+pub async fn resolve_drive_title(c: &Ctx, file_id: &str) -> Option<String> {
     let api = c.app().google.api();
     if !api.config.configured() {
         return None;

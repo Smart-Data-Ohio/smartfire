@@ -1,7 +1,9 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
+import * as links from "../api/work-link-endpoints.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { Thread } from "../gen/Thread.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
@@ -176,4 +178,30 @@ export const handoff = Effect.fn("work.handoff")(function* (
   const since = store.getState().removalCount;
 
   yield* installSaved(threadId, sent, since, yield* api.handoffWork(threadId, body));
+});
+
+export const linkForm = links.workLinkForm;
+
+export const addLink = Effect.fn("work.addLink")(function* (
+  threadId: number,
+  input: CreateWorkLink,
+) {
+  const sent = store.getState().threads[threadId];
+  const since = store.getState().removalCount;
+  const detail = yield* links.createWorkLink(threadId, input);
+  yield* installSaved(threadId, sent, since, detail);
+
+  return detail;
+});
+
+export const removeLink = Effect.fn("work.removeLink")(function* (
+  threadId: number,
+  linkId: number,
+) {
+  const sent = store.getState().threads[threadId];
+  const since = store.getState().removalCount;
+  const detail = yield* links.deleteWorkLink(threadId, linkId);
+  yield* installSaved(threadId, sent, since, detail);
+
+  return detail;
 });

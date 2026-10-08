@@ -143,6 +143,12 @@ pub const SCREENS: &[Screen] = &[
     ),
     screen("searches#index", "/searches", "/app/search", true),
     screen("work_threads#index", "/work", "/app/work", false),
+    screen(
+        "threads/work/links#index",
+        "/threads/:thread_id/work/links",
+        "/app/t/:thread_id/links",
+        true,
+    ),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(
         "users/profiles#show",

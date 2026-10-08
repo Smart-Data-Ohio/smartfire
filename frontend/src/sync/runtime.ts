@@ -14,6 +14,7 @@ import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
@@ -35,6 +36,7 @@ import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { ActivityAction } from "../store/activity.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -320,6 +322,12 @@ export const actions = {
       runAction(boardActions.createPost(roomId, input)),
   },
   work: {
+    linkForm: (threadId: number): Promise<WorkLinkForm> =>
+      runAction(boardActions.linkForm(threadId)),
+    addLink: (threadId: number, input: CreateWorkLink): Promise<ThreadDetail> =>
+      runAction(boardActions.addLink(threadId, input)),
+    removeLink: (threadId: number, linkId: number): Promise<ThreadDetail> =>
+      runAction(boardActions.removeLink(threadId, linkId)),
     update: (threadId: number, body: UpdateWork): Promise<void> =>
       runAction(boardActions.update(threadId, body)),
     handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>

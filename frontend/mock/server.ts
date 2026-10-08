@@ -78,6 +78,7 @@ import {
 import { createHuddles } from "./s5/huddles.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
+import { createWorkLinks } from "./s6/work-links.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -714,6 +715,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...uploads.routes,
     ...threads.routes,
     ...boards.routes,
+    ...createWorkLinks(ctx, threads).routes,
     ...messageActions.routes,
     ...composer.routes,
     ...createDirects(ctx).routes,

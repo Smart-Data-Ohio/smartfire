@@ -177,6 +177,22 @@ export function seedBoards(world: World, now: number, seed: number): void {
     },
   });
 
+  for (const [id, title, hours] of [
+    [9104, "API review", 24],
+    [9105, "Roadmap planning", 48],
+    [9106, "Launch readiness", 72],
+  ] as const) {
+    world.workLinkEvents.set(id, {
+      id,
+      title,
+      roomId: BOARD_ROOM_ID,
+      startsAt: iso(now + hours * 3600000),
+      endsAt: iso(now + (hours + 1) * 3600000),
+      timeZone: "America/New_York",
+      cancelled: false,
+    });
+  }
+
   for (const post of POSTS) {
     const createdAt = iso(now - (post.hoursAgo + 24) * 3600000);
     const lastActivityAt = iso(now - post.hoursAgo * 3600000);

@@ -12,8 +12,10 @@
 //! thread's room
 //! (`ChannelThread#work_viewable_by`); bots and agent tokens never use this API.
 //!
-//! Deferred, so not in this contract: managing links (classic `work_threads/links.rs` index,
-//! create and destroy, and its event candidates). The links a thread has are on [`WorkFacts::links`].
+//! Link management ports classic `work_threads/links.rs`: [`WorkLinkForm`] supplies the event
+//! picker, [`CreateWorkLink`] adds a pull request, event or Drive file, and DELETE removes a
+//! link. Any person who can view the work may add or remove links. The links a thread has are
+//! on [`WorkFacts::links`].
 //!
 //! Every work change publishes `thread.updated` with the new [`WorkFacts`]: a status, owner,
 //! result, run URL or link change, tags, and a handoff. **New**: the classic app broadcasts none of
@@ -70,6 +72,72 @@ pub enum WorkLinkKind {
     PullRequest,
     Event,
     DriveFile,
+}
+
+/// One choice in the classic work links event picker (`board_posts::links`): the event's
+/// title and start shown in its time zone. Candidates retain `starts_at ASC, id ASC` order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkLinkEventCandidate {
+    /// Send as [`CreateWorkLink::event_id`].
+    pub id: i64,
+    pub title: String,
+    pub starts_at: Timestamp,
+    pub time_zone: String,
+}
+
+/// `GET /api/v1/threads/:thread_id/work/links/new` (200, `Cache-Control: no-store`): the
+/// classic `work_threads/links#index` event choices (`CalendarEvent::work_link_candidates`).
+/// Upcoming means `COALESCE(ends_at, starts_at) >= now`; cancelled and already linked events
+/// are excluded. Only the thread's room is searched, in start/id order.
+///
+/// Errors: 404 unless the thread exists and the viewer is an active human room member;
+/// 422 `Validation` on `base` when it isn't tracked as work. Work management rights aren't
+/// needed, as for the two link writers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkLinkForm {
+    pub events: Vec<WorkLinkEventCandidate>,
+}
+
+/// `POST /api/v1/threads/:thread_id/work/links` (`work_threads/links#create`): add one link.
+/// Answers [`crate::ThreadDetail`] (201) and publishes `thread.updated`. Pull requests use the
+/// shared GitHub identity; the durable fetch claim and job are atomic with the link save.
+/// Drive titles are resolved best-effort through the viewer's usable Drive account.
+///
+/// Errors, with the classic messages in both `Validation.message` and the named field:
+/// - 404 unless the viewer can view the work; 422 on `base` if the thread isn't tracked;
+/// - `pullRequestUrl`: "Enter a GitHub pull request URL, like https://github.com/owner/repo/pull/123.";
+/// - `eventId`: "Choose an event to link." when absent; 404 for a missing or foreign event.
+///   The picker filters upcoming events, but any event in the room may be linked;
+/// - `driveUrl`: "Enter a Google Drive, Docs, Sheets, Slides, or Forms link.";
+/// - `kind`: "Choose a pull request, event, or Drive file to link." for absent/unknown kinds;
+/// - the kind's input: "That is already linked to this work thread." for a duplicate.
+///
+/// Other model validation errors use the sentence of their full messages on that input.
+///
+/// `DELETE /api/v1/threads/:thread_id/work/links/:id` (`work_threads/links#destroy`) answers
+/// [`crate::ThreadDetail`] (200) and publishes `thread.updated`, with the same viewing/tracking
+/// checks. A missing link or a link belonging to another thread is 404.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct CreateWorkLink {
+    pub kind: WorkLinkKind,
+    /// For `pull_request`: GitHub PR URL, parsed by the classic `references::extract`.
+    #[ts(optional = nullable)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pull_request_url: Option<String>,
+    /// For `event`: an event in the thread's room.
+    #[ts(optional = nullable)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_id: Option<i64>,
+    /// For `drive_file`: a Drive/Docs/Sheets/Slides/Forms URL; stored stripped, as classic.
+    #[ts(optional = nullable)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub drive_url: Option<String>,
 }
 
 /// A linked pull request's state (`github::state_label`).
