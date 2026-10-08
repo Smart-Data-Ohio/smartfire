@@ -8,11 +8,13 @@ import { me } from "../api/endpoints.ts";
 import {
   accountSettings,
   connectService,
+  createPushSubscription,
   disableTwoFactor,
   disconnectService,
   forgetDevices,
   settings as loadSettings,
   newBackupCodes,
+  pushPublicKey,
   pushSubscriptions,
   removeAvatar,
   removePushSubscription,
@@ -31,7 +33,9 @@ import {
 } from "../api/settings-endpoints.ts";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
+import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
 import type { IntegrationChange } from "../gen/IntegrationChange.ts";
+import type { PushPublicKey } from "../gen/PushPublicKey.ts";
 import type { PushSubscriptionList } from "../gen/PushSubscriptionList.ts";
 import type { SessionList } from "../gen/SessionList.ts";
 import type { Settings } from "../gen/Settings.ts";
@@ -41,8 +45,23 @@ import type { UpdateCalls } from "../gen/UpdateCalls.ts";
 import type { UpdateNotifications } from "../gen/UpdateNotifications.ts";
 import type { UpdateProfile } from "../gen/UpdateProfile.ts";
 import type { UpdateStatus } from "../gen/UpdateStatus.ts";
-import { mutations } from "../store/store.ts";
+import {
+  appearanceSnapshot,
+  applyAccountAppearance,
+  showAccountTheme,
+  type ThemePreference,
+} from "../lib/appearance.ts";
+import type { State } from "../store/state.ts";
+import { mutations, store } from "../store/store.ts";
 import { runAction } from "./runtime.ts";
+
+export {
+  enablePushNotifications,
+  inspectPush,
+  type PushEnrollmentOutcome,
+  type PushPermission,
+  unsubscribePushEndpoint,
+} from "./push-enrollment.ts";
 
 /** Every key of a write body, unchanged (`null`), so a caller names only what it changes. */
 const UNCHANGED = {
@@ -142,6 +161,11 @@ export const settings = {
 
   pushSubscriptions: (): Promise<PushSubscriptionList> => runAction(pushSubscriptions()),
 
+  pushPublicKey: (): Promise<PushPublicKey> => runAction(pushPublicKey()),
+
+  createPushSubscription: (body: CreatePushSubscription): Promise<PushSubscriptionList> =>
+    runAction(createPushSubscription(body)),
+
   removePushSubscription: (subscriptionId: number): Promise<PushSubscriptionList> =>
     runAction(removePushSubscription(subscriptionId)),
 
@@ -173,3 +197,49 @@ export const settings = {
   forgetDevices: (deviceId: number | null, reauth: string): Promise<TwoFactorChange> =>
     runAction(forgetDevices(deviceId, reauth)),
 };
+
+/** The account's theme and size as the store knows them: `/me` once loaded, else boot. */
+function accountOf(state: State) {
+  return state.me?.preferences ?? state.boot ?? null;
+}
+
+/**
+ * Keeps the account's theme and text size on screen as boot and `/me` report them (every settings
+ * save reloads `/me`, so a save on another tab or device shows on the next one). Returns the
+ * unsubscribe.
+ */
+export function followAccountAppearance(): () => void {
+  let last = accountOf(store.getState());
+
+  if (last !== null) {
+    applyAccountAppearance({ theme: last.theme, textSize: last.textSize });
+  }
+
+  return store.subscribe((state) => {
+    const account = accountOf(state);
+
+    if (account === null || account === last) {
+      return;
+    }
+
+    last = account;
+    applyAccountAppearance({ theme: account.theme, textSize: account.textSize });
+  });
+}
+
+/**
+ * Saves `theme` as the account's theme, showing it at once; a refusal puts the previous one back
+ * and rejects with the reason.
+ */
+export async function saveAccountTheme(theme: ThemePreference): Promise<void> {
+  const before = appearanceSnapshot().accountTheme;
+
+  showAccountTheme(theme);
+
+  try {
+    await settings.updateAppearance({ theme });
+  } catch (error) {
+    showAccountTheme(before);
+    throw error;
+  }
+}

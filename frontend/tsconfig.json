@@ -24,6 +24,8 @@
     "src",
     "mock",
     "e2e",
+    "tools/service-worker.ts",
+    "tools/service-worker.test.ts",
     "vite.config.ts",
     "playwright.config.ts",
     "playwright.mock.config.ts"

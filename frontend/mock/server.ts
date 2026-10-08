@@ -76,6 +76,8 @@ import {
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
 import { createHuddles } from "./s5/huddles.ts";
+import { createEvents, EVENT_IDS } from "./s8/events.ts";
+import { createFizzy } from "./s8/fizzy.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -127,6 +129,7 @@ export const SEED_IDS = {
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
   cards: CARD_IDS,
+  events: EVENT_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -149,6 +152,11 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /**
+   * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
+   * without its CSRF token, which the meta tag carries), escaped for a script element.
+   */
+  inlineBoot(): string;
   /** Stops the ambient simulation (the bot still answers). */
   pause(): void;
   resume(): void;
@@ -332,9 +340,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
       account: { name: "Smart Data" },
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       cableUrl: "/cable",
+      serviceWorkerUrl: null,
       version: "mock",
       revision: null,
       csrfToken: csrf,
@@ -345,8 +353,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
@@ -687,6 +694,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
+  // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
+  const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
@@ -702,11 +711,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   );
 
   const huddles = createHuddles(ctx, simulate);
-  const cards = createCards(ctx);
+  const events = createEvents(ctx);
+  const cards = createCards(ctx, events);
+  const fizzy = createFizzy(ctx, threads);
 
   const routes = [
+    ...events.routes,
     ...huddles.routes,
     ...cards.routes,
+    ...fizzy.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -715,7 +728,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...settings.routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...createPeople(ctx, admin.requireSudo).routes,
@@ -968,6 +981,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "fizzy":
+        return { status: 200, json: fizzy.control(body) };
       case "cards":
         return { status: 200, json: cards.control(body) };
       case "reset":
@@ -1021,6 +1036,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    inlineBoot: () => {
+      const { csrfToken: _meta, ...inline } = boot();
+
+      return JSON.stringify(inline).replaceAll("<", "\\u003c");
+    },
     pause: () => simulation.pause(),
     resume: () => simulation.resume(),
     typing,

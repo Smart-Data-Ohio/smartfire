@@ -52,8 +52,11 @@ seeds), `fixtures/`, `test-support/`, `vectors/`, `ci/`, `.cargo/`, `.config/`, 
 action, `rust.yml`, Cargo manifests/lockfile, the Rust toolchain, Dockerfile/`.dockerignore`,
 and the frontend auth/dist inputs above. Shared app, session, rendering and harness inputs
 use broad directories to avoid missing indirect dependencies. Page jobs start alongside
-ordinary Rust jobs; only messaging keeps its existing host-build prerequisite. PRs without
-page inputs skip these jobs and receipt collection; the correctness gate requires those
+ordinary Rust jobs. SPA-only changes under `frontend/` or `crates/api/` run only the existing
+PWA matrix slot, including the binary-backed SPA smoke test; its receipts are required by
+the correctness gate's `spa` scope. Other page jobs remain skipped for those changes.
+Only messaging keeps its existing host-build prerequisite. PRs without
+page or SPA inputs skip these jobs and receipt collection; the correctness gate requires those
 skips and checks the seed job against the ordinary Rust scope. Branch protection is managed
 separately by the release lead.
 
@@ -71,6 +74,7 @@ instead of building it sixteen times.
 | browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | drive | The pinned Chromium image, then exactly the 45 ignored Drive attachment, share, sudo and event-card declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
+| pwa | The production SPA from the Dockerfile's `spa` stage, frozen Rust seed and pinned Chromium image: the URL contract with built assets, real sign-in/UI-switch registration and a smoke test that starts the actual binary, opens a room, sends a message and verifies it after reload. Registration attempts a real push subscription and records the browser's exact outcome. |
 | messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
@@ -107,7 +111,7 @@ docker build --target toolchain -t campfire-toolchain .
 docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
 RUNNER_TEMP=/tmp/campfire-ci bash ci/verify-ignored.sh
 RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
-# Repeat the last command for browsers, drive, livekit, messaging, and agents-ui.
+# Repeat the last command for browsers, drive, pwa, livekit, messaging, and agents-ui.
 # CI's slices: CORRECTNESS_SHARD=2/4 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
@@ -120,7 +124,7 @@ sequence and writer-control receipts. The first test shard additionally runs `ne
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(66 correctness tests + 6 compiled utilities). This covers expanded conditional
+(68 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the

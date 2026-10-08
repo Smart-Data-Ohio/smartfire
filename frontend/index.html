@@ -14,6 +14,42 @@
     <style>@layer tokens, base, motion, recipes, ui, app;</style>
     <!-- The Rust shell (crates/spa) puts the CSRF meta and the boot JSON here. -->
     <!--boot-->
+    <script>
+      // Blocking, before the stylesheet can paint: the theme pinned on this device, else the
+      // account's theme and text size from the boot JSON just above; density and motion from this
+      // device. src/lib/appearance.ts keeps them current afterwards. The Rust shell gives this
+      // script the page's CSP nonce, as it does every script.
+      (() => {
+        const root = document.documentElement;
+        const read = (text) => {
+          try {
+            const value = JSON.parse(text || "null");
+
+            return value !== null && typeof value === "object" ? value : {};
+          } catch {
+            return {};
+          }
+        };
+        let device = {};
+
+        try {
+          device = read(localStorage.getItem("smartfire.appearance"));
+        } catch {
+          // Storage can be unavailable; the account's choices still apply.
+        }
+
+        const boot = read(document.getElementById("boot")?.textContent);
+        const pin = device.themeOverride;
+        const theme = pin === "light" || pin === "dark" || pin === "system" ? pin : boot.theme;
+
+        if (theme === "light" || theme === "dark") root.dataset.theme = theme;
+        root.dataset.textSize = ["smaller", "small", "large", "larger"].includes(boot.textSize)
+          ? boot.textSize
+          : "default";
+        if (device.density === "compact") root.dataset.density = "compact";
+        if (device.motion === "reduce" || device.motion === "full") root.dataset.motion = device.motion;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

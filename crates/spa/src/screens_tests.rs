@@ -447,3 +447,78 @@ fn export_screens() {
     let parsed: serde_json::Value = serde_json::from_str(&committed).unwrap();
     assert_eq!(parsed.as_array().map(Vec::len), Some(SCREENS.len()));
 }
+
+#[test]
+fn event_pages_open_in_the_spa_and_fall_back_to_classic() {
+    for (endpoint, classic, spa) in [
+        ("rooms/events#index", "/rooms/12/events", "/app/r/12/events"),
+        (
+            "rooms/events#new",
+            "/rooms/12/events/new",
+            "/app/r/12/events/new",
+        ),
+        (
+            "rooms/events#show",
+            "/rooms/12/events/34",
+            "/app/r/12/events/34",
+        ),
+        (
+            "rooms/events#edit",
+            "/rooms/12/events/34/edit",
+            "/app/r/12/events/34/edit",
+        ),
+        (
+            "rooms/events/attendances#show",
+            "/rooms/12/events/34/attendance",
+            "/app/r/12/events/34/attendance",
+        ),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // `new` is not an event id: the show row doesn't take it.
+    assert_eq!(
+        spa_url("rooms/events#show", "/rooms/12/events/new", None),
+        None
+    );
+}
+
+#[test]
+fn fizzy_card_forms_open_over_the_conversation_and_fall_back_to_classic() {
+    for (classic, spa) in [
+        (
+            "/rooms/12/messages/34/fizzy_cards/new",
+            "/app/r/12/m/34/fizzy/new",
+        ),
+        (
+            "/rooms/12/threads/5/messages/34/fizzy_cards/new",
+            "/app/r/12/t/5/m/34/fizzy/new",
+        ),
+    ] {
+        assert_eq!(
+            spa_url("rooms/fizzy/message_cards#new", classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // The room's permalink and thread rows don't take the form's longer URLs.
+    assert_eq!(
+        classic_url("/app/r/12/m/34", None).as_deref(),
+        Some("/rooms/12/@34")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms/fizzy/message_cards#new",
+            "/rooms/12/messages/new/fizzy_cards/new",
+            None
+        ),
+        None
+    );
+}

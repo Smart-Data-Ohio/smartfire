@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check the receipts of every correctness job, including sharded ones, as one gate.
 
-Usage: correctness_gate.py RECEIPTS_DIR [--scope full|messaging-and-browsers] [--head SHA]
+Usage: correctness_gate.py RECEIPTS_DIR [--scope full|messaging-and-browsers|spa] [--head SHA]
 
 Each job uploads target/ci-receipts (correctness.sh): TAG.json with its exit code, the
 nextest JUnit for its ignored selection, and for messaging behaviour shards the named cases
@@ -19,8 +19,9 @@ from pathlib import Path
 from ignored_tests import ROOT, verify_junit
 
 SCOPES = {
-    "full": ["acme", "drive", "browsers", "livekit", "messaging", "agents-ui"],
+    "full": ["acme", "drive", "browsers", "livekit", "messaging", "agents-ui", "pwa"],
     "messaging-and-browsers": ["browsers", "drive", "messaging"],
+    "spa": ["pwa"],
 }
 
 

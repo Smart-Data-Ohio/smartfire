@@ -2,7 +2,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  lazyRouteComponent,
   notFound,
   Outlet,
 } from "@tanstack/react-router";
@@ -44,6 +43,7 @@ import { parseRunSearch } from "./features/slack/slack-format.ts";
 import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
+import { lazyForUpdate as lazy } from "./service-worker/lazy.ts";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
 function parseId(segment: string): number {
@@ -62,7 +62,7 @@ const rootRoute = createRootRoute({ component: Outlet });
 const kitchenSinkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "_kitchen-sink",
-  component: lazyRouteComponent(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
+  component: lazy(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
 });
 
 const shellRoute = createRoute({
@@ -108,9 +108,10 @@ const messageRoute = createRoute({
     parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
     stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
   },
-  component: lazyRouteComponent(
-    () => import("./features/room/message-resolver.tsx"),
-    "MessageResolver",
+  component: lazy(() =>
+    import("./features/room/message-resolver.tsx").then((module) => ({
+      default: module.MessageResolver,
+    })),
   ),
 });
 
@@ -169,6 +170,31 @@ const threadRoute = createRoute({
     parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
     stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
   },
+  component: () => null,
+});
+
+/** A message's id in a "Create Fizzy card" URL (not `messageId`: that would refocus the room). */
+const sourceParams = {
+  parse: ({ sourceId }: { readonly sourceId: string }) => ({ sourceId: parseId(sourceId) }),
+  stringify: ({ sourceId }: { readonly sourceId: number }) => ({ sourceId: `${sourceId}` }),
+};
+
+/**
+ * `/app/r/$roomId/m/$sourceId/fizzy/new`: the room with "Create Fizzy card" open on a message of
+ * its timeline (the classic form page); `…/t/$threadId/m/$sourceId/fizzy/new` opens it on a reply,
+ * over the thread. The room draws the dialog (features/fizzy/fizzy-card-overlay.tsx).
+ */
+const fizzyCardRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
+  component: () => null,
+});
+
+const threadFizzyCardRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "m/$sourceId/fizzy/new",
+  params: sourceParams,
   component: () => null,
 });
 
@@ -279,9 +305,10 @@ const activityRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "activity",
   validateSearch: parseActivitySearch,
-  component: lazyRouteComponent(
-    () => import("./features/activity/activity-route.tsx"),
-    "ActivityRoute",
+  component: lazy(() =>
+    import("./features/activity/activity-route.tsx").then((module) => ({
+      default: module.ActivityRoute,
+    })),
   ),
 });
 
@@ -290,16 +317,19 @@ const savedRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "saved",
   validateSearch: parseSavedSearch,
-  component: lazyRouteComponent(() => import("./features/saved/saved-route.tsx"), "SavedRoute"),
+  component: lazy(() =>
+    import("./features/saved/saved-route.tsx").then((module) => ({ default: module.SavedRoute })),
+  ),
 });
 
 /** `/app/scheduled`: every scheduled message, upcoming, stranded and past. */
 const scheduledRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "scheduled",
-  component: lazyRouteComponent(
-    () => import("./features/scheduled/scheduled-page.tsx"),
-    "ScheduledPage",
+  component: lazy(() =>
+    import("./features/scheduled/scheduled-page.tsx").then((module) => ({
+      default: module.ScheduledPage,
+    })),
   ),
 });
 
@@ -307,7 +337,9 @@ const scheduledRoute = createRoute({
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "people",
-  component: lazyRouteComponent(() => import("./features/people/people-page.tsx"), "PeoplePage"),
+  component: lazy(() =>
+    import("./features/people/people-page.tsx").then((module) => ({ default: module.PeoplePage })),
+  ),
 });
 
 /** `/app/people/$userId`: someone's page (a bot's opens its agent or classic page). */
@@ -318,8 +350,56 @@ const personRoute = createRoute({
     parse: ({ userId }) => ({ userId: parseId(userId) }),
     stringify: ({ userId }) => ({ userId: `${userId}` }),
   },
-  component: lazyRouteComponent(() => import("./features/people/person-page.tsx"), "PersonRoute"),
+  component: lazy(() =>
+    import("./features/people/person-page.tsx").then((module) => ({
+      default: module.PersonRoute,
+    })),
+  ),
 });
+
+/** `/app/r/$roomId/events`: a room's calendar (its own chunk); `…/new` opens the form over it. */
+const eventsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events",
+  params: {
+    parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
+    stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/events-page.tsx").then((module) => ({
+      default: module.EventsRoute,
+    })),
+  ),
+});
+
+const newEventRoute = createRoute({
+  getParentRoute: () => eventsRoute,
+  path: "new",
+  component: () => null,
+});
+
+/**
+ * `/app/r/$roomId/events/$eventId`: an event's page; `…/edit` opens the form over it and
+ * `…/attendance` opens it on the viewer's response.
+ */
+const eventRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events/$eventId",
+  params: {
+    parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
+    stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
+  },
+  component: lazy(() =>
+    import("./features/events/event-page.tsx").then((module) => ({
+      default: module.EventRoute,
+    })),
+  ),
+});
+
+const eventChildRoutes = [
+  createRoute({ getParentRoute: () => eventRoute, path: "edit", component: () => null }),
+  createRoute({ getParentRoute: () => eventRoute, path: "attendance", component: () => null }),
+];
 
 /** The search page's query as the URL has it. */
 interface RawSearchPageSearch {
@@ -337,7 +417,9 @@ const searchRoute = createRoute({
   path: "search",
   validateSearch: (search: RawSearchPageSearch): SearchPageSearch =>
     search.q === undefined || search.q === null || search.q === "" ? {} : { q: String(search.q) },
-  component: lazyRouteComponent(() => import("./features/search/search-page.tsx"), "SearchPage"),
+  component: lazy(() =>
+    import("./features/search/search-page.tsx").then((module) => ({ default: module.SearchPage })),
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
@@ -351,7 +433,15 @@ const routeTree = rootRoute.addChildren([
     peopleRoute,
     personRoute,
     messageRoute,
-    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute, ...roomControlRoutes]),
+    roomRoute.addChildren([
+      permalinkRoute,
+      fizzyCardRoute,
+      newThreadRoute,
+      threadRoute.addChildren([threadFizzyCardRoute]),
+      ...roomControlRoutes,
+    ]),
+    eventsRoute.addChildren([newEventRoute]),
+    eventRoute.addChildren(eventChildRoutes),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),

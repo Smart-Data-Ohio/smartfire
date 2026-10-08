@@ -118,6 +118,50 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/notifications",
         true,
     ),
+    // S8: a room's calendar, an event's page, its form and the viewer's response.
+    screen(
+        "rooms/events#index",
+        "/rooms/:room_id/events",
+        "/app/r/:room_id/events",
+        true,
+    ),
+    screen(
+        "rooms/events#new",
+        "/rooms/:room_id/events/new",
+        "/app/r/:room_id/events/new",
+        true,
+    ),
+    screen(
+        "rooms/events#show",
+        "/rooms/:room_id/events/:id",
+        "/app/r/:room_id/events/:id",
+        true,
+    ),
+    screen(
+        "rooms/events#edit",
+        "/rooms/:room_id/events/:id/edit",
+        "/app/r/:room_id/events/:id/edit",
+        true,
+    ),
+    screen(
+        "rooms/events/attendances#show",
+        "/rooms/:room_id/events/:event_id/attendance",
+        "/app/r/:room_id/events/:event_id/attendance",
+        true,
+    ),
+    // S8: "Create Fizzy card" on a message, a dialog over its room or its thread.
+    screen(
+        "rooms/fizzy/message_cards#new",
+        "/rooms/:room_id/messages/:message_id/fizzy_cards/new",
+        "/app/r/:room_id/m/:message_id/fizzy/new",
+        true,
+    ),
+    screen(
+        "rooms/fizzy/message_cards#new",
+        "/rooms/:room_id/threads/:thread_id/messages/:message_id/fizzy_cards/new",
+        "/app/r/:room_id/t/:thread_id/m/:message_id/fizzy/new",
+        true,
+    ),
     // S3: workspace destinations (plan §4.7).
     screen("activity_items#index", "/activity", "/app/activity", true),
     screen("saved_items#index", "/saved", "/app/saved", true),

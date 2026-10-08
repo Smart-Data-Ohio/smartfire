@@ -1,6 +1,7 @@
-import { lazy, type ReactNode, Suspense, useEffect, useId, useSyncExternalStore } from "react";
+import { type ReactNode, Suspense, useEffect, useId, useSyncExternalStore } from "react";
 import { useResolvedTheme } from "../lib/appearance.ts";
 import { useReducedMotion } from "../motion/reduced-motion.ts";
+import { lazyForUpdate as lazy } from "../service-worker/lazy.ts";
 import { beamOwner, claimBeam, releaseBeam, subscribeBeam } from "./beam-store.ts";
 import "./effects.css";
 

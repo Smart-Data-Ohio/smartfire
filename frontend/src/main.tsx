@@ -6,8 +6,16 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { restoreAppearance } from "./lib/appearance.ts";
 import { router } from "./router.tsx";
+import { watchWorkerRegistration } from "./service-worker/register.ts";
+import { followAccountAppearance } from "./sync/settings.ts";
 
+// Before the first render: the account's theme and text size from the inline boot JSON, under any
+// theme pinned on this device. Then boot and `/me` keep the account's choices on screen.
 restoreAppearance();
+
+followAccountAppearance();
+
+watchWorkerRegistration();
 
 const container = document.getElementById("root");
 
