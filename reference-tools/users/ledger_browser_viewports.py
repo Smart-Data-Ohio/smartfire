@@ -3,7 +3,7 @@
 The requested pairs come from the pinned system declarations. Chrome owns the
 inner viewport calculation; the replay never assumes a toolbar-height offset.
 """
-import json, os, pathlib, shutil, socket, subprocess, tempfile, time, urllib.request
+import json, os, pathlib, shutil, socket, subprocess, sys, tempfile, time, urllib.request
 
 # ApplicationSystemTestCase plus the remaining original files' resize_to calls
 # (room_header's width loops retain each width with their original height).
@@ -59,5 +59,12 @@ def prepare_viewports(labels, root):
             try:request('DELETE',f'/session/{session}')
             except OSError:pass
         driver.terminate();driver.wait(timeout=10)
-        # Chrome can still be releasing profile files. This directory is ours alone.
-        shutil.rmtree(worker_tmpdir, ignore_errors=True)
+        # Chrome can still be releasing profile files. Report each failure and
+        # continue, so cleanup does not replace the test's own exception.
+        def report_cleanup_error(_function, path, exc):
+            error = exc[1] if isinstance(exc, tuple) else exc
+            print(f'cleanup failed: {path}: {error}', file=sys.stderr)
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(worker_tmpdir, onexc=report_cleanup_error)
+        else:
+            shutil.rmtree(worker_tmpdir, onerror=report_cleanup_error)
