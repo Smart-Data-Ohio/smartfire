@@ -1,5 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { BOARD_POST_IDS, BOARD_ROOM_ID } from "../../mock/s6/seed.ts";
+import { BOARD_POST_IDS, BOARD_ROOM_ID, LONG_DISCUSSION } from "../../mock/s6/seed.ts";
 import { DESKTOP, expect, matrix, openApp, shot, syncWelcomed, test } from "./support.ts";
 
 const BOARD = BOARD_ROOM_ID;
@@ -134,9 +134,35 @@ matrix("a post opens with its work above the discussion", async ({ page, theme, 
   await expect(work.getByRole("region", { name: "Linked" })).toBeVisible();
   await expect(work.getByRole("heading", { name: "Result" })).toBeVisible();
   await expect(work.getByText("The original message was deleted.")).toHaveCount(0);
+  await work.getByRole("button", { name: "Steps (2)" }).click();
+  await expect(work.getByText("Reproduce the duplicate")).toBeVisible();
+  await expect(work.getByText("1.2s")).toBeVisible();
+  await expect(work.getByText("Two sends share one client id")).toBeVisible();
+  await expect(work.getByText("Write the fix")).toBeVisible();
   await expect(work.getByText(/^Discussion · \d+ repl/)).toBeVisible();
   await page.mouse.move(0, 0);
   await shot(page, phone ? "board-post-phone" : "board-post", theme);
+});
+
+test("a post with more replies than one page still opens at its work", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `r/${BOARD}/t/${BOARD_POST_IDS.keyboardNavigation}`);
+
+  const work = pane(page);
+
+  await expect(work.getByRole("button", { name: /^Status:/ })).toBeVisible();
+  await expect(work.getByRole("heading", { name: "Result" })).toBeVisible();
+
+  const earlier = work.getByRole("button", { name: /earlier repl/ });
+
+  await expect(earlier).toBeVisible();
+  // The newest page is loaded; the brief and the first replies wait under the work.
+  await expect(work.getByText(/^Brief: Keyboard navigation/)).toHaveCount(0);
+  await earlier.click();
+  await expect(work.getByText(/^Brief: Keyboard navigation/)).toBeVisible();
+  await expect(earlier).toHaveCount(0);
+  await expect(work.getByRole("button", { name: /^Status:/ })).toBeVisible();
+  expect(LONG_DISCUSSION).toBeGreaterThan(40);
 });
 
 test("changing a post's status in the pane moves its card", async ({ page }) => {

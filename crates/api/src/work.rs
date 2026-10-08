@@ -235,6 +235,7 @@ pub fn facts(
         let (id, name) = tag?;
         grouped_tags.entry(id).or_default().push(name);
     }
+    let mut message_counts = ChannelThread::board_reply_counts(conn, &ids)?;
     let rows = WorkThreadLink::for_threads(conn, &ids)?;
     let sources = WorkLinkSources::load(conn, &rows)?;
     let mut grouped: HashMap<i64, Vec<WorkThreadLink>> = HashMap::new();
@@ -260,6 +261,7 @@ pub fn facts(
                 result_updated_at: thread.result_updated_at.map(dto::time),
                 links,
                 tags: grouped_tags.remove(&thread.id).unwrap_or_default(),
+                message_count: message_counts.remove(&thread.id).unwrap_or_default(),
             },
         );
     }

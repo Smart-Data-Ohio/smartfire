@@ -77,7 +77,7 @@ export function PostRow({ roomId, threadId, open, activeTag }: PostProps) {
           </span>
           <span className="board-row-meta">
             <OwnerLine work={work} />
-            <span className="board-meta-item tabular">{replyCountLabel(thread.replyCount)}</span>
+            <span className="board-meta-item tabular">{replyCountLabel(work.messageCount)}</span>
             {work.links.length > 0 ? (
               <span className="board-meta-item tabular">{linkedLabel(work.links.length)}</span>
             ) : null}
@@ -126,9 +126,9 @@ export function PostCard({ roomId, threadId, open, activeTag }: PostProps) {
         <span className="board-card-foot">
           <OwnerLine work={work} />
           <span className="board-card-counts">
-            <span className="board-card-count tabular" title={replyCountLabel(thread.replyCount)}>
+            <span className="board-card-count tabular" title={replyCountLabel(work.messageCount)}>
               <Icon name="message-circle" size={12} />
-              {thread.replyCount}
+              {work.messageCount}
             </span>
             {work.links.length > 0 ? (
               <span className="board-card-count tabular" title={linkedLabel(work.links.length)}>

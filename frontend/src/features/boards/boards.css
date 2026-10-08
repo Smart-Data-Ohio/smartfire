@@ -989,6 +989,84 @@
     color: var(--text-faint);
   }
 
+  .post-step-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-1) 0 0;
+    padding: 0 0 0 var(--space-3);
+    border-left: 1px solid var(--border);
+    list-style: none;
+  }
+
+  .post-step {
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .post-step-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .post-step-name {
+    min-width: 0;
+    color: var(--text);
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  .post-step-status,
+  .post-step-duration {
+    color: var(--text-muted);
+  }
+
+  .post-step[data-status="failed"] .post-step-status {
+    color: var(--danger-text);
+  }
+
+  .post-step-duration {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .post-step-io {
+    margin: 2px 0 0;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  .post-step-io-label {
+    color: var(--text-faint);
+    font-weight: var(--weight-medium);
+  }
+
+  .post-classic {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .post-classic-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--accent);
+    font-weight: var(--weight-medium);
+  }
+
+  .post-classic-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (max-width: 720px) {

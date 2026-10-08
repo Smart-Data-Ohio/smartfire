@@ -8,8 +8,9 @@ import type { WorkStatus } from "./WorkStatus";
  * board's opener). Answers the post's [`crate::ThreadDetail`] (201) and publishes
  * `thread.created` on `room:<id>`; tag rules may then assign an owner (`thread.updated`).
  *
- * Idempotent on `message.clientMessageId` when there is a brief: a retry returns the post already
- * made (200).
+ * Idempotent on `clientPostId` (and on `message.clientMessageId` when there is a brief, which the
+ * SPA sets to the same value): a retry by the same creator in the same board returns the post the
+ * first attempt made (200), brief or not.
  *
  * Errors:
  * - 404 unless the room is a board the viewer belongs to;
@@ -40,4 +41,9 @@ tags: Array<string>,
 /**
  * The brief; `null` for none. A blank `markdownSource` without an attachment counts as none.
  */
-message: CreateMessage | null, };
+message: CreateMessage | null, 
+/**
+ * The submission's retry identity: a UUID the client keeps across retries of one post, so a
+ * retry after a lost reply can't make a second post. `null` makes no such promise.
+ */
+clientPostId: string | null, };

@@ -32,6 +32,10 @@ function byActivity(threads: State["threads"]) {
 
 /** A thread record (from `thread.created`, `thread.updated` or a reply): into the map and lists. */
 export function upsertThread(state: State, thread: Thread): State {
+  if (state.removedThreads[thread.id] !== undefined) {
+    return state;
+  }
+
   state = boardThreadChanged(state, thread);
   const threads = { ...state.threads, [thread.id]: thread };
   const list = state.roomThreads[thread.roomId];
@@ -53,6 +57,17 @@ export function upsertThread(state: State, thread: Thread): State {
   };
 }
 
+/** Forgets that `threadId` was removed: an HTTP load just showed it. */
+export function revive(state: State, threadId: number): State {
+  if (state.removedThreads[threadId] === undefined) {
+    return state;
+  }
+
+  const { [threadId]: _lifted, ...removedThreads } = state.removedThreads;
+
+  return { ...state, removedThreads };
+}
+
 /** A moderator deleted the thread: it leaves the lists, its pane says so, the indicator goes. */
 export function removeThread(state: State, threadId: number, roomId: number): State {
   const thread = state.threads[threadId];
@@ -63,6 +78,7 @@ export function removeThread(state: State, threadId: number, roomId: number): St
 
   return {
     ...removeBoardPost(state, roomId, threadId),
+    removedThreads: { ...state.removedThreads, [threadId]: true },
     threads,
     threadPanes: {
       ...state.threadPanes,
@@ -169,7 +185,8 @@ export function loadThreadDetail(state: State, detail: ThreadDetail): State {
   const threadId = detail.thread.id;
   const parent = detail.parentMessage;
   const held = parent === null ? undefined : state.messages[parent.id];
-  const next = upsertThread(state, detail.thread);
+  // A fresh load that answers the thread is the one thing that lifts its removal.
+  const next = upsertThread(revive(state, threadId), detail.thread);
   const kept = parent === null ? undefined : reconcileMessage(held, parent, true);
 
   return {

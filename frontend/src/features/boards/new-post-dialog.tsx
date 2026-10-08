@@ -1,6 +1,7 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { BoardPostForm } from "../../gen/BoardPostForm.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
+import { uuid7 } from "../../lib/uuid7.ts";
 import { useStore } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -181,6 +182,21 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const briefId = useId();
+  // One opening of the dialog: a reply that lands after Cancel, a reopen or a room change belongs
+  // to an opening that's gone, and must neither navigate nor touch the new draft.
+  const openingRef = useRef(0);
+  // The opening's retry identity: every attempt to create this post sends it, so a retry after a
+  // lost reply answers the post the first attempt made instead of making a second.
+  const clientIdRef = useRef(uuid7(Date.now()));
+  const savingRef = useRef(false);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: opening or a new room is the trigger
+  useEffect(() => {
+    openingRef.current += 1;
+    clientIdRef.current = uuid7(Date.now());
+    savingRef.current = false;
+    setSaving(false);
+  }, [open, roomId]);
 
   useEffect(() => {
     if (!open) {
@@ -220,6 +236,10 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   };
 
   const submit = () => {
+    if (savingRef.current) {
+      return;
+    }
+
     const name = draft.name.trim();
     const problems = localProblems(name, tags);
 
@@ -229,6 +249,10 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
       return;
     }
 
+    const opening = openingRef.current;
+    const current = () => openingRef.current === opening;
+
+    savingRef.current = true;
     setSaving(true);
     actions.boards
       .createPost(roomId, {
@@ -237,14 +261,23 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
         ownerId: draft.ownerId === "" ? null : Number(draft.ownerId),
         tags,
         brief: draft.brief,
+        clientId: clientIdRef.current,
       })
       .then(
         (detail) => {
+          if (!current()) {
+            return;
+          }
+
           setDraft(EMPTY);
           setFields(NO_FIELDS);
           onCreated(detail.thread.id);
         },
         (error: Error) => {
+          if (!current()) {
+            return;
+          }
+
           const named = error instanceof ActionError ? sentences(error.fields) : NO_FIELDS;
 
           fail(named);
@@ -258,7 +291,12 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
           }
         },
       )
-      .finally(() => setSaving(false));
+      .finally(() => {
+        if (current()) {
+          savingRef.current = false;
+          setSaving(false);
+        }
+      });
   };
 
   const close = (next: boolean) => {

@@ -30,6 +30,8 @@ pub struct AppState {
     pub agent_repositories: crate::integrations::agent_repositories::State,
     pub sudo: crate::state::sudo::State,
     pub two_factor: crate::state::two_factor::State,
+    /// Creation receipts for client retries that the database has no key column for.
+    pub receipts: crate::state::receipts::Receipts,
     pub google: crate::integrations::google::State,
     pub errors: crate::errors::Reporter,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
@@ -72,6 +74,7 @@ impl AppState {
             agent_repositories: self.agent_repositories.fixture_snapshot(),
             sudo: self.sudo.fixture_snapshot(),
             two_factor: self.two_factor.fixture_snapshot(),
+            receipts: self.receipts.fixture_snapshot(),
             google: self.google.clone(),
             errors: self.errors.clone(),
             web_push: self.web_push.clone(),

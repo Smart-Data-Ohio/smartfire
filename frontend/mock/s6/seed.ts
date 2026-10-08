@@ -7,6 +7,9 @@ import { emptyWorkDetail, newWorkFacts } from "./work.ts";
 
 export const BOARD_ROOM_ID = 900;
 
+/** How many messages the long discussion (Keyboard navigation in dialogs) holds. */
+export const LONG_DISCUSSION = 64;
+
 export const BOARD_POST_IDS = {
   onboardingChecklist: 9001,
   launchWeek: 9002,
@@ -247,6 +250,10 @@ export function seedBoards(world: World, now: number, seed: number): void {
       `Brief: ${post.name}. Discuss the approach here.`,
       "I have checked the current behavior.",
       "The acceptance criteria are in the linked notes.",
+      // A discussion longer than one page of replies, so the post opens short of its start.
+      ...(post.id === BOARD_POST_IDS.keyboardNavigation
+        ? Array.from({ length: LONG_DISCUSSION - 3 }, (_, at) => `Focus order note ${at + 1}.`)
+        : []),
     ];
 
     for (const [index, markdown] of lines.entries()) {
@@ -256,7 +263,9 @@ export function seedBoards(world: World, now: number, seed: number): void {
           BOARD_ROOM_ID,
           post.id,
           plainDraft(index === 0 ? thread.creatorId : USER_IDS.maya, markdown, seededUuid(random)),
-          index === 0 ? createdAt : iso(Date.parse(lastActivityAt) - (2 - index) * 60000),
+          index === 0
+            ? createdAt
+            : iso(Date.parse(lastActivityAt) - (lines.length - 1 - index) * 60000),
           people,
         ),
       );
@@ -298,6 +307,30 @@ export function seedBoards(world: World, now: number, seed: number): void {
           eventCancelled: false,
         },
       ];
+
+      if (thread.workDetail != null) {
+        const step = (id: number, name: string, status: "done" | "running", position: number) => ({
+          id,
+          messageId: null,
+          threadId: post.id,
+          name,
+          status,
+          inputSummary: position === 0 ? "send_message retries after a timeout" : null,
+          outputSummary: position === 0 ? "Two sends share one client id" : null,
+          durationMs: position === 0 ? 1250 : null,
+          position,
+          createdAt: lastActivityAt,
+          updatedAt: lastActivityAt,
+        });
+
+        thread.workDetail = {
+          ...thread.workDetail,
+          steps: [
+            step(90011, "Reproduce the duplicate", "done", 0),
+            step(90012, "Write the fix", "running", 1),
+          ],
+        };
+      }
     }
 
     world.threads.set(post.id, thread);

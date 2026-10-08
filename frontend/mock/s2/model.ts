@@ -270,7 +270,7 @@ export function threadDto(thread: ThreadRecord, now: number): Thread {
     lastActivityAt: thread.lastActivityAt,
     autoArchiveAfterMinutes: thread.autoArchiveAfterMinutes,
     createdAt: thread.createdAt,
-    work: thread.work ?? null,
+    work: thread.work == null ? null : { ...thread.work, messageCount: thread.messages.length },
   };
 }
 

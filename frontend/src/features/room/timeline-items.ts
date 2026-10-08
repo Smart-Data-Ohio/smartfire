@@ -7,6 +7,8 @@ export const GROUP_WINDOW_MS = 5 * 60_000;
 /** A row in the virtualized timeline. Keys are stable across reconciliation. */
 export type TimelineItem =
   | { readonly kind: "intro"; readonly key: "intro" }
+  /** Under an intro that stays first (a board post's work): loads the replies before the window. */
+  | { readonly kind: "earlier"; readonly key: "earlier" }
   | { readonly kind: "loading"; readonly key: "loading-older" | "loading-newer" }
   | { readonly kind: "day"; readonly key: string; readonly label: string }
   | { readonly kind: "unread"; readonly key: "unread"; readonly count: number }
@@ -51,6 +53,11 @@ interface TimelineInput {
   readonly messages: Readonly<Record<number, MessageDTO>>;
   readonly pending: readonly PendingMessage[];
   readonly now: number;
+  /**
+   * The intro leads whatever the window holds, with an "earlier" row after it while older replies
+   * remain (a board post: its work belongs above the discussion, however long that is).
+   */
+  readonly introFirst?: boolean;
 }
 
 /**
@@ -59,14 +66,24 @@ interface TimelineInput {
  * and messages grouped by author. Pending sends follow the confirmed messages once the window
  * reaches the present.
  */
-export function timelineItems({ timeline, messages, pending, now }: TimelineInput): TimelineItem[] {
+export function timelineItems({
+  timeline,
+  messages,
+  pending,
+  now,
+  introFirst = false,
+}: TimelineInput): TimelineItem[] {
   const items: TimelineItem[] = [];
   let previous: Previous | null = null;
 
-  if (timeline.before === null) {
+  if (timeline.before === null || introFirst) {
     items.push({ kind: "intro", key: "intro" });
-  } else if (timeline.loadingOlder) {
+  }
+
+  if (timeline.before !== null && timeline.loadingOlder) {
     items.push({ kind: "loading", key: "loading-older" });
+  } else if (timeline.before !== null && introFirst) {
+    items.push({ kind: "earlier", key: "earlier" });
   }
 
   const place = (creatorId: number, createdAt: string, quiet: boolean): boolean => {

@@ -31,6 +31,7 @@ export function boardThread(
       resultUpdatedAt: null,
       links: [],
       tags,
+      messageCount: 0,
     },
   };
 }

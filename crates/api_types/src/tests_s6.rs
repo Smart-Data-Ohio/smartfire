@@ -25,6 +25,7 @@ fn post() -> Thread {
             result_updated_at: None,
             links: vec![],
             tags: vec!["api".into(), "bug".into()],
+            message_count: 3,
         }),
     }
 }
@@ -33,6 +34,7 @@ fn post() -> Thread {
 fn a_board_listing_round_trips() {
     let thread = serde_json::to_value(post()).unwrap();
     assert_eq!(thread["work"]["tags"], json!(["api", "bug"]));
+    assert_eq!(thread["work"]["messageCount"], json!(3));
     assert_wire(
         &BoardListing {
             room_id: 40,
@@ -110,6 +112,7 @@ fn the_new_post_form_and_create_round_trip() {
             status: WorkStatus::Planned,
             owner_id: None,
             tags: vec!["bug".into()],
+            client_post_id: Some("0192a3b4-0000-7000-8000-000000000001".into()),
             message: Some(CreateMessage {
                 client_message_id: "0192a3b4-0000-7000-8000-000000000001".into(),
                 markdown_source: "Steps to reproduce…".into(),
@@ -123,6 +126,7 @@ fn the_new_post_form_and_create_round_trip() {
             "status": "planned",
             "ownerId": null,
             "tags": ["bug"],
+            "clientPostId": "0192a3b4-0000-7000-8000-000000000001",
             "message": {
                 "clientMessageId": "0192a3b4-0000-7000-8000-000000000001",
                 "markdownSource": "Steps to reproduce…",

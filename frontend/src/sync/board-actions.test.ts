@@ -96,20 +96,22 @@ describe("board actions", () => {
           ownerId: null,
           tags: ["api"],
           brief: "Brief",
+          clientId: "0192a3b4-0000-7000-8000-00000000c1ad",
         } as const;
 
         yield* boards.createPost(BOARD, input);
         const body = (yield* fake.requests).at(-1)?.body;
         expect(body).toMatchObject({
-          message: {
-            markdownSource: "Brief",
-            clientMessageId: expect.stringMatching(/^[0-9a-f-]{14}7[0-9a-f-]+$/),
-          },
+          clientPostId: input.clientId,
+          message: { markdownSource: "Brief", clientMessageId: input.clientId },
         });
         expect(boardPostIds(store.getState(), BOARD)).toEqual([1]);
         expect(store.getState().threadPanes[1]?.work).toEqual(boardDetail().work);
         yield* boards.createPost(BOARD, { ...input, brief: " \n " });
-        expect((yield* fake.requests).at(-1)?.body).toMatchObject({ message: null });
+        expect((yield* fake.requests).at(-1)?.body).toMatchObject({
+          message: null,
+          clientPostId: input.clientId,
+        });
       }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
@@ -139,6 +141,19 @@ describe("board actions", () => {
 });
 
 describe("work sync and board room sessions", () => {
+  it("doesn't refetch a pane's work when only its message count moved", () => {
+    mutations.loadThreadDetail(boardDetail());
+    const replied = boardThread(1);
+
+    if (replied.work !== null) replied.work.messageCount = 5;
+
+    const events = [{ seq: 1, topic: "room:900", type: "thread.updated", data: replied }] as const;
+
+    mutations.applyEvents(events, 0);
+    expect(store.getState().threads[1]?.work?.messageCount).toBe(5);
+    expect(changedWorkPanes(store.getState(), events, ["thread:1"])).toEqual([]);
+  });
+
   it.effect("refetches only open panes with changed work facts and keeps newer live rows", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
@@ -245,5 +260,41 @@ it.effect("keeps a reply's newer activity when work detail lands", () =>
     yield* Fiber.join(refresh);
     expect(store.getState().threads[1]).toEqual(live);
     expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("done");
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("doesn't let a late save reply undo a newer change that arrived meanwhile", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")));
+    const reply = yield* Deferred.make<ReturnType<typeof boardDetail>>();
+    const entered = yield* Deferred.make<void>();
+    yield* fake.route("PATCH /threads/1/work", () =>
+      Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(reply)),
+    );
+    yield* fake.reply("GET /threads/1", boardDetail(boardThread(1, "blocked", 8)));
+    const save = yield* Effect.forkChild(boards.update(1, { status: "in_progress" }));
+    yield* Deferred.await(entered);
+    // Another member's later change lands while our reply is held up.
+    mutations.applyEvents(
+      [{ seq: 1, topic: "room:900", type: "thread.updated", data: boardThread(1, "blocked", 8) }],
+      0,
+    );
+    yield* Deferred.succeed(reply, boardDetail(boardThread(1, "in_progress")));
+    yield* Fiber.join(save);
+    expect(store.getState().threads[1]?.work?.status).toBe("blocked");
+    expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("blocked");
+    expect(store.getState().threadPanes[1]?.workFacts?.owner?.id).toBe(8);
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("installs a save reply at once when nothing changed while it was in flight", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")));
+    yield* fake.reply("PATCH /threads/1/work", boardDetail(boardThread(1, "done")));
+    yield* boards.update(1, { status: "done" });
+    expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("done");
+    expect((yield* fake.requests).map((request) => request.method)).toEqual(["PATCH"]);
   }).pipe(Effect.provide(FakeApi.layerClient)),
 );

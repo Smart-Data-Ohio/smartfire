@@ -1,11 +1,13 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { Thread } from "../gen/Thread.ts";
+import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
-import { uuid7 } from "../lib/uuid7.ts";
 import type { BoardQuery } from "../store/boards.ts";
 import { mutations, store } from "../store/store.ts";
+import { refreshWorkPane } from "./work-refresh.ts";
 
 /** Room sessions own room:<id>; changing board filters does not acquire another holder. */
 export const open = Effect.fn("boards.open")(function* (roomId: number, query: BoardQuery) {
@@ -61,8 +63,11 @@ export interface BoardPostInput {
   readonly ownerId: number | null;
   readonly tags: readonly string[];
   readonly brief: string;
-  /** Preserve this when retrying a request whose response was lost. */
-  readonly clientMessageId?: string;
+  /**
+   * The submission's retry identity (a UUID): keep it across retries of one post, so a retry after
+   * a lost reply answers the post already made. The brief's message id is the same.
+   */
+  readonly clientId: string;
 }
 
 export const createPost = Effect.fn("boards.createPost")(function* (
@@ -74,11 +79,12 @@ export const createPost = Effect.fn("boards.createPost")(function* (
     status: input.status,
     ownerId: input.ownerId,
     tags: [...input.tags],
+    clientPostId: input.clientId,
     message:
       input.brief.trim() === ""
         ? null
         : {
-            clientMessageId: input.clientMessageId ?? uuid7(Date.now()),
+            clientMessageId: input.clientId,
             markdownSource: input.brief,
             replyToMessageId: null,
             replyNotifyAuthor: null,
@@ -92,13 +98,37 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   return detail;
 });
 
+/**
+ * A save's reply is the post as the server had it when it answered. If anything newer reached the
+ * store while it was in flight (another member's change, a refreshed detail, our own broadcast),
+ * the reply may be older than what we hold, so it isn't installed: the pane refetches instead,
+ * and `refreshWorkPane` settles any change that lands during that GET too.
+ */
+const installSaved = Effect.fnUntraced(function* (
+  threadId: number,
+  sent: Thread | undefined,
+  detail: ThreadDetail,
+) {
+  if (store.getState().threads[threadId] === sent) {
+    mutations.loadThreadDetail(detail);
+
+    return;
+  }
+
+  yield* refreshWorkPane(threadId);
+});
+
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
-  mutations.loadThreadDetail(yield* api.updateWork(threadId, body));
+  const sent = store.getState().threads[threadId];
+
+  yield* installSaved(threadId, sent, yield* api.updateWork(threadId, body));
 });
 
 export const handoff = Effect.fn("work.handoff")(function* (
   threadId: number,
   body: CreateWorkHandoff,
 ) {
-  mutations.loadThreadDetail(yield* api.handoffWork(threadId, body));
+  const sent = store.getState().threads[threadId];
+
+  yield* installSaved(threadId, sent, yield* api.handoffWork(threadId, body));
 });

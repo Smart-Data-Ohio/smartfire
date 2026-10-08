@@ -193,10 +193,19 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     ]);
   };
 
+  /** Posts by `room:creator:clientPostId`, so a retry answers the post its first attempt made. */
+  const postsByClientId = new Map<string, number>();
+
   const createPost = (roomId: number, body: Json | undefined, actorId = VIEWER_ID) => {
     const room = boardRoom(roomId);
 
     if (!room.memberIds.includes(actorId)) throw notFound("Board not found");
+    const clientPostId = stringField(body, "clientPostId") ?? null;
+    const postKey = clientPostId === null ? null : `${roomId}:${actorId}:${clientPostId}`;
+    const made = postKey === null ? undefined : postsByClientId.get(postKey);
+
+    if (made !== undefined && ctx.world().threads.has(made))
+      return ok(threads.detail(threads.threadOr404(made)));
     const messageBody = field(body, "message");
     const clientMessageId = messageBody == null ? null : clientMessageIdOf(messageBody);
     const key = `${roomId}:${actorId}:${clientMessageId}`;
@@ -253,6 +262,8 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads)
     if (thread.viewerMembership !== null)
       thread.viewerMembership = { ...thread.viewerMembership, threadId: thread.id };
     ctx.world().threads.set(thread.id, thread);
+
+    if (postKey !== null) postsByClientId.set(postKey, thread.id);
 
     if (parsed !== null && clientMessageId !== null) {
       const message = threads.postReply(

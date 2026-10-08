@@ -1,8 +1,20 @@
 import { Effect } from "effect";
 import { thread } from "../api/thread-endpoints.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import type { WorkFacts } from "../gen/WorkFacts.ts";
 import type { State } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+
+/**
+ * The facts that version the work detail, as JSON: all but `messageCount`, which every reply
+ * changes and the detail doesn't hold.
+ */
+export function workVersion(facts: WorkFacts | null | undefined): string {
+  if (facts == null) return JSON.stringify(facts ?? null);
+  const { messageCount: _, ...version } = facts;
+
+  return JSON.stringify(version);
+}
 
 /** Work facts are the detail's version; the pane remembers them at its last GET. */
 export function changedWorkPanes(
@@ -19,7 +31,7 @@ export function changedWorkPanes(
         const pane = state.threadPanes[event.data.id];
 
         return pane !== undefined &&
-          JSON.stringify(pane.workFacts) !== JSON.stringify(state.threads[event.data.id]?.work)
+          workVersion(pane.workFacts) !== workVersion(state.threads[event.data.id]?.work)
           ? [event.data.id]
           : [];
       }),
@@ -42,13 +54,13 @@ export const refreshWorkPane = Effect.fn("work.refreshPane")(function* (threadId
       return;
     }
 
-    if (JSON.stringify(current.work) === JSON.stringify(before?.work)) {
+    if (workVersion(current.work) === workVersion(before?.work)) {
       mutations.loadThreadDetail({ ...detail, thread: { ...current, work: detail.thread.work } });
 
       return;
     }
 
-    if (JSON.stringify(current.work) === JSON.stringify(detail.thread.work)) {
+    if (workVersion(current.work) === workVersion(detail.thread.work)) {
       mutations.loadThreadDetail({ ...detail, thread: current });
 
       return;

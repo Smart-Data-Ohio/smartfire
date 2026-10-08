@@ -175,6 +175,11 @@ async fn new_post(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &form)
 }
 
+/// The receipt kind for a board post made with a `clientPostId`.
+const RECEIPT: &str = "board_post";
+/// The longest `clientPostId` honoured.
+const CLIENT_POST_ID_LIMIT: usize = 255;
+
 /// A client id is a board creation receipt only when it names this creator's board opener.
 fn duplicate(
     conn: &Connection,
@@ -212,6 +217,21 @@ async fn create_post(c: &mut Ctx) -> Result {
     let client_id = message
         .as_ref()
         .map(|message| message.client_message_id.trim().to_string());
+    let post_key = input
+        .client_post_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|key| !key.is_empty())
+        .map(str::to_string);
+    if post_key
+        .as_ref()
+        .is_some_and(|key| key.chars().count() > CLIENT_POST_ID_LIMIT)
+    {
+        return Err(fail(
+            c,
+            validation("clientPostId", "is too long (maximum is 255 characters)"),
+        ));
+    }
     let lookup = client_id.clone();
     let replay = c
         .app()
@@ -275,6 +295,7 @@ async fn create_post(c: &mut Ctx) -> Result {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
     };
+    let app = c.app().clone();
     let outcome = c
         .app()
         .db
@@ -291,6 +312,17 @@ async fn create_post(c: &mut Ctx) -> Result {
                 && let Some(thread) = duplicate(tx.conn(), room_id, creator_id, id)?
             {
                 return Ok((thread.id, false));
+            }
+            if let Some(key) = post_key.as_deref()
+                && let Some(id) = app.receipts.find(RECEIPT, room_id, creator_id, key)
+            {
+                match ChannelThread::find(tx.conn(), id) {
+                    Ok(thread) if thread.room_id == room_id && thread.creator_id == creator_id => {
+                        return Ok((thread.id, false));
+                    }
+                    Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => {}
+                    Err(error) => return Err(error),
+                }
             }
             let blob = attachment_blob(tx, attachment)?;
             let message = message.map(|message| NewMessage {
@@ -319,6 +351,9 @@ async fn create_post(c: &mut Ctx) -> Result {
                     attachments::enqueue_analysis(tx, blob);
                 }
                 campfire_db::models::message_attachment_processing::schedule_message(tx, opener)?;
+            }
+            if let Some(key) = post_key.as_deref() {
+                app.receipts.record(RECEIPT, room_id, creator_id, key, thread.id);
             }
             Ok((thread.id, true))
         })

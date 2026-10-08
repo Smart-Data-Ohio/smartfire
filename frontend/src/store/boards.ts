@@ -1,3 +1,5 @@
+import type { AgentStep } from "../gen/AgentStep.ts";
+import type { AgentStepsChanged } from "../gen/AgentStepsChanged.ts";
 import type { BoardDigest } from "../gen/BoardDigest.ts";
 import type { BoardListing } from "../gen/BoardListing.ts";
 import type { BoardOwnerOption } from "../gen/BoardOwnerOption.ts";
@@ -112,9 +114,16 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
   if (held === undefined || held.generation !== generation) return state;
   const posts = listing.posts.filter(({ thread }) => !held.removedPostIds.includes(thread.id));
   const snapshot = posts.filter(({ thread }) => !held.changedPostIds.includes(thread.id));
+  // Asked for after any removal this board saw, so a post it shows really exists.
+  const shown = new Set(posts.map(({ thread }) => thread.id));
+
+  const removedThreads = Object.fromEntries(
+    Object.entries(state.removedThreads).filter(([id]) => !shown.has(Number(id))),
+  );
 
   return {
     ...state,
+    removedThreads,
     users: mergeUserList(state.users, listing.users),
     threads: {
       ...state.threads,
@@ -169,7 +178,12 @@ export function boardThreadChanged(state: State, thread: Thread): State {
 export function addBoardPost(state: State, thread: Thread): State {
   const held = state.boards[thread.roomId];
 
-  if (held === undefined || held.postIds.includes(thread.id)) return state;
+  if (
+    held === undefined ||
+    held.postIds.includes(thread.id) ||
+    state.removedThreads[thread.id] !== undefined
+  )
+    return state;
 
   return {
     ...state,
@@ -272,4 +286,41 @@ export function boardColumns(state: State, roomId: number): BoardColumns {
   }
 
   return columns;
+}
+
+/**
+ * `agent.steps` for a work thread: merges the steps into the open post's work by id, keeping the
+ * copy with the later `updatedAt` (the later arrival on a tie), in `(position, id)` order. Steps
+ * on a message, and threads whose work isn't loaded, are left alone (a load brings them).
+ */
+export function mergeWorkSteps(state: State, event: AgentStepsChanged): State {
+  if (event.messageId !== null || event.threadId === null) {
+    return state;
+  }
+
+  const pane = state.threadPanes[event.threadId];
+
+  if (pane?.work == null) {
+    return state;
+  }
+
+  const byId = new Map<number, AgentStep>(pane.work.steps.map((step) => [step.id, step]));
+
+  for (const step of event.steps) {
+    const held = byId.get(step.id);
+
+    if (held === undefined || Date.parse(step.updatedAt) >= Date.parse(held.updatedAt)) {
+      byId.set(step.id, step);
+    }
+  }
+
+  const steps = [...byId.values()].sort((a, b) => a.position - b.position || a.id - b.id);
+
+  return {
+    ...state,
+    threadPanes: {
+      ...state.threadPanes,
+      [event.threadId]: { ...pane, work: { ...pane.work, steps } },
+    },
+  };
 }
