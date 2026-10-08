@@ -1,9 +1,17 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from "@tanstack/react-router";
 import { act, fireEvent, render } from "@testing-library/react";
 import { createRef, type ReactNode, type RefObject, useImperativeHandle, useRef } from "react";
 import type { VListHandle } from "virtua";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
+import { MessageRow } from "../room/message-row.tsx";
 import type { TimelineItem } from "../room/timeline-items.ts";
+import { useListEdges } from "./list-edges.ts";
 import { useViewportAnchor } from "./viewport-anchor.ts";
 
 type AnchorApi = ReturnType<typeof useViewportAnchor>;
@@ -81,6 +89,7 @@ interface HarnessProps {
   readonly onSettled?: () => void;
   readonly introFirst?: boolean;
   readonly introControls?: ReactNode;
+  readonly navigableRows?: boolean;
 }
 
 /** The virtualiser's geometry is explicit because jsdom does not lay out the rows. */
@@ -98,6 +107,7 @@ function Harness({
   onSettled,
   introFirst = false,
   introControls,
+  navigableRows = false,
 }: HarnessProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewport = () => containerRef.current?.querySelector<HTMLElement>('[role="log"]');
@@ -146,6 +156,7 @@ function Harness({
   });
 
   useImperativeHandle(apiRef, () => anchor);
+  useListEdges(containerRef, listRef, items);
 
   const rowBounds = (id: number) =>
     new DOMRect(
@@ -254,28 +265,45 @@ function Harness({
             <div
               key={id}
               ref={(element) => {
-                if (element) element.getBoundingClientRect = () => rowBounds(id);
+                if (element) {
+                  element.getBoundingClientRect = () => rowBounds(id);
+
+                  if (navigableRows && element.firstElementChild)
+                    element.firstElementChild.getBoundingClientRect = () => rowBounds(id);
+                }
               }}
             >
-              <article
-                data-message-row={introFirst && id === geometry.ids[0] ? undefined : true}
-                data-message-id={introFirst && id === geometry.ids[0] ? undefined : id}
-                data-intro-id={introFirst && id === geometry.ids[0] ? id : undefined}
-                data-editing={editingId === id ? true : undefined}
-                data-popup-pending={popupPendingId === id ? true : undefined}
-                tabIndex={-1}
-                ref={(element) => {
-                  if (element) element.getBoundingClientRect = () => rowBounds(id);
-                }}
-              >
-                <div className="message-body">
-                  {introFirst && id === geometry.ids[0] ? "Work header" : `Message ${id}`}
-                </div>
-                {introFirst && id === geometry.ids[0] ? introControls : null}
-                <a href="/">Read message {id}</a>
-                {hasCards ? <div className="message-cards">Card</div> : null}
-                {popupId === id ? <span className="message-popup-anchor" /> : null}
-              </article>
+              {navigableRows && !(introFirst && id === geometry.ids[0]) ? (
+                <MessageRow
+                  message={messageFixture(id, 12)}
+                  groupStart={false}
+                  mentionsMe={false}
+                  focused={false}
+                  live={false}
+                  inThread
+                  onNavigate={anchor.takeControl}
+                />
+              ) : (
+                <article
+                  data-message-row={introFirst && id === geometry.ids[0] ? undefined : true}
+                  data-message-id={introFirst && id === geometry.ids[0] ? undefined : id}
+                  data-intro-id={introFirst && id === geometry.ids[0] ? id : undefined}
+                  data-editing={editingId === id ? true : undefined}
+                  data-popup-pending={popupPendingId === id ? true : undefined}
+                  tabIndex={-1}
+                  ref={(element) => {
+                    if (element) element.getBoundingClientRect = () => rowBounds(id);
+                  }}
+                >
+                  <div className="message-body">
+                    {introFirst && id === geometry.ids[0] ? "Work header" : `Message ${id}`}
+                  </div>
+                  {introFirst && id === geometry.ids[0] ? introControls : null}
+                  <a href="/">Read message {id}</a>
+                  {hasCards ? <div className="message-cards">Card</div> : null}
+                  {popupId === id ? <span className="message-popup-anchor" /> : null}
+                </article>
+              )}
             </div>
           ))}
         </div>
@@ -1480,6 +1508,61 @@ describe("useViewportAnchor reader control", () => {
       expect(apiRef.current?.canFollow()).toBe(false);
     },
   );
+
+  it("End on a fitting post's sole reply follows an incoming long reply", () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+    const scrollIntoView = Element.prototype.scrollIntoView;
+
+    try {
+      Element.prototype.scrollIntoView = () => undefined;
+
+      const apiRef = createRef<AnchorApi>();
+
+      const router = createRouter({
+        routeTree: createRootRoute(),
+        history: createMemoryHistory({ initialEntries: ["/"] }),
+      });
+
+      const geometry: Geometry = {
+        ids: [1, 2],
+        heights: new Map([
+          [1, 200],
+          [2, 100],
+        ]),
+      };
+
+      const content = () => (
+        <RouterContextProvider router={router}>
+          <Harness apiRef={apiRef} geometry={geometry} introFirst navigableRows />
+        </RouterContextProvider>
+      );
+
+      const view = render(content());
+
+      act(() => apiRef.current?.place(0, { align: "start", follow: false }));
+      act(() => vi.advanceTimersToNextFrame());
+      act(() => vi.advanceTimersToNextFrame());
+      act(() => measureRows(geometry));
+      expect(apiRef.current?.isPlacing()).toBe(false);
+      expect(viewport().scrollHeight).toBe(VIEWPORT_HEIGHT);
+      act(() => rowOf(2).focus());
+      expect(document.activeElement).toBe(rowOf(2));
+      expect(apiRef.current?.canFollow()).toBe(false);
+      expect(fireEvent.keyDown(rowOf(2), { key: "End" })).toBe(false);
+      expect(document.activeElement).toBe(rowOf(2));
+      expect(apiRef.current?.canFollow()).toBe(true);
+
+      geometry.ids = [1, 2, 3];
+      geometry.heights.set(3, 900);
+      view.rerender(content());
+      act(() => measureRows(geometry));
+      expect(viewport().scrollTop).toBe(900);
+      expect(apiRef.current?.canFollow()).toBe(true);
+    } finally {
+      Element.prototype.scrollIntoView = scrollIntoView;
+      vi.useRealTimers();
+    }
+  });
 
   it.each(["wheel", "ArrowDown", "End", "send"] as const)(
     "a short post intro keeps follow off through settlement and growth until %s takes over",

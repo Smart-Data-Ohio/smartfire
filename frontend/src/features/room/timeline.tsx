@@ -374,6 +374,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             mentionsMe={mentionsViewer(item.message.bodyHtml, viewerId)}
             focused={item.message.id === focusMessageId}
             live={created > openedAt && now - created < LIVE_WINDOW_MS}
+            onNavigate={takeControl}
           />
         );
       }

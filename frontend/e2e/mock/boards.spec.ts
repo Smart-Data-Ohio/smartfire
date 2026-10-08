@@ -222,6 +222,62 @@ for (const key of ["End", "PageDown"] as const) {
   });
 }
 
+test("End on a fitting post's sole reply follows an incoming long reply", async ({ page }) => {
+  const threadId = BOARD_POST_IDS.onboardingChecklist;
+
+  await page.route(`**/api/v1/threads/${threadId}/messages**`, async (route) => {
+    const response = await route.fetch();
+    const body: MessagePage = await response.json();
+
+    body.messages = body.messages.slice(-1);
+    body.before = null;
+    body.after = null;
+    await route.fulfill({ response, json: body });
+  });
+  const welcomed = syncWelcomed(page);
+
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await openApp(page, `r/${BOARD}/t/${threadId}`);
+  await welcomed;
+  const list = pane(page).getByRole("log", { name: "Replies" });
+  const reply = list.locator("[data-message-row]");
+
+  await expect(list).toHaveAttribute("data-placement-settled", "true");
+  await expect(reply).toHaveCount(1);
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBe(0);
+  await reply.focus();
+  await expect(reply).toBeFocused();
+  await reply.press("End");
+  await expect(reply).toBeFocused();
+
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  const posted = await page.request.post("/__mock/thread-post", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: {
+      threadId,
+      userId: USER_IDS.maya,
+      markdown: Array.from(
+        { length: 100 },
+        (_, index) => `Board End reply paragraph ${index}`,
+      ).join("\n\n"),
+    },
+  });
+
+  expect(posted.ok()).toBe(true);
+  await expect(list.getByText("Board End reply paragraph 99", { exact: true })).toBeInViewport();
+  await expect
+    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBeGreaterThan(500);
+  await expect
+    .poll(() =>
+      list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
+    )
+    .toBeLessThanOrEqual(1);
+});
+
 test("Status menu navigation keeps a fitting board post at its work after a long reply", async ({
   page,
 }) => {

@@ -65,10 +65,12 @@ function ThreadParent({
   parent,
   replyCount,
   viewerId,
+  onNavigate,
 }: {
   readonly parent: MessageDTO | null;
   readonly replyCount: number;
   readonly viewerId: number | null;
+  readonly onNavigate: (allowEnd: boolean) => void;
 }) {
   return (
     <div className="thread-parent">
@@ -85,6 +87,7 @@ function ThreadParent({
           focused={false}
           live={false}
           inThread
+          onNavigate={onNavigate}
         />
       )}
       <div className="thread-replies-rule">
@@ -206,6 +209,7 @@ export function ThreadTimeline({
     isPlacing,
     canFollow,
     followEnd,
+    takeControl,
     keepMounted,
   } = useViewportAnchor({
     containerRef,
@@ -311,6 +315,7 @@ export function ThreadTimeline({
             parent={parent}
             replyCount={replyCount}
             viewerId={viewerId}
+            onNavigate={takeControl}
           />
         ) : (
           <PostIntro key={item.key} intro={intro} replyCount={replyCount} />
@@ -348,6 +353,7 @@ export function ThreadTimeline({
             focused={item.message.id === focusMessageId}
             live={created > openedAt && now - created < LIVE_WINDOW_MS}
             inThread
+            onNavigate={takeControl}
           />
         );
       }

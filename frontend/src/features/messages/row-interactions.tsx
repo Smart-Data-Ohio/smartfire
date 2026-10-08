@@ -139,7 +139,11 @@ export interface RowInteractions {
  * right-click and long-press menu, the emoji picker and boost popovers, the row's keys, editing,
  * forwarding and the delete confirmation with its collapse.
  */
-export function useRowInteractions(message: MessageDTO, inThread: boolean): RowInteractions {
+export function useRowInteractions(
+  message: MessageDTO,
+  inThread: boolean,
+  onNavigate?: (allowEnd: boolean) => void,
+): RowInteractions {
   const navigate = useNavigate();
   const openFizzyCard = useOpenFizzyCard();
   const permissions = useMessagePermissions(message);
@@ -406,6 +410,9 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
     }
 
     event.preventDefault();
+
+    if (["up", "down", "first", "last"].includes(command))
+      onNavigate?.(command === "down" || command === "last");
 
     switch (command) {
       case "up":

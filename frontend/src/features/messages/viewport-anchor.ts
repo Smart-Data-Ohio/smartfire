@@ -697,7 +697,7 @@ export function useViewportAnchor({
     },
   );
 
-  const takeControl = () => cancelPlacement(true, false);
+  const takeControl = (allowEnd = false) => cancelPlacement(true, allowEnd);
 
   const finishPlacement = useEffectEvent(() => {
     const state = placementRef.current;
