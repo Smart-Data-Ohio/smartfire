@@ -234,8 +234,30 @@ describe("palette and font", () => {
     expect(html().style.getPropertyValue("--bg-pane")).toMatch(/^light-dark\(oklch/);
     expect(html().style.getPropertyValue("--accent")).toMatch(/^light-dark\(oklch/);
     expect(stored()).toMatchObject({ palette: "ember" });
-    // Its tokens too, for index.html's blocking script to paint before the SPA loads.
-    expect(stored().paletteTokens?.["--accent"]).toBe(html().style.getPropertyValue("--accent"));
+    // Only the name: index.html carries every palette's tokens, built from the same presets.
+    expect(stored()).not.toHaveProperty("paletteTokens");
+  });
+
+  it("ignores tokens an earlier version stored, and drops them at the next change", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        palette: "ember",
+        paletteTokens: { "--text-body": "0px", "--accent": "light-dark(red, red)" },
+      }),
+    );
+    const { restoreAppearance, setFont } = await load();
+    const { paletteTokens } = await import("./palette.ts");
+
+    restoreAppearance();
+
+    expect(html().style.getPropertyValue("--text-body")).toBe("");
+    expect(html().style.getPropertyValue("--accent")).toBe(paletteTokens("ember").get("--accent"));
+
+    setFont("serif");
+
+    expect(stored()).toMatchObject({ palette: "ember", font: "serif" });
+    expect(stored()).not.toHaveProperty("paletteTokens");
   });
 
   it("goes back to the stylesheet's colours with Smartfire's palette", async () => {

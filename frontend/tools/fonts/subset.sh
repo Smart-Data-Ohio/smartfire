@@ -5,6 +5,12 @@
 # Source Serif 4.005 (adobe-fonts/source-serif). All are SIL OFL 1.1. Needs gh, unzip and python3;
 # fonttools and brotli are installed into a throwaway venv under the work directory.
 #
+# Inter, JetBrains Mono and Atkinson Hyperlegible Next declare no Reserved Font Name, so they are
+# subset (a Modified Version under the OFL) and keep their names. Source Serif reserves "Source",
+# so its upstream web fonts ship unmodified (the Text optical size, static, with upstream's file
+# names) rather than subset. Every file keeps its name table, the licence records (13 and 14)
+# included, and each licence is copied beside the fonts; vite.config.ts puts them in the build.
+#
 #   tools/fonts/subset.sh [work-dir]     (default: ~/.cache/smartfire-fonts)
 set -euo pipefail
 
@@ -17,8 +23,10 @@ gh release download v4.1 --repo rsms/inter -p 'Inter-4.1.zip' --clobber
 gh release download v2.304 --repo JetBrains/JetBrainsMono -p 'JetBrainsMono-2.304.zip' --clobber
 unzip -o -q Inter-4.1.zip -d inter
 unzip -o -q JetBrainsMono-2.304.zip -d jbm
-gh release download 4.005R --repo adobe-fonts/source-serif -p 'source-serif-4.005_Desktop.zip' --clobber
-unzip -o -q source-serif-4.005_Desktop.zip -d sserif
+gh release download 4.005R --repo adobe-fonts/source-serif -p 'source-serif-4.005_WOFF2.zip' --clobber
+unzip -o -q source-serif-4.005_WOFF2.zip -d sserif
+gh api -H 'Accept: application/vnd.github.raw' \
+  'repos/adobe-fonts/source-serif/contents/LICENSE.md?ref=4.005R' > sserif-LICENSE.md
 # Atkinson Hyperlegible Next publishes no releases; its variable fonts are fetched at one commit.
 ahn_commit="${AHN_COMMIT:-7925f50f649b3813257faf2f4c0b381011f434f1}"
 echo "Atkinson Hyperlegible Next at $ahn_commit"
@@ -38,7 +46,8 @@ range+=",U+2113,U+2C60-2C7F,U+A720-A7FF,U+2318,U+2325,U+2303,U+238B,U+232B,U+23C
 
 # The type scale uses weights 400-600 only; text sizes need only Inter's text optical size.
 subset() { # input output features
-  venv/bin/pyftsubset "$1" --unicodes="$range" --layout-features="$3" --flavor=woff2 --output-file="$2"
+  venv/bin/pyftsubset "$1" --unicodes="$range" --layout-features="$3" --name-IDs='*' \
+    --name-languages='*' --flavor=woff2 --output-file="$2"
 }
 inter_features="kern,liga,calt,ccmp,locl,mark,mkmk,case,tnum,cv11,ss01,zero,frac"
 venv/bin/fonttools varLib.instancer inter/InterVariable.ttf opsz=14 wght=400:600 -o inter.ttf -q
@@ -48,18 +57,18 @@ subset inter.ttf "$out/inter-latin-var.woff2" "$inter_features"
 subset inter-italic.ttf "$out/inter-latin-var-italic.woff2" "$inter_features"
 subset jbm.ttf "$out/jetbrains-mono-latin-var.woff2" "kern,liga,calt,ccmp,locl,mark,mkmk,zero"
 
-# Presets: the same weights and ranges; Source Serif pinned to its text optical size.
+# Presets: Atkinson Hyperlegible Next with the same weights and ranges.
 preset_features="kern,liga,calt,ccmp,locl,mark,mkmk,case,tnum"
 venv/bin/fonttools varLib.instancer 'AtkinsonHyperlegibleNext[wght].ttf' wght=400:600 -o ahn.ttf -q
 venv/bin/fonttools varLib.instancer 'AtkinsonHyperlegibleNext-Italic[wght].ttf' wght=400:600 -o ahn-italic.ttf -q
-venv/bin/fonttools varLib.instancer sserif/source-serif-4.005_Desktop/VAR/SourceSerif4Variable-Roman.ttf opsz=16 wght=400:600 -o sserif.ttf -q
-venv/bin/fonttools varLib.instancer sserif/source-serif-4.005_Desktop/VAR/SourceSerif4Variable-Italic.ttf opsz=16 wght=400:600 -o sserif-italic.ttf -q
 subset ahn.ttf "$out/atkinson-hyperlegible-next-latin-var.woff2" "$preset_features"
 subset ahn-italic.ttf "$out/atkinson-hyperlegible-next-latin-var-italic.woff2" "$preset_features"
-subset sserif.ttf "$out/source-serif-4-latin-var.woff2" "$preset_features"
-subset sserif-italic.ttf "$out/source-serif-4-latin-var-italic.woff2" "$preset_features"
+# Source Serif, unmodified: the regular and semibold weights and their italics.
+for face in Regular It Semibold SemiboldIt; do
+  cp "sserif/source-serif-4.005_WOFF2/TTF/SourceSerif4-$face.ttf.woff2" "$out/"
+done
 cp inter/LICENSE.txt "$out/LICENSE-Inter.txt"
 cp jbm/OFL.txt "$out/LICENSE-JetBrainsMono.txt"
 cp ahn-OFL.txt "$out/LICENSE-AtkinsonHyperlegibleNext.txt"
-cp sserif/source-serif-4.005_Desktop/LICENSE.md "$out/LICENSE-SourceSerif4.md"
+cp sserif-LICENSE.md "$out/LICENSE-SourceSerif4.txt"
 ls -l "$out"

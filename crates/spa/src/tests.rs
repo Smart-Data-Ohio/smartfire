@@ -118,7 +118,10 @@ fn built_dist_is_embedded_whole() {
         if extension == "woff2" {
             assert_eq!((file.br, file.gz), (None, None), "{}: woff2 is compressed already", file.path);
         }
-        if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
+        // The fonts' licences keep their names, so they're found beside the fonts (and revalidated).
+        if file.path.starts_with("assets/LICENSE-") {
+            assert!(!file.immutable && extension == "txt", "{}", file.path);
+        } else if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
             assert!(file.immutable, "Vite hashes every asset's name: {}", file.path);
         }
         if let Some(br) = file.br {
@@ -228,6 +231,34 @@ fn lookups_are_exact() {
     assert!(find(files, "assets/index-B2x8Kq1f.js").is_some());
     for path in ["index.html", "assets/../index.html", "/assets/index-B2x8Kq1f.js", "assets/index-B2x8Kq1f.js.br", ".vite/manifest.json", "assets"] {
         assert_eq!(find(files, path), None, "{path}");
+    }
+}
+
+/// The SIL Open Font License travels with each font the build ships: its licence sits beside the
+/// fonts in `assets/` (vite.config.ts copies them from `frontend/src/styles/fonts`).
+#[test]
+fn built_dist_ships_each_fonts_licence() {
+    if !built() {
+        return;
+    }
+    let licences = [
+        ("inter-", "LICENSE-Inter.txt"),
+        ("jetbrains-mono-", "LICENSE-JetBrainsMono.txt"),
+        ("atkinson-hyperlegible-next-", "LICENSE-AtkinsonHyperlegibleNext.txt"),
+        ("SourceSerif4-", "LICENSE-SourceSerif4.txt"),
+    ];
+    let fonts: Vec<&File> = files().iter().filter(|file| file.path.ends_with(".woff2")).collect();
+    assert!(!fonts.is_empty(), "the build ships fonts");
+    for font in fonts {
+        let name = font.path.rsplit('/').next().unwrap_or(font.path);
+        let (_, licence) = licences
+            .iter()
+            .find(|(prefix, _)| name.starts_with(prefix))
+            .unwrap_or_else(|| panic!("{name} has no licence listed here"));
+        let path = format!("assets/{licence}");
+        let file = files().iter().find(|file| file.path == path).unwrap_or_else(|| panic!("{path} isn't in the build, beside {name}"));
+        let text = std::str::from_utf8(file.identity).expect("the licence is text");
+        assert!(text.contains("SIL Open Font License"), "{path}");
     }
 }
 

@@ -132,9 +132,9 @@ const SURFACES = [
   "--bg-sunken",
 ];
 
-/** Text token → the backgrounds it is used on. */
-const PAIRS = new Map<string, readonly string[]>([
-  ["--text", SURFACES],
+/** Text token → the backgrounds it is used on; each text token once (a Map keeps the last). */
+const PAIR_LIST: readonly (readonly [string, readonly string[]])[] = [
+  ["--text", [...SURFACES, "--mention-bg over --bg-pane"]],
   ["--text-muted", SURFACES],
   ["--text-faint", SURFACES],
   ["--accent", [...SURFACES, "--accent-soft"]],
@@ -148,7 +148,6 @@ const PAIRS = new Map<string, readonly string[]>([
       "--bg-sidebar",
     ],
   ],
-  ["--text", ["--mention-bg over --bg-pane"]],
   ["--danger-text", ["--bg-pane", "--bg-raised", "--bg-hover", "--danger-soft"]],
   ["--success-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
   ["--warning-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
@@ -156,7 +155,9 @@ const PAIRS = new Map<string, readonly string[]>([
   ["--tooltip-text", ["--tooltip-bg"]],
   ["--on-accent", ["--accent-solid"]],
   ["--on-danger", ["--danger-solid"]],
-]);
+];
+
+const PAIRS = new Map(PAIR_LIST);
 
 /** A component's `--name: value;` declaration, read from its stylesheet in src/ui. */
 function declaration(file: string, name: string): string {
@@ -229,6 +230,13 @@ describe("design tokens", () => {
       ).toBeGreaterThanOrEqual(4.5);
     },
   );
+
+  it("lists each text token's backgrounds once, so none is dropped from the checks", () => {
+    const names = PAIR_LIST.map(([text]) => text);
+
+    expect(new Set(names).size).toBe(names.length);
+    expect(PAIRS.get("--text")).toEqual(expect.arrayContaining([...SURFACES]));
+  });
 
   it("knows the stylesheet's own value for every token a palette replaces", () => {
     // The palette picker paints Smartfire's swatch with these, whatever palette is on the page.

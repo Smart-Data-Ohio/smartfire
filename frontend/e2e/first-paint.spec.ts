@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
+import { PALETTE_TOKEN_NAMES, paletteTokens } from "../src/lib/palette.ts";
 
 /**
  * The production build's first paint, before any of the SPA's JavaScript runs, on the page the
@@ -163,34 +164,94 @@ test("a theme pinned on this device is painted first, over the account's", async
   expect(opened.refusals).toEqual([]);
 });
 
-test("this device's palette and font are painted first, before the SPA derives them", async ({
-  page,
-}) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.addInitScript(() =>
-    localStorage.setItem(
-      "smartfire.appearance",
-      JSON.stringify({
-        palette: "ember",
-        font: "serif",
-        paletteTokens: { "--bg-app": "light-dark(oklch(30% 0.05 50), oklch(20% 0.02 50))" },
-      }),
-    ),
+/** The palette tokens set on <html>, by name (none when the stylesheet's own apply). */
+async function inlineTokens(page: Page): Promise<Map<string, string>> {
+  const set = await page.evaluate(
+    (names) =>
+      names
+        .map((name) => [name, document.documentElement.style.getPropertyValue(name)])
+        .filter(([, value]) => value !== ""),
+    [...PALETTE_TOKEN_NAMES],
   );
 
-  const opened = await openHeld(page, { theme: "light", textSize: "default" });
+  return new Map(set.map(([name = "", value = ""]) => [name, value]));
+}
+
+/** A custom property set on <html> itself. */
+const inlineProperty = (page: Page, name: string) =>
+  page.evaluate((property) => document.documentElement.style.getPropertyValue(property), name);
+
+/** Stores `value` as this device's appearance before the page loads. */
+async function storeAppearance(page: Page, value: string): Promise<void> {
+  await page.addInitScript((stored) => localStorage.setItem("smartfire.appearance", stored), value);
+}
+
+test("this device's palette and font are painted first, exactly as the SPA then sets them", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await storeAppearance(page, JSON.stringify({ palette: "ember", font: "serif" }));
+
+  const opened = await openHeld(page, { theme: "dark", textSize: "default" });
   const html = page.locator("html");
 
   await expect(html).toHaveAttribute("data-palette", "ember");
   await expect(html).toHaveAttribute("data-font", "serif");
-  // The stored --bg-app (a dark brown, even in the light theme) is what the body paints.
-  expect(await backgroundLuminance(page)).toBeLessThan(0.1);
 
-  // The SPA derives Ember's own tokens, a light surface in the light theme, over the stored ones.
+  const background = await backgroundLuminance(page);
+
+  // Ember's own tokens, as src/lib/palette.ts derives them, built into the page.
+  expect(await inlineTokens(page)).toEqual(paletteTokens("ember"));
+
   await hydrate(page, opened);
   await expect(html).toHaveAttribute("data-palette", "ember");
-  await expect(html).toHaveAttribute("data-font", "serif");
-  await expect.poll(() => backgroundLuminance(page)).toBeGreaterThan(0.8);
+  expect(await inlineTokens(page), "the SPA sets the same tokens").toEqual(paletteTokens("ember"));
+  expect(await backgroundLuminance(page), "so nothing shifts").toBe(background);
+  expect(opened.refusals).toEqual([]);
+});
+
+test("tokens an earlier version stored are ignored: the palette's own are painted", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await storeAppearance(
+    page,
+    JSON.stringify({
+      palette: "ember",
+      paletteTokens: { "--bg-app": "oklch(20% 0 0)", "--text-body": "0px" },
+    }),
+  );
+
+  const opened = await openHeld(page, { theme: "light", textSize: "default" });
+
+  await expect(page.locator("html")).toHaveAttribute("data-palette", "ember");
+  expect(await inlineTokens(page)).toEqual(paletteTokens("ember"));
+  expect(await inlineProperty(page, "--text-body")).toBe("");
+  expect(await backgroundLuminance(page), "Ember's light surface").toBeGreaterThan(0.8);
+
+  await hydrate(page, opened);
+  expect(await inlineTokens(page)).toEqual(paletteTokens("ember"));
+  expect(await inlineProperty(page, "--text-body")).toBe("");
+  expect(opened.refusals).toEqual([]);
+});
+
+test("storage that isn't JSON is ignored: the account's appearance is painted", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await storeAppearance(page, '{"palette": "ember", "font":');
+
+  const opened = await openHeld(page, { theme: "dark", textSize: "larger" });
+  const html = page.locator("html");
+
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  await expect(html).not.toHaveAttribute("data-palette", /.*/);
+  expect(await inlineTokens(page)).toEqual(new Map());
+
+  await hydrate(page, opened);
+  await expect(html).toHaveAttribute("data-theme", "dark");
+  await expect(html).not.toHaveAttribute("data-palette", /.*/);
+  expect(await rootFontSize(page)).toBe("18px");
   expect(opened.refusals).toEqual([]);
 });
 
@@ -206,7 +267,6 @@ test("corrupted choices on this device are ignored, at first paint and once the 
         density: ["compact"],
         palette: ["ember"],
         font: ["serif"],
-        paletteTokens: { "--bg-app": "oklch(100% 0 0)" },
       }),
     ),
   );

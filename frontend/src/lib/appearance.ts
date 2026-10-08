@@ -145,15 +145,13 @@ function writePalette(palette: PalettePreset): void {
 
 function store(appearance: Appearance): void {
   const { themeOverride, density, motion, palette, font } = appearance;
-  const tokens = paletteTokens(palette);
-  // The palette's derived tokens too, for index.html's blocking script to paint before any of the
-  // SPA's code (which derives them) has loaded. Smartfire's own palette has none.
-  const paint = tokens.size === 0 ? undefined : Object.fromEntries(tokens);
 
   try {
+    // The palette by name only: index.html carries every palette's tokens. Whatever else an
+    // earlier version stored (a palette's tokens, an account's theme) goes with this write.
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ themeOverride, density, motion, palette, font, paletteTokens: paint }),
+      JSON.stringify({ themeOverride, density, motion, palette, font }),
     );
   } catch {
     // Storage can be unavailable (private windows, quota); the choice still applies to this tab.
