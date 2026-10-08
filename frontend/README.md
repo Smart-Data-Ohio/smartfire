@@ -63,6 +63,53 @@ ported it; `pnpm gen` writes it to `src/gen/screens.json`, which `src/lib/screen
 Porting a screen: add its route, flip `ported` in `screens.rs` in the same PR, and run `pnpm gen`
 (`src/router.test.ts` fails until the two agree).
 
+## URL cutover contract
+
+[`crates/spa/compat/urls.json`](../crates/spa/compat/urls.json) pins incoming navigation URLs,
+their current responses, and their destinations after the root cutover. It includes old
+bookmarks and notification links, `/app/` deep links, and the auth, public, PWA, file, API and
+socket URLs that root routing must reserve. This is an acceptance contract; runtime routing
+still comes from the route table and screen map.
+
+Later default, root-dispatch and prefix changes should update the affected expectations in
+this JSON alongside the implementation. Keep the old incoming paths as cases, preserve their
+query context, and keep explicit classic choices and `classic=1` until classic retirement.
+The Rust HTTP test reads every entry from the file, so changing an expected response requires
+no test-code edit. A missing screen's eventual destination records required future work, not
+a claim that the screen exists today.
+
+Each entry records `owner_today`, `after_cutover`, bookmark and notification dependencies,
+and request `cases`. Update `cases[].expect` for a later step's status, redirect or content
+marker; `expect_stub` and `expect_built` distinguish a Cargo-only shell from the built SPA.
+Keep `after_cutover` as the final destination and retain cases for each older incoming URL.
+
+Restore the frozen seeds before running the contract tests from the repository root:
+
+```sh
+python3 parity/bin/frozen-seeds restore
+cargo test -j 4 -p campfire url_contract_tests -- --nocapture
+```
+
+The existing `pwa` Rust correctness job runs the contract with built assets, then a smoke
+test against the actual `campfire`
+binary with the production SPA embedded: real sign-in, room navigation, message send and
+reload. It uses the frozen default seed and pinned Chromium image, with no API mocks.
+Browser runs reserve `SMARTFIRE_E2E_PORT=4320` or `4321`.
+
+For a local smoke run, build the SPA first (`pnpm build` in `frontend/`), then from the root:
+
+```sh
+python3 parity/bin/frozen-seeds restore
+export SPA_DIST="$PWD/frontend/dist"
+cargo build -j 4 -p campfire --bin campfire
+SPA_SMOKE_LOCAL=1 SMARTFIRE_E2E_PORT=4320 cargo nextest run -p campfire \
+  --build-jobs 4 -j 4 --run-ignored only \
+  -E 'test(=controllers::spa_smoke_tests::real_server_spa_smoke_sends_and_persists_a_message)'
+```
+
+The local browser uses the Chromium installed by `pnpm exec playwright install chromium`.
+CI runs both PWA browser tests with `bash ci/correctness.sh pwa` inside its correctness image.
+
 ## Design system
 
 `/app/_kitchen-sink` (the `pnpm dev` server, or a build) shows every component in every variant
