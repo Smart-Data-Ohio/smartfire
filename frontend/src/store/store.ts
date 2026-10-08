@@ -36,7 +36,7 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
-import { beginRoomRequest, clearRoomJoin, noteDetailInstalled } from "./join-state.ts";
+import { clearRoomJoin, noteDetailInstalled } from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -181,7 +181,7 @@ export const mutations = {
     apply((state) => reduce.setRoomError(state, roomId, error)),
   setRoomPreview: (roomId: number, preview: OpenRoomPreview) =>
     apply((state) => reduce.setRoomPreview(state, roomId, preview)),
-  setRoomDetail: (detail: RoomDetail, started = beginRoomRequest()) => {
+  setRoomDetail: (detail: RoomDetail, started: number) => {
     noteDetailInstalled(detail.room.id, started);
 
     return apply((state) => reduce.setRoomDetail(state, detail));

@@ -6,6 +6,7 @@ import type { RoomForm } from "../gen/RoomForm.ts";
 import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
 
@@ -23,6 +24,7 @@ const landForm = (form: RoomForm): RoomForm => {
 const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId: number) {
   const revision = invalidateRoom(roomId);
   const since = managementEpoch();
+  const started = beginRoomRequest();
   const fetched = yield* Effect.result(room(roomId));
 
   if (roomRevision(roomId) !== revision) {
@@ -57,6 +59,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
           displayName: row.displayName,
           directMemberIds: row.directMemberIds,
         },
+    started,
   );
 });
 
@@ -68,6 +71,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 const landMutation = Effect.fn("rooms.landMutation")(function* (
   result: RoomMutation,
   since: number,
+  started: number,
 ) {
   if (changedSince(result.room.id, since)) {
     yield* refetchSuperseded(result.room.id);
@@ -78,7 +82,7 @@ const landMutation = Effect.fn("rooms.landMutation")(function* (
   if (result.detail === null) {
     mutations.setRoomUnavailable(result.room.id);
   } else {
-    mutations.setRoomDetail(result.detail);
+    mutations.setRoomDetail(result.detail, started);
   }
 
   const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
@@ -112,14 +116,16 @@ export const editForm = Effect.fn("rooms.editForm")(function* (roomId: number) {
 /** `body.clientRoomId` names the attempt: sending it again returns the room it already made. */
 export const create = Effect.fn("rooms.create")(function* (body: CreateRoom) {
   const since = managementEpoch();
+  const started = beginRoomRequest();
 
-  return yield* landMutation(yield* api.createRoom(body), since);
+  return yield* landMutation(yield* api.createRoom(body), since, started);
 });
 
 export const update = Effect.fn("rooms.update")(function* (roomId: number, body: UpdateRoom) {
   const since = managementEpoch();
+  const started = beginRoomRequest();
 
-  return yield* landMutation(yield* api.updateRoom(roomId, body), since);
+  return yield* landMutation(yield* api.updateRoom(roomId, body), since, started);
 });
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {

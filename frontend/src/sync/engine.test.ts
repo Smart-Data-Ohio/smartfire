@@ -20,6 +20,7 @@ import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
@@ -2827,7 +2828,7 @@ describe("room management refresh", () => {
 
         yield* api.route("GET /rooms/12", () => Deferred.await(reply));
         yield* pushEvents(changed(1));
-        mutations.setRoomDetail({ ...roomDetailFixture(12), memberCount: 11 });
+        mutations.setRoomDetail({ ...roomDetailFixture(12), memberCount: 11 }, beginRoomRequest());
         invalidateRoom(12);
         yield* Deferred.succeed(reply, { ...roomDetailFixture(12), memberCount: 4 });
         yield* settle;
@@ -3773,6 +3774,97 @@ describe("joining an open room", () => {
   it.effect(
     "a refresh started before a leave cannot hide an unavailable room opened after disconnect",
     () => lateRefresh("unavailable"),
+  );
+
+  const staleJoinRecovery = (outcome: "join" | "unavailable") =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const releaseJoin = yield* Deferred.make<void>();
+        const releaseRecovery = yield* Deferred.make<void>();
+        const releasePreview = yield* Deferred.make<void>();
+        let reads = 0;
+        let previews = 0;
+
+        yield* serve([]);
+        yield* api.route("GET /rooms/90", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Effect.fail(new NotFound({ message: "Room not found" }));
+          }
+
+          if (reads === 2) {
+            return Deferred.await(releaseRecovery).pipe(Effect.as(roomDetailFixture(90)));
+          }
+
+          return Effect.fail(new NotFound({ message: "Room not found" }));
+        });
+        yield* api.route("GET /rooms/90/preview", () => {
+          previews += 1;
+
+          if (previews === 1) {
+            return Effect.succeed(preview);
+          }
+
+          return outcome === "join"
+            ? Deferred.await(releasePreview).pipe(Effect.as(preview))
+            : Deferred.await(releasePreview).pipe(
+                Effect.andThen(Effect.fail(new NotFound({ message: "Room not found" }))),
+              );
+        });
+        yield* api.route("POST /rooms/90/join", () =>
+          Deferred.await(releaseJoin).pipe(Effect.as(joined())),
+        );
+        yield* api.reply("GET /rooms/90/messages", pageFixture([]));
+        yield* startEngine;
+        yield* welcome(1, false);
+        yield* session.openRoom(90, null);
+
+        const joining = yield* Effect.forkChild(session.joinOpenRoom(90));
+
+        yield* settle;
+        yield* session.closeRoom(90);
+        yield* Deferred.succeed(releaseJoin, undefined);
+        yield* settle;
+        expect(reads).toBe(2);
+
+        yield* socket.drop;
+        const reopening = yield* Effect.forkChild(session.openRoom(90, null));
+
+        yield* settle;
+        yield* Deferred.succeed(releaseRecovery, undefined);
+        yield* settle;
+        yield* Deferred.succeed(releasePreview, undefined);
+        yield* Fiber.join(reopening);
+        yield* Fiber.join(joining);
+        yield* settle;
+
+        expect(store.getState().rooms[90]?.detail).toBeNull();
+
+        if (outcome === "join") {
+          expect(store.getState().rooms[90]).toMatchObject({
+            status: "ready",
+            preview,
+          });
+        } else {
+          expect(store.getState().rooms[90]).toMatchObject({
+            status: "error",
+            preview: null,
+          });
+        }
+      }),
+    );
+
+  it.effect(
+    "a join recovery started before disconnect cannot hide a preview opened after an unseen revocation",
+    () => staleJoinRecovery("join"),
+  );
+
+  it.effect(
+    "a join recovery started before disconnect cannot hide an unavailable room opened after an unseen revocation",
+    () => staleJoinRecovery("unavailable"),
   );
 });
 

@@ -9,6 +9,7 @@ import {
   userFixture,
 } from "../api/testing.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import * as rooms from "./room-actions.ts";
 import { invalidateRoom } from "./room-refresh.ts";
@@ -37,7 +38,7 @@ const form: RoomForm = {
 const seed = () => {
   mutations.reset();
   mutations.loadSidebar(sidebarFixture([sidebarRowFixture(20, "Room")]));
-  mutations.setRoomDetail(roomDetailFixture(20));
+  mutations.setRoomDetail(roomDetailFixture(20), beginRoomRequest());
 };
 
 describe("room management actions", () => {

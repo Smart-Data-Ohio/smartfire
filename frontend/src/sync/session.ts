@@ -281,8 +281,9 @@ const installJoined = Effect.fnUntraced(function* (
   roomId: number,
   detail: RoomDetail,
   row: SidebarRow | null,
+  started: number,
 ) {
-  mutations.setRoomDetail(detail);
+  mutations.setRoomDetail(detail, started);
 
   if (row !== null) {
     const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
@@ -336,13 +337,14 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
 
     const revision = invalidateRoom(roomId);
     const since = managementEpoch();
+    const started = beginRoomRequest();
     const fetched = yield* Effect.result(room(roomId));
     const superseded = roomRevision(roomId) !== revision || changedSince(roomId, since);
 
     if (Result.isSuccess(fetched) && !superseded) {
       const row = store.getState().sidebar.rows[roomId];
 
-      yield* installJoined(roomId, withSidebarRow(fetched.success, row), null);
+      yield* installJoined(roomId, withSidebarRow(fetched.success, row), null, started);
 
       return;
     }
@@ -374,6 +376,7 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
 export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
   const since = managementEpoch();
   const token = visits.get(roomId)?.token ?? null;
+  const started = beginRoomRequest();
   const joined = yield* postJoin(roomId);
   const topics = yield* Topics;
 
@@ -385,7 +388,7 @@ export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId:
     return;
   }
 
-  yield* installJoined(roomId, joined.detail, joined.row);
+  yield* installJoined(roomId, joined.detail, joined.row, started);
 });
 
 /**

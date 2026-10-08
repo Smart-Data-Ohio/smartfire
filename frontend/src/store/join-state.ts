@@ -25,7 +25,7 @@ export function clearRoomJoin(roomId: number): void {
   joinedAt.delete(roomId);
 }
 
-/** Taken when a room load or metadata refresh begins. */
+/** Taken immediately before a room read, join, recovery read, or room mutation. */
 export function beginRoomRequest(): number {
   return ++nextRequest;
 }
