@@ -219,13 +219,15 @@ export class Engine extends Context.Service<
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
         mutations.setThreadPageReplacing(threadId);
 
+        const since = store.getState().removalCount;
+
         const [detail, newest] = yield* Effect.all(
           [Effect.result(thread(threadId)), threadMessages(threadId, null)],
           { concurrency: 2 },
         );
 
         if (Result.isSuccess(detail)) {
-          mutations.loadThreadDetail(detail.success);
+          mutations.loadThreadDetail(detail.success, since);
         }
 
         mutations.applyThreadPage(threadId, newest, "resync");

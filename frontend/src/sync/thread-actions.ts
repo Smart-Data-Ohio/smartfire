@@ -25,6 +25,8 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   mutations.setThreadPageLoading(threadId, "newer");
   mutations.setThreadPageReplacing(threadId);
 
+  const since = store.getState().removalCount;
+
   const [detail, page] = yield* Effect.all(
     [
       Effect.result(api.thread(threadId)),
@@ -42,7 +44,7 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
     return;
   }
 
-  mutations.loadThreadDetail(detail.success);
+  mutations.loadThreadDetail(detail.success, since);
 
   if (Result.isFailure(page)) {
     mutations.setThreadPageFailed(threadId);
@@ -128,6 +130,8 @@ export const create = Effect.fn("threads.create")(function* (
     readonly clientMessageId?: string;
   } = {},
 ) {
+  const since = store.getState().removalCount;
+
   const created = yield* api.createThread(roomId, {
     parentMessageId,
     name: options.name ?? null,
@@ -140,14 +144,16 @@ export const create = Effect.fn("threads.create")(function* (
     },
   });
 
-  mutations.threadCreated(created);
+  mutations.threadCreated(created, since);
 
   return created.detail.thread.id;
 });
 
 /** Renames, closes, reopens, locks or unlocks it. */
 export const update = Effect.fn("threads.update")(function* (threadId: number, body: UpdateThread) {
-  mutations.loadThreadDetail(yield* api.updateThread(threadId, body));
+  const since = store.getState().removalCount;
+
+  mutations.loadThreadDetail(yield* api.updateThread(threadId, body), since);
 });
 
 /** Deletes it on the server; its `thread.removed` takes it out of the store and the board. */

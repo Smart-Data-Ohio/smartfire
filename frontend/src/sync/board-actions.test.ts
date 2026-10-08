@@ -142,7 +142,7 @@ describe("board actions", () => {
 
 describe("work sync and board room sessions", () => {
   it("doesn't refetch a pane's work when only its message count moved", () => {
-    mutations.loadThreadDetail(boardDetail());
+    mutations.loadThreadDetail(boardDetail(), 0);
     const replied = boardThread(1);
 
     if (replied.work !== null) replied.work.messageCount = 5;
@@ -157,7 +157,7 @@ describe("work sync and board room sessions", () => {
   it.effect("refetches only open panes with changed work facts and keeps newer live rows", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
-      mutations.loadThreadDetail(boardDetail());
+      mutations.loadThreadDetail(boardDetail(), 0);
       const changed = boardThread(1, "done");
 
       const events = [
@@ -219,7 +219,7 @@ describe("work sync and board room sessions", () => {
 it.effect("refetches again when newer work facts arrive during a detail request", () =>
   Effect.gen(function* () {
     const fake = yield* FakeApi;
-    mutations.loadThreadDetail(boardDetail());
+    mutations.loadThreadDetail(boardDetail(), 0);
     mutations.upsertThread(boardThread(1, "done"));
     const waiting = yield* Deferred.make<ReturnType<typeof boardDetail>>();
     const entered = yield* Deferred.make<void>();
@@ -245,7 +245,7 @@ it.effect("keeps a reply's newer activity when work detail lands", () =>
   Effect.gen(function* () {
     const fake = yield* FakeApi;
     const old = boardThread(1, "done");
-    mutations.loadThreadDetail(boardDetail());
+    mutations.loadThreadDetail(boardDetail(), 0);
     mutations.upsertThread(old);
     const waiting = yield* Deferred.make<ReturnType<typeof boardDetail>>();
     const entered = yield* Deferred.make<void>();
@@ -266,7 +266,7 @@ it.effect("keeps a reply's newer activity when work detail lands", () =>
 it.effect("doesn't let a late save reply undo a newer change that arrived meanwhile", () =>
   Effect.gen(function* () {
     const fake = yield* FakeApi;
-    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")));
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")), 0);
     const reply = yield* Deferred.make<ReturnType<typeof boardDetail>>();
     const entered = yield* Deferred.make<void>();
     yield* fake.route("PATCH /threads/1/work", () =>
@@ -291,10 +291,128 @@ it.effect("doesn't let a late save reply undo a newer change that arrived meanwh
 it.effect("installs a save reply at once when nothing changed while it was in flight", () =>
   Effect.gen(function* () {
     const fake = yield* FakeApi;
-    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")));
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")), 0);
     yield* fake.reply("PATCH /threads/1/work", boardDetail(boardThread(1, "done")));
     yield* boards.update(1, { status: "done" });
     expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("done");
     expect((yield* fake.requests).map((request) => request.method)).toEqual(["PATCH"]);
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("doesn't bring back a post removed while its creation was in flight", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    yield* fake.reply(`GET /rooms/${BOARD}/board`, boardListing([]));
+    yield* boards.open(BOARD, all);
+    const reply = yield* Deferred.make<ReturnType<typeof boardDetail>>();
+    const entered = yield* Deferred.make<void>();
+    yield* fake.route(`POST /rooms/${BOARD}/posts`, () =>
+      Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(reply)),
+    );
+
+    const create = yield* Effect.forkChild(
+      boards.createPost(BOARD, {
+        name: "New",
+        status: "planned",
+        ownerId: null,
+        tags: [],
+        brief: "",
+        clientId: "0192a3b4-0000-7000-8000-00000000c1ae",
+      }),
+    );
+
+    yield* Deferred.await(entered);
+    mutations.applyEvents(
+      [{ seq: 1, topic: "room:900", type: "thread.created", data: boardThread(1) }],
+      0,
+    );
+    mutations.applyEvents(
+      [{ seq: 2, topic: "room:900", type: "thread.removed", data: { threadId: 1, roomId: BOARD } }],
+      0,
+    );
+    yield* Deferred.succeed(reply, boardDetail());
+    yield* Fiber.join(create);
+    expect(store.getState().threads[1]).toBeUndefined();
+    expect(boardPostIds(store.getState(), BOARD)).toEqual([]);
+    expect(store.getState().threadPanes[1]?.status).toBe("error");
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("keeps a step the agent reported while a save was in flight", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "planned")), 0);
+    const reply = yield* Deferred.make<ReturnType<typeof boardDetail>>();
+    const entered = yield* Deferred.make<void>();
+    yield* fake.route("PATCH /threads/1/work", () =>
+      Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(reply)),
+    );
+
+    const step = {
+      id: 5,
+      messageId: null,
+      threadId: 1,
+      name: "Write the fix",
+      status: "running",
+      inputSummary: null,
+      outputSummary: null,
+      durationMs: null,
+      position: 0,
+      createdAt: "2026-10-07T10:00:00Z",
+      updatedAt: "2026-10-07T10:00:00Z",
+    } as const;
+
+    const save = yield* Effect.forkChild(boards.update(1, { status: "in_progress" }));
+    yield* Deferred.await(entered);
+    mutations.applyEvents(
+      [
+        {
+          seq: 1,
+          topic: "thread:1",
+          type: "agent.steps",
+          data: {
+            roomId: BOARD,
+            messageId: null,
+            threadId: 1,
+            steps: [{ ...step, status: "done", updatedAt: "2026-10-07T10:03:00Z" }],
+          },
+        },
+      ],
+      0,
+    );
+    // The reply was read before the step finished.
+    const answered = boardDetail(boardThread(1, "in_progress"));
+
+    if (answered.work !== null) answered.work = { ...answered.work, steps: [step] };
+
+    yield* Deferred.succeed(reply, answered);
+    yield* Fiber.join(save);
+    expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("in_progress");
+    expect(store.getState().threadPanes[1]?.work?.steps.map((s) => s.status)).toEqual(["done"]);
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("keeps the live message count when an older work detail lands", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    mutations.loadThreadDetail(boardDetail(), 0);
+    const waiting = yield* Deferred.make<ReturnType<typeof boardDetail>>();
+    const entered = yield* Deferred.make<void>();
+    yield* fake.route("GET /threads/1", () =>
+      Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(waiting)),
+    );
+    const refresh = yield* Effect.forkChild(refreshWorkPane(1));
+    yield* Deferred.await(entered);
+    const replied = boardThread(1);
+
+    if (replied.work !== null) replied.work.messageCount = 7;
+
+    mutations.applyEvents(
+      [{ seq: 1, topic: "room:900", type: "thread.updated", data: replied }],
+      0,
+    );
+    yield* Deferred.succeed(waiting, boardDetail());
+    yield* Fiber.join(refresh);
+    expect(store.getState().threads[1]?.work?.messageCount).toBe(7);
   }).pipe(Effect.provide(FakeApi.layerClient)),
 );

@@ -1553,6 +1553,47 @@ async fn spa_api_board_briefless_creation_retries_by_client_post_id() {
 }
 
 #[tokio::test]
+async fn spa_api_board_creation_whose_commit_fails_leaves_no_receipt() {
+    let a = app(true).await.expect("the frozen default seed");
+    let mut david = a.sign_in(DAVID).await;
+    let path = format!("/api/v1/rooms/{BOARD}/posts");
+    // A deferred foreign key fails the COMMIT itself, after the post was inserted.
+    a.db()
+        .write(|tx| {
+            tx.conn().execute_batch(
+                "CREATE TABLE commit_breaker_parents(id INTEGER PRIMARY KEY);
+                 CREATE TABLE commit_breakers(parent_id INTEGER REFERENCES commit_breaker_parents(id) DEFERRABLE INITIALLY DEFERRED);
+                 CREATE TRIGGER break_commit AFTER INSERT ON channel_threads WHEN NEW.name = 'Lost at commit'
+                 BEGIN INSERT INTO commit_breakers VALUES (-1); END;",
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut lost = new_post("Lost at commit");
+    lost["clientPostId"] = json!("0192a3b4-0000-7000-8000-00000000b0a2");
+    let failed = david.write(json_body(Method::POST, &path, &lost)).await;
+    assert!(!failed.status.is_success(), "{}", failed.text());
+    a.db()
+        .write(|tx| {
+            tx.conn().execute_batch("DROP TRIGGER break_commit")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    // The next post may take the rolled-back id; the retry must not answer with it.
+    let other = david.write(json_body(Method::POST, &path, &new_post("Takes the id"))).await;
+    assert_eq!(other.status, StatusCode::CREATED, "{}", other.text());
+    let other = parse::<api::ThreadDetail>(&other).thread;
+    let retry = david.write(json_body(Method::POST, &path, &lost)).await;
+    assert_eq!(retry.status, StatusCode::CREATED, "{}", retry.text());
+    let retried = parse::<api::ThreadDetail>(&retry).thread;
+    assert_ne!(retried.id, other.id);
+    assert_eq!(retried.name, "Lost at commit");
+}
+
+#[tokio::test]
 async fn spa_api_board_rows_count_every_message_as_classic() {
     let a = app(true).await.expect("the frozen default seed");
     let mut david = a.sign_in(DAVID).await;

@@ -4,6 +4,7 @@ import type { AgentStep } from "../gen/AgentStep.ts";
 import type { Thread } from "../gen/Thread.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import {
+  addBoardPost,
   boardColumns,
   boardPostIds,
   defaultBoardQuery,
@@ -12,7 +13,7 @@ import {
 } from "./boards.ts";
 import { applyEvents } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
-import { loadThreadDetail } from "./threads.ts";
+import { loadThreadDetail, MAX_REMOVED_THREADS } from "./threads.ts";
 
 const threads = [
   boardThread(1, "planned", 7, ["api"]),
@@ -137,7 +138,7 @@ describe("board selectors and reducers", () => {
     expect(event(initialState, "thread.created", boardThread(99)).boards).toEqual({});
   });
   it("upserts users and memberships and retains detail work in the pane", () => {
-    const state = loadThreadDetail(loaded(), boardDetail());
+    const state = loadThreadDetail(loaded(), boardDetail(), 0);
     expect(state.users[7]?.id).toBe(7);
     expect(state.threadMemberships[1]).toBeNull();
     expect(state.threadPanes[1]?.work).toEqual(boardDetail().work);
@@ -213,18 +214,69 @@ describe("removed posts", () => {
     const state = loadBoardListing(removed(asked, 3), { ...boardListing(threads), ...query }, 1);
 
     expect(boardPostIds(state, BOARD)).not.toContain(3);
-    expect(state.removedThreads[3]).toBe(true);
+    expect(state.removedThreads[3]).toBe(1);
   });
 
-  it("lets a fresh load that shows the post bring it back", () => {
+  it("lets a reply to a request sent after the removal bring it back", () => {
     const post = boardThread(6, "planned");
-    const state = loadThreadDetail(removed(loaded(), 6), boardDetail(post));
+    const gone = removed(loaded(), 6);
+    const state = loadThreadDetail(gone, boardDetail(post), gone.removalCount);
 
     expect(state.threads[6]?.name).toBe(post.name);
     expect(state.removedThreads[6]).toBeUndefined();
     expect(event(state, "thread.updated", { ...post, name: "Renamed" }).threads[6]?.name).toBe(
       "Renamed",
     );
+  });
+});
+
+describe("replies that began before a removal", () => {
+  function removed(state: State, threadId: number): State {
+    return applyEvents(
+      state,
+      [
+        {
+          seq: 2,
+          topic: `room:${BOARD}`,
+          type: "thread.removed",
+          data: { threadId, roomId: BOARD },
+        },
+      ],
+      0,
+    );
+  }
+
+  it("don't bring the post back, card or pane", () => {
+    const post = boardThread(6, "planned");
+    const since = loaded().removalCount;
+    const gone = removed(event(loaded(), "thread.created", post), 6);
+    const state = addBoardPost(loadThreadDetail(gone, boardDetail(post), since), post);
+
+    expect(state).toBe(gone);
+    expect(state.threads[6]).toBeUndefined();
+    expect(boardPostIds(state, BOARD)).not.toContain(6);
+    expect(state.threadPanes[6]?.status).toBe("error");
+  });
+
+  it("are judged per removal: a later removal of another post doesn't lift this one", () => {
+    const first = removed(loaded(), 6);
+    const since = first.removalCount;
+    const second = removed(first, 7);
+
+    expect(loadThreadDetail(second, boardDetail(boardThread(7)), since).threads[7]).toBeUndefined();
+    expect(loadThreadDetail(second, boardDetail(boardThread(6)), since).threads[6]).toBeDefined();
+  });
+
+  it("forget the oldest removals past the cap", () => {
+    let state = loaded();
+
+    for (let id = 10_000; id < 10_000 + MAX_REMOVED_THREADS + 5; id += 1) {
+      state = removed(state, id);
+    }
+
+    expect(Object.keys(state.removedThreads)).toHaveLength(MAX_REMOVED_THREADS);
+    expect(state.removedThreads[10_000]).toBeUndefined();
+    expect(state.removedThreads[10_000 + MAX_REMOVED_THREADS + 4]).toBe(state.removalCount);
   });
 });
 
@@ -261,7 +313,7 @@ describe("agent steps on a post", () => {
   }
 
   it("merges a post's steps by id, keeping the later copy, in position order", () => {
-    let state = loadThreadDetail(loaded(), boardDetail(boardThread(1)));
+    let state = loadThreadDetail(loaded(), boardDetail(boardThread(1)), 0);
 
     state = steps(state, [step(2, "running", "2026-10-07T10:02:00Z", 1)]);
     state = steps(state, [
@@ -275,8 +327,32 @@ describe("agent steps on a post", () => {
     ]);
   });
 
+  it("keeps a newer step when an older detail reply lands", () => {
+    let state = loadThreadDetail(loaded(), boardDetail(boardThread(1)), 0);
+
+    state = steps(state, [step(1, "done", "2026-10-07T10:05:00Z")]);
+
+    const stale = boardDetail(boardThread(1));
+
+    if (stale.work !== null) {
+      stale.work = {
+        ...stale.work,
+        steps: [
+          step(1, "running", "2026-10-07T10:01:00Z"),
+          step(2, "pending", "2026-10-07T10:02:00Z"),
+        ],
+      };
+    }
+
+    state = loadThreadDetail(state, stale, 0);
+    expect(state.threadPanes[1]?.work?.steps.map((s) => [s.id, s.status])).toEqual([
+      [1, "done"],
+      [2, "pending"],
+    ]);
+  });
+
   it("leaves a post alone for steps on a message in it", () => {
-    const state = loadThreadDetail(loaded(), boardDetail(boardThread(1)));
+    const state = loadThreadDetail(loaded(), boardDetail(boardThread(1)), 0);
 
     expect(steps(state, [step(1, "done", "2026-10-07T10:01:00Z")], 44)).toBe(state);
   });

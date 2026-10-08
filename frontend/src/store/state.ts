@@ -67,10 +67,14 @@ export interface State {
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
   readonly tombstones: Readonly<Record<number, number>>;
   /**
-   * Deleted thread ids: a `thread.created` or `thread.updated` published out of order after the
-   * `thread.removed` can't bring the thread back. Only a fresh HTTP load that shows it again does.
+   * Deleted thread ids, each with the `removalCount` its removal made: a `thread.created` or
+   * `thread.updated` published out of order after the `thread.removed` can't bring the thread
+   * back, and neither can an HTTP reply to a request sent before the removal. Only a reply to one
+   * sent after it does (see `revive`). At most `MAX_REMOVED_THREADS`, the oldest dropped first.
    */
-  readonly removedThreads: Readonly<Record<number, true>>;
+  readonly removedThreads: Readonly<Record<number, number>>;
+  /** How many thread removals this session has seen: a request's `since` is the count at send. */
+  readonly removalCount: number;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -131,6 +135,7 @@ export const initialState: State = {
   typing: {},
   tombstones: {},
   removedThreads: {},
+  removalCount: 0,
   huddles: {},
   stages: {},
   activity: emptyActivity,

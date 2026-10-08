@@ -196,6 +196,11 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
     clientIdRef.current = uuid7(Date.now());
     savingRef.current = false;
     setSaving(false);
+
+    // Unmounting ends the opening too: the room pane is keyed by room, so a room change unmounts.
+    return () => {
+      openingRef.current += 1;
+    };
   }, [open, roomId]);
 
   useEffect(() => {

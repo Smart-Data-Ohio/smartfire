@@ -289,6 +289,27 @@ export function boardColumns(state: State, roomId: number): BoardColumns {
 }
 
 /**
+ * Steps merged by id, keeping the copy with the later `updatedAt` (the incoming one on a tie), in
+ * `(position, id)` order. Steps are never deleted apart from their parent, so none is dropped.
+ */
+export function mergeSteps(
+  held: readonly AgentStep[],
+  incoming: readonly AgentStep[],
+): AgentStep[] {
+  const byId = new Map<number, AgentStep>(held.map((step) => [step.id, step]));
+
+  for (const step of incoming) {
+    const kept = byId.get(step.id);
+
+    if (kept === undefined || Date.parse(step.updatedAt) >= Date.parse(kept.updatedAt)) {
+      byId.set(step.id, step);
+    }
+  }
+
+  return [...byId.values()].sort((a, b) => a.position - b.position || a.id - b.id);
+}
+
+/**
  * `agent.steps` for a work thread: merges the steps into the open post's work by id, keeping the
  * copy with the later `updatedAt` (the later arrival on a tie), in `(position, id)` order. Steps
  * on a message, and threads whose work isn't loaded, are left alone (a load brings them).
@@ -304,17 +325,7 @@ export function mergeWorkSteps(state: State, event: AgentStepsChanged): State {
     return state;
   }
 
-  const byId = new Map<number, AgentStep>(pane.work.steps.map((step) => [step.id, step]));
-
-  for (const step of event.steps) {
-    const held = byId.get(step.id);
-
-    if (held === undefined || Date.parse(step.updatedAt) >= Date.parse(held.updatedAt)) {
-      byId.set(step.id, step);
-    }
-  }
-
-  const steps = [...byId.values()].sort((a, b) => a.position - b.position || a.id - b.id);
+  const steps = mergeSteps(pane.work.steps, event.steps);
 
   return {
     ...state,

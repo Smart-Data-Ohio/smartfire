@@ -352,8 +352,13 @@ async fn create_post(c: &mut Ctx) -> Result {
                 }
                 campfire_db::models::message_attachment_processing::schedule_message(tx, opener)?;
             }
-            if let Some(key) = post_key.as_deref() {
-                app.receipts.record(RECEIPT, room_id, creator_id, key, thread.id);
+            // Only a committed post earns a receipt: a rolled-back id may be reused.
+            if let Some(key) = post_key.clone() {
+                let app = app.clone();
+                let id = thread.id;
+                tx.on_commit_success(move || {
+                    app.receipts.record(RECEIPT, room_id, creator_id, &key, id);
+                });
             }
             Ok((thread.id, true))
         })

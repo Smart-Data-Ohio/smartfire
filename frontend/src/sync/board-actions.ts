@@ -74,6 +74,9 @@ export const createPost = Effect.fn("boards.createPost")(function* (
   roomId: number,
   input: BoardPostInput,
 ) {
+  // A post removed while its creation was in flight stays removed.
+  const since = store.getState().removalCount;
+
   const detail = yield* api.createBoardPost(roomId, {
     name: input.name,
     status: input.status,
@@ -92,7 +95,7 @@ export const createPost = Effect.fn("boards.createPost")(function* (
           },
   });
 
-  mutations.loadThreadDetail(detail);
+  mutations.loadThreadDetail(detail, since);
   mutations.addBoardPost(detail.thread);
 
   return detail;
@@ -107,10 +110,11 @@ export const createPost = Effect.fn("boards.createPost")(function* (
 const installSaved = Effect.fnUntraced(function* (
   threadId: number,
   sent: Thread | undefined,
+  since: number,
   detail: ThreadDetail,
 ) {
   if (store.getState().threads[threadId] === sent) {
-    mutations.loadThreadDetail(detail);
+    mutations.loadThreadDetail(detail, since);
 
     return;
   }
@@ -120,8 +124,9 @@ const installSaved = Effect.fnUntraced(function* (
 
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
   const sent = store.getState().threads[threadId];
+  const since = store.getState().removalCount;
 
-  yield* installSaved(threadId, sent, yield* api.updateWork(threadId, body));
+  yield* installSaved(threadId, sent, since, yield* api.updateWork(threadId, body));
 });
 
 export const handoff = Effect.fn("work.handoff")(function* (
@@ -129,6 +134,7 @@ export const handoff = Effect.fn("work.handoff")(function* (
   body: CreateWorkHandoff,
 ) {
   const sent = store.getState().threads[threadId];
+  const since = store.getState().removalCount;
 
-  yield* installSaved(threadId, sent, yield* api.handoffWork(threadId, body));
+  yield* installSaved(threadId, sent, since, yield* api.handoffWork(threadId, body));
 });
