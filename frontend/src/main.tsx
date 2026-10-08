@@ -6,8 +6,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { restoreAppearance } from "./lib/appearance.ts";
 import { router } from "./router.tsx";
+import { watchWorkerRegistration } from "./service-worker/register.ts";
 
 restoreAppearance();
+
+watchWorkerRegistration();
 
 const container = document.getElementById("root");
 

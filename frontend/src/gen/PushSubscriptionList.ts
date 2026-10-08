@@ -2,7 +2,6 @@
 import type { PushSubscriptionInfo } from "./PushSubscriptionInfo";
 
 /**
- * `GET /api/v1/settings/push_subscriptions`, and the answer to
- * `DELETE /api/v1/settings/push_subscriptions/:id`.
+ * `GET /api/v1/settings/push_subscriptions`, and the answer to creating or deleting one.
  */
 export type PushSubscriptionList = { pushSubscriptions: Array<PushSubscriptionInfo>, };

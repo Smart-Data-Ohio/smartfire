@@ -1,4 +1,5 @@
 import { type ComponentType, useSyncExternalStore } from "react";
+import { loadForUpdate } from "../../service-worker/update-required.ts";
 import type { MessageDTO } from "../../store/model.ts";
 
 interface MessageCardsProps {
@@ -23,7 +24,7 @@ function fetchChunk(): void {
   }
 
   fetching = true;
-  import("./message-cards.tsx").then(
+  loadForUpdate(() => import("./message-cards.tsx")).then(
     (module) => {
       loaded = module.default;
       fetching = false;

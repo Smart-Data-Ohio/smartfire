@@ -12,7 +12,14 @@ async fn pwa_http_bodies_match_rails_before_and_after_first_run() {
             let response = app.anonymous().get(vector["path"].as_str().unwrap()).await;
             assert_eq!(response.status.as_u16(), vector["status"].as_u64().unwrap() as u16);
             assert_eq!(response.content_type(), vector["content_type"].as_str());
-            assert_eq!(response.text(), vector["body"].as_str().unwrap(), "{seed} {}", vector["path"]);
+            let rails = vector["body"].as_str().unwrap();
+            // The worker keeps one documented difference from Rails (the SPA's build caches).
+            let expected = if vector["path"] == "/service-worker.js" {
+                campfire_views::pwa::rails_service_worker_with_spa_patch(rails)
+            } else {
+                rails.to_owned()
+            };
+            assert_eq!(response.text(), expected, "{seed} {}", vector["path"]);
             if vector["path"] == "/offline.html" { assert_eq!(response.header("set-cookie"), None); }
         }
     }

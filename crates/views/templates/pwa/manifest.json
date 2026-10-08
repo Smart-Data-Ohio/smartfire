@@ -18,9 +18,9 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "{{ root }}",
   "display": "standalone",
-  "scope": "/",
+  "scope": "{{ root }}",
   "description": "A free, open source workspace where people and AI agents work together.",
   "categories": ["social", "business", "productivity"],
   "theme_color": "#ffffff",
@@ -29,13 +29,13 @@
     {
       "name": "New chat room",
       "description": "Open Smartfire and start a new chat room",
-      "url": "rooms/opens/new",
+      "url": "{{ new_room_url }}",
       "icons": [{ "src": "{{ self.image_url("add.svg") }}", "sizes": "any" }]
     },
     {
       "name": "My profile",
       "description": "Open Smartfire and view your profile",
-      "url": "/users/me/profile",
+      "url": "{{ profile_url }}",
       "icons": [{ "src": "{{ self.image_url("person.svg") }}", "sizes": "any" }]
     }
   ],
