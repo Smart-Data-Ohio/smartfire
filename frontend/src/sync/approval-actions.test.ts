@@ -137,6 +137,108 @@ describe("approval actions", () => {
       }).pipe(Effect.provide(FakeApi.layerClient)),
     );
 
+    it.effect("a next page waiting on a reload that fails pages from the list it kept", () =>
+      Effect.gen(function* () {
+        const fake = yield* FakeApi;
+        const { reloadStarted, reloadGate, moreGate, befores } = yield* held;
+
+        yield* fake.route(`GET /agents/${AGENT}/approvals`, (request) =>
+          (request.query?.before ?? null) === null
+            ? Deferred.succeed(reloadStarted, undefined).pipe(
+                Effect.andThen(Deferred.await(reloadGate)),
+                Effect.andThen(Effect.fail(new Conflict({ message: "Try again" }))),
+              )
+            : Effect.succeed({ approvals: [row(103)], users: [], nextCursor: null }),
+        );
+
+        const reloading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+        yield* Deferred.await(reloadStarted);
+
+        const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+        yield* Effect.yieldNow;
+        expect(yield* befores).toEqual([null, null]);
+
+        yield* Deferred.succeed(reloadGate, undefined);
+        yield* Deferred.succeed(moreGate, undefined);
+        yield* Fiber.join(reloading);
+        // The waiter settles, and the failed reload left the held rows and their cursor.
+        yield* Fiber.join(paging);
+
+        expect(all()).toMatchObject({ ids: [105, 104, 103], nextCursor: null });
+        expect(yield* befores).toEqual([null, null, "c104"]);
+        expect(store.getState().freshness.reads).toEqual({});
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+
+    it.effect("an interrupted waiter lets the next page asked for wait in its place", () =>
+      Effect.gen(function* () {
+        const { reloadStarted, reloadGate, moreStarted, moreGate, befores } = yield* held;
+
+        const reloading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+        yield* Deferred.await(reloadStarted);
+
+        const interrupted = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+        yield* Effect.yieldNow;
+        yield* Fiber.interrupt(interrupted);
+
+        // The pager unmounted and mounted again while the reload is still out.
+        const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+        yield* Effect.yieldNow;
+        expect(yield* befores).toEqual([null, null]);
+
+        yield* Deferred.succeed(reloadGate, undefined);
+        yield* Fiber.join(reloading);
+        yield* Deferred.await(moreStarted);
+        expect(yield* befores).toEqual([null, null, "c105"]);
+
+        yield* Deferred.succeed(moreGate, undefined);
+        yield* Fiber.join(paging);
+
+        expect(all()).toMatchObject({ ids: [106, 105, 104, 103], nextCursor: null });
+        expect(store.getState().freshness.reads).toEqual({});
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+
+    it.effect("retiring the list's reads releases its waiter, and a later reload goes ahead", () =>
+      Effect.gen(function* () {
+        const { reloadStarted, reloadGate, moreStarted, moreGate, befores } = yield* held;
+
+        const reloading = yield* Effect.forkChild(approvals.load(AGENT, "all"));
+
+        yield* Deferred.await(reloadStarted);
+
+        const paging = yield* Effect.forkChild(approvals.loadMore(AGENT, "all"));
+
+        yield* Effect.yieldNow;
+        // The filter changed (or the tab unmounted): the view retires the list's reads.
+        mutations.retireReads(`approvals:${allKey}`);
+        yield* Deferred.await(moreStarted);
+        expect(yield* befores).toEqual([null, null, "c104"]);
+
+        yield* Deferred.succeed(moreGate, undefined);
+        yield* Fiber.join(paging);
+        yield* Deferred.succeed(reloadGate, undefined);
+        yield* Fiber.join(reloading);
+
+        // The retired reload merged its records but not its membership.
+        expect(all()).toMatchObject({ ids: [105, 104, 103], nextCursor: null });
+        expect(store.getState().approvals.items[106]).toBeDefined();
+
+        // Shown again: a new reload replaces the list, and its next page follows.
+        yield* approvals.load(AGENT, "all");
+        expect(all()).toMatchObject({ ids: [106, 105], nextCursor: "c105" });
+        yield* approvals.loadMore(AGENT, "all");
+        expect(all()).toMatchObject({ ids: [106, 105, 104, 103], nextCursor: null });
+        expect(yield* befores).toEqual([null, null, "c104", null, "c105"]);
+        expect(store.getState().freshness.reads).toEqual({});
+      }).pipe(Effect.provide(FakeApi.layerClient)),
+    );
+
     for (const first of ["next page", "reload"] as const) {
       it.effect(`a reload started during a next page wins when the ${first} lands first`, () =>
         Effect.gen(function* () {
