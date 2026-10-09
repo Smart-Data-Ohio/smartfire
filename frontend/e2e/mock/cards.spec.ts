@@ -461,10 +461,11 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
         event,
         () => {
           const keyboard = input === "PageUp" || input === "ArrowUp" || input === "Home";
+          const touch = input === "touch";
 
-          // Placement can move between setup and keydown. Keyboard default scrolling
-          // starts after this capture callback; wheel scrolling can precede its callback.
-          if (keyboard) offset = element.scrollTop;
+          // Placement can move between setup and keydown or touchstart. Keyboard and touch
+          // scrolling start after this capture callback; wheel scrolling can precede its callback.
+          if (keyboard || touch) offset = element.scrollTop;
 
           if (input === "ArrowUp") {
             element.removeAttribute("data-input-row");
@@ -503,7 +504,8 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
             return;
           }
 
-          let released = !keyboard;
+          // A layout scroll end can't finish a held key or a finger that's still down.
+          let released = !keyboard && !touch;
           let ended = false;
           let moved = element.scrollTop !== offset;
 
@@ -524,6 +526,9 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
             element.removeEventListener("scrollend", end);
             element.removeEventListener("keydown", repeat, true);
             element.removeEventListener("keyup", release, true);
+            element.removeEventListener("touchmove", repeat, true);
+            element.removeEventListener("touchend", release, true);
+            element.removeEventListener("touchcancel", release, true);
           };
 
           const end = (event: Event) => {
@@ -545,6 +550,12 @@ async function scrollToStart(page: Page, list: Locator, input: ReaderInput, anch
           if (keyboard) {
             element.addEventListener("keydown", repeat, true);
             element.addEventListener("keyup", release, true);
+          }
+
+          if (touch) {
+            element.addEventListener("touchmove", repeat, { capture: true, passive: true });
+            element.addEventListener("touchend", release, true);
+            element.addEventListener("touchcancel", release, true);
           }
         },
         { once: true, capture: true, passive: true },
