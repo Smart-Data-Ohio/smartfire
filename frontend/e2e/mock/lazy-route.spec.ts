@@ -294,10 +294,12 @@ test("a fast right-pane chunk names the pane at once and skips the skeleton", as
 
   // Held until the name is read. Page time is stopped, so the bone delay cannot elapse.
   const named = Promise.withResolvers<void>();
+  const chunkUrl = Promise.withResolvers<string>();
 
   await page.route(
     (url) => url.pathname.endsWith("/members-pane.tsx"),
     async (route) => {
+      chunkUrl.resolve(route.request().url());
       await named.promise;
       await route.continue();
     },
@@ -331,6 +333,16 @@ test("a fast right-pane chunk names the pane at once and skips the skeleton", as
   await expect(page.locator("html")).toHaveAttribute("data-pane-skeleton-seen", "0");
 
   named.resolve();
+
+  // The chunk's own imports load on the wall clock, with page time still stopped. On a cold dev
+  // server that takes longer than the whole page-time budget, so the budget starts only once the
+  // chunk has loaded: it is the time React takes to reveal a resolved pane.
+  await page.evaluate(
+    async (url) => {
+      await import(url);
+    },
+    await chunkUrl.promise,
+  );
 
   const search = pane.getByRole("searchbox", { name: "Find a member" });
 
