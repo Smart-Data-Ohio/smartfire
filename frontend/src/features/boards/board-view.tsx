@@ -10,8 +10,9 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { isPaneShowing } from "../panes/pane-selection.ts";
 import { PaneError } from "../panes/pane-states.tsx";
-import { useRightPaneView } from "../panes/use-right-pane.ts";
+import { usePaneNavigation, useRightPaneView } from "../panes/use-right-pane.ts";
 import {
   type BoardQuery,
   boardQuery,
@@ -282,6 +283,8 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
   const error = useStore((state) => state.boards[roomId]?.error ?? null);
   const ownerOptions = useStore((state) => state.boards[roomId]?.ownerOptions ?? NONE);
   const tagCounts = useStore((state) => state.boards[roomId]?.tagCounts ?? NONE);
+  const canAdminister = useStore((state) => state.boards[roomId]?.canAdminister ?? false);
+  const panes = usePaneNavigation(roomId);
   const composing = pathname.endsWith("/posts/new");
 
   useEffect(() => {
@@ -327,6 +330,9 @@ export function BoardView({ roomId }: { readonly roomId: number }) {
         tagCounts={tagCounts}
         onChange={change}
         onNewPost={openComposer}
+        canAdminister={canAdminister}
+        automationsOpen={isPaneShowing(panes.view, "automations")}
+        onAutomations={() => panes.toggle("automations")}
       />
       {status === "error" ? (
         <PaneError

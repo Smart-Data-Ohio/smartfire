@@ -87,6 +87,11 @@ export interface State {
    * `removedSince`).
    */
   readonly forgottenRemoval: number;
+  /**
+   * How many `board.automations.changed` events each board has had: an open automations pane
+   * refetches when its board's count moves.
+   */
+  readonly boardAutomationsChanged: Readonly<Record<number, number>>;
   /** Who is in each room's call, by room id; rooms with nobody in their call are absent. */
   readonly huddles: Readonly<Record<number, HuddlePresence>>;
   /** Each loaded stage's roster and live stream, by room id. */
@@ -158,6 +163,7 @@ export const initialState: State = {
   removedThreads: {},
   removalCount: 0,
   forgottenRemoval: 0,
+  boardAutomationsChanged: {},
   huddles: {},
   stages: {},
   activity: emptyActivity,
