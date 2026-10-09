@@ -1,6 +1,7 @@
 import {
   createMemoryHistory,
   createRootRoute,
+  createRoute,
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
@@ -9,13 +10,17 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
 import type { Poll } from "../../gen/Poll.ts";
-import type { Timeline as RoomTimeline } from "../../store/model.ts";
+import { parseBoardSearch } from "../../lib/board-search.ts";
+import type { Boot, Timeline as RoomTimeline } from "../../store/model.ts";
 import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
+import { panes } from "../../sync/panes.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Dialog } from "../../ui/dialog.tsx";
 import { holdCardsChunk } from "../cards/card-slot.tsx";
+import { openPane } from "../panes/pane-store.ts";
+import { RightPane } from "../panes/right-pane.tsx";
 import { Timeline } from "./timeline.tsx";
 import { timelineItems } from "./timeline-items.ts";
 
@@ -127,6 +132,76 @@ async function renderTimelineDialog(focus: number) {
   render(<RouterProvider router={router} />);
   await act(() => router.load());
 }
+
+/** The timeline beside the real right pane, so Escape can hand focus back to a row. */
+function TimelinePaneHost({ focus }: { readonly focus: number }) {
+  return (
+    <>
+      <Timeline roomId={ROOM} focusMessageId={focus} />
+      <RightPane roomId={ROOM} />
+    </>
+  );
+}
+
+async function renderTimelinePane(focus: number) {
+  const root = createRootRoute();
+
+  const room = createRoute({
+    getParentRoute: () => root,
+    path: "/r/$roomId",
+    component: () => <TimelinePaneHost focus={focus} />,
+    validateSearch: parseBoardSearch,
+    params: {
+      parse: ({ roomId }) => ({ roomId: Number(roomId) }),
+      stringify: ({ roomId }) => ({ roomId: String(roomId) }),
+    },
+  });
+
+  const router = createRouter({
+    routeTree: root.addChildren([room]),
+    history: createMemoryHistory({ initialEntries: [`/r/${ROOM}`] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+}
+
+/** jsdom here has no `matchMedia`; the pane asks which layout it is before it can take focus. */
+function installMatchMedia(): () => void {
+  const previous = window.matchMedia;
+
+  window.matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+  });
+
+  return () => {
+    window.matchMedia = previous;
+  };
+}
+
+const VIEWER: Boot = {
+  user: { id: 7, name: "Ada", avatarUrl: "/a" },
+  account: {
+    name: "Acme",
+    logoUrl: null,
+    logoStillUrl: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
+  },
+  theme: "system",
+  textSize: "default",
+  cableUrl: "/cable",
+  serviceWorkerUrl: null,
+  version: "test",
+  revision: null,
+};
 
 /** Where a virtualised row sits in the list, from the wrapper Virtua positions. */
 function rowTop(row: Element): number {
@@ -322,6 +397,7 @@ describe("permalink placement", () => {
 
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    openPane(null);
     store.setState(initialState, true);
   });
 
@@ -691,6 +767,108 @@ describe("permalink placement", () => {
 
     await act(async () => {
       replaceAround(ids);
+    });
+
+    expect(scrolls.length).toBeGreaterThan(0);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+    expect(rowIndex(FOCUS)).toBeGreaterThan(0);
+  });
+
+  it("still recentres after Escape returns focus from the right pane", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    const restoreMedia = installMatchMedia();
+
+    try {
+      vi.spyOn(panes, "members").mockResolvedValue({ members: [], users: [] });
+      install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+      await renderTimelinePane(FOCUS);
+      expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+      await settlePlacement();
+
+      const row = document.querySelector<HTMLElement>(
+        `[data-message-row][data-message-id="${FOCUS}"]`,
+      );
+
+      expect(row).not.toBeNull();
+
+      if (row === null) {
+        return;
+      }
+
+      // The permalink left this row focused. Opening the sheet from it is not reader input.
+      await act(async () => {
+        row.focus();
+        openPane("members");
+      });
+
+      for (let frame = 0; frame < 5 && document.activeElement === row; frame += 1) {
+        await flushFrame();
+      }
+
+      const pane = document.querySelector(".right-pane");
+
+      expect(pane).not.toBeNull();
+      expect(document.activeElement).not.toBe(row);
+      expect(pane?.contains(document.activeElement ?? null)).toBe(true);
+
+      await act(async () => {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+        );
+      });
+
+      expect(document.activeElement).toBe(row);
+      scrolls.length = 0;
+
+      await act(async () => {
+        replaceAround([10, 11, 12, FOCUS]);
+      });
+
+      expect(scrolls.length).toBeGreaterThan(0);
+      expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+      expect(rowIndex(FOCUS)).toBeGreaterThan(0);
+    } finally {
+      restoreMedia();
+    }
+  });
+
+  it("still recentres after an emoji picker autofocuses inside the timeline", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+    store.setState({ boot: VIEWER });
+    await renderTimeline(FOCUS);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+    await settlePlacement();
+
+    const row = document.querySelector<HTMLElement>(
+      `[data-message-row][data-message-id="${FOCUS}"]`,
+    );
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+
+    expect(row).not.toBeNull();
+    expect(list).not.toBeNull();
+
+    if (row === null || list === null) {
+      return;
+    }
+
+    await act(async () => {
+      row.focus();
+      row.dispatchEvent(new KeyboardEvent("keydown", { key: "r", bubbles: true }));
+    });
+
+    const picker = document.querySelector("[aria-label='Add a reaction']");
+
+    expect(picker).not.toBeNull();
+    expect(document.activeElement).not.toBe(row);
+    expect(list.contains(document.activeElement)).toBe(true);
+    scrolls.length = 0;
+
+    await act(async () => {
+      replaceAround([10, 11, 12, FOCUS]);
     });
 
     expect(scrolls.length).toBeGreaterThan(0);

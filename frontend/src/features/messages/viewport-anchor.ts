@@ -942,9 +942,9 @@ export function useViewportAnchor({
     };
 
     const onFocus = (event: Event) => {
-      // Tab moves focus after keydown, so the key list never sees it. A press in the last
-      // moment is the reader; focus() from a dialog or the app itself is marked and is not.
-      if (readerMovedFocus()) noteReaderInput();
+      // Tab moves focus after keydown, so the key list never sees it. Only that Tab, or a
+      // click on the element that took focus, is the reader. Escape and an autofocus are not.
+      if (readerMovedFocus(event.target)) noteReaderInput();
 
       retainRow(event.target);
 

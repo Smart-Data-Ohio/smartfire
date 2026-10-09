@@ -1,23 +1,39 @@
 /**
  * Whether a focus move inside the timeline belongs to the reader.
  *
- * Tab (and any other key) changes focus after keydown, so the viewport anchor cannot see it on
- * the key itself. A keydown or pointerdown in this window, followed by focusin, is the reader.
- * `focus()` the app calls — dialog restoration, placement, permalink focus — is marked for the
- * synchronous focusin it causes, and does not count.
+ * Tab changes focus after keydown, so the viewport anchor cannot see it on the key itself.
+ * A focusin counts only when the last keydown in this window was Tab (with or without Shift)
+ * and no other key followed it, or when the last pointerdown landed on the newly focused
+ * element or an ancestor of it. Escape, Enter, Space and every other key are the app moving
+ * focus. `duringAppFocus` still covers a `focus()` the app already knows is its own.
  */
 
-/** How recently a key or pointer press still explains the focus that follows it. */
+/** How recently a Tab or a click still explains the focus that follows it. */
 const READER_FOCUS_WINDOW_MS = 100;
 
-let lastUserInputAt = Number.NEGATIVE_INFINITY;
+let lastKey: { readonly key: string; readonly at: number } | null = null;
+
+let lastPointer: { readonly target: EventTarget | null; readonly at: number } | null = null;
 
 let appFocus = 0;
 
 let listeners = 0;
 
-function stampUserInput(): void {
-  lastUserInputAt = performance.now();
+function onKeyDown(event: Event): void {
+  if (!(event instanceof KeyboardEvent)) {
+    return;
+  }
+
+  lastKey = { key: event.key, at: performance.now() };
+}
+
+function onPointerDown(event: Event): void {
+  lastPointer = { target: event.target, at: performance.now() };
+}
+
+function forgetInput(): void {
+  lastKey = null;
+  lastPointer = null;
 }
 
 /**
@@ -27,8 +43,8 @@ function stampUserInput(): void {
  */
 export function bindReaderInput(doc: Document): () => void {
   if (listeners === 0) {
-    doc.addEventListener("keydown", stampUserInput, true);
-    doc.addEventListener("pointerdown", stampUserInput, true);
+    doc.addEventListener("keydown", onKeyDown, true);
+    doc.addEventListener("pointerdown", onPointerDown, true);
   }
 
   listeners += 1;
@@ -44,9 +60,9 @@ export function bindReaderInput(doc: Document): () => void {
     listeners -= 1;
 
     if (listeners === 0) {
-      doc.removeEventListener("keydown", stampUserInput, true);
-      doc.removeEventListener("pointerdown", stampUserInput, true);
-      lastUserInputAt = Number.NEGATIVE_INFINITY;
+      doc.removeEventListener("keydown", onKeyDown, true);
+      doc.removeEventListener("pointerdown", onPointerDown, true);
+      forgetInput();
     }
   };
 }
@@ -62,7 +78,27 @@ export function duringAppFocus<T>(run: () => T): T {
   }
 }
 
-/** A focusin that followed the person's own key or pointer, and not an app `focus()` call. */
-export function readerMovedFocus(at = performance.now()): boolean {
-  return appFocus === 0 && at - lastUserInputAt <= READER_FOCUS_WINDOW_MS;
+/**
+ * A focusin that followed the person's Tab, or a click on `focused` (or an ancestor of it).
+ * Any other key, and a click that landed somewhere else, is the app.
+ */
+export function readerMovedFocus(
+  focused: EventTarget | null = null,
+  at = performance.now(),
+): boolean {
+  if (appFocus !== 0) {
+    return false;
+  }
+
+  if (lastKey?.key === "Tab" && at - lastKey.at <= READER_FOCUS_WINDOW_MS) {
+    return true;
+  }
+
+  return (
+    focused instanceof Node &&
+    lastPointer !== null &&
+    lastPointer.target instanceof Node &&
+    at - lastPointer.at <= READER_FOCUS_WINDOW_MS &&
+    lastPointer.target.contains(focused)
+  );
 }
