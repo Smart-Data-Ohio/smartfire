@@ -156,6 +156,20 @@ export function loadBoardListing(state: State, listing: BoardListing, generation
   };
 }
 
+/**
+ * The board's automations may have changed: someone else saved them, or the room resynced and
+ * a change may have been missed. An open automations pane refetches on the bump.
+ */
+export function boardAutomationsChanged(state: State, roomId: number): State {
+  return {
+    ...state,
+    boardAutomationsChanged: {
+      ...state.boardAutomationsChanged,
+      [roomId]: (state.boardAutomationsChanged[roomId] ?? 0) + 1,
+    },
+  };
+}
+
 /** Preserve live facts when the board snapshot was requested before this update. */
 export function boardThreadChanged(state: State, thread: Thread): State {
   const held = state.boards[thread.roomId];

@@ -24,6 +24,7 @@ import { renderMarkdown } from "../markdown.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
 import { iso, type ThreadRecord, threadDto } from "../s2/model.ts";
 import type { Threads } from "../s2/threads.ts";
+import { autoAssignedBoardOwner } from "../s6/automations.ts";
 import { tagsOf } from "../s6/work.ts";
 import { rowTimestamp, touchedRow, VIEWER_ID } from "../seed.ts";
 import { invalid, invalidBody, sentence } from "./http.ts";
@@ -167,7 +168,15 @@ export function createWork(ctx: S2Context, threads: Threads): Work {
     const world = ctx.world();
     const work: WorkRecord = thread.work ?? emptyWork(rowTimestamp(ctx.now()));
     const status = change.status === undefined ? work.status : change.status;
-    const ownerId = change.ownerId === undefined ? work.ownerId : change.ownerId;
+    const requestedOwnerId = change.ownerId === undefined ? work.ownerId : change.ownerId;
+    const addedTags = (change.tags ?? []).filter((tag) => !work.tags.includes(tag));
+
+    const ownerId =
+      requestedOwnerId ??
+      (status === null
+        ? null
+        : (autoAssignedBoardOwner(world, thread.roomId, addedTags)?.id ?? null));
+
     const ownerChanged = ownerId !== work.ownerId;
     const errors: [string, string][] = [];
 
