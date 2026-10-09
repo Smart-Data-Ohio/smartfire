@@ -137,7 +137,7 @@
     z-index: 1;
   }
 
-  @media (width >= 720px) {
+  @media (720px <= width) {
     .pane-header {
       gap: var(--space-1);
       padding: 0 var(--space-2) 0 var(--space-4);

@@ -90,7 +90,7 @@
   }
 
   /* Off phones a page sits beside what it came from, so its back button goes. */
-  @media (width >= 720px) {
+  @media (720px <= width) {
     .page-header[data-back="phone"] .page-header-back {
       display: none;
     }

@@ -192,9 +192,9 @@ export async function openHeaderTool(page: Page, name: RegExp | string): Promise
 
   const menu = page.getByRole("menu", { name: "More" });
 
-  await expectBase(async () => {
+  await expect(async () => {
     await header.getByRole("button", { name: "More" }).click();
-    await expectBase(menu).toBeVisible({ timeout: 1000 });
+    await expect(menu).toBeVisible({ timeout: 1000 });
   }).toPass();
   await menu.getByRole("menuitem", { name }).click();
 }
