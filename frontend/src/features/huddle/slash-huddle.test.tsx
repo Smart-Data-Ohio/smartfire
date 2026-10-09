@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { SEED_IDS } from "../../../mock/server.ts";
 import { sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
 import type { Me } from "../../gen/Me.ts";
-import { mutations } from "../../store/store.ts";
+import { mutations, sidebarRowClock } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { toastSnapshot } from "../../ui/toast-store.ts";
 import { Composer } from "../composer/composer.tsx";
@@ -32,7 +32,7 @@ describe("/huddle's start_huddle", () => {
   it("joins the room's call, as the call button does", () => {
     const { joins, join } = recorder();
 
-    mutations.loadSidebar(sidebarFixture([sidebarRowFixture(12, "general")]));
+    mutations.loadSidebar(sidebarFixture([sidebarRowFixture(12, "general")]), sidebarRowClock());
 
     startHuddleFromCommand(12, "general", join);
 
@@ -42,7 +42,10 @@ describe("/huddle's start_huddle", () => {
   it("joins a direct message's call", () => {
     const { joins, join } = recorder();
 
-    mutations.loadSidebar(sidebarFixture([sidebarRowFixture(14, "Maya", "direct", [7, 9])]));
+    mutations.loadSidebar(
+      sidebarFixture([sidebarRowFixture(14, "Maya", "direct", [7, 9])]),
+      sidebarRowClock(),
+    );
 
     startHuddleFromCommand(14, "Maya", join);
 
@@ -55,6 +58,7 @@ describe("/huddle's start_huddle", () => {
 
     mutations.loadSidebar(
       sidebarFixture([{ ...stage, membership: { ...stage.membership, stageRole: "host" } }]),
+      sidebarRowClock(),
     );
 
     startHuddleFromCommand(20, "Town Hall", join);
@@ -65,7 +69,10 @@ describe("/huddle's start_huddle", () => {
   it("joins a board post's call, as classic's join endpoints allow", () => {
     const { joins, join } = recorder();
 
-    mutations.loadSidebar(sidebarFixture([sidebarRowFixture(30, "Roadmap", "board")]));
+    mutations.loadSidebar(
+      sidebarFixture([sidebarRowFixture(30, "Roadmap", "board")]),
+      sidebarRowClock(),
+    );
 
     startHuddleFromCommand(30, "Roadmap", join);
 

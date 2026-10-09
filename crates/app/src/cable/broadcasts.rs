@@ -360,6 +360,8 @@ impl Broadcasts {
         }
         let reached = self.channel(&unread_rooms_stream_name(user_id), &UnreadRoom { room_id });
         sync::room_unread(&self.server, user_id, room_id, None, false);
+        // Its red count now takes in the pings after the new read position.
+        self.sync_read_row(user_id, room_id);
         reached
     }
 
@@ -387,9 +389,10 @@ impl Broadcasts {
         sync::thread_changed_later(&self.server, &self.sync, thread_id, false);
     }
 
-    /// A thread was deleted.
+    /// A thread was deleted: its pings leave the room's red counts.
     pub fn thread_removed(&self, thread_id: i64, room_id: i64) {
         sync::thread_removed(&self.server, thread_id, room_id);
+        sync::sidebar_rows_later(&self.server, &self.sync, room_id, None);
     }
 
     /// A board's tag rules or SLA timers changed.
@@ -397,9 +400,18 @@ impl Broadcasts {
         sync::board_automations_changed(&self.server, room_id);
     }
 
-    /// The person read a thread.
+    /// The person read a thread: its pings leave the room's red count.
     pub fn thread_read(&self, user_id: i64, thread_id: i64, room_id: i64) {
         sync::thread_read(&self.server, user_id, thread_id, room_id);
+        self.sync_read_row(user_id, room_id);
+    }
+
+    /// `sidebar.row.upserted` for the person's own row after they read the room or one of its
+    /// threads, left a thread, or marked it unread, read afresh later: the server's count agrees
+    /// with the read (and with the client's own clearing of it), so a reload doesn't bring a
+    /// badge back.
+    pub fn sync_read_row(&self, user_id: i64, room_id: i64) {
+        sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(vec![user_id]));
     }
 
     // Message::Broadcasts (reference/app/models/message/broadcasts.rb)
@@ -481,7 +493,9 @@ impl Broadcasts {
             &message_dom_id(message, None),
         );
         sync::message_removed(&self.server, message);
-        self.direct_preview_later(room, message);
+        // Its unread count and pings, and their inbox items, went with it; every member's row
+        // is read afresh, which also moves a direct row's preview back to the message before.
+        sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
     /// A direct row previews its newest root message (`SidebarRow.lastMessage`): after one is

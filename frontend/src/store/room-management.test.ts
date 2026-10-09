@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { roomDetailFixture, sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import type { SidebarRow, SyncEvent } from "./model.ts";
 import { applyEvents, loadSidebar, setRoomDetail } from "./reducers.ts";
+import { rowClock } from "./row-touches.ts";
 import { initialState } from "./state.ts";
 
 const rowEvent = (data: SidebarRow): SyncEvent => ({
@@ -22,7 +23,7 @@ describe("room metadata follows sidebar sync", () => {
       membership: { ...row.membership, involvement: "mentions" as const },
     };
 
-    const loaded = setRoomDetail(loadSidebar(initialState, sidebarFixture([row])), detail);
+    const loaded = setRoomDetail(loadSidebar(initialState, sidebarFixture([row]), 0), detail);
     const next = applyEvents(loaded, [rowEvent(edited)], 0);
 
     expect(next.rooms[20]?.detail).toEqual({
@@ -42,9 +43,9 @@ describe("room metadata follows sidebar sync", () => {
 
     expect(synced.rooms[20]?.detail?.directMemberIds).toEqual([8, 9]);
     expect(synced.rooms[20]?.detail?.displayName).toBe("Ada and Grace");
-    expect(loadSidebar(loaded, sidebarFixture([row])).rooms[20]?.detail?.displayName).toBe(
-      "Ada and Grace",
-    );
+    expect(
+      loadSidebar(loaded, sidebarFixture([row]), rowClock(loaded)).rooms[20]?.detail?.displayName,
+    ).toBe("Ada and Grace");
   });
 
   it("does not create an unloaded detail or revoke access for a hidden row removal", () => {
@@ -53,7 +54,7 @@ describe("room metadata follows sidebar sync", () => {
     expect(applyEvents(initialState, [rowEvent(row)], 0).rooms[20]).toBeUndefined();
 
     const loaded = setRoomDetail(
-      loadSidebar(initialState, sidebarFixture([row])),
+      loadSidebar(initialState, sidebarFixture([row]), 0),
       roomDetailFixture(20),
     );
 

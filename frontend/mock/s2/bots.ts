@@ -16,7 +16,7 @@ import type { Grant } from "../../src/gen/Grant.ts";
 import type { GrantList } from "../../src/gen/GrantList.ts";
 import { HttpError, notFound, ok } from "../http.ts";
 import { field, intField, type Json, stringField } from "../json.ts";
-import { BOT_ID, timestamp, VIEWER_ID, type World } from "../seed.ts";
+import { BOT_ID, rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 import { type Route, route, type S2Context } from "./context.ts";
 import type { Uploads } from "./uploads.ts";
 
@@ -98,7 +98,7 @@ function agentRecord(id: number): AgentRecord {
   };
 }
 
-function initialState(world: World): State {
+function initialState(world: World, now: number): State {
   const bots = new Map<number, BotRecord>();
   const seeded = world.users.get(BOT_ID);
 
@@ -136,6 +136,21 @@ function initialState(world: World): State {
     removed: false,
   });
 
+  world.users.set(LEGACY_ID, {
+    id: LEGACY_ID,
+    name: "Deploy Bot",
+    role: "bot",
+    status: "active",
+    bio: null,
+    avatarUrl: `/users/${LEGACY_ID}/avatar`,
+    hasAvatar: false,
+    customStatus: null,
+    avatarIcon: null,
+    agent: null,
+    createdAt: timestamp(now),
+    updatedAt: rowTimestamp(now),
+  });
+
   return { bots, nextId: 901 };
 }
 
@@ -156,7 +171,7 @@ export function createBots(ctx: S2Context, uploads: Uploads, requireSudo: () => 
     const world = ctx.world();
 
     if (state === null || stateWorld !== world) {
-      state = initialState(world);
+      state = initialState(world, ctx.now());
       stateWorld = world;
     }
 

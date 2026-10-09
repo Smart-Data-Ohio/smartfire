@@ -27,6 +27,32 @@ const recoveryStops = new Map<number, RecoveryStop>();
 
 let nextRecoveryStop = 0;
 
+/**
+ * A full room read a re-read loop in flight absorbed (a visit's first read lost to a membership
+ * fact while a metadata refresh held the slot). That loop runs it next, in place of its own read,
+ * so the visit still settles.
+ */
+const handoffs = new Map<number, Map<number | null, () => Effect.Effect<void>>>();
+
+/** Test isolation, with `resetRoomRereads`. */
+export function resetRoomHandoffs(): void {
+  handoffs.clear();
+}
+
+function takeHandoff(
+  roomId: number,
+  visit: number | null,
+): (() => Effect.Effect<void>) | undefined {
+  const visits = handoffs.get(roomId);
+  const read = visits?.get(visit);
+
+  visits?.delete(visit);
+
+  if (visits?.size === 0) handoffs.delete(roomId);
+
+  return read;
+}
+
 /** The management revision a pending header/member-list read must still match. */
 export function roomRevision(roomId: number): number {
   return revisions.get(roomId) ?? 0;
@@ -114,16 +140,32 @@ export function interruptRoomRecovery(roomId: number): Effect.Effect<void> {
  * the read finishes, a pending loss starts exactly one more. If `visit` is no longer current,
  * the loop stops without writing and leaves the visit on screen alone — a dirty flag on the old
  * visit is not handed off.
+ *
+ * `handoff` is a full read of the room (detail, page, and an error or unavailable outcome). When
+ * a loop already in flight absorbs this loss, that loop runs `handoff` from its next pass on, so
+ * a metadata refresh that holds the slot can't leave the visit loading.
  */
 export function recoverRejectedRoomRead<E, R>(
   roomId: number,
   visit: number | null,
   owns: () => boolean,
   read: () => Effect.Effect<void, E, R>,
+  handoff?: () => Effect.Effect<void>,
 ): Effect.Effect<void, E, R> {
   if (!owns()) return Effect.void;
 
-  if (!claimRoomReread(roomId, visit)) return Effect.void;
+  if (!claimRoomReread(roomId, visit)) {
+    if (handoff !== undefined) {
+      const visits = handoffs.get(roomId) ?? new Map<number | null, () => Effect.Effect<void>>();
+
+      visits.set(visit, handoff);
+      handoffs.set(roomId, visits);
+    }
+
+    return Effect.void;
+  }
+
+  takeHandoff(roomId, visit);
 
   return runRoomReread(roomId, visit, owns, read);
 }
@@ -134,29 +176,41 @@ function runRoomReread<E, R>(
   owns: () => boolean,
   read: () => Effect.Effect<void, E, R>,
 ): Effect.Effect<void, E, R> {
+  const drop = () => {
+    dropRoomReread(roomId, visit);
+    takeHandoff(roomId, visit);
+  };
+
   const loop = Effect.gen(function* () {
+    let next = read;
+
     while (true) {
       if (!owns()) {
-        dropRoomReread(roomId, visit);
+        drop();
 
         return;
       }
 
-      const result = yield* Effect.result(read());
+      const result = yield* Effect.result(next());
 
       if (!owns()) {
-        dropRoomReread(roomId, visit);
+        drop();
 
         return;
       }
 
-      if (finishRoomReread(roomId, visit)) continue;
+      if (finishRoomReread(roomId, visit)) {
+        next = takeHandoff(roomId, visit) ?? next;
+        continue;
+      }
+
+      takeHandoff(roomId, visit);
 
       if (Result.isFailure(result)) return yield* Effect.fail(result.failure);
 
       return;
     }
-  }).pipe(Effect.onInterrupt(() => Effect.sync(() => dropRoomReread(roomId, visit))));
+  }).pipe(Effect.onInterrupt(() => Effect.sync(drop)));
 
   return Effect.gen(function* () {
     const fiber = yield* Effect.forkChild(loop);

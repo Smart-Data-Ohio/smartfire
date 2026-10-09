@@ -103,10 +103,11 @@ describe("directoryBadge", () => {
 });
 
 describe("botPage", () => {
-  it("opens an agent's profile when the SPA has one, else the classic page", () => {
+  it("opens an agent's profile when available, otherwise their SPA person page", () => {
     expect(botPage(user(90, "bot", true), true)).toBe("/app/agents/90");
-    expect(botPage(user(90, "bot", true), false)).toBe("/users/90?classic=1");
-    expect(botPage(user(91, "bot"), true)).toBe("/users/91?classic=1");
+    expect(botPage(user(90, "bot", true), false)).toBe("/app/people/90");
+    expect(botPage(user(91, "bot"), true)).toBe("/app/people/91");
+    expect(botPage(user(91, "bot"), false)).toBe("/app/people/91");
   });
 });
 
@@ -151,6 +152,7 @@ describe("landBan", () => {
     transferUrl: status === "active" ? "https://chat.example/session/transfers/t" : null,
     transferQrSvg: status === "active" ? "<svg/>" : null,
     canBan: true,
+    canManageBot: false,
   });
 
   it("takes a newer reply whole: the status and what follows from it", () => {

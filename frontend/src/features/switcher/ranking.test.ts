@@ -2,6 +2,13 @@ import { describe, expect, it } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../../api/testing.ts";
 import type { SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
+import {
+  rowPillCount,
+  rowState,
+  rowUnread,
+  sectionUnread,
+  sidebarTotals,
+} from "../sidebar/sections.ts";
 import { matchRange, matchScore, normalizeQuery } from "./match.ts";
 import {
   flattenSections,
@@ -9,18 +16,26 @@ import {
   mergeItems,
   type RemoteCatalogue,
   rankItems,
+  readsUnread,
   remoteItems,
 } from "./ranking.ts";
 import { withRecent } from "./recents.ts";
 
 const VIEWER = 7;
 
+/** Unread in a room that notifies for mentions only, so its count is the mentions (the default). */
 function unread(row: SidebarRow, mentions = 0): SidebarRow {
   return {
     ...row,
     unreadCount: 3,
     mentionCount: mentions,
-    membership: { ...row.membership, unreadAt: "2026-10-05T00:00:00.000Z" },
+    notificationCount: mentions,
+    threadNotificationCount: 0,
+    membership: {
+      ...row.membership,
+      involvement: "mentions",
+      unreadAt: "2026-10-05T00:00:00.000Z",
+    },
   };
 }
 
@@ -127,6 +142,113 @@ describe("localItems", () => {
     expect(items.find((item) => item.key === "person:2")?.roomId).toBe(9);
     expect(items.find((item) => item.key === "room:11")?.memberIds).toEqual([3, 4]);
     expect(items.find((item) => item.key === "room:2")?.count).toBe(2);
+  });
+});
+
+describe("readsUnread", () => {
+  const muted = (row: SidebarRow): SidebarRow => ({
+    ...row,
+    membership: { ...row.membership, involvement: "muted" },
+  });
+
+  it("bolds exactly the rows the sidebar bolds, a muted unread room included", () => {
+    const items = localItems(
+      sidebarOf([
+        unread(sidebarRowFixture(2, "design"), 2),
+        muted(unread(sidebarRowFixture(4, "noise"), 1)),
+        muted(unread(sidebarRowFixture(5, "chatter"))),
+        sidebarRowFixture(1, "general"),
+      ]),
+      VIEWER,
+    );
+
+    const reads = (key: string) => {
+      const item = items.find((entry) => entry.key === key);
+
+      return item === undefined ? undefined : readsUnread(item);
+    };
+
+    expect(reads("room:2")).toBe(true);
+    expect(reads("room:4")).toBe(true);
+    expect(reads("room:5")).toBe(true);
+    expect(reads("room:1")).toBe(false);
+
+    // The same answer as the sidebar row's own state, for every room.
+    for (const row of [
+      unread(sidebarRowFixture(2, "design"), 2),
+      muted(unread(sidebarRowFixture(4, "noise"), 1)),
+      muted(unread(sidebarRowFixture(5, "chatter"))),
+      sidebarRowFixture(1, "general"),
+    ]) {
+      expect(reads(`room:${row.room.id}`)).toBe(rowState(row, false) === "unread");
+    }
+  });
+});
+
+describe("one number on every surface", () => {
+  /** A row as the server sends it for `involvement`, with its own counts. */
+  const served = (
+    id: number,
+    involvement: SidebarRow["membership"]["involvement"],
+    counts: { unread: number; mentions: number; notifications: number },
+    kind: "open" | "direct" = "open",
+  ): SidebarRow => {
+    const base = sidebarRowFixture(id, `room ${id}`, kind, kind === "direct" ? [id + 100] : []);
+
+    return {
+      ...base,
+      unreadCount: counts.unread,
+      mentionCount: counts.mentions,
+      notificationCount: counts.notifications,
+      membership: {
+        ...base.membership,
+        involvement,
+        unreadAt: counts.unread > 0 ? "2026-10-05T00:00:00.000Z" : null,
+      },
+    };
+  };
+
+  it("gives the switcher the sidebar's count and bold for every involvement", () => {
+    const quietRoom = served(5, "nothing", { unread: 4, mentions: 1, notifications: 0 });
+
+    const quietDirect = served(
+      6,
+      "nothing",
+      { unread: 2, mentions: 0, notifications: 0 },
+      "direct",
+    );
+
+    const rows = [
+      served(1, "everything", { unread: 3, mentions: 0, notifications: 3 }),
+      // A thread @mention in a read room: no unread roots, still one notification.
+      served(2, "everything", { unread: 0, mentions: 1, notifications: 1 }),
+      served(3, "mentions", { unread: 5, mentions: 1, notifications: 2 }),
+      // Muted: classic still pushes mentions.
+      served(4, "muted", { unread: 2, mentions: 1, notifications: 1 }),
+      // "nothing" never pushes: bold for its unread messages, never a count, DM or not.
+      quietRoom,
+      quietDirect,
+      served(7, "mentions", { unread: 0, mentions: 0, notifications: 0 }),
+    ];
+
+    const sidebar = sidebarOf(rows);
+    const items = localItems(sidebar, VIEWER);
+
+    for (const row of rows) {
+      const item = items.find((entry) => entry.roomId === row.room.id);
+
+      expect(item?.count).toBe(rowPillCount(row));
+      expect(item === undefined ? undefined : readsUnread(item)).toBe(rowUnread(row));
+    }
+
+    const total = rows.reduce((sum, row) => sum + rowPillCount(row), 0);
+
+    expect(total).toBe(3 + 1 + 2 + 1);
+    expect(sidebarTotals(sidebar).mentions).toBe(total);
+    expect(sectionUnread(rows).count).toBe(total);
+    expect(rowPillCount(quietRoom)).toBe(0);
+    expect(rowPillCount(quietDirect)).toBe(0);
+    expect(rowUnread(quietDirect)).toBe(true);
   });
 });
 

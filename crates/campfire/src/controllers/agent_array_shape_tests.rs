@@ -29,12 +29,17 @@ fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<
                     continue;
                 }
                 use rusqlite::types::ValueRef;
-                // The API's per-attempt creation key is port-only; classic paths leave it null.
+                // Port-only columns Rails doesn't have. The API's per-attempt creation keys stay
+                // null on classic paths; a thread member's read position doesn't.
                 if crate::controllers::presenters::test_support::rust_only_column(table, name) {
-                    assert!(
-                        matches!(r.get_ref(i)?, ValueRef::Null),
-                        "classic paths never set API creation keys"
-                    );
+                    if crate::controllers::presenters::test_support::api_creation_key_column(
+                        table, name,
+                    ) {
+                        assert!(
+                            matches!(r.get_ref(i)?, ValueRef::Null),
+                            "classic paths never set API creation keys"
+                        );
+                    }
                     continue;
                 }
                 object.insert(

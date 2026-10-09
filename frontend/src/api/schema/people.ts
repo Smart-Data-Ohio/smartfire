@@ -49,6 +49,7 @@ export const PersonProfile = Schema.Struct({
   transferUrl: Schema.NullOr(Schema.String),
   transferQrSvg: Schema.NullOr(Schema.String),
   canBan: Schema.Boolean,
+  canManageBot: Schema.Boolean,
 });
 
 export type PersonProfile = typeof PersonProfile.Type;
