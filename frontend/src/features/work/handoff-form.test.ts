@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { checkHandoff, EMPTY_HANDOFF, handoffLines } from "./handoff-form.ts";
+import { ActionError } from "../../sync/run.ts";
+import { checkHandoff, EMPTY_HANDOFF, handoffLines, serverHandoffErrors } from "./handoff-form.ts";
 
 const ready = { ...EMPTY_HANDOFF, receiverAgentId: 9, summary: "  Over to you  " };
 
@@ -46,6 +47,42 @@ describe("the handoff form", () => {
     });
     expect(checkHandoff({ ...ready, openQuestions: "q".repeat(501) })).toEqual({
       errors: { openQuestions: "Open questions must be at most 500 characters each" },
+    });
+  });
+
+  it("puts the server's field errors on those fields, and a fieldless refusal on the alert", () => {
+    expect(
+      serverHandoffErrors(
+        new ActionError("Validation", "Summary is too long (maximum is 2000 characters)", {
+          summary: ["is too long (maximum is 2000 characters)"],
+          receiverAgentId: ["Receiver must hold the manage_threads capability in this room"],
+          links: ["must be http(s) URLs"],
+          openQuestions: ["are limited to 10 per handoff"],
+        }),
+      ),
+    ).toEqual({
+      errors: {
+        summary: "Summary is too long (maximum is 2000 characters).",
+        receiver: "Receiver must hold the manage_threads capability in this room.",
+        links: "Links must be http(s) URLs.",
+        openQuestions: "Open questions are limited to 10 per handoff.",
+      },
+      alert: null,
+    });
+
+    expect(
+      serverHandoffErrors(
+        new ActionError("Validation", "This thread isn't tracked as work", {
+          base: ["This thread isn't tracked as work"],
+        }),
+      ),
+    ).toEqual({ errors: {}, alert: "This thread isn't tracked as work" });
+
+    expect(
+      serverHandoffErrors(new ActionError("Forbidden", "You cannot manage work in this thread")),
+    ).toEqual({
+      errors: {},
+      alert: "You cannot manage work in this thread",
     });
   });
 });

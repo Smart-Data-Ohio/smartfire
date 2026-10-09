@@ -22,7 +22,8 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
-import { HandoffDialog } from "../work/handoff-dialog.tsx";
+import { handoffRefusal } from "../work/handoff-access.ts";
+import { HandoffDialog, useHandoffRoute } from "../work/handoff-dialog.tsx";
 import {
   classicWorkUrl,
   parseTags,
@@ -562,7 +563,10 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/** Link management stays classic; handoffs use the shared work dialog. */
+/**
+ * What a manager can do beyond the facts: hand the work to an agent (the dialog's URL over this
+ * pane) and manage its links, still a classic page.
+ */
 function PostWorkActions({
   threadId,
   detail,
@@ -570,8 +574,16 @@ function PostWorkActions({
   readonly threadId: number;
   readonly detail: WorkDetail | null;
 }) {
-  const [handingOff, setHandingOff] = useState(false);
   const name = useStore((state) => state.threads[threadId]?.name ?? "Post");
+  const { open: handingOff, openHandoff, closeHandoff } = useHandoffRoute(threadId);
+
+  const offering =
+    detail !== null &&
+    handoffRefusal({
+      tracked: true,
+      canManage: true,
+      receiverCount: detail.handoffReceivers.length,
+    }) === null;
 
   return (
     <div className="post-classic">
@@ -579,9 +591,9 @@ function PostWorkActions({
         Manage links
         <Icon name="arrow-up-right" size={12} />
       </a>
-      {detail === null || detail.handoffReceivers.length === 0 ? null : (
+      {offering && detail !== null ? (
         <>
-          <Button variant="secondary" size="sm" icon="send" onClick={() => setHandingOff(true)}>
+          <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
             Hand off to an agent
           </Button>
           <HandoffDialog
@@ -589,10 +601,12 @@ function PostWorkActions({
             threadName={name}
             work={detail}
             open={handingOff}
-            onOpenChange={setHandingOff}
+            onOpenChange={(open) => {
+              if (!open) closeHandoff();
+            }}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -600,7 +614,8 @@ function PostWorkActions({
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, the agent's steps, the work history, and link management and handoff controls.
+ * its editor, the agent's steps, the work history, the handoff dialog, and the way to the classic
+ * links page.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);

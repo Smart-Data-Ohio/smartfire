@@ -417,6 +417,11 @@
     font-size: var(--text-sidebar);
   }
 
+  .work-form-refusal:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--focus-ring);
+  }
+
   .work-steps,
   .work-history {
     display: flex;
