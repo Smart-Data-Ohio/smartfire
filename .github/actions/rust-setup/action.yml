@@ -11,7 +11,7 @@ inputs:
     description: Build the toolchain image from the main-written Buildx cache
     default: 'true'
   cargo-cache:
-    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds through ci/exec.sh), stable (the production toolchain check), or none'
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), or none'
     default: none
   free-disk:
     description: Delete unused preinstalled SDKs in the background
@@ -32,7 +32,7 @@ runs:
   using: composite
   steps:
     # Deleting these SDKs takes one to two minutes; nothing below needs the space at once.
-    - name: Make room for media, targets, and pinned browsers
+    - name: Make room for media and targets
       if: ${{ inputs.free-disk == 'true' }}
       shell: bash
       run: nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc >/dev/null 2>&1 &
@@ -68,8 +68,7 @@ runs:
         cache-to: ${{ inputs.save-caches == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
 
     # One cache per kind of build: the nextest harnesses' dependencies, clippy's check-mode
-    # dependencies plus the binaries' and doctests', or the correctness suites' stable-toolchain
-    # builds. Workspace crates are pruned before saving (ci/prune-target.py): a fresh
+    # dependencies plus the binaries' and doctests'. Workspace crates are pruned before saving (ci/prune-target.py): a fresh
     # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
     # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
     # and toolchain image), so an entry built by another compiler is never restored. The cache

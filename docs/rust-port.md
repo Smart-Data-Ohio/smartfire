@@ -88,9 +88,7 @@ applies it to the committed seeds. Golden vectors and fixtures were recorded fro
 This repository's deployable Rust image is private in **GCP Artifact Registry**, tagged
 **`rust-git-<full Git SHA>`**, for **`linux/amd64`**.
 [`publish-image.yml`](../.github/workflows/publish-image.yml) builds and pushes it on every push
-to main (or resolves an existing immutable tag) in a job of its own. An arm64 build runs alongside
-on a native runner, and GHCR (`ghcr.io/smart-data-ohio/smartfire`) gets both as a multi-arch image
-for self-hosters, built from the same amd64 manifest. A manual dry run builds both without pushing. The registry image path comes from
+to main (or resolves an existing immutable tag) in a job of its own. A manual dry run builds without pushing. The registry image path comes from
 the `GCP_IMAGE` repository variable.
 
 Deploy the selected commit with

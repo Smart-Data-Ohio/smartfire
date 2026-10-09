@@ -309,11 +309,6 @@ impl Layout {
 struct KitTokens(campfire_kit::csrf::AuthenticityTokens);
 
 impl request_forgery::AuthenticityTokens for KitTokens {
-    #[cfg(any(test, feature = "test-support"))]
-    fn enabled(&self) -> bool {
-        !crate::test_support::forgery_disabled()
-    }
-
     fn global(&self) -> String {
         self.0.global()
     }

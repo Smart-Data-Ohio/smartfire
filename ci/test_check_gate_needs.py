@@ -25,13 +25,13 @@ class GateNeedsTest(unittest.TestCase):
 
     def test_a_new_job_outside_the_gates_fails(self):
         text = WORKFLOW.read_text() + "\n  extra:\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n"
-        self.assertEqual(gate_needs.problems(text), ["job 'extra' is not in the needs of rust or correctness-gate"])
+        self.assertEqual(gate_needs.problems(text), ["job 'extra' is not in the needs of rust"])
 
     def test_block_and_scalar_needs_are_read(self):
         text = ("on: push\njobs:\n  a:\n    runs-on: x\n  b:\n    needs: a\n"
                 "  rust:\n    needs:\n      - a\n      - b # comment\n"
-                "  correctness-gate:\n    needs: [b]\n")
-        self.assertEqual(gate_needs.jobs(text), {"a": [], "b": ["a"], "rust": ["a", "b"], "correctness-gate": ["b"]})
+                "")
+        self.assertEqual(gate_needs.jobs(text), {"a": [], "b": ["a"], "rust": ["a", "b"]})
         self.assertEqual(gate_needs.problems(text), [])
 
 
