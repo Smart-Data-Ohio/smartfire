@@ -1,4 +1,4 @@
-import { useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
@@ -19,32 +19,20 @@ import {
   SUMMARY_LIMIT,
   serverHandoffErrors,
 } from "./handoff-form.ts";
+import { pushedOverState, useClosePushedOver } from "./pushed-over.ts";
 import { WorkTextArea } from "./work-textarea.tsx";
-
-declare module "@tanstack/react-router" {
-  interface HistoryState {
-    /** The work bar or a board post pushed the handoff dialog over the thread. */
-    readonly smartfireHandoffOver?: boolean;
-  }
-}
-
-/** The history state an in-app open carries, so closing can step back to the entry under it. */
-export function handoffOverState() {
-  return { smartfireHandoffOver: true };
-}
 
 /**
  * The handoff dialog follows `/app/r/$roomId/t/$threadId/handoff` (a board's query stays put).
- * An in-app open (the work bar, a board post) pushes that URL with {@link handoffOverState}, and
+ * An in-app open (the work bar, a board post) pushes that URL with {@link pushedOverState}, and
  * closing steps back, so the thread entry underneath is the one that was already there. A direct
  * arrival (the classic URL's redirect, a deep link) has no such flag, and closing replaces this
  * entry with the thread. Cancel and a successful handoff both close this way.
  */
 export function useHandoffRoute(threadId: number) {
   const navigate = useNavigate();
-  const router = useRouter();
   const matchRoute = useMatchRoute();
-  const over = useLocation({ select: (location) => location.state.smartfireHandoffOver === true });
+  const closeOver = useClosePushedOver();
   const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
   const open = matchRoute({ to: "/r/$roomId/t/$threadId/handoff", includeSearch: false }) !== false;
 
@@ -72,18 +60,10 @@ export function useHandoffRoute(threadId: number) {
         to: "/r/$roomId/t/$threadId/handoff",
         params: { roomId, threadId },
         search: parseBoardSearch,
-        state: handoffOverState(),
+        state: pushedOverState(),
       });
     },
-    closeHandoff: () => {
-      if (over) {
-        router.history.back();
-
-        return;
-      }
-
-      replaceWithThread();
-    },
+    closeHandoff: () => closeOver(replaceWithThread),
   };
 }
 

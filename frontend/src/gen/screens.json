@@ -41,6 +41,7 @@
   { "endpoint": "searches#index", "classic": "/searches", "spa": "/app/search", "ported": true },
   { "endpoint": "work_threads#index", "classic": "/work", "spa": "/app/work", "ported": true },
   { "endpoint": "threads/work/handoffs#new", "classic": "/threads/:thread_id/work/handoff/new", "spa": "/app/t/:thread_id/handoff", "ported": true },
+  { "endpoint": "threads/work/links#index", "classic": "/threads/:thread_id/work/links", "spa": "/app/t/:thread_id/links", "ported": true },
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings", "ported": true },
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/notifications", "ported": true },
   { "endpoint": "users/profiles#show", "classic": "/users/me/profile", "spa": "/app/settings/appearance", "ported": true },

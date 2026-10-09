@@ -274,6 +274,14 @@ pub const SCREENS: &[Screen] = &[
         "/app/t/:thread_id/handoff",
         true,
     ),
+    // S6: the links page names only the thread; the SPA resolves its room, then opens the
+    // form over the room's thread pane (`/app/r/:room_id/t/:thread_id/links`).
+    screen(
+        "threads/work/links#index",
+        "/threads/:thread_id/work/links",
+        "/app/t/:thread_id/links",
+        true,
+    ),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(
         "users/profiles#show",

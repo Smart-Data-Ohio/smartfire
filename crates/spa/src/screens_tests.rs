@@ -228,6 +228,11 @@ fn board_pages_and_workspace_work_are_ported() {
             "/threads/9/work/handoff/new",
             "/app/t/9/handoff",
         ),
+        (
+            "threads/work/links#index",
+            "/threads/9/work/links",
+            "/app/t/9/links",
+        ),
     ] {
         assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
         assert_eq!(classic_url(spa, None).as_deref(), Some(classic));

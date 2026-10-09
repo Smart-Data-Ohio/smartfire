@@ -14,6 +14,7 @@ import type { Me } from "../../gen/Me.ts";
 import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
 import { mutations, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
+import { LinksArrival } from "./links-arrival.tsx";
 import {
   factsFixture,
   threadDetailFixture,
@@ -36,8 +37,8 @@ async function load(threadId: number): Promise<ThreadDetail> {
   return detail;
 }
 
-/** The bar reads the handoff dialog off the thread's child route, so tests sit in that router. */
-async function renderBar(threadId: number, live = true) {
+/** The bar reads the handoff dialog and the link editor off the thread's child routes. */
+async function renderBar(threadId: number, live = true, at: "thread" | "links" = "thread") {
   const roomId = store.getState().threads[threadId]?.roomId ?? 1;
   const root = createRootRoute({ component: Outlet });
 
@@ -49,6 +50,7 @@ async function renderBar(threadId: number, live = true) {
         <div className="pane-frame">
           <button type="button" aria-label="Thread actions" />
           <WorkBar threadId={threadId} />
+          <LinksArrival threadId={threadId} />
           {live ? <WorkLive threadId={threadId} /> : null}
         </div>
         <Outlet />
@@ -62,16 +64,26 @@ async function renderBar(threadId: number, live = true) {
     component: () => null,
   });
 
+  const links = createRoute({
+    getParentRoute: () => thread,
+    path: "links",
+    component: () => null,
+  });
+
   const router = createRouter({
-    routeTree: root.addChildren([thread.addChildren([handoff])]),
-    history: createMemoryHistory({ initialEntries: [`/r/${roomId}/t/${threadId}`] }),
+    routeTree: root.addChildren([thread.addChildren([handoff, links])]),
+    history: createMemoryHistory({
+      initialEntries: [
+        at === "links" ? `/r/${roomId}/t/${threadId}/links` : `/r/${roomId}/t/${threadId}`,
+      ],
+    }),
   });
 
   const view = render(<RouterProvider router={router} />);
 
   await act(() => router.load());
 
-  return view;
+  return Object.assign(view, { router });
 }
 
 const factsOf = (threadId: number) => store.getState().threads[threadId]?.work ?? null;
@@ -304,5 +316,33 @@ describe("the thread pane's work section", () => {
       expect(store.getState().work.details[WORK.agentOwned]?.history.length).toBe(before + 1),
     );
     expect(announced()).toContain("Status: Done");
+  });
+
+  it("shows the link editor on a work thread's links route", async () => {
+    await load(WORK.agentOwned);
+
+    const { router } = await renderBar(WORK.agentOwned, false, "links");
+    const roomId = store.getState().threads[WORK.agentOwned]?.roomId;
+
+    const work = screen.getByRole("region", { name: "Work" });
+
+    expect(await within(work).findByRole("form", { name: "Link to this work" })).toBeTruthy();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(router.history.location.pathname).toBe(`/r/${roomId}/t/${WORK.agentOwned}/links`);
+  });
+
+  it("opens the link editor from the work bar", async () => {
+    await load(WORK.viewerOwned);
+
+    const { router } = await renderBar(WORK.viewerOwned, false);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: (name) => name === "Link" }));
+
+    expect(await screen.findByRole("form", { name: "Link to this work" })).toBeTruthy();
+    expect(router.history.location.pathname).toMatch(/\/links$/);
   });
 });

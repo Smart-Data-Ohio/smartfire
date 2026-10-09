@@ -1293,17 +1293,18 @@
       "category": "work",
       "classic_endpoint": "threads/work/handoffs#new",
       "owner_today": "both",
-      "after_cutover": {"action": "alias", "target": "/app/t/:thread_id/handoff; links stay classic", "notes": "The handoff page redirects next users to the SPA dialog. Keep the create POST and the links page classic; keep link models."},
+      "after_cutover": {"action": "alias", "target": "/app/t/:thread_id/handoff and /app/t/:thread_id/links", "notes": "The handoff page redirects next users to the SPA dialog, and the links page to the SPA link form. Keep the create POSTs classic; keep link models."},
       "bookmarks": true,
       "notifications": true,
       "known_bug": null,
-      "notes": "The handoff page is ported: next users redirect to /app/t/:id/handoff, which resolves the thread's room and opens the dialog. Links stay classic. Untracked threads answer 422 on the classic page; handoff needs a manager (403 otherwise). WORK_THREAD is tracked and David-owned.",
+      "notes": "The handoff and links pages are ported: next users redirect to /app/t/:id/handoff and /app/t/:id/links, which resolve the thread's room and open the dialog or the link form. Untracked threads answer 422 on the classic page; handoff needs a manager (403 otherwise). WORK_THREAD is tracked and David-owned.",
       "bookmark_notes": "Work links from threads.",
       "notification_notes": "Handoff notifications link here.",
       "cases": [
         {"id": "work.handoff", "method": "GET", "path": "/threads/{WORK_THREAD}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
         {"id": "work.handoff.next", "method": "GET", "path": "/threads/{WORK_THREAD}/work/handoff/new", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/handoff"}},
         {"id": "work.links", "method": "GET", "path": "/threads/{WORK_THREAD}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 200, "content_type_prefix": "text/html", "markers": ["{CLASSIC_SHELL}"]}},
+        {"id": "work.links.next", "method": "GET", "path": "/threads/{WORK_THREAD}/work/links", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 302, "location": "/app/t/{WORK_THREAD}/links"}},
         {"id": "work.handoff.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/handoff/new", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 422, "body_empty": true}},
         {"id": "work.links.untracked422", "method": "GET", "path": "/threads/{THREAD_DESIGNERS}/work/links", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "expect": {"status": 422, "body_empty": true}}
       ]

@@ -48,8 +48,9 @@ describe("the screen map and the router", () => {
       "/app/agents/:id",
       "/app/settings/profile",
       "/app/admin/workspace",
-      // The room-scoped handoff dialog is where the classic handoff page's resolver lands.
+      // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
+      "/app/r/:id/t/:id/links",
     ]);
 
     for (const route of Object.values(router.routesById)) {
@@ -82,6 +83,7 @@ describe("board route search", () => {
       "/r/900/posts/new",
       "/r/900/t/42",
       "/r/900/t/42/handoff",
+      "/r/900/t/42/links",
       "/r/900/files",
       "/r/900/automations",
       "/r/900/m/123",
@@ -118,5 +120,21 @@ describe("handoff routes", () => {
     expect(matches.at(-1)?.params).toMatchObject({ threadId: 42 });
     // A malformed id fails the params parse: the page is not found, nothing is fetched.
     expect(router.matchRoutes("/t/abc/handoff", {}).at(-1)?.paramsError).toBeTruthy();
+  });
+
+  it("opens a post's link form over its thread pane", () => {
+    const matches = router.matchRoutes("/r/900/t/42/links", {});
+
+    expect(matches.at(-1)?.routeId).toBe("/shell/r/$roomId/t/$threadId/links");
+    expect(matches.at(-1)?.params).toMatchObject({ roomId: 900, threadId: 42 });
+    expect(matches.map((match) => match.routeId)).toContain("/shell/r/$roomId/t/$threadId");
+  });
+
+  it("resolves a bare links link, and only for a thread id", () => {
+    const matches = router.matchRoutes("/t/42/links", {});
+
+    expect(matches.at(-1)?.routeId).toBe("/shell/t/$threadId/links");
+    expect(matches.at(-1)?.params).toMatchObject({ threadId: 42 });
+    expect(router.matchRoutes("/t/abc/links", {}).at(-1)?.paramsError).toBeTruthy();
   });
 });
