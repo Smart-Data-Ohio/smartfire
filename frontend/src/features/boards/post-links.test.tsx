@@ -228,6 +228,7 @@ describe("a post's links", () => {
 
     const user = userEvent.setup();
     const { router } = await mount("/app/r/4/t/7");
+    const toasts = toastSnapshot().length;
 
     await user.click(button("Remove link acme/api#12"));
 
@@ -243,12 +244,39 @@ describe("a post's links", () => {
       removal.reject(new ActionError("ServerError", "Something went wrong.", {})),
     );
 
-    // The toast names the old post's link; this post's draft and pending link are untouched.
-    expect(toastSnapshot().at(-1)).toMatchObject({ title: "Couldn't remove acme/api#12" });
+    // The editor is gone, so the failure doesn't toast onto this post. Its draft and pending
+    // link are untouched.
+    expect(toastSnapshot()).toHaveLength(toasts);
     expect(router.history.location.pathname).toBe("/app/r/4/t/8/links");
     expect(urlField("Pull request URL").value).toBe("https://github.com/acme/web/pull/2");
     expect(button("Link pull request").disabled).toBe(true);
     expect(button("Remove link acme/api#12").disabled).toBe(true);
+  });
+
+  it("ignores a removal that fails after the editor closes", async () => {
+    vi.spyOn(actions.work, "linkForm").mockResolvedValue({ events: [] });
+
+    const removal = deferred<ThreadDetail>();
+
+    vi.spyOn(actions.work, "removeLink").mockReturnValue(removal.promise);
+
+    const user = userEvent.setup();
+    const { router } = await mount("/app/r/4/t/7/links");
+    const toasts = toastSnapshot().length;
+
+    await user.click(button("Remove link acme/api#12"));
+
+    await act(() =>
+      router.navigate({ to: "/r/$roomId/t/$threadId", params: { roomId: 4, threadId: 7 } }),
+    );
+
+    await act(async () =>
+      removal.reject(new ActionError("ServerError", "Something went wrong.", {})),
+    );
+
+    expect(toastSnapshot()).toHaveLength(toasts);
+    expect(screen.queryByRole("form", { name: "Link to this work" })).toBeNull();
+    expect(screen.getByText("acme/api#12")).toBeDefined();
   });
 
   it("leaves another post's draft alone when an earlier link answers late", async () => {

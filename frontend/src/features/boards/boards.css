@@ -963,6 +963,17 @@
     gap: var(--space-2);
   }
 
+  /* A phone's work bar doesn't scroll, and a post's intro starts at the top of the thread.
+     A long list would push Cancel and the submit button off the screen, so the list scrolls
+     and the form stays under it. */
+  @media (width < 720px) {
+    .post-links:has(.post-link-add) .post-link-list {
+      max-height: 8rem;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+  }
+
   @media (hover: none) {
     .post-link-remove {
       opacity: 1;

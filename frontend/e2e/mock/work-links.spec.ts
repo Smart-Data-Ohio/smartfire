@@ -1,6 +1,6 @@
 import { S4_WORK_IDS } from "../../mock/s4/seed.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "../../mock/s6/seed.ts";
-import { DESKTOP, expect, openApp, PHONE, ROOM_IDS, shot, test } from "./support.ts";
+import { DESKTOP, expect, openApp, PHONE, PHONE_TOUCH, ROOM_IDS, shot, test } from "./support.ts";
 
 const POST = BOARD_POST_IDS.apiPagination;
 
@@ -67,4 +67,68 @@ test("a work thread's classic links URL opens the link editor", async ({ page })
   await expect(form).toHaveCount(0);
   await expect(page).toHaveURL(new RegExp(`${thread}$`));
   await expect(work.getByRole("link", { name: /acme\/api#88/ })).toBeVisible();
+});
+
+test("Back after closing an in-app links editor leaves the thread", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `r/${ROOM_IDS.general}/t/${S4_WORK_IDS.agentOwned}`);
+
+  const thread = new RegExp(`/app/r/${ROOM_IDS.general}/t/${S4_WORK_IDS.agentOwned}$`);
+
+  await expect(page).toHaveURL(thread);
+
+  const work = page.locator("aside.right-pane").getByRole("region", { name: "Work" });
+
+  await work.getByRole("button", { name: "Link", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/app/r/${ROOM_IDS.general}/t/${S4_WORK_IDS.agentOwned}/links$`),
+  );
+
+  const form = work.getByRole("form", { name: "Link to this work" });
+
+  await form.getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(thread);
+  await expect(form).toHaveCount(0);
+
+  // The open pushed one entry. Cancelling steps back to the thread, so the next Back leaves it
+  // instead of landing on a second copy of the same thread.
+  await page.goBack();
+  await expect(page).not.toHaveURL(thread);
+});
+
+test.describe("a phone's links editor", () => {
+  test.use(PHONE_TOUCH);
+
+  test("keeps submit on screen when the thread has many links", async ({ page, request }) => {
+    const threadId = S4_WORK_IDS.agentOwned;
+    const state = await (await request.get("/__mock/state")).json();
+
+    for (let index = 0; index < 16; index += 1) {
+      const response = await request.post(`/api/v1/threads/${threadId}/work/links`, {
+        headers: { "X-CSRF-Token": state.csrfToken },
+        data: {
+          kind: "pull_request",
+          pullRequestUrl: `https://github.com/acme/api/pull/${300 + index}`,
+        },
+      });
+
+      expect(response.ok()).toBe(true);
+    }
+
+    await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
+
+    const work = page.locator("aside.right-pane").getByRole("region", { name: "Work" });
+
+    await work.getByRole("button", { name: "Link", exact: true }).click();
+
+    const form = work.getByRole("form", { name: "Link to this work" });
+    const submit = form.getByRole("button", { name: "Link pull request" });
+
+    await expect(submit).toBeInViewport({ ratio: 1 });
+    await expect(submit).toBeEnabled();
+    await form.getByLabel("Pull request URL").fill("https://github.com/acme/api/pull/399");
+    await expect(submit).toBeInViewport({ ratio: 1 });
+    await submit.click();
+    await expect(form).toHaveCount(0);
+  });
 });

@@ -7,8 +7,8 @@ import { useLinksRoute } from "./links-route.ts";
 /**
  * The links URL over a thread that isn't tracked. A board post and the work bar only mount the
  * editor for tracked work, so a pasted `/links` on an ordinary thread would otherwise sit there
- * with nothing to edit. Says why, once, and replaces the URL with the thread, the same way a
- * direct handoff arrival leaves `/handoff`.
+ * with nothing to edit. Says why, once, and leaves the URL the same way a close does: back when
+ * the app pushed it, otherwise replacing it with the thread.
  */
 export function LinksArrival({ threadId }: { readonly threadId: number }) {
   const { open, closeLinks } = useLinksRoute(threadId);

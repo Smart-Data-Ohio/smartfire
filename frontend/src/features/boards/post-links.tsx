@@ -1,11 +1,9 @@
-import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { CreateWorkLink } from "../../gen/CreateWorkLink.ts";
 import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
 import type { WorkLink } from "../../gen/WorkLink.ts";
 import type { WorkLinkEventCandidate } from "../../gen/WorkLinkEventCandidate.ts";
 import type { WorkLinkKind } from "../../gen/WorkLinkKind.ts";
-import { parseBoardSearch } from "../../lib/board-search.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -14,6 +12,7 @@ import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useLinksRoute } from "../work/links-route.ts";
 import "./boards.css";
 
 const LINK_ICON = {
@@ -360,18 +359,15 @@ export function PostLinks({
   readonly links: readonly WorkLink[];
   readonly editable: boolean;
 }) {
-  const navigate = useNavigate();
-
-  const adding =
-    useMatchRoute()({ to: "/r/$roomId/t/$threadId/links", includeSearch: false }) !== false &&
-    editable;
+  const { open: onLinksRoute, openLinks, closeLinks } = useLinksRoute(threadId, roomId);
+  const adding = onLinksRoute && editable;
 
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const headingId = useId();
   const linkButtonRef = useRef<HTMLButtonElement | null>(null);
-  // The opening an add's answer belongs to: closing or reopening the form, and unmounting (a
-  // different post), end it, so a late answer neither moves the reader nor touches a new draft.
+  // The opening an answer belongs to. Closing, reopening, switching posts, or unmounting ends
+  // it, so a late add or removal neither moves the reader nor toasts after the editor is gone.
   const openingRef = useRef(0);
 
   useEffect(() => {
@@ -386,13 +382,10 @@ export function PostLinks({
     };
   }, [adding, threadId]);
 
-  const setAdding = (open: boolean) => {
-    void navigate({
-      to: open ? "/r/$roomId/t/$threadId/links" : "/r/$roomId/t/$threadId",
-      params: { roomId, threadId },
-      search: parseBoardSearch,
-      replace: true,
-    });
+  const dismiss = () => {
+    // Before the route moves, so an answer already in flight can't close this opening again.
+    openingRef.current += 1;
+    closeLinks();
   };
 
   /** Runs one change; another can't start until it answers. */
@@ -429,13 +422,20 @@ export function PostLinks({
     }
 
     if (saved !== undefined && current()) {
-      setAdding(false);
+      dismiss();
       linkButtonRef.current?.focus();
     }
   };
 
   const remove = (link: WorkLink) => {
+    const opening = openingRef.current;
+
     void run(() => actions.work.removeLink(threadId, link.id)).catch((error: Error) => {
+      // The editor closed, or the reader moved on: the failure has nowhere to land.
+      if (openingRef.current !== opening) {
+        return;
+      }
+
       const title = `Couldn't remove ${link.label}`;
       const description = error.message;
 
@@ -463,7 +463,7 @@ export function PostLinks({
             size="sm"
             icon="plus"
             disabled={busy}
-            onClick={() => setAdding(true)}
+            onClick={openLinks}
           >
             Link
           </Button>
@@ -490,9 +490,7 @@ export function PostLinks({
           linked={links.map((link) => link.id).join(",")}
           busy={busy}
           onSubmit={add}
-          onCancel={() => {
-            setAdding(false);
-          }}
+          onCancel={dismiss}
         />
       ) : null}
     </section>
