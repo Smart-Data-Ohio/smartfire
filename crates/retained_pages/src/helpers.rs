@@ -13,7 +13,7 @@ pub use campfire_view_kit::helpers::{
     Attrs, ErbEscaper, FormWith, Html, attrs, auth_script_tag, auth_stylesheet_tag, builder_tag,
     button_tag, capitalize, csp_meta_tag, csrf_meta_tags, empty, form_with, hidden_field_tag,
     link_to, link_to_text, mail_to, page_title_tag, raw, to_sentence, translations_for,
-    turbo_page_requires_reload_tag,
+    turbo_page_requires_reload_tag, unsupported_script_tag,
 };
 pub use campfire_view_kit::helpers::{filters, url};
 

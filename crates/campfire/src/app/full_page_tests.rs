@@ -235,7 +235,7 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
         let expected = expected.as_str().unwrap();
         if name == "incompatible_browser" {
             assert!(
-                actual.contains("<body class=\"auth\">"),
+                actual.contains("<body class=\"auth auth--unsupported\">"),
                 "{name}: retained shell"
             );
             assert!(
@@ -254,7 +254,11 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
             );
             assert!(
                 actual.contains("<script src=\"/assets/auth-") && actual.contains(".js\">"),
-                "{name}: auth script, which dismisses the translation popup"
+                "{name}: auth script"
+            );
+            assert!(
+                actual.contains("<script src=\"/assets/unsupported-") && actual.contains(".js\">"),
+                "{name}: es5 popup script"
             );
             assert!(
                 actual.contains("data-controller=\"popup\""),

@@ -24,6 +24,15 @@ pub fn auth_script_tag() -> Html {
     ))
 }
 
+/// Popup dismissal for the unsupported-browser page. Separate from [`auth_script_tag`]: `auth.js`
+/// uses syntax the browsers that page is shown to cannot parse, and one parse error drops it.
+pub fn unsupported_script_tag() -> Html {
+    raw(format!(
+        "<script src=\"{}\"></script>",
+        campfire_assets::javascript_path("unsupported")
+    ))
+}
+
 /// The `id` of the auth layout's rejection message (its alert flash).
 pub const AUTH_ALERT_ID: &str = "auth-alert";
 

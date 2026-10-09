@@ -140,8 +140,13 @@
 
       if (!menu) return;
 
-      const rect = menu.getBoundingClientRect();
       const topClass = list.dataset.popupOrientationTopClass;
+
+      // A reopen keeps the upward class from last time. Measuring in that state reports the
+      // flipped box, and the menu can stay off the top of the window. Drop it, then measure.
+      if (topClass) list.classList.remove(topClass);
+
+      const rect = menu.getBoundingClientRect();
 
       if (topClass) list.classList.toggle(topClass, window.innerHeight - rect.bottom < 90);
 

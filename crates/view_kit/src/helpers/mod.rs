@@ -15,6 +15,7 @@ pub mod url;
 pub use forms::*;
 pub use head::{
     auth_script_tag, auth_stylesheet_tag, page_title_tag, turbo_page_requires_reload_tag,
+    unsupported_script_tag,
 };
 pub use html::*;
 pub use links::*;

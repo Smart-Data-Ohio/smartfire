@@ -43,6 +43,7 @@ fn local_html(mut html: String, files: &mut BTreeMap<String, Vec<u8>>) -> String
             let relative = match *logical {
                 "auth.css" => "auth.css".to_string(),
                 "auth.js" => "auth.js".to_string(),
+                "unsupported.js" => "unsupported.js".to_string(),
                 _ => format!("images/{logical}"),
             };
             html = html.replace(&url, &format!("./{relative}"));
@@ -221,10 +222,9 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                         };
                         shell(&ctx, page.page_title(), page.as_head(), page.as_content())
                     }
-                    "incompatible-browser" => {
-                        let page = sessions::IncompatibleBrowser { ctx: &ctx };
-                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
-                    }
+                    "incompatible-browser" => sessions::IncompatibleBrowser { ctx: &ctx }
+                        .render()
+                        .unwrap(),
                     _ => unreachable!(),
                 }
             },

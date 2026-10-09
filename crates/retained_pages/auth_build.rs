@@ -38,6 +38,11 @@ pub fn prepare(crate_dir: &Path, out_dir: &Path) -> PathBuf {
     let css = bundle.inline(&frontend.join("auth/auth.css"));
     fs::write(destination.join("auth.css"), css).unwrap();
     fs::copy(crate_dir.join("auth/auth.js"), destination.join("auth.js")).unwrap();
+    fs::copy(
+        crate_dir.join("auth/unsupported.js"),
+        destination.join("unsupported.js"),
+    )
+    .unwrap();
     destination
 }
 

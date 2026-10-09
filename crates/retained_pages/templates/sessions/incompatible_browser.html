@@ -1,5 +1,6 @@
 {% extends "layouts/auth.html" %}
-{%- block head %}{% endblock %}
+{%- block body_class %}auth auth--unsupported{% endblock %}
+{%- block head %}{{ h::unsupported_script_tag() }}{% endblock %}
 
 {% block content %}
 <div class="panel center">
