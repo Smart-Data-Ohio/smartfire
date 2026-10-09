@@ -331,12 +331,14 @@ async fn direct_rooms_are_found_or_created() {
         ))
         .await;
     assert_eq!(destroyed.location(), Some("http://campfire.test/"));
-    assert!(
-        app.db()
-            .read(move |conn| Ok(Room::find(conn, room_id)?.deleted_at.is_some()))
-            .await
-            .unwrap()
-    );
+    // The soft delete commits before the response; the DestroyJob it enqueues after commit may
+    // already have removed the row by the time this reads it.
+    let room = app
+        .db()
+        .read(move |conn| Room::find_by_id(conn, room_id))
+        .await
+        .unwrap();
+    assert!(room.is_none_or(|room| room.deleted_at.is_some()));
 }
 
 #[tokio::test]
