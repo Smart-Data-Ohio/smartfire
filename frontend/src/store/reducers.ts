@@ -659,7 +659,8 @@ function removePending(state: State, clientMessageId: string): State {
 /**
  * A confirmed message (the `POST` reply or the `message.created` event, whichever is first):
  * replaces its pending row and joins its timeline (the room's, or its thread's) if that window
- * reaches the present. The second arrival is a no-op unless it's newer.
+ * reaches the present or its pending row was visible while a fresh page loads. The second
+ * arrival is a no-op unless it's newer.
  */
 export function receiveMessage(state: State, message: MessageDTO): State {
   if (state.tombstones[message.id] !== undefined) {
@@ -694,8 +695,11 @@ export function receiveMessage(state: State, message: MessageDTO): State {
           arrived: [...timeline.arrived.filter((id) => id !== message.id), message.id],
         };
 
-  // Not loaded, or the window stops short of the present: the message is beyond it.
-  if (timeline.status !== "ready" || timeline.after !== null) {
+  // Keep a sent row visible while its fresh page loads. Other arrivals stay beyond history.
+  const visibleSend =
+    timeline.arrived !== null && state.pending[message.clientMessageId] !== undefined;
+
+  if (timeline.status !== "ready" || (timeline.after !== null && !visibleSend)) {
     if (waiting === timeline) {
       return held === undefined ? reconciled : { ...reconciled, messages };
     }

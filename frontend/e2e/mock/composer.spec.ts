@@ -3,6 +3,7 @@ import { boardDeckPdf, onboardingMockupPng } from "../../mock/s2/assets.ts";
 import {
   expect,
   expectTouchTargets,
+  holdSync,
   matrix,
   PHONE_TOUCH,
   ROOM_IDS,
@@ -188,6 +189,87 @@ test("an ordinary send posts and shows its pending row before the latest page ar
     response.resolve();
   }
 });
+
+for (const first of ["POST response", "broadcast"]) {
+  test(`an ordinary send stays visible when the ${first} arrives before the latest page`, async ({
+    page,
+  }) => {
+    const releaseSync = await holdSync(page);
+
+    await openApp(page, `${GENERAL}/m/10005`);
+    await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+    if (first === "broadcast") {
+      await releaseSync();
+      await page.waitForLoadState("networkidle");
+    }
+
+    const latest = Promise.withResolvers<void>();
+    const post = Promise.withResolvers<void>();
+    const reply = Promise.withResolvers<void>();
+    let fetching = false;
+    let replied = false;
+
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages*`, async (route) => {
+      if (route.request().method() === "GET") {
+        fetching = true;
+        await latest.promise;
+
+        return route.continue();
+      }
+
+      await post.promise;
+      const response = await route.fetch();
+
+      if (first === "broadcast") await reply.promise;
+
+      await route.fulfill({ response });
+      replied = true;
+    });
+
+    try {
+      const text = `Continuous message, ${first} first`;
+      const input = composer(page);
+      const confirmed = page.locator("[data-message-id]").filter({ hasText: text });
+
+      await input.fill(text);
+      await input.press("Enter");
+      await expect.poll(() => fetching).toBe(true);
+      await expect(page.locator('[data-pending="sending"]')).toContainText(text);
+      await expect(page.locator('[data-pending="sending"]')).toBeVisible();
+      post.resolve();
+
+      // The GET stays held while the real POST reply or sync broadcast reconciles the row.
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+      expect(replied).toBe(first === "POST response");
+
+      await releaseSync();
+      reply.resolve();
+      await expect.poll(() => replied).toBe(true);
+      await expect(confirmed).toBeVisible();
+
+      const landed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === `/api/v1/rooms/${ROOM_IDS.general}/messages` &&
+          new URL(response.url()).search === "",
+      );
+
+      latest.resolve();
+      await landed;
+      await expect(page.locator('[data-message-id="10005"]')).toHaveCount(0);
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+    } finally {
+      latest.resolve();
+      post.resolve();
+      reply.resolve();
+      await releaseSync();
+    }
+  });
+}
 
 matrix("autocomplete: people, emoji, commands and channels", async ({ page, theme }) => {
   await openApp(page, GENERAL, theme);
