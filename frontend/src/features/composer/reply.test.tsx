@@ -9,6 +9,7 @@ import type { MessagePage } from "../../gen/MessagePage.ts";
 import { uuid7 } from "../../lib/uuid7.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { mutations, store } from "../../store/store.ts";
+import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { editingId, stopEditing } from "../messages/editing-store.ts";
@@ -43,6 +44,9 @@ let refuse: ((body: CreateMessage) => boolean) | null = null;
 /** What a refusal waits on before it answers, to let the test act while the send is in flight. */
 let hold: Promise<void> = Promise.resolve();
 
+/** POSTs to paths ending in `suffix` wait for `until` before they go through. */
+let delay: { readonly suffix: string; readonly until: Promise<void> } | null = null;
+
 /** A loaded #general message by someone other than the viewer (not `except`). */
 function seeded(except: number | null = null): MessageDTO {
   const found = Object.values(store.getState().messages).find(
@@ -69,6 +73,9 @@ beforeAll(async () => {
   meta.content = network.server.csrfToken();
   document.head.append(meta);
 
+  // jsdom doesn't lay out; the command list scrolls its active option into view.
+  Element.prototype.scrollIntoView = () => undefined;
+
   const mocked = globalThis.fetch;
 
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -89,6 +96,10 @@ beforeAll(async () => {
 
         return Response.json({ error: "Not today" }, { status: 422 });
       }
+    }
+
+    if (request.method === "POST" && delay !== null && path.endsWith(delay.suffix)) {
+      await delay.until;
     }
 
     return mocked(input, init);
@@ -131,6 +142,7 @@ beforeEach(async () => {
   schedules = [];
   refuse = null;
   hold = Promise.resolve();
+  delay = null;
 });
 
 /** The pending messages that failed for good. */
@@ -452,5 +464,95 @@ describe("the composer's reply", () => {
     expect(chip()).toBeNull();
     expect(replyTarget(draftKey(ROOM, null))).toBeNull();
     expect(input()).toHaveProperty("value", "qQ");
+  });
+
+  it("doesn't come back after a reply picked and cancelled while the failed send was out", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+    const key = draftKey(ROOM, null);
+
+    hold = gate.promise;
+    refuse = () => true;
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "Slow{Enter}");
+    await waitFor(() => expect(posts).toHaveLength(1));
+
+    act(() => startReply(second));
+    act(() => cancelReply(key));
+    gate.resolve();
+
+    await waitFor(() => expect(failedSends()).toHaveLength(1));
+    expect(replyTarget(key)).toBeNull();
+    expect(chip()).toBeNull();
+  });
+
+  it("keeps a reply picked while a schedule request was out", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+
+    delay = { suffix: "/scheduled_messages", until: gate.promise };
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "Later");
+    await user.click(screen.getByRole("button", { name: "Schedule message" }));
+
+    const [preset] = within(
+      await screen.findByRole("menu", { name: "Schedule message" }),
+    ).getAllByRole("menuitem");
+
+    if (preset !== undefined) await user.click(preset);
+
+    await waitFor(() => expect(schedules).toHaveLength(1));
+    expect(schedules[0]).toMatchObject({ replyToMessageId: first.id });
+
+    act(() => startReply(second));
+    gate.resolve();
+
+    await waitFor(() => expect(input()).toHaveProperty("value", ""));
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(second.id);
+  });
+
+  it("keeps a reply picked while a slash command was running", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+    const run = vi.spyOn(composerActions, "runSlashCommand");
+
+    delay = { suffix: "/slash_commands", until: gate.promise };
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "/shrug fine{Enter}");
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+
+    act(() => startReply(second));
+    gate.resolve();
+    await act(async () => {
+      await expect(run.mock.results[0]?.value).resolves.toMatchObject({ status: "posted" });
+    });
+
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(second.id);
+    run.mockRestore();
+  });
+
+  it("is taken by a slash command that runs", async () => {
+    const user = userEvent.setup();
+    const run = vi.spyOn(composerActions, "runSlashCommand");
+
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(seeded()));
+    await user.type(input(), "/shrug fine{Enter}");
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await expect(run.mock.results[0]?.value).resolves.toMatchObject({ status: "posted" });
+    });
+
+    expect(replyTarget(draftKey(ROOM, null))).toBeNull();
+    run.mockRestore();
   });
 });

@@ -22,6 +22,22 @@ const replyStore = createStore<ReplyState>()(() => ({ targets: {} }));
 
 let picks = 0;
 
+/** Per conversation, bumps on every pick and cancel: a later outcome only undoes what it saw. */
+const revisions = new Map<string, number>();
+
+function bump(key: string): number {
+  const next = (revisions.get(key) ?? 0) + 1;
+
+  revisions.set(key, next);
+
+  return next;
+}
+
+/** The conversation's reply revision, to hand back to `cancelReplyAt` or compare later. */
+export function replyRevision(key: string): number {
+  return revisions.get(key) ?? 0;
+}
+
 /** The composer key a message's reply goes to: its own timeline (the room, or its thread). */
 export function replyKey(message: Pick<MessageDTO, "roomId" | "threadId">): string {
   return draftKey(message.roomId, message.threadId);
@@ -34,6 +50,7 @@ export function startReply(message: Pick<MessageDTO, "id" | "roomId" | "threadId
   const key = replyKey(message);
   const target: ReplyTarget = { messageId: message.id, notify: true, seq: picks };
 
+  bump(key);
   replyStore.setState((state) => ({ targets: { ...state.targets, [key]: target } }));
 }
 
@@ -43,11 +60,22 @@ export function cancelReply(key: string): void {
     return;
   }
 
+  bump(key);
   replyStore.setState((state) => {
     const { [key]: _dropped, ...rest } = state.targets;
 
     return { targets: rest };
   });
+}
+
+/**
+ * Drops the reply only if nothing was picked or cancelled since `revision` was read: a schedule
+ * or command that took the reply when it started leaves a reply picked while it ran.
+ */
+export function cancelReplyAt(key: string, revision: number): void {
+  if (replyRevision(key) === revision) {
+    cancelReply(key);
+  }
 }
 
 /** Flips "Notify author" for the composer's reply. */
@@ -79,6 +107,8 @@ interface SentReply {
   /** The messages not yet settled (landed or discarded), and whether each has shown as pending. */
   readonly open: Map<string, boolean>;
   restored: boolean;
+  /** The conversation's revision after the send dropped the chip, or after the restore. */
+  revision: number;
 }
 
 const sent = new Map<string, SentReply>();
@@ -95,10 +125,8 @@ function settle(pending: Readonly<Record<string, PendingMessage>>): void {
         sent.delete(id);
         group.open.delete(id);
 
-        const current = replyStore.getState().targets[group.key];
-
-        if (group.open.size === 0 && group.restored && current?.seq === group.target.seq) {
-          cancelReply(group.key);
+        if (group.open.size === 0 && group.restored) {
+          cancelReplyAt(group.key, group.revision);
         }
       }
 
@@ -110,8 +138,9 @@ function settle(pending: Readonly<Record<string, PendingMessage>>): void {
     if (entry.state === "failed" && !group.restored) {
       group.restored = true;
 
-      // A reply picked since then is newer input: keep it.
-      if (replyStore.getState().targets[group.key] === undefined) {
+      // A reply picked or cancelled since then is newer input: keep it.
+      if (replyRevision(group.key) === group.revision) {
+        group.revision = bump(group.key);
         replyStore.setState((state) => ({
           targets: { ...state.targets, [group.key]: group.target },
         }));
@@ -128,7 +157,8 @@ function settle(pending: Readonly<Record<string, PendingMessage>>): void {
 /**
  * Follows a send that carried `target` (the composer drops the chip as it sends). If any of its
  * messages fails, the reply comes back with its notify choice, as classic keeps reply mode until
- * the send succeeds; it keeps its pick number, so the composer doesn't take the focus again.
+ * the send succeeds; it keeps its pick number, so the composer doesn't take the focus again. Call
+ * it right after dropping the chip: any pick or cancel after that wins over the restore.
  */
 export function trackSentReply(
   key: string,
@@ -142,6 +172,7 @@ export function trackSentReply(
     target,
     open: new Map(clientMessageIds.map((id) => [id, pending[id] !== undefined])),
     restored: false,
+    revision: replyRevision(key),
   };
 
   for (const id of clientMessageIds) {
@@ -159,6 +190,7 @@ export function trackSentReply(
 /** Forgets every reply target (for tests). */
 export function resetReplies(): void {
   replyStore.setState({ targets: {} });
+  revisions.clear();
   sent.clear();
   unwatch?.();
   unwatch = null;

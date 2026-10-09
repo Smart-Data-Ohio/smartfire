@@ -134,6 +134,42 @@ test("Esc and × drop the reply; the menu and Q pick it again", async ({ page })
   await expect(composer(page)).toBeFocused();
 });
 
+test("Q typed in the composer or a message's edit box doesn't start a reply; a focused row's does", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`/app/r/${ROOM_IDS.general}`);
+  await expect(page.locator("[data-message-id]").first()).toBeVisible();
+  await composer(page).fill("Mine to edit");
+  await expect(composer(page)).toHaveValue("Mine to edit");
+  await composer(page).press("Enter");
+
+  const own = await sentRow(page, "Mine to edit");
+  const anyChip = page.locator(".composer").getByRole("region", { name: /^Replying to / });
+
+  await composer(page).pressSequentially("q Q");
+  await expect(composer(page)).toHaveValue("q Q");
+  await expect(anyChip).toHaveCount(0);
+
+  await composer(page).fill("");
+  await composer(page).press("ArrowUp");
+
+  const editor = own.getByRole("textbox");
+
+  await expect(editor).toBeFocused();
+  await editor.press("End");
+  await editor.pressSequentially(" q");
+  await expect(editor).toHaveValue("Mine to edit q");
+  await expect(anyChip).toHaveCount(0);
+
+  await editor.press("Escape");
+  await expect(editor).toBeHidden();
+  await own.focus();
+  await page.keyboard.press("q");
+  await expect(anyChip).toBeVisible();
+  await expect(composer(page)).toBeFocused();
+});
+
 /** Refuses the message creates `refuse` picks with a 422 until the returned undo runs. */
 async function refuseCreates(
   page: Page,

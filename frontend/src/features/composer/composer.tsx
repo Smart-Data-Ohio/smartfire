@@ -42,6 +42,8 @@ import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
 import { ReplyChip } from "./reply-chip.tsx";
 import {
   cancelReply,
+  cancelReplyAt,
+  replyRevision,
   replyTarget,
   setReplyNotify,
   trackSentReply,
@@ -409,10 +411,11 @@ export function Composer({
     clear();
   };
 
-  const showResult = (result: SlashCommandResult, typed: string) => {
-    // A command that ran consumes the draft and, as in classic, the reply with it.
+  const showResult = (result: SlashCommandResult, typed: string, revision: number) => {
+    // A command that ran consumes the draft and, as in classic, the reply with it (not one
+    // picked while it ran).
     if (result.status !== "error") {
-      cancelReply(key);
+      cancelReplyAt(key, revision);
     }
 
     switch (result.status) {
@@ -470,8 +473,12 @@ export function Composer({
     actions.setTyping(roomId, false, threadId);
     clear();
 
+    const revision = replyRevision(key);
+
     try {
-      showResult(await composerActions.runSlashCommand(roomId, route.text, threadId), typed);
+      const result = await composerActions.runSlashCommand(roomId, route.text, threadId);
+
+      showResult(result, typed, revision);
     } catch (error) {
       update(typed);
       toast({
@@ -565,6 +572,7 @@ export function Composer({
 
   const schedule = (at: Date): Promise<void> => {
     const markdown = text.trimEnd();
+    const revision = replyRevision(key);
 
     return scheduled
       .create(roomId, {
@@ -576,7 +584,8 @@ export function Composer({
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
-        cancelReply(key);
+        // The reply it took, not one picked while the request was out.
+        cancelReplyAt(key, revision);
         clear();
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
