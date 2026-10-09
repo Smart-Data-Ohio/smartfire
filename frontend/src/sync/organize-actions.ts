@@ -23,6 +23,7 @@ import {
   type SidebarOverlay,
 } from "../store/organize.ts";
 import { mutations, store } from "../store/store.ts";
+import { withRowTicket } from "./row-ticket.ts";
 
 /** One server change at a time, in order. */
 const lock = Semaphore.makeUnsafe(1);
@@ -74,9 +75,13 @@ const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>)
 /**
  * Lands an organising reply's rows: for a row the sidebar has, only the organisation fields (the
  * reply may be older than a sync event with newer counts); a row it lacks lands whole, through
- * the reducer the `sidebar.row.upserted` event uses.
+ * the reducer the `sidebar.row.upserted` event uses, unless the sync path changed (or removed) it
+ * after `since`, the request's row ticket. After a sync resync, the whole reply is stale.
  */
-const landRows = Effect.fn("organize.landRows")(function* (rows: readonly SidebarRow[]) {
+const landRows = Effect.fn("organize.landRows")(function* (
+  rows: readonly SidebarRow[],
+  since: number,
+) {
   const state = store.getState();
   const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
 
@@ -87,19 +92,37 @@ const landRows = Effect.fn("organize.landRows")(function* (rows: readonly Sideba
       : [],
   );
 
-  mutations.mergeOrganization(rows);
+  mutations.mergeOrganization(rows, since);
 
   if (fresh.length > 0) {
-    mutations.applyEvents(fresh, yield* Clock.currentTimeMillis);
+    mutations.landReplyRows(fresh, yield* Clock.currentTimeMillis, since);
   }
 });
+
+/** Sends an organising request holding a row ticket, then lands its reply's rows. */
+const organizing = <E, R>(request: Effect.Effect<readonly SidebarRow[], E, R>) =>
+  withRowTicket((since) => Effect.flatMap(request, (rows) => landRows(rows, since)));
 
 /** The server's copy of a row, without pending changes: what the next call starts from. */
 const serverRow = (roomId: number) => store.getState().sidebar.rows[roomId];
 
-/** Loads the sidebar again (after a 409, the list the client sent was stale). */
-const refetchSidebar = fetchSidebar().pipe(
-  Effect.tap((sidebar) => Effect.sync(() => mutations.loadSidebar(sidebar))),
+/** How many times a refetch is read before it gives up on landing a reply a resync outdated. */
+const REFETCH_ATTEMPTS = 3;
+
+/**
+ * Loads the sidebar again (after a 409, the list the client sent was stale). Rows the sync path
+ * changed while it was on its way are newer than it, so they stay. A reply a sync resync made
+ * stale is read again, three times in all; then the sync state stands as it is.
+ */
+const refetchSidebar = Effect.gen(function* () {
+  for (let attempt = 0; attempt < REFETCH_ATTEMPTS; attempt++) {
+    const landed = yield* withRowTicket((since) =>
+      Effect.map(fetchSidebar(), (sidebar) => mutations.loadSidebar(sidebar, since)),
+    );
+
+    if (landed) return;
+  }
+}).pipe(
   Effect.catch((error) => Effect.logWarning("organize: sidebar refetch failed", error.message)),
 );
 
@@ -141,7 +164,7 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
   if (slot.kind === "favorite") {
     if (!favorite) {
-      yield* landRows([yield* api.favorite(roomId)]);
+      yield* organizing(Effect.map(api.favorite(roomId), (row) => [row]));
     }
 
     const others = favoriteRows(store.getState().sidebar).filter(
@@ -150,20 +173,20 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
     // A new favourite lands at the end, which may already be where it was dropped.
     if (favorite || slot.index < others.length) {
-      yield* landRows((yield* api.moveFavorite(roomId, slot.index)).rows);
+      yield* organizing(Effect.map(api.moveFavorite(roomId, slot.index), (reply) => reply.rows));
     }
 
     return;
   }
 
   if (favorite) {
-    yield* landRows([yield* api.unfavorite(roomId)]);
+    yield* organizing(Effect.map(api.unfavorite(roomId), (row) => [row]));
   }
 
   const categoryId = categoryAfter(slot, row.membership.roomCategoryId);
 
   if (canCategorize(row) && categoryId !== row.membership.roomCategoryId) {
-    yield* landRows([yield* api.assignCategory(roomId, categoryId)]);
+    yield* organizing(Effect.map(api.assignCategory(roomId, categoryId), (row) => [row]));
   }
 });
 
@@ -222,19 +245,28 @@ export const createCategory = Effect.fn("organize.createCategory")(function* (
   return yield* pending(
     entry,
     Effect.gen(function* () {
-      const category = yield* api.createCategory({ name: draft.name });
-      const slot: RoomSlot = { kind: "category", categoryId: category.id };
+      const slot = (category: RoomCategory): RoomSlot => ({
+        kind: "category",
+        categoryId: category.id,
+      });
 
       // The real category replaces the draft at once; the room shows in it while it moves.
-      const settled = memberships(
-        row === undefined ? {} : placementPatches(view(), row.room.id, slot),
+      const settledFor = (category: RoomCategory) =>
+        memberships(row === undefined ? {} : placementPatches(view(), row.room.id, slot(category)));
+
+      const [category, settled] = yield* withRowTicket((since) =>
+        Effect.map(api.createCategory({ name: draft.name }), (created) => {
+          const placed = settledFor(created);
+
+          createdIds.set(temporaryId, created.id);
+          mutations.landCreatedCategory(created, entry, placed, since);
+
+          return [created, placed] as const;
+        }),
       );
 
-      createdIds.set(temporaryId, category.id);
-      mutations.landCreatedCategory(category, entry, settled);
-
       if (row !== undefined) {
-        yield* placeOnServer(row.room.id, slot).pipe(
+        yield* placeOnServer(row.room.id, slot(category)).pipe(
           Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(settled))),
         );
       }
@@ -265,11 +297,11 @@ export const renameCategory = Effect.fn("organize.renameCategory")(function* (
 
   yield* pending(
     categories({ [categoryId]: next }),
-    Effect.gen(function* () {
-      mutations.upsertCategory(
-        yield* api.updateCategory(serverCategoryId(categoryId), { name: trimmed }),
-      );
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateCategory(serverCategoryId(categoryId), { name: trimmed }), (category) =>
+        mutations.landCategory(category, since),
+      ),
+    ),
   );
 });
 
@@ -286,11 +318,11 @@ export const setCollapsed = Effect.fn("organize.setCollapsed")(function* (
 
   yield* pending(
     categories({ [categoryId]: next }),
-    Effect.gen(function* () {
-      mutations.upsertCategory(
-        yield* api.updateCategory(serverCategoryId(categoryId), { collapsed }),
-      );
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateCategory(serverCategoryId(categoryId), { collapsed }), (category) =>
+        mutations.landCategory(category, since),
+      ),
+    ),
   );
 });
 
@@ -307,12 +339,15 @@ export const deleteCategory = Effect.fn("organize.deleteCategory")(function* (ca
 
   yield* pending(
     entry,
-    Effect.gen(function* () {
-      const serverId = serverCategoryId(categoryId);
+    withRowTicket((since) =>
+      Effect.suspend(() => {
+        const serverId = serverCategoryId(categoryId);
 
-      yield* api.deleteCategory(serverId);
-      mutations.removeCategory(serverId);
-    }),
+        return Effect.map(api.deleteCategory(serverId), () =>
+          mutations.landCategoryRemoval(serverId, since),
+        );
+      }),
+    ),
   );
 });
 
@@ -340,8 +375,11 @@ export const reorderCategories = Effect.fn("organize.reorderCategories")(functio
   // id by then.
   yield* pending(
     entry,
-    Effect.suspend(() => api.reorderCategories(categoryIds.map(serverCategoryId))).pipe(
-      Effect.tap((list) => Effect.sync(() => mutations.setCategories(list.categories))),
+    withRowTicket((since) =>
+      Effect.suspend(() => api.reorderCategories(categoryIds.map(serverCategoryId))).pipe(
+        Effect.tap((list) => Effect.sync(() => mutations.landCategories(list.categories, since))),
+      ),
+    ).pipe(
       Effect.catchTag("Conflict", (conflict) =>
         refetchSidebar.pipe(Effect.andThen(Effect.fail(conflict))),
       ),
@@ -362,8 +400,10 @@ export const setInvolvement = Effect.fn("organize.setInvolvement")(function* (
 
   yield* pending(
     memberships({ [roomId]: patch }),
-    Effect.gen(function* () {
-      mutations.setMembership(yield* api.updateInvolvement(roomId, involvement));
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateInvolvement(roomId, involvement), (membership) =>
+        mutations.setMembership(membership, since),
+      ),
+    ),
   );
 });

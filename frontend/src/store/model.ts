@@ -102,6 +102,10 @@ export interface PendingMessage {
   /** A finished direct upload's signed id, posted as the message's file. */
   readonly attachmentSignedId: string | null;
   readonly attachment: PendingAttachment | null;
+  /** The message it replies to (inline, on the same timeline), or `null`. */
+  readonly replyToMessageId: number | null;
+  /** Whether the replied-to author is notified; `null` when it isn't a reply. */
+  readonly replyNotifyAuthor: boolean | null;
   readonly creatorId: number;
   readonly markdownSource: string;
   /** Local clock, RFC 3339: pending rows sort after every confirmed row by this. */

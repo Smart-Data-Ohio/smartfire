@@ -79,12 +79,13 @@ fn profile_and_status_round_trip() {
                 transfer_url: Some("https://chat.example/session/transfers/token".into()),
                 transfer_qr_svg: Some("<svg>transfer</svg>".into()),
                 can_ban: true,
+                can_manage_bot: false,
             },
             json!({
                 "user": user_json(), "status": wire, "dndAllowed": allowed,
                 "emailAddress": "ada@example.com",
                 "transferUrl": "https://chat.example/session/transfers/token",
-                "transferQrSvg": "<svg>transfer</svg>", "canBan": true
+                "transferQrSvg": "<svg>transfer</svg>", "canBan": true, "canManageBot": false
             }),
         );
     }
@@ -97,8 +98,10 @@ fn profile_and_status_round_trip() {
             transfer_url: None,
             transfer_qr_svg: None,
             can_ban: false,
+            can_manage_bot: false,
         },
         json!({"user": user_json(), "status": null, "dndAllowed": null,
-        "emailAddress": null, "transferUrl": null, "transferQrSvg": null, "canBan": false}),
+        "emailAddress": null, "transferUrl": null, "transferQrSvg": null, "canBan": false,
+        "canManageBot": false}),
     );
 }

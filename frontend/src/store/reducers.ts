@@ -26,7 +26,17 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
-import { removeCategory, upsertCategory } from "./organize.ts";
+import { removeCategory, replyCategories, upsertCategory } from "./organize.ts";
+import {
+  changedRowIds,
+  claimDivider,
+  dividerMovedSince,
+  isStale,
+  markResynced,
+  readSince,
+  touchedSince,
+  touchRows,
+} from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -69,28 +79,63 @@ function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly 
     .map((row) => row.room.id);
 }
 
-export function loadSidebar(state: State, sidebar: Sidebar): State {
+/**
+ * Installs a whole-sidebar HTTP reply. `since` is its request's ticket: once a sync resync has
+ * landed after it the reply is stale and changes nothing; otherwise it installs as
+ * `installSidebar` does.
+ */
+export function loadSidebar(state: State, sidebar: Sidebar, since: number): State {
+  return isStale(state, since) ? state : installSidebar(state, sidebar, since);
+}
+
+/**
+ * A whole-sidebar snapshot the sync engine read (a resync), `since` its own ticket: installed as
+ * `installSidebar` does, then every HTTP reply to a request already in flight is stale.
+ */
+export function resyncSidebar(state: State, sidebar: Sidebar, since: number): State {
+  return markResynced(installSidebar(state, sidebar, since));
+}
+
+/**
+ * Installs a whole-sidebar snapshot. `since` is its request's ticket: a room the sync path
+ * changed after that keeps the store's row, or stays gone if sync removed it, and a row sync
+ * added that the snapshot predates stays too. Categories are guarded the same way.
+ */
+function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   const rows: Record<number, SidebarRow> = {};
+  const installed: SidebarRow[] = [];
 
   for (const row of sidebar.rows) {
-    rows[row.room.id] = row;
+    if (!touchedSince(state, row.room.id, since)) {
+      rows[row.room.id] = row;
+      installed.push(row);
+    }
   }
+
+  for (const row of Object.values(state.sidebar.rows)) {
+    if (touchedSince(state, row.room.id, since)) {
+      rows[row.room.id] = row;
+    }
+  }
+
+  const listed = sidebar.rows.map((row) => row.room.id).filter((id) => rows[id] !== undefined);
 
   let next: State = {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
       status: "ready",
-      order: sidebar.rows.map((row) => row.room.id),
+      // A row sync added that the snapshot predates takes its sorted place, as an upsert would.
+      order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
       rows,
-      categories: sidebar.categories,
+      categories: replyCategories(state, sidebar.categories, since),
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
     },
   };
 
-  for (const row of sidebar.rows) {
+  for (const row of installed) {
     next = setDetailRow(next, row);
   }
 
@@ -110,15 +155,21 @@ function updateRow(state: State, roomId: number, change: (row: SidebarRow) => Si
   };
 }
 
-/** The room was read here: counts clear and the membership stops being unread. */
+/**
+ * The room was read here: its unread messages clear and the membership stops being unread, as
+ * the server's row (published on the read) will say. Thread pings stay until their thread is
+ * read, and the inbox keeps its own unread mentions.
+ */
 export function markRoomRead(state: State, roomId: number): State {
   return updateRow(state, roomId, (row) =>
-    row.unreadCount === 0 && row.mentionCount === 0 && row.membership.unreadAt === null
+    row.unreadCount === 0 &&
+    row.notificationCount === row.threadNotificationCount &&
+    row.membership.unreadAt === null
       ? row
       : {
           ...row,
           unreadCount: 0,
-          mentionCount: 0,
+          notificationCount: row.threadNotificationCount,
           membership: { ...row.membership, unreadAt: null },
         },
   );
@@ -595,12 +646,35 @@ export function moveUnreadDivider(state: State, roomId: number, fromId: number):
 
 /**
  * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
- * what the divider counts (at least 1, when the message is outside the loaded window).
+ * what the divider counts (at least 1, when the message is outside the loaded window). `since` is
+ * the request's ticket. A reply that started before a resync, a newer mark-unread reply moving
+ * the divider, or a sync `room.read` (another tab read the room) changes nothing, divider
+ * included. Any other row change sync made after the request began is newer, so the row stays,
+ * but the divider still moves: sync never moves it, and the viewer's own `room.unread` echo
+ * often lands first.
  */
-export function markUnreadFrom(state: State, roomId: number, fromId: number, now: number): State {
-  const moved = moveUnreadDivider(state, roomId, fromId);
+export function markUnreadFrom(
+  state: State,
+  roomId: number,
+  fromId: number,
+  now: number,
+  since: number,
+): State {
+  if (
+    isStale(state, since) ||
+    dividerMovedSince(state, roomId, since) ||
+    readSince(state, roomId, since)
+  ) {
+    return state;
+  }
+
+  const moved = claimDivider(moveUnreadDivider(state, roomId, fromId), roomId);
   const timeline = moved.timelines[roomId];
   const count = timeline?.unreadFromId === fromId ? timeline.unreadCount : 0;
+
+  if (touchedSince(moved, roomId, since)) {
+    return moved;
+  }
 
   return updateRow(moved, roomId, (row) => ({
     ...row,
@@ -873,9 +947,13 @@ function setDetailRow(state: State, row: SidebarRow): State {
   };
 }
 
-/** A successful local delete, leave, or self-removal establishes that access was revoked. */
-export function setRoomUnavailable(state: State, roomId: number): State {
-  const next = removeRow(state, roomId);
+/**
+ * A successful local delete, leave, or self-removal establishes that access was revoked: the room
+ * shows as unavailable, and its sidebar row leaves unless `keepRow` (the row is newer than the
+ * reply that said so).
+ */
+export function setRoomUnavailable(state: State, roomId: number, keepRow = false): State {
+  const next = keepRow ? state : removeRow(state, roomId);
 
   return {
     ...next,
@@ -899,6 +977,24 @@ function removeRow(state: State, roomId: number): State {
   };
 }
 
+/**
+ * Whether a new root message would push under the classic policy, as the server's
+ * `notificationCount` counts it: every one in an `everything` room, a mention in a `mentions` or
+ * `muted` one, none in a `nothing` one. A reply to you arrives with the row the server sends
+ * next; a keyword alert alone never pushes, so it never counts.
+ */
+function notifies(row: SidebarRow, mentioned: boolean): boolean {
+  switch (row.membership.involvement) {
+    case "everything":
+      return true;
+    case "mentions":
+    case "muted":
+      return mentioned;
+    default:
+      return false;
+  }
+}
+
 function roomUnread(
   state: State,
   roomId: number,
@@ -910,6 +1006,8 @@ function roomUnread(
     ...row,
     unreadCount: messageId === null ? Math.max(row.unreadCount, 1) : row.unreadCount + 1,
     mentionCount: row.mentionCount + (mentioned ? 1 : 0),
+    notificationCount:
+      row.notificationCount + (messageId !== null && notifies(row, mentioned) ? 1 : 0),
     membership: {
       ...row.membership,
       unreadAt: row.membership.unreadAt ?? new Date(now).toISOString(),
@@ -917,8 +1015,18 @@ function roomUnread(
   }));
 }
 
-/** Applies one batch of sync events, in order, as a single state change. */
-export function applyEvents(state: State, events: readonly SyncEvent[], now: number): State {
+/**
+ * Applies one batch of sync events, in order, as a single state change. Rows the batch changes
+ * are touched, so an HTTP reply older than them leaves them be. A `reply` batch is an HTTP
+ * reply's rows put through the same reducers (already filtered by `untouchedReplyEvents`), so it
+ * touches nothing.
+ */
+export function applyEvents(
+  state: State,
+  events: readonly SyncEvent[],
+  now: number,
+  source: "sync" | "reply" = "sync",
+): State {
   const meId = state.me?.user.id ?? state.boot?.user.id ?? null;
   let next = state;
 
@@ -1043,7 +1151,57 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
     }
   }
 
-  return next;
+  return source === "sync"
+    ? touchRows(
+        next,
+        syncTouchedRooms(state, next, events),
+        syncTouchedCategories(events),
+        syncReadRooms(events),
+      )
+    : next;
+}
+
+/**
+ * The rooms a sync batch touched: every room a `sidebar.row.*`, `room.read` or `room.unread`
+ * event names, whether or not it changed anything (a row added and removed in one batch, or a
+ * removal of a row already gone, still outranks an older reply that lists it), and every row
+ * the batch's other events changed (a new message's count).
+ */
+function syncTouchedRooms(
+  before: State,
+  after: State,
+  events: readonly SyncEvent[],
+): readonly number[] {
+  const ids = new Set(changedRowIds(before.sidebar.rows, after.sidebar.rows));
+
+  for (const event of events) {
+    switch (event.type) {
+      case "sidebar.row.upserted":
+        ids.add(event.data.room.id);
+        break;
+      case "sidebar.row.removed":
+      case "room.read":
+      case "room.unread":
+        ids.add(event.data.roomId);
+        break;
+    }
+  }
+
+  return [...ids];
+}
+
+/** The categories a sync batch names, so an older category reply leaves them be. */
+function syncTouchedCategories(events: readonly SyncEvent[]): readonly number[] {
+  return events.flatMap((event) =>
+    event.type === "sidebar.category.upserted" || event.type === "sidebar.category.removed"
+      ? [event.data.id]
+      : [],
+  );
+}
+
+/** The rooms a sync batch says were read, so an older mark-unread reply leaves them be. */
+function syncReadRooms(events: readonly SyncEvent[]): readonly number[] {
+  return events.flatMap((event) => (event.type === "room.read" ? [event.data.roomId] : []));
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */

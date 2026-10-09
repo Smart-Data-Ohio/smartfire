@@ -131,7 +131,7 @@
     width: 4px;
     height: 36px;
     border-radius: 0 4px 4px 0;
-    background: var(--text);
+    background: var(--text-strong);
     translate: 0 -50%;
     scale: 1 0;
     transition: scale var(--duration-small) var(--ease-move);
@@ -171,6 +171,11 @@
 
   .rail-button:active {
     scale: var(--scale-press);
+  }
+
+  /* Unread brightens the destination's icon too, as it does a sidebar row's name. */
+  .rail-item[data-unread] .rail-button {
+    color: var(--text-strong);
   }
 
   .rail-item[data-active] .rail-button {

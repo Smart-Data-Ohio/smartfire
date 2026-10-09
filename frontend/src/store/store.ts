@@ -66,6 +66,14 @@ import type {
 } from "./model.ts";
 import * as organize from "./organize.ts";
 import * as reduce from "./reducers.ts";
+import {
+  isStale,
+  pruneTouches,
+  removalIsStale,
+  rowClock,
+  touchRows,
+  untouchedReplyEvents,
+} from "./row-touches.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
@@ -78,6 +86,12 @@ import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
  * `mutations`, components read it through `useStore(selector)`.
  */
 export const store = createStore<State>()(() => initialState);
+
+/**
+ * The sidebar row clock now: the ticket a request opening now would hold. Requests take theirs
+ * through `withRowTicket` (src/sync/row-ticket.ts), which releases it too.
+ */
+export const sidebarRowClock = (): number => rowClock(store.getState());
 
 export function useStore<T>(selector: (state: State) => T): T {
   return useZustandStore(store, selector);
@@ -103,8 +117,50 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
   );
 }
 
+/**
+ * The row tickets of the HTTP requests in flight, oldest first (several can share a clock). Not
+ * state anyone renders, so held outside the store: it only bounds the touches the store keeps.
+ */
+const heldTickets: number[] = [];
+
+/** Every change ends by forgetting the row touches no request in flight is older than. */
 const apply = (change: (state: State) => State) =>
-  store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
+  store.setState(
+    (state) => agents.reconcileAgentBadges(pruneTouches(change(state), heldTickets[0])),
+    true,
+  );
+
+/**
+ * Room-read bookkeeping for `sidebar.row.*` events about to land: a removal or a membership change
+ * claims the room's outcome, so a read that started earlier must not restore what they changed.
+ */
+function noteRowEvents(events: readonly SyncEvent[]): void {
+  let held = { ...store.getState().sidebar.rows };
+
+  for (const event of events) {
+    if (event.type === "sidebar.row.removed") {
+      // Access changed at delivery, so a read that started earlier must not restore the room.
+      claimRoomOutcome(event.data.roomId, beginRoomRequest());
+      clearRoomJoin(event.data.roomId);
+
+      const { [event.data.roomId]: _removed, ...rest } = held;
+
+      held = rest;
+      continue;
+    }
+
+    if (event.type !== "sidebar.row.upserted") continue;
+
+    const row = event.data;
+
+    if (membershipChanged(held[row.room.id], row)) {
+      claimRoomOutcome(row.room.id, beginRoomRequest());
+      dirtyRoomReread(row.room.id);
+    }
+
+    held[row.room.id] = row;
+  }
+}
 
 /**
  * A room outcome lands only when `started` is newer than the one already applied.
@@ -222,20 +278,90 @@ export const mutations = {
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "loading" } })),
   setSidebarFailed: () =>
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "error" } })),
-  loadSidebar: (sidebar: Sidebar) => apply((state) => reduce.loadSidebar(state, sidebar)),
-  markRoomRead: (roomId: number) => apply((state) => reduce.markRoomRead(state, roomId)),
+  /**
+   * A request whose reply installs or removes sidebar rows begins: answers its ticket, held until
+   * `closeRowTicket` (see `withRowTicket` in src/sync/row-ticket.ts).
+   */
+  openRowTicket: (): number => {
+    const since = rowClock(store.getState());
+
+    heldTickets.push(since);
+
+    return since;
+  },
+  /** The request holding `since` settled; touches no request in flight needs are dropped. */
+  closeRowTicket: (since: number) => {
+    const index = heldTickets.indexOf(since);
+
+    if (index >= 0) heldTickets.splice(index, 1);
+    apply((state) => state);
+  },
+  /**
+   * A whole-sidebar reply; `since` is its request's ticket. Answers whether it landed: a reply
+   * that started before a sync resync is stale, and leaves the store as it is.
+   */
+  loadSidebar: (sidebar: Sidebar, since: number): boolean => {
+    if (isStale(store.getState(), since)) return false;
+    apply((state) => reduce.loadSidebar(state, sidebar, since));
+
+    return true;
+  },
+  /**
+   * A whole-sidebar snapshot the sync engine read (a resync), `since` its own ticket: it is
+   * authoritative, so every HTTP reply already on its way becomes stale. A room whose membership
+   * it installed or changed claims its outcome, as a `sidebar.row.upserted` does, so a room read
+   * (a 404 above all) that started earlier can't land over it. Answers those rooms.
+   */
+  resyncSidebar: (sidebar: Sidebar, since: number): readonly number[] => {
+    const before = store.getState().sidebar.rows;
+
+    apply((state) => reduce.resyncSidebar(state, sidebar, since));
+
+    const after = store.getState().sidebar.rows;
+    const changed: number[] = [];
+
+    for (const row of Object.values(after)) {
+      if (membershipChanged(before[row.room.id], row)) {
+        claimRoomOutcome(row.room.id, beginRoomRequest());
+        dirtyRoomReread(row.room.id);
+        changed.push(row.room.id);
+      }
+    }
+
+    return changed;
+  },
+  /** Read here: newer than any HTTP reply already on its way, so that reply leaves the row be. */
+  markRoomRead: (roomId: number) =>
+    apply((state) => touchRows(reduce.markRoomRead(state, roomId), [roomId])),
   setRoomLoading: (roomId: number) => apply((state) => reduce.setRoomLoading(state, roomId)),
-  setRoomError: (roomId: number, error: string) =>
-    apply((state) => reduce.setRoomError(state, roomId, error)),
+  /**
+   * A room read failed. With `started` (the read's outcome sequence) it lands only when no newer
+   * room outcome has, like a read's detail, preview or 404; answers whether it landed.
+   */
+  setRoomError: (roomId: number, error: string, started?: number): boolean => {
+    if (started === undefined) {
+      apply((state) => reduce.setRoomError(state, roomId, error));
+
+      return true;
+    }
+
+    return landRoom(roomId, started, (state) => reduce.setRoomError(state, roomId, error));
+  },
   setRoomPreview: (roomId: number, preview: OpenRoomPreview, started: number) =>
     landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail, started: number) =>
     landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
-  setRoomUnavailable: (roomId: number, started: number) =>
+  /**
+   * An HTTP 404 (or a delete or leave reply): access is gone, and the room shows as unavailable
+   * whenever the room outcome is still this request's (`started`). The sidebar row is sync's
+   * word: one a resync installed, or sync touched, after the request began (`rowsSince`, its row
+   * ticket) stays, and the server publishes its removal if access really went.
+   */
+  setRoomUnavailable: (roomId: number, started: number, rowsSince: number) =>
     landRoom(roomId, started, (state) => {
       clearRoomJoin(roomId);
 
-      return reduce.setRoomUnavailable(state, roomId);
+      return reduce.setRoomUnavailable(state, roomId, removalIsStale(state, roomId, rowsSince));
     }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),
@@ -253,8 +379,8 @@ export const mutations = {
     apply((state) => reduce.clearUnreadDivider(state, roomId)),
   moveUnreadDivider: (roomId: number, fromId: number) =>
     apply((state) => reduce.moveUnreadDivider(state, roomId, fromId)),
-  markUnreadFrom: (roomId: number, fromId: number, now: number) =>
-    apply((state) => reduce.markUnreadFrom(state, roomId, fromId, now)),
+  markUnreadFrom: (roomId: number, fromId: number, now: number, since: number) =>
+    apply((state) => reduce.markUnreadFrom(state, roomId, fromId, now, since)),
   receiveMessage: (message: MessageDTO) => apply((state) => reduce.receiveMessage(state, message)),
   addPending: (pending: PendingMessage) => apply((state) => reduce.addPending(state, pending)),
   setPendingState: (
@@ -265,33 +391,19 @@ export const mutations = {
   discardPending: (clientMessageId: string) =>
     apply((state) => reduce.discardPending(state, clientMessageId)),
   applyEvents: (events: readonly SyncEvent[], now: number) => {
-    let held = { ...store.getState().sidebar.rows };
-
-    for (const event of events) {
-      if (event.type === "sidebar.row.removed") {
-        // Access changed at delivery, so a read that started earlier must not restore the room.
-        claimRoomOutcome(event.data.roomId, beginRoomRequest());
-        clearRoomJoin(event.data.roomId);
-
-        const { [event.data.roomId]: _removed, ...rest } = held;
-
-        held = rest;
-        continue;
-      }
-
-      if (event.type !== "sidebar.row.upserted") continue;
-
-      const row = event.data;
-
-      if (membershipChanged(held[row.room.id], row)) {
-        claimRoomOutcome(row.room.id, beginRoomRequest());
-        dirtyRoomReread(row.room.id);
-      }
-
-      held[row.room.id] = row;
-    }
-
+    noteRowEvents(events);
     apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now)));
+  },
+  /**
+   * An HTTP reply's rows, as the local `sidebar.row.*` events that land them. `since` is the
+   * request's ticket: a room the sync path changed after it keeps the store's row, and none land
+   * once a resync made the reply stale.
+   */
+  landReplyRows: (events: readonly SyncEvent[], now: number, since: number) => {
+    const fresh = untouchedReplyEvents(store.getState(), events, since);
+
+    noteRowEvents(fresh);
+    apply((state) => (fresh.length === 0 ? state : reduce.applyEvents(state, fresh, now, "reply")));
   },
   prune: (now: number) => apply((state) => reduce.prune(state, now)),
   /** An edit's reply (the `message.updated` event may beat it; the newer copy wins). */
@@ -543,23 +655,33 @@ export const mutations = {
     apply((state) => organize.addOverlay(state, entry)),
   dropSidebarOverlay: (entry: organize.SidebarOverlay) =>
     apply((state) => organize.dropOverlay(state, entry)),
-  upsertCategory: (category: RoomCategory) =>
-    apply((state) => organize.upsertCategory(state, category)),
-  mergeOrganization: (rows: readonly SidebarRow[]) =>
-    apply((state) => organize.mergeOrganization(state, rows)),
+  /** A rename or fold reply; `since` is its request's ticket. */
+  landCategory: (category: RoomCategory, since: number) =>
+    apply((state) => organize.landCategory(state, category, since)),
+  /** An organising reply's rows the sidebar has; `since` is the request's ticket. */
+  mergeOrganization: (rows: readonly SidebarRow[], since: number) =>
+    apply((state) => organize.mergeOrganization(state, rows, since)),
+  /** A create reply; `since` is its request's ticket. */
   landCreatedCategory: (
     category: RoomCategory,
     draft: organize.SidebarOverlay,
     settled: organize.SidebarOverlay,
-  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled)),
-  setCategories: (categories: readonly RoomCategory[]) =>
-    apply((state) => organize.setCategories(state, categories)),
-  removeCategory: (categoryId: number) =>
-    apply((state) => organize.removeCategory(state, categoryId)),
-  setMembership: (membership: Membership) =>
-    apply((state) => organize.setMembership(state, membership)),
+    since: number,
+  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled, since)),
+  /** A reorder reply's list; `since` is its request's ticket. */
+  landCategories: (categories: readonly RoomCategory[], since: number) =>
+    apply((state) => organize.landCategories(state, categories, since)),
+  /** A delete reply; `since` is its request's ticket. */
+  landCategoryRemoval: (categoryId: number, since: number) =>
+    apply((state) => organize.landCategoryRemoval(state, categoryId, since)),
+  /** A membership reply; `since` is its request's ticket. */
+  setMembership: (membership: Membership, since: number) =>
+    apply((state) => organize.setMembership(state, membership, since)),
   /** Back to an empty store (tests). */
-  reset: () => apply(() => initialState),
+  reset: () => {
+    heldTickets.length = 0;
+    apply(() => initialState);
+  },
 };
 
 export type Mutations = typeof mutations;

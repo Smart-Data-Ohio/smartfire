@@ -9,6 +9,7 @@ import {
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
+import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -18,6 +19,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
+import { startHuddleFromCommand } from "../huddle/slash-huddle.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
@@ -37,6 +39,16 @@ import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
+import { ReplyChip } from "./reply-chip.tsx";
+import {
+  cancelReply,
+  cancelReplyAt,
+  type ReplySnapshot,
+  setReplyNotify,
+  snapshotReply,
+  trackSentReply,
+  useReplyTarget,
+} from "./reply-store.ts";
 import { LazyCustomTimeDialog } from "./schedule/lazy-custom-time-dialog.tsx";
 import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
@@ -195,6 +207,34 @@ export function Composer({
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
   const canSend = (hasText || hasFiles) && !running;
+  // An inline reply (classic's Reply): a new thread's first message never carries one.
+  const reply = useReplyTarget(creating ? null : key);
+
+  const replyGone = useStore(
+    (state) => reply !== null && state.messages[reply.messageId] === undefined,
+  );
+
+  const replySeq = reply?.seq ?? null;
+  const seenReplySeq = useRef(replySeq);
+
+  // The quoted message was deleted: there's nothing left to reply to.
+  useEffect(() => {
+    if (replyGone) {
+      cancelReply(key);
+    }
+  }, [replyGone, key]);
+
+  // A Reply picked on a message hands this composer the focus (as classic's does), but coming
+  // back to a conversation with a reply already set doesn't.
+  useEffect(() => {
+    if (replySeq === null || replySeq === seenReplySeq.current) {
+      return;
+    }
+
+    seenReplySeq.current = replySeq;
+    textareaRef.current?.focus();
+    requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
+  }, [replySeq]);
 
   // Grow with the text; CSS caps it at half the viewport and scrolls beyond that.
   useLayoutEffect(() => {
@@ -326,31 +366,54 @@ export function Composer({
     }
   };
 
-  /** Posts the text with the first file, and each further file as its own message. */
-  const deliver = (markdown: string, files: readonly TrayFile[]) => {
+  /**
+   * Posts the text with the first file, and each further file as its own message. Each carries
+   * the reply the submit took (`snapshot`, read before any await), as classic's text and uploads
+   * do. The chip goes with the send; a send that fails puts it back (`trackSentReply`).
+   */
+  const deliver = (markdown: string, files: readonly TrayFile[], snapshot: ReplySnapshot) => {
     toPresent();
 
     const [first, ...rest] = files;
+    const target = snapshot.target;
 
-    actions.send(roomId, markdown, {
-      threadId,
+    const replying =
+      target === null ? null : { messageId: target.messageId, notify: target.notify };
+
+    const sentIds: string[] = [];
+
+    const post = (body: string, options: NonNullable<Parameters<typeof actions.send>[2]>) => {
+      const clientMessageId = uuid7(Date.now());
+
+      sentIds.push(clientMessageId);
+      actions.send(roomId, body, { ...options, threadId, reply: replying, clientMessageId });
+    };
+
+    post(markdown, {
       attachmentSignedId: first?.snapshot.signedId ?? null,
       attachment: first === undefined ? null : pendingAttachment(first),
     });
 
     for (const entry of rest) {
-      actions.send(roomId, "", {
-        threadId,
+      post("", {
         attachmentSignedId: entry.snapshot.signedId,
         attachment: pendingAttachment(entry),
       });
     }
 
     attachments.clearSent();
+
+    trackSentReply(key, snapshot, sentIds);
     clear();
   };
 
-  const showResult = (result: SlashCommandResult, typed: string) => {
+  const showResult = (result: SlashCommandResult, typed: string, revision: number) => {
+    // A command that ran consumes the draft and, as in classic, the reply with it (not one
+    // picked while it ran).
+    if (result.status !== "error") {
+      cancelReplyAt(key, revision);
+    }
+
     switch (result.status) {
       case "posted":
         // The server posted it with no pending row: go to it, as a send does.
@@ -388,19 +451,17 @@ export function Composer({
 
         return;
       case "start_huddle":
-        toast({
-          title: `Huddles in #${result.roomName} aren't in this app yet`,
-          description: "Start it from the classic view for now.",
-        });
+        startHuddleFromCommand(result.roomId, result.roomName);
     }
   };
 
-  const runCommand = async (typed: string) => {
+  // The reply is read before the command-list lookup: one picked during it is newer input.
+  const runCommand = async (typed: string, snapshot: ReplySnapshot = currentReply()) => {
     const commands = await loadCommands(roomId, threadId).catch(() => []);
     const route = routeSlash(typed, commands);
 
     if (route.kind === "message") {
-      deliver(route.markdown, []);
+      deliver(route.markdown, [], snapshot);
 
       return;
     }
@@ -410,7 +471,9 @@ export function Composer({
     clear();
 
     try {
-      showResult(await composerActions.runSlashCommand(roomId, route.text, threadId), typed);
+      const result = await composerActions.runSlashCommand(roomId, route.text, threadId);
+
+      showResult(result, typed, snapshot.revision);
     } catch (error) {
       update(typed);
       toast({
@@ -424,7 +487,13 @@ export function Composer({
     }
   };
 
-  const send = () => {
+  /** The reply a submit takes, read as the author submits; a new thread's never has one. */
+  const currentReply = () => snapshotReply(creating ? null : key);
+
+  /** What a send waiting on uploads took when Enter was pressed. */
+  const waitingReply = useRef<ReplySnapshot | null>(null);
+
+  const send = (snapshot: ReplySnapshot = currentReply()) => {
     if (!canSend) {
       return;
     }
@@ -441,11 +510,13 @@ export function Composer({
     }
 
     if (!attachments.ready) {
+      waitingReply.current = snapshot;
       setWaiting(true);
 
       return;
     }
 
+    waitingReply.current = null;
     setWaiting(false);
 
     const markdown = text.trimEnd();
@@ -479,12 +550,12 @@ export function Composer({
     }
 
     if (files.length === 0 && looksLikeCommand(markdown)) {
-      void runCommand(markdown);
+      void runCommand(markdown, snapshot);
 
       return;
     }
 
-    deliver(markdown, files);
+    deliver(markdown, files, snapshot);
   };
 
   // Enter while files upload: send as soon as they're all up (or stop if one fails).
@@ -498,22 +569,26 @@ export function Composer({
 
   useEffect(() => {
     if (waiting && uploadsSettled) {
-      sendRef.current();
+      sendRef.current(waitingReply.current ?? undefined);
     }
   }, [waiting, uploadsSettled]);
 
   const schedule = (at: Date): Promise<void> => {
     const markdown = text.trimEnd();
+    const taken = currentReply();
 
     return scheduled
       .create(roomId, {
         markdownSource: markdown,
         sendAt: at.toISOString(),
         threadId,
-        replyToMessageId: null,
+        // Classic's schedule menu keeps the draft's reply target too.
+        replyToMessageId: taken.target?.messageId ?? null,
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
+        // The reply it took, not one picked while the request was out.
+        cancelReplyAt(key, taken.revision);
         clear();
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
@@ -582,6 +657,14 @@ export function Composer({
       event.preventDefault();
       event.stopPropagation();
       setPreviewOpen(false);
+
+      return;
+    }
+
+    if (event.key === "Escape" && reply !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelReply(key);
 
       return;
     }
@@ -710,6 +793,16 @@ export function Composer({
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>
+          {reply === null ? null : (
+            <ReplyChip
+              target={reply}
+              onNotifyChange={(notify) => setReplyNotify(key, notify)}
+              onCancel={() => {
+                cancelReply(key);
+                focusInput();
+              }}
+            />
+          )}
           <LazyPreviewPanel
             open={previewOpen}
             roomId={roomId}
@@ -789,7 +882,7 @@ export function Composer({
             <SendButton
               canSend={canSend}
               waiting={waiting || running}
-              onSend={send}
+              onSend={() => send()}
               schedule={
                 creating
                   ? null

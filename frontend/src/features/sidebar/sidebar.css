@@ -247,6 +247,47 @@
     color: var(--text);
   }
 
+  /*
+   * A folded section holding unread rooms: its name brightens and carries the nub, like a row,
+   * and its red pill totals the notifications inside (none for plain unread).
+   */
+  .sidebar-section-trigger {
+    position: relative;
+  }
+
+  /* Last in the heading, past the hover actions, so it lines up with the rows' pills. */
+  .sidebar-section-heading > .badge {
+    order: 1;
+    margin-inline-end: var(--space-1-5);
+  }
+
+  .sidebar-section-trigger::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: calc(var(--space-1-5) * -1);
+    width: 4px;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--text-strong);
+    translate: 0 -50%;
+    opacity: 0;
+    scale: 0;
+    transition:
+      scale var(--duration-small) var(--ease-move),
+      opacity var(--duration-small) var(--ease-move);
+  }
+
+  .sidebar-section[data-unread] .sidebar-section-trigger {
+    color: var(--text-strong);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar-section[data-unread] .sidebar-section-trigger::before {
+    opacity: 1;
+    scale: 1;
+  }
+
   .sidebar-rows {
     display: flex;
     flex-direction: column;
@@ -287,8 +328,12 @@
     outline-offset: -2px;
   }
 
+  /*
+   * Unread without a notification: a bolder, brighter name and the nub, never a count (the red
+   * pill is for mentions, DMs and rooms set to notify for everything; `rowPillCount`).
+   */
   .sidebar-row[data-state="unread"] {
-    color: var(--text);
+    color: var(--text-strong);
     font-weight: var(--weight-semibold);
   }
 
@@ -304,7 +349,7 @@
     width: 4px;
     height: 8px;
     border-radius: var(--radius-pill);
-    background: var(--text);
+    background: var(--text-strong);
     translate: 0 -50%;
     opacity: 0;
     scale: 0;

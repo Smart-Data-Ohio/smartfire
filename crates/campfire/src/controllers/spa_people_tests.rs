@@ -609,7 +609,7 @@ async fn check_profile(
     let profile: api::PersonProfile = parse(&reply);
     let secrets = a.booted.app.secrets.clone();
     let now = a.db().env().now();
-    let (user, viewer_user, status) = a
+    let (user, viewer_user, status, manages_agent) = a
         .db()
         .read(move |conn| {
             let user = User::find(conn, id)?;
@@ -623,7 +623,15 @@ async fn check_profile(
                 now,
                 &settings.zone(),
             )?;
-            Ok((user, viewer_user, status))
+            let manages_agent = presenters::agents::profile(
+                conn,
+                &secrets,
+                id,
+                &viewer_user,
+                now,
+                &campfire_views::time::Zone::for_user(settings.time_zone.as_deref()),
+            )?.is_some_and(|profile| profile.management.is_some());
+            Ok((user, viewer_user, status, manages_agent))
         })
         .await
         .unwrap();
@@ -675,6 +683,10 @@ async fn check_profile(
     );
     assert_eq!(profile.can_ban, person && administrator && viewer != id);
     assert_eq!(
+        profile.can_manage_bot,
+        user.is_bot() && user.is_active() && (administrator || manages_agent),
+    );
+    assert_eq!(
         profile.transfer_qr_svg,
         profile
             .transfer_url
@@ -682,6 +694,79 @@ async fn check_profile(
             .and_then(qr_code::transfer_svg)
     );
     profile
+}
+
+#[tokio::test]
+async fn legacy_bot_profiles_keep_classic_actions_and_admin_visibility() {
+    let Some(a) = app().await else { return };
+    let id = a.db().write(|tx| {
+        let bot = User::create_bot(tx, "Legacy Bot", None)?;
+        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+        Ok(bot.id)
+    }).await.unwrap();
+    let member = a.db().read(|conn| {
+        Ok(conn.query_row("SELECT id FROM users WHERE name='JZ'", [], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    for viewer in [DAVID, member] {
+        let mut browser = a.sign_in(viewer).await;
+        let profile = check_profile(&a, &mut browser, viewer, id).await;
+        assert_eq!(profile.user.role, api::UserRole::Bot);
+        assert!(profile.user.agent.is_none());
+        assert!(profile.status.is_none());
+        assert!(profile.dnd_allowed.is_none());
+        assert!(profile.email_address.is_none());
+        assert!(profile.transfer_url.is_none());
+        assert!(!profile.can_ban);
+        assert_eq!(profile.can_manage_bot, viewer == DAVID);
+        let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+        assert_eq!(classic.contains("Manage capability grants"), viewer == DAVID);
+    }
+}
+
+#[tokio::test]
+async fn active_bot_profiles_allow_the_non_admin_agent_owner_to_manage() {
+    let Some(a) = app().await else { return };
+    let (id, owner) = a.db().write(|tx| {
+        let owner = tx.conn().query_row("SELECT id FROM users WHERE name='JZ'", [], |row| row.get::<_, i64>(0))?;
+        let bot = User::create_bot(tx, "Owned Bot", None)?;
+        campfire_db::Agent::create(tx, campfire_db::NewAgent {
+            user_id: bot.id,
+            owner_id: Some(owner),
+            ..Default::default()
+        })?;
+        Ok((bot.id, owner))
+    }).await.unwrap();
+    let mut browser = a.sign_in(owner).await;
+    let profile = check_profile(&a, &mut browser, owner, id).await;
+    assert!(profile.can_manage_bot);
+    let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+    assert!(classic.contains("Manage capability grants"));
+}
+
+#[tokio::test]
+async fn inactive_legacy_bot_profiles_hide_classic_actions() {
+    let Some(a) = app().await else { return };
+    let id = a.db().write(|tx| {
+        let mut bot = User::create_bot(tx, "Inactive Legacy Bot", None)?;
+        bot.deactivate(tx)?;
+        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+        Ok(bot.id)
+    }).await.unwrap();
+    let mut browser = a.sign_in(DAVID).await;
+    let profile = check_profile(&a, &mut browser, DAVID, id).await;
+    assert_eq!(profile.user.status, api::UserStatus::Deactivated);
+    assert_eq!(profile.user.role, api::UserRole::Bot);
+    assert!(profile.user.agent.is_none());
+    assert!(!profile.can_manage_bot);
+    assert!(!profile.can_ban);
+    assert!(profile.status.is_none());
+    assert!(profile.dnd_allowed.is_none());
+    assert!(profile.email_address.is_none());
+    assert!(profile.transfer_url.is_none());
+    let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+    assert!(classic.contains("Inactive Legacy Bot is no longer on this account"));
+    assert!(!classic.contains("Manage capability grants"));
+    assert!(!classic.contains("/rooms/directs?"));
 }
 
 #[tokio::test]

@@ -63,6 +63,9 @@ pub struct ThreadMembership {
     pub joined_at: Timestamp,
     /// When a followed conversation last changed unread for this member; nil once read.
     pub unread_at: Option<Timestamp>,
+    /// The newest message id when the member last read the thread (none until then): a ping at
+    /// or below it was read, so a later reply making the thread unread doesn't count it again.
+    pub last_read_message_id: Option<i64>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -76,6 +79,7 @@ impl ThreadMembership {
             involvement: row.get("involvement")?,
             joined_at: row.get("joined_at")?,
             unread_at: row.get("unread_at")?,
+            last_read_message_id: row.get("last_read_message_id")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -183,18 +187,22 @@ impl ThreadMembership {
         Ok(())
     }
 
-    /// `read`: `update!(unread_at: nil)`, a no-op when already read.
+    /// `read`: `update!(unread_at: nil)`, a no-op when already read. It also records the newest
+    /// message read through (`last_read_message_id`, never moving back): every message committed
+    /// so far has a lower id than any later one, so the pings it read stay read.
     pub fn read(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         if self.unread_at.is_none() {
             return Ok(());
         }
         Self::validate(tx.conn(), self.thread_id, self.user_id)?.into_result()?;
         let now = tx.now();
-        tx.conn().execute_cached(
-            r#"UPDATE "thread_memberships" SET "unread_at" = NULL, "updated_at" = ? WHERE "thread_memberships"."id" = ?"#,
+        let read_through: Option<i64> = tx.conn().query_row_cached(
+            r#"UPDATE "thread_memberships" SET "unread_at" = NULL, "last_read_message_id" = MAX(COALESCE("last_read_message_id", 0), COALESCE((SELECT MAX("id") FROM "messages"), 0)), "updated_at" = ? WHERE "thread_memberships"."id" = ? RETURNING "last_read_message_id""#,
             params![now, self.id],
+            |r| r.get(0),
         )?;
         self.unread_at = None;
+        self.last_read_message_id = read_through;
         self.updated_at = now;
         Ok(())
     }

@@ -18,6 +18,7 @@ import { organizedSidebar } from "../../store/organize.ts";
 import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
 import { saveAccountTheme } from "../../sync/settings.ts";
+import { Badge } from "../../ui/badge.tsx";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -48,7 +49,14 @@ import {
   slotForSection,
 } from "./organize-model.ts";
 import { RoomContextMenu, type RoomMenuRequest } from "./room-menu.tsx";
-import { type SidebarSection, sidebarSections } from "./sections.ts";
+import {
+  notificationLabel,
+  peekingRows,
+  type SidebarSection,
+  sectionStatus,
+  sectionUnread,
+  sidebarSections,
+} from "./sections.ts";
 import {
   type DropEdge,
   type RowActions,
@@ -193,7 +201,8 @@ interface SectionProps {
 
 /**
  * A collapsible group (the transitions.dev accordion). Collapsed, it still lists its unread rows
- * and the open conversation, as Slack does, so nothing new hides behind a chevron.
+ * and the open conversation, as Slack does, so nothing new hides behind a chevron; its heading
+ * brightens with the nub when anything inside is unread, and totals the notifications in red.
  */
 function Section({
   section,
@@ -209,11 +218,12 @@ function Section({
 }: SectionProps) {
   const id = useId();
 
-  const peeking = open
-    ? []
-    : section.rows.filter(
-        (row) => row.room.id === selectedRoomId || row.membership.unreadAt !== null,
-      );
+  const peeking = open ? [] : peekingRows(section.rows, selectedRoomId);
+
+  const folded = open ? { unread: false, count: 0 } : sectionUnread(section.rows);
+  // A folded category says what it hides when its trigger takes focus. The status is `hidden` so
+  // reading the page doesn't say it twice beside the badge; a description still reads it.
+  const status = sectionStatus(folded);
 
   const edgeFor = (row: Row) => (drop.line?.roomId === row.room.id ? drop.line.edge : undefined);
 
@@ -221,6 +231,7 @@ function Section({
     <div
       className="sidebar-section t-acc"
       data-open={open}
+      data-unread={folded.unread || undefined}
       data-kind={section.kind}
       data-drop-section={section.key}
       data-flip={`section-${section.key}`}
@@ -238,6 +249,7 @@ function Section({
               className="sidebar-section-trigger"
               aria-expanded={open}
               aria-controls={`${id}-panel`}
+              aria-describedby={status === null ? undefined : `${id}-status`}
               onClick={onToggle}
               onPointerDown={onHeadingPointerDown}
             >
@@ -249,6 +261,14 @@ function Section({
           </h2>
         )}
         {heading === undefined ? action : null}
+        {heading === undefined ? (
+          <Badge count={folded.count} tone="danger" label={notificationLabel(folded.count)} />
+        ) : null}
+        {heading === undefined && status !== null ? (
+          <span id={`${id}-status`} hidden>
+            {status}
+          </span>
+        ) : null}
       </div>
       <section
         id={`${id}-panel`}
