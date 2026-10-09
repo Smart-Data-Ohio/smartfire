@@ -1,5 +1,16 @@
 import type { Page } from "@playwright/test";
-import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { GITHUB_BOT_ID } from "../../mock/s8/room-integrations.ts";
+import {
+  DESKTOP,
+  expect,
+  matrix,
+  openApp,
+  PHONE,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+} from "./support.ts";
 
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
 
@@ -561,6 +572,189 @@ test.describe("room settings", () => {
 
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
+  });
+
+  test("renaming a closed room after subscribing keeps the GitHub bot", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toHaveLength(5);
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+    expect(body.userIds).toEqual(expect.arrayContaining([1, 2, 3, 6, GITHUB_BOT_ID]));
+  });
+
+  test("Save stays off until the member refresh after subscribing finishes", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await expect(dialog.getByLabel("Name", { exact: true })).toBeVisible();
+
+    let release: () => void = () => undefined;
+
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await page.route("**/api/v1/rooms/*/edit", async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByText("Updating members…")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    release();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+  });
+
+  test("a failed member refresh keeps Save off until retry", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await expect(dialog.getByLabel("Name", { exact: true })).toBeVisible();
+
+    let failRefresh = true;
+
+    await page.route("**/api/v1/rooms/*/edit", async (route) => {
+      if (failRefresh) {
+        await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByText("Couldn't update the member list.")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    failRefresh = false;
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    await dialog.getByRole("button", { name: "Try again" }).click();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+  });
+
+  test("subscribes and unsubscribes a repository, and shows the room's email address", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("Rails/Rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(page.getByText("Subscribed to rails/rails.")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Remove rails/rails" }).click();
+    await page
+      .getByRole("alertdialog", { name: "Unsubscribe rails/rails?" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
+    await expect(page.getByText("Unsubscribed from rails/rails.")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "Email" }).click();
+    await expect(
+      dialog.getByText("room-a1b2c3d4e5f67890a1b2c3d4e5f67890@mail.campfire.test"),
+    ).toBeVisible();
+  });
+
+  test("on a phone, Enter in the repository field subscribes without saving the room", async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("campfire/campfire");
+    await page.keyboard.press("Enter");
+    await expect(dialog.getByText("campfire/campfire")).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.launchPlanning}/settings$`));
+
+    await dialog.getByRole("tab", { name: "Email" }).click();
+    await expect(dialog.getByText(/room-a1b2c3d4e5f67890/)).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Rotate address" })).toBeVisible();
+  });
+
+  test("a board's settings offer GitHub and not inbound email", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+    // The seeded board is not a sidebar row this spec opens by id.
+    await page.goto("/app/r/900/settings");
+
+    const dialog = page.getByRole("dialog", { name: "Board settings" });
+
+    await expect(dialog.getByRole("tab", { name: "GitHub" })).toBeVisible();
+    await expect(dialog.getByRole("tab", { name: "Email" })).toHaveCount(0);
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
   });
 
   test("a direct message's settings URL opens the conversation", async ({ page }) => {

@@ -9,6 +9,7 @@ import {
   isDirty,
   kindOf,
   privacyChoice,
+  reconcileMembers,
   roomIconLook,
   updateBody,
 } from "./room-forms.ts";
@@ -135,6 +136,13 @@ describe("icons", () => {
     expect(iconNameFor("🎉", EMOJI)).toBe("tada");
     expect(iconNameFor(":octocat:", EMOJI)).toBe("octocat");
     expect(iconNameFor("🦄", EMOJI)).toBeNull();
+  });
+
+  it("applies the server's membership delta and keeps unsaved member edits", () => {
+    expect(reconcileMembers([1, 2], [1, 2], [1, 2, 9])).toEqual([1, 2, 9]);
+    expect(reconcileMembers([1, 2, 9], [1, 2, 9], [1, 2])).toEqual([1, 2]);
+    expect(reconcileMembers([1], [1, 2], [1, 2, 9])).toEqual([1, 9]);
+    expect(reconcileMembers([1, 2, 5], [1, 2], [1, 2])).toEqual([1, 2, 5]);
   });
 
   it("draws a workspace icon before the emoji of the same name", () => {

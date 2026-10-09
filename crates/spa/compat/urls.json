@@ -421,6 +421,31 @@
       ]
     },
     {
+      "id": "room_integrations",
+      "family": "room GitHub subscriptions and inbound email",
+      "pattern": "POST/PATCH/DELETE /rooms/:room_id/github_subscriptions, POST /rooms/:room_id/inbound_email_address",
+      "category": "rooms",
+      "classic_endpoint": "rooms/github_subscriptions#create, rooms/inbound_email_addresses#create",
+      "owner_today": "classic",
+      "after_cutover": {"action": "retain", "target": "/api/v1/rooms/:id/github_subscriptions, /api/v1/rooms/:id/inbound_email", "notes": "Form writes, not pages, so they are not SPA screens. Next preference does not alias them. The SPA settings dialog uses the JSON API. classic preference and classic=1 keep the edit pages that host the sections."},
+      "bookmarks": false,
+      "notifications": false,
+      "known_bug": null,
+      "notes": "Open, closed, voice, stage and board edit pages include GitHub subscriptions. Inbound email is on every emailable room (not direct, not board). Writes stay on the classic controllers and redirect to the classic edit URL, including for a next-preference user, because aliasing is GET/HEAD only. An invalid subscribe does not create a row. Voice and board rooms are not open, so the GitHub redirect uses the closed edit path, as the classic controller does.",
+      "bookmark_notes": "No producer bookmarks these form actions.",
+      "notification_notes": "No producer emits these.",
+      "cases": [
+        {"id": "github.subscribe.invalid.next", "method": "POST", "path": "/rooms/{OPEN_ROOM}/github_subscriptions", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"github_repository_subscription[full_name]": "", "github_repository_subscription[events][]": "opened"}, "expect": {"status": 302, "location": "/rooms/opens/{OPEN_ROOM}/edit"}},
+        {"id": "github.subscribe.invalid.classic", "method": "POST", "path": "/rooms/{OPEN_ROOM}/github_subscriptions", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"github_repository_subscription[full_name]": "", "github_repository_subscription[events][]": "opened"}, "expect": {"status": 302, "location": "/rooms/opens/{OPEN_ROOM}/edit"}},
+        {"id": "github.subscribe.direct", "method": "POST", "path": "/rooms/{DIRECT_DJ}/github_subscriptions", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"github_repository_subscription[full_name]": "rails/rails"}, "expect": {"status": 404, "body_empty": true}},
+        {"id": "github.subscribe.voice.redirects_to_closed_edit", "method": "POST", "path": "/rooms/{VOICE_ROOM}/github_subscriptions", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"github_repository_subscription[full_name]": ""}, "expect": {"status": 302, "location": "/rooms/closeds/{VOICE_ROOM}/edit"}},
+        {"id": "inbound.rotate.next", "method": "POST", "path": "/rooms/{OPEN_ROOM}/inbound_email_address", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"commit": "Rotate address"}, "expect": {"status": 302, "location": "/rooms/{OPEN_ROOM}/edit"}},
+        {"id": "inbound.rotate.classic", "method": "POST", "path": "/rooms/{CLOSED_ROOM}/inbound_email_address", "auth": "david", "preference": "classic", "spa_enabled": true, "spa_default_next": false, "form": {"commit": "Rotate address"}, "expect": {"status": 302, "location": "/rooms/{CLOSED_ROOM}/edit"}},
+        {"id": "inbound.direct", "method": "POST", "path": "/rooms/{DIRECT_DJ}/inbound_email_address", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"commit": "Rotate address"}, "expect": {"status": 404, "body_empty": true}},
+        {"id": "inbound.board", "method": "POST", "path": "/rooms/{BOARD_ROOM}/inbound_email_address", "auth": "david", "preference": "next", "spa_enabled": true, "spa_default_next": false, "form": {"commit": "Rotate address"}, "expect": {"status": 404, "body_empty": true}}
+      ]
+    },
+    {
       "id": "room_administration",
       "family": "Room administration URL",
       "pattern": "/rooms/:id/settings",

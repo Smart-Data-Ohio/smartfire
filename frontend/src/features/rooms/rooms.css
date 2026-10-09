@@ -113,6 +113,13 @@
     font-size: var(--text-meta);
   }
 
+  /* The membership-refresh error, on the footer's leading edge beside Save. */
+  .room-member-sync {
+    align-self: center;
+    margin-right: auto;
+    min-width: 0;
+  }
+
   /* The kind cards: Discord's channel type list. */
   .kind-cards {
     display: flex;
@@ -551,6 +558,86 @@
     opacity: 1;
   }
 
+  /* GitHub subscriptions and inbound email, inside the settings tabs. */
+  .room-integrations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .room-integration-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .room-subscription-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .room-subscription {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .room-subscription-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .room-subscription-name {
+    flex: 1;
+    min-width: 8rem;
+    overflow-wrap: anywhere;
+    font-weight: var(--weight-medium);
+  }
+
+  .room-integration-events {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .room-subscribe {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .room-subscribe-title {
+    margin: 0;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+  }
+
+  .room-email-address {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .room-email-address code {
+    font-family: var(--font-mono);
+    font-size: var(--text-sidebar);
+  }
+
+  .room-integration-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
   /* The form didn't load: the reason and a retry on one line. */
   .room-form-load-error {
     display: flex;
@@ -574,6 +661,23 @@
 
     .kind-card-blurb {
       white-space: normal;
+    }
+
+    .room-integration-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .room-integration-actions > .button {
+      width: 100%;
+    }
+
+    .room-subscription-head {
+      align-items: stretch;
+    }
+
+    .room-subscription-head > .button {
+      width: 100%;
     }
   }
 }

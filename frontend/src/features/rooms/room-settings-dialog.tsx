@@ -7,16 +7,19 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
-import { Tabs, tabId } from "../../ui/tabs.tsx";
+import { type TabItem, Tabs, tabId } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
+import { GithubSubscriptions } from "./github-subscriptions.tsx";
+import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
 import {
   hasMemberList,
   isDirty,
   type ManagedKind,
   type RoomDraft,
+  reconcileMembers,
   roomLabel,
   updateBody,
 } from "./room-forms.ts";
@@ -34,7 +37,10 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly form: RoomForm };
 
-type Tab = "general" | "members";
+/** A refetch of membership after subscribe or unsubscribe. Save waits until it succeeds. */
+type MemberSync = "idle" | "pending" | "error";
+
+type Tab = "general" | "members" | "github" | "email";
 
 const NOUN = {
   open: "channel",
@@ -43,6 +49,18 @@ const NOUN = {
   stage: "stage",
   board: "board",
 } as const satisfies Record<ManagedKind, string>;
+
+function withMembership(form: RoomForm, next: RoomForm): RoomForm {
+  return {
+    ...form,
+    userIds: next.userIds,
+    memberIds: next.memberIds,
+    users: next.users,
+    candidateIds: next.candidateIds,
+    displayMemberIds: next.displayMemberIds,
+    stageRoles: next.stageRoles,
+  };
+}
 
 function capitalised(text: string): string {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -79,9 +97,11 @@ function Pending({ load }: { readonly load: Load }) {
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
  * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
- * has the same name, icon and members, and a way through to its automations. The creator and
- * administrators can change them; everyone else reads them. Nothing is written until "Save
- * changes"; then the room's header, sidebar row and member list update in place.
+ * has the same name, icon and members, and a way through to its automations. Every room, including
+ * a board, can subscribe GitHub repositories here; inbound email is offered except on a board.
+ * The creator and administrators can change them; everyone else reads the room and is refused the
+ * two integrations. Nothing about the room itself is written until "Save changes"; then the room's
+ * header, sidebar row and member list update in place.
  */
 export default function RoomSettingsDialog({
   roomId,
@@ -105,9 +125,22 @@ export default function RoomSettingsDialog({
   const [iconError, setIconError] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [memberSync, setMemberSync] = useState<MemberSync>("idle");
+  const [memberSyncScope, setMemberSyncScope] = useState({ open, roomId });
   // Which opening of the dialog this is, and whether it's still open: a save or delete that
   // completes after the viewer closed it (or after it reopened) mustn't close or navigate again.
   const opening = useRef({ id: 0, open: false });
+  const membershipForm = useRef<RoomForm | null>(null);
+  const membershipSeq = useRef(0);
+  // Bumped when this opening ends, so a refresh still in flight cannot block the next one.
+  const membershipEpoch = useRef(0);
+
+  if (memberSyncScope.open !== open || memberSyncScope.roomId !== roomId) {
+    setMemberSyncScope({ open, roomId });
+    membershipEpoch.current += 1;
+
+    if (memberSync !== "idle") setMemberSync("idle");
+  }
 
   useEffect(() => {
     opening.current = open
@@ -122,6 +155,8 @@ export default function RoomSettingsDialog({
 
   const close = () => {
     opening.current = { ...opening.current, open: false };
+    membershipEpoch.current += 1;
+    setMemberSync("idle");
     onOpenChange(false);
   };
 
@@ -170,11 +205,28 @@ export default function RoomSettingsDialog({
   }, [roomId, open]);
 
   const form = load.status === "ready" ? load.form : null;
+
+  membershipForm.current = form;
   const readOnly = form === null || !form.canSubmit;
   const dirty = form !== null && isDirty(form, kind, draft);
   const noun = NOUN[kind];
   const members = hasMemberList(kind);
-  const shownTab: Tab = members ? tab : "general";
+  const emailable = kind !== "board";
+
+  const shownTab: Tab =
+    (tab === "members" && !members) || (tab === "email" && !emailable) ? "general" : tab;
+
+  const tabItems: TabItem[] = [{ value: "general", label: "General", icon: "settings" }];
+
+  if (members) {
+    tabItems.push({ value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" });
+  }
+
+  tabItems.push({ value: "github", label: "GitHub", icon: "code" });
+
+  if (emailable) {
+    tabItems.push({ value: "email", label: "Email", icon: "inbox" });
+  }
 
   const canConvert =
     form !== null &&
@@ -234,6 +286,48 @@ export default function RoomSettingsDialog({
     form?.users.filter((user) => user.agent !== null).map((user) => user.id),
   );
 
+  /**
+   * Subscribe and unsubscribe add or remove the GitHub bot on the server. The dialog's member
+   * list is what Save sends, so it has to include that change or the next save drops the bot.
+   * The delta comes from a refetch, and unsaved member edits are left in place. Save stays off
+   * until that refetch succeeds: one started while it is in flight, or after it failed, would
+   * still send the member list from before the bot changed.
+   */
+  const reconcileMembership = () => {
+    const seq = membershipSeq.current + 1;
+
+    membershipSeq.current = seq;
+
+    const epoch = membershipEpoch.current;
+    const showing = stillShowing();
+    const before = membershipForm.current?.userIds ?? [];
+
+    setMemberSync("pending");
+
+    const applies = () =>
+      membershipEpoch.current === epoch && showing() && membershipSeq.current === seq;
+
+    actions.rooms.editForm(roomId).then(
+      (next) => {
+        if (!applies()) return;
+
+        setMemberSync("idle");
+        setLoad((current) =>
+          current.status === "ready"
+            ? { status: "ready", form: withMembership(current.form, next) }
+            : current,
+        );
+        setDraft((draft) => ({
+          ...draft,
+          userIds: reconcileMembers(draft.userIds, before, next.userIds),
+        }));
+      },
+      () => {
+        if (applies()) setMemberSync("error");
+      },
+    );
+  };
+
   const edit = (patch: Partial<RoomDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
     setProblem(null);
@@ -259,7 +353,7 @@ export default function RoomSettingsDialog({
   };
 
   const save = () => {
-    if (form === null || readOnly || busy || !dirty) {
+    if (form === null || readOnly || busy || !dirty || memberSync !== "idle") {
       return;
     }
 
@@ -317,7 +411,18 @@ export default function RoomSettingsDialog({
     </Button>
   ) : (
     <>
-      {dirty ? (
+      {memberSync === "pending" ? (
+        <span className="room-form-dirty" role="status">
+          Updating members…
+        </span>
+      ) : memberSync === "error" ? (
+        <p className="picker-note picker-error room-form-load-error room-member-sync" role="alert">
+          <span>Couldn't update the member list.</span>
+          <Button variant="link" size="sm" onClick={reconcileMembership}>
+            Try again
+          </Button>
+        </p>
+      ) : dirty ? (
         <span className="room-form-dirty enter-fade" aria-live="polite">
           Unsaved changes
         </span>
@@ -329,7 +434,7 @@ export default function RoomSettingsDialog({
         type="submit"
         form={formId}
         variant="primary"
-        disabled={!dirty}
+        disabled={!dirty || memberSync !== "idle"}
         loading={busy}
         loadingLabel="Saving…"
       >
@@ -426,38 +531,41 @@ export default function RoomSettingsDialog({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+
+          // Enter in a GitHub or email control must not save the room around it.
+          const active = document.activeElement;
+
+          if (active instanceof HTMLElement && active.closest("[data-room-integration]") !== null) {
+            return;
+          }
+
           save();
         }}
       >
-        {/* The strip comes and goes with privacy; the panel stays put, so the focused toggle
-            in it isn't remounted (and doesn't lose focus) when the Members tab appears. */}
-        {members ? (
-          <Tabs
-            id={tabsId}
-            panelId={panelId}
-            items={[
-              { value: "general", label: "General", icon: "settings" },
-              { value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" },
-            ]}
-            value={shownTab}
-            onValueChange={(value) => setTab(value === "members" ? "members" : "general")}
-            label="Settings sections"
-          />
-        ) : null}
+        {/* The panel stays put when Members appears, so a focused privacy toggle isn't remounted. */}
+        <Tabs
+          id={tabsId}
+          panelId={panelId}
+          items={tabItems}
+          value={shownTab}
+          onValueChange={(value) => {
+            if (value === "members" || value === "github" || value === "email") {
+              setTab(value);
+            } else {
+              setTab("general");
+            }
+          }}
+          label="Settings sections"
+        />
         <div
           key={shownTab}
+          id={panelId}
+          role="tabpanel"
           className="room-tab-panel enter-fade"
-          {...(members
-            ? {
-                id: panelId,
-                role: "tabpanel",
-                "aria-labelledby": tabId(tabsId, shownTab),
-              }
-            : {})}
+          aria-labelledby={tabId(tabsId, shownTab)}
         >
-          {shownTab === "general" ? (
-            general
-          ) : (
+          {shownTab === "general" ? general : null}
+          {shownTab === "members" ? (
             <MemberList
               candidateIds={form.candidateIds}
               memberIds={draft.userIds}
@@ -468,7 +576,11 @@ export default function RoomSettingsDialog({
               agentIds={agentIds}
               readOnly={readOnly}
             />
-          )}
+          ) : null}
+          {shownTab === "github" ? (
+            <GithubSubscriptions roomId={roomId} onMembership={reconcileMembership} />
+          ) : null}
+          {shownTab === "email" ? <InboundEmailSection roomId={roomId} /> : null}
         </div>
         {problem === null ? null : (
           <p className="picker-note picker-error" role="alert">

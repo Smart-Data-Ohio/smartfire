@@ -150,6 +150,37 @@ export function updateBody(form: RoomForm, kind: ManagedKind, draft: RoomDraft):
   }
 }
 
+/**
+ * Membership after the server added or removed people (the GitHub bot, on subscribe and on the
+ * last unsubscribe). Local edits stay: someone the viewer added remains, someone they removed
+ * stays removed, and only the server's own delta is applied.
+ */
+export function reconcileMembers(
+  draftIds: readonly number[],
+  before: readonly number[],
+  after: readonly number[],
+): number[] {
+  const beforeIds = new Set(before);
+  const afterIds = new Set(after);
+  const removed = new Set<number>();
+
+  for (const id of before) {
+    if (!afterIds.has(id)) removed.add(id);
+  }
+
+  const next: number[] = [];
+
+  for (const id of draftIds) {
+    if (!removed.has(id) && !next.includes(id)) next.push(id);
+  }
+
+  for (const id of after) {
+    if (!beforeIds.has(id) && !next.includes(id)) next.push(id);
+  }
+
+  return next;
+}
+
 /** Whether `draft` differs from what `form` loaded with. */
 export function isDirty(form: RoomForm, kind: RoomKind, draft: RoomDraft): boolean {
   if (kind !== form.type) return true;
