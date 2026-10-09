@@ -203,6 +203,8 @@ jobs:
   # "Frontend e2e (i/n)". It runs when frontend/ or this workflow changes (a crates/api_types
   # change the SPA sees comes with its regenerated frontend/src/gen), on every push to main, and
   # when the PR diff can't be read. The browser is cached per Playwright version, saved from main.
+  # Six shards keep each one well inside the 15-minute timeout as the phone specs grow; at four,
+  # shards ran 12-15 minutes and the slowest were cancelled mid-run.
   e2e:
     name: Frontend e2e (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
@@ -212,7 +214,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ 1, 2, 3, 4 ]
+        shard: [ 1, 2, 3, 4, 5, 6 ]
     defaults:
       run:
         working-directory: frontend
