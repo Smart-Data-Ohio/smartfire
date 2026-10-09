@@ -16,4 +16,11 @@
   .popover:focus-visible {
     outline: none;
   }
+
+  /* As an action sheet (a touch phone): the popover's own inset, clear of the home indicator. */
+  .popover.action-sheet[popover] {
+    padding-inline: max(var(--space-3), var(--safe-left)) max(var(--space-3), var(--safe-right));
+    padding-bottom: calc(var(--space-3) + var(--safe-bottom));
+    font-size: var(--text-ui);
+  }
 }
