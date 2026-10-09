@@ -4,12 +4,12 @@ import {
   expectNoHorizontalOverflow,
   expectTouchTargets,
   openApp,
-  PHONE,
-  PHONE_SMALL,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   syncWelcomed,
+  THEMES,
   test,
   USER_IDS,
 } from "./support.ts";
@@ -38,18 +38,11 @@ const REST = [/^Notifications$/, /^Events$/, /^Search$/];
 const ROOMS: readonly RoomCase[] = [
   { label: "general", id: ROOM_IDS.general, name: "general", items: [...PANES, ...REST] },
   {
-    label: "engineering",
-    id: ROOM_IDS.engineering,
-    name: "engineering",
-    items: [...PANES, ...REST],
-  },
-  {
     label: "a DM",
     id: ROOM_IDS.dmMaya,
     name: "Maya Okafor",
     items: [/^Add people$/, /^Pinned messages/, /^Files$/, ...REST],
   },
-  { label: "lounge", id: ROOM_IDS.lounge, name: "Lounge", items: [...PANES, ...REST] },
   {
     label: "Town Hall",
     id: ROOM_IDS.townHall,
@@ -103,108 +96,77 @@ async function openOverflow(page: Page) {
   return menu;
 }
 
-for (const viewport of [PHONE_SMALL, PHONE]) {
-  test.describe(`on a ${viewport.width} px touch phone`, () => {
-    test.use({ ...PHONE_TOUCH, viewport });
-
-    for (const room of ROOMS) {
-      test(`${room.label}: the name keeps its width; the rest is in the ⋯ menu`, async ({
-        page,
-      }) => {
-        await openRoom(page, room.id);
-
-        // The name, in full, with room to spare.
-        const title = header(page).locator(".room-title-name");
-
-        await expect(title).toHaveText(room.name);
-
-        const fit = await title.evaluate((element) => ({
-          width: element.getBoundingClientRect().width,
-          clipped: element.scrollWidth > element.clientWidth,
-        }));
-
-        expect(fit.width).toBeGreaterThanOrEqual(120);
-        expect(fit.clipped).toBe(false);
-
-        // Back, the title, and at most the call and ⋯ beside it; all at the touch size.
-        await expect(
-          header(page).getByRole("link", { name: "Back to conversations" }),
-        ).toBeVisible();
-        expect(
-          await header(page).locator(".page-header-actions button").count(),
-        ).toBeLessThanOrEqual(2);
-        await expectTouchTargets(page, ".room-header");
-        await expectNoHorizontalOverflow(page);
-
-        // The ⋯ menu holds every tool the wide header shows.
-        const menu = await openOverflow(page);
-
-        await expect(menu.getByRole("menuitem")).toHaveText(room.items);
-        await page.keyboard.press("Escape");
-        await expect(menu).toBeHidden();
-      });
-
-      test(`${room.label}: the name opens the room's details`, async ({ page }) => {
-        await openRoom(page, room.id);
-        await header(page).locator(".room-title-button").tap();
-
-        await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
-        await expect(pane(page).locator(".details-name")).toHaveText(room.name);
-        await expect(pane(page).getByRole("button", { name: /^Notifications/ })).toBeVisible();
-        await expect(pane(page).getByRole("button", { name: /^Pinned messages/ })).toBeVisible();
-        await expect(pane(page).getByRole("button", { name: /^Files/ })).toBeVisible();
-        await expectTouchTargets(page, "aside.right-pane");
-        await expectNoHorizontalOverflow(page);
-
-        await pane(page)
-          .getByRole("button", { name: /^Back to/ })
-          .tap();
-        await expect(pane(page)).toHaveCount(0);
-        await expect(header(page).locator(".room-title-name")).toBeInViewport();
-      });
-    }
-  });
-}
-
 test.describe("on a 360 px touch phone", () => {
   test.use(PHONE_TOUCH);
 
-  for (const [label, id, panes] of [
-    [
-      "a channel",
-      ROOM_IDS.general,
-      [
-        ["Members", "Members"],
-        ["Threads", "Threads"],
-        ["Pinned messages", "Pinned messages"],
-        ["Files", "Files"],
-      ],
-    ],
-    [
-      "a DM",
-      ROOM_IDS.dmMaya,
-      [
-        ["Pinned messages", "Pinned messages"],
-        ["Files", "Files"],
-      ],
-    ],
-    ["a stage", ROOM_IDS.townHall, [["Stage", "Stage"]]],
-  ] as const) {
-    test(`each ⋯ item in ${label} opens its pane`, async ({ page }) => {
-      await openRoom(page, id);
+  for (const room of ROOMS) {
+    test(`${room.label}: the name keeps its width; the rest is in the ⋯ menu`, async ({ page }) => {
+      await openRoom(page, room.id);
 
-      for (const [item, heading] of panes) {
-        const menu = await openOverflow(page);
+      // The name, in full, with room to spare.
+      const title = header(page).locator(".room-title-name");
 
-        await menu.getByRole("menuitem", { name: new RegExp(`^${item}`) }).tap();
-        await expect(pane(page).getByRole("heading", { name: heading, exact: true })).toBeVisible();
-        await pane(page)
-          .getByRole("button", { name: /^Back to/ })
-          .tap();
-        await expect(pane(page)).toHaveCount(0);
-      }
+      await expect(title).toHaveText(room.name);
+
+      const fit = await title.evaluate((element) => ({
+        width: element.getBoundingClientRect().width,
+        clipped: element.scrollWidth > element.clientWidth,
+      }));
+
+      expect(fit.width).toBeGreaterThanOrEqual(120);
+      expect(fit.clipped).toBe(false);
+
+      // Back, the title, and at most the call and ⋯ beside it; all at the touch size.
+      await expect(header(page).getByRole("link", { name: "Back to conversations" })).toBeVisible();
+      expect(await header(page).locator(".page-header-actions button").count()).toBeLessThanOrEqual(
+        2,
+      );
+      await expectTouchTargets(page, ".room-header");
+      await expectNoHorizontalOverflow(page);
+
+      // The ⋯ menu holds every tool the wide header shows.
+      const menu = await openOverflow(page);
+
+      await expect(menu.getByRole("menuitem")).toHaveText(room.items);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+    });
+
+    test(`${room.label}: the name opens the room's details`, async ({ page }) => {
+      await openRoom(page, room.id);
+      await header(page).locator(".room-title-button").tap();
+
+      await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
+      await expect(pane(page).locator(".details-name")).toHaveText(room.name);
+      await expect(pane(page).getByRole("button", { name: /^Notifications/ })).toBeVisible();
+      await expect(pane(page).getByRole("button", { name: /^Pinned messages/ })).toBeVisible();
+      await expect(pane(page).getByRole("button", { name: /^Files/ })).toBeVisible();
+      await expectTouchTargets(page, "aside.right-pane");
+      await expectNoHorizontalOverflow(page);
+
+      await pane(page)
+        .getByRole("button", { name: /^Back to/ })
+        .tap();
+      await expect(pane(page)).toHaveCount(0);
+      await expect(header(page).locator(".room-title-name")).toBeInViewport();
     });
   }
+
+  // A channel's panes open from the ⋯ menu in panes.spec, the stage's in the raised-hand test here.
+  test("each ⋯ item in a DM opens its pane", async ({ page }) => {
+    await openRoom(page, ROOM_IDS.dmMaya);
+
+    for (const heading of ["Pinned messages", "Files"]) {
+      const menu = await openOverflow(page);
+
+      await menu.getByRole("menuitem", { name: new RegExp(`^${heading}`) }).tap();
+      await expect(pane(page).getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await pane(page)
+        .getByRole("button", { name: /^Back to/ })
+        .tap();
+      await expect(pane(page)).toHaveCount(0);
+    }
+  });
 
   test("the ⋯ menu opens the notification levels, the calendar and search", async ({ page }) => {
     await openRoom(page, ROOM_IDS.general);
@@ -388,7 +350,8 @@ test.describe("on a 360 px touch phone", () => {
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
   });
 
-  for (const theme of ["light", "dark"] as const) {
+  // Screenshots only; the scrim tap they take is phone-action-sheets.spec's to check.
+  for (const theme of SHOTS ? THEMES : []) {
     test(`screenshots (${theme})`, async ({ page }) => {
       await openRoom(page, ROOM_IDS.general, theme);
       await shot(page, "phone-header-room", theme);

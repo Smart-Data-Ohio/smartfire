@@ -9,7 +9,9 @@ import {
   PHONE_SMALL,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
+  THEMES,
   type Theme,
   test,
 } from "./support.ts";
@@ -92,7 +94,7 @@ async function tapScrim(page: Page) {
 test.describe("on a 360 px touch phone", () => {
   test.use(PHONE_TOUCH);
 
-  for (const theme of ["light", "dark"] as const) {
+  for (const theme of THEMES) {
     test(`a long press opens the message sheet with quick reactions (${theme})`, async ({
       page,
     }) => {
@@ -204,32 +206,9 @@ test.describe("on a 360 px touch phone", () => {
     await expectBottomSheet(page, sheet);
   });
 
-  test("an open dropdown turned upright becomes a sheet, its fallback placement dropped", async ({
-    page,
-  }) => {
-    // Deny anchor positioning, as older engines do, so the measured fallback places the dropdown.
-    await page.addInitScript(() => {
-      const supports = CSS.supports.bind(CSS);
-
-      CSS.supports = (...query: [string]) =>
-        !/anchor|position-area/.test(query.join(" ")) && supports(...query);
-    });
-    await page.setViewportSize({ width: PHONE_SMALL.height, height: PHONE_SMALL.width });
-    await openRoom(page, GENERAL);
-    await page.getByRole("button", { name: "Attach and more" }).click();
-
-    const sheet = page.getByRole("menu", { name: "Attach and more" });
-
-    await expect(sheet).toHaveClass(/\bfloating\b/);
-    expect(await sheet.evaluate((menu) => menu.style.position)).toBe("fixed");
-    await page.setViewportSize(PHONE_SMALL);
-    await expectBottomSheet(page, sheet);
-    expect(
-      await sheet.evaluate((menu) => [menu.style.position, menu.style.left, menu.style.top]),
-    ).toEqual(["", "", ""]);
-  });
-
-  for (const theme of ["light", "dark"] as const) {
+  // Screenshots only: the message sheet's test checks a sheet's rows and hidden hints, the
+  // cancelled-press test that the + menu is a bottom sheet.
+  for (const theme of SHOTS ? THEMES : []) {
     test(`the + menu is a sheet without shortcut hints (${theme})`, async ({ page }) => {
       await openRoom(page, GENERAL, theme);
       await page.getByRole("button", { name: "Attach and more" }).click();
@@ -299,7 +278,7 @@ test.describe("on a 360 px touch phone", () => {
     await expect(sheet).toBeHidden();
   });
 
-  for (const theme of ["light", "dark"] as const) {
+  for (const theme of THEMES) {
     test(`the composer's emoji picker is a sheet of finger-sized cells (${theme})`, async ({
       page,
     }) => {

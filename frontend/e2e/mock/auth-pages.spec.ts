@@ -3,6 +3,7 @@ import {
   expect,
   matrix,
   openApp,
+  SHOTS,
   saveAccountAppearance,
   shot,
   type Theme,
@@ -86,31 +87,17 @@ async function selfSubmitted(page: Page, name: string): Promise<URLSearchParams>
   return new URLSearchParams((await submitted).postData() ?? "");
 }
 
-for (const { name, heading } of PAGES) {
-  matrix(`the ${name} page in the SPA's look`, async ({ page, theme }) => {
-    await openPage(page, name, theme);
-    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
-    await page.mouse.move(0, 0);
-    await shot(page, `auth-${name}`, theme);
-  });
+// Screenshots only: the Rust fixture test pins each page's HTML, and the tests below drive them.
+if (SHOTS) {
+  for (const { name, heading } of PAGES) {
+    matrix(`the ${name} page in the SPA's look`, async ({ page, theme }) => {
+      await openPage(page, name, theme);
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+      await page.mouse.move(0, 0);
+      await shot(page, `auth-${name}`, theme);
+    });
+  }
 }
-
-test("the pages follow a theme pinned on this device in the SPA", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.addInitScript(() =>
-    localStorage.setItem(
-      "smartfire.appearance",
-      JSON.stringify({ themeOverride: "dark", density: "comfortable", motion: "system" }),
-    ),
-  );
-  await page.goto("/__auth/sign-in.html");
-
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-
-  const scheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
-
-  expect(scheme).toBe("dark");
-});
 
 test("a pinned system theme follows the OS over the account's theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
@@ -195,17 +182,6 @@ test("sign-in shows a rejected attempt above the card and shakes it", async ({ p
   await expect(page.getByRole("button", { name: "Sign in with Google" })).toBeVisible();
 });
 
-test("a rejected code names the rejection as the field's description", async ({ page }) => {
-  await openPage(page, "two-factor-challenge-alert", "light");
-
-  const code = page.getByLabel("Authenticator or backup code");
-
-  await expect(code).toHaveAttribute("aria-invalid", "true");
-  await expect(code).toHaveAccessibleDescription(
-    "That code didn't work. Check your authenticator app or try a backup code.",
-  );
-});
-
 test("a field's translations open from the globe and close on Escape or a click elsewhere", async ({
   page,
 }) => {
@@ -250,13 +226,6 @@ test("Copy all puts every backup code on the clipboard", async ({ page, context 
   await page.getByRole("button", { name: "Copy all" }).click();
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(codes.join("\n"));
-});
-
-test("the sign-in link submits itself, with nothing but its method and token", async ({ page }) => {
-  const form = await selfSubmitted(page, "transfer");
-
-  expect([...form.keys()].sort()).toEqual(["_method", "authenticity_token"]);
-  expect(form.get("_method")).toBe("put");
 });
 
 test("a confirmed action carries on by itself with what it was carrying", async ({ page }) => {

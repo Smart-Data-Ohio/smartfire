@@ -229,7 +229,14 @@ export function syncWelcomed(page: Page): Promise<void> {
   });
 }
 
-const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
+/** `SMARTFIRE_SHOTS=1`: the specs also write screenshots, in every theme and size they cover. */
+export const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
+
+/**
+ * The themes a per-theme test runs in. Only screenshots differ between them, so a plain run uses
+ * the light theme alone; `SMARTFIRE_SHOTS=1` runs both to capture both.
+ */
+export const THEMES: readonly Theme[] = SHOTS ? ["light", "dark"] : ["light"];
 
 const SHOTS_DIR = process.env.SMARTFIRE_SHOTS_DIR ?? join(homedir(), ".cache/frontend-s2/shots");
 
@@ -248,21 +255,33 @@ export async function shot(page: Page, name: string, theme: Theme): Promise<void
   await page.screenshot({ path: join(SHOTS_DIR, `${name}-${theme}-${size}.png`) });
 }
 
-/** Runs `body` once per theme and viewport: four combinations, each its own test. */
+const MATRIX = [
+  ["light", "desktop"],
+  ["light", "phone"],
+  ["dark", "desktop"],
+  ["dark", "phone"],
+] as const satisfies readonly (readonly [Theme, "desktop" | "phone"])[];
+
+/**
+ * Runs `body` on a desktop in the light theme and on a phone in the dark one, each its own test, so
+ * both layouts and both themes are exercised. `SMARTFIRE_SHOTS=1` runs all four combinations, for
+ * a screenshot of each; the behaviour checked doesn't depend on the theme.
+ */
 export function matrix(
   title: string,
   body: (context: { page: Page; theme: Theme; phone: boolean }) => Promise<void>,
 ): void {
-  for (const theme of ["light", "dark"] as const) {
-    for (const [label, viewport] of [
-      ["desktop", DESKTOP],
-      ["phone", PHONE],
-    ] as const) {
-      test(`${title} (${theme}, ${label})`, async ({ page }) => {
-        await page.setViewportSize(viewport);
-        await body({ page, theme, phone: viewport === PHONE });
-      });
-    }
+  const combinations = SHOTS
+    ? MATRIX
+    : MATRIX.filter(([theme, size]) => (theme === "light") === (size === "desktop"));
+
+  for (const [theme, label] of combinations) {
+    const viewport = label === "phone" ? PHONE : DESKTOP;
+
+    test(`${title} (${theme}, ${label})`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await body({ page, theme, phone: viewport === PHONE });
+    });
   }
 }
 

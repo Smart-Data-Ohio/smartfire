@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { AGENT_IDS } from "../../mock/s4/agents.ts";
-import { expect, matrix, openApp, openHeaderTool, ROOM_IDS, shot, test } from "./support.ts";
+import { expect, matrix, openApp, openHeaderTool, ROOM_IDS, SHOTS, shot, test } from "./support.ts";
 
 const { ember: EMBER, scout: SCOUT, quill: QUILL } = AGENT_IDS;
 
@@ -56,28 +56,36 @@ async function openRoom(page: Page, roomId: number, theme: "light" | "dark") {
 
 // --- directory ---
 
-matrix("the agent directory", async ({ page, theme }) => {
-  await openApp(page, "agents", theme);
-  await directoryReady(page);
-  await expect(rows(page)).toHaveCount(5);
-  // Active agents first; the suspended one sorts last and says so.
-  await expect(rows(page).last()).toContainText("Quill");
-  await expect(rows(page).last()).toContainText("Suspended");
-  await shot(page, "agents-directory", theme);
+// Screenshots only: agents.test.tsx covers the filters, and the tests below the rows.
+if (SHOTS) {
+  matrix("the agent directory", async ({ page, theme }) => {
+    await openApp(page, "agents", theme);
+    await directoryReady(page);
+    await expect(rows(page)).toHaveCount(5);
+    // Active agents first; the suspended one sorts last and says so.
+    await expect(rows(page).last()).toContainText("Quill");
+    await expect(rows(page).last()).toContainText("Suspended");
+    await shot(page, "agents-directory", theme);
 
-  await page.getByRole("tab", { name: "Personal" }).click();
-  await expect(rows(page)).toHaveCount(2);
-  await shot(page, "agents-directory-personal", theme);
+    await page.getByRole("tab", { name: "Personal" }).click();
+    await expect(rows(page)).toHaveCount(2);
+    await shot(page, "agents-directory-personal", theme);
 
-  await page.getByRole("tab", { name: "All" }).click();
-  await page.getByRole("searchbox", { name: "Find an agent or owner" }).fill("zzz");
-  await expect(page.getByText(/No agents match/)).toBeVisible();
-  await shot(page, "agents-directory-nomatch", theme);
-});
+    await page.getByRole("tab", { name: "All" }).click();
+    await page.getByRole("searchbox", { name: "Find an agent or owner" }).fill("zzz");
+    await expect(page.getByText(/No agents match/)).toBeVisible();
+    await shot(page, "agents-directory-nomatch", theme);
+  });
+}
 
 test("the directory finds an agent by its owner, and opens its profile", async ({ page }) => {
   await openApp(page, "agents");
   await directoryReady(page);
+  await page.getByRole("tab", { name: "Personal" }).click();
+  await expect(rows(page)).toHaveCount(2);
+  await page.getByRole("tab", { name: "All" }).click();
+  await page.getByRole("searchbox", { name: "Find an agent or owner" }).fill("zzz");
+  await expect(page.getByText(/No agents match/)).toBeVisible();
   await page.getByRole("searchbox", { name: "Find an agent or owner" }).fill("theo");
   await expect(rows(page)).toHaveCount(1);
   await expect(rows(page).first()).toContainText("Scout");
@@ -110,20 +118,23 @@ test("the directory keeps up with agent.status", async ({ page, request }) => {
 
 // --- profile ---
 
-matrix("an agent's profile", async ({ page, theme }) => {
-  await openApp(page, `agents/${SCOUT}`, theme);
-  await expect(page.getByRole("heading", { level: 2, name: "Scout" })).toBeVisible();
-  await expect(page.getByText("Personal agent of Theo", { exact: false })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Capabilities" })).toBeVisible();
-  await expect(page.getByRole("meter").first()).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "agents-profile", theme);
+// Screenshots only: agents.test.tsx covers the profile and the suspended badge.
+if (SHOTS) {
+  matrix("an agent's profile", async ({ page, theme }) => {
+    await openApp(page, `agents/${SCOUT}`, theme);
+    await expect(page.getByRole("heading", { level: 2, name: "Scout" })).toBeVisible();
+    await expect(page.getByText("Personal agent of Theo", { exact: false })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Capabilities" })).toBeVisible();
+    await expect(page.getByRole("meter").first()).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "agents-profile", theme);
 
-  await openApp(page, `agents/${QUILL}`, theme);
-  await expect(page.getByRole("heading", { level: 2, name: "Quill" })).toBeVisible();
-  await expect(page.locator(".agent-hero")).toContainText("Suspended");
-  await shot(page, "agents-profile-suspended", theme);
-});
+    await openApp(page, `agents/${QUILL}`, theme);
+    await expect(page.getByRole("heading", { level: 2, name: "Quill" })).toBeVisible();
+    await expect(page.locator(".agent-hero")).toContainText("Suspended");
+    await shot(page, "agents-profile-suspended", theme);
+  });
+}
 
 test("an unknown agent says so and links back", async ({ page }) => {
   await openApp(page, "agents/999");
@@ -188,17 +199,20 @@ test("clicking an agent's name in a message opens its profile", async ({ page })
   await expect(page.getByRole("heading", { level: 2, name: "Ember" })).toBeVisible();
 });
 
-matrix("the agent badge in the members pane", async ({ page, theme }) => {
-  await openRoom(page, ROOM_IDS.general, theme);
-  await openHeaderTool(page, /^Members/);
+// Screenshots only: agents.test.tsx covers the badge.
+if (SHOTS) {
+  matrix("the agent badge in the members pane", async ({ page, theme }) => {
+    await openRoom(page, ROOM_IDS.general, theme);
+    await openHeaderTool(page, /^Members/);
 
-  const pane = page.locator("aside.right-pane");
-  const ember = pane.locator("li").filter({ hasText: "Ember" }).first();
+    const pane = page.locator("aside.right-pane");
+    const ember = pane.locator("li").filter({ hasText: "Ember" }).first();
 
-  await expect(ember.locator(".agent-badge")).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "agents-members", theme);
-});
+    await expect(ember.locator(".agent-badge")).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "agents-members", theme);
+  });
+}
 
 /** The page's request context, so a matrix body can call the controls. */
 function request(page: Page): APIRequestContext {
