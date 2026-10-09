@@ -14,8 +14,10 @@ import type {
   Me,
   MessageDTO,
   MessagePage,
+  OpenRoomPreview,
   PendingMessage,
   RoomDetail,
+  RoomState,
   Sidebar,
   SidebarRow,
   SyncEvent,
@@ -134,6 +136,15 @@ function withThreadTimeline(state: State, threadId: number, timeline: Timeline):
   return { ...state, threadTimelines: { ...state.threadTimelines, [threadId]: timeline } };
 }
 
+function roomView(
+  detail: RoomDetail | null,
+  status: RoomState["status"],
+  error: string | null,
+  preview: OpenRoomPreview | null,
+): RoomState {
+  return { detail, status, error, preview };
+}
+
 export function setRoomLoading(state: State, roomId: number): State {
   const room = state.rooms[roomId];
 
@@ -141,7 +152,7 @@ export function setRoomLoading(state: State, roomId: number): State {
     ...state,
     rooms: {
       ...state.rooms,
-      [roomId]: { detail: room?.detail ?? null, status: "loading", error: null },
+      [roomId]: roomView(room?.detail ?? null, "loading", null, null),
     },
   };
 }
@@ -151,7 +162,21 @@ export function setRoomError(state: State, roomId: number, error: string): State
 
   return {
     ...state,
-    rooms: { ...state.rooms, [roomId]: { detail: room?.detail ?? null, status: "error", error } },
+    rooms: {
+      ...state.rooms,
+      [roomId]: roomView(room?.detail ?? null, "error", error, null),
+    },
+  };
+}
+
+/** The viewer can join this open room. The conversation stays unloaded. */
+export function setRoomPreview(state: State, roomId: number, preview: OpenRoomPreview): State {
+  return {
+    ...state,
+    rooms: {
+      ...state.rooms,
+      [roomId]: roomView(null, "ready", null, preview),
+    },
   };
 }
 
@@ -162,7 +187,7 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
   return {
     ...state,
     users: mergeUserList(state.users, detail.users),
-    rooms: { ...state.rooms, [roomId]: { detail, status: "ready", error: null } },
+    rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
     timelines: {
       ...state.timelines,
       [roomId]:
@@ -834,6 +859,8 @@ function setDetailRow(state: State, row: SidebarRow): State {
       ...state.rooms,
       [row.room.id]: {
         ...loaded,
+        // The patch retired the read that had set loading; that read must not land later.
+        status: loaded.status === "loading" ? "ready" : loaded.status,
         detail: {
           ...loaded.detail,
           room: row.room,
@@ -854,7 +881,7 @@ export function setRoomUnavailable(state: State, roomId: number): State {
     ...next,
     rooms: {
       ...next.rooms,
-      [roomId]: { detail: null, status: "error", error: "This room is no longer available" },
+      [roomId]: roomView(null, "error", "This room is no longer available", null),
     },
   };
 }

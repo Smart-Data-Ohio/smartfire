@@ -109,15 +109,26 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn join(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let id = c.param_str("id").and_then(cast_integer);
-    let room = match id {
-        Some(id) => joinable_open_room(c, id).await?,
+    let joined = match id {
+        Some(id) => join_open_room(c, id).await?,
         None => None,
     };
-    let Some(room) = room else {
+    let Some((room, _)) = joined else {
         return inaccessible_room(c);
     };
+    redirect_to_room(c, room.id)
+}
+
+/// `Membership::join_open` plus the joiner's sidebar broadcasts. `None` when the room is not an
+/// alive open room. A membership that already exists is returned without broadcasting again.
+pub async fn join_open_room(
+    c: &Ctx,
+    room_id: i64,
+) -> Result<Option<(Room, campfire_db::Membership)>> {
+    let Some(room) = find_joinable_open_room(c, room_id).await? else {
+        return Ok(None);
+    };
     let user_id = require_current_user(c)?.id;
-    let room_id = room.id;
     let (membership, created) = c
         .app()
         .db
@@ -132,8 +143,18 @@ pub async fn join(c: &mut Ctx) -> Result {
             "shared_rooms",
             &partials.shared_room(&room),
         );
+        let broadcasts = c.app().broadcasts.clone();
+        let membership_id = membership.id;
+        c.app()
+            .db
+            .read(move |conn| {
+                broadcasts.joined_open_room(conn, membership_id);
+                Ok(())
+            })
+            .await
+            .map_err(db_error)?;
     }
-    redirect_to_room(c, room.id)
+    Ok(Some((room, membership)))
 }
 
 /// `destroy` (RoomsController and `Rooms::DirectsController`).
@@ -290,7 +311,7 @@ fn inaccessible_room<T>(c: &mut Ctx) -> Result<T> {
     halt(c.redirect_to_with(&root, redirect)?)
 }
 
-async fn joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
+pub async fn find_joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
     c.app()
         .db
         .read(move |conn| {
@@ -319,7 +340,7 @@ pub(super) async fn set_room_for_show(c: &mut Ctx, scope: Scope) -> Result<(Room
         if let Some(room) = room.filter(|room| scope.includes(room)) {
             return Ok((room, false));
         }
-        if let Some(room) = joinable_open_room(c, id).await? {
+        if let Some(room) = find_joinable_open_room(c, id).await? {
             return Ok((room, true));
         }
     }
