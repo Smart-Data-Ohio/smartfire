@@ -5,7 +5,7 @@
  */
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 
-type Listener = (events: readonly SyncEvent[]) => void;
+type Listener = (events: readonly SyncEvent[], liveAfter: number) => void;
 
 type ResyncListener = (topics: readonly string[]) => void;
 
@@ -22,10 +22,13 @@ export function onSyncEvents(listener: Listener): () => void {
   };
 }
 
-/** The engine's side: one applied batch. */
-export function emitSyncEvents(events: readonly SyncEvent[]): void {
+/** One applied batch. Events through `liveAfter` replayed from before the connection's welcome. */
+export function emitSyncEvents(
+  events: readonly SyncEvent[],
+  liveAfter = Number.NEGATIVE_INFINITY,
+): void {
   for (const listener of listeners) {
-    listener(events);
+    listener(events, liveAfter);
   }
 }
 

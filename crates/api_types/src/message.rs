@@ -26,6 +26,8 @@ pub struct MessageDTO {
     pub client_message_id: String,
     /// The rendered body from the server's sanitizer pipeline.
     pub body_html: String,
+    /// The classic built-in `/play` presentation; attachments take precedence.
+    pub sound: Option<MessageSound>,
     /// The Markdown the body was written in, for editing; `null` for rich-text-only bodies.
     pub markdown_source: Option<String>,
     /// A quiet timeline note: shown, but never unread or notified.
@@ -83,6 +85,29 @@ pub struct MessageDTO {
     /// Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
     /// replies (`touch`), so a later `updatedAt` always holds the newer copy.
     pub updated_at: Timestamp,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MessageSound {
+    pub name: String,
+    pub url: String,
+    pub presentation: SoundPresentation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+#[ts(export)]
+pub enum SoundPresentation {
+    Text {
+        text: String,
+    },
+    Image {
+        url: String,
+        width: u32,
+        height: u32,
+    },
 }
 
 /// The `message.removed` event: enough to drop the message from any cached page.

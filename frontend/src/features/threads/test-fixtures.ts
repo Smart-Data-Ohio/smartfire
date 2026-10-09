@@ -10,6 +10,7 @@ export function messageFixture(id: number, extra: Partial<MessageDTO> = {}): Mes
     threadId: null,
     creatorId: 2,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>Message ${id}</p>`,
     markdownSource: `Message ${id}`,
     systemNote: false,

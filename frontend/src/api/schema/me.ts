@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { ChatSounds as GeneratedChatSounds } from "../../gen/ChatSounds.ts";
 import type { DoNotDisturb as GeneratedDoNotDisturb } from "../../gen/DoNotDisturb.ts";
 import type { Me as GeneratedMe } from "../../gen/Me.ts";
 import type { OutOfOffice as GeneratedOutOfOffice } from "../../gen/OutOfOffice.ts";
@@ -56,6 +57,15 @@ export const QuietHours = Schema.Struct({
 
 export type QuietHoursPin = Assert<Pinned<typeof QuietHours, GeneratedQuietHours>>;
 
+export const ChatSounds = Schema.Struct({
+  muted: Schema.Boolean,
+  quietHours: Schema.NullOr(QuietHours),
+  timeZone: Schema.String,
+  quietWindows: Schema.Array(Schema.Tuple([Schema.Int, Schema.Int])),
+});
+
+export type ChatSoundsPin = Assert<Pinned<typeof ChatSounds, GeneratedChatSounds>>;
+
 export const OutOfOffice = Schema.Struct({
   until: Timestamp,
   note: Schema.NullOr(Schema.String),
@@ -72,6 +82,7 @@ export const Me = Schema.Struct({
   presenceSetting: PresenceSetting,
   doNotDisturb: DoNotDisturb,
   quietHours: Schema.NullOr(QuietHours),
+  chatSounds: ChatSounds,
   outOfOffice: Schema.NullOr(OutOfOffice),
   /** Where `/app/` opens: the last room visited, else the person's original room. */
   lastRoomId: Schema.NullOr(RoomId),

@@ -8,6 +8,7 @@ import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { AttachmentView } from "./attachments.tsx";
 import { BodyHtml } from "./body-html.tsx";
 import { plainText } from "./commands.ts";
+import { SoundMessage } from "./sound-message.tsx";
 
 /** How much of a quoted message the reply line shows before it trails off. */
 const QUOTE_CHARS = 140;
@@ -90,6 +91,10 @@ export function ReplyQuote({ message }: { readonly message: MessageDTO }) {
 }
 
 function Body({ message }: { readonly message: MessageDTO }) {
+  if (message.sound !== null) {
+    return <SoundMessage sound={message.sound} />;
+  }
+
   return <BodyHtml html={message.bodyHtml} className="message-body" />;
 }
 

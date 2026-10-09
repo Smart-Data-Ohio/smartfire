@@ -10,6 +10,7 @@ function message(id: number, creatorId: number, createdAt: string, systemNote = 
     threadId: null,
     creatorId,
     clientMessageId: `client-${id}`,
+    sound: null,
     bodyHtml: `<p>${id}</p>`,
     markdownSource: `${id}`,
     systemNote,

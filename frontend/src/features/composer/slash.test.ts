@@ -17,6 +17,7 @@ const COMMANDS = [
   command("shrug"),
   command("me", "<text>"),
   command("status", "<text>"),
+  command("play", "<sound>"),
 ];
 
 describe("slashName", () => {
@@ -36,6 +37,13 @@ describe("slashName", () => {
 });
 
 describe("routeSlash", () => {
+  it("dispatches /play to the existing sound-message slash handler", () => {
+    expect(routeSlash("/play bell", COMMANDS)).toEqual({
+      kind: "command",
+      command: COMMANDS[4],
+      text: "/play bell",
+    });
+  });
   it("runs a known command with the whole trimmed line", () => {
     expect(routeSlash("/remind in 5m stretch \n", COMMANDS)).toEqual({
       kind: "command",
@@ -66,6 +74,7 @@ describe("filterCommands", () => {
       "shrug",
       "me",
       "status",
+      "play",
     ]);
     expect(filterCommands(COMMANDS, "zz")).toEqual([]);
   });

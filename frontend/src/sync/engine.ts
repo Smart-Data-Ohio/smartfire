@@ -230,6 +230,8 @@ export class Engine extends Context.Service<
       const restored = yield* Ref.make((yield* cursor.get) !== null);
       /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+      /** Replayed messages update the store, but must not play sounds. */
+      const replayThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
       const activitySnapshotThrough = yield* Ref.make({
         generation: store.getState().activity.generation,
@@ -617,7 +619,7 @@ export class Engine extends Context.Service<
         const now = yield* Clock.currentTimeMillis;
 
         mutations.applyEvents(fresh, now);
-        emitSyncEvents(fresh);
+        emitSyncEvents(fresh, yield* Ref.get(replayThrough));
         const open = new Set(yield* topics.subscribed);
 
         const workIds = new Set(
@@ -665,6 +667,7 @@ export class Engine extends Context.Service<
       });
 
       const welcome = Effect.fnUntraced(function* (frame: Extract<ServerFrame, { t: "welcome" }>) {
+        yield* Ref.set(replayThrough, frame.seq);
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 

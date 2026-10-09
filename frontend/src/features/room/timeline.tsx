@@ -13,6 +13,7 @@ import { hasCards, useCardsChunkLoaded, useCardsChunkSettled } from "../cards/ca
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
+import { useChatSounds } from "../messages/use-chat-sounds.ts";
 import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { useFollowPosted } from "./follow-posted.ts";
@@ -108,6 +109,7 @@ interface TimelineProps {
  * messages keep it pinned to the bottom, and a pill offers the way back to the present.
  */
 export function Timeline({ roomId, focusMessageId }: TimelineProps) {
+  useChatSounds(roomId);
   const navigate = useNavigate();
   const timeline = useStore((state) => state.timelines[roomId] ?? emptyTimeline);
   const messages = useMessagesIn(timeline.ids);

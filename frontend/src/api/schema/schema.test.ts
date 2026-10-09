@@ -32,6 +32,7 @@ const messageJson = {
   threadId: null,
   creatorId: 7,
   clientMessageId: "4f1c7a0e-5b0e-4c55-9d0a-6f3b2d1e8c11",
+  sound: null,
   bodyHtml: "<p>Hello <strong>there</strong></p>",
   markdownSource: "Hello **there**",
   systemNote: false,
@@ -116,6 +117,7 @@ describe("DTO schemas", () => {
       presenceSetting: "dnd",
       doNotDisturb: { enabled: true, until: "2026-10-06T17:00:00.000Z" },
       quietHours: { startMinute: 1320, endMinute: 420 },
+      chatSounds: { muted: true, quietHours: null, timeZone: "UTC", quietWindows: [] },
       outOfOffice: null,
       lastRoomId: 12,
     };

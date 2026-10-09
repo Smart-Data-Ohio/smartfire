@@ -33,7 +33,7 @@ import { Outbox } from "./outbox.ts";
 import * as roomActions from "./room-actions.ts";
 import { invalidateRoom, markSidebarSnapshot, onRoomRefresh } from "./room-refresh.ts";
 import * as session from "./session.ts";
-import { onResync } from "./signals.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
 import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
@@ -702,6 +702,37 @@ describe("reconnecting", () => {
 });
 
 describe("resuming", () => {
+  it.effect("marks reconnect replay as historical for sound playback", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const observed: [number, number][] = [];
+
+        const stop = onSyncEvents((events, liveAfter) => {
+          observed.push(...events.map((event): [number, number] => [event.seq, liveAfter]));
+        });
+
+        try {
+          yield* serve([]);
+          yield* startEngine;
+          yield* welcome(10, false);
+          yield* pushEvents(unreadEvent(11));
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(13, true);
+          yield* pushEvents(unreadEvent(12), unreadEvent(13), unreadEvent(14));
+          expect(observed).toEqual([
+            [11, 10],
+            [12, 13],
+            [13, 13],
+            [14, 13],
+          ]);
+        } finally {
+          stop();
+        }
+      }),
+    ),
+  );
   it.effect("says hello with the cursor and applies a replayed event only once", () =>
     withSync(
       Effect.gen(function* () {
