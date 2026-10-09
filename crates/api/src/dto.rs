@@ -8,7 +8,8 @@ use campfire_app::app::AppState;
 use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{
     CachedStatements, Connection, Involvement, Membership, Message, MessagePin, Result, Role, Room,
-    RoomType, StageRole, Status, Timestamp, User, UserStatusSettings, WorkspacePresenceLease,
+    RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
+    WorkspacePresenceLease,
 };
 use campfire_web::controllers::presenters::{self, Presenter, accounts, room_shell};
 use rails_compat::Secrets;
@@ -845,6 +846,41 @@ fn mention_counts(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// Each direct room's newest root message that isn't a system note, by room: one statement,
+/// whose per-room subquery walks `index_messages_on_room_thread_created` back from the newest
+/// (SQLite's lateral join). The excerpt is the search index's body (the plain text
+/// `create_in_index` stores) with whitespace collapsed.
+fn last_direct_messages(
+    conn: &Connection,
+    room_ids: &[i64],
+) -> Result<HashMap<i64, api::SidebarLastMessage>> {
+    let rows = ids_query(
+        conn,
+        r#"SELECT "messages"."room_id", "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."id" IN (SELECT (SELECT "newest"."id" FROM "messages" AS "newest" WHERE "newest"."room_id" = "rooms"."id" AND "newest"."thread_id" IS NULL AND NOT "newest"."system_note" ORDER BY "newest"."created_at" DESC, "newest"."id" DESC LIMIT 1) FROM "rooms" WHERE "rooms"."id" IN ({}))"#,
+        room_ids,
+        |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Timestamp>(3)?,
+            ))
+        },
+    )?;
+    Ok(rows
+        .into_iter()
+        .map(|(room_id, creator_id, body, created_at)| {
+            let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
+            let last = api::SidebarLastMessage {
+                creator_id,
+                excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
+                created_at: time(created_at),
+            };
+            (room_id, last)
+        })
+        .collect())
+}
+
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
 fn visible(room: &Room, membership: &Membership) -> bool {
     !room.deleted()
@@ -860,6 +896,7 @@ fn sidebar_row_with(
     viewer_name: &str,
     members: Option<&[(i64, String)]>,
     mention_count: i64,
+    last_message: Option<api::SidebarLastMessage>,
 ) -> Result<api::SidebarRow> {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -880,13 +917,15 @@ fn sidebar_row_with(
         direct_member_ids,
         unread_count,
         mention_count,
+        last_message,
         refresh_room: None,
     })
 }
 
-/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar.
+/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar. Read
+/// from one snapshot, as the membership must be: its direct preview is only what it could see.
 pub fn sidebar_row(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
 ) -> Result<Option<api::SidebarRow>> {
@@ -897,9 +936,9 @@ pub fn sidebar_row(
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
-/// answer to an organising call on a hidden room.
+/// answer to an organising call on a hidden room. From one snapshot, as [`sidebar_row`] is.
 pub fn membership_row(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
 ) -> Result<api::SidebarRow> {
@@ -913,6 +952,11 @@ pub fn membership_row(
         .get(&room.id)
         .copied()
         .unwrap_or(0);
+    let last_message = if room.direct() {
+        last_direct_messages(conn, &[room.id])?.remove(&room.id)
+    } else {
+        None
+    };
     sidebar_row_with(
         conn,
         room,
@@ -920,18 +964,29 @@ pub fn membership_row(
         &viewer.name,
         members.as_deref(),
         mentions,
+        last_message,
     )
 }
 
+/// The person's whole sidebar, from one snapshot: the memberships it lists and the direct
+/// previews it shows are read together, so a preview is never newer than the membership.
 pub fn sidebar(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     secrets: &Secrets,
     viewer: &User,
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let mentions = mention_counts(conn, viewer.id, None)?;
+    let direct_ids: Vec<i64> = all
+        .iter()
+        .filter(|(_, room)| room.direct())
+        .map(|(_, room)| room.id)
+        .collect();
+    let mut last_messages = last_direct_messages(conn, &direct_ids)?;
     let mut user_ids = BTreeSet::new();
     let mut rows = Vec::with_capacity(all.len());
     for (membership, room) in &all {
@@ -947,6 +1002,7 @@ pub fn sidebar(
             &viewer.name,
             members.as_deref(),
             mentions.get(&room.id).copied().unwrap_or(0),
+            last_messages.remove(&room.id),
         )?;
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);

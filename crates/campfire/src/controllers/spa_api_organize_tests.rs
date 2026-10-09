@@ -52,6 +52,21 @@ fn fields(reply: &Reply) -> Vec<String> {
     fields.into_keys().collect()
 }
 
+/// Both events, in either order: the row is read later, so it may go out before or after the
+/// `room.read` the write sends at once.
+async fn both(
+    sync: &mut Sync,
+    first: impl Fn(&api::SyncEvent) -> bool,
+    second: impl Fn(&api::SyncEvent) -> bool,
+) {
+    let event = sync.until(|e| first(e) || second(e), |_| false).await;
+    if first(&event) {
+        sync.until(second, |_| false).await;
+    } else {
+        sync.until(first, |_| false).await;
+    }
+}
+
 fn row_of(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
     move |event| matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == room_id)
 }
@@ -468,14 +483,10 @@ async fn involvement_answers_the_membership_and_mutes_read() {
     .await);
     assert_eq!(muted.involvement, api::Involvement::Muted);
     assert_eq!(muted.unread_at, None);
-    sync.until(
+    both(
+        &mut sync,
         |e| matches!(&e.payload, api::SyncPayload::RoomRead(r) if r.room_id == ALL_TALK),
-        |_| false,
-    )
-    .await;
-    sync.until(
         |e| matches!(&e.payload, api::SyncPayload::SidebarRowUpserted(r) if r.room.id == ALL_TALK && r.membership.involvement == api::Involvement::Muted),
-        |_| false,
     )
     .await;
 
@@ -1012,7 +1023,6 @@ async fn a_mute_sends_room_read_only_when_its_write_cleared_unread() {
     set_unread(false).await.unwrap();
     let muted: api::Membership = ok(&mute_while_unread_changes(&a, &mut david, true).await);
     assert_eq!(muted.unread_at, None);
-    sync.until(room_read, |_| false).await;
-    sync.until(muted_row, |_| false).await;
+    both(&mut sync, room_read, muted_row).await;
     server.abort();
 }

@@ -341,14 +341,51 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return first === undefined ? null : { firstUnreadMessageId: first.id, count: unread.length };
   };
 
-  const sidebarRow = (record: RoomRecord): SidebarRow => ({
-    room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
-    membership: record.membership,
-    displayName: displayName(record),
-    directMemberIds: directMemberIds(record),
-    unreadCount: unreadMessages(record).length,
-    mentionCount: record.mentionCount,
-  });
+  /** A direct room's newest root message as its row previews it (`last_direct_message`). */
+  const lastMessage = (record: RoomRecord): SidebarRow["lastMessage"] => {
+    const last = record.messages.findLast(
+      (message) => message.threadId === null && !message.systemNote,
+    );
+
+    if (record.room.kind !== "direct" || last === undefined) return undefined;
+
+    const text = last.bodyHtml
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const plain = text === "" ? (last.attachment?.filename ?? "") : text;
+
+    return {
+      creatorId: last.creatorId,
+      excerpt: plain.length > 140 ? `${plain.slice(0, 139)}…` : plain,
+      createdAt: last.createdAt,
+    };
+  };
+
+  const sidebarRow = (record: RoomRecord): SidebarRow => {
+    const row: SidebarRow = {
+      room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
+      membership: record.membership,
+      displayName: displayName(record),
+      directMemberIds: directMemberIds(record),
+      unreadCount: unreadMessages(record).length,
+      mentionCount: record.mentionCount,
+    };
+
+    const last = lastMessage(record);
+
+    if (last !== undefined) {
+      row.lastMessage = last;
+    }
+
+    return row;
+  };
 
   const visibleRooms = (): RoomRecord[] =>
     [...world.rooms.values()]

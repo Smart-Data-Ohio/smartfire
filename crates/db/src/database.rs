@@ -1038,6 +1038,61 @@ impl Database {
     pub fn read_blocking<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
         self.readers.with(f)
     }
+
+    /// [`Database::read`] inside one read transaction: everything `f` reads comes from one
+    /// SQLite snapshot (see [`Snapshot`]).
+    pub async fn read_snapshot<T, F>(&self, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&Snapshot<'_>) -> Result<T> + Send + 'static,
+    {
+        self.read(move |conn| f(&Snapshot::begin(conn)?)).await
+    }
+}
+
+/// A connection inside one transaction, so every read through it comes from one SQLite snapshot
+/// (WAL mode takes it at the transaction's first read): nothing read through it can see a commit
+/// that something read earlier predates. The pooled readers otherwise commit each statement on
+/// its own, so a membership read by one statement could let the next see a message posted after
+/// it was revoked. Whatever must be read consistently (who may see something, then what they
+/// see) takes a `&Snapshot` rather than a `&Connection`.
+pub struct Snapshot<'c> {
+    conn: &'c Connection,
+    /// The read transaction this snapshot opened, rolled back (it wrote nothing) when dropped;
+    /// `None` inside a write transaction, which already reads one state.
+    _read: Option<rusqlite::Transaction<'c>>,
+}
+
+impl<'c> Snapshot<'c> {
+    /// Opens a read transaction (`BEGIN DEFERRED`) on `conn`, which must not be in one already.
+    /// Read through the snapshot only from here on: what `conn` read before isn't part of it.
+    pub fn begin(conn: &'c Connection) -> Result<Self> {
+        Ok(Self {
+            conn,
+            _read: Some(conn.unchecked_transaction()?),
+        })
+    }
+
+    /// The write's own state, while it is in its transaction; a fresh read transaction on the
+    /// writer while after-commit work runs outside it.
+    pub fn of_write(tx: &Tx<'c>) -> Result<Self> {
+        if tx.in_transaction {
+            Ok(Self {
+                conn: tx.conn,
+                _read: None,
+            })
+        } else {
+            Self::begin(tx.conn)
+        }
+    }
+}
+
+impl std::ops::Deref for Snapshot<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Connection {
+        self.conn
+    }
 }
 
 /// Prepared statements each connection keeps.

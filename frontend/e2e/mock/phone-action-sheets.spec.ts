@@ -5,6 +5,7 @@ import {
   expect,
   expectNoHorizontalOverflow,
   expectTouchTargets,
+  longPress,
   PHONE_SMALL,
   PHONE_TOUCH,
   ROOM_IDS,
@@ -33,40 +34,6 @@ async function openRoom(page: Page, path: string, theme: Theme = "light") {
 
 function messageBody(page: Page): Locator {
   return page.locator(`[data-message-id="${TARGET}"] .message-body`).first();
-}
-
-/**
- * Holds a finger on `target` for 600 ms. Synthetic touch PointerEvents, because a press held
- * through CDP's touch input never reaches the row's long-press timer in Chromium.
- */
-async function longPress(target: Locator) {
-  const box = await target.boundingBox();
-
-  if (box === null) {
-    throw new Error("the long-press target isn't on screen");
-  }
-
-  await target.evaluate(
-    async (element, point) => {
-      const init = {
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-        pointerId: 11,
-        pointerType: "touch",
-        isPrimary: true,
-        clientX: point.x,
-        clientY: point.y,
-        button: 0,
-        buttons: 1,
-      };
-
-      element.dispatchEvent(new PointerEvent("pointerdown", init));
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      element.dispatchEvent(new PointerEvent("pointerup", { ...init, buttons: 0 }));
-    },
-    { x: box.x + Math.min(24, box.width / 2), y: box.y + box.height / 2 },
-  );
 }
 
 /** Asserts `sheet` is an action sheet: on the bottom edge, the viewport's full width. */

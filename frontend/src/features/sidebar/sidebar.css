@@ -438,6 +438,17 @@
     opacity: 0.8;
   }
 
+  /* A direct row's preview wrappers: dissolved here, two lines on phones (below). */
+  .sidebar-row-text,
+  .sidebar-row-line {
+    display: contents;
+  }
+
+  .sidebar-row-time,
+  .sidebar-row-preview {
+    display: none;
+  }
+
   .sidebar-empty {
     padding: var(--space-1) var(--space-2);
     font-size: var(--text-sidebar);
@@ -542,15 +553,89 @@
 }
 
 @layer app {
-  /* Phones: the list is the home screen, so rows get thumb-sized. */
+  /*
+   * Phones: the list is the home screen, so everything in it is thumb-sized: rows, section
+   * headings and their buttons, the header's and Jump. Your own panel moves to the tab bar's You.
+   */
   @media (width < 720px) {
     .sidebar-row {
-      height: 40px;
+      height: var(--touch-target);
       font-size: var(--text-body);
     }
 
+    .sidebar-section + .sidebar-section {
+      margin-top: var(--space-1);
+    }
+
     .sidebar-section-trigger {
-      height: 32px;
+      height: var(--touch-target);
+    }
+
+    .sidebar-section-action {
+      --button-height: var(--touch-target);
+    }
+
+    .sidebar-header {
+      --control-sm: var(--touch-target);
+      --control-md: var(--touch-target);
+
+      padding-inline: var(--space-1);
+    }
+
+    .sidebar-header[data-banner] {
+      padding-top: calc((var(--pane-header-height) - var(--touch-target)) / 2);
+    }
+
+    .sidebar-jump {
+      --button-height: var(--touch-target);
+    }
+
+    .sidebar-you {
+      display: none;
+    }
+
+    /* The DMs tab: the name and the newest message's time over a line of that message. */
+    .sidebar-row[data-preview] {
+      height: auto;
+      min-height: 60px;
+      padding-block: var(--space-2);
+    }
+
+    .sidebar-row-text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .sidebar-row-line {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-2);
+    }
+
+    .sidebar-row-time {
+      display: block;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      font-size: var(--text-meta);
+      font-weight: var(--weight-regular);
+    }
+
+    .sidebar-row-preview {
+      display: block;
+      overflow: hidden;
+      color: var(--text-muted);
+      font-size: var(--text-meta);
+      font-weight: var(--weight-regular);
+      line-height: var(--leading-meta);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sidebar-row[data-state="unread"] .sidebar-row-preview {
+      color: var(--text);
     }
   }
 }
@@ -603,7 +688,7 @@
 
   @media (width < 720px) {
     .sidebar-row-more {
-      top: 20px;
+      top: calc(var(--touch-target) / 2);
     }
   }
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::{Membership, Room, User};
+use crate::{Membership, Room, Timestamp, User};
 
 /// `GET /api/v1/sidebar`: every room in the viewer's sidebar (`users/sidebars#show`), one row
 /// per visible membership, plus what the rows refer to.
@@ -58,10 +58,26 @@ pub struct SidebarRow {
     /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`); drives the numeric
     /// pill.
     pub mention_count: i64,
+    /// Direct messages only: the newest root message, for the phone list's preview line. Absent
+    /// for every other kind and for a direct room with no messages yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub last_message: Option<SidebarLastMessage>,
     /// Management changed the room's metadata or membership; reload a loaded room's detail.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub refresh_room: Option<bool>,
+}
+
+/// A direct room's newest root message (system notes aside), as its sidebar row previews it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct SidebarLastMessage {
+    pub creator_id: i64,
+    /// The message's plain text (its search-index body), cut to 140 characters.
+    pub excerpt: String,
+    pub created_at: Timestamp,
 }
 
 /// `room_categories`: a person's own sidebar section.

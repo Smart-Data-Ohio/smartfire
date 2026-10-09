@@ -95,11 +95,19 @@ impl SyncRenderer for Renderer {
 
     fn sidebar_row(
         &self,
-        conn: &Connection,
+        conn: &campfire_db::Snapshot<'_>,
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {
-        dto::sidebar_row(conn, room, membership)
+        let row = dto::sidebar_row(conn, room, membership);
+        #[cfg(feature = "test-support")]
+        if let Some(app) = self.app.upgrade() {
+            crate::test_hooks::after_sidebar_snapshot(app.db.path(), room.id);
+            if crate::test_hooks::read_after_sidebar_snapshot(app.db.path(), room.id) {
+                campfire_app::cable::sync::room_read(&app.cable, membership.user_id, room.id);
+            }
+        }
+        row
     }
 
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
@@ -281,9 +289,38 @@ impl SyncRenderer for Renderer {
         });
     }
 
+    fn defer_unread(&self, job: twins::UnreadJob) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        #[cfg(feature = "test-support")]
+        let deferred = self.deferred.start();
+        // A blocking thread, not a reader: the job may wait on a lock before it reads.
+        self.runtime.spawn_blocking(move || {
+            #[cfg(feature = "test-support")]
+            let _deferred = deferred;
+            job(&PooledReader(&app.db));
+        });
+    }
+
     #[cfg(feature = "test-support")]
     fn settle(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
         Box::pin(self.deferred.settle())
+    }
+}
+
+/// A reader from the app's pool, borrowed for one `read` at a time.
+struct PooledReader<'a>(&'a campfire_db::Database);
+
+impl twins::Reader for PooledReader<'_> {
+    fn read(&self, read: &mut dyn FnMut(&Connection)) {
+        let result = self.0.read_blocking(|conn| {
+            read(conn);
+            Ok(())
+        });
+        if let Err(error) = result {
+            tracing::warn!(%error, "sync: deferred twin not read");
+        }
     }
 }
 

@@ -378,6 +378,80 @@ export async function expectTouchTargets(
 }
 
 /**
+ * Holds a finger on `target` for 600 ms. Synthetic touch PointerEvents, because a press held
+ * through CDP's touch input never reaches the row's long-press timer in Chromium.
+ */
+export async function longPress(target: Locator): Promise<void> {
+  const box = await target.boundingBox();
+
+  if (box === null) {
+    throw new Error("the long-press target isn't on screen");
+  }
+
+  await target.evaluate(
+    async (element, point) => {
+      const init = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        pointerId: 11,
+        pointerType: "touch",
+        isPrimary: true,
+        clientX: point.x,
+        clientY: point.y,
+        button: 0,
+        buttons: 1,
+      };
+
+      element.dispatchEvent(new PointerEvent("pointerdown", init));
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      element.dispatchEvent(new PointerEvent("pointerup", { ...init, buttons: 0 }));
+    },
+    { x: box.x + Math.min(24, box.width / 2), y: box.y + box.height / 2 },
+  );
+}
+
+/**
+ * Drags a finger `distance` px left across `target` in small steps and lifts it: a row's swipe
+ * action. Synthetic touch PointerEvents, as for `longPress`.
+ */
+export async function swipeLeft(target: Locator, distance = 200): Promise<void> {
+  const box = await target.boundingBox();
+
+  if (box === null) {
+    throw new Error("the swipe target isn't on screen");
+  }
+
+  await target.evaluate(
+    async (element, { x, y, distance }) => {
+      const init = {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        pointerId: 12,
+        pointerType: "touch",
+        isPrimary: true,
+        clientY: y,
+        button: 0,
+        buttons: 1,
+      };
+
+      element.dispatchEvent(new PointerEvent("pointerdown", { ...init, clientX: x }));
+
+      for (let moved = 10; moved <= distance; moved += 10) {
+        element.dispatchEvent(new PointerEvent("pointermove", { ...init, clientX: x - moved }));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+
+      element.dispatchEvent(
+        new PointerEvent("pointerup", { ...init, clientX: x - distance, buttons: 0 }),
+      );
+    },
+    { x: box.x + box.width - 16, y: box.y + box.height / 2, distance },
+  );
+}
+
+/**
  * Raises an on-screen keyboard `height` px tall that overlays the page, as iOS Safari's does: the
  * visual viewport shrinks and the layout viewport holds. `offsetTop` pans the visible area down
  * the layout viewport, as iOS does to bring a field above the keyboard (`pageTop` follows). 0

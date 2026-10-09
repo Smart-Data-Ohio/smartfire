@@ -82,7 +82,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
         campfire_db::models::activity_item::ActivityItemsRemoved::KIND => decode::<campfire_db::models::activity_item::ActivityItemsRemoved>(request).map(|removed| {
             if let Some(app) = app { app.broadcasts.sync_activity_removed(removed.items); }
         }),
-        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
+        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, app, &broadcast, app.map_or_else(||huddle_configured(env),|app|app.config.huddle.configured()))),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
             if let Some(app) = app
                 && (super::message_features::deliver(cable, app, &broadcast)?
@@ -363,7 +363,8 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
     if let Some(campfire_db::broadcasts::Partial::ThreadIndicator { message_id, .. }) = &frame.partial
         && cable.sync_wanted()
     {
-        app.db.read_blocking(|conn| { app.broadcasts.sync_thread_indicator(conn, *message_id); Ok(()) })?;
+        // Later, on a deferred reader: the sink runs on the database writer.
+        app.broadcasts.sync_thread_indicator(*message_id);
     }
     Ok(())
 }
@@ -375,7 +376,9 @@ fn direct_sidebar_twin(cable: &Cable, app: Option<&App>, broadcast: &campfire_db
         && let Some(campfire_db::broadcasts::Partial::DirectSidebar { membership_id, .. }) = &frame.partial
         && cable.sync_wanted()
     {
-        app.db.read_blocking(|conn| { app.broadcasts.sync_membership_row(conn, *membership_id); Ok(()) })?;
+        // Later, on a deferred reader: the sink runs on the database writer, which must not
+        // wait for the room's lock.
+        app.broadcasts.sync_membership_row(*membership_id);
     }
     Ok(())
 }
@@ -391,7 +394,7 @@ fn env(name: &str) -> Option<String> {
 }
 
 /// `Membership#broadcast_room_removal_to_user` (reference/app/models/membership.rb).
-pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_configured: bool) {
+pub fn room_removal(cable: &Cable, app: Option<&App>, broadcast: &RoomRemovalBroadcast, huddle_configured: bool) {
     let user = user_gid(broadcast.user_id).to_param();
     let param_key = broadcast.room_class.replace("::", "_").to_ascii_lowercase();
     if huddle_configured {
@@ -416,7 +419,15 @@ pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_conf
         None,
         &[],
     );
-    crate::cable::sync::sidebar_row_removed(cable, broadcast.user_id, broadcast.room_id);
+    // The sync twin is queued: the sink runs on the database writer, and the removal takes the
+    // room's lock and a reader later, off it. With no app there's no sync renderer, so no twin,
+    // as for the sink's other sync twins.
+    if let Some(app) = app
+        && cable.sync_wanted()
+    {
+        app.broadcasts
+            .sync_row_removed(broadcast.user_id, broadcast.room_id);
+    }
 }
 
 /// `Huddle.configured?` (reference/app/services/huddle.rb): the five LiveKit variables are set and

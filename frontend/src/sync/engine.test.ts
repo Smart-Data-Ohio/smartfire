@@ -1275,6 +1275,32 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("refetches the sidebar on every user resync, one after another", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        for (const name of ["First", "Second"]) {
+          yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, name)]));
+          const before = (yield* api.requests).length;
+
+          yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+          yield* settle;
+
+          expect(
+            (yield* api.requests).slice(before).filter((request) => request.path === "/sidebar"),
+          ).toEqual([{ method: "GET", path: "/sidebar" }]);
+          expect(store.getState().sidebar.rows[12]?.displayName).toBe(name);
+        }
+      }),
+    ),
+  );
+
   it.effect("refetches a subscribed thread's header and replies", () =>
     withSync(
       Effect.gen(function* () {

@@ -296,8 +296,14 @@
   .thread-list {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     padding: var(--space-1) var(--space-2) var(--space-4);
     list-style: none;
+  }
+
+  /* A row is the list's width, however long its meta line or links: they clip, not the pane. */
+  .thread-list > li {
+    min-width: 0;
   }
 
   .thread-row {

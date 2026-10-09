@@ -168,7 +168,7 @@ pub use slack::{
     SlackRunPage, SlackRunRow, SlackRunStatus, SlackRunSummary, SlackSample, SlackSetup,
     SlackSetupChange, StartPersonalSlackImport, StartSlackDryRun, StartSlackImport,
 };
-pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
+pub use sidebar::{RoomCategory, Sidebar, SidebarLastMessage, SidebarRow, SidebarRowRemoved};
 pub use stage::{
     ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
     StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,

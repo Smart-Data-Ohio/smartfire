@@ -40,19 +40,35 @@ export function requestAtElement(id: number, element: Element): PointMenuRequest
   };
 }
 
+/** A long press's resting point: it opens there, the finger already lifted. */
+export interface PressPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+/** What asks for a row's menu: a right click, the menu key, or a long press. */
+export type MenuSource = MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement> | PressPoint;
+
 /** How long to wait for a pressed button's release before opening anyway. */
 const RELEASE_WAIT_MS = 600;
 
 /**
- * Asks for a context menu from a right click or a menu key: at the pointer, or hanging from the
- * row for a key (a menu key's click lands at 0, 0). A pressed button opens it only once released,
- * as the message rows do, so the release can't light-dismiss the menu it just opened.
+ * Asks for a context menu from a right click, a menu key or a long press: at the pointer, or
+ * hanging from the row for a key (a menu key's click lands at 0, 0). A pressed button opens it
+ * only once released, as the message rows do, so the release can't light-dismiss the menu it
+ * just opened.
  */
 export function requestMenu(
   id: number,
-  event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>,
+  event: MenuSource,
   open: (request: PointMenuRequest) => void,
 ): void {
+  if (!("currentTarget" in event)) {
+    open(requestAtPoint(id, event.x, event.y));
+
+    return;
+  }
+
   const pointer = "clientX" in event && !(event.clientX === 0 && event.clientY === 0);
 
   const request = pointer

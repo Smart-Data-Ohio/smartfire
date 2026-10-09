@@ -1,6 +1,19 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import type { ActivityList } from "../../src/gen/ActivityList.ts";
-import { expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  expectTouchTargets,
+  longPress,
+  matrix,
+  openApp,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  swipeLeft,
+  syncWelcomed,
+  test,
+} from "./support.ts";
 
 /** Calls one of the mock's `/__mock/*` controls. */
 async function control(request: APIRequestContext, action: string): Promise<void> {
@@ -452,6 +465,78 @@ test("editing a scheduled message saves its new text", async ({ page }) => {
   await dialog.getByRole("button", { name: "Save changes" }).click();
   await expect(dialog).toBeHidden();
   await expect(rows(page).first()).toContainText("Moved to the new launch doc");
+});
+
+// --- touch phones ---
+
+test.describe("the lists on a 360 px touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("activity is thumb-sized, with its filter in a menu and no icon bar", async ({ page }) => {
+    await openApp(page, "activity");
+    await ready(page, "Activity");
+    await expectTouchTargets(page, ".page");
+    await expectNoHorizontalOverflow(page, { allowScroll: ".page-toolbar .tabs" });
+    await expect(rows(page).first().locator(".list-row-bar")).toHaveCSS("opacity", "0");
+
+    const filter = page.getByRole("button", { name: "Show: Unread" });
+
+    await expect(page.getByRole("tab", { name: "Handled" })).toBeHidden();
+    await filter.click();
+    await page.getByRole("menuitemradio", { name: "Handled" }).click();
+    await expect(page).toHaveURL(/status=handled/);
+    await expect(page.getByRole("button", { name: "Show: Handled" })).toBeVisible();
+  });
+
+  test("a long press on an activity row opens its action sheet", async ({ page }) => {
+    await openApp(page, "activity");
+    await ready(page, "Activity");
+    await longPress(rows(page).first().locator(".list-row-inner"));
+
+    const sheet = page.getByRole("menu", { name: "Activity actions" });
+
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toHaveClass(/\baction-sheet\b/);
+    // The swipe's action is in the sheet too, for anyone who can't swipe.
+    await expect(sheet.getByRole("menuitem", { name: "Mark as handled" })).toBeVisible();
+    await expectTouchTargets(page, `#${await sheet.getAttribute("id")}`);
+    // The press doesn't also open the item.
+    await expect(page).toHaveURL(/\/app\/activity/);
+  });
+
+  test("swiping an activity row left marks it handled", async ({ page }) => {
+    await openApp(page, "activity");
+    await ready(page, "Activity");
+
+    const text = (await body(page).textContent()) ?? "";
+    const before = await unreadCount(page);
+
+    await swipeLeft(rows(page).first().locator(".list-row-inner"));
+    await expect(page.locator(".page-count [aria-hidden='true']")).toHaveText(`${before - 1}`);
+    await expect(body(page)).not.toHaveText(text);
+    await expect(said(page)).toHaveText("Marked handled");
+    await expect(page).toHaveURL(/\/app\/activity/);
+  });
+
+  test("saved and scheduled are thumb-sized and open a sheet on a long press", async ({ page }) => {
+    await openApp(page, "saved");
+    await ready(page, "Saved");
+    await expectTouchTargets(page, ".page");
+    await expectNoHorizontalOverflow(page, { allowScroll: ".page-toolbar .tabs" });
+    await longPress(rows(page).first().locator(".list-row-inner"));
+    await expect(page.getByRole("menu", { name: "Saved message actions" })).toHaveClass(
+      /\baction-sheet\b/,
+    );
+    await page.keyboard.press("Escape");
+
+    await openApp(page, "scheduled");
+    await ready(page, "Scheduled");
+    await expectTouchTargets(page, ".page");
+    await longPress(rows(page).first().locator(".list-row-inner"));
+    await expect(page.getByRole("menu", { name: "Scheduled message actions" })).toHaveClass(
+      /\baction-sheet\b/,
+    );
+  });
 });
 
 // --- loading and errors ---

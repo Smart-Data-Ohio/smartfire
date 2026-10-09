@@ -80,7 +80,7 @@ function FileRow({ file, now, onJump }: FileItemProps) {
             {extension === "" ? null : <span className="file-ext">{extension}</span>}
             <span className="tabular">{formatBytes(attachment.byteSize)}</span>
             <span aria-hidden="true">·</span>
-            <span>{poster?.name ?? UNKNOWN_NAME}</span>
+            <span className="file-row-poster">{poster?.name ?? UNKNOWN_NAME}</span>
             <span aria-hidden="true">·</span>
             <time dateTime={file.createdAt} title={formatFull(file.createdAt)}>
               {timeAgo(file.createdAt, now)}

@@ -515,6 +515,7 @@ pub(crate) fn row() -> SidebarRow {
         direct_member_ids: vec![],
         unread_count: 4,
         mention_count: 1,
+        last_message: None,
         refresh_room: None,
     }
 }

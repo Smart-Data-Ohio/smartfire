@@ -1,5 +1,16 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, openApp, openHeaderTool, ROOM_IDS, shot, test } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  expectTouchTargets,
+  matrix,
+  openApp,
+  openHeaderTool,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  test,
+} from "./support.ts";
 
 /** The modifier the app reads on this platform (the CI browsers aren't Apple). */
 const MOD = process.platform === "darwin" ? "Meta" : "Control";
@@ -336,4 +347,62 @@ matrix("rename", async ({ page, theme, phone }) => {
   await expect(page.getByRole("dialog", { name: "Rename conversation" })).toBeVisible();
   await page.getByRole("textbox", { name: "Name" }).fill("Launch crew");
   await shot(page, "rename", theme);
+});
+
+test.describe("the tab bar and the list on a 360 px touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  const tabBar = (page: Page) => page.getByRole("navigation", { name: "Destinations" });
+
+  test("every tab and every control in the list is thumb-sized", async ({ page }) => {
+    await openApp(page, "");
+    await expect(sidebar(page).locator(".sidebar-row").first()).toBeVisible();
+    await expectTouchTargets(page, ".rail");
+    await expectTouchTargets(page, ".sidebar");
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("a tap on a tab's caption switches to it", async ({ page }) => {
+    await openApp(page, "");
+
+    const dms = tabBar(page).getByRole("button", { name: "DMs" });
+
+    await dms.locator(".rail-caption").tap();
+    await expect(dms).toHaveAttribute("aria-pressed", "true");
+    await expect(sidebar(page).getByText("Direct messages").first()).toBeVisible();
+  });
+
+  test("You opens the account menu as a sheet", async ({ page }) => {
+    await openApp(page, "");
+    await expect(sidebar(page).locator(".sidebar-you")).toBeHidden();
+    await tabBar(page).getByRole("button", { name: "You" }).tap();
+
+    const menu = page.getByRole("menu", { name: "Your account" });
+
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveClass(/\baction-sheet\b/);
+  });
+
+  test("the DMs tab previews each conversation's newest message and its time", async ({ page }) => {
+    await openApp(page, "");
+    await tabBar(page).getByRole("button", { name: "DMs" }).tap();
+
+    const row = sidebar(page).locator(".sidebar-row[data-preview]").first();
+
+    await expect(row.locator(".sidebar-row-preview")).toHaveText(/\S/);
+    await expect(row.locator(".sidebar-row-time")).toBeVisible();
+    await expect(row.locator(".sidebar-row-time")).toHaveAttribute("datetime", /^\d{4}-/);
+    await expectTouchTargets(page, ".sidebar");
+    await expectNoHorizontalOverflow(page);
+
+    // The preview follows a new message.
+    await row.tap();
+    await page.getByRole("textbox", { name: /^Message/ }).fill("Previewed on the DMs tab");
+    await page.keyboard.press("Enter");
+    await page.goBack();
+    await tabBar(page).getByRole("button", { name: "DMs" }).tap();
+    await expect(sidebar(page).locator(".sidebar-row-preview").first()).toContainText(
+      "Previewed on the DMs tab",
+    );
+  });
 });

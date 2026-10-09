@@ -13,11 +13,12 @@ import { conversationText } from "../destinations/conversation-label.tsx";
 import { type MotionRow, useListMotion } from "../destinations/list-motion.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList, type PagedState } from "../destinations/paged-list.tsx";
+import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/point-menu.tsx";
 import { PaneEmpty } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
 import type { ScheduledEdit } from "./edit-scheduled-dialog.tsx";
 import { inlineWhen, markdownExcerpt, scheduledSection } from "./scheduled-format.ts";
-import { ScheduledRow, type ScheduledRowHandlers } from "./scheduled-row.tsx";
+import { ScheduledMenuItems, ScheduledRow, type ScheduledRowHandlers } from "./scheduled-row.tsx";
 import "./scheduled.css";
 
 const LoadedEditDialog = lazy(async () => {
@@ -99,6 +100,7 @@ export function ScheduledPage() {
   const [editing, setEditing] = useState<ScheduledMessage | null>(null);
   const [rescheduling, setRescheduling] = useState<ScheduledMessage | null>(null);
   const [cancelling, setCancelling] = useState<ScheduledMessage | null>(null);
+  const [menu, setMenu] = useState<{ request: PointMenuRequest; itemId: number } | null>(null);
   const keyOf = (row: ScheduledEntry) => row.message.id;
 
   const pendingRows = useListMotion(
@@ -158,6 +160,11 @@ export function ScheduledPage() {
         )
         .finally(() => settle(item.id));
     },
+    onMenu: (item, source) => {
+      const id = (menu?.request.id ?? 0) + 1;
+
+      requestMenu(id, source, (request) => setMenu({ request, itemId: item.id }));
+    },
   };
 
   const byId = new Map([...pendingRows, ...pastRows].map((row) => [row.key, row.value]));
@@ -210,6 +217,8 @@ export function ScheduledPage() {
   }
 
   const cancelConversation = conversationOf(cancelling);
+  // The menu reads the row live, so it follows the message out of Upcoming while it's open.
+  const menuItem = menu === null ? undefined : byId.get(menu.itemId)?.message;
 
   return (
     <PageFrame title="Scheduled" icon="clock" back>
@@ -228,6 +237,20 @@ export function ScheduledPage() {
       >
         {children}
       </PagedList>
+      {menu === null || menuItem === undefined ? null : (
+        <PointMenu
+          key={menu.request.id}
+          request={menu.request}
+          label="Scheduled message actions"
+          onClosed={(id) => setMenu((current) => (current?.request.id === id ? null : current))}
+        >
+          <ScheduledMenuItems
+            item={menuItem}
+            sending={sending.has(menuItem.id)}
+            handlers={handlers}
+          />
+        </PointMenu>
+      )}
       <LazyEditDialog
         item={editing}
         onClose={() => setEditing(null)}

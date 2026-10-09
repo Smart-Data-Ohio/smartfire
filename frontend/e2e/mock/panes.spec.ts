@@ -174,6 +174,27 @@ test.describe("pane headers on a 360 px touch phone", () => {
     });
   }
 
+  for (const [name, heading, rows] of [
+    [/^Threads/, "Threads", ".thread-list > li"],
+    [/^Files/, "Files", ".file-row"],
+  ] as const) {
+    test(`the ${heading} pane's rows fit its body without scrolling sideways`, async ({ page }) => {
+      await open(page, `r/${GENERAL}`);
+      await openHeaderTool(page, name);
+      await expect(pane(page).locator(rows).first()).toBeVisible();
+
+      const body = pane(page).locator(".pane-body");
+
+      const { scrollWidth, clientWidth } = await body.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+      }));
+
+      expect(scrollWidth, "the pane body's content width").toBeLessThanOrEqual(clientWidth);
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+
   test("a pane opened from the room's details goes back to them", async ({ page }) => {
     await open(page, `r/${GENERAL}`);
     await page.locator(".room-header .room-title-button").click();

@@ -136,47 +136,113 @@ pub(crate) async fn after_approval_page_read(agent_id: i64) {
 }
 
 /// Holds one rendered sync snapshot before publication, scoped to this app's database.
-pub struct ThreadSnapshotHold {
+pub struct SnapshotHold {
     pub reached: tokio::sync::oneshot::Receiver<()>,
     pub release: mpsc::Sender<()>,
 }
 
-struct ThreadSnapshotPause {
+struct SnapshotPause {
     reached: tokio::sync::oneshot::Sender<()>,
     release: mpsc::Receiver<()>,
 }
 
-type ThreadSnapshotHolds = Mutex<Option<HashMap<(PathBuf, i64), ThreadSnapshotPause>>>;
-static AFTER_THREAD_SNAPSHOT: ThreadSnapshotHolds = Mutex::new(None);
+type SnapshotHolds = Mutex<Option<HashMap<(PathBuf, i64), SnapshotPause>>>;
+static AFTER_THREAD_SNAPSHOT: SnapshotHolds = Mutex::new(None);
+static AFTER_SIDEBAR_SNAPSHOT: SnapshotHolds = Mutex::new(None);
+static AFTER_SIDEBAR_MEMBERSHIPS: SnapshotHolds = Mutex::new(None);
 
-pub fn hold_after_thread_snapshot(database: &Path, thread_id: i64) -> ThreadSnapshotHold {
+fn hold_snapshot(holds: &SnapshotHolds, database: &Path, id: i64) -> SnapshotHold {
     let (reached, ready) = tokio::sync::oneshot::channel();
     let (release, wait) = mpsc::channel();
-    AFTER_THREAD_SNAPSHOT
-        .lock()
-        .unwrap()
-        .get_or_insert_with(HashMap::new)
-        .insert(
-            (database.to_owned(), thread_id),
-            ThreadSnapshotPause {
-                reached,
-                release: wait,
-            },
-        );
-    ThreadSnapshotHold {
+    holds.lock().unwrap().get_or_insert_with(HashMap::new).insert(
+        (database.to_owned(), id),
+        SnapshotPause {
+            reached,
+            release: wait,
+        },
+    );
+    SnapshotHold {
         reached: ready,
         release,
     }
 }
 
-pub(crate) fn after_thread_snapshot(database: &Path, thread_id: i64) {
-    let pause = AFTER_THREAD_SNAPSHOT
+fn after_snapshot(holds: &SnapshotHolds, database: &Path, id: i64) {
+    let pause = holds
         .lock()
         .unwrap()
         .as_mut()
-        .and_then(|holds| holds.remove(&(database.to_owned(), thread_id)));
+        .and_then(|holds| holds.remove(&(database.to_owned(), id)));
     if let Some(pause) = pause {
         pause.reached.send(()).unwrap();
         pause.release.recv_timeout(Duration::from_secs(10)).unwrap();
     }
+}
+
+/// Holds the next `thread.updated` snapshot of this thread after it is rendered.
+pub fn hold_after_thread_snapshot(database: &Path, thread_id: i64) -> SnapshotHold {
+    hold_snapshot(&AFTER_THREAD_SNAPSHOT, database, thread_id)
+}
+
+pub(crate) fn after_thread_snapshot(database: &Path, thread_id: i64) {
+    after_snapshot(&AFTER_THREAD_SNAPSHOT, database, thread_id);
+}
+
+/// Holds the next sidebar row rendered for this room, before it is published.
+pub fn hold_after_sidebar_snapshot(database: &Path, room_id: i64) -> SnapshotHold {
+    hold_snapshot(&AFTER_SIDEBAR_SNAPSHOT, database, room_id)
+}
+
+pub(crate) fn after_sidebar_snapshot(database: &Path, room_id: i64) {
+    after_snapshot(&AFTER_SIDEBAR_SNAPSHOT, database, room_id);
+}
+
+/// Holds the person's next `GET /api/v1/sidebar` once its memberships are read, before the rest
+/// of the sidebar is.
+pub fn hold_after_sidebar_memberships(database: &Path, user_id: i64) -> SnapshotHold {
+    hold_snapshot(&AFTER_SIDEBAR_MEMBERSHIPS, &canonical(database), user_id)
+}
+
+pub(crate) fn after_sidebar_memberships(conn: &campfire_db::Connection, user_id: i64) {
+    if let Some(database) = conn.path() {
+        after_snapshot(
+            &AFTER_SIDEBAR_MEMBERSHIPS,
+            &canonical(Path::new(database)),
+            user_id,
+        );
+    }
+}
+
+/// The database file as SQLite names it, whichever way the test spelt its path.
+fn canonical(database: &Path) -> PathBuf {
+    std::fs::canonicalize(database).unwrap_or_else(|_| database.to_owned())
+}
+
+static READ_AFTER_SIDEBAR_SNAPSHOT: Mutex<Option<HashMap<(PathBuf, i64), usize>>> =
+    Mutex::new(None);
+
+/// After each of the next `renders` sidebar rows rendered for this room, its viewer reads the
+/// room again (`room.read` goes out), as if their unread state kept changing faster than a row
+/// renders.
+pub fn read_after_sidebar_snapshots(database: &Path, room_id: i64, renders: usize) {
+    READ_AFTER_SIDEBAR_SNAPSHOT
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert((database.to_owned(), room_id), renders);
+}
+
+/// Whether the row just rendered for this room is followed by a read: see
+/// [`read_after_sidebar_snapshots`].
+pub(crate) fn read_after_sidebar_snapshot(database: &Path, room_id: i64) -> bool {
+    let mut holds = READ_AFTER_SIDEBAR_SNAPSHOT.lock().unwrap();
+    let Some(left) = holds
+        .as_mut()
+        .and_then(|holds| holds.get_mut(&(database.to_owned(), room_id)))
+        .filter(|left| **left > 0)
+    else {
+        return false;
+    };
+    *left -= 1;
+    true
 }

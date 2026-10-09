@@ -5,11 +5,13 @@ import { formatFull } from "../../lib/time.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { sendAtLabel } from "../composer/schedule/presets.ts";
 import { ConversationLabel, conversationText } from "../destinations/conversation-label.tsx";
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
+import type { MenuSource } from "../destinations/point-menu.tsx";
 import { markdownExcerpt, outcomeLabel, scheduledSection } from "./scheduled-format.ts";
 
 /** What a scheduled row can ask for. */
@@ -19,6 +21,56 @@ export interface ScheduledRowHandlers {
   readonly onSendNow: (item: ScheduledMessage) => void;
   readonly onCancel: (item: ScheduledMessage) => void;
   readonly onView: (item: ScheduledMessage) => void;
+  readonly onMenu: (item: ScheduledMessage, source: MenuSource) => void;
+}
+
+/** Whether a row has a menu: a pending one, or a past one that went out (to view it). */
+export function hasScheduledMenu(item: ScheduledMessage): boolean {
+  return (
+    scheduledSection(item) !== "past" || (item.state === "sent" && item.sentMessageId !== null)
+  );
+}
+
+interface ScheduledMenuItemsProps {
+  readonly item: ScheduledMessage;
+  /** "Send now" is on its way for this one. */
+  readonly sending: boolean;
+  readonly handlers: ScheduledRowHandlers;
+}
+
+/** The row's menu (a long press, a right click, Shift+F10): the hover actions, or View message. */
+export function ScheduledMenuItems({ item, sending, handlers }: ScheduledMenuItemsProps) {
+  if (scheduledSection(item) === "past") {
+    return (
+      <MenuItem icon="arrow-up-right" onSelect={() => handlers.onView(item)}>
+        View message
+      </MenuItem>
+    );
+  }
+
+  const busy = sending || item.state === "sending";
+
+  return (
+    <>
+      <MenuItem icon="pencil" disabled={busy} onSelect={() => handlers.onEdit(item)}>
+        Edit message
+      </MenuItem>
+      <MenuItem
+        icon="send"
+        disabled={busy || !item.sendable}
+        onSelect={() => handlers.onSendNow(item)}
+      >
+        Send now
+      </MenuItem>
+      <MenuItem icon="calendar-clock" disabled={busy} onSelect={() => handlers.onReschedule(item)}>
+        Reschedule
+      </MenuItem>
+      <MenuSeparator />
+      <MenuItem icon="trash" tone="danger" disabled={busy} onSelect={() => handlers.onCancel(item)}>
+        Cancel scheduled message
+      </MenuItem>
+    </>
+  );
 }
 
 interface ScheduledRowProps {
@@ -72,8 +124,9 @@ function glyphFor(item: ScheduledMessage) {
 
 /**
  * One scheduled message: where it goes, when, and its text. Upcoming and stranded rows open the
- * editor and offer send now, reschedule and cancel on hover (always on touch screens); a stranded
- * one says why it can't go. Past rows say whether it went (with "View message") or why not.
+ * editor and offer send now, reschedule and cancel on hover, in their menu, and on touch screens
+ * by a long press (the menu) or a swipe (cancel); a stranded one says why it can't go. Past rows
+ * say whether it went (with "View message") or why not.
  */
 export function ScheduledRow({
   item,
@@ -88,6 +141,7 @@ export function ScheduledRow({
   const busy = sending || item.state === "sending";
   const when = sendAtLabel(new Date(item.sendAt), new Date(now));
   const viewable = item.state === "sent" && item.sentMessageId !== null;
+  const menu = hasScheduledMenu(item);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target instanceof HTMLElement && event.target.closest(".list-row-bar") !== null) {
@@ -102,6 +156,9 @@ export function ScheduledRow({
     } else if (pending && !busy && plain && (event.key === "Delete" || event.key === "Backspace")) {
       event.preventDefault();
       handlers.onCancel(item);
+    } else if (menu && ((event.key === "F10" && event.shiftKey) || event.key === "ContextMenu")) {
+      event.preventDefault();
+      handlers.onMenu(item, event);
     }
   };
 
@@ -116,6 +173,25 @@ export function ScheduledRow({
       motion={motion}
       state={busy ? "busy" : section}
       onKeyDown={onKeyDown}
+      onContextMenu={
+        menu
+          ? (event) => {
+              event.preventDefault();
+              handlers.onMenu(item, event);
+            }
+          : undefined
+      }
+      onLongPress={menu ? (x, y) => handlers.onMenu(item, { x, y }) : undefined}
+      swipe={
+        pending && !busy
+          ? {
+              label: "Cancel",
+              icon: "trash",
+              tone: "danger",
+              onSwipe: () => handlers.onCancel(item),
+            }
+          : undefined
+      }
       actions={
         pending ? (
           <>

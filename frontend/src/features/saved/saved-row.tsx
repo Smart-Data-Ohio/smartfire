@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent } from "react";
+import type { KeyboardEvent } from "react";
 import type { ConversationName } from "../../gen/ConversationName.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
 import { inlineMentions } from "../../lib/body-html.ts";
@@ -14,6 +14,7 @@ import { sendAtLabel } from "../composer/schedule/presets.ts";
 import { ConversationLabel, conversationText } from "../destinations/conversation-label.tsx";
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
+import type { MenuSource } from "../destinations/point-menu.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -27,10 +28,7 @@ export interface SavedRowHandlers {
   readonly onRemind: (item: SavedItem, at: Date | null) => void;
   readonly onCustomRemind: (item: SavedItem) => void;
   readonly onRemove: (item: SavedItem) => void;
-  readonly onMenu: (
-    item: SavedItem,
-    event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>,
-  ) => void;
+  readonly onMenu: (item: SavedItem, source: MenuSource) => void;
 }
 
 interface SavedMenuItemsProps {
@@ -103,8 +101,9 @@ interface SavedRowProps {
 /**
  * One saved message: its author and conversation, the message itself (a few lines of it), its
  * attachment, the reminder and whether it's done. The row opens the message; hover (or focus)
- * shows done, remind and remove, plus the menu. Keys on a focused row: ↑/↓ move, Home/End jump,
- * ⏎ opens, E toggles done, Delete removes, Shift+F10 the menu.
+ * shows done, remind and remove, plus the menu. On touch screens a long press opens the menu and
+ * a swipe toggles done. Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, E toggles done,
+ * Delete removes, Shift+F10 the menu.
  */
 export function SavedRow({
   item,
@@ -150,6 +149,13 @@ export function SavedRow({
       onContextMenu={(event) => {
         event.preventDefault();
         handlers.onMenu(item, event);
+      }}
+      onLongPress={(x, y) => handlers.onMenu(item, { x, y })}
+      swipe={{
+        label: done ? "In progress" : "Done",
+        icon: done ? "undo-2" : "circle-check",
+        tone: done ? "neutral" : "success",
+        onSwipe: () => handlers.onToggleDone(item),
       }}
       actions={
         <>
