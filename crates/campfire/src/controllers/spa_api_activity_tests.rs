@@ -1581,6 +1581,73 @@ async fn a_thread_ping_counts_until_the_thread_is_read() {
     server.abort();
 }
 
+/// Marks thread 1 unread for David as a new reply does (`ChannelThread#receive`).
+async fn thread_receives(a: &TestApp) {
+    exec(
+        a,
+        "UPDATE thread_memberships SET unread_at = datetime('now') WHERE thread_id = ? AND user_id = ?",
+        vec![THREAD.into(), DAVID.into()],
+    )
+    .await;
+}
+
+/// A ping David read stays read: an ordinary reply that makes the thread unread again doesn't
+/// count it a second time; only a mention posted after the read counts.
+#[tokio::test]
+async fn a_read_thread_ping_stays_read_when_a_reply_follows() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "mentions").await;
+    // David follows thread 1 for mentions only.
+    exec(
+        &a,
+        "UPDATE thread_memberships SET involvement = 'mentions' WHERE thread_id = ? AND user_id = ?",
+        vec![THREAD.into(), DAVID.into()],
+    )
+    .await;
+    let mention = designers_message(&a, Some(THREAD), false, 1).await;
+    item(&a, DAVID, ("Message", mention), "mention", 0).await;
+    thread_receives(&a).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let path = format!("/api/v1/threads/{THREAD}/read");
+    let response = david.write(json_body(Method::POST, &path, &json!({}))).await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+    assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
+
+    // An ordinary reply: the thread goes unread, but a mentions-only follower gets no item.
+    designers_message(&a, Some(THREAD), false, 2).await;
+    thread_receives(&a).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 0, 0));
+
+    let later = designers_message(&a, Some(THREAD), false, 3).await;
+    item(&a, DAVID, ("Message", later), "mention", 0).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+    server.abort();
+}
+
+/// The classic thread read (`ChannelThreadsController#read`) records the same boundary.
+#[tokio::test]
+async fn the_classic_thread_read_keeps_read_pings_read() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    quiet_designers(&a, "mentions").await;
+    let mention = designers_message(&a, Some(THREAD), false, 1).await;
+    item(&a, DAVID, ("Message", mention), "mention", 0).await;
+    thread_receives(&a).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 1, 1));
+
+    let path = format!("/rooms/{DESIGNERS}/threads/{THREAD}/read.json");
+    let response = david.write(Req::new(Method::POST, &path)).await;
+    assert!(response.status.is_success(), "{} {}", response.status, response.text());
+    designers_message(&a, Some(THREAD), false, 2).await;
+    thread_receives(&a).await;
+    assert_eq!(counts(&designers_row(&mut david).await), (0, 0, 0));
+}
+
 #[tokio::test]
 async fn deleting_the_only_ping_republishes_the_row() {
     let Some(a) = app(true).await else { return };

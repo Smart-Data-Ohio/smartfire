@@ -544,6 +544,38 @@ fn receiving_marks_other_members_unread_broadcasts_and_enqueues_the_push() {
     assert!(!t.read(|c| ChannelThread::find(c, thread_id)?.unread_for(c, id("jason"))));
 }
 
+/// Reading a thread records the newest message it was read through, and a no-op read (already
+/// read) leaves it.
+#[test]
+fn reading_a_thread_records_how_far_it_was_read() {
+    let t = frozen();
+    let thread_id = create_thread(&t, "designers", "jz", None, Some("Read through")).id;
+    let joined = t.write(move |tx| ThreadMembership::join(tx, thread_id, id("jason")));
+    assert_eq!(joined.last_read_message_id, None);
+
+    t.travel(5);
+    let first = post_reply(&t, thread_id, "jz", "One");
+    let mut jason = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
+    t.write(move |tx| jason.read(tx).map(|()| jason));
+    let jason = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
+    assert_eq!((jason.unread_at, jason.last_read_message_id), (None, Some(first.id)));
+
+    t.travel(5);
+    post_root(&t, "designers", "jz", "Elsewhere");
+    let mut again = jason.clone();
+    t.write(move |tx| again.read(tx).map(|()| again));
+    let unchanged = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
+    assert_eq!(unchanged.last_read_message_id, Some(first.id), "an already-read thread's read is a no-op");
+
+    t.travel(5);
+    let second = post_reply(&t, thread_id, "jz", "Two");
+    let mut unread = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
+    assert!(unread.unread());
+    t.write(move |tx| unread.read(tx).map(|()| unread));
+    let read = t.read(|c| ThreadMembership::find_by_thread_and_user(c, thread_id, id("jason"))).unwrap();
+    assert_eq!(read.last_read_message_id, Some(second.id));
+}
+
 #[test]
 fn the_room_timeline_leaves_thread_messages_out() {
     let t = frozen();
