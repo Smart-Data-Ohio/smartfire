@@ -32,6 +32,16 @@ matrix("a board's automations open from its toolbar", async ({ page, theme, phon
   await expect(automations.getByRole("button", { name: "Save SLA timers" })).toBeDisabled();
   await page.mouse.move(0, 0);
   await shot(page, phone ? "board-automations-phone" : "board-automations", theme);
+
+  if (phone) return;
+
+  // The toolbar button toggles the pane: pressed while it's open, and a second press closes it.
+  const button = page.getByRole("button", { name: "Automations" });
+
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+  await button.click();
+  await expect(page).toHaveURL(new RegExp(`/r/${BOARD}$`));
+  await expect(button).toHaveAttribute("aria-pressed", "false");
 });
 
 test("adding and removing an auto-assign rule", async ({ page }) => {
@@ -82,16 +92,4 @@ test("SLA timers save together and show the classic alert", async ({ page }) => 
   await expect(pane(page).getByRole("spinbutton", { name: "Blocked nudge minutes" })).toHaveValue(
     "90",
   );
-});
-
-test("Automations closes from its toolbar button", async ({ page }) => {
-  await page.setViewportSize(DESKTOP);
-  await openApp(page, `r/${BOARD}/automations`);
-
-  const button = page.getByRole("button", { name: "Automations" });
-
-  await expect(button).toHaveAttribute("aria-pressed", "true");
-  await button.click();
-  await expect(page).toHaveURL(new RegExp(`/r/${BOARD}$`));
-  await expect(button).toHaveAttribute("aria-pressed", "false");
 });

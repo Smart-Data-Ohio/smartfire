@@ -391,26 +391,23 @@ async function fittingWork(page: Page) {
   return { list, work, staysAfterReply };
 }
 
-for (const control of ["Status", "Owner"] as const) {
-  for (const key of ["End", "ArrowDown"] as const) {
-    test(`${key} in the open ${control} menu keeps fitting work in place after a long reply`, async ({
-      page,
-    }) => {
-      const { list, work, staysAfterReply } = await fittingWork(page);
+// The Owner menu is the same shared menu, so the Status menu stands for both.
+for (const key of ["End", "ArrowDown"] as const) {
+  test(`${key} in the open Status menu keeps fitting work in place after a long reply`, async ({
+    page,
+  }) => {
+    const { list, work, staysAfterReply } = await fittingWork(page);
 
-      await work
-        .getByRole("button", { name: control === "Owner" ? "Change owner" : /^Status:/ })
-        .click();
-      const menu = page.getByRole("menu");
+    await work.getByRole("button", { name: /^Status:/ }).click();
+    const menu = page.getByRole("menu");
 
-      await expect(menu).toBeVisible();
-      await menu.press(key);
-      await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
-      await page.keyboard.press("Escape");
-      await expect(menu).not.toBeVisible();
-      await staysAfterReply();
-    });
-  }
+    await expect(menu).toBeVisible();
+    await menu.press(key);
+    await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
+    await page.keyboard.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await staysAfterReply();
+  });
 }
 
 for (const key of ["End", "ArrowDown"] as const) {

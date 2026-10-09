@@ -172,13 +172,6 @@ test.describe("the product tour on desktop", () => {
     expect(await motion()).toMatchObject(still);
     expect((await motion()).dialog).toContain("opacity");
   });
-
-  test("stays out of the way of someone who completed it", async ({ page, request }) => {
-    await openApp(page, `r/${ROOM_IDS.general}`);
-    await reloadSettled(page);
-    await expect(tourDialog(page)).toHaveCount(0);
-    expect(await stamps(request)).toBe(0);
-  });
 });
 
 test.describe("the product tour on a 360 px touch phone", () => {

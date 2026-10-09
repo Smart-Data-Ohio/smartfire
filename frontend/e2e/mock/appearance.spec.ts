@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { ROOM_IDS } from "../../mock/seed.ts";
-import { expect, matrix, openApp, saveAccountAppearance, shot, test } from "./support.ts";
+import { expect, matrix, openApp, SHOTS, saveAccountAppearance, shot, test } from "./support.ts";
 
 /** The computed font size of `selector`, in px. */
 function fontSize(page: Page, selector: string): Promise<number> {
@@ -11,24 +11,6 @@ function fontSize(page: Page, selector: string): Promise<number> {
 }
 
 const html = (page: Page) => page.locator("html");
-
-test("the account's theme applies on start, over what this device last showed", async ({
-  page,
-}) => {
-  await page.emulateMedia({ colorScheme: "light" });
-  // A device that last showed the light theme, before the account switched to dark elsewhere.
-  await page.addInitScript(() => {
-    if (localStorage.getItem("smartfire.appearance") === null) {
-      localStorage.setItem("smartfire.appearance", JSON.stringify({ theme: "light" }));
-    }
-  });
-  await openApp(page, "");
-  await saveAccountAppearance(page, { theme: "dark" });
-
-  await page.reload();
-  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
-  await expect(html(page)).toHaveAttribute("data-theme", "dark");
-});
 
 test("a theme pinned on this device wins, until it's set back to the account's", async ({
   page,
@@ -60,6 +42,9 @@ test("the five text sizes change the text, and the choice comes back on start", 
   page,
 }) => {
   await openApp(page, "settings/appearance");
+  // The theme saves the same way, and shows at once too.
+  await page.getByRole("radio", { name: "Dark", exact: true }).check();
+  await expect(html(page)).toHaveAttribute("data-theme", "dark");
 
   const sizes: Record<string, number> = {};
 
@@ -76,6 +61,7 @@ test("the five text sizes change the text, and the choice comes back on start", 
 
   // The account keeps "Larger": a fresh start shows it, messages included.
   await openApp(page, "");
+  await expect(html(page)).toHaveAttribute("data-theme", "dark");
   await expect(html(page)).toHaveAttribute("data-text-size", "larger");
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)).toBe(
     "18px",
@@ -149,33 +135,38 @@ test("a colour palette and a font apply at once, and stay on this device", async
   expect(await rootToken(page, "--accent")).toBe(before);
 });
 
-matrix("palettes and fonts", async ({ page, theme }) => {
-  await openApp(page, "settings/appearance");
-  await page.getByRole("radio", { name: theme === "dark" ? "Dark" : "Light", exact: true }).check();
-  await page
-    .getByRole("group", { name: "Colour palette" })
-    .getByRole("radio", { name: "Ocean" })
-    .check();
-  await page
-    .getByRole("group", { name: "Font" })
-    .getByRole("radio", { name: "Atkinson Hyperlegible" })
-    .check();
-  await page.mouse.move(0, 0);
-  await shot(page, "appearance-presets", theme);
+// Screenshots only.
+if (SHOTS) {
+  matrix("palettes and fonts", async ({ page, theme }) => {
+    await openApp(page, "settings/appearance");
+    await page
+      .getByRole("radio", { name: theme === "dark" ? "Dark" : "Light", exact: true })
+      .check();
+    await page
+      .getByRole("group", { name: "Colour palette" })
+      .getByRole("radio", { name: "Ocean" })
+      .check();
+    await page
+      .getByRole("group", { name: "Font" })
+      .getByRole("radio", { name: "Atkinson Hyperlegible" })
+      .check();
+    await page.mouse.move(0, 0);
+    await shot(page, "appearance-presets", theme);
 
-  await page
-    .getByRole("group", { name: "Colour palette" })
-    .getByRole("radio", { name: "Ember" })
-    .check();
-  await page
-    .getByRole("group", { name: "Font" })
-    .getByRole("radio", { name: "Source Serif" })
-    .check();
-  await page.goto("/app/");
-  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
-  await page.mouse.move(0, 0);
-  await shot(page, "appearance-ember-serif", theme);
-});
+    await page
+      .getByRole("group", { name: "Colour palette" })
+      .getByRole("radio", { name: "Ember" })
+      .check();
+    await page
+      .getByRole("group", { name: "Font" })
+      .getByRole("radio", { name: "Source Serif" })
+      .check();
+    await page.goto("/app/");
+    await page.getByRole("complementary", { name: "Conversations" }).waitFor();
+    await page.mouse.move(0, 0);
+    await shot(page, "appearance-ember-serif", theme);
+  });
+}
 
 test.describe("on a touch phone", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
@@ -211,16 +202,19 @@ test.describe("on a touch phone", () => {
   });
 });
 
-matrix("appearance from the account", async ({ page, theme }) => {
-  await openApp(page, "settings/appearance");
-  await saveAccountAppearance(page, { theme, textSize: "large" });
-  await page.reload();
-  await expect(html(page)).toHaveAttribute("data-theme", theme);
-  await page.mouse.move(0, 0);
-  await shot(page, "appearance-settings", theme);
+// Screenshots only.
+if (SHOTS) {
+  matrix("appearance from the account", async ({ page, theme }) => {
+    await openApp(page, "settings/appearance");
+    await saveAccountAppearance(page, { theme, textSize: "large" });
+    await page.reload();
+    await expect(html(page)).toHaveAttribute("data-theme", theme);
+    await page.mouse.move(0, 0);
+    await shot(page, "appearance-settings", theme);
 
-  await page.goto("/app/");
-  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
-  await page.mouse.move(0, 0);
-  await shot(page, "appearance-large-text", theme);
-});
+    await page.goto("/app/");
+    await page.getByRole("complementary", { name: "Conversations" }).waitFor();
+    await page.mouse.move(0, 0);
+    await shot(page, "appearance-large-text", theme);
+  });
+}

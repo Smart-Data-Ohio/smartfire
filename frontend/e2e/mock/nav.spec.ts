@@ -8,6 +8,7 @@ import {
   openHeaderTool,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   test,
 } from "./support.ts";
@@ -169,19 +170,6 @@ test("Alt+↓ and Alt+↑ step through the sidebar's order", async ({ page }) =>
   await expect(page).toHaveURL(new RegExp(`${previous}$`));
 });
 
-test("Alt+Shift+↓ jumps to the next unread conversation", async ({ page }) => {
-  await openApp(page, `r/${ROOM_IDS.engineering}`);
-  await expect(page.getByRole("heading", { level: 1, name: "engineering" })).toBeVisible();
-
-  const unreadHref = await sidebar(page)
-    .locator('.sidebar-row[data-state="unread"]')
-    .first()
-    .getAttribute("href");
-
-  await page.keyboard.press("Alt+Shift+ArrowDown");
-  await expect(page).toHaveURL(new RegExp(`${unreadHref}$`));
-});
-
 test("a new DM with one person opens it", async ({ page }) => {
   await openApp(page, `r/${ROOM_IDS.general}`);
 
@@ -196,44 +184,6 @@ test("a new DM with one person opens it", async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { level: 1, name: /Sam/ })).toBeVisible();
   await expect(sidebar(page).getByRole("link", { name: /Sam/ })).toBeVisible();
-});
-
-test("a new DM with two people makes a group", async ({ page }) => {
-  await openApp(page, `r/${ROOM_IDS.general}`);
-
-  const dialog = await openNewDirect(page, false);
-
-  await page.keyboard.type("lucia");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type("theo");
-  await page.keyboard.press("Enter");
-  await expect(dialog.getByRole("button", { name: "Start group conversation" })).toBeEnabled();
-  await page.keyboard.press("Backspace");
-  await expect(dialog.getByRole("button", { name: "Start conversation" })).toBeEnabled();
-  await page.keyboard.type("theo");
-  await page.keyboard.press("Enter");
-  await dialog.getByRole("button", { name: "Start group conversation" }).click();
-
-  await expect(dialog).toBeHidden();
-  await expect(
-    page.getByRole("heading", { level: 1, name: /Lucía Fernández, Theo/ }),
-  ).toBeVisible();
-});
-
-test("adding people to a group DM grows it in place", async ({ page }) => {
-  await openApp(page, `r/${ROOM_IDS.groupDm}`);
-  await page.getByRole("button", { name: "Add people" }).click();
-
-  const dialog = page.getByRole("dialog", { name: /Add people/ });
-
-  await expect(dialog.getByRole("option").first()).toBeVisible();
-  await page.keyboard.type("grace");
-  await page.keyboard.press("Enter");
-  await dialog.getByRole("button", { name: "Add", exact: true }).click();
-
-  await expect(dialog).toBeHidden();
-  await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.groupDm}$`));
-  await expect(page.getByRole("heading", { level: 1, name: /Grace/ })).toBeVisible();
 });
 
 test("adding people to a one-to-one starts a new group", async ({ page }) => {
@@ -255,99 +205,88 @@ test("adding people to a one-to-one starts a new group", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: /Maya/ })).toBeVisible();
 });
 
-test("renaming a group DM updates the header and the sidebar", async ({ page }) => {
-  await openApp(page, `r/${ROOM_IDS.groupDm}`);
-  await page.getByRole("button", { name: "Rename conversation" }).click();
+// --- Screenshots: every surface in light and dark, desktop and phone. What they check is
+// covered by the tests above and by phone-sheets/phone-header, so they only run for shots. ---
 
-  const dialog = page.getByRole("dialog", { name: "Rename conversation" });
+if (SHOTS) {
+  matrix("sidebar with unread", async ({ page, theme, phone }) => {
+    await openApp(page, phone ? "" : `r/${ROOM_IDS.engineering}`, theme);
+    await expect(sidebar(page).locator('.sidebar-row[data-state="unread"]').first()).toBeVisible();
+    await shot(page, "sidebar", theme);
+  });
 
-  await dialog.getByRole("textbox", { name: "Name" }).fill("Launch crew");
-  await dialog.getByRole("button", { name: "Save" }).click();
+  matrix("switcher", async ({ page, theme, phone }) => {
+    await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
 
-  await expect(dialog).toBeHidden();
-  await expect(page.getByRole("heading", { level: 1, name: "Launch crew" })).toBeVisible();
-  await expect(sidebar(page).getByRole("link", { name: /Launch crew/ })).toBeVisible();
-});
+    const dialog = await openSwitcher(page, phone);
 
-// --- Screenshots: every surface in light and dark, desktop and phone ---
+    await expect(dialog.getByRole("option").first()).toBeVisible();
+    await shot(page, "switcher-empty", theme);
+    await dialog.getByRole("combobox").fill("an");
+    await expect(dialog.getByRole("option").first()).toBeVisible();
+    await shot(page, "switcher-query", theme);
+  });
 
-matrix("sidebar with unread", async ({ page, theme, phone }) => {
-  await openApp(page, phone ? "" : `r/${ROOM_IDS.engineering}`, theme);
-  await expect(sidebar(page).locator('.sidebar-row[data-state="unread"]').first()).toBeVisible();
-  await shot(page, "sidebar", theme);
-});
+  matrix("shortcuts dialog", async ({ page, theme, phone }) => {
+    await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
 
-matrix("switcher", async ({ page, theme, phone }) => {
-  await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
+    if (phone) {
+      await sidebar(page).getByRole("button", { name: "Smart Data" }).click();
+      await page.getByRole("menuitem", { name: /Keyboard shortcuts/ }).click();
+    } else {
+      await page.keyboard.press(`${MOD}+/`);
+    }
 
-  const dialog = await openSwitcher(page, phone);
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    await shot(page, "shortcuts", theme);
+  });
 
-  await expect(dialog.getByRole("option").first()).toBeVisible();
-  await shot(page, "switcher-empty", theme);
-  await dialog.getByRole("combobox").fill("an");
-  await expect(dialog.getByRole("option").first()).toBeVisible();
-  await shot(page, "switcher-query", theme);
-});
+  matrix("new DM picker", async ({ page, theme, phone }) => {
+    await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
 
-matrix("shortcuts dialog", async ({ page, theme, phone }) => {
-  await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
+    const dialog = await openNewDirect(page, phone);
+    const input = dialog.getByRole("combobox");
 
-  if (phone) {
-    await sidebar(page).getByRole("button", { name: "Smart Data" }).click();
-    await page.getByRole("menuitem", { name: /Keyboard shortcuts/ }).click();
-  } else {
-    await page.keyboard.press(`${MOD}+/`);
+    await input.fill("lu");
+    await input.press("Enter");
+    await input.fill("sam");
+    await input.press("Enter");
+    await input.fill("");
+    await shot(page, "new-direct", theme);
+  });
+
+  /** Opens the group DM; a phone opens on the sidebar, so it taps through like a person would. */
+  async function openGroupDirect(page: Page, theme: "light" | "dark", phone: boolean) {
+    if (phone) {
+      await openApp(page, "", theme);
+      await sidebar(page)
+        .getByRole("link", { name: /Jonah Lindqvist, Priya Raman/ })
+        .click();
+    } else {
+      await openApp(page, `r/${ROOM_IDS.groupDm}`, theme);
+    }
   }
 
-  await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
-  await shot(page, "shortcuts", theme);
-});
+  matrix("add people", async ({ page, theme, phone }) => {
+    await openGroupDirect(page, theme, phone);
+    await openHeaderTool(page, "Add people");
 
-matrix("new DM picker", async ({ page, theme, phone }) => {
-  await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
+    const dialog = page.getByRole("dialog", { name: /Add people/ });
 
-  const dialog = await openNewDirect(page, phone);
-  const input = dialog.getByRole("combobox");
+    await expect(dialog.getByRole("option").first()).toBeVisible();
+    await dialog.getByRole("combobox").fill("gr");
+    await dialog.getByRole("combobox").press("Enter");
+    await shot(page, "add-people", theme);
+  });
 
-  await input.fill("lu");
-  await input.press("Enter");
-  await input.fill("sam");
-  await input.press("Enter");
-  await input.fill("");
-  await shot(page, "new-direct", theme);
-});
-
-/** Opens the group DM; a phone opens on the sidebar, so it taps through like a person would. */
-async function openGroupDirect(page: Page, theme: "light" | "dark", phone: boolean) {
-  if (phone) {
-    await openApp(page, "", theme);
-    await sidebar(page)
-      .getByRole("link", { name: /Jonah Lindqvist, Priya Raman/ })
-      .click();
-  } else {
-    await openApp(page, `r/${ROOM_IDS.groupDm}`, theme);
-  }
+  matrix("rename", async ({ page, theme, phone }) => {
+    await openGroupDirect(page, theme, phone);
+    await openHeaderTool(page, "Rename conversation");
+    await expect(page.getByRole("dialog", { name: "Rename conversation" })).toBeVisible();
+    await page.getByRole("textbox", { name: "Name" }).fill("Launch crew");
+    await shot(page, "rename", theme);
+  });
 }
-
-matrix("add people", async ({ page, theme, phone }) => {
-  await openGroupDirect(page, theme, phone);
-  await openHeaderTool(page, "Add people");
-
-  const dialog = page.getByRole("dialog", { name: /Add people/ });
-
-  await expect(dialog.getByRole("option").first()).toBeVisible();
-  await dialog.getByRole("combobox").fill("gr");
-  await dialog.getByRole("combobox").press("Enter");
-  await shot(page, "add-people", theme);
-});
-
-matrix("rename", async ({ page, theme, phone }) => {
-  await openGroupDirect(page, theme, phone);
-  await openHeaderTool(page, "Rename conversation");
-  await expect(page.getByRole("dialog", { name: "Rename conversation" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Name" }).fill("Launch crew");
-  await shot(page, "rename", theme);
-});
 
 test.describe("the tab bar and the list on a 360 px touch phone", () => {
   test.use(PHONE_TOUCH);

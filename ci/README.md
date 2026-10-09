@@ -67,9 +67,8 @@ The other required checks are `Frontend`, `GitHub Actions audit`,
 `Huddle authorization gateway`, `Ops scripts` and `Dependency audit`. Their
 jobs report on every PR and main push and skip expensive steps internally when
 irrelevant. The Frontend job runs lint, typecheck, Vitest and a production build,
-then tests `crates/spa` with that dist. Its three advisory e2e shards use the
-Vite mock server, which does not compile Rust. One shard also runs the production
-preview tests.
+then tests `crates/spa` with that dist and runs the production preview tests. Its
+three advisory e2e shards use the Vite mock server, which does not compile Rust.
 
 Only Dependency audit has a weekly schedule in the repository-check workflow.
 CodeQL runs weekly or manually. Operational backup and restore schedules remain

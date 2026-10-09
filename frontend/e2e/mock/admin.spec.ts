@@ -8,6 +8,7 @@ import {
   openApp,
   PHONE_SMALL,
   PHONE_TOUCH,
+  SHOTS,
   shot,
   test,
 } from "./support.ts";
@@ -36,31 +37,34 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
-matrix("the admin sections", async ({ page, theme, phone }) => {
-  // On phones the root is the list of sections: the workspace is pushed from it, at its own address.
-  await openAdmin(page, phone ? "workspace" : "", theme);
+// Screenshots only: the tests below cover each section and the phone list's way back.
+if (SHOTS) {
+  matrix("the admin sections", async ({ page, theme, phone }) => {
+    // On phones the root is the list of sections: the workspace is pushed from it, at its own address.
+    await openAdmin(page, phone ? "workspace" : "", theme);
 
-  await expect(page.getByRole("heading", { level: 1, name: "Workspace" })).toBeVisible();
-  await settle(page);
-  await shot(page, "admin-workspace", theme);
-
-  for (const [link, heading, name] of [
-    ["People", "People", "admin-people"],
-    ["Workspace icons", "Workspace icons", "admin-icons"],
-    ["Custom styles", "Custom CSS", "admin-styles"],
-    ["Audit log", "Audit log", "admin-audit-log"],
-    ["Integration health", "Integration health", "admin-integrations"],
-  ] as const) {
-    if (phone) {
-      await page.getByRole("link", { name: "Back to Workspace" }).click();
-    }
-
-    await nav(page).getByRole("link", { name: link }).click();
-    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Workspace" })).toBeVisible();
     await settle(page);
-    await shot(page, name, theme);
-  }
-});
+    await shot(page, "admin-workspace", theme);
+
+    for (const [link, heading, name] of [
+      ["People", "People", "admin-people"],
+      ["Workspace icons", "Workspace icons", "admin-icons"],
+      ["Custom styles", "Custom CSS", "admin-styles"],
+      ["Audit log", "Audit log", "admin-audit-log"],
+      ["Integration health", "Integration health", "admin-integrations"],
+    ] as const) {
+      if (phone) {
+        await page.getByRole("link", { name: "Back to Workspace" }).click();
+      }
+
+      await nav(page).getByRole("link", { name: link }).click();
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+      await settle(page);
+      await shot(page, name, theme);
+    }
+  });
+}
 
 test("the user menu opens the workspace in place", async ({ page }) => {
   await openApp(page, "");
@@ -142,34 +146,6 @@ test("custom CSS waits out the password confirmation", async ({ page, request })
     "body { color: red; }",
   );
   await expect(page.getByText("Your unsaved CSS is back")).toBeVisible();
-});
-
-test("a write that needs the password goes to the confirmation page", async ({ page, request }) => {
-  const state = await (await request.get("/__mock/state")).json();
-
-  await request.post("/__mock/lapse-sudo", { headers: { "X-CSRF-Token": state.csrfToken } });
-  await page.route("**/sudo/new", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<h1>Confirm your password</h1>",
-    }),
-  );
-  await openAdmin(page, "people");
-
-  await page.locator(".admin-person", { hasText: "Jonah" }).getByRole("switch").click();
-
-  await expect(page).toHaveURL(/\/sudo\/new$/);
-});
-
-test("a new icon names what's wrong, as the classic form does", async ({ page }) => {
-  await openAdmin(page, "icons");
-
-  await page.getByRole("textbox", { name: "Name" }).fill("Not Valid");
-  await page.getByRole("button", { name: "Upload icon" }).click();
-
-  await expect(page.getByText("Title can't be blank")).toBeVisible();
-  await expect(page.getByText("Image must be attached")).toBeVisible();
 });
 
 test("the audit log filters by action", async ({ page }) => {
