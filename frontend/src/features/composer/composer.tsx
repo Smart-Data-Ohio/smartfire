@@ -9,6 +9,7 @@ import {
 import type { SlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import { MOD, type ShortcutId, shortcutKeys } from "../../lib/shortcuts.ts";
+import { uuid7 } from "../../lib/uuid7.ts";
 import { store, useStore } from "../../store/store.ts";
 import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -39,7 +40,13 @@ import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdow
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
 import { ReplyChip } from "./reply-chip.tsx";
-import { cancelReply, replyTarget, setReplyNotify, useReplyTarget } from "./reply-store.ts";
+import {
+  cancelReply,
+  replyTarget,
+  setReplyNotify,
+  trackSentReply,
+  useReplyTarget,
+} from "./reply-store.ts";
 import { LazyCustomTimeDialog } from "./schedule/lazy-custom-time-dialog.tsx";
 import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
@@ -359,7 +366,8 @@ export function Composer({
 
   /**
    * Posts the text with the first file, and each further file as its own message. Each carries
-   * the reply, if there is one, as classic's text and uploads do; the reply ends with the send.
+   * the reply, if there is one, as classic's text and uploads do. The chip goes with the send; a
+   * send that fails puts it back (`trackSentReply`).
    */
   const deliver = (markdown: string, files: readonly TrayFile[]) => {
     toPresent();
@@ -370,24 +378,34 @@ export function Composer({
     const replying =
       target === null ? null : { messageId: target.messageId, notify: target.notify };
 
-    actions.send(roomId, markdown, {
-      threadId,
+    const sentIds: string[] = [];
+
+    const post = (body: string, options: NonNullable<Parameters<typeof actions.send>[2]>) => {
+      const clientMessageId = uuid7(Date.now());
+
+      sentIds.push(clientMessageId);
+      actions.send(roomId, body, { ...options, threadId, reply: replying, clientMessageId });
+    };
+
+    post(markdown, {
       attachmentSignedId: first?.snapshot.signedId ?? null,
       attachment: first === undefined ? null : pendingAttachment(first),
-      reply: replying,
     });
 
     for (const entry of rest) {
-      actions.send(roomId, "", {
-        threadId,
+      post("", {
         attachmentSignedId: entry.snapshot.signedId,
         attachment: pendingAttachment(entry),
-        reply: replying,
       });
     }
 
     attachments.clearSent();
-    cancelReply(key);
+
+    if (target !== null) {
+      cancelReply(key);
+      trackSentReply(key, target, sentIds);
+    }
+
     clear();
   };
 
@@ -433,13 +451,8 @@ export function Composer({
         }
 
         return;
-      case "start_huddle": {
-        const outcome = startHuddleFromCommand(result.roomId, result.roomName);
-
-        if (outcome.kind === "refused") {
-          toast({ title: outcome.title, description: outcome.description });
-        }
-      }
+      case "start_huddle":
+        startHuddleFromCommand(result.roomId, result.roomName);
     }
   };
 

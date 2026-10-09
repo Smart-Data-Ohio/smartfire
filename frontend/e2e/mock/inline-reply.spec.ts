@@ -134,8 +134,132 @@ test("Esc and × drop the reply; the menu and Q pick it again", async ({ page })
   await expect(composer(page)).toBeFocused();
 });
 
+/** Refuses the message creates `refuse` picks with a 422 until the returned undo runs. */
+async function refuseCreates(
+  page: Page,
+  refuse: (body: { attachmentSignedId: string | null }) => boolean,
+): Promise<() => Promise<void>> {
+  const pattern = `**/api/v1/rooms/${ROOM_IDS.general}/messages`;
+
+  await page.route(pattern, async (route) => {
+    const request = route.request();
+
+    if (request.method() === "POST" && refuse(request.postDataJSON())) {
+      await route.fulfill({ status: 422, json: { error: "Not today" } });
+    } else {
+      await route.fallback();
+    }
+  });
+
+  return () => page.unroute(pattern);
+}
+
+test("a text send that fails brings the reply back with its notify choice; Retry lands it", async ({
+  page,
+}) => {
+  await openOn(page, TARGET);
+
+  const bar = await hoverBar(row(page, TARGET));
+
+  await bar.getByRole("button", { name: "Reply", exact: true }).click();
+  await chip(page).getByRole("checkbox", { name: "Notify author" }).click();
+
+  const allow = await refuseCreates(page, () => true);
+
+  await composer(page).fill("Try this");
+  await composer(page).press("Enter");
+
+  const failed = page.locator(".message-failed");
+
+  await expect(failed).toContainText("Couldn't send");
+  await expect(chip(page)).toBeVisible();
+  await expect(chip(page).getByRole("checkbox", { name: "Notify author" })).not.toBeChecked();
+
+  await allow();
+
+  const create = nextCreate(page);
+
+  await failed.getByRole("button", { name: "Retry" }).click();
+  expect((await create).postDataJSON()).toMatchObject({
+    markdownSource: "Try this",
+    replyToMessageId: TARGET,
+    replyNotifyAuthor: false,
+  });
+  await sentRow(page, "Try this");
+  await expect(chip(page)).toBeHidden();
+});
+
+test("a file send that fails brings the reply back", async ({ page }) => {
+  await openOn(page, TARGET);
+
+  const bar = await hoverBar(row(page, TARGET));
+
+  await bar.getByRole("button", { name: "Reply", exact: true }).click();
+  await page
+    .locator('.composer input[type="file"]')
+    .setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("notes") });
+  await expect(page.locator('.tray-chip[data-phase="done"]')).toHaveCount(1);
+
+  await refuseCreates(page, (body) => body.attachmentSignedId !== null);
+
+  const create = nextCreate(page);
+
+  await composer(page).press("Enter");
+  expect((await create).postDataJSON()).toMatchObject({ replyToMessageId: TARGET });
+  await expect(page.locator(".message-failed")).toContainText("Couldn't send");
+  await expect(chip(page)).toBeVisible();
+  await expect(composer(page)).toBeFocused();
+});
+
 test.describe("on a 360 px touch phone", () => {
   test.use(PHONE_TOUCH);
+
+  test("a long unbroken author name ends in an ellipsis inside the chip", async ({ page }) => {
+    const LONG = "Graceadeyemiwhosenamerunsonandonwithoutasinglebreakanywhere";
+
+    // Every API body that names Grace names her the long way.
+    await page.route("**/api/v1/**", async (route) => {
+      const response = await route.fetch();
+      const type = response.headers()["content-type"] ?? "";
+
+      if (!type.includes("json")) {
+        await route.fulfill({ response });
+
+        return;
+      }
+
+      const body = (await response.text()).replaceAll("Grace Adeyemi", LONG);
+
+      await route.fulfill({ response, body });
+    });
+    await openOn(page, TARGET);
+    await longPress(row(page, TARGET).locator(".message-body").first());
+    await page
+      .getByRole("menu", { name: "Message actions" })
+      .getByRole("menuitem", { name: "Reply", exact: true })
+      .click();
+
+    const longChip = page.locator(".composer").getByRole("region", { name: `Replying to ${LONG}` });
+    const label = longChip.locator(".composer-reply-label");
+
+    await expect(longChip).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(page, ".composer-reply");
+
+    const fit = await label.evaluate((element) => {
+      const chipBox = element.closest(".composer-reply")?.getBoundingClientRect();
+      const box = element.getBoundingClientRect();
+
+      return {
+        clipped: element.scrollWidth > element.clientWidth,
+        inside: chipBox !== undefined && box.right <= chipBox.right,
+      };
+    });
+
+    expect(fit).toEqual({ clipped: true, inside: true });
+    await expect(longChip.getByRole("button", { name: "Cancel reply" })).toBeInViewport();
+    await shot(page, "composer-reply-long-name", "light");
+  });
 
   for (const theme of ["light", "dark"] as const) {
     test(`a long press offers Reply; the quote fits and sends without notifying (${theme})`, async ({

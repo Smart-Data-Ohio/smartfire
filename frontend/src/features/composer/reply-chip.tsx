@@ -34,7 +34,7 @@ export function ReplyChip({ target, onNotifyChange, onCancel }: ReplyChipProps) 
     <section className="composer-reply enter-rise" aria-label={`Replying to ${name}`}>
       <Icon name="corner-up-left" size={14} className="composer-reply-icon" />
       <p className="composer-reply-copy">
-        <span className="composer-reply-label">
+        <span className="composer-reply-label" title={name}>
           Replying to <strong>{name}</strong>
         </span>
         <span className="composer-reply-text">{snippet(source)}</span>

@@ -31,6 +31,8 @@ export interface SendOptions {
   readonly attachment?: PendingAttachment | null;
   /** An inline reply: the message it answers and whether that author is notified. */
   readonly reply?: { readonly messageId: number; readonly notify: boolean } | null;
+  /** The `clientMessageId` to post under, when the caller follows the send; made here otherwise. */
+  readonly clientMessageId?: string;
 }
 
 /**
@@ -115,7 +117,7 @@ export class Outbox extends Context.Service<
         options: SendOptions = {},
       ) {
         const now = yield* Clock.currentTimeMillis;
-        const clientMessageId = uuid7(now);
+        const clientMessageId = options.clientMessageId ?? uuid7(now);
         const state = store.getState();
 
         const pending: PendingMessage = {

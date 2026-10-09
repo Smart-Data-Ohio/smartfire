@@ -158,8 +158,14 @@
     margin: 0;
   }
 
+  /* A long unbroken name ends in an ellipsis and leaves room for the excerpt. */
   .composer-reply-label {
     flex-shrink: 0;
+    max-width: 60%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .composer-reply-label strong {
@@ -322,6 +328,10 @@
     .composer-reply-copy {
       flex-direction: column;
       gap: 0;
+    }
+
+    .composer-reply-label {
+      max-width: 100%;
     }
 
     .composer-reply-notify {

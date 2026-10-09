@@ -1,13 +1,17 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
 import type { CreateMessage } from "../../gen/CreateMessage.ts";
+import type { CreateScheduledMessage } from "../../gen/CreateScheduledMessage.ts";
 import type { Me } from "../../gen/Me.ts";
 import type { MessagePage } from "../../gen/MessagePage.ts";
+import { uuid7 } from "../../lib/uuid7.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { mutations, store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
+import { editingId, stopEditing } from "../messages/editing-store.ts";
 import { Composer } from "./composer.tsx";
 import { draftKey } from "./draft.ts";
 import {
@@ -17,6 +21,7 @@ import {
   resetReplies,
   setReplyNotify,
   startReply,
+  trackSentReply,
 } from "./reply-store.ts";
 
 // The composer sends through the real outbox against the in-memory mock backend.
@@ -29,10 +34,23 @@ const VIEWER = SEED_IDS.viewer;
 /** Every message create the composer posted, parsed. */
 let posts: CreateMessage[] = [];
 
-/** A loaded #general message by someone other than the viewer. */
-function seeded(): MessageDTO {
+/** Every scheduled-message create, parsed. */
+let schedules: CreateScheduledMessage[] = [];
+
+/** Which message creates the backend refuses with a 422; `null` takes them all. */
+let refuse: ((body: CreateMessage) => boolean) | null = null;
+
+/** What a refusal waits on before it answers, to let the test act while the send is in flight. */
+let hold: Promise<void> = Promise.resolve();
+
+/** A loaded #general message by someone other than the viewer (not `except`). */
+function seeded(except: number | null = null): MessageDTO {
   const found = Object.values(store.getState().messages).find(
-    (message) => message.roomId === ROOM && message.creatorId !== VIEWER && !message.systemNote,
+    (message) =>
+      message.roomId === ROOM &&
+      message.creatorId !== VIEWER &&
+      !message.systemNote &&
+      message.id !== except,
   );
 
   if (found === undefined) {
@@ -57,8 +75,20 @@ beforeAll(async () => {
     const url = input instanceof Request ? input : new URL(String(input), location.href);
     const request = new Request(url, init);
 
-    if (request.method === "POST" && new URL(request.url).pathname.endsWith("/messages")) {
-      posts.push(await request.clone().json());
+    const path = new URL(request.url).pathname;
+
+    if (request.method === "POST" && path.endsWith("/scheduled_messages")) {
+      schedules.push(await request.clone().json());
+    } else if (request.method === "POST" && path.endsWith("/messages")) {
+      const body: CreateMessage = await request.clone().json();
+
+      posts.push(body);
+
+      if (refuse?.(body)) {
+        await hold;
+
+        return Response.json({ error: "Not today" }, { status: 422 });
+      }
     }
 
     return mocked(input, init);
@@ -96,8 +126,38 @@ beforeEach(async () => {
   mutations.applyPage(ROOM, page, "replace");
   resetReplies();
   sessionStorage.clear();
+  stopEditing();
   posts = [];
+  schedules = [];
+  refuse = null;
+  hold = Promise.resolve();
 });
+
+/** The pending messages that failed for good. */
+function failedSends() {
+  return Object.values(store.getState().pending).filter((pending) => pending.state === "failed");
+}
+
+/** Posts a message as the viewer and loads it, as their own last message. */
+async function postOwn(): Promise<MessageDTO> {
+  const response = await fetch(`/api/v1/rooms/${ROOM}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-CSRF-Token": network.server.csrfToken() },
+    body: JSON.stringify({
+      clientMessageId: uuid7(Date.now()),
+      markdownSource: "Mine",
+      replyToMessageId: null,
+      replyNotifyAuthor: null,
+    }),
+  });
+
+  const own: MessageDTO = await response.json();
+
+  act(() => mutations.receiveMessage(own));
+  posts = [];
+
+  return own;
+}
 
 describe("reply targets", () => {
   it("start notifying the author, per conversation, until cancelled", () => {
@@ -147,20 +207,8 @@ describe("the composer's reply", () => {
   });
 
   it("hides Notify author on a reply to yourself", async () => {
-    const response = await fetch(`/api/v1/rooms/${ROOM}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-Token": network.server.csrfToken() },
-      body: JSON.stringify({
-        clientMessageId: "reply-own",
-        markdownSource: "Mine",
-        replyToMessageId: null,
-        replyNotifyAuthor: null,
-      }),
-    });
+    const own = await postOwn();
 
-    const own: MessageDTO = await response.json();
-
-    act(() => mutations.receiveMessage(own));
     render(<Composer roomId={ROOM} />);
     act(() => startReply(own));
 
@@ -231,5 +279,178 @@ describe("the composer's reply", () => {
 
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]).toMatchObject({ replyToMessageId: null, replyNotifyAuthor: null });
+  });
+
+  it("comes back with its notify choice when the text send fails", async () => {
+    const user = userEvent.setup();
+    const message = seeded();
+
+    refuse = () => true;
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(message));
+    await user.click(screen.getByRole("checkbox", { name: "Notify author" }));
+    await user.type(input(), "Lost{Enter}");
+
+    await waitFor(() => expect(failedSends()).toHaveLength(1));
+    await waitFor(() => expect(chip()).not.toBeNull());
+    expect(replyTarget(draftKey(ROOM, null))).toMatchObject({
+      messageId: message.id,
+      notify: false,
+    });
+    expect(screen.getByRole("checkbox", { name: "Notify author" })).toHaveProperty(
+      "checked",
+      false,
+    );
+    expect(failedSends()[0]).toMatchObject({ replyToMessageId: message.id });
+  });
+
+  // jsdom can't run the direct upload, so this sends what the composer sends for text plus one
+  // file (the mock e2e attaches a real file through the composer).
+  it("rides on each file message, and comes back when a file message fails", async () => {
+    const message = seeded();
+    const key = draftKey(ROOM, null);
+    const textId = uuid7(Date.now());
+    const fileId = uuid7(Date.now());
+    const ids = [textId, fileId];
+
+    refuse = (body) => body.attachmentSignedId !== null;
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(message));
+
+    const target = replyTarget(key);
+
+    expect(target).not.toBeNull();
+
+    const reply = { messageId: message.id, notify: true };
+
+    act(() => {
+      actions.send(ROOM, "Notes attached", { reply, clientMessageId: textId });
+      actions.send(ROOM, "", {
+        attachmentSignedId: "signed-notes",
+        reply,
+        clientMessageId: fileId,
+      });
+      cancelReply(key);
+
+      if (target !== null) trackSentReply(key, target, ids);
+    });
+
+    await waitFor(() =>
+      expect(failedSends().map((pending) => pending.clientMessageId)).toEqual([fileId]),
+    );
+    await waitFor(() => expect(chip()).not.toBeNull());
+    expect(new Set(posts.map((post) => post.clientMessageId))).toEqual(new Set(ids));
+    expect(posts.every((post) => post.replyToMessageId === message.id)).toBe(true);
+  });
+
+  it("doesn't come back over a reply picked while the failed send was in flight", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+
+    hold = gate.promise;
+    refuse = () => true;
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "Slow{Enter}");
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(chip()).toBeNull();
+
+    act(() => startReply(second));
+    gate.resolve();
+
+    await waitFor(() => expect(failedSends()).toHaveLength(1));
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(second.id);
+  });
+
+  it("is resent by Retry, and leaves the composer once that lands", async () => {
+    const user = userEvent.setup();
+    const message = seeded();
+
+    refuse = () => true;
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(message));
+    await user.type(input(), "Again{Enter}");
+    await waitFor(() => expect(chip()).not.toBeNull());
+
+    const [failed] = failedSends();
+
+    refuse = null;
+    act(() => actions.retry(failed?.clientMessageId ?? ""));
+
+    await waitFor(() => expect(posts).toHaveLength(2));
+    expect(posts[1]).toMatchObject({
+      clientMessageId: failed?.clientMessageId,
+      replyToMessageId: message.id,
+      replyNotifyAuthor: true,
+    });
+    await waitFor(() => expect(chip()).toBeNull());
+  });
+
+  it("stays with its room when the composer switches rooms, without taking the focus back", async () => {
+    const message = seeded();
+    const view = render(<Composer roomId={ROOM} />);
+
+    act(() => startReply(message));
+    await waitFor(() => expect(document.activeElement).toBe(input()));
+    act(() => input().blur());
+
+    view.rerender(<Composer roomId={SEED_IDS.rooms.design} />);
+    expect(chip()).toBeNull();
+
+    view.rerender(<Composer roomId={ROOM} />);
+    expect(chip()).not.toBeNull();
+    expect(document.activeElement).not.toBe(input());
+  });
+
+  it("survives ↑ editing your last message", async () => {
+    const user = userEvent.setup();
+    const own = await postOwn();
+    const message = seeded();
+
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(message));
+    await waitFor(() => expect(document.activeElement).toBe(input()));
+    await user.keyboard("{ArrowUp}");
+
+    expect(editingId()).toBe(own.id);
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(message.id);
+    expect(chip()).not.toBeNull();
+  });
+
+  it("goes with a scheduled send and leaves once it's scheduled", async () => {
+    const user = userEvent.setup();
+    const message = seeded();
+
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(message));
+    await user.type(input(), "Later");
+    await user.click(screen.getByRole("button", { name: "Schedule message" }));
+
+    const [preset] = within(
+      await screen.findByRole("menu", { name: "Schedule message" }),
+    ).getAllByRole("menuitem");
+
+    expect(preset).toBeDefined();
+
+    if (preset !== undefined) await user.click(preset);
+
+    await waitFor(() => expect(schedules).toHaveLength(1));
+    expect(schedules[0]).toMatchObject({ markdownSource: "Later", replyToMessageId: message.id });
+    await waitFor(() => expect(chip()).toBeNull());
+    expect(posts).toHaveLength(0);
+  });
+
+  it("isn't started by typing Q in the composer", async () => {
+    const user = userEvent.setup();
+
+    render(<Composer roomId={ROOM} />);
+    await user.type(input(), "q");
+    await user.keyboard("{Shift>}Q{/Shift}");
+
+    expect(chip()).toBeNull();
+    expect(replyTarget(draftKey(ROOM, null))).toBeNull();
+    expect(input()).toHaveProperty("value", "qQ");
   });
 });

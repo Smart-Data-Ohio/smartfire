@@ -34,7 +34,8 @@ describe("/huddle's start_huddle", () => {
 
     mutations.loadSidebar(sidebarFixture([sidebarRowFixture(12, "general")]));
 
-    expect(startHuddleFromCommand(12, "general", join)).toEqual({ kind: "joining" });
+    startHuddleFromCommand(12, "general", join);
+
     expect(joins).toEqual([[12, "general", null]]);
   });
 
@@ -43,7 +44,8 @@ describe("/huddle's start_huddle", () => {
 
     mutations.loadSidebar(sidebarFixture([sidebarRowFixture(14, "Maya", "direct", [7, 9])]));
 
-    expect(startHuddleFromCommand(14, "Maya", join).kind).toBe("joining");
+    startHuddleFromCommand(14, "Maya", join);
+
     expect(joins).toEqual([[14, "Maya", null]]);
   });
 
@@ -60,16 +62,14 @@ describe("/huddle's start_huddle", () => {
     expect(joins).toEqual([[20, "Town Hall", true]]);
   });
 
-  it("refuses a board, which has no call button", () => {
+  it("joins a board post's call, as classic's join endpoints allow", () => {
     const { joins, join } = recorder();
 
     mutations.loadSidebar(sidebarFixture([sidebarRowFixture(30, "Roadmap", "board")]));
 
-    expect(startHuddleFromCommand(30, "Roadmap", join)).toMatchObject({
-      kind: "refused",
-      title: "Boards don't have calls",
-    });
-    expect(joins).toEqual([]);
+    startHuddleFromCommand(30, "Roadmap", join);
+
+    expect(joins).toEqual([[30, "Roadmap", null]]);
   });
 });
 
