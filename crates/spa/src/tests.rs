@@ -273,12 +273,29 @@ fn workspace_styles_follow_the_base_sheets_without_html_breakout() {
     let mut boot = boot();
     boot.custom_styles = Some(":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into());
     let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"));
-    let expected = "<style data-turbo-track=\"reload\">:root { --accent: red; } .label::after { content: \"\\3c /style>\\3c script>&\\\"\"; }</style>";
+    let expected = "<style data-turbo-track=\"reload\">:root { --accent: red; } .label::after { content: \"\\3c /style><script>&\\\"\"; }</style>";
     assert!(page.contains(expected), "{page}");
     assert!(page.find("base.css").unwrap() < page.find(expected).unwrap());
     assert_eq!(page.matches("</style>").count(), 1);
-    assert!(!page.contains("<script>&"));
+    assert!(!page.contains("</style><script>"));
     assert_eq!(boot_json(&page)["customStyles"], boot.custom_styles.unwrap());
+}
+
+#[test]
+fn workspace_styles_preserve_range_queries_and_attribute_selectors() {
+    let css = "@media (width < 720px) { [data-label=\"<雪\"] { color: red; } }";
+    let mut boot = boot();
+    boot.custom_styles = Some(css.into());
+    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    assert!(page.contains(&format!("<style data-turbo-track=\"reload\">{css}</style>")), "{page}");
+}
+
+#[test]
+fn workspace_style_end_tags_are_case_insensitive_and_require_a_delimiter() {
+    let mut boot = boot();
+    boot.custom_styles = Some("body::after { content: \"</StYlE> </STYLE /> </style\n> </stylesheet>\"; }".into());
+    let page = render("<head><!--boot--></head>", &boot, "token", None);
+    assert!(page.contains("content: \"\\3c /StYlE> \\3c /STYLE /> \\3c /style\n> </stylesheet>\"; }"), "{page}");
 }
 
 #[test]

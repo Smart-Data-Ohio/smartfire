@@ -21,7 +21,7 @@ function render(css: string | null): void {
   // Match shell.rs: raw CSS, with CSS escapes for HTML's end-tag delimiter. Classic's inline
   // style-src permits this element. Unlayered workspace CSS beats base layers; appearance's
   // explicit choices use the root CSSOM, above workspace defaults.
-  style.textContent = css.replaceAll("<", "\\3c ");
+  style.textContent = css.replace(/<\/style(?=[\t\n\f\r />])/gi, (tag) => `\\3c ${tag.slice(1)}`);
 
   if (existing === null) document.head.append(style);
 }

@@ -30,6 +30,24 @@ test("saved CSS reaches this SPA, another open tab and the next load", async ({
   await expect(observer.locator("body")).toHaveCSS("border-top-width", "0px");
 });
 
+test("range queries and literal less-than attribute selectors reach the browser unchanged", async ({
+  page,
+}) => {
+  const rangeCss =
+    '@media (width < 720px) { body[data-css-probe="<value"] { border-top: 11px solid red; } }';
+
+  await page.setViewportSize({ width: 700, height: 900 });
+  await page.goto("/app/admin/styles");
+  await page.locator("body").evaluate((body) => body.setAttribute("data-css-probe", "<value"));
+  await page.getByRole("textbox", { name: "Custom CSS" }).fill(rangeCss);
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Custom styles saved", { exact: true })).toBeVisible();
+  await expect(page.locator(selector)).toHaveJSProperty("textContent", rangeCss);
+  await expect(page.locator("body")).toHaveCSS("border-top-width", "11px");
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(page.locator("body")).toHaveCSS("border-top-width", "0px");
+});
+
 test("preview renders the real page, safely, and leaving restores the saved CSS", async ({
   page,
 }) => {

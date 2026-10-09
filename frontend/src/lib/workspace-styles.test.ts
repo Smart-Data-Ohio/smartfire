@@ -19,6 +19,24 @@ afterEach(() => {
 });
 
 describe("workspace styles", () => {
+  it("preserves range media queries and attribute selectors in live updates", () => {
+    const css = '@media (width < 720px) { [data-label="<雪"] { color: red; } }';
+
+    applyWorkspaceStyles(css);
+
+    expect(style()?.textContent).toBe(css);
+  });
+
+  it("encodes only case-insensitive style end tags with an HTML delimiter", () => {
+    applyWorkspaceStyles(
+      'body::after { content: "</StYlE> </STYLE /> </style\n> </stylesheet>"; }',
+    );
+
+    expect(style()?.textContent).toBe(
+      'body::after { content: "\\3c /StYlE> \\3c /STYLE /> \\3c /style\n> </stylesheet>"; }',
+    );
+  });
+
   it("uses classic's element and shell encoding, without escaping CSS selectors or quotes", () => {
     applyWorkspaceStyles('body > .label::after { content: "</style>&"; }');
 

@@ -19,8 +19,10 @@ import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { followWorkspaceStyles } from "../lib/workspace-styles.ts";
 import { activityListOf } from "../store/activity.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
+import type { Boot } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
@@ -63,6 +65,7 @@ const serve = (roomMessages: readonly MessageDTO[]) =>
   Effect.gen(function* () {
     const api = yield* FakeApi;
 
+    yield* api.reply("GET /boot", { ...workspaceBoot, csrfToken: "token" });
     yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
     yield* api.reply("GET /rooms/12", roomDetailFixture(12));
     yield* api.reply("GET /rooms/12/messages", pageFixture(roomMessages));
@@ -149,6 +152,24 @@ const activityItem: ActivityItem = {
 };
 
 const unreadCount = (roomId: number) => store.getState().sidebar.rows[roomId]?.unreadCount;
+
+const workspaceBoot: Boot = {
+  user: { id: 7, name: "Ada", avatarUrl: "/avatar.svg" },
+  account: {
+    name: "Smart Data",
+    logoUrl: null,
+    logoStillUrl: null,
+    bannerUrl: null,
+    bannerStillUrl: null,
+  },
+  customStyles: "body { color: red; }",
+  theme: "system",
+  textSize: "default",
+  cableUrl: "/cable",
+  serviceWorkerUrl: null,
+  version: "test",
+  revision: null,
+};
 
 const timelineIds = (roomId: number) => store.getState().timelines[roomId]?.ids;
 
@@ -1177,6 +1198,53 @@ const threadDetail = (status: "active" | "closed", canClose: boolean) => ({
 });
 
 describe("resync", () => {
+  it.effect("refreshes workspace CSS after a missed save and a server restart", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* serve([]);
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+
+        mutations.setBoot(workspaceBoot);
+        const stop = followWorkspaceStyles();
+
+        yield* Effect.addFinalizer(() =>
+          Effect.sync(() => {
+            stop();
+            document.head.querySelector('style[data-turbo-track="reload"]')?.remove();
+          }),
+        );
+        yield* api.reply("GET /boot", {
+          ...workspaceBoot,
+          customStyles: "body { color: green; }",
+          csrfToken: "token",
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+        expect(document.head.querySelector('style[data-turbo-track="reload"]')?.textContent).toBe(
+          "body { color: green; }",
+        );
+
+        yield* socket.drop;
+        yield* api.reply("GET /boot", {
+          ...workspaceBoot,
+          customStyles: "body { color: blue; }",
+          csrfToken: "token",
+        });
+        yield* TestClock.adjust(250);
+        yield* welcome(1, false, "e2");
+
+        expect(document.head.querySelector('style[data-turbo-track="reload"]')?.textContent).toBe(
+          "body { color: blue; }",
+        );
+        yield* api.reply("GET /boot", { ...workspaceBoot, customStyles: null, csrfToken: "token" });
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        expect(document.head.querySelector('style[data-turbo-track="reload"]')).toBeNull();
+      }).pipe(Effect.scoped),
+    ),
+  );
+
   it.effect("refetches the sidebar and subscribed rooms when the server can't resume", () =>
     withSync(
       Effect.gen(function* () {
@@ -1206,10 +1274,11 @@ describe("resync", () => {
 
         const requests = (yield* api.requests).slice(before);
 
-        expect(requests).toHaveLength(4);
+        expect(requests).toHaveLength(5);
         expect(requests).toEqual(
           expect.arrayContaining([
             { method: "GET", path: "/sidebar" },
+            { method: "GET", path: "/boot" },
             { method: "GET", path: "/activity/unread_count" },
             { method: "GET", path: "/rooms/12" },
             { method: "GET", path: "/rooms/12/messages" },
