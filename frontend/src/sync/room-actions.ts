@@ -5,6 +5,8 @@ import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { RoomForm } from "../gen/RoomForm.ts";
 import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
+import type { SubscribeGithubRepository } from "../gen/SubscribeGithubRepository.ts";
+import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
@@ -151,4 +153,40 @@ export const leaveDirect = Effect.fn("rooms.leaveDirect")(function* (roomId: num
   }
 
   return result;
+});
+
+export const githubSubscriptions = Effect.fn("rooms.githubSubscriptions")(function* (
+  roomId: number,
+) {
+  return yield* api.githubSubscriptions(roomId);
+});
+
+export const subscribeRepository = Effect.fn("rooms.subscribeRepository")(function* (
+  roomId: number,
+  body: SubscribeGithubRepository,
+) {
+  return yield* api.subscribeRepository(roomId, body);
+});
+
+export const updateGithubSubscription = Effect.fn("rooms.updateGithubSubscription")(function* (
+  roomId: number,
+  subscriptionId: number,
+  body: UpdateGithubSubscription,
+) {
+  return yield* api.updateGithubSubscription(roomId, subscriptionId, body);
+});
+
+export const unsubscribeRepository = Effect.fn("rooms.unsubscribeRepository")(function* (
+  roomId: number,
+  subscriptionId: number,
+) {
+  return yield* api.unsubscribeRepository(roomId, subscriptionId);
+});
+
+export const inboundEmail = Effect.fn("rooms.inboundEmail")(function* (roomId: number) {
+  return yield* api.inboundEmail(roomId);
+});
+
+export const rotateInboundEmail = Effect.fn("rooms.rotateInboundEmail")(function* (roomId: number) {
+  return yield* api.rotateInboundEmail(roomId);
 });

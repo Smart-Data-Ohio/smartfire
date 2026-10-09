@@ -7,10 +7,12 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
-import { Tabs, tabId } from "../../ui/tabs.tsx";
+import { type TabItem, Tabs, tabId } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
+import { GithubSubscriptions } from "./github-subscriptions.tsx";
+import { InboundEmailSection } from "./inbound-email.tsx";
 import { MemberList } from "./member-list.tsx";
 import {
   hasMemberList,
@@ -34,7 +36,7 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly form: RoomForm };
 
-type Tab = "general" | "members";
+type Tab = "general" | "members" | "github" | "email";
 
 const NOUN = {
   open: "channel",
@@ -78,9 +80,10 @@ function Pending({ load }: { readonly load: Load }) {
 
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
- * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. The
- * creator and administrators can change them; everyone else reads them. Nothing is written until
- * "Save changes"; then the room's header, sidebar row and member list update in place.
+ * and icon, whether a text channel is private, who's in it (with stage roles), Delete, the GitHub
+ * repositories it subscribes to, and (except on a board) its inbound email address. The creator
+ * and administrators can change them; everyone else reads the room and is refused the two
+ * integrations. Nothing about the room itself is written until "Save changes".
  */
 export default function RoomSettingsDialog({
   roomId,
@@ -173,7 +176,22 @@ export default function RoomSettingsDialog({
   const dirty = form !== null && isDirty(form, kind, draft);
   const noun = NOUN[kind];
   const members = hasMemberList(kind);
-  const shownTab: Tab = members ? tab : "general";
+  const emailable = kind !== "board";
+
+  const shownTab: Tab =
+    (tab === "members" && !members) || (tab === "email" && !emailable) ? "general" : tab;
+
+  const tabItems: TabItem[] = [{ value: "general", label: "General", icon: "settings" }];
+
+  if (members) {
+    tabItems.push({ value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" });
+  }
+
+  tabItems.push({ value: "github", label: "GitHub", icon: "code" });
+
+  if (emailable) {
+    tabItems.push({ value: "email", label: "Email", icon: "inbox" });
+  }
 
   const canConvert =
     form !== null &&
@@ -412,38 +430,41 @@ export default function RoomSettingsDialog({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+
+          // Enter in a GitHub or email control must not save the room around it.
+          const active = document.activeElement;
+
+          if (active instanceof HTMLElement && active.closest("[data-room-integration]") !== null) {
+            return;
+          }
+
           save();
         }}
       >
-        {/* The strip comes and goes with privacy; the panel stays put, so the focused toggle
-            in it isn't remounted (and doesn't lose focus) when the Members tab appears. */}
-        {members ? (
-          <Tabs
-            id={tabsId}
-            panelId={panelId}
-            items={[
-              { value: "general", label: "General", icon: "settings" },
-              { value: "members", label: `Members · ${draft.userIds.length}`, icon: "users" },
-            ]}
-            value={shownTab}
-            onValueChange={(value) => setTab(value === "members" ? "members" : "general")}
-            label="Settings sections"
-          />
-        ) : null}
+        {/* The panel stays put when Members appears, so a focused privacy toggle isn't remounted. */}
+        <Tabs
+          id={tabsId}
+          panelId={panelId}
+          items={tabItems}
+          value={shownTab}
+          onValueChange={(value) => {
+            if (value === "members" || value === "github" || value === "email") {
+              setTab(value);
+            } else {
+              setTab("general");
+            }
+          }}
+          label="Settings sections"
+        />
         <div
           key={shownTab}
+          id={panelId}
+          role="tabpanel"
           className="room-tab-panel enter-fade"
-          {...(members
-            ? {
-                id: panelId,
-                role: "tabpanel",
-                "aria-labelledby": tabId(tabsId, shownTab),
-              }
-            : {})}
+          aria-labelledby={tabId(tabsId, shownTab)}
         >
-          {shownTab === "general" ? (
-            general
-          ) : (
+          {shownTab === "general" ? general : null}
+          {shownTab === "members" ? (
             <MemberList
               candidateIds={form.candidateIds}
               memberIds={draft.userIds}
@@ -454,7 +475,9 @@ export default function RoomSettingsDialog({
               agentIds={agentIds}
               readOnly={readOnly}
             />
-          )}
+          ) : null}
+          {shownTab === "github" ? <GithubSubscriptions roomId={roomId} /> : null}
+          {shownTab === "email" ? <InboundEmailSection roomId={roomId} /> : null}
         </div>
         {problem === null ? null : (
           <p className="picker-note picker-error" role="alert">

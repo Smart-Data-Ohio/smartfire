@@ -1,5 +1,15 @@
 import type { Page } from "@playwright/test";
-import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import {
+  DESKTOP,
+  expect,
+  matrix,
+  openApp,
+  PHONE,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+} from "./support.ts";
 
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
 
@@ -561,6 +571,67 @@ test.describe("room settings", () => {
 
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
+  });
+
+  test("subscribes and unsubscribes a repository, and shows the room's email address", async ({
+    page,
+  }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("Rails/Rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(page.getByText("Subscribed to rails/rails.")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Remove rails/rails" }).click();
+    await page
+      .getByRole("alertdialog", { name: "Unsubscribe rails/rails?" })
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
+    await expect(page.getByText("Unsubscribed from rails/rails.")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "Email" }).click();
+    await expect(
+      dialog.getByText("room-a1b2c3d4e5f67890a1b2c3d4e5f67890@mail.campfire.test"),
+    ).toBeVisible();
+  });
+
+  test("on a phone, Enter in the repository field subscribes without saving the room", async ({
+    page,
+  }) => {
+    await page.setViewportSize(PHONE);
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("campfire/campfire");
+    await page.keyboard.press("Enter");
+    await expect(dialog.getByText("campfire/campfire")).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.launchPlanning}/settings$`));
+
+    await dialog.getByRole("tab", { name: "Email" }).click();
+    await expect(dialog.getByText(/room-a1b2c3d4e5f67890/)).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Rotate address" })).toBeVisible();
+  });
+
+  test("a board's settings offer GitHub and not inbound email", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+    // The seeded board is not a sidebar row this spec opens by id.
+    await page.goto("/app/r/900/settings");
+
+    const dialog = page.getByRole("dialog", { name: "Board settings" });
+
+    await expect(dialog.getByRole("tab", { name: "GitHub" })).toBeVisible();
+    await expect(dialog.getByRole("tab", { name: "Email" })).toHaveCount(0);
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await expect(dialog.getByText("No repositories subscribed yet.")).toBeVisible();
   });
 
   test("a direct message's settings URL opens the conversation", async ({ page }) => {

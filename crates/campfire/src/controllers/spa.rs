@@ -101,6 +101,10 @@ mod people_tests;
 mod api_room_management_tests;
 
 #[cfg(test)]
+#[path = "spa_api_room_integrations_tests.rs"]
+mod api_room_integrations_tests;
+
+#[cfg(test)]
 #[path = "spa_api_room_join_tests.rs"]
 mod api_room_join_tests;
 

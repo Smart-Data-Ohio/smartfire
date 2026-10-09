@@ -86,6 +86,7 @@ import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
+import { createRoomIntegrations } from "./s8/room-integrations.ts";
 import { createRoomManagement } from "./s8/rooms.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
@@ -919,6 +920,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...approvals.routes,
     ...ledger.routes,
     ...createRoomManagement(ctx, admin, huddles).routes,
+    ...createRoomIntegrations(ctx).routes,
     ...events.routes,
     ...huddles.routes,
     ...cards.routes,

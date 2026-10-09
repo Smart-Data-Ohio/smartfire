@@ -41,6 +41,7 @@ mod presence;
 mod reaction;
 mod read;
 mod room;
+mod room_integrations;
 mod room_management;
 mod saved;
 mod search;
@@ -146,6 +147,10 @@ pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
 pub use room::{Involvement, Membership, Room, RoomDetail, RoomKind, StageRole, UnreadDivider};
+pub use room_integrations::{
+    GithubEventChoice, GithubSubscription, GithubSubscriptionList, InboundEmail,
+    SubscribeGithubRepository, UpdateGithubSubscription,
+};
 pub use room_management::{CreateRoom, RoomForm, RoomFormStageRole, RoomLeft, RoomMutation, RoomRemoved, UpdateRoom};
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{

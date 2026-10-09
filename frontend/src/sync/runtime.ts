@@ -34,8 +34,11 @@ import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
 import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
+import type { GithubSubscription } from "../gen/GithubSubscription.ts";
+import type { GithubSubscriptionList } from "../gen/GithubSubscriptionList.ts";
 import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
 import type { Icon } from "../gen/Icon.ts";
+import type { InboundEmail } from "../gen/InboundEmail.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
@@ -50,11 +53,13 @@ import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
 import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
+import type { SubscribeGithubRepository } from "../gen/SubscribeGithubRepository.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
+import type { UpdateGithubSubscription } from "../gen/UpdateGithubSubscription.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
@@ -387,6 +392,24 @@ const rooms = {
     runAction(roomActions.update(roomId, body)),
   remove: (roomId: number): Promise<RoomRemoved> => runAction(roomActions.remove(roomId)),
   leaveDirect: (roomId: number): Promise<RoomLeft> => runAction(roomActions.leaveDirect(roomId)),
+  githubSubscriptions: (roomId: number): Promise<GithubSubscriptionList> =>
+    runAction(roomActions.githubSubscriptions(roomId)),
+  subscribeRepository: (
+    roomId: number,
+    body: SubscribeGithubRepository,
+  ): Promise<GithubSubscription> => runAction(roomActions.subscribeRepository(roomId, body)),
+  updateGithubSubscription: (
+    roomId: number,
+    subscriptionId: number,
+    body: UpdateGithubSubscription,
+  ): Promise<GithubSubscription> =>
+    runAction(roomActions.updateGithubSubscription(roomId, subscriptionId, body)),
+  unsubscribeRepository: (roomId: number, subscriptionId: number): Promise<GithubSubscription> =>
+    runAction(roomActions.unsubscribeRepository(roomId, subscriptionId)),
+  inboundEmail: (roomId: number): Promise<InboundEmail> =>
+    runAction(roomActions.inboundEmail(roomId)),
+  rotateInboundEmail: (roomId: number): Promise<InboundEmail> =>
+    runAction(roomActions.rotateInboundEmail(roomId)),
 };
 
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
