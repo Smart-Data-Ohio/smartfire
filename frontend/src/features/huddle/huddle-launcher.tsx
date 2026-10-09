@@ -96,6 +96,8 @@ export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
         size="sm"
         icon={active && labels.toggle ? "phone-off" : "headphones"}
         className="huddle-launcher"
+        // Phones show the glyph alone (the label is display: none), so the name is set here.
+        aria-label={label}
         aria-pressed={active}
         data-active={active || undefined}
         onClick={onClick}

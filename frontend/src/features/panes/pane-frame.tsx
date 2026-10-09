@@ -3,6 +3,7 @@ import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { useStore } from "../../store/store.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { PageHeader } from "../../ui/page-header.tsx";
 
 /** What the right pane's frame needs from the container: how to go back and how to close. */
 export interface PaneChrome {
@@ -37,28 +38,29 @@ interface PaneFrameProps {
 }
 
 /**
- * The right pane's frame: a 48 px header that lines up with the conversation's (back, title,
- * tools, close), an optional fixed toolbar, the scrolling body and an optional fixed footer. On
- * phones the back chevron leads and the close button goes, as a pushed page has it.
+ * The right pane's frame: a page header that lines up with the conversation's (back, title over
+ * subtitle, tools, close), an optional fixed toolbar, the scrolling body and an optional fixed
+ * footer. On phones the back chevron leads and the close button goes, as a pushed page has it.
  */
 export function PaneFrame({ title, subtitle, tools, toolbar, footer, children }: PaneFrameProps) {
   const chrome = use(PaneChromeContext);
   const subtitleId = useId();
-  const showBack = chrome.onBack !== null;
 
   return (
     <div className="pane-frame">
-      <header className="pane-header" data-back={showBack || undefined}>
-        {showBack ? (
-          <IconButton
-            icon={chrome.phone ? "chevron-left" : "arrow-left"}
-            label={chrome.backLabel}
-            className="pane-back"
-            tooltipPlacement="bottom"
-            onClick={chrome.onBack ?? undefined}
-          />
-        ) : null}
-        <div className="pane-heading">
+      <PageHeader
+        className="pane-header"
+        back={
+          chrome.onBack === null
+            ? undefined
+            : {
+                label: chrome.backLabel,
+                icon: chrome.phone ? "chevron-left" : "arrow-left",
+                always: true,
+                onBack: chrome.onBack,
+              }
+        }
+        title={
           <h2
             id={chrome.headingId}
             className="pane-title"
@@ -66,25 +68,24 @@ export function PaneFrame({ title, subtitle, tools, toolbar, footer, children }:
           >
             {title}
           </h2>
-          {subtitle === undefined ? null : (
-            <div id={subtitleId} className="pane-subtitle">
-              {subtitle}
-            </div>
-          )}
-        </div>
-        <div className="pane-header-tools">
-          {tools}
-          {chrome.phone ? null : (
-            <IconButton
-              icon="x"
-              label="Close"
-              shortcut={shortcutKeys("close-pane")}
-              tooltipPlacement="bottom-end"
-              onClick={chrome.onClose}
-            />
-          )}
-        </div>
-      </header>
+        }
+        subtitle={subtitle}
+        subtitleId={subtitleId}
+        actions={
+          <>
+            {tools}
+            {chrome.phone ? null : (
+              <IconButton
+                icon="x"
+                label="Close"
+                shortcut={shortcutKeys("close-pane")}
+                tooltipPlacement="bottom-end"
+                onClick={chrome.onClose}
+              />
+            )}
+          </>
+        }
+      />
       {toolbar === undefined ? null : <div className="pane-toolbar">{toolbar}</div>}
       <div className="pane-body">{children}</div>
       {footer === undefined ? null : <div className="pane-footer">{footer}</div>}

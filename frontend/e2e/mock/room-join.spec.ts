@@ -116,15 +116,10 @@ test("restarting the server while previewing keeps the join page", async ({ page
       response.request().method() === "GET",
   );
 
-  const again = page.waitForEvent("websocket", (socket) => socket.url().includes("/api/v1/sync"));
+  const welcomed = syncWelcomed(page);
 
   await control(page, "restart");
-
-  const socket = await again;
-
-  await socket.waitForEvent("framereceived", (frame) =>
-    String(frame.payload).includes('"t":"welcome"'),
-  );
+  await welcomed;
   await refetched;
   await expect(preview).toBeVisible();
   await expect(page.getByRole("region", { name: "Room unavailable" })).toBeHidden();

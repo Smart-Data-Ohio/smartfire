@@ -1,0 +1,126 @@
+/*
+ * A screen's title bar (PageHeader): back, the title and its subtitle, the actions and the ⋯ menu.
+ * 48 px everywhere, lined up with the panes beside it; on phones every button in it is 44 px and
+ * the title takes what's left.
+ */
+
+@layer ui {
+  .page-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--pane-header-height);
+    padding: 0 var(--space-3) 0 var(--space-5);
+    box-shadow: 0 1px 0 var(--border);
+    z-index: 2;
+  }
+
+  .page-header-back {
+    flex-shrink: 0;
+  }
+
+  /* A link back (a pushed page's) looks like the icon button a pane's back is. */
+  a.page-header-back {
+    display: grid;
+    place-items: center;
+    width: var(--control-md);
+    height: var(--control-md);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a.page-header-back:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  a.page-header-back:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .page-header-heading {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  /* The title over its subtitle, as a pane's or a phone room's header has it. */
+  .page-header-heading[data-stacked] {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .page-header-subtitle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .page-header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  /* The ⋯ button's dot: something inside wants attention (raised hands). */
+  .page-header-overflow-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .page-header-overflow-wrap .badge[data-floating] {
+    --badge-ring: var(--bg-pane);
+
+    top: 10px;
+    right: 10px;
+  }
+
+  /* Off phones a page sits beside what it came from, so its back button goes. */
+  @media (720px <= width) {
+    .page-header[data-back="phone"] .page-header-back {
+      display: none;
+    }
+  }
+
+  /* Phones: a pushed page's bar. The back chevron leads at the touch size, the actions follow it,
+     and the edges come in so a 360 px screen still shows a 14-character name in full. */
+  @media (width < 720px) {
+    .page-header {
+      --control-md: var(--control-touch);
+
+      gap: var(--space-1);
+      padding: 0 var(--space-1) 0 var(--space-4);
+    }
+
+    .page-header[data-back] {
+      padding-left: var(--space-1);
+    }
+
+    .page-header-back {
+      --button-height: var(--touch-target);
+    }
+
+    a.page-header-back {
+      width: var(--touch-target);
+      height: var(--touch-target);
+    }
+
+    .page-header-actions {
+      gap: 0;
+    }
+  }
+}

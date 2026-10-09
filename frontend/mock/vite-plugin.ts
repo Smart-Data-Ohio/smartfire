@@ -271,6 +271,17 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
   };
 
   function attach(server: ViteDevServer | PreviewServer) {
+    // Playwright's request agent pools keep-alive sockets and ignores this server's
+    // Keep-Alive timeout: the agent is `keepAlive: true` with no `timeout`, so Node
+    // drops the advertised hint and reuses a socket this process has already closed.
+    // Node's default idle close is a few seconds. The next `route.fetch` then fails
+    // with `read ECONNRESET`. The scrollbar pagination spec hits that gap: its
+    // forwarded `messages?before` fetch runs only after the reader has been dragging.
+    // Leave idle mock sockets up for the life of this server.
+    if (server.httpServer !== null && "keepAliveTimeout" in server.httpServer) {
+      server.httpServer.keepAliveTimeout = 0;
+    }
+
     const backend = current();
     const sockets = new WebSocketServer({ noServer: true });
 

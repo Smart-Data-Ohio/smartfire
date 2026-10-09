@@ -1,5 +1,14 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test, USER_IDS } from "./support.ts";
+import {
+  expect,
+  matrix,
+  openHeaderTool,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /**
  * Stages, incoming calls and call notices against the mock and the fake LiveKit transport: the
@@ -49,7 +58,7 @@ function stagePane(page: Page) {
 }
 
 async function openStage(page: Page): Promise<void> {
-  await page.getByRole("button", { name: /^Stage/ }).click();
+  await openHeaderTool(page, /^Stage/);
   await expect(stagePane(page).getByRole("region", { name: "Hosts" })).toBeVisible();
 }
 
