@@ -11,6 +11,7 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { roomDetailFixture } from "../../api/testing.ts";
+import { beginRoomRequest } from "../../store/join-state.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -28,7 +29,7 @@ function Probe() {
 }
 
 async function mount() {
-  mutations.setRoomDetail(roomDetailFixture(4));
+  mutations.setRoomDetail(roomDetailFixture(4), beginRoomRequest());
 
   const root = createRootRoute({ component: Outlet });
 
