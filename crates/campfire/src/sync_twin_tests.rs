@@ -18,6 +18,7 @@ const PRIMITIVES: &[&str] = &[
     "sync_thread_indicator",
     "sync_unread_rows",
     "sync_membership_row",
+    "sync_read_row",
     "sync_row_removed",
     "sync_disconnect_after_leaves",
     "sync_activity_stream",

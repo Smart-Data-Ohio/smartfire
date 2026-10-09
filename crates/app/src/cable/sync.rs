@@ -205,7 +205,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
         "Broadcasts::unread_room",
         &["room.unread", "sidebar.row.upserted"],
     ),
-    ("Broadcasts::mark_room_unread", &["room.unread"]),
+    (
+        "Broadcasts::mark_room_unread",
+        &["room.unread", "sidebar.row.upserted"],
+    ),
     (
         "Broadcasts::message_remove",
         &["message.removed", "sidebar.row.upserted"],
@@ -229,12 +232,15 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::thread_refresh", &["thread.unread"]),
     ("Broadcasts::thread_created", &["thread.created"]),
     ("Broadcasts::thread_updated", &["thread.updated"]),
-    ("Broadcasts::thread_removed", &["thread.removed"]),
+    (
+        "Broadcasts::thread_removed",
+        &["thread.removed", "sidebar.row.upserted"],
+    ),
     (
         "Broadcasts::board_automations_changed",
         &["board.automations.changed"],
     ),
-    ("Broadcasts::thread_read", &["thread.read"]),
+    ("Broadcasts::thread_read", &["thread.read", "sidebar.row.upserted"]),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
     ("Broadcasts::open_room_update", &["sidebar.row.upserted"]),
@@ -259,6 +265,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("channel_thread::ThreadBoardCreation", &["thread.created"]),
     ("channel_thread::ThreadWorkChange", &["thread.updated"]),
     ("activity_item::ActivityItemTouched", &["activity.item"]),
+    ("membership::PresentRead", &["sidebar.row.upserted"]),
     (
         "room_category::SidebarOrganized",
         &[
@@ -682,7 +689,28 @@ pub fn activity_item_later(server: &Cable, slot: &RendererSlot, user_id: i64, it
             Ok(None) => {}
             Err(error) => tracing::warn!(%error, item_id, "sync: activity item not read"),
         }
+        // A message's item counts toward its room's red pill (`notificationCount`): a thread
+        // reply pings without making the room unread, and reading the item clears it.
+        // Read afresh later, under the room's lock, as every row is ([`RoomRows::publish`]).
+        match item_room_id(conn, item_id) {
+            Ok(Some(room_id)) => {
+                sidebar_rows_later(&server, &slot, room_id, Some(vec![user_id]));
+            }
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, item_id, "sync: activity item's room not read"),
+        }
     }));
+}
+
+/// The room of the message an activity item is about, if it's about a message.
+fn item_room_id(conn: &Connection, item_id: i64) -> campfire_db::Result<Option<i64>> {
+    Ok(conn
+        .prepare_cached(
+            r#"SELECT "messages"."room_id" FROM "activity_items" INNER JOIN "messages" ON "messages"."id" = "activity_items"."source_id" WHERE "activity_items"."id" = ? AND "activity_items"."source_type" = 'Message'"#,
+        )?
+        .query_map([item_id], |row| row.get(0))?
+        .next()
+        .transpose()?)
 }
 
 /// `activity.removed` on each owner's `user` topic, with their unread count afterwards.

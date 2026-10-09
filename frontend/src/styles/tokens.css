@@ -100,6 +100,8 @@
     --image-backdrop-b: light-dark(var(--neutral-100), var(--neutral-300));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
+    /* Unread names and markers: the ink at full strength, white on dark (Discord's unread channel). */
+    --text-strong: light-dark(var(--neutral-900), var(--neutral-0));
     --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
     --text-faint: light-dark(var(--neutral-500), var(--charcoal-400));
 

@@ -5,6 +5,7 @@
  */
 import type { Involvement } from "../gen/Involvement.ts";
 import type { Membership, RoomCategory, SidebarRow } from "./model.ts";
+import { categoryTouchedSince, isStale, touchedSince } from "./row-touches.ts";
 import type { SidebarState, State } from "./state.ts";
 
 /** The organisation fields a pending change can set on a membership. */
@@ -183,21 +184,72 @@ export function upsertCategory(state: State, category: RoomCategory): State {
 
 /**
  * A new category the server has made takes over from its draft in one step, so the sidebar never
- * shows both: the category lands, the draft's entry goes, and `settled` (the room being moved
- * into it, placed under its real id) shows until that move settles too.
+ * shows both: the category lands (guarded as `landCategory` is, `since` the create's ticket), the
+ * draft's entry goes, and `settled` (the room being moved into it, placed under its real id)
+ * shows until that move settles too.
  */
 export function landCreatedCategory(
   state: State,
   category: RoomCategory,
   draft: SidebarOverlay,
   settled: SidebarOverlay,
+  since: number,
 ): State {
-  return addOverlay(dropOverlay(upsertCategory(state, category), draft), settled);
+  return addOverlay(dropOverlay(landCategory(state, category, since), draft), settled);
 }
 
 /** Every category, after a reorder. */
 export function setCategories(state: State, categories: readonly RoomCategory[]): State {
   return withCategories(state, categories.toSorted(byPosition));
+}
+
+/**
+ * A whole category list from an HTTP reply, `since` its request's ticket: a category the sync path
+ * changed (or removed) after that keeps the store's copy (or stays gone), and one sync added
+ * stays.
+ */
+export function replyCategories(
+  state: State,
+  categories: readonly RoomCategory[],
+  since: number,
+): readonly RoomCategory[] {
+  const fresh = categories.filter((category) => !categoryTouchedSince(state, category.id, since));
+
+  const synced = state.sidebar.categories.filter((category) =>
+    categoryTouchedSince(state, category.id, since),
+  );
+
+  return [...fresh, ...synced].sort(byPosition);
+}
+
+/** Whether a category reply (the request holding `since`) is older than the store's word on it. */
+function categoryReplyIsStale(state: State, categoryId: number, since: number): boolean {
+  return isStale(state, since) || categoryTouchedSince(state, categoryId, since);
+}
+
+/**
+ * A rename or fold reply, `since` its request's ticket: dropped when a resync landed after the
+ * request began, or the sync path changed or removed the category meanwhile (the server publishes
+ * whatever the reply knew that sync didn't).
+ */
+export function landCategory(state: State, category: RoomCategory, since: number): State {
+  return categoryReplyIsStale(state, category.id, since) ? state : upsertCategory(state, category);
+}
+
+/** A reorder reply's list, `since` its request's ticket; nothing once a resync made it stale. */
+export function landCategories(
+  state: State,
+  categories: readonly RoomCategory[],
+  since: number,
+): State {
+  return isStale(state, since)
+    ? state
+    : withCategories(state, replyCategories(state, categories, since));
+}
+
+/** A delete reply, `since` its request's ticket, guarded as `landCategory` is. */
+export function landCategoryRemoval(state: State, categoryId: number, since: number): State {
+  return categoryReplyIsStale(state, categoryId, since) ? state : removeCategory(state, categoryId);
 }
 
 /**
@@ -221,9 +273,19 @@ export function removeCategory(state: State, categoryId: number): State {
  * Lands an organising reply's rows the sidebar already has, taking only what organising changes:
  * the category, the favourite position and the involvement (the room header's copy follows). The
  * reply may be older than a sync event that has since brought newer read state or counts, which
- * stay.
+ * stay. The fields it takes are the ones the viewer's own change set, so the reply owns them,
+ * unless a sync resync landed after the request began (`since`, its ticket): then the whole reply
+ * is stale, and the resync (or the events after it) has the viewer's change.
  */
-export function mergeOrganization(state: State, replies: readonly SidebarRow[]): State {
+export function mergeOrganization(
+  state: State,
+  replies: readonly SidebarRow[],
+  since: number,
+): State {
+  if (isStale(state, since)) {
+    return state;
+  }
+
   const rows = { ...state.sidebar.rows };
   const merged: Membership[] = [];
 
@@ -267,10 +329,23 @@ export function setDetailMembership(state: State, membership: Membership): State
 
 /**
  * The viewer's membership changed (an involvement reply): the sidebar row, when the room has
- * one, and the room header take it.
+ * one, and the room header take it. The reply owns the involvement it set; the rest of the
+ * membership (read state above all) is taken only if the sync path hasn't changed the row since
+ * the request began (`since`, its ticket), as a newer row's copy is newer than the reply's. Once
+ * a sync resync has landed after the request began, the whole reply is stale.
  */
-export function setMembership(state: State, membership: Membership): State {
-  const row = state.sidebar.rows[membership.roomId];
+export function setMembership(state: State, reply: Membership, since: number): State {
+  if (isStale(state, since)) {
+    return state;
+  }
+
+  const row = state.sidebar.rows[reply.roomId];
+  const current = row?.membership ?? state.rooms[reply.roomId]?.detail?.membership;
+
+  const membership =
+    current !== undefined && touchedSince(state, reply.roomId, since)
+      ? { ...current, involvement: reply.involvement }
+      : reply;
 
   const next =
     row === undefined

@@ -20,7 +20,7 @@ import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { RoomGlyph } from "../rooms/room-glyph.tsx";
 import { GroupAvatars } from "./group-avatars.tsx";
-import { rowPillCount, rowState } from "./sections.ts";
+import { notificationLabel, rowPillCount, rowState, rowUnread } from "./sections.ts";
 
 /** What a row can ask of the sidebar: drag it, or open its menu somewhere. */
 export interface RowActions {
@@ -157,8 +157,9 @@ interface SidebarRowProps {
 }
 
 /**
- * One conversation in the sidebar. Unread rows are bold, muted rows faint, mentions (and every
- * unread direct message) carry a count that pops in, and the selected row is tinted. A right
+ * One conversation in the sidebar. Unread rows are bold with a nub, muted rows faint, and what
+ * would have notified you under classic's rules carries a red count that pops in
+ * (`rowPillCount`); the selected row is tinted. A right
  * click, a long press, the "⋯" button or Shift+F10 opens its menu; it can be dragged, by pointer
  * or with Space and the arrows.
  */
@@ -249,13 +250,12 @@ export function SidebarRow({
         ) : (
           <PreviewedName row={row} last={last} />
         )}
+        {state === "unread" || (selected && rowUnread(row)) ? (
+          <span className="visually-hidden">, unread</span>
+        ) : null}
         {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
         <CallMark roomId={room.id} />
-        <Badge
-          count={pill}
-          tone="danger"
-          label={`${pill} ${room.kind === "direct" && !muted ? "unread" : "mentions"}`}
-        />
+        <Badge count={pill} tone="danger" label={`, ${notificationLabel(pill)}`} />
       </Link>
       <IconButton
         icon="more"

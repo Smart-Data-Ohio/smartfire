@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
+import type { Involvement } from "../../gen/Involvement.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import { initialState, type SidebarState } from "../../store/state.ts";
-import { rowPillCount, rowState, sidebarSections, sidebarTotals } from "./sections.ts";
+import {
+  notificationLabel,
+  peekingRows,
+  rowPillCount,
+  rowState,
+  rowUnread,
+  sectionStatus,
+  sectionUnread,
+  sidebarSections,
+  sidebarTotals,
+} from "./sections.ts";
 
 interface RowOptions {
   readonly kind?: RoomKind;
@@ -11,10 +22,32 @@ interface RowOptions {
   readonly unread?: number;
   readonly mentions?: number;
   readonly muted?: boolean;
+  readonly involvement?: Involvement;
+  /** The server's `notificationCount`; by default what its policy gives for the options. */
+  readonly notifications?: number;
+}
+
+/** `crates/api/src/dto.rs` `notification_count` for a row with no thread or inbox-only pings. */
+function policyCount(involvement: Involvement, unread: number, mentions: number): number {
+  switch (involvement) {
+    case "everything":
+      return unread;
+    case "mentions":
+    case "muted":
+      return mentions;
+    default:
+      return 0;
+  }
 }
 
 function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
   const unread = options.unread ?? 0;
+  const mentions = options.mentions ?? 0;
+
+  // A DM notifies for everything by default, a channel for mentions (the server's defaults).
+  const involvement: Involvement =
+    options.involvement ??
+    (options.muted === true ? "muted" : options.kind === "direct" ? "everything" : "mentions");
 
   return {
     room: {
@@ -30,7 +63,7 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
       id: id * 10,
       roomId: id,
       userId: 1,
-      involvement: options.muted === true ? "muted" : "mentions",
+      involvement,
       unreadAt: unread > 0 ? "2026-10-05T00:00:00.000Z" : null,
       lastReadMessageId: null,
       roomCategoryId: options.category ?? null,
@@ -40,7 +73,9 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
     displayName: name,
     directMemberIds: [],
     unreadCount: unread,
-    mentionCount: options.mentions ?? 0,
+    mentionCount: mentions,
+    notificationCount: options.notifications ?? policyCount(involvement, unread, mentions),
+    threadNotificationCount: 0,
   };
 }
 
@@ -125,7 +160,7 @@ describe("sidebarSections", () => {
 });
 
 describe("sidebarTotals", () => {
-  it("counts unread rooms and mentions, DMs by message, a muted room by its mentions", () => {
+  it("counts unread rooms, and notifications as each row's policy count", () => {
     const totals = sidebarTotals(
       sidebarOf([
         row(1, "alpha", { unread: 3, mentions: 1 }),
@@ -134,15 +169,18 @@ describe("sidebarTotals", () => {
         row(3, "noise", { unread: 9, mentions: 4, muted: true }),
         row(4, "hush", { muted: true }),
         row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true }),
+        // A thread ping in a read room still counts (the server's count, not the unread roots).
+        row(6, "ops", { involvement: "everything", notifications: 1 }),
       ]),
     );
 
-    expect(totals).toEqual({ unreadRooms: 4, mentions: 1 + 2 + 4 + 1 });
+    // "ops" reads as unread too: its ping bolds it, so the rail's dot agrees with the row.
+    expect(totals).toEqual({ unreadRooms: 5, mentions: 1 + 2 + 4 + 1 + 1 });
   });
 });
 
 describe("sidebarTotals through pending changes", () => {
-  it("stops counting a room at once when it is being hidden or muted", () => {
+  it("stops counting a room at once when it is being hidden, muted or set to nothing", () => {
     const base = sidebarOf([
       row(1, "alpha", { unread: 3, mentions: 1 }),
       row(2, "Ada", { kind: "direct", unread: 2 }),
@@ -160,27 +198,125 @@ describe("sidebarTotals through pending changes", () => {
       },
     };
 
+    const quiet: SidebarState = {
+      ...base,
+      overlay: { memberships: { 3: { involvement: "nothing" } }, categories: {} },
+    };
+
     expect(sidebarTotals(base)).toEqual({ unreadRooms: 3, mentions: 5 });
     expect(sidebarTotals(pending)).toEqual({ unreadRooms: 1, mentions: 2 });
+    expect(sidebarTotals(quiet).mentions).toBe(3);
   });
 });
 
 describe("rows", () => {
-  it("count a muted room's mentions only, and read it as unread once mentioned", () => {
+  it("read a muted room as unread once mentioned, and count its mentions", () => {
     const mentioned = row(3, "noise", { unread: 9, mentions: 4, muted: true });
     const quiet = row(4, "hush", { muted: true });
-    const direct = row(5, "Bo", { kind: "direct", unread: 6, mentions: 1, muted: true });
 
     expect(rowPillCount(mentioned)).toBe(4);
-    expect(rowPillCount(direct)).toBe(1);
-    expect(rowPillCount(row(2, "Ada", { kind: "direct", unread: 2 }))).toBe(2);
     expect(rowState(mentioned, false)).toBe("unread");
     expect(rowState(quiet, false)).toBe("muted");
-    // Read again, the mention no longer shows.
-    expect(
-      rowPillCount({ ...mentioned, membership: { ...mentioned.membership, unreadAt: null } }),
-    ).toBe(0);
     expect(rowState(mentioned, true)).toBe("selected");
     expect(rowState(row(1, "alpha"), false)).toBeNull();
+  });
+});
+
+describe("rowUnread", () => {
+  it("bolds a row with a ping even when its root timeline is read", () => {
+    // A thread @mention: the membership stays read, but classic would have notified.
+    const pinged = row(4, "alerts", { involvement: "everything", notifications: 1 });
+    // A muted room's thread mention counts and bolds too, as classic still pushes it.
+    const mutedPing = row(5, "noise", { muted: true, mentions: 1 });
+
+    expect(rowUnread(pinged)).toBe(true);
+    expect(rowState(pinged, false)).toBe("unread");
+    expect(rowPillCount(mutedPing)).toBe(1);
+    expect(rowState(mutedPing, false)).toBe("unread");
+    expect(sectionUnread([pinged])).toEqual({ unread: true, count: 1 });
+    expect(sidebarTotals(sidebarOf([pinged, mutedPing]))).toEqual({ unreadRooms: 2, mentions: 2 });
+    // "nothing" never notifies, so a stale server count neither bolds nor counts.
+    expect(rowUnread(row(6, "quiet", { involvement: "nothing", notifications: 2 }))).toBe(false);
+    expect(rowUnread(row(1, "general"))).toBe(false);
+  });
+});
+
+describe("peekingRows", () => {
+  it("keeps a folded section's pinged rows on show, even with the room timeline read", () => {
+    const pinged = row(4, "alerts", { involvement: "everything", notifications: 1 });
+    const unreadRoom = row(5, "design", { unread: 2 });
+    const selected = row(6, "general");
+    const quiet = row(7, "random");
+
+    expect(
+      peekingRows([pinged, unreadRoom, selected, quiet], 6).map((entry) => entry.room.id),
+    ).toEqual([4, 5, 6]);
+  });
+});
+
+describe("the red pill: what would have notified you", () => {
+  it("leaves plain unread activity in a channel to the bold name, with no count", () => {
+    const busy = row(1, "general", { unread: 12 });
+
+    expect(rowState(busy, false)).toBe("unread");
+    expect(rowPillCount(busy)).toBe(0);
+    expect(rowPillCount(row(2, "private", { kind: "closed", unread: 3 }))).toBe(0);
+  });
+
+  it("is the server's notification count: mentions, replies, thread pings", () => {
+    expect(rowPillCount(row(1, "general", { unread: 12, mentions: 2 }))).toBe(2);
+    // A reply and a thread mention the mention count leaves out.
+    expect(rowPillCount(row(1, "general", { unread: 12, mentions: 1, notifications: 3 }))).toBe(3);
+  });
+
+  it("counts every unread message where every message notifies (a DM, an everything room)", () => {
+    expect(rowPillCount(row(2, "Ada", { kind: "direct", unread: 3 }))).toBe(3);
+    expect(rowPillCount(row(4, "alerts", { unread: 5, involvement: "everything" }))).toBe(5);
+    // A thread @mention in a read "everything" room still counts.
+    expect(rowPillCount(row(4, "alerts", { involvement: "everything", notifications: 1 }))).toBe(1);
+  });
+
+  it("follows the policy for a DM set to mentions, and counts nothing for nothing", () => {
+    expect(
+      rowPillCount(row(2, "Ada", { kind: "direct", unread: 3, involvement: "mentions" })),
+    ).toBe(0);
+    // Overlaid involvement wins at once over a count the server made for the old one.
+    expect(rowPillCount(row(5, "quiet", { involvement: "nothing", notifications: 4 }))).toBe(0);
+    expect(rowPillCount(row(5, "noise", { muted: true, mentions: 1, notifications: 6 }))).toBe(1);
+  });
+});
+
+describe("a folded section's summary", () => {
+  it("marks plain unread without a count, and totals the notifications inside", () => {
+    expect(sectionUnread([row(1, "general", { unread: 12 }), row(2, "design")])).toEqual({
+      unread: true,
+      count: 0,
+    });
+    expect(
+      sectionUnread([
+        row(1, "general", { unread: 12, mentions: 1 }),
+        row(2, "Ada", { kind: "direct", unread: 2 }),
+      ]),
+    ).toEqual({ unread: true, count: 3 });
+    expect(sectionUnread([row(1, "general"), row(2, "design")])).toEqual({
+      unread: false,
+      count: 0,
+    });
+  });
+});
+
+describe("notificationLabel", () => {
+  it("names the red count for screen readers", () => {
+    expect(notificationLabel(1)).toBe("1 notification");
+    expect(notificationLabel(4)).toBe("4 notifications");
+  });
+});
+
+describe("sectionStatus", () => {
+  it("says what a folded category hides, or nothing when it is all read", () => {
+    expect(sectionStatus({ unread: false, count: 0 })).toBeNull();
+    expect(sectionStatus({ unread: true, count: 0 })).toBe("Unread");
+    expect(sectionStatus({ unread: true, count: 2 })).toBe("Unread, 2 notifications");
+    expect(sectionStatus({ unread: false, count: 1 })).toBe("1 notification");
   });
 });

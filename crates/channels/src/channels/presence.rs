@@ -20,7 +20,17 @@ impl PresenceChannel {
     /// `present`: `membership.present`, then `broadcast_read_room`. Raises (NoMethodError on nil)
     /// once the membership is gone.
     async fn present(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        if !self.with_membership(sub, |membership, tx| membership.present(tx)).await? {
+        let present = |membership: &mut Membership, tx: &mut campfire_db::Tx<'_>| {
+            membership.present(tx)?;
+            // Single-page app only: an authoritative row after the read.
+            campfire_db::models::membership::PresentRead {
+                user_id: membership.user_id,
+                room_id: membership.room_id,
+            }
+            .emit(tx);
+            Ok(())
+        };
+        if !self.with_membership(sub, present).await? {
             return Err(nil_membership());
         }
         // `membership.room_id` finds the membership again.

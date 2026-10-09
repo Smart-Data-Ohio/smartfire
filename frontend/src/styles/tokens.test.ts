@@ -140,6 +140,7 @@ const CODE_TOKENS = ["--code-plain", ...TOKEN_KINDS.map((kind) => `--code-${kind
 /** Text token → the backgrounds it is used on; each text token once (a Map keeps the last). */
 const PAIR_LIST: readonly (readonly [string, readonly string[]])[] = [
   ["--text", [...SURFACES, "--mention-bg over --bg-pane"]],
+  ["--text-strong", SURFACES],
   ["--text-muted", SURFACES],
   ["--text-faint", SURFACES],
   ["--accent", [...SURFACES, "--accent-soft"]],

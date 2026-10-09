@@ -6,7 +6,7 @@
 import type { SwitcherRoomKind } from "../../gen/SwitcherRoomKind.ts";
 import type { RoomKind, SidebarRow } from "../../store/model.ts";
 import type { SidebarState } from "../../store/state.ts";
-import { rowPillCount, sidebarSections } from "../sidebar/sections.ts";
+import { rowPillCount, rowUnread, sidebarSections } from "../sidebar/sections.ts";
 import { matchScore, normalizeQuery } from "./match.ts";
 
 /** Something the switcher can open: a room, a person (their DM, made on demand) or a thread. */
@@ -28,12 +28,21 @@ export interface SwitcherItem {
   readonly memberIds: readonly number[];
   readonly threadId: number | null;
   readonly unread: boolean;
-  /** The sidebar pill's number: mentions, or every unread message in a DM. */
+  /** The sidebar's red count (`rowPillCount`): what would have notified you. */
   readonly count: number;
   readonly muted: boolean;
   readonly favorite: boolean;
   /** The room's last activity, for the empty query's fallback order; `null` when unknown. */
   readonly updatedAt: string | null;
+}
+
+/**
+ * Whether an option draws bold, exactly when its sidebar row does (`rowUnread`): an unread room,
+ * or one with a red count. A muted room goes unread only when a mention makes it so (classic's
+ * `unread muted` row), and then it reads as unread here too, still dimmed.
+ */
+export function readsUnread(item: SwitcherItem): boolean {
+  return item.unread;
 }
 
 /** The server's catalogue, as far as ranking needs it. */
@@ -77,8 +86,8 @@ function localItem(row: SidebarRow, viewerId: number | null): SwitcherItem {
     label: row.displayName,
     roomId: room.id,
     roomKind: room.kind,
-    unread: membership.unreadAt !== null,
-    count: membership.involvement === "muted" ? 0 : rowPillCount(row),
+    unread: rowUnread(row),
+    count: rowPillCount(row),
     muted: membership.involvement === "muted",
     favorite: membership.favoritePosition !== null,
     updatedAt: room.updatedAt,

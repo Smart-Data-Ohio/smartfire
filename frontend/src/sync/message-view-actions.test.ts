@@ -9,7 +9,7 @@ import {
   sidebarRowFixture,
   userFixture,
 } from "../api/testing.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { customIcons, ensureUsers, markUnreadFrom } from "./message-view-actions.ts";
 
 const ROOM = 12;
@@ -42,7 +42,10 @@ describe("message view actions", () => {
     Effect.gen(function* () {
       mutations.reset();
       mutations.setMe(meFixture);
-      mutations.loadSidebar(sidebarFixture([sidebarRowFixture(ROOM, "general")]));
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
 
       const fake = yield* FakeApi;
 
@@ -66,7 +69,10 @@ describe("message view actions", () => {
     Effect.gen(function* () {
       mutations.reset();
       mutations.setMe(meFixture);
-      mutations.loadSidebar(sidebarFixture([sidebarRowFixture(ROOM, "general")]));
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
       mutations.applyPage(
         ROOM,
         pageFixture([39, 40, 41, 42].map((id) => messageFixture(id, ROOM))),
@@ -86,6 +92,88 @@ describe("message view actions", () => {
 
       expect(store.getState().timelines[ROOM]?.unreadCount).toBe(3);
       expect(store.getState().sidebar.rows[ROOM]?.unreadCount).toBe(3);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("leave the divider when another tab read the room before the reply came", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+      mutations.setMe(meFixture);
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
+      mutations.applyPage(
+        ROOM,
+        pageFixture([39, 40, 41, 42].map((id) => messageFixture(id, ROOM))),
+        "replace",
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route(`DELETE /rooms/${ROOM}/read`, () => {
+        // Another tab reads the room; its room.read lands before this reply.
+        mutations.applyEvents(
+          [{ seq: 1, topic: "user:7", type: "room.read", data: { roomId: ROOM } }],
+          0,
+        );
+
+        return Effect.succeed({
+          roomId: ROOM,
+          unread: true,
+          firstUnreadMessageId: 40,
+          unreadCount: 3,
+        });
+      });
+
+      yield* markUnreadFrom(ROOM, 40);
+
+      expect(store.getState().timelines[ROOM]?.unreadFromId).toBeNull();
+      expect(store.getState().sidebar.rows[ROOM]?.unreadCount).toBe(0);
+      expect(store.getState().rowTouches.reads).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("move the divider when the viewer's own room.unread echo comes first", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+      mutations.setMe(meFixture);
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
+      mutations.applyPage(
+        ROOM,
+        pageFixture([39, 40, 41, 42].map((id) => messageFixture(id, ROOM))),
+        "replace",
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route(`DELETE /rooms/${ROOM}/read`, () => {
+        mutations.applyEvents(
+          [
+            {
+              seq: 1,
+              topic: "user:7",
+              type: "room.unread",
+              data: { roomId: ROOM, messageId: null, mentioned: false },
+            },
+          ],
+          0,
+        );
+
+        return Effect.succeed({
+          roomId: ROOM,
+          unread: true,
+          firstUnreadMessageId: 40,
+          unreadCount: 3,
+        });
+      });
+
+      yield* markUnreadFrom(ROOM, 40);
+
+      expect(store.getState().timelines[ROOM]?.unreadFromId).toBe(40);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

@@ -264,6 +264,8 @@ describe("threads", () => {
       threadId: THREAD,
       attachmentSignedId: null,
       attachment: null,
+      replyToMessageId: null,
+      replyNotifyAuthor: null,
       creatorId: 1,
       markdownSource: "6",
       createdAt: "2026-10-06T09:06:00.000Z",
