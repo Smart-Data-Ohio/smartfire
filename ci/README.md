@@ -30,6 +30,35 @@ slots, and the CI profile in `cargo-config.toml`. Local builds keep their normal
 profile and linker. Cargo caches retain dependencies; workspace outputs are
 pruned before a main push saves a new cache.
 
+The `Toolchain image` workflow publishes
+`ghcr.io/smart-data-ohio/smartfire-toolchain:<inputs-hash>` on main pushes that
+touch its inputs, or a manual dispatch on main. An existing tag skips the build.
+Branch dispatches cannot publish. Both the producer and `rust-setup` run
+`python3 ci/toolchain-inputs.py`. It hashes the toolchain stage, its transitive
+stages and referenced global arguments, the Dockerfile syntax directive, and
+the contents and executable flags of local files those stages copy. Today the
+only copied file is `rust-toolchain.toml`. `--files` lists context inputs. Add
+new copied scripts or patches to the workflow's push paths; the CI helper test
+checks that list. Unsupported COPY syntax or RUN mounts fail the hash instead
+of reusing an image that may have different inputs.
+
+The registry-prefix argument `BASE_REGISTRY` uses Docker's
+[global ARG scope for FROM](https://docs.docker.com/reference/dockerfile/#understand-how-arg-and-from-interact)
+and precedes the first `FROM`.
+Its default is `mirror.gcr.io`; changing that default leaves the hash unchanged
+because all external base images retain their exact digest pins. App-only
+Dockerfile changes also leave the toolchain hash unchanged. Release publishing
+passes `us-central1-docker.pkg.dev/smart-data-campfire/docker-hub` after logging
+in to Artifact Registry. Dry runs use the public mirror.
+
+Rust jobs have `packages: read`, log in with their GitHub token, resolve the
+input tag to a digest and pull that digest as the local `campfire-toolchain`
+image. A missing or inaccessible manifest, including a PR's new inputs before
+main publishes them, selects a local build through `mirror.gcr.io`. PRs never
+publish the image or save shared caches. The toolchain's old Buildx cache is
+gone. Cargo dependency caches use the same toolchain hash and still save only
+on main pushes; the release image keeps its separate Buildx cache.
+
 Frontend auth inputs under `frontend/src/auth`, `styles`, `motion`, and the
 shared button, text-field and checkbox styles also feed Rust's asset build.
 Generated API types and embedded dist files are Rust inputs too.

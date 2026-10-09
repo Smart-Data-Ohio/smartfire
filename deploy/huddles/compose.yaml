@@ -40,7 +40,7 @@ services:
       start_period: 10s
 
   caddy:
-    image: livekit/caddyl4:latest@sha256:9dd090159a6042a907dbff0ce9dda27a21d2a559dc7b03b60a8e6b1b60b8348e
+    image: mirror.gcr.io/livekit/caddyl4:latest@sha256:9dd090159a6042a907dbff0ce9dda27a21d2a559dc7b03b60a8e6b1b60b8348e
     command: run --config /etc/caddy.yaml --adapter yaml
     restart: unless-stopped
     network_mode: host

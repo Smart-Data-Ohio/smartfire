@@ -221,6 +221,7 @@ jobs:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
+      packages: read
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -305,6 +306,7 @@ jobs:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
     permissions:
       contents: read
+      packages: read
     timeout-minutes: 60
     steps:
       - name: Checkout code
