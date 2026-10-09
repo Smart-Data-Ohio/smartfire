@@ -78,6 +78,119 @@ function fill(pattern: string, captured: Map<string, string>): string {
   return pattern.endsWith("/") && path !== "/" ? `${path}/` : path;
 }
 
+/**
+ * One application/x-www-form-urlencoded component (`+` is a space). `null` when the encoding is
+ * broken, so the value cannot be a record id. Matches the server's query decoder.
+ */
+function queryComponent(raw: string): string | null {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, " "));
+  } catch {
+    return null;
+  }
+}
+
+/** A record id from a query component, percent-decoded first (`thread=%39` is 9). */
+function recordId(raw: string): string | null {
+  const decoded = queryComponent(raw);
+
+  return decoded !== null && isId(decoded) ? String(Number(decoded)) : null;
+}
+
+/**
+ * A room notification's `thread` and `message_id` query, as the SPA's thread and message routes.
+ * `null` when neither effective value is a record id, so the plain room URL keeps the query.
+ * `thread` is the first value (the classic thread panel's `URLSearchParams.get`). A non-empty
+ * `thread` makes `message_id` the first value too. With no thread, `message_id` is the last
+ * value (the room controller's params). Only that value is parsed; another duplicate is not a
+ * fallback when it isn't an id. The same rules as the server translator.
+ */
+function roomNotificationUrl(spa: string, search: string): string | null {
+  let threadRaw: string | undefined;
+  let messageFirst: string | undefined;
+  let messageLast: string | undefined;
+  const rest: string[] = [];
+
+  for (const pair of search.replace(/^\?/, "").split("&")) {
+    if (pair === "") {
+      continue;
+    }
+
+    const eq = pair.indexOf("=");
+    const rawName = eq === -1 ? pair : pair.slice(0, eq);
+    const rawValue = eq === -1 ? "" : pair.slice(eq + 1);
+    const name = queryComponent(rawName);
+
+    if (name === "classic") {
+      continue;
+    }
+
+    if (name === "thread") {
+      if (threadRaw === undefined) {
+        threadRaw = rawValue;
+      }
+
+      continue;
+    }
+
+    if (name === "message_id") {
+      if (messageFirst === undefined) {
+        messageFirst = rawValue;
+      }
+
+      messageLast = rawValue;
+
+      continue;
+    }
+
+    rest.push(pair);
+  }
+
+  const threadDecoded = threadRaw === undefined ? null : queryComponent(threadRaw);
+  const threadOpens = threadDecoded !== null && threadDecoded !== "";
+  const messageRaw = threadOpens ? messageFirst : messageLast;
+  const thread = threadRaw === undefined ? undefined : (recordId(threadRaw) ?? undefined);
+  const message = messageRaw === undefined ? undefined : (recordId(messageRaw) ?? undefined);
+
+  if (thread === undefined && message === undefined) {
+    return null;
+  }
+
+  const kept = rest.filter((pair) => {
+    const rawName = pair.split("=")[0] ?? "";
+    const name = queryComponent(rawName) ?? rawName;
+
+    return name !== "thread" && name !== "message_id";
+  });
+
+  if (thread !== undefined) {
+    if (message !== undefined) {
+      kept.unshift(`m=${message}`);
+    }
+
+    const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
+
+    return `${spa}/t/${thread}${query}`;
+  }
+
+  const query = kept.length === 0 ? "" : `?${kept.join("&")}`;
+
+  return `${spa}/m/${message}${query}`;
+}
+
+/**
+ * `search` less any `classic` parameter, keeping every other pair as it was written.
+ * The server's room redirect does the same when it leaves the query on the plain room URL.
+ */
+function rawKeptSearch(search: string): string {
+  const kept = search
+    .replace(/^\?/, "")
+    .split("&")
+    .filter((pair) => pair !== "" && (pair.split("=")[0] ?? "") !== "classic");
+
+  return kept.length === 0 ? "" : `?${kept.join("&")}`;
+}
+
 /** `search` (with or without its `?`) less any `classic` parameter, as `?...` or "". */
 function keptSearch(search: string): string {
   const params = new URLSearchParams(search);
@@ -102,7 +215,19 @@ export function spaUrlFor(path: string, search = ""): string | null {
     const captured = capture(screen.classic, path);
 
     if (captured !== null) {
-      return `${fill(screen.spa, captured)}${keptSearch(search)}`;
+      const filled = fill(screen.spa, captured);
+
+      if (screen.classic === "/rooms/:id" && screen.spa === "/app/r/:id") {
+        const translated = roomNotificationUrl(filled, search);
+
+        if (translated !== null) {
+          return translated;
+        }
+
+        return `${filled}${rawKeptSearch(search)}`;
+      }
+
+      return `${filled}${keptSearch(search)}`;
     }
   }
 

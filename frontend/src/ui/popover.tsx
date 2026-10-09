@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { Placement } from "../lib/anchor.ts";
 import { showPopover, supportsPopover } from "../lib/popover.ts";
+import { duringAppFocus } from "../lib/reader-focus.ts";
 import { usePresence } from "../motion/presence.ts";
 import { SheetHandle, useActionSheet, useSheetScrim } from "./action-sheet.tsx";
 import { originFor, useFloating } from "./floating.ts";
@@ -116,7 +117,9 @@ export function Popover({ trigger, label, placement = "bottom-start", children }
 
   const close = () => {
     setOpen(false);
-    triggerRef.current?.focus({ preventScroll: true });
+    duringAppFocus(() => {
+      triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   // A sheet's scrim and handle close it as Esc does, focus back to the trigger.

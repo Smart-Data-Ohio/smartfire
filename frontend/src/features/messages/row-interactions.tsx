@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import type { EmojiChoice } from "../../lib/emoji/recent.ts";
+import { duringAppFocus } from "../../lib/reader-focus.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
@@ -204,7 +205,9 @@ export function useRowInteractions(
 
     const back = returnTo.current;
 
-    (back?.isConnected === true ? back : element).focus({ preventScroll: true });
+    duringAppFocus(() => {
+      (back?.isConnected === true ? back : element).focus({ preventScroll: true });
+    });
   };
 
   const openPopup = (
@@ -391,7 +394,9 @@ export function useRowInteractions(
     const element = row();
 
     if (target !== null) {
-      target.focus({ preventScroll: true });
+      duringAppFocus(() => {
+        target.focus({ preventScroll: true });
+      });
     } else if (element !== null) {
       focusComposerNear(element);
     }

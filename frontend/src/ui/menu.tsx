@@ -15,6 +15,7 @@ import {
 } from "react";
 import type { Placement } from "../lib/anchor.ts";
 import { showPopover, supportsPopover } from "../lib/popover.ts";
+import { duringAppFocus } from "../lib/reader-focus.ts";
 import { readDurationMs } from "../motion/durations.ts";
 import { usePresence } from "../motion/presence.ts";
 import { SheetHandle, useActionSheet, useSheetScrim } from "./action-sheet.tsx";
@@ -126,7 +127,9 @@ export function Menu({
     setOpen(false);
 
     if (restoreFocus) {
-      triggerRef.current?.focus({ preventScroll: true });
+      duringAppFocus(() => {
+        triggerRef.current?.focus({ preventScroll: true });
+      });
     }
   };
 

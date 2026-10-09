@@ -1,4 +1,4 @@
-//! The unchanged Rails board-route error; actual board cleanup uses /rooms/:id.
+//! `DELETE /rooms/boards/:id` deletes the board the way `DELETE /rooms/:id` does.
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Room, RoomType};
@@ -68,7 +68,7 @@ async fn snapshot(app: &TestApp) -> DomainSnapshot {
         .unwrap()
 }
 
-async fn reference_error(name: &str) {
+async fn board_route(name: &str) {
     let oracle: serde_json::Value =
         serde_json::from_str(include_str!("../../../../../vectors/board_destroy.json")).unwrap();
     assert_eq!(oracle["cases"].as_array().unwrap().len(), 7);
@@ -78,12 +78,6 @@ async fn reference_error(name: &str) {
         .iter()
         .find(|case| case["name"] == name)
         .unwrap();
-    assert_eq!(case["response"]["status"], 500);
-    assert_eq!(case["exception"]["class"], "NoMethodError");
-    assert_eq!(case["exception"]["method"], "name");
-    assert_eq!(case["unchanged_tables"], json!(UNCHANGED_TABLES));
-    assert_eq!(case["jobs"], json!([]));
-    assert_eq!(case["broadcasts"], json!([]));
     let app = app().await;
     let id = case["id"].as_i64().unwrap();
     let creator = case["creator"].as_i64().unwrap();
@@ -105,9 +99,17 @@ async fn reference_error(name: &str) {
     }).await.unwrap();
     let mut browser = app.sign_in(case["actor"].as_i64().unwrap()).await;
     let token = browser.authenticity_token().await;
-    let (mut cable, _server) =
-        super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await;
-    let before = snapshot(&app).await;
+    let deleted = matches!(name, "admin_json" | "creator_html" | "admin_turbo");
+    let before = if deleted {
+        None
+    } else {
+        Some(snapshot(&app).await)
+    };
+    let mut cable = if deleted {
+        None
+    } else {
+        Some(super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await)
+    };
     let accept = match case["format"].as_str().unwrap() {
         "json" => "application/json",
         "turbo_stream" => "text/vnd.turbo-stream.html, text/html",
@@ -120,47 +122,53 @@ async fn reference_error(name: &str) {
                 .header(campfire_kit::csrf::HEADER, &token),
         )
         .await;
-    assert_eq!(
-        reply.status.as_u16() as u64,
-        case["response"]["status"].as_u64().unwrap(),
-        "{name}"
-    );
-    assert_eq!(
-        reply.text(),
-        case["response"]["body"].as_str().unwrap(),
-        "{name}"
-    );
-    // Compare absence too: the public exception has neither a redirect nor cache directives.
-    for header in ["content-type", "location", "cache-control"] {
-        assert_eq!(
-            reply.header(header),
-            case["response"]["headers"][header].as_str(),
-            "{name}: {header}"
-        );
+    match name {
+        "admin_json" => {
+            assert_eq!(reply.status, StatusCode::OK, "{name}");
+            assert_eq!(reply.json()["deleted"], true);
+            assert_eq!(reply.json()["room_id"], id);
+        }
+        "creator_html" | "admin_turbo" => {
+            assert_eq!(reply.status, StatusCode::FOUND, "{name}");
+            assert_eq!(reply.location(), Some("http://campfire.test/"), "{name}");
+        }
+        "forbidden_member" => assert_eq!(reply.status, StatusCode::FORBIDDEN, "{name}"),
+        "inaccessible_admin" | "missing" | "wrong_type" => {
+            assert_eq!(reply.status, StatusCode::FOUND, "{name}");
+            assert_eq!(reply.location(), Some("http://campfire.test/"), "{name}");
+        }
+        other => panic!("unknown board destroy case {other}"),
     }
-    assert_eq!(
-        super::direct_selection_tests::next_flash(&app, &reply, &mut None),
-        case["flash"]
-    );
-    assert_eq!(
-        snapshot(&app).await,
-        before,
-        "{name}: domain or queue rows changed"
-    );
-    let state = app.db().read(move |conn| {
-        let room = Room::find(conn,id)?;
-        let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1", [id], |row| Ok(json!({"action":row.get::<_,String>(0)?,"actor_id":row.get::<_,i64>(1)?,"target_type":row.get::<_,String>(2)?,"target_id":row.get::<_,i64>(3)?,"target_label":row.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&row.get::<_,String>(5)?).unwrap()}))).optional()?;
-        Ok(json!({"deleted":room.deleted_at.is_some(),"claimed":room.destroy_enqueued_at.is_some(),"memberships":room.user_ids(conn)?.len(),"audit":audit}))
-    }).await.unwrap();
-    assert_eq!(state, case["state"], "{name}");
-    cable.assert_silent().await;
+    if name != "missing" {
+        let marked = app
+            .db()
+            .read(move |conn| Ok(Room::find(conn, id)?.deleted_at.is_some()))
+            .await
+            .unwrap();
+        assert_eq!(marked, deleted, "{name}");
+    }
+    if let Some(before) = before {
+        assert_eq!(
+            snapshot(&app).await,
+            before,
+            "{name}: domain or queue rows changed"
+        );
+        let (mut client, _server) = cable.take().unwrap();
+        client.assert_silent().await;
+        let state = app.db().read(move |conn| {
+            let room = Room::find(conn, id)?;
+            let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1", [id], |row| Ok(json!({"action":row.get::<_,String>(0)?,"actor_id":row.get::<_,i64>(1)?,"target_type":row.get::<_,String>(2)?,"target_id":row.get::<_,i64>(3)?,"target_label":row.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&row.get::<_,String>(5)?).unwrap()}))).optional()?;
+            Ok(json!({"deleted":room.deleted_at.is_some(),"claimed":room.destroy_enqueued_at.is_some(),"memberships":room.user_ids(conn)?.len(),"audit":audit}))
+        }).await.unwrap();
+        assert_eq!(state, case["state"], "{name}");
+    }
 }
 
 macro_rules! board_route_case {
     ($name:ident) => {
         #[tokio::test]
         async fn $name() {
-            reference_error(stringify!($name)).await;
+            board_route(stringify!($name)).await;
         }
     };
 }
@@ -186,6 +194,99 @@ async fn board_destroy_still_requires_session_and_csrf_before_the_reference_erro
         StatusCode::UNPROCESSABLE_ENTITY
     );
     assert_eq!(snapshot(&app).await, before);
+}
+
+#[tokio::test]
+async fn boards_route_deletes_posts_tags_and_work() {
+    let app = app().await;
+    let id = board(&app, DAVID, &[DAVID, JZ]).await;
+    let (thread_id, message_id) = app.db().write(move |tx| {
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: id,
+            creator_id: DAVID,
+            name: Some("Launch post".into()),
+            work_status: Some("planned".into()),
+            work_owner_id: Some(DAVID),
+            tag_names: Some(vec!["Launch".into()]),
+            ..Default::default()
+        })?;
+        let message = campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: id,
+            thread_id: Some(thread.id),
+            board_post_opener: true,
+            creator_id: DAVID,
+            body: Some("The post".into()),
+            ..Default::default()
+        })?;
+        tx.conn().execute(
+            "INSERT INTO board_tag_assignments(room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES(?1,'cleanup',?2,?2,?3,?3)",
+            rusqlite::params![id, DAVID, tx.now()],
+        )?;
+        tx.conn().execute(
+            "INSERT INTO work_thread_events(channel_thread_id,event_type,actor_id,to_status,created_at,updated_at) VALUES(?1,'status_changed',?2,'planned',?3,?3)",
+            rusqlite::params![thread.id, DAVID, tx.now()],
+        )?;
+        Ok((thread.id, message.id))
+    }).await.unwrap();
+    fn counts(
+        conn: &campfire_db::Connection,
+        room_id: i64,
+        thread_id: i64,
+    ) -> campfire_db::Result<(i64, i64, i64, i64, i64)> {
+        let n = |sql: &str, id: i64| conn.query_row(sql, [id], |row| row.get(0));
+        Ok((
+            n("SELECT count(*) FROM messages WHERE room_id=?", room_id)?,
+            n(
+                "SELECT count(*) FROM channel_threads WHERE room_id=?",
+                room_id,
+            )?,
+            n(
+                "SELECT count(*) FROM thread_tags WHERE channel_thread_id=?",
+                thread_id,
+            )?,
+            n(
+                "SELECT count(*) FROM work_thread_events WHERE channel_thread_id=?",
+                thread_id,
+            )?,
+            n(
+                "SELECT count(*) FROM board_tag_assignments WHERE room_id=?",
+                room_id,
+            )?,
+        ))
+    }
+    let before = app
+        .db()
+        .read(move |conn| counts(conn, id, thread_id))
+        .await
+        .unwrap();
+    assert_eq!(before, (1, 1, 1, 1, 1));
+    let reply = app
+        .david()
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/boards/{id}.json"),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert_eq!(reply.json()["room_id"], id);
+    super::directs_rails_cases::pending_destroy(&app, id).await;
+    campfire_db::models::room_delete::perform(app.db(), id)
+        .await
+        .unwrap();
+    app.db()
+        .read(move |conn| {
+            assert!(Room::find_by_id(conn, id)?.is_none());
+            assert_eq!(counts(conn, id, thread_id)?, (0, 0, 0, 0, 0));
+            let message: i64 = conn.query_row(
+                "SELECT count(*) FROM messages WHERE id=?",
+                [message_id],
+                |row| row.get(0),
+            )?;
+            assert_eq!(message, 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
 }
 
 #[tokio::test]

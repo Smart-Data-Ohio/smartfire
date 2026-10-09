@@ -1,7 +1,7 @@
-import { useLocation, useParams } from "@tanstack/react-router";
+import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { classicPageFor } from "../../lib/screens.ts";
-import { useStore } from "../../store/store.ts";
+import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { BoardView } from "../boards/board-view.tsx";
@@ -15,9 +15,32 @@ import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes
 import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
 import { JoinRoom } from "./join-preview.tsx";
+import type { RoomAccess } from "./message-destination.ts";
+import { followPermalink } from "./permalink-follow.ts";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
 import "./room.css";
+
+/**
+ * Member when the sidebar or the room detail says so. A ready sidebar that omits the room, or a
+ * join preview, means the viewer has not joined. `null` while that is still loading.
+ */
+function roomAccess(roomId: number): RoomAccess | null {
+  const state = store.getState();
+  const room = state.rooms[roomId];
+
+  if (room?.detail != null || state.sidebar.rows[roomId] !== undefined) {
+    return "member";
+  }
+
+  const sidebarSettled = state.sidebar.status === "ready" || state.sidebar.status === "error";
+
+  if (room?.preview != null || sidebarSettled) {
+    return "unjoined";
+  }
+
+  return null;
+}
 
 /**
  * `/app/r/$roomId` (and its permalink, thread and "Create Fizzy card" children): opens the room on
@@ -29,14 +52,57 @@ export function RoomRoute() {
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? 0;
   const focusMessageId = params.messageId ?? null;
+  const navigate = useNavigate();
+  const router = useRouter();
 
   useRoomPaneLifecycle(roomId);
 
   useEffect(() => {
-    void actions.openRoom(roomId, focusMessageId);
-  }, [roomId, focusMessageId]);
+    let opened = false;
 
-  useEffect(() => () => actions.closeRoom(roomId), [roomId]);
+    const open = (focus: number | null) => {
+      opened = true;
+      void actions.openRoom(roomId, focus);
+    };
+
+    if (focusMessageId === null) {
+      open(null);
+
+      return () => {
+        if (opened) {
+          actions.closeRoom(roomId);
+        }
+      };
+    }
+
+    const messageId = focusMessageId;
+
+    const cancel = followPermalink({
+      roomId,
+      messageId,
+      read: (id) => actions.messages.read(id),
+      access: () => roomAccess(roomId),
+      joined: () => store.getState().rooms[roomId]?.detail != null,
+      subscribe: (onChange) => store.subscribe(onChange),
+      onFocus: (focus) => {
+        open(focus);
+      },
+      onRedirect: (href) => {
+        router.history.replace(href);
+      },
+      onDrop: () => {
+        void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
+      },
+    });
+
+    return () => {
+      cancel();
+
+      if (opened) {
+        actions.closeRoom(roomId);
+      }
+    };
+  }, [roomId, focusMessageId, navigate, router]);
 
   return (
     <>

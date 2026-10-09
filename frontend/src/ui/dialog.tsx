@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react";
 import { COARSE_QUERY, PHONE_QUERY } from "../lib/breakpoints.ts";
+import { duringAppFocus } from "../lib/reader-focus.ts";
 import { usePresence } from "../motion/presence.ts";
 import { IconButton } from "./icon-button.tsx";
 import "./dialog.css";
@@ -335,13 +336,20 @@ export function Dialog({
       }
 
       // The body isn't an opener (a dialog that opened with the page): use the fallback instead.
-      if (returnFocusFirstRef.current) {
-        returnFocusRef.current?.()?.focus({ preventScroll: true });
-      } else if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) {
-        opener.focus({ preventScroll: true });
-      } else {
-        returnFocusRef.current?.()?.focus({ preventScroll: true });
-      }
+      // Restoring focus is the app's, even when Escape or the close click was a moment ago.
+      duringAppFocus(() => {
+        if (returnFocusFirstRef.current) {
+          returnFocusRef.current?.()?.focus({ preventScroll: true });
+        } else if (
+          opener instanceof HTMLElement &&
+          opener !== document.body &&
+          opener.isConnected
+        ) {
+          opener.focus({ preventScroll: true });
+        } else {
+          returnFocusRef.current?.()?.focus({ preventScroll: true });
+        }
+      });
 
       onExitedRef.current?.();
     };
