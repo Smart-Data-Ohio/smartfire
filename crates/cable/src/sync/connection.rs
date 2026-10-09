@@ -207,7 +207,10 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
         }
 
-        if let Some(remote) = connection.disconnect(disconnect, &mut internal, internal_capacity) {
+        let gapped = resync.is_some();
+        if let Some(remote) =
+            connection.disconnect(disconnect, gapped, &mut internal, internal_capacity)
+        {
             // Once the person is disconnected, a refetch is moot.
             resync = None;
             bye.get_or_insert(remote);
@@ -409,17 +412,22 @@ impl<U> Connection<U> {
     /// disconnect published after select chose the head's change can precede events
     /// `catch_up` then read. Exactly the events published before the disconnect still go out
     /// (the hub assigns ring and internal-channel sequences under one lock): those not yet
-    /// read are read now, and any read past it are dropped.
+    /// read are read now, and any read past it are dropped. If this turn's catch-up found a gap
+    /// (`gapped`), nothing more is read: the cursor stays at the gap and the client's resume
+    /// point before it, so a resume starts afresh.
     fn disconnect(
         &mut self,
         seen: Option<(u64, bool)>,
+        gapped: bool,
         internal: &mut InternalMessages,
         capacity: usize,
     ) -> Option<Bye> {
         let (sequence, reconnect) = seen.or_else(|| poll_remote_reconnect(internal, capacity))?;
         // A gap before the disconnect ends the reading there, without a `resync`: the person
         // can't refetch once disconnected, and a resume from their cursor starts afresh.
-        let _ = self.catch_up_before(sequence, false);
+        if !gapped {
+            let _ = self.catch_up_before(sequence, false);
+        }
         self.pending.retain(|entry| entry.seq < sequence);
         Some(Bye {
             reconnect,
@@ -793,7 +801,7 @@ mod tests {
         assert_eq!(pending_seqs(&connection), [1, 3]);
         // Before anything pending is written, the disconnect is looked for again.
         let bye = connection
-            .disconnect(None, &mut internal, 16)
+            .disconnect(None, false, &mut internal, 16)
             .expect("the disconnect is seen before the write");
         assert!(!bye.reconnect);
         assert_eq!(bye.reason, "remote");
@@ -815,9 +823,43 @@ mod tests {
         let reconnect = crate::connection::process_internal_reconnect(message.frame.as_str());
         let seen = reconnect.map(|reconnect| (message.sequence, reconnect));
         assert_eq!(seen, Some((2, false)));
-        let bye = connection.disconnect(seen, &mut internal, 16).unwrap();
+        let bye = connection
+            .disconnect(seen, false, &mut internal, 16)
+            .unwrap();
         assert_eq!((bye.reconnect, bye.reason), (false, "remote"));
         assert_eq!(pending_seqs(&connection), [1]);
+    }
+
+    #[tokio::test]
+    async fn a_gap_found_on_the_turn_a_disconnect_follows_is_not_read_past() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        // The head's change shows a gap through seq 2.
+        hub.sequenced(|seq| publish(&connection, seq, Audience::User(1)));
+        hub.sequenced(|seq| connection.engine.ring.push_gap(seq, 1));
+        let resync = connection.catch_up(false);
+        assert!(matches!(resync, Some(ServerFrame::Resync { .. })));
+        // Before the write, event 3 and the disconnect (seq 4) commit.
+        hub.sequenced(|seq| publish(&connection, seq, Audience::User(1)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":true}"#,
+        );
+        let bye = connection
+            .disconnect(None, resync.is_some(), &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        assert_eq!((bye.reconnect, bye.reason), (true, "remote"));
+        assert_eq!(pending_seqs(&connection), [0u64; 0], "nothing past the gap");
+        assert_eq!(connection.cursor, 2);
+        // The client's cursor stays at its welcome (seq 0), so its resume starts afresh.
+        let start = connection
+            .engine
+            .ring
+            .resume(Some((connection.engine.ring.epoch(), 0)));
+        assert!(matches!(
+            connection.welcome(start),
+            ServerFrame::Welcome { resumed: false, .. }
+        ));
     }
 
     #[test]
