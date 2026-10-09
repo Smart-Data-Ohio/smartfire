@@ -1,10 +1,10 @@
 //! `app/controllers/sudos_controller.rb`; Google transport/token verification belongs to WS14.
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user, session_keys, sudo};
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::retained_page;
 use campfire_db::SudoVerifier;
 use campfire_kit::{Ctx, Error, RateLimit, Redirect, Result, StatusCode, format, halt};
-use campfire_views::sudos;
+use campfire_retained::sudos;
 use jiff::SignedDuration;
 use rusqlite::OptionalExtension;
 
@@ -200,7 +200,7 @@ pub async fn continue_after_sudo(c: &mut Ctx) -> Result {
             params,
         } => {
             c.respond_to(&[&format::HTML])?;
-            framed_page!(c, StatusCode::OK, |ctx| sudos::Continue {
+            retained_page!(c, StatusCode::OK, |ctx| sudos::Continue {
                 ctx,
                 method: method.clone(),
                 path: path.clone(),
@@ -234,7 +234,7 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         && linked_subject(c, require_current_user(c)?.id)
             .await?
             .is_some();
-    framed_page!(c, status, |ctx| sudos::New {
+    retained_page!(c, status, |ctx| sudos::New {
         ctx,
         password,
         totp,

@@ -3,20 +3,20 @@
 
 use campfire_db::{Account, FirstRun, PasswordDigest};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
-use campfire_views::first_runs;
+use campfire_retained::first_runs;
 
 use super::presenters;
 use super::presenters::attachments::{self, Assignment, Record};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::retained_page;
 
 /// `allow_unauthenticated_access`, `before_action :prevent_repeats`
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
     prevent_repeats(c).await?;
     c.respond_to(&[&format::HTML])?;
-    framed_page!(c, StatusCode::OK, |ctx| first_runs::Show { ctx }).await
+    retained_page!(c, StatusCode::OK, |ctx| first_runs::Show { ctx }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {

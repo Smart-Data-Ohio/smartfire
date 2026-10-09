@@ -1,0 +1,29 @@
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
+{% block head %}{{ h::turbo_page_requires_reload_tag() }}{% endblock %}
+
+{% block content %}
+<main class="auth-card"{% if ctx.flash_alert().is_some() %} data-shake{% endif %}>
+  <header class="auth-header">
+    {{ h::image_tag(ctx, &ctx.account.logo_url, h::attrs().alt("").class("auth-logo").size(48)) }}
+    <h1 class="auth-title">Confirm it's you</h1>
+    <p class="auth-lede">This action needs a fresh confirmation. Confirm once and it continues.</p>
+  </header>
+
+{% if password %}{% let form = h::form_with(ctx.url(h::routes::sudo().as_str())).class("auth-form").data("turbo", false) %}  {% filter form_with(form) %}
+    {{ h::hidden_field_tag("verifier", Some("password"), h::attrs()) }}
+    <div class="field">
+      {{ form.label("password", "Password", h::attrs().class("field-label")) }}
+      {{ form.password_field("password", h::rejected_field(ctx, h::attrs().required(true).class("input").autofocus().autocomplete("current-password").maxlength(72))) }}
+    </div>
+
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit").name("confirm"), "Confirm") }}
+{% endfilter %}{% endif %}
+{% if totp %}{% if password %}  <p class="auth-divider">or</p>
+{% endif %}  {% include "sudos/_totp_form.html" %}
+{% endif %}
+{% if google %}{% if password || totp %}  <p class="auth-divider">or</p>
+{% endif %}  {% filter button_to_form(h::routes::sudo_google().as_str(), h::attrs().method("post").class("button auth-wide auth-google").data("variant", "secondary").data("size", "lg"), h::attrs().class("auth-button-form").data("turbo", false)) %}{% call auth::google() %}Confirm with Google{% endfilter %}
+{% endif %}</main>
+{% endblock %}

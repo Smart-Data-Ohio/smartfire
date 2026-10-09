@@ -175,6 +175,47 @@ impl Layout {
         self.render_with_secrets(c, Some(secrets), render)
     }
 
+    /// A retained page: the same request secrets, flash sweep and account data as [`Self::render`],
+    /// without building an import map or putting the classic stylesheet tags on the context.
+    /// The response still uses [`Self::page`] when it is a full document, so the stylesheet
+    /// preload `Link` header sign-in already sends stays put.
+    pub fn render_retained(
+        &self,
+        c: &mut Ctx,
+        render: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+    ) -> Result<String> {
+        let secrets = RequestSecrets {
+            tokens: Box::new(KitTokens(c.authenticity_tokens())),
+            csp_nonce: c.content_security_policy_nonce(),
+        };
+        #[cfg(any(test, feature = "test-support"))]
+        let secrets = super::render_secrets::fixed_render_secrets().unwrap_or(secrets);
+        let flash = c.peek_flash();
+        let asset_path = |path: &str| campfire_assets::asset_path(path);
+        let ctx = campfire_retained::Context {
+            current_user: self.current_user.clone(),
+            account: self.account.clone(),
+            flash_notice: flash.notice().map(str::to_string),
+            flash_alert: flash.alert().map(str::to_string),
+            custom_styles: self.custom_styles.clone(),
+            platform: self.platform.clone(),
+            app_version: self.app_version.clone(),
+            base_url: c.url_for(""),
+            asset_path: &asset_path,
+            chrome: campfire_retained::Chrome {
+                service_worker_auto_register: self.chrome.service_worker_auto_register,
+                service_worker_url: self.chrome.service_worker_url.clone(),
+            },
+        };
+        let (result, read_flash) = campfire_views::flash::track_reads(|| {
+            request_forgery::rendering_with(secrets, || render(&ctx))
+        });
+        if read_flash {
+            c.flash();
+        }
+        result.map_err(Error::internal)
+    }
+
     /// Token-free partials use the viewer's time zone without creating a CSRF session.
     pub fn render_without_secrets(
         &self,
@@ -372,6 +413,45 @@ pub async fn page_or_frame(
 ) -> Result {
     find_template(c, &format::HTML)?;
     page_or_frame_in_any_format(c, status, full, frame).await
+}
+
+/// [`page_or_frame`] for a retained page. Full documents still send the stylesheet preload
+/// `Link` header; the context itself does not carry those tags or an import map.
+pub async fn retained_page_or_frame(
+    c: &mut Ctx,
+    status: StatusCode,
+    full: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+    frame: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+) -> Result {
+    find_template(c, &format::HTML)?;
+    retained_page_or_frame_in_any_format(c, status, full, frame).await
+}
+
+pub async fn retained_page_or_frame_in_any_format(
+    c: &mut Ctx,
+    status: StatusCode,
+    full: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+    frame: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+) -> Result {
+    let layout = Layout::load(c).await?;
+    if c.is_turbo_frame_request() {
+        let html = layout.render_retained(c, frame)?;
+        Ok(layout.frame(c, status, html))
+    } else {
+        let html = layout.render_retained(c, full)?;
+        Ok(layout.page(c, status, html))
+    }
+}
+
+/// A retained document even for a Turbo-Frame request (controllers that force their own layout).
+pub async fn retained_document(
+    c: &mut Ctx,
+    status: StatusCode,
+    full: impl FnOnce(&campfire_retained::Context) -> askama::Result<String>,
+) -> Result {
+    let layout = Layout::load(c).await?;
+    let html = layout.render_retained(c, full)?;
+    Ok(layout.page(c, status, html))
 }
 
 /// [`page_or_frame`] without the template lookup (see [`page_in_any_format`]).

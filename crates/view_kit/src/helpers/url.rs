@@ -6,7 +6,9 @@ pub fn cgi_escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for byte in text.bytes() {
         match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-' | b'~' => out.push(byte as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'_' | b'.' | b'-' | b'~' => {
+                out.push(byte as char)
+            }
             b' ' => out.push('+'),
             _ => out.push_str(&format!("%{byte:02X}")),
         }
@@ -30,18 +32,29 @@ pub fn with_query(path: &str, params: Vec<(&str, Param)>) -> String {
             Param::One(value) => pairs.push(format!("{}={}", cgi_escape(key), cgi_escape(&value))),
             Param::Many(values) => {
                 let key = cgi_escape(&format!("{key}[]"));
-                pairs.extend(values.iter().map(|value| format!("{key}={}", cgi_escape(value))));
+                pairs.extend(
+                    values
+                        .iter()
+                        .map(|value| format!("{key}={}", cgi_escape(value))),
+                );
             }
         }
     }
-    if pairs.is_empty() { path.to_string() } else { format!("{path}?{}", pairs.join("&")) }
+    if pairs.is_empty() {
+        path.to_string()
+    } else {
+        format!("{path}?{}", pairs.join("&"))
+    }
 }
 
 /// `rooms_directs_path(user_ids: [ id ])`.
 pub fn rooms_directs_with_users(user_ids: &[i64]) -> String {
     with_query(
         &campfire_routes::rooms_directs(),
-        vec![("user_ids", Param::Many(user_ids.iter().map(ToString::to_string).collect()))],
+        vec![(
+            "user_ids",
+            Param::Many(user_ids.iter().map(ToString::to_string).collect()),
+        )],
     )
 }
 
@@ -56,9 +69,18 @@ mod tests {
 
     #[test]
     fn builds_rails_query_strings() {
-        assert_eq!(rooms_directs_with_users(&[5, 6]), "/rooms/directs?user_ids%5B%5D=5&user_ids%5B%5D=6");
         assert_eq!(
-            with_query("/x", vec![("z", Param::One("a b".into())), ("a", Param::One("1".into()))]),
+            rooms_directs_with_users(&[5, 6]),
+            "/rooms/directs?user_ids%5B%5D=5&user_ids%5B%5D=6"
+        );
+        assert_eq!(
+            with_query(
+                "/x",
+                vec![
+                    ("z", Param::One("a b".into())),
+                    ("a", Param::One("1".into()))
+                ]
+            ),
             "/x?a=1&z=a+b"
         );
     }

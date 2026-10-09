@@ -850,8 +850,9 @@ async fn sudo_continuation_consumes_gets_and_rejects_external_paths() {
 
 #[tokio::test]
 async fn sudo_views_preserve_six_rails_form_contracts() {
+    use crate::controllers::users::people_tests::retained;
     use askama::Template;
-    use campfire_views::{helpers as h, sudos};
+    use campfire_views::helpers as h;
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
@@ -877,11 +878,12 @@ async fn sudo_views_preserve_six_rails_form_contracts() {
                     account.as_ref(),
                     "http://campfire.test",
                     |ctx| {
+                        let ctx = retained(ctx);
                         if name == "continue" {
-                            sudos::Continue { ctx, method: "patch".into(), path: "/account/users/127326141?x=1&y=2".into(), params: json!({ "user": {"name": "David <&>", "tags": ["a",true,false,null,12,{"skip":1}], "empty":null}, "invalid name":"skip", "bad]name":"allowed" }) }.as_content().render().unwrap()
+                            campfire_retained::sudos::Continue { ctx: &ctx, method: "patch".into(), path: "/account/users/127326141?x=1&y=2".into(), params: json!({ "user": {"name": "David <&>", "tags": ["a",true,false,null,12,{"skip":1}], "empty":null}, "invalid name":"skip", "bad]name":"allowed" }) }.as_content().render().unwrap()
                         } else {
-                            sudos::New {
-                                ctx,
+                            campfire_retained::sudos::New {
+                                ctx: &ctx,
                                 password: name.contains("password"),
                                 totp: name.contains("totp"),
                                 google: name.contains("google"),
@@ -896,6 +898,5 @@ async fn sudo_views_preserve_six_rails_form_contracts() {
         );
         crate::form_contracts::assert_forms(name, &actual, expected.as_str().unwrap());
         if name != "continue" { crate::form_contracts::assert_text(&actual, "Confirm it's you"); }
-
     }
 }

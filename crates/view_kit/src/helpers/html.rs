@@ -50,7 +50,9 @@ pub fn empty() -> Html {
 /// `&` become `\uXXXX`. The JS line separators stay raw (`load_defaults 8.2` turns
 /// `escape_js_separators_in_json` off). Apply to serde_json output for Jbuilder views.
 pub fn rails_json_escape(json: &str) -> String {
-    json.replace('<', "\\u003c").replace('>', "\\u003e").replace('&', "\\u0026")
+    json.replace('<', "\\u003c")
+        .replace('>', "\\u003e")
+        .replace('&', "\\u0026")
 }
 
 /// `render json:` / Jbuilder: serde_json with Rails' HTML-entity escaping.
@@ -93,6 +95,9 @@ mod tests {
 
     #[test]
     fn escapes_json_like_rails() {
-        assert_eq!(to_rails_json(&"<b>&</b>"), r#""\u003cb\u003e\u0026\u003c/b\u003e""#);
+        assert_eq!(
+            to_rails_json(&"<b>&</b>"),
+            r#""\u003cb\u003e\u0026\u003c/b\u003e""#
+        );
     }
 }

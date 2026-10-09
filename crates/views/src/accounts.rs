@@ -12,12 +12,7 @@ use crate::users::UserSummary;
 
 pub mod bot_access;
 
-/// `User.administrator.first`, shown by `accounts/_help_contact`.
-#[derive(Clone, Debug)]
-pub struct HelpContact {
-    pub name: String,
-    pub email_address: String,
-}
+pub use campfire_view_kit::HelpContact;
 
 /// `accounts/_help_contact.html.erb` on its own.
 #[derive(Template)]
@@ -172,11 +167,12 @@ impl BotForm {
                 agent.owner_id == ctx.current_user.as_ref().map(|user| user.id)
             })
     }
-
 }
 impl BotAgentForm {
     fn cap_value(&self, name: &str) -> Option<String> {
-        if let Some(value) = self.raw_caps.get(name) { return value.clone(); }
+        if let Some(value) = self.raw_caps.get(name) {
+            return value.clone();
+        }
         match name {
             "messages" => self.daily_message_cap,
             "board_posts" => self.daily_board_post_cap,
@@ -264,9 +260,11 @@ impl BotsEdit<'_> {
     fn ws15g_github_connection_fragment(&self) -> askama::Result<h::Html> {
         let account = self.bot.github.as_ref();
         let data = crate::github::connections::Connection {
-            linked: account.is_some(), usable: account.is_some_and(|a| a.usable),
+            linked: account.is_some(),
+            usable: account.is_some_and(|a| a.usable),
             login: account.map(|a| a.login.clone()).unwrap_or_default(),
-            reason: account.and_then(|a| a.disconnected_reason.clone()), ..Default::default()
+            reason: account.and_then(|a| a.disconnected_reason.clone()),
+            ..Default::default()
         };
         let html = crate::github::connections::bot(&data, self.bot_id, self.ctx.can_administer());
         // This inline call already contributes the partial's final newline.

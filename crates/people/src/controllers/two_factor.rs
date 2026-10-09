@@ -1,13 +1,13 @@
 //! `app/controllers/two_factor`: domain writes are transactional; page rendering stays separate.
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_session, require_current_user};
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::retained_page;
 use campfire_db::models::audit_log::{Actor, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{TwoFactorCredential, TwoFactorRememberedDevice, User};
 use campfire_kit::{
     Cookie, Ctx, Error, RateLimit, Redirect, Result, SameSite, StatusCode, format, halt,
 };
-use campfire_views::two_factor;
+use campfire_retained::two_factor;
 use jiff::SignedDuration;
 use rails_compat::{ar_encryption::ArEncryption, totp};
 use serde_json::json;
@@ -170,7 +170,7 @@ async fn render_setup(c: &mut Ctx, status: StatusCode) -> Result {
         .map(|c| c.iter().collect::<String>())
         .collect::<Vec<_>>()
         .join(" ");
-    framed_page!(c, status, |ctx| two_factor::Setup {
+    retained_page!(c, status, |ctx| two_factor::Setup {
         ctx,
         key: key.clone(),
         qr: qr.clone()
@@ -184,7 +184,7 @@ async fn render_backups(
     continue_url: String,
 ) -> Result {
     c.respond_to(&[&format::HTML])?;
-    framed_page!(c, StatusCode::OK, |ctx| two_factor::BackupCodes {
+    retained_page!(c, StatusCode::OK, |ctx| two_factor::BackupCodes {
         ctx,
         codes: codes.clone(),
         signed_out,
@@ -366,7 +366,7 @@ pub async fn challenge_create(c: &mut Ctx) -> Result {
 }
 async fn render_challenge(c: &mut Ctx, status: StatusCode) -> Result {
     c.respond_to(&[&format::HTML])?;
-    framed_page!(c, status, |ctx| two_factor::Challenge { ctx }).await
+    retained_page!(c, status, |ctx| two_factor::Challenge { ctx }).await
 }
 async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
     let agent = c.request.user_agent().map(str::to_string);
