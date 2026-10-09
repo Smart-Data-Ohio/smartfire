@@ -36,7 +36,12 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
-import { beginRoomRequest, claimRoomOutcome, clearRoomJoin } from "./join-state.ts";
+import {
+  beginRoomRequest,
+  claimRoomOutcome,
+  clearRoomJoin,
+  dirtyRoomReread,
+} from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -277,6 +282,7 @@ export const mutations = {
 
       if (membershipChanged(held[row.room.id], row)) {
         claimRoomOutcome(row.room.id, beginRoomRequest());
+        dirtyRoomReread(row.room.id);
       }
 
       held[row.room.id] = row;

@@ -14,10 +14,24 @@ const appliedOutcome = new Map<number, number>();
 
 let nextRequest = 0;
 
+type RoomReread = {
+  /** A recovery read is running. */
+  inFlight: boolean;
+  /** A read was rejected, or a membership fact landed, while that read was in flight. */
+  dirty: boolean;
+};
+
+const roomRereads = new Map<number, RoomReread>();
+
 export function resetJoinState(): void {
   joinedAt.clear();
   appliedOutcome.clear();
   nextRequest = 0;
+}
+
+/** Test isolation. A rejected read's re-read outlives the store. */
+export function resetRoomRereads(): void {
+  roomRereads.clear();
 }
 
 /** A terminal outcome: the id must not keep a join alive for the rest of the page. */
@@ -45,6 +59,59 @@ export function claimRoomOutcome(roomId: number, started: number): boolean {
   appliedOutcome.set(roomId, started);
 
   return true;
+}
+
+/** A membership fact arrived during the in-flight re-read, so it must run once more. */
+export function dirtyRoomReread(roomId: number): void {
+  const current = roomRereads.get(roomId);
+
+  if (current?.inFlight) current.dirty = true;
+}
+
+/**
+ * A room read lost to a newer membership fact. The caller starts one re-read when this returns
+ * true. A loss while that re-read is in flight only marks it dirty.
+ */
+export function claimRoomReread(roomId: number): boolean {
+  const current = roomRereads.get(roomId);
+
+  if (current?.inFlight) {
+    current.dirty = true;
+
+    return false;
+  }
+
+  roomRereads.set(roomId, { inFlight: true, dirty: false });
+
+  return true;
+}
+
+/**
+ * The in-flight re-read applied, was rejected, or errored. Returns whether exactly one more
+ * should start. A failure with nothing pending returns false, so a network error cannot spin.
+ */
+export function finishRoomReread(roomId: number): boolean {
+  const current = roomRereads.get(roomId);
+
+  if (current === undefined) return false;
+
+  current.inFlight = false;
+
+  if (!current.dirty) {
+    roomRereads.delete(roomId);
+
+    return false;
+  }
+
+  current.dirty = false;
+  current.inFlight = true;
+
+  return true;
+}
+
+/** The recovery fiber was interrupted. Drop the hold so the next visit can read. */
+export function dropRoomReread(roomId: number): void {
+  roomRereads.delete(roomId);
 }
 
 export function noteJoined(roomId: number, epoch: number): void {

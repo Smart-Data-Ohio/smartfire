@@ -31,11 +31,10 @@ import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
 import {
-  holdRoomReread,
   invalidateRoom,
   markRoomsChanged,
   markSidebarSnapshot,
-  releaseRoomReread,
+  recoverRejectedRoomRead,
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
@@ -237,9 +236,9 @@ export class Engine extends Context.Service<
       });
 
       /**
-       * A refresh lost to a membership fact. One later read, at the room's current revision and a
-       * new sequence, replaces it. A burst of losses shares that read. The fact itself is not read
-       * again.
+       * A refresh lost to a membership fact. A later read, at the room's current revision and a
+       * new sequence, replaces it. Losses while that re-read is in flight share one follow-up.
+       * The fact itself is not read again.
        */
       let retryRejectedRefresh: (roomId: number) => Effect.Effect<void> = () => Effect.void;
 
@@ -554,11 +553,7 @@ export class Engine extends Context.Service<
       };
 
       retryRejectedRefresh = Effect.fnUntraced(function* (roomId: number) {
-        if (!holdRoomReread(roomId)) return;
-
-        yield* refreshRoom(roomId, roomRevision(roomId)).pipe(
-          Effect.ensuring(Effect.sync(() => releaseRoomReread(roomId))),
-        );
+        yield* recoverRejectedRoomRead(roomId, () => refreshRoom(roomId, roomRevision(roomId)));
       });
 
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */

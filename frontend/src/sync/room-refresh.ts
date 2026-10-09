@@ -1,4 +1,6 @@
+import { Effect, Result } from "effect";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { claimRoomReread, dropRoomReread, finishRoomReread } from "../store/join-state.ts";
 
 type Listener = () => void;
 
@@ -87,27 +89,35 @@ export function onRoomRefresh(roomId: number, listener: Listener): () => void {
   };
 }
 
-const rereads = new Set<number>();
-
 /**
- * One fresh read after a room response lost to a newer membership fact. Further losses for that
- * room share it, so a burst of rejections is one GET, not one per event.
+ * A room read lost to a newer membership fact. Starts one re-read; `read` runs then, so it takes
+ * a new sequence. A loss while that re-read is in flight only marks it dirty. When the read
+ * finishes, a pending loss starts exactly one more.
  */
-export function holdRoomReread(roomId: number): boolean {
-  if (rereads.has(roomId)) return false;
+export function recoverRejectedRoomRead<E, R>(
+  roomId: number,
+  read: () => Effect.Effect<void, E, R>,
+): Effect.Effect<void, E, R> {
+  if (!claimRoomReread(roomId)) return Effect.void;
 
-  rereads.add(roomId);
-
-  return true;
+  return runRoomReread(roomId, read);
 }
 
-export function releaseRoomReread(roomId: number): void {
-  rereads.delete(roomId);
-}
+function runRoomReread<E, R>(
+  roomId: number,
+  read: () => Effect.Effect<void, E, R>,
+): Effect.Effect<void, E, R> {
+  return Effect.gen(function* () {
+    while (true) {
+      const result = yield* Effect.result(read());
 
-/** Test isolation. A rejected read's re-read outlives the store. */
-export function resetRoomRereads(): void {
-  rereads.clear();
+      if (finishRoomReread(roomId)) continue;
+
+      if (Result.isFailure(result)) return yield* Effect.fail(result.failure);
+
+      return;
+    }
+  }).pipe(Effect.onInterrupt(() => Effect.sync(() => dropRoomReread(roomId))));
 }
 
 /** Once per room in a batch, including hidden removals whose membership is still readable. */

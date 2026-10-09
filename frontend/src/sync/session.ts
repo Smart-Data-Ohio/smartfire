@@ -25,17 +25,16 @@ import {
   joinedAtEpoch,
   noteJoined,
   resetJoinState,
+  resetRoomRereads,
 } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
   changedSince,
-  holdRoomReread,
   invalidateRoom,
   managementEpoch,
-  releaseRoomReread,
-  resetRoomRereads,
+  recoverRejectedRoomRead,
   roomRevision,
 } from "./room-refresh.ts";
 import { Topics } from "./topics.ts";
@@ -197,9 +196,9 @@ function currentJoinDetail(roomId: number): RoomDetail | null {
 }
 
 /**
- * The read lost to a membership fact that arrived while it was in flight. One later read, with a
- * new sequence, fills what that fact did not (member counts, or the first detail). A burst shares
- * it. Confirmed mutations are not reads and do not come through here.
+ * The read lost to a membership fact that arrived while it was in flight. A later read, with a
+ * new sequence, fills what that fact did not (member counts, or the first detail). Losses while
+ * that re-read is in flight share one follow-up. Confirmed mutations are not reads.
  */
 let retryRejectedLoad: (roomId: number, token: number) => Effect.Effect<void, never, ApiClient> =
   () => Effect.void;
@@ -283,11 +282,9 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 });
 
 retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) {
-  if (!sameVisit(roomId, token) || !holdRoomReread(roomId)) return;
+  if (!sameVisit(roomId, token)) return;
 
-  yield* loadRoom(roomId, token).pipe(
-    Effect.ensuring(Effect.sync(() => releaseRoomReread(roomId))),
-  );
+  yield* recoverRejectedRoomRead(roomId, () => loadRoom(roomId, token));
 });
 
 /** The sidebar row's facts win over a room read that raced a rename or a membership change. */

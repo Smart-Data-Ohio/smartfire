@@ -3232,6 +3232,192 @@ describe("room access refresh", () => {
       }),
     ),
   );
+
+  const membershipUpsert = (
+    seq: number,
+    membership: Partial<SidebarRow["membership"]>,
+  ): SyncEvent => {
+    const row = sidebarRowFixture(12, "general");
+
+    return {
+      seq,
+      topic: "user",
+      type: "sidebar.row.upserted",
+      data: { ...row, membership: { ...row.membership, ...membership } },
+    };
+  };
+
+  it.effect(
+    "a second membership upsert during the first load's re-read still renders that membership",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const firstStarted = yield* Deferred.make<void>();
+          const releaseFirst = yield* Deferred.make<void>();
+          const secondStarted = yield* Deferred.make<void>();
+          const releaseSecond = yield* Deferred.make<void>();
+          const row = sidebarRowFixture(12, "general");
+          let reads = 0;
+
+          yield* api.reply("GET /sidebar", sidebarFixture([row]));
+          yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+          yield* api.reply("GET /users", { users: [] });
+          yield* api.route("GET /rooms/12", () => {
+            reads += 1;
+
+            if (reads === 1) {
+              return Deferred.succeed(firstStarted, undefined).pipe(
+                Effect.andThen(Deferred.await(releaseFirst)),
+                Effect.as(roomDetailFixture(12)),
+              );
+            }
+
+            if (reads === 2) {
+              return Deferred.succeed(secondStarted, undefined).pipe(
+                Effect.andThen(Deferred.await(releaseSecond)),
+                Effect.as({ ...roomDetailFixture(12), memberCount: 4 }),
+              );
+            }
+
+            return Effect.succeed({ ...roomDetailFixture(12), memberCount: 7 });
+          });
+          yield* startEngine;
+          yield* welcome(0, false);
+
+          const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+          yield* Deferred.await(firstStarted);
+          yield* pushEvents(membershipUpsert(1, { involvement: "muted" }));
+          yield* Deferred.succeed(releaseFirst, undefined);
+          yield* Deferred.await(secondStarted);
+          yield* pushEvents(membershipUpsert(2, { involvement: "mentions" }));
+          yield* Deferred.succeed(releaseSecond, undefined);
+          yield* Fiber.join(opening);
+          yield* settle;
+
+          expect(reads).toBe(3);
+          expect(store.getState().rooms[12]?.status).toBe("ready");
+          expect(store.getState().rooms[12]?.detail?.membership.involvement).toBe("mentions");
+          expect(store.getState().rooms[12]?.detail?.memberCount).toBe(7);
+        }),
+      ),
+  );
+
+  it.effect("a refresh rejected twice still shows the fresh member count", () =>
+    withSync(
+      Effect.gen(function* () {
+        yield* loaded;
+        const api = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const secondStarted = yield* Deferred.make<void>();
+        const releaseSecond = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        let reads = 0;
+
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.as({ ...roomDetailFixture(12), memberCount: 3 }),
+            );
+          }
+
+          if (reads === 2) {
+            return Deferred.succeed(secondStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseSecond)),
+              Effect.as({ ...roomDetailFixture(12), memberCount: 4 }),
+            );
+          }
+
+          return Effect.succeed({ ...roomDetailFixture(12), memberCount: 9 });
+        });
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: { ...row, refreshRoom: true },
+        });
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents(membershipUpsert(2, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Deferred.await(secondStarted);
+        yield* pushEvents(membershipUpsert(3, { involvement: "mentions" }));
+        yield* Deferred.succeed(releaseSecond, undefined);
+        yield* settle;
+
+        expect(reads).toBe(3);
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(9);
+      }),
+    ),
+  );
+
+  it.effect("five membership upserts during one re-read schedule a single follow-up", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const secondStarted = yield* Deferred.make<void>();
+        const releaseSecond = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        let reads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* api.reply("GET /users", { users: [] });
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          if (reads === 2) {
+            return Deferred.succeed(secondStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseSecond)),
+              Effect.as({ ...roomDetailFixture(12), memberCount: 4 }),
+            );
+          }
+
+          return Effect.succeed({ ...roomDetailFixture(12), memberCount: 11 });
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents(membershipUpsert(1, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Deferred.await(secondStarted);
+
+        const duringReread = reads;
+
+        yield* pushEvents(
+          membershipUpsert(2, { involvement: "mentions" }),
+          membershipUpsert(3, { involvement: "nothing" }),
+          membershipUpsert(4, { involvement: "invisible" }),
+          membershipUpsert(5, { involvement: "everything", stageRole: "listener" }),
+          membershipUpsert(6, { involvement: "everything", stageRole: "host" }),
+        );
+        yield* Deferred.succeed(releaseSecond, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(reads - duringReread).toBe(1);
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail?.membership.stageRole).toBe("host");
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(11);
+      }),
+    ),
+  );
 });
 
 describe("decoding", () => {
