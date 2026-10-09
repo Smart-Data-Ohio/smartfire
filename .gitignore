@@ -17,6 +17,10 @@ target/
 /web/script/*/node_modules/
 /web/.bundle
 
+# The huddle gateway's npm install and its project-local LiveKit server.
+/huddle-gateway/node_modules
+/huddle-gateway/.bundle
+
 # Local server output: `cargo run -p campfire -- server` keeps its database, uploads and backups in
 # storage/ under the working directory unless CAMPFIRE_STORAGE_PATH says otherwise.
 /storage/

@@ -115,7 +115,7 @@ class ImageContextTest(unittest.TestCase):
         for path in ["gha-creds-0123456789abcdef.json", ".env", ".env.production", "err.log",
                      ".cargo-home/credentials.toml", ".scratch/release-inputs.x/Cargo.toml",
                      "target/debug/campfire", "parity/.seed/default/db/production.sqlite3",
-                     "web/script/livekit-gateway/node_modules/x/index.js", ".git/config",
+                     "huddle-gateway/node_modules/x/index.js", ".git/config",
                      "frontend/node_modules/vite/package.json", "frontend/dist/index.html",
                      "frontend/test-results/x.png"]:
             with self.subTest(path=path):

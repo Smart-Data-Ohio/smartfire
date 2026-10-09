@@ -24,8 +24,9 @@ The app's static inputs live at the repository root:
 - `web/`, laid out like the Rails app it came from: `app/assets`, `app/javascript`,
   `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb`, the JS
   builders that vendor bundles into `vendor/javascript` (`script/livekit-client`,
-  `script/code-highlighter`), the LiveKit gateway (`script/livekit-gateway`) and
-  `bin/livekit-local`. `crates/assets/build.rs` reads them, and the `Dockerfile` copies them.
+  `script/code-highlighter`). `crates/assets/build.rs` reads them, and the `Dockerfile` copies them.
+  The LiveKit gateway and `livekit-local` live in `huddle-gateway/`, outside this tree, so
+  retiring `web/` does not take calls with it.
 - `fixtures/`: the Rails app's `test/fixtures`, which the tests load.
 - `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
   agents UI cast inputs, the post-pin status files, Node test adapters).
@@ -67,6 +68,7 @@ rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing front
 | `crates/spa` | `campfire_spa` | The built SPA embedded at compile time (brotli/gzip, immutable caching), the shell and its boot JSON |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
 | `frontend/` | — | The React SPA replacing the Hotwire UI (`frontend/README.md`) |
+| `huddle-gateway/` | — | LiveKit authorization gateway (Node) and `livekit-local` for local media |
 | `parity/` | — | Frozen test seeds (`parity/seeds`), the pinned Playwright image the browser suites run in, template coverage |
 | `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
