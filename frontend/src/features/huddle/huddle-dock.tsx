@@ -366,7 +366,7 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 onClick={() => {
                   if (phone) {
                     if (shown) {
-                      callView.close(roomId);
+                      callView.close("user");
                     } else {
                       callView.open(roomId);
                     }

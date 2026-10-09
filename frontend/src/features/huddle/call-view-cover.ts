@@ -4,7 +4,13 @@
  * URL hasn't got it), the room under it goes inert, it holds focus while open and gives it back
  * to the call bar's "Show call" when it closes. Desktop keeps the controller's `viewOpen`.
  */
-import { useMatchRoute, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import {
+  useLocation,
+  useMatchRoute,
+  useNavigate,
+  useRouter,
+  useSearch,
+} from "@tanstack/react-router";
 import { type RefObject, useEffect, useRef } from "react";
 import { parseBoardSearch, type RoomSearch } from "../../lib/board-search.ts";
 import { usePhoneLayout } from "../panes/use-right-pane.ts";
@@ -43,13 +49,23 @@ export interface CallViewNavigation {
   /** Pushes `roomId`'s page with the call view over it. */
   readonly open: (roomId: number) => void;
   /**
-   * Takes the call view away: back to the room's page it was opened over, else (or when
-   * `replace`) by replacing this entry with the room's page.
+   * Takes `call=1` off this page. A person closing the view (`"user"`) on the entry "Show call"
+   * pushed over the room's page steps back to that page; anything else, and every automatic
+   * cleanup (`"replace"`), replaces this entry with the same URL less `call`.
    */
-  readonly close: (roomId: number, replace?: "replace") => void;
+  readonly close: (how: "user" | "replace") => void;
 }
 
-/** Opening and closing the phone's call view, as navigations to the room with or without `call=1`. */
+/** This search less `call`, whatever else it holds (board filters, a reply's `m`, ...). */
+function withoutCall<Search extends { readonly call?: unknown }>(
+  search: Search,
+): Omit<Search, "call"> {
+  const { call: _call, ...rest } = search;
+
+  return rest;
+}
+
+/** Opening and closing the phone's call view, as navigations that add or remove `call=1`. */
 export function useCallViewNavigation(): CallViewNavigation {
   const navigate = useNavigate();
   const router = useRouter();
@@ -58,8 +74,11 @@ export function useCallViewNavigation(): CallViewNavigation {
   return {
     open: (roomId) => {
       // Over the room's own page, closing can step back to it; from anywhere else it replaces.
+      const match = matchRoute({ to: "/r/$roomId" });
+
+      // (Given `params: { roomId }`, matchRoute never matched the numeric id: compare it here.)
       const onRoomPage =
-        matchRoute({ to: "/r/$roomId", params: { roomId } }) !== false && !carriesCallParam(router);
+        match !== false && Number(match.roomId) === roomId && !carriesCallParam(router);
 
       void navigate({
         to: "/r/$roomId",
@@ -69,7 +88,7 @@ export function useCallViewNavigation(): CallViewNavigation {
         state: onRoomPage ? { smartfireCallOver: true } : {},
       });
     },
-    close: (roomId, replace) => {
+    close: (how) => {
       const location = router.state.location;
 
       if (closing === location || !carriesCallParam(router)) {
@@ -78,16 +97,21 @@ export function useCallViewNavigation(): CallViewNavigation {
 
       closing = location;
 
-      if (replace === undefined && location.state.smartfireCallOver === true) {
+      if (how === "user" && location.state.smartfireCallOver === true) {
         router.history.back();
 
         return;
       }
 
       void navigate({
-        to: "/r/$roomId",
-        params: { roomId },
-        search: parseBoardSearch,
+        to: ".",
+        search: (previous) => withoutCall(previous),
+        hash: true,
+        state: (previous) => {
+          const { smartfireCallOver: _over, ...rest } = previous;
+
+          return rest;
+        },
         replace: true,
       });
     },
@@ -103,25 +127,41 @@ function carriesCallParam(router: ReturnType<typeof useRouter>): boolean {
 let closing: object | null = null;
 
 /**
- * Keeps `call=1` honest: where it can't show (a desktop, or no call on in the room, as when the
- * call ends) it comes off the URL, so Back never lands on a cover that isn't there.
+ * Keeps `call=1` honest: where it can't show (a desktop, no call on in the room) it comes off the
+ * URL by replacing this entry. Only a call that ends while its view shows on this very entry
+ * counts as the person closing it (which may step back); arriving at a stale `call=1` (Back,
+ * Forward, a reload, a link) never does.
  */
 export function useCallParamCleanup(roomId: number, close: CallViewNavigation["close"]): void {
   const phone = usePhoneLayout();
   const active = useCall((state) => callActiveIn(state, roomId));
   const asked = useCallParam();
-  const stale = asked && !(phone && active);
-  // A desktop never showed the cover, so it only takes the parameter off; an ended call closes it.
-  const replace = phone ? undefined : "replace";
+  const entry = useLocation({ select: (location) => location.state.__TSR_key });
+  const covers = phone && active && asked;
+  const stale = asked && !covers;
+
+  // The entry the view last showed on, while it did.
+  const shownOn = useRef<string | undefined | null>(null);
   const closeRef = useRef(close);
 
   closeRef.current = close;
 
   useEffect(() => {
-    if (stale) {
-      closeRef.current(roomId, replace);
+    if (covers) {
+      shownOn.current = entry;
     }
-  }, [stale, roomId, replace]);
+  }, [covers, entry]);
+
+  useEffect(() => {
+    if (!stale) {
+      return;
+    }
+
+    const endedHere = phone && shownOn.current === entry;
+
+    shownOn.current = null;
+    closeRef.current(endedHere ? "user" : "replace");
+  }, [stale, phone, entry]);
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
 import {
   expect,
   expectTouchTargets,
@@ -392,6 +393,83 @@ test.describe("on a touch phone", () => {
     await page.goForward();
     await expect(page).toHaveURL(next);
     await expect(view).toHaveCount(0);
+  });
+
+  test("closing the call steps back to the room page it opened over", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+    const length = await page.evaluate(() => window.history.length);
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
+
+    // Stepped back, not replaced: the call is still the next page, one entry past the room.
+    expect(await page.evaluate(() => window.history.length)).toBe(length + 1);
+    await page.goForward();
+    await expect(view).toBeVisible();
+  });
+
+  test("a call ended elsewhere leaves its old call=1 entry to Back and Forward", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const general = new RegExp(`/r/${GENERAL}$`);
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(page.locator("section.call-view")).toBeVisible();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(page).not.toHaveURL(/call=1/);
+
+    const next = page.url();
+
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(bar).toHaveCount(0);
+
+    // Back finds the call gone: the parameter comes off in place, not by stepping back again ...
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await expect(page.locator("section.call-view")).toHaveCount(0);
+
+    // ... so Forward still reaches the room after it.
+    await page.goForward();
+    await expect(page).toHaveURL(next);
+  });
+
+  test("taking call=1 off a reply's permalink keeps the thread and the reply", async ({ page }) => {
+    const permalink = `/r/${GENERAL}/t/${THREAD_IDS.generalActive}?m=${seededReplyId(THREAD_IDS.generalActive, 0)}`;
+    const kept = new RegExp(`${permalink.replace("?", "\\?")}$`);
+
+    // Arriving with no call on: the stale parameter is replaced off.
+    await open(page, GENERAL);
+    await page.goto(`/app${permalink}&call=1`);
+    await expect(page).toHaveURL(kept);
+
+    // In a call, closing the view there (Escape on the bar) takes only `call` away.
+    await open(page, GENERAL);
+    await join(page, true);
+    await page.evaluate((url) => {
+      const index = Number(window.history.state?.__TSR_index ?? 0) + 1;
+
+      window.history.pushState(
+        { __TSR_index: index, __TSR_key: "permalink", key: "permalink" },
+        "",
+        url,
+      );
+      window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    }, `/app${permalink}&call=1`);
+    await expect(page).toHaveURL(/call=1/);
+
+    await dock(page, true).getByRole("button", { name: "Mute microphone" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(kept);
   });
 
   test("a rapid double Back from the open call leaves the room, with no extra stop", async ({

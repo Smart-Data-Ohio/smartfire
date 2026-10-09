@@ -314,7 +314,7 @@ export function CallView({ roomId }: { readonly roomId: number }) {
   const navigation = useCallViewNavigation();
 
   useCallParamCleanup(roomId, navigation.close);
-  useCallViewEscape(covers, () => navigation.close(roomId));
+  useCallViewEscape(covers, () => navigation.close("user"));
   useCallViewFocus(view, covers);
 
   if (!(phone ? covers : open)) {
