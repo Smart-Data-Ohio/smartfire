@@ -14,7 +14,9 @@
  * Unlayered on purpose. An @layer block is discarded whole by browsers that predate it
  * (Chrome ≤98, Firefox ≤96, Safari ≤15.3). The class keeps these rules off the other auth pages.
  *
- * Colours are hex, then oklch, and follow the OS or data-theme. The auth tokens are
+ * Colours are hex, and follow the OS or data-theme. Every oklch value sits in an
+ * @supports (color: oklch(0% 0 0)) block that repeats its selector and comes after the hex rule,
+ * so browsers without oklch (Chrome ≤90) keep the hex. The auth tokens are
  * light-dark(), which this page's browsers do not implement. Logical properties, flex gap and
  * inset match the classic utilities; the physical longhands sit in front so a browser that
  * drops the logical form keeps the panel width and the upward popup.
@@ -35,24 +37,15 @@ body.auth.auth--unsupported {
   --block-space-double: calc(var(--block-space) * 2);
   --lch-always-black: 0% 0 0;
   --color-bg: #ffffff;
-  --color-bg: oklch(100% 0 0);
   --color-text: #1c1e24;
-  --color-text: oklch(22% 0.01 260);
   --color-text-reversed: #ffffff;
-  --color-text-reversed: oklch(100% 0 0);
   --color-border: #e2e4e8;
-  --color-border: oklch(91% 0.004 250);
   --color-border-dark: #e2e4e8;
-  --color-border-dark: oklch(91% 0.004 250);
   --color-border-darker: #d5d8de;
-  --color-border-darker: oklch(86% 0.006 255);
   --btn-size: 2.65em;
   --btn-background: #ffffff;
-  --btn-background: oklch(100% 0 0);
   --btn-border-color: #d5d8de;
-  --btn-border-color: oklch(86% 0.006 255);
   --btn-color: #1c1e24;
-  --btn-color: oklch(22% 0.01 260);
   --icon-filter: none;
 
   margin: 0;
@@ -60,88 +53,117 @@ body.auth.auth--unsupported {
   min-height: 100dvh;
   padding: 40px 16px;
   background: #f7f8f9;
-  background: oklch(98.5% 0.002 250);
   color: var(--color-text);
+}
+
+@supports (color: oklch(0% 0 0)) {
+  body.auth.auth--unsupported {
+    --color-bg: oklch(100% 0 0);
+    --color-text: oklch(22% 0.01 260);
+    --color-text-reversed: oklch(100% 0 0);
+    --color-border: oklch(91% 0.004 250);
+    --color-border-dark: oklch(91% 0.004 250);
+    --color-border-darker: oklch(86% 0.006 255);
+    --btn-background: oklch(100% 0 0);
+    --btn-border-color: oklch(86% 0.006 255);
+    --btn-color: oklch(22% 0.01 260);
+    background: oklch(98.5% 0.002 250);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   body.auth.auth--unsupported {
     --color-bg: #22252b;
-    --color-bg: oklch(23% 0.007 260);
     --color-text: #e7e9ee;
-    --color-text: oklch(94% 0.005 260);
     --color-text-reversed: #2b2e34;
-    --color-text-reversed: oklch(27% 0.008 260);
     --color-border: #33373d;
-    --color-border: oklch(30% 0.008 260);
     --color-border-dark: #33373d;
-    --color-border-dark: oklch(30% 0.008 260);
     --color-border-darker: #3c4148;
-    --color-border-darker: oklch(34% 0.009 260);
     --btn-background: #2b2e34;
-    --btn-background: oklch(27% 0.008 260);
     --btn-border-color: #3c4148;
-    --btn-border-color: oklch(34% 0.009 260);
     --btn-color: #e7e9ee;
-    --btn-color: oklch(94% 0.005 260);
     --icon-filter: invert(1);
 
     background: #16181c;
-    background: oklch(17% 0.006 260);
     color: var(--color-text);
+  }
+
+  @supports (color: oklch(0% 0 0)) {
+    body.auth.auth--unsupported {
+      --color-bg: oklch(23% 0.007 260);
+      --color-text: oklch(94% 0.005 260);
+      --color-text-reversed: oklch(27% 0.008 260);
+      --color-border: oklch(30% 0.008 260);
+      --color-border-dark: oklch(30% 0.008 260);
+      --color-border-darker: oklch(34% 0.009 260);
+      --btn-background: oklch(27% 0.008 260);
+      --btn-border-color: oklch(34% 0.009 260);
+      --btn-color: oklch(94% 0.005 260);
+      background: oklch(17% 0.006 260);
+    }
   }
 }
 
 html[data-theme="light"] body.auth.auth--unsupported {
   --color-bg: #ffffff;
-  --color-bg: oklch(100% 0 0);
   --color-text: #1c1e24;
-  --color-text: oklch(22% 0.01 260);
   --color-text-reversed: #ffffff;
-  --color-text-reversed: oklch(100% 0 0);
   --color-border: #e2e4e8;
-  --color-border: oklch(91% 0.004 250);
   --color-border-dark: #e2e4e8;
-  --color-border-dark: oklch(91% 0.004 250);
   --color-border-darker: #d5d8de;
-  --color-border-darker: oklch(86% 0.006 255);
   --btn-background: #ffffff;
-  --btn-background: oklch(100% 0 0);
   --btn-border-color: #d5d8de;
-  --btn-border-color: oklch(86% 0.006 255);
   --btn-color: #1c1e24;
-  --btn-color: oklch(22% 0.01 260);
   --icon-filter: none;
 
   background: #f7f8f9;
-  background: oklch(98.5% 0.002 250);
   color: var(--color-text);
+}
+
+@supports (color: oklch(0% 0 0)) {
+  html[data-theme="light"] body.auth.auth--unsupported {
+    --color-bg: oklch(100% 0 0);
+    --color-text: oklch(22% 0.01 260);
+    --color-text-reversed: oklch(100% 0 0);
+    --color-border: oklch(91% 0.004 250);
+    --color-border-dark: oklch(91% 0.004 250);
+    --color-border-darker: oklch(86% 0.006 255);
+    --btn-background: oklch(100% 0 0);
+    --btn-border-color: oklch(86% 0.006 255);
+    --btn-color: oklch(22% 0.01 260);
+    background: oklch(98.5% 0.002 250);
+  }
 }
 
 html[data-theme="dark"] body.auth.auth--unsupported {
   --color-bg: #22252b;
-  --color-bg: oklch(23% 0.007 260);
   --color-text: #e7e9ee;
-  --color-text: oklch(94% 0.005 260);
   --color-text-reversed: #2b2e34;
-  --color-text-reversed: oklch(27% 0.008 260);
   --color-border: #33373d;
-  --color-border: oklch(30% 0.008 260);
   --color-border-dark: #33373d;
-  --color-border-dark: oklch(30% 0.008 260);
   --color-border-darker: #3c4148;
-  --color-border-darker: oklch(34% 0.009 260);
   --btn-background: #2b2e34;
-  --btn-background: oklch(27% 0.008 260);
   --btn-border-color: #3c4148;
-  --btn-border-color: oklch(34% 0.009 260);
   --btn-color: #e7e9ee;
-  --btn-color: oklch(94% 0.005 260);
   --icon-filter: invert(1);
 
   background: #16181c;
-  background: oklch(17% 0.006 260);
   color: var(--color-text);
+}
+
+@supports (color: oklch(0% 0 0)) {
+  html[data-theme="dark"] body.auth.auth--unsupported {
+    --color-bg: oklch(23% 0.007 260);
+    --color-text: oklch(94% 0.005 260);
+    --color-text-reversed: oklch(27% 0.008 260);
+    --color-border: oklch(30% 0.008 260);
+    --color-border-dark: oklch(30% 0.008 260);
+    --color-border-darker: oklch(34% 0.009 260);
+    --btn-background: oklch(27% 0.008 260);
+    --btn-border-color: oklch(34% 0.009 260);
+    --btn-color: oklch(94% 0.005 260);
+    background: oklch(17% 0.006 260);
+  }
 }
 
 body.auth.auth--unsupported .panel {
@@ -167,13 +189,18 @@ body.auth.auth--unsupported .panel {
     border: 1px solid var(--color-border);
     border-radius: 0.8em;
     box-shadow: 0 0.4em 1.6em rgba(0, 0, 0, 0.18);
-    box-shadow:
-      0 0 0 1px oklch(var(--lch-always-black) / 0.02),
-      0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
-      0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
-      0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
-      0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
-      0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+  }
+
+  @supports (color: oklch(0% 0 0)) {
+    body.auth.auth--unsupported .panel {
+      box-shadow:
+        0 0 0 1px oklch(var(--lch-always-black) / 0.02),
+        0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
+        0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
+        0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
+        0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
+        0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+    }
   }
 }
 
@@ -332,13 +359,18 @@ body.auth.auth--unsupported .for-screen-reader {
 
 body.auth.auth--unsupported .shadow {
   box-shadow: 0 0.4em 1.6em rgba(0, 0, 0, 0.18);
-  box-shadow:
-    0 0 0 1px oklch(var(--lch-always-black) / 0.02),
-    0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
-    0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
-    0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
-    0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
-    0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+}
+
+@supports (color: oklch(0% 0 0)) {
+  body.auth.auth--unsupported .shadow {
+    box-shadow:
+      0 0 0 1px oklch(var(--lch-always-black) / 0.02),
+      0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
+      0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
+      0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
+      0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
+      0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+  }
 }
 
 body.auth.auth--unsupported .language-list-menu {
