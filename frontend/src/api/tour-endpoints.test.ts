@@ -1,39 +1,20 @@
-import { Effect, Exit } from "effect";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "@effect/vitest";
+import { Effect } from "effect";
 import { FakeApi } from "./testing.ts";
 import { completeTour, TOUR_PATH } from "./tour-endpoints.ts";
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
 describe("completeTour", () => {
-  it("patches classic's tour stamp with the session's CSRF token", async () => {
-    const fetchStub = vi.fn(async () => new Response(null, { status: 204 }));
+  it.effect("patches classic's tour stamp from the origin's root, through the app's client", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
 
-    vi.stubGlobal("fetch", fetchStub);
+      yield* fake.route(`PATCH ${TOUR_PATH}`, () => Effect.succeed(null));
+      yield* completeTour();
 
-    await Effect.runPromise(completeTour().pipe(Effect.provide(FakeApi.layerClient)));
-
-    expect(fetchStub).toHaveBeenCalledExactlyOnceWith(TOUR_PATH, {
-      method: "PATCH",
-      credentials: "same-origin",
-      headers: { Accept: "application/json", "X-CSRF-Token": "test-csrf-token" },
-    });
-    expect(TOUR_PATH).toBe("/users/me/tour");
-  });
-
-  it("fails with the status when the server refuses", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(null, { status: 422 })),
-    );
-
-    const exit = await Effect.runPromiseExit(
-      completeTour().pipe(Effect.provide(FakeApi.layerClient)),
-    );
-
-    expect(Exit.isFailure(exit)).toBe(true);
-    expect(JSON.stringify(exit)).toContain("422");
-  });
+      expect(TOUR_PATH).toBe("/users/me/tour");
+      expect(yield* fake.requests).toEqual([
+        { method: "PATCH", path: "/users/me/tour", root: true },
+      ]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
 });

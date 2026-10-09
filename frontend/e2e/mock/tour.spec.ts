@@ -120,6 +120,59 @@ test.describe("the product tour on desktop", () => {
     await expect(account).toBeFocused();
   });
 
+  test("glides between anchors only where motion is allowed, and always fades", async ({
+    page,
+    request,
+  }) => {
+    const motion = () =>
+      page.evaluate(() => {
+        const of = (selector: string) => {
+          const element = document.querySelector(selector);
+
+          return element === null ? "" : getComputedStyle(element).transitionProperty;
+        };
+
+        return {
+          spotlight: of(".tour-spotlight"),
+          card: of(".tour-card"),
+          dialog: of("dialog.tour"),
+        };
+      });
+
+    /** The app's own motion preference, as lib/appearance.ts writes it on the root. */
+    const preferMotion = (value: "reduce" | "full" | null) =>
+      page.evaluate((next) => {
+        if (next === null) {
+          delete document.documentElement.dataset.motion;
+        } else {
+          document.documentElement.dataset.motion = next;
+        }
+      }, value);
+
+    await newcomer(request);
+    // openApp emulates the OS's reduced motion.
+    await openApp(page, `r/${ROOM_IDS.general}`);
+    await expect(tourDialog(page)).toBeVisible();
+
+    const still = { spotlight: "none", card: "none" };
+
+    expect(await motion()).toMatchObject(still);
+    expect((await motion()).dialog).toContain("opacity");
+
+    // "Full" in the app overrides the OS.
+    await preferMotion("full");
+    expect((await motion()).spotlight).toContain("top");
+    expect((await motion()).card).toContain("left");
+
+    // With no OS preference, the app's own "reduce" stills it too.
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await preferMotion(null);
+    expect((await motion()).spotlight).toContain("width");
+    await preferMotion("reduce");
+    expect(await motion()).toMatchObject(still);
+    expect((await motion()).dialog).toContain("opacity");
+  });
+
   test("stays out of the way of someone who completed it", async ({ page, request }) => {
     await openApp(page, `r/${ROOM_IDS.general}`);
     await reloadSettled(page);
