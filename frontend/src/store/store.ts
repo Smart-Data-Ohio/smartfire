@@ -183,6 +183,8 @@ export const mutations = {
       );
     }),
   addBoardPost: (thread: Thread) => apply((state) => boards.addBoardPost(state, thread)),
+  boardAutomationsChanged: (roomId: number) =>
+    apply((state) => boards.boardAutomationsChanged(state, roomId)),
   startRead: (list: string, reload = true) => {
     const read = freshness.startRead(store.getState().freshness, list, reload);
 

@@ -200,3 +200,21 @@ export function classicWorkUrl(threadId: number, page: "links" | "handoff"): str
     page === "links" ? `/threads/${threadId}/work/links` : `/threads/${threadId}/work/handoff/new`,
   );
 }
+
+/** The longest SLA timer, in minutes (30 days), as the classic rule validates. */
+export const MAX_SLA_MINUTES = 43_200;
+
+/** What a minutes field reads as: "45 min", "2 h", "1 d 4 h", "1 d 4 h 30 min". */
+export function minutesLabel(minutes: number): string {
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const rest = minutes % 60;
+
+  const parts = [
+    days > 0 ? `${days} d` : null,
+    hours > 0 ? `${hours} h` : null,
+    rest > 0 || minutes === 0 ? `${rest} min` : null,
+  ];
+
+  return parts.filter((part) => part !== null).join(" ");
+}

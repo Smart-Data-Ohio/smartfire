@@ -382,6 +382,11 @@ impl Broadcasts {
         sync::thread_removed(&self.server, thread_id, room_id);
     }
 
+    /// A board's tag rules or SLA timers changed.
+    pub fn board_automations_changed(&self, room_id: i64) {
+        sync::board_automations_changed(&self.server, room_id);
+    }
+
     /// The person read a thread.
     pub fn thread_read(&self, user_id: i64, thread_id: i64, room_id: i64) {
         sync::thread_read(&self.server, user_id, thread_id, room_id);

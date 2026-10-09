@@ -32,6 +32,7 @@ mod error;
 pub mod admin;
 pub mod bots;
 pub mod boards;
+pub mod board_automations;
 pub mod huddles;
 pub mod join;
 pub mod message_actions;
@@ -270,6 +271,22 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             get(action(threads::threads)).post(unparsed_action(threads::create)),
         )
         .route("/api/v1/rooms/{room_id}/board", get(action(boards::index)))
+        .route(
+            "/api/v1/rooms/{room_id}/automations",
+            get(action(board_automations::show)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/automations/tag_rules",
+            post(unparsed_action(board_automations::create_tag_rule)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/automations/tag_rules/{id}",
+            delete(action(board_automations::destroy_tag_rule)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/automations/sla_timers",
+            put(unparsed_action(board_automations::update_sla_timers)),
+        )
         .route("/api/v1/rooms/{room_id}/posts/new", get(action(boards::new)))
         .route("/api/v1/rooms/{room_id}/posts", post(unparsed_action(boards::create)))
         .route(
