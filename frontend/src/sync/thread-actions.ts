@@ -82,6 +82,18 @@ const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: 
   }
 });
 
+/**
+ * The room a thread lives in, for a link that names only the thread: the store's copy when it
+ * holds the thread, else the server's (`GET /threads/:id`, which 404s unless the viewer can see it).
+ */
+export const locate = Effect.fn("threads.locate")(function* (threadId: number) {
+  const held = store.getState().threads[threadId];
+
+  if (held !== undefined) return held.roomId;
+
+  return (yield* api.thread(threadId)).thread.roomId;
+});
+
 /** Subscribes to the thread, then loads its header and newest replies (or those around a reply). */
 export const open = Effect.fn("threads.open")(function* (
   threadId: number,

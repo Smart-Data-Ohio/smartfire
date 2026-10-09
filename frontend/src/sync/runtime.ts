@@ -184,6 +184,8 @@ const threads = {
   close(threadId: number): void {
     runtime.runFork(threadActions.close(threadId));
   },
+  /** The room a thread lives in (a bare thread link's resolver). */
+  locate: (threadId: number): Promise<number> => runAction(threadActions.locate(threadId)),
   loadOlder: (threadId: number): Promise<void> => runAction(threadActions.loadOlder(threadId)),
   loadNewer: (threadId: number): Promise<void> => runAction(threadActions.loadNewer(threadId)),
   create: (

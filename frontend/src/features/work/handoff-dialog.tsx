@@ -1,5 +1,7 @@
+import { useMatchRoute, useNavigate } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -16,6 +18,35 @@ import {
   SUMMARY_LIMIT,
 } from "./handoff-form.ts";
 import { WorkTextArea } from "./work-textarea.tsx";
+
+/**
+ * The handoff dialog follows `/app/r/$roomId/t/$threadId/handoff` (a board's query stays put).
+ * Opening pushes that URL; closing replaces it with the thread, so a direct visit and Cancel
+ * both land on the thread.
+ */
+export function useHandoffRoute(threadId: number) {
+  const navigate = useNavigate();
+  const matchRoute = useMatchRoute();
+  const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
+  const open = matchRoute({ to: "/r/$roomId/t/$threadId/handoff", includeSearch: false }) !== false;
+
+  const go = (
+    to: "/r/$roomId/t/$threadId" | "/r/$roomId/t/$threadId/handoff",
+    replace: boolean,
+  ) => {
+    if (roomId === null) {
+      return;
+    }
+
+    void navigate({ to, params: { roomId, threadId }, search: parseBoardSearch, replace });
+  };
+
+  return {
+    open,
+    openHandoff: () => go("/r/$roomId/t/$threadId/handoff", false),
+    closeHandoff: () => go("/r/$roomId/t/$threadId", true),
+  };
+}
 
 interface HandoffDialogProps {
   readonly threadId: number;

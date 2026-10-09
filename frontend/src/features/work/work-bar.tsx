@@ -23,7 +23,7 @@ import { useAnnouncer } from "../destinations/live-region.tsx";
 import { isAgent, UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { threadTitle } from "../threads/thread-format.ts";
-import { HandoffDialog } from "./handoff-dialog.tsx";
+import { HandoffDialog, useHandoffRoute } from "./handoff-dialog.tsx";
 import { WorkHistory, WorkResult, WorkStepsSection } from "./work-details.tsx";
 import { WorkLinks, WorkOwner, WorkStatusPill } from "./work-facts.tsx";
 import { UNASSIGNED, WORK_STATUS_LABEL, WORK_STATUSES, workStatusLabel } from "./work-format.ts";
@@ -264,7 +264,7 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.work.details[threadId]);
   const permissions = useStore((state) => state.threadPanes[threadId]?.permissions ?? null);
   const [stopping, setStopping] = useState(false);
-  const [handingOff, setHandingOff] = useState(false);
+  const { open: handingOff, openHandoff, closeHandoff } = useHandoffRoute(threadId);
   const { announce, region } = useAnnouncer();
 
   if (facts === null || permissions === null) {
@@ -300,12 +300,7 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
               <WorkHistory threadId={threadId} history={work.history} />
               {canHandOff ? (
                 <div className="work-handoff-row">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="send"
-                    onClick={() => setHandingOff(true)}
-                  >
+                  <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
                     Hand off to an agent
                   </Button>
                 </div>
@@ -317,7 +312,9 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
             threadName={name}
             work={work}
             open={handingOff}
-            onOpenChange={setHandingOff}
+            onOpenChange={(next) => {
+              if (!next) closeHandoff();
+            }}
           />
         </div>
       )}

@@ -6,6 +6,7 @@ import {
   matrix,
   openApp,
   openHeaderTool,
+  PHONE,
   ROOM_IDS,
   shot,
   type Theme,
@@ -333,6 +334,14 @@ test("the sidebar's Work destination opens the page, and it reloads when shown a
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
   await page.getByRole("link", { name: "Work" }).click();
   await expect(rows(page).filter({ hasText: AGENT_OWNED })).toHaveCount(0);
+});
+
+test("the classic handoff URL opens the dialog on its thread", async ({ page }) => {
+  await page.setViewportSize(PHONE);
+  await open(page, `t/${S4_WORK_IDS.done}/handoff`, "dark");
+
+  await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/t/${S4_WORK_IDS.done}/handoff$`));
+  await expect(page.getByRole("dialog", { name: /^Hand off/ })).toBeVisible();
 });
 
 test("arrow keys move between work rows", async ({ page }) => {
