@@ -322,16 +322,16 @@ export const mutations = {
   setRoomDetail: (detail: RoomDetail, started: number) =>
     landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
   /**
-   * An HTTP 404 (or a delete or leave reply): access is gone. `rowsSince` is the request's
-   * ticket; a row a resync installed, or sync restored, after it began is newer, so the reply is
-   * dropped and answers false.
+   * An HTTP 404 (or a delete or leave reply): access is gone, and the room shows as unavailable
+   * whenever the room outcome is still this request's (`started`). The sidebar row is sync's
+   * word: one a resync installed, or sync touched, after the request began (`rowsSince`, its row
+   * ticket) stays, and the server publishes its removal if access really went.
    */
   setRoomUnavailable: (roomId: number, started: number, rowsSince: number) =>
-    !removalIsStale(store.getState(), roomId, rowsSince) &&
     landRoom(roomId, started, (state) => {
       clearRoomJoin(roomId);
 
-      return reduce.setRoomUnavailable(state, roomId);
+      return reduce.setRoomUnavailable(state, roomId, removalIsStale(state, roomId, rowsSince));
     }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),

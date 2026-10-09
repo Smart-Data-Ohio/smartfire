@@ -947,9 +947,13 @@ function setDetailRow(state: State, row: SidebarRow): State {
   };
 }
 
-/** A successful local delete, leave, or self-removal establishes that access was revoked. */
-export function setRoomUnavailable(state: State, roomId: number): State {
-  const next = removeRow(state, roomId);
+/**
+ * A successful local delete, leave, or self-removal establishes that access was revoked: the room
+ * shows as unavailable, and its sidebar row leaves unless `keepRow` (the row is newer than the
+ * reply that said so).
+ */
+export function setRoomUnavailable(state: State, roomId: number, keepRow = false): State {
+  const next = keepRow ? state : removeRow(state, roomId);
 
   return {
     ...next,

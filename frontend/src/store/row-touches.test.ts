@@ -342,33 +342,75 @@ describe("sidebar row tickets in the store", () => {
     // Room 2 was lost. Its 404 read goes out; access comes back during a gap; a resync reads.
     mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
 
+    const started = beginRoomRequest();
     const notFound = mutations.openRowTicket();
     const resync = mutations.openRowTicket();
 
     // The 404 lands while the resync is on its way: the store already agrees the room is gone.
-    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(true);
+    expect(mutations.setRoomUnavailable(2, started, notFound)).toBe(true);
     mutations.resyncSidebar(sidebarFixture([general, design]), resync);
     mutations.closeRowTicket(resync);
 
     expect(rows()[2]).toEqual(design);
 
-    // Read again, it lands after the resync: stale, so the restored row stays.
-    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(false);
+    // Read again, it lands after the resync: the restored row is newer, so it stays.
+    mutations.setRoomUnavailable(2, beginRoomRequest(), notFound);
     mutations.closeRowTicket(notFound);
 
     expect(rows()[2]).toEqual(design);
   });
 
-  it("a 404 from before sync restored the row leaves it", () => {
+  it("a 404 from before sync restored the row leaves it, and the room", () => {
     mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
 
+    const started = beginRoomRequest();
     const notFound = mutations.openRowTicket();
 
+    // The membership arriving claims the room's outcome too.
     mutations.applyEvents([upserted(design)], 0);
 
-    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(false);
+    expect(mutations.setRoomUnavailable(2, started, notFound)).toBe(false);
     expect(rows()[2]).toEqual(design);
+    expect(store.getState().rooms[2]?.status).not.toBe("error");
     mutations.closeRowTicket(notFound);
+  });
+
+  it("a first load's 404 shows the room unavailable whatever lands meanwhile", () => {
+    // The room's first read goes out; a read here and the welcome's resync land; then the 404.
+    mutations.loadSidebar(sidebarFixture([general, design]), rowClock(store.getState()));
+
+    const started = beginRoomRequest();
+    const notFound = mutations.openRowTicket();
+
+    mutations.markRoomRead(2);
+
+    const resync = mutations.openRowTicket();
+
+    mutations.resyncSidebar(sidebarFixture([general, design]), resync);
+    mutations.closeRowTicket(resync);
+
+    expect(mutations.setRoomUnavailable(2, started, notFound)).toBe(true);
+    mutations.closeRowTicket(notFound);
+
+    expect(store.getState().rooms[2]).toMatchObject({
+      status: "error",
+      error: "This room is no longer available",
+    });
+    // The row is sync's to remove: the server publishes it if access really went.
+    expect(rows()[2]).toEqual(design);
+  });
+
+  it("a 404 no newer row outranks removes the row too", () => {
+    mutations.loadSidebar(sidebarFixture([general, design]), rowClock(store.getState()));
+
+    const started = beginRoomRequest();
+    const notFound = mutations.openRowTicket();
+
+    expect(mutations.setRoomUnavailable(2, started, notFound)).toBe(true);
+    mutations.closeRowTicket(notFound);
+
+    expect(rows()[2]).toBeUndefined();
+    expect(store.getState().rooms[2]?.status).toBe("error");
   });
 
   it("keeps no touches once every request has settled", () => {

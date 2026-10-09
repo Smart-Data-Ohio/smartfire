@@ -168,8 +168,9 @@ export function pruneTouches(state: State, oldest: number | undefined): State {
 
 /**
  * Whether an HTTP 404 (the request holding `since`) is older than the store's row for `roomId`:
- * a row a resync installed, or sync restored, after the request began stays. With no row, the
- * store already agrees the room is gone.
+ * a row a resync installed, or sync (or a read here) touched, after the request began stays. With
+ * no row, the store already agrees the room is gone. Only the row: the room's own unavailable
+ * outcome is the room request's to settle.
  */
 export function removalIsStale(state: State, roomId: number, since: number): boolean {
   return (
