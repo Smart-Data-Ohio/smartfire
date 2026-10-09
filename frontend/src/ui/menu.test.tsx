@@ -358,6 +358,28 @@ describe("Menu as an action sheet", () => {
       expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "Move to" }));
     });
 
+    it("lets the next tap through while the closed sheet slides away", async () => {
+      const user = userEvent.setup();
+      const pressed = vi.fn();
+
+      render(
+        <>
+          <SheetMenu onSelect={() => {}} />
+          <Button onClick={pressed}>Back to general</Button>
+        </>,
+      );
+      await user.click(screen.getByRole("button", { name: "Message actions" }));
+      await user.keyboard("{Escape}");
+      expect(document.querySelector('.action-sheet[data-state="closing"]')).not.toBeNull();
+
+      const back = screen.getByRole("button", { name: "Back to general" });
+
+      fireEvent.pointerDown(back, { pointerId: 1, button: 0 });
+      fireEvent.pointerUp(back, { pointerId: 1, button: 0 });
+      fireEvent.click(back, { detail: 1 });
+      expect(pressed).toHaveBeenCalledOnce();
+    });
+
     it("hands focus back to its trigger when dragged away by its handle", async () => {
       const user = userEvent.setup();
 

@@ -1,8 +1,9 @@
 import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
+import { MenuItem } from "../../ui/menu.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
-import { StageButton } from "../huddle/stage-button.tsx";
+import { raisedHandsLabel, StageButton, useRaisedHands } from "../huddle/stage-button.tsx";
 import { AvatarGroup } from "../threads/avatar-group.tsx";
 import { isPaneShowing } from "./pane-selection.ts";
 import { usePaneNavigation } from "./use-right-pane.ts";
@@ -103,5 +104,55 @@ export function PaneButtons({ roomId }: { readonly roomId: number }) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The same panes as ⋯ menu items, for a phone's room header, which has no room for the buttons:
+ * Stage (stage rooms, with the raised hands a host can act on), Members, Threads, Pinned
+ * messages and Files. Each opens its pane.
+ */
+export function PaneMenuItems({ roomId }: { readonly roomId: number }) {
+  const { toggle } = usePaneNavigation(roomId);
+  const hands = useRaisedHands(roomId);
+  const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
+  const kind = detail?.room.kind ?? null;
+
+  if (detail === null || kind === null) {
+    return null;
+  }
+
+  const direct = kind === "direct";
+  const pins = detail.pinsCount;
+
+  return (
+    <>
+      {kind === "stage" ? (
+        <MenuItem icon="radio" onSelect={() => toggle("stage")}>
+          Stage
+          {hands > 0 ? (
+            <span className="pane-menu-count">
+              <Badge count={hands} label={raisedHandsLabel(hands)} />
+            </span>
+          ) : null}
+        </MenuItem>
+      ) : null}
+      {direct ? null : (
+        <MenuItem icon="users" onSelect={() => toggle("members")}>
+          Members ({detail.memberCount})
+        </MenuItem>
+      )}
+      {direct ? null : (
+        <MenuItem icon="thread" onSelect={() => toggle("threads")}>
+          Threads
+        </MenuItem>
+      )}
+      <MenuItem icon="pin" onSelect={() => toggle("pins")}>
+        {pins > 0 ? `Pinned messages (${pins})` : "Pinned messages"}
+      </MenuItem>
+      <MenuItem icon="file" onSelect={() => toggle("files")}>
+        Files
+      </MenuItem>
+    </>
   );
 }

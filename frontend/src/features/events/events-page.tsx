@@ -9,6 +9,7 @@ import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneEmpty, PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
+import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { useNow } from "../threads/use-now.ts";
 import { EventFormDialog } from "./event-form-dialog.tsx";
 import { EventTileMark, EventWhen, relativeDay, scheduledNotice } from "./event-format.tsx";
@@ -130,6 +131,7 @@ export function EventsRoute() {
   // The new form's raw query: a prefilled link's `event[…]` values (see `newEventPrefill`).
   const search = useLocation({ select: (location) => location.searchStr });
   const now = useNow();
+  const phone = usePhoneLayout();
   const tabsId = useId();
   const panelId = useId();
   const [section, setSection] = useState<Section>("upcoming");
@@ -182,18 +184,24 @@ export function EventsRoute() {
       title="Events"
       icon="calendar"
       meta={list === null ? null : <span className="ev-page-room">{list.roomName}</span>}
+      back={{
+        label: `Back to ${list?.roomName ?? "the conversation"}`,
+        link: (props) => <Link to="/r/$roomId" params={{ roomId }} {...props} />,
+      }}
       tools={
         list?.mayCreate === true ? (
+          // On phones the header's icon button; on wide screens the labelled one.
           <Link
             to="/r/$roomId/events/new"
             params={{ roomId }}
             state={overPageState()}
             className="button"
-            data-variant="primary"
-            data-size="sm"
+            data-variant={phone ? "icon" : "primary"}
+            data-size={phone ? "md" : "sm"}
+            aria-label={phone ? "New event" : undefined}
           >
-            <Icon name="plus" size={14} />
-            New event
+            <Icon name="plus" size={phone ? 18 : 14} />
+            {phone ? null : "New event"}
           </Link>
         ) : null
       }
