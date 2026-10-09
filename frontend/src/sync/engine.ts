@@ -13,12 +13,13 @@ import {
 } from "effect";
 import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
-import { messages, room, sidebar, users } from "../api/endpoints.ts";
+import { messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
 import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
@@ -33,9 +34,11 @@ import {
   invalidateRoom,
   markRoomsChanged,
   markSidebarSnapshot,
+  recoverRejectedRoomRead,
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
+import { roomVisitToken } from "./session.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
@@ -163,18 +166,28 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   return [...missing];
 }
 
-function landRefreshedRoom(detail: RoomDetail, revision: number): void {
+function landRefreshedRoom(
+  detail: RoomDetail,
+  revision: number,
+  started: number,
+): "applied" | "skipped" | "rejected" {
   const state = store.getState();
   const roomId = detail.room.id;
+  const view = state.rooms[roomId];
 
-  if (roomRevision(roomId) !== revision || state.rooms[roomId]?.detail == null) {
-    return;
+  if (roomRevision(roomId) !== revision || view == null) {
+    return "skipped";
+  }
+
+  // Unavailable, or a join preview, has no detail this refresh may replace. A first load does.
+  if (view.detail == null && view.status !== "loading") {
+    return "skipped";
   }
 
   // A read/unread or placement row may have landed while this request was pending.
   const row = state.sidebar.rows[roomId];
 
-  mutations.setRoomDetail(
+  const landed = mutations.setRoomDetail(
     row === undefined
       ? detail
       : {
@@ -184,7 +197,10 @@ function landRefreshedRoom(detail: RoomDetail, revision: number): void {
           displayName: row.displayName,
           directMemberIds: row.directMemberIds,
         },
+    started,
   );
+
+  return landed ? "applied" : "rejected";
 }
 
 /**
@@ -220,20 +236,57 @@ export class Engine extends Context.Service<
         through: Number.NEGATIVE_INFINITY,
       });
 
+      /**
+       * A refresh lost to a membership fact. A later read, at the room's current revision and a
+       * new sequence, replaces it. Losses while that re-read is in flight share one follow-up.
+       * The fact itself is not read again.
+       */
+      let retryRejectedRefresh: (roomId: number) => Effect.Effect<void> = () => Effect.void;
+
       /** Refetch room metadata at its current management revision, including lost access. */
       const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const started = beginRoomRequest();
         const detail = yield* Effect.result(room(roomId));
 
         if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
           markRoomsChanged([roomId]);
-          landRefreshedRoom(detail.success, revision);
+
+          if (landRefreshedRoom(detail.success, revision, started) === "rejected") {
+            yield* retryRejectedRefresh(roomId);
+          }
         } else if (
           Result.isFailure(detail) &&
           roomRevision(roomId) === revision &&
           Predicate.isTagged(detail.failure, "NotFound")
         ) {
+          // A previewed room is not a membership: this 404 is expected. Reload the preview
+          // instead of treating the reconnect as lost access.
+          let unavailableAt = started;
+
+          if (store.getState().rooms[roomId]?.preview != null) {
+            unavailableAt = beginRoomRequest();
+            const preview = yield* Effect.result(openRoomPreview(roomId));
+
+            if (roomRevision(roomId) !== revision) {
+              return "preview";
+            }
+
+            if (Result.isSuccess(preview)) {
+              // A join can install the membership while this refetch is in flight.
+              if (store.getState().rooms[roomId]?.detail == null) {
+                mutations.setRoomPreview(roomId, preview.success, unavailableAt);
+              }
+
+              return "preview";
+            }
+
+            if (!Predicate.isTagged(preview.failure, "NotFound")) {
+              return "preview";
+            }
+          }
+
           markRoomsChanged([roomId]);
-          mutations.setRoomUnavailable(roomId);
+          mutations.setRoomUnavailable(roomId, unavailableAt);
 
           return false;
         }
@@ -272,9 +325,10 @@ export class Engine extends Context.Service<
             { concurrency: 2 },
           );
 
-          if (!available) {
-            if (generation !== undefined)
+          if (available !== true) {
+            if (available === false && generation !== undefined) {
               mutations.setBoardError(roomId, generation, "This room is no longer available.");
+            }
 
             return;
           }
@@ -298,8 +352,10 @@ export class Engine extends Context.Service<
           { concurrency: 2 },
         );
 
-        if (!available) {
-          mutations.setPageFailed(roomId);
+        if (available !== true) {
+          if (available === false) {
+            mutations.setPageFailed(roomId);
+          }
 
           return;
         }
@@ -474,26 +530,46 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
-      const refreshRoom = (roomId: number, revision: number) =>
-        room(roomId).pipe(
-          Effect.tap((detail) =>
-            Effect.sync(() => {
-              landRefreshedRoom(detail, revision);
-            }),
-          ),
-          Effect.catch((error) =>
-            Effect.sync(() => {
-              if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
-                mutations.setRoomUnavailable(roomId);
-              }
-            }).pipe(
-              Effect.andThen(
-                Effect.logWarning("sync: room metadata refresh failed", error.message),
-              ),
+      const refreshRoom = (roomId: number, revision: number, allow: () => boolean = () => true) =>
+        Effect.suspend(() => {
+          if (!allow()) return Effect.void;
+
+          const started = beginRoomRequest();
+
+          return room(roomId).pipe(
+            Effect.tap((detail) =>
+              Effect.gen(function* () {
+                if (!allow()) return;
+
+                if (landRefreshedRoom(detail, revision, started) === "rejected") {
+                  yield* retryRejectedRefresh(roomId);
+                }
+              }),
             ),
-          ),
-          Effect.provideContext(api),
+            Effect.catch((error) => {
+              if (!allow()) return Effect.void;
+
+              return Effect.sync(() => {
+                if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
+                  mutations.setRoomUnavailable(roomId, started);
+                }
+              }).pipe(
+                Effect.andThen(
+                  Effect.logWarning("sync: room metadata refresh failed", error.message),
+                ),
+              );
+            }),
+          );
+        }).pipe(Effect.provideContext(api));
+
+      retryRejectedRefresh = Effect.fnUntraced(function* (roomId: number) {
+        const visit = roomVisitToken(roomId);
+        const owns = () => roomVisitToken(roomId) === visit;
+
+        yield* recoverRejectedRoomRead(roomId, visit, owns, () =>
+          refreshRoom(roomId, roomRevision(roomId), owns),
         );
+      });
 
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (
@@ -563,7 +639,12 @@ export class Engine extends Context.Service<
             roomId,
             revision: invalidateRoom(roomId),
           }))
-          .filter(({ roomId }) => store.getState().rooms[roomId]?.detail != null);
+          .filter(({ roomId }) => {
+            const view = store.getState().rooms[roomId];
+
+            // A revocation can arrive before the first GET installs detail. Refresh anyway.
+            return view?.detail != null || view?.status === "loading";
+          });
 
         if (refreshes.length > 0) {
           yield* Effect.forkIn(

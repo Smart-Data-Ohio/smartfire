@@ -1,0 +1,153 @@
+/*
+ * Action sheets: on a touch phone (SHEET_QUERY in action-sheet.tsx) a Menu or Popover rises from
+ * the bottom edge at full width instead of hanging beside its trigger. Its ::backdrop is the
+ * scrim, so a tap above the sheet light-dismisses it through the Popover API as before. It keeps
+ * clear of the home indicator, the rounded corners and an overlaid keyboard (--keyboard-inset),
+ * and scrolls inside itself when taller than the screen.
+ *
+ * A submenu pushes in place: it opens as a sheet of its own over its parent, which fades out
+ * until the submenu goes back. The `.action-sheet[popover]` selectors outrank `.menu` and
+ * `.popover`, so the desktop rules need no phone overrides.
+ */
+
+@layer ui {
+  :root {
+    /* Where a sheet enters from and leaves to; reduced motion only fades. */
+    --sheet-rise: 100%;
+    --sheet-push: 100%;
+  }
+
+  .action-sheet[popover] {
+    position: fixed;
+    inset: auto 0 var(--keyboard-inset);
+    box-sizing: border-box;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: calc(100dvh - var(--keyboard-inset) - var(--safe-top) - var(--space-10));
+    margin: 0;
+    padding: 0 max(var(--space-2), var(--safe-right)) calc(var(--space-2) + var(--safe-bottom))
+      max(var(--space-2), var(--safe-left));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+    font-size: var(--text-body);
+    pointer-events: auto;
+    translate: 0 0;
+    opacity: 1;
+    transition:
+      translate var(--duration-medium) var(--ease-enter),
+      opacity var(--duration-medium) var(--ease-enter),
+      display var(--duration-medium),
+      overlay var(--duration-medium);
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    .action-sheet[popover][data-state="open"] {
+      translate: 0 var(--sheet-rise);
+      opacity: 0;
+    }
+  }
+
+  /* Closing, or light-dismissed by the Popover API before React hears about it. */
+  .action-sheet[popover][data-state="closing"],
+  .action-sheet[popover]:not(:popover-open) {
+    translate: 0 var(--sheet-rise);
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--duration-small-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  /* Following a finger on the handle: no easing behind it. */
+  .action-sheet[popover][data-dragging] {
+    transition: none;
+  }
+
+  .action-sheet[popover]::backdrop {
+    background: var(--scrim);
+    opacity: 1;
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      display var(--duration-medium),
+      overlay var(--duration-medium);
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    .action-sheet[popover][data-state="open"]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .action-sheet[popover][data-state="closing"]::backdrop,
+  .action-sheet[popover]:not(:popover-open)::backdrop {
+    opacity: 0;
+    transition-duration: var(--duration-small-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  /* A pushed submenu slides in from the end edge over its parent, which steps out of the way. */
+  .action-sheet[popover] .action-sheet[popover]::backdrop {
+    background: transparent;
+  }
+
+  @starting-style {
+    .action-sheet[popover] .action-sheet[popover][data-state="open"] {
+      translate: var(--sheet-push) 0;
+      opacity: 1;
+    }
+  }
+
+  .action-sheet[popover] .action-sheet[popover][data-state="closing"] {
+    translate: var(--sheet-push) 0;
+  }
+
+  .action-sheet[popover]:has(.action-sheet[popover][data-state="open"]) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* The whole stack closing (an item chosen in a submenu): the submenu leaves with its parent. */
+  .action-sheet[popover][data-state="closing"] .action-sheet[popover] {
+    translate: 0 var(--sheet-rise);
+    opacity: 0;
+    transition-duration: var(--duration-small-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  /* The grab handle: a 44 px strip to pull on, drawn as a short pill. It scrolls with the sheet. */
+  .action-sheet-handle {
+    display: grid;
+    place-items: center;
+    height: var(--touch-target);
+    margin-block-end: calc(var(--space-3) * -1);
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .action-sheet-handle::before {
+    content: "";
+    width: 36px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background: var(--border-strong);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) {
+      --sheet-rise: 0%;
+      --sheet-push: 0%;
+    }
+  }
+
+  :root[data-motion="reduce"] {
+    --sheet-rise: 0%;
+    --sheet-push: 0%;
+  }
+}

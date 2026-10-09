@@ -36,6 +36,12 @@ import * as approvals from "./approvals.ts";
 import * as boards from "./boards.ts";
 import * as freshness from "./freshness.ts";
 import * as huddles from "./huddles.ts";
+import {
+  beginRoomRequest,
+  claimRoomOutcome,
+  clearRoomJoin,
+  dirtyRoomReread,
+} from "./join-state.ts";
 import * as ledger from "./ledger.ts";
 import * as extras from "./message-extras.ts";
 import type {
@@ -45,6 +51,7 @@ import type {
   Membership,
   MessageDTO,
   MessagePage,
+  OpenRoomPreview,
   PendingMessage,
   RoomCategory,
   RoomDetail,
@@ -98,6 +105,46 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
 
 const apply = (change: (state: State) => State) =>
   store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
+
+/**
+ * A room outcome lands only when `started` is newer than the one already applied.
+ * Reads pass the sequence from when they started; confirmed facts pass one taken on arrival.
+ */
+function landRoom(roomId: number, started: number, change: (state: State) => State): boolean {
+  if (!claimRoomOutcome(roomId, started)) return false;
+  apply(change);
+
+  return true;
+}
+
+function sameMembers(left: readonly number[], right: readonly number[]): boolean {
+  if (left.length !== right.length) return false;
+
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Involvement, the membership itself, or who a direct row names. Unread, category, favourite
+ * order and a rename do not count: those must not retire a room read.
+ */
+function membershipChanged(previous: SidebarRow | undefined, row: SidebarRow): boolean {
+  if (previous === undefined) return true;
+
+  const before = previous.membership;
+  const after = row.membership;
+
+  return (
+    before.id !== after.id ||
+    before.userId !== after.userId ||
+    before.involvement !== after.involvement ||
+    before.stageRole !== after.stageRole ||
+    !sameMembers(previous.directMemberIds, row.directMemberIds)
+  );
+}
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
 export const mutations = {
@@ -179,9 +226,16 @@ export const mutations = {
   setRoomLoading: (roomId: number) => apply((state) => reduce.setRoomLoading(state, roomId)),
   setRoomError: (roomId: number, error: string) =>
     apply((state) => reduce.setRoomError(state, roomId, error)),
-  setRoomDetail: (detail: RoomDetail) => apply((state) => reduce.setRoomDetail(state, detail)),
-  setRoomUnavailable: (roomId: number) =>
-    apply((state) => reduce.setRoomUnavailable(state, roomId)),
+  setRoomPreview: (roomId: number, preview: OpenRoomPreview, started: number) =>
+    landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
+  setRoomDetail: (detail: RoomDetail, started: number) =>
+    landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
+  setRoomUnavailable: (roomId: number, started: number) =>
+    landRoom(roomId, started, (state) => {
+      clearRoomJoin(roomId);
+
+      return reduce.setRoomUnavailable(state, roomId);
+    }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),
   setPageLoading: (roomId: number, direction: "older" | "newer") => {
@@ -209,8 +263,35 @@ export const mutations = {
   ) => apply((state) => reduce.setPendingState(state, clientMessageId, status, error)),
   discardPending: (clientMessageId: string) =>
     apply((state) => reduce.discardPending(state, clientMessageId)),
-  applyEvents: (events: readonly SyncEvent[], now: number) =>
-    apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now))),
+  applyEvents: (events: readonly SyncEvent[], now: number) => {
+    let held = { ...store.getState().sidebar.rows };
+
+    for (const event of events) {
+      if (event.type === "sidebar.row.removed") {
+        // Access changed at delivery, so a read that started earlier must not restore the room.
+        claimRoomOutcome(event.data.roomId, beginRoomRequest());
+        clearRoomJoin(event.data.roomId);
+
+        const { [event.data.roomId]: _removed, ...rest } = held;
+
+        held = rest;
+        continue;
+      }
+
+      if (event.type !== "sidebar.row.upserted") continue;
+
+      const row = event.data;
+
+      if (membershipChanged(held[row.room.id], row)) {
+        claimRoomOutcome(row.room.id, beginRoomRequest());
+        dirtyRoomReread(row.room.id);
+      }
+
+      held[row.room.id] = row;
+    }
+
+    apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now)));
+  },
   prune: (now: number) => apply((state) => reduce.prune(state, now)),
   /** An edit's reply (the `message.updated` event may beat it; the newer copy wins). */
   updateMessage: (message: MessageDTO) => apply((state) => reduce.updateMessage(state, message)),

@@ -17,6 +17,7 @@ import type { Placement } from "../lib/anchor.ts";
 import { showPopover, supportsPopover } from "../lib/popover.ts";
 import { readDurationMs } from "../motion/durations.ts";
 import { usePresence } from "../motion/presence.ts";
+import { SheetHandle, useActionSheet, useSheetScrim } from "./action-sheet.tsx";
 import { originFor, useFloating } from "./floating.ts";
 import { Icon, type IconName } from "./icons/icon.tsx";
 import "./floating.css";
@@ -38,6 +39,8 @@ interface MenuBaseProps {
   readonly placement?: Placement;
   /** An accessible name for the menu when the trigger's own name doesn't fit. */
   readonly label?: string;
+  /** Shown above the items when the menu opens as an action sheet (the message menu's reactions). */
+  readonly sheetHeader?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -50,14 +53,22 @@ type MenuProps = MenuBaseProps &
 /** Where focus lands when a menu opens: an item, or the menu itself (pointer opens). */
 type FocusTarget = "first" | "last" | "menu" | "none";
 
-type CloseReason = "escape" | "tab" | "select" | "dismiss" | "left";
+/** "sheet": an action sheet's own dismissal, by its scrim or its handle. */
+type CloseReason = "escape" | "tab" | "select" | "dismiss" | "left" | "sheet";
+
+/** Whether closing for `reason` hands focus back to the trigger, as Esc does. */
+function restoresFocus(reason: CloseReason): boolean {
+  return reason === "escape" || reason === "select" || reason === "sheet";
+}
 
 interface MenuContextValue {
   /** Closes the whole menu tree; with `restoreFocus`, focus goes back to the trigger. */
   readonly closeAll: (restoreFocus: boolean) => void;
+  /** The tree opened as an action sheet (a touch phone): submenus push in place. */
+  readonly sheet: boolean;
 }
 
-const MenuContext = createContext<MenuContextValue>({ closeAll: () => {} });
+const MenuContext = createContext<MenuContextValue>({ closeAll: () => {}, sheet: false });
 
 const ITEMS = ':scope > [role^="menuitem"], :scope > [role="group"] > [role^="menuitem"]';
 
@@ -76,12 +87,15 @@ function itemLabel(item: HTMLElement): string {
 /**
  * A dropdown menu (WAI-ARIA menu pattern): arrow keys, Home/End, typeahead, Enter/Space to
  * choose, Esc to close (back to the trigger), Tab to leave, and submenus on ArrowRight or hover.
- * It sits in the top layer as an auto popover, so an outside click dismisses it natively.
+ * It sits in the top layer as an auto popover, so an outside click dismisses it natively. On a
+ * touch phone it opens as a bottom action sheet instead (src/ui/action-sheet.tsx): full width over
+ * a scrim, finger-sized rows, no shortcut hints, and submenus that push in place.
  */
 export function Menu({
   trigger,
   placement = "bottom-start",
   label,
+  sheetHeader,
   children,
   open: controlledOpen,
   onOpenChange,
@@ -93,6 +107,7 @@ export function Menu({
   const [focusOnOpen, setFocusOnOpen] = useState<FocusTarget>("first");
   const dismissedAt = useRef(Number.NEGATIVE_INFINITY);
   const presence = usePresence<HTMLDivElement>(open);
+  const sheet = useActionSheet();
 
   const setOpen = (next: boolean) => {
     if (onOpenChange === undefined) {
@@ -120,7 +135,7 @@ export function Menu({
       dismissedAt.current = performance.now();
     }
 
-    closeAll(reason === "escape" || reason === "select");
+    closeAll(restoresFocus(reason));
   };
 
   const triggerProps: MenuTriggerProps = {
@@ -156,7 +171,7 @@ export function Menu({
     <>
       {trigger(triggerProps)}
       {presence.mounted ? (
-        <MenuContext value={{ closeAll }}>
+        <MenuContext value={{ closeAll, sheet }}>
           <MenuSurface
             id={id}
             surfaceRef={presence.ref}
@@ -167,6 +182,7 @@ export function Menu({
             labelledBy={label === undefined ? `${id}-trigger` : undefined}
             focusOnOpen={focusOnOpen}
             onClose={onClose}
+            header={sheet ? sheetHeader : undefined}
           >
             {children}
           </MenuSurface>
@@ -187,6 +203,8 @@ interface MenuSurfaceProps {
   readonly focusOnOpen: FocusTarget;
   readonly onClose: (reason: CloseReason) => void;
   readonly submenu?: boolean;
+  /** Above the items, in a sheet only. */
+  readonly header?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -201,8 +219,10 @@ function MenuSurface({
   focusOnOpen,
   onClose,
   submenu = false,
+  header,
   children,
 }: MenuSurfaceProps) {
+  const { sheet } = use(MenuContext);
   const typeahead = useRef({ buffer: "", timer: 0 });
   const onCloseRef = useRef(onClose);
 
@@ -210,7 +230,10 @@ function MenuSurface({
     onCloseRef.current = onClose;
   });
 
-  useFloating(id, anchorRef, surfaceRef, placement, true);
+  // A sheet sits on the bottom edge, not beside its anchor. Its submenus sit inside it, so the
+  // scrim is the root's alone. A closing sheet is already dismissed: the next tap goes through.
+  useFloating(id, anchorRef, surfaceRef, placement, !sheet);
+  useSheetScrim(sheet && !submenu && state === "open", surfaceRef, () => onClose("sheet"));
 
   // Show in the top layer and move focus in, once, when the surface mounts: where focus lands
   // depends on how the menu was opened, not on later renders.
@@ -368,12 +391,32 @@ function MenuSurface({
       aria-orientation="vertical"
       tabIndex={-1}
       popover="auto"
-      className="menu floating t-dropdown"
+      className={sheet ? "menu action-sheet" : "menu floating t-dropdown"}
       data-state={state}
-      data-placement={placement}
-      data-origin={originFor(placement)}
+      data-placement={sheet ? undefined : placement}
+      data-origin={sheet ? undefined : originFor(placement)}
       onKeyDown={onKeyDown}
     >
+      {sheet ? <SheetHandle onDismiss={() => onClose("sheet")} /> : null}
+      {sheet && submenu ? (
+        // A pushed submenu's title row, which goes back to the menu it replaced.
+        // biome-ignore lint/a11y/useKeyWithClickEvents: the menu's keydown handler turns Enter and Space into this click
+        <div
+          role="menuitem"
+          tabIndex={-1}
+          className="menu-item menu-sheet-back"
+          aria-label="Back"
+          data-label={label}
+          onPointerMove={focusOnPointer}
+          onClick={() => onClose("left")}
+        >
+          <span className="menu-item-icon">
+            <Icon name="chevron-left" />
+          </span>
+          <span className="menu-item-label">{label}</span>
+        </div>
+      ) : null}
+      {header}
       {children}
     </div>
   );
@@ -381,8 +424,10 @@ function MenuSurface({
 
 interface MenuItemProps {
   readonly icon?: IconName;
-  /** Shown faint at the end, e.g. ["⌘", "E"]. */
+  /** Shown faint at the end, e.g. ["⌘", "E"]; not in an action sheet, where there's no keyboard. */
   readonly shortcut?: readonly string[];
+  /** Faint text at the end that isn't a key, e.g. the time "In 1 hour" lands on; sheets keep it. */
+  readonly detail?: string | undefined;
   readonly tone?: "danger" | undefined;
   readonly disabled?: boolean;
   readonly onSelect?: () => void;
@@ -407,6 +452,7 @@ function Shortcut({ keys }: { readonly keys: readonly string[] | undefined }) {
 export function MenuItem({
   icon,
   shortcut,
+  detail,
   tone,
   disabled = false,
   onSelect,
@@ -434,7 +480,54 @@ export function MenuItem({
     >
       <span className="menu-item-icon">{icon === undefined ? null : <Icon name={icon} />}</span>
       <span className="menu-item-label">{children}</span>
+      {detail === undefined ? null : <span className="menu-item-detail">{detail}</span>}
       <Shortcut keys={shortcut} />
+    </div>
+  );
+}
+
+interface MenuQuickRowProps {
+  /** The row's accessible name, e.g. "Quick reactions". */
+  readonly label: string;
+  readonly children: ReactNode;
+}
+
+/** A row of compact items across a menu (the message sheet's quick reactions). */
+export function MenuQuickRow({ label, children }: MenuQuickRowProps) {
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: a <fieldset> isn't allowed inside role="menu"; ARIA groups are
+    <div role="group" aria-label={label} className="menu-quick-row">
+      {children}
+    </div>
+  );
+}
+
+interface MenuQuickItemProps {
+  /** The accessible name; the glyph inside carries none. */
+  readonly label: string;
+  readonly onSelect: () => void;
+  readonly children: ReactNode;
+}
+
+/** One round item in a MenuQuickRow: a glyph that closes the menu when chosen, like an item. */
+export function MenuQuickItem({ label, onSelect, children }: MenuQuickItemProps) {
+  const { closeAll } = use(MenuContext);
+
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: the menu's keydown handler turns Enter and Space into this click
+    <div
+      role="menuitem"
+      tabIndex={-1}
+      className="menu-quick-item"
+      aria-label={label}
+      data-label={label}
+      onPointerMove={focusOnPointer}
+      onClick={() => {
+        onSelect();
+        closeAll(true);
+      }}
+    >
+      {children}
     </div>
   );
 }
@@ -555,10 +648,13 @@ interface SubMenuProps {
   readonly children: ReactNode;
 }
 
-/** An item that opens a nested menu: ArrowRight, Enter or Space, or a short hover. */
+/**
+ * An item that opens a nested menu: ArrowRight, Enter or Space, or a short hover. In an action
+ * sheet a tap pushes it in place, with a back row at its top.
+ */
 export function SubMenu({ label, icon, children }: SubMenuProps) {
   const id = useId();
-  const { closeAll } = use(MenuContext);
+  const { closeAll, sheet } = use(MenuContext);
   const itemRef = useRef<HTMLDivElement | null>(null);
   const hoverTimer = useRef(0);
   const [open, setOpen] = useState(false);
@@ -605,7 +701,7 @@ export function SubMenu({ label, icon, children }: SubMenuProps) {
     if (reason === "left") {
       itemRef.current?.focus({ preventScroll: true });
     } else if (reason !== "dismiss") {
-      closeAll(reason === "escape" || reason === "select");
+      closeAll(restoresFocus(reason));
     }
   };
 
@@ -622,6 +718,11 @@ export function SubMenu({ label, icon, children }: SubMenuProps) {
         data-label={label}
         onPointerMove={focusOnPointer}
         onPointerEnter={() => {
+          // A sheet's submenu replaces it, so only a tap opens one.
+          if (sheet) {
+            return;
+          }
+
           window.clearTimeout(hoverTimer.current);
           hoverTimer.current = window.setTimeout(
             () => openWith("none"),
@@ -629,7 +730,7 @@ export function SubMenu({ label, icon, children }: SubMenuProps) {
           );
         }}
         onPointerLeave={() => window.clearTimeout(hoverTimer.current)}
-        onClick={() => openWith("first")}
+        onClick={() => openWith(sheet ? "menu" : "first")}
         onKeyDown={(event) => {
           if (event.key === "ArrowRight" || event.key === "Enter" || event.key === " ") {
             event.preventDefault();

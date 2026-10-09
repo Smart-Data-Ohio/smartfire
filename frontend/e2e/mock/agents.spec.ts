@@ -37,11 +37,21 @@ async function directoryReady(page: Page): Promise<void> {
   await page.mouse.move(0, 0);
 }
 
-/** Opens a room and waits for its conversation (a phone in a room hides the sidebar). */
+/**
+ * Opens a room and waits for its conversation (a phone in a room hides the sidebar) to come to
+ * rest at the present. While the opening scroll settles, virtua turns off pointer events on its
+ * rows, so a click then lands on the list and Playwright's retry scrolls the target into view: on
+ * a phone that carries the timeline to the top and unmounts the latest messages.
+ */
 async function openRoom(page: Page, roomId: number, theme: "light" | "dark") {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/r/${roomId}`);
   await page.getByRole("main").waitFor();
+
+  const log = page.getByRole("log", { name: "Messages" });
+
+  await expect(log).toHaveAttribute("data-placement-settled", "true");
+  await expect(log).toHaveAttribute("data-scroll-settled", "true");
 }
 
 // --- directory ---

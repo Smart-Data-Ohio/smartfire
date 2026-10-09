@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { roomDetailFixture } from "../../api/testing.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
+import { beginRoomRequest } from "../../store/join-state.ts";
 import { mutations } from "../../store/store.ts";
 import { openPane } from "./pane-store.ts";
 import { usePaneNavigation, useRoomPaneLifecycle } from "./use-right-pane.ts";
@@ -116,7 +117,7 @@ describe("URL pane navigation", () => {
   it("opens automations by URL from the base board, retains filters and returns after a thread", async () => {
     const detail = roomDetailFixture(900);
     detail.room.kind = "board";
-    mutations.setRoomDetail(detail);
+    mutations.setRoomDetail(detail, beginRoomRequest());
     const router = await mount("/r/900?view=board&status=all&owner=me&tag=api");
     const user = userEvent.setup();
     const filters = { view: "board", status: "all", owner: "me", tag: "api" };
@@ -139,7 +140,7 @@ describe("URL pane navigation", () => {
   it("opens a direct automations URL and closes it while retaining board filters", async () => {
     const detail = roomDetailFixture(900);
     detail.room.kind = "board";
-    mutations.setRoomDetail(detail);
+    mutations.setRoomDetail(detail, beginRoomRequest());
     const router = await mount("/r/900/automations?view=list&status=done&owner=7&tag=design");
     const user = userEvent.setup();
     expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"automations"}');
@@ -155,7 +156,7 @@ describe("URL pane navigation", () => {
   });
 
   it("shows no pane for an automations URL on a non-board room", async () => {
-    mutations.setRoomDetail(roomDetailFixture(4));
+    mutations.setRoomDetail(roomDetailFixture(4), beginRoomRequest());
     openPane("files");
     const router = await mount("/r/4/automations");
     expect(router.state.location.pathname).toBe("/r/4/automations");
