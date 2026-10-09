@@ -350,9 +350,14 @@ impl FormBuilder {
 
     /// `Tags::Base#tag_id`: the sanitized object name and method joined by "_".
     fn tag_id(&self, method: &str) -> String {
-        let id = if self.object_name.is_empty() { method.to_string() }
-            else { format!("{}_{method}", sanitize_object_name(&self.object_name)) };
-        self.namespace.as_ref().map_or(id.clone(), |namespace| format!("{namespace}_{id}"))
+        let id = if self.object_name.is_empty() {
+            method.to_string()
+        } else {
+            format!("{}_{method}", sanitize_object_name(&self.object_name))
+        };
+        self.namespace
+            .as_ref()
+            .map_or(id.clone(), |namespace| format!("{namespace}_{id}"))
     }
 
     fn add_default_name_and_id(&self, method: &str, options: &mut Attrs) {
@@ -531,7 +536,13 @@ pub fn button_to_form(url: &str, options: Attrs, form_options: Attrs, content: &
 }
 
 /// `button_to(..., params:)`: callers supply Rails' ordered, flattened form parameters.
-pub fn button_to_form_params(url: &str, mut options: Attrs, form_options: Attrs, content: &str, params: &[(&str, &str)]) -> Html {
+pub fn button_to_form_params(
+    url: &str,
+    mut options: Attrs,
+    form_options: Attrs,
+    content: &str,
+    params: &[(&str, &str)],
+) -> Html {
     let authenticity_token = options.remove("authenticity_token") != Some(Value::Bool(false));
     let method = options
         .remove("method")
@@ -570,9 +581,12 @@ pub fn button_to_form_params(url: &str, mut options: Attrs, form_options: Attrs,
     let button = content_tag("button", &options, content).0;
 
     let form = form.method(form_method).attr("action", url);
-    let parameters: String = params.iter().map(|(name, value)| {
-        legacy_tag("input", attrs().type_("hidden").name(*name).value(*value)).0
-    }).collect();
+    let parameters: String = params
+        .iter()
+        .map(|(name, value)| {
+            legacy_tag("input", attrs().type_("hidden").name(*name).value(*value)).0
+        })
+        .collect();
     Safe(format!(
         "<form{}>{method_field}{button}{token}{parameters}</form>",
         form.render()

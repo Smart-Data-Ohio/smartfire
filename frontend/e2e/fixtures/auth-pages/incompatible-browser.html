@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="system" data-service-worker="false">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
+    <meta name="csrf-param" content="authenticity_token" />
+<meta name="csrf-token" content="GLOBAL" />
+    <meta name="csp-nonce" content="NONCE" />
+
+    <title>Unsupported browser</title>
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==" type="image/png">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM1YzZhODQiLz48dGV4dCB4PSIzMiIgeT0iNDEiIGZpbGw9IndoaXRlIiBmb250LXNpemU9IjI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5TPC90ZXh0Pjwvc3ZnPg==">
+    <link rel="manifest" href="/webmanifest.json">
+    <link rel="stylesheet" href="./auth.css">
+    <script src="./auth.js"></script>
+
+
+  </head>
+  <body class="auth">
+
+<div class="panel center">
+  <header>
+    <h1 class="txt-x-large txt-tight-lines txt-align-center margin-none-block-start margin-block-end">
+      Upgrade to a supported web browser
+    </h1>
+    <div class="flex align-start gap">
+      <details class="position-relative" data-controller="popup" data-action="keydown.esc-&gt;popup#close toggle-&gt;popup#toggle click@document-&gt;popup#closeOnClickOutside" data-popup-orientation-top-class="popup-orientation-top"><summary class="btn" tabindex="-1"><img aria-hidden="true" class="color-icon" src="./images/globe.svg" width="20" height="20" /><span class="for-screen-reader">Translate</span></summary><div class="language-list-menu shadow" data-popup-target="menu"><dl class="language-list"><dt>🇺🇸</dt><dd class="margin-none">Upgrade to a supported web browser. Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.</dd><dt>🇪🇸</dt><dd class="margin-none">Actualiza a un navegador web compatible. Smartfire requiere un navegador web moderno. Utiliza uno de los navegadores listados a continuación y asegúrate de que las actualizaciones automáticas estén habilitadas.</dd><dt>🇫🇷</dt><dd class="margin-none">Mettez à jour vers un navigateur web pris en charge. Smartfire nécessite un navigateur web moderne. Veuillez utiliser l&#39;un des navigateurs répertoriés ci-dessous et assurez-vous que les mises à jour automatiques sont activées.</dd><dt>🇮🇳</dt><dd class="margin-none">समर्थित वेब ब्राउज़र में अपग्रेड करें। Smartfire को एक आधुनिक वेब ब्राउज़र की आवश्यकता है। कृपया नीचे सूचीबद्ध ब्राउज़रों में से कोई एक का उपयोग करें और सुनिश्चित करें कि स्वचालित अपडेट्स सक्षम हैं।</dd><dt>🇩🇪</dt><dd class="margin-none">Aktualisieren Sie auf einen unterstützten Webbrowser. Smartfire erfordert einen modernen Webbrowser. Verwenden Sie bitte einen der unten aufgeführten Browser und stellen Sie sicher, dass automatische Updates aktiviert sind.</dd><dt>🇧🇷</dt><dd class="margin-none">Atualize para um navegador compatível. O Smartfire requer um navegador moderno. Por favor, use um dos navegadores listados abaixo e certifique-se de que as atualizações automáticas estão ativadas.</dd><dt>🇯🇵</dt><dd class="margin-none">サポートされたウェブブラウザーにアップグレードしてください。Smartfireはモダンなウェブブラウザーが必要です。下記のブラウザーのいずれかを使用し、自動更新が有効になっていることを確認してください。</dd></dl></div></details>
+      <p class="margin-none-block-start">Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.</p>
+    </div>
+  </header>
+
+  <div class="browser-list flex align-center flex-wrap gap justify-center margin-block">
+
+      <div class="browser flex flex-column">
+        <img aria-hidden="true" class="center" src="./images/browsers/safari.svg" />
+        <div class="flex flex-column align-center margin-block-start-half">
+          <strong>Safari</strong>
+          <span> 17.2+</span>
+        </div>
+      </div>
+
+      <div class="browser flex flex-column">
+        <img aria-hidden="true" class="center" src="./images/browsers/chrome.svg" />
+        <div class="flex flex-column align-center margin-block-start-half">
+          <strong>Chrome</strong>
+          <span> 120+</span>
+        </div>
+      </div>
+
+      <div class="browser flex flex-column">
+        <img aria-hidden="true" class="center" src="./images/browsers/firefox.svg" />
+        <div class="flex flex-column align-center margin-block-start-half">
+          <strong>Firefox</strong>
+          <span> 121+</span>
+        </div>
+      </div>
+
+      <div class="browser flex flex-column">
+        <img aria-hidden="true" class="center" src="./images/browsers/opera.svg" />
+        <div class="flex flex-column align-center margin-block-start-half">
+          <strong>Opera</strong>
+          <span> 104+</span>
+        </div>
+      </div>
+  </div>
+</div>
+
+  </body>
+</html>

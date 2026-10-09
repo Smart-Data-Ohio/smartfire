@@ -6,7 +6,7 @@ use serde_json::Value;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
-pub use campfire_views::sudos::replay_fields;
+pub use campfire_view_kit::sudo::replay_fields;
 
 #[derive(Template)]
 #[template(path = "sudos/new.html", blocks = ["head", "content"])]

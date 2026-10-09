@@ -124,10 +124,29 @@
     }
   }
 
-  // The translation lists beside field labels are <details>: Escape and a click elsewhere close
-  // them, and opening one closes the others.
+  // Translation lists are <details>. The field labels use .auth-translate; the unsupported-browser
+  // page keeps the classic popup controller markup. Escape and a click elsewhere close them,
+  // opening one closes the others, and the classic popup flips upward when it is near the bottom.
   function translationLists() {
-    const lists = () => document.querySelectorAll("details.auth-translate[open]");
+    const lists = () =>
+      document.querySelectorAll("details.auth-translate[open], details[data-controller~='popup'][open]");
+
+    const isPopup = (list) => list.matches("[data-controller~='popup']");
+
+    function orientPopup(list) {
+      if (!isPopup(list)) return;
+
+      const menu = list.querySelector("[data-popup-target='menu']");
+
+      if (!menu) return;
+
+      const rect = menu.getBoundingClientRect();
+      const topClass = list.dataset.popupOrientationTopClass;
+
+      if (topClass) list.classList.toggle(topClass, window.innerHeight - rect.bottom < 90);
+
+      menu.style.setProperty("--max-width", `${window.innerWidth - rect.left}px`);
+    }
 
     document.addEventListener("click", (event) => {
       for (const list of lists()) {
@@ -151,8 +170,12 @@
 
         if (!(opened instanceof HTMLDetailsElement) || !opened.open) return;
 
+        if (!opened.classList.contains("auth-translate") && !isPopup(opened)) return;
+
+        orientPopup(opened);
+
         for (const list of lists()) {
-          if (list !== opened && opened.classList.contains("auth-translate")) list.open = false;
+          if (list !== opened) list.open = false;
         }
       },
       true,

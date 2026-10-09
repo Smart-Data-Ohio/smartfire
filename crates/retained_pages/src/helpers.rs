@@ -1,25 +1,24 @@
-//! Helpers the retained templates call. Form, tag, CSRF, CSP, route and translation
-//! machinery stays in `campfire_views` (it is large and still used by the classic UI).
-//! The wrappers below are the ones that used to take a classic `ViewContext`; they read
-//! [`crate::Context`] instead, which has no import map and no classic stylesheet tags.
+//! Helpers the retained templates call. Shared form, tag, CSRF, CSP, route and translation
+//! machinery lives in `campfire_view_kit`, which does not compile classic templates.
+//! The wrappers below read [`crate::Context`] instead of a classic view context.
 
-use campfire_views::helpers::{Value, content_tag, content_tag_text};
+use campfire_view_kit::helpers::{Value, content_tag, content_tag_text};
 
-pub use campfire_views::helpers::legacy_tag;
+pub use campfire_view_kit::helpers::legacy_tag;
 
 use crate::Context;
 
-pub use campfire_routes as routes;
-pub use campfire_views::helpers::{
+pub use campfire_view_kit::helpers::routes;
+pub use campfire_view_kit::helpers::{
     Attrs, ErbEscaper, FormWith, Html, attrs, auth_script_tag, auth_stylesheet_tag, builder_tag,
     button_tag, capitalize, csp_meta_tag, csrf_meta_tags, empty, form_with, hidden_field_tag,
     link_to, link_to_text, mail_to, page_title_tag, raw, to_sentence, translations_for,
     turbo_page_requires_reload_tag,
 };
-pub use campfire_views::helpers::{filters, url};
+pub use campfire_view_kit::helpers::{filters, url};
 
 /// The `id` of the auth layout's rejection message (its alert flash).
-pub use campfire_views::helpers::AUTH_ALERT_ID;
+pub use campfire_view_kit::helpers::head::AUTH_ALERT_ID;
 
 pub fn user_theme<'a>(ctx: &'a Context<'_>) -> &'a str {
     let theme = ctx
@@ -42,7 +41,7 @@ pub fn theme_color_scheme_meta_content(ctx: &Context<'_>) -> &'static str {
 
 pub fn current_user_meta_tags(ctx: &Context<'_>) -> Html {
     match &ctx.current_user {
-        Some(user) => campfire_views::helpers::html::Safe(format!(
+        Some(user) => campfire_view_kit::helpers::html::Safe(format!(
             "{}{}",
             legacy_tag(
                 "meta",
@@ -116,36 +115,10 @@ pub fn rejected_field(ctx: &Context<'_>, attrs: Attrs) -> Attrs {
 }
 
 pub fn translation_button(ctx: &Context<'_>, key: &str) -> Html {
-    let summary = content_tag(
-        "summary",
-        attrs().class("btn").tabindex(-1),
-        &format!(
-            "{}{}",
-            image_tag(
-                ctx,
-                "globe.svg",
-                attrs().size(20).aria_hidden().class("color-icon")
-            )
-            .0,
-            content_tag_text("span", attrs().class("for-screen-reader"), "Translate").0
-        ),
+    let globe = image_tag(
+        ctx,
+        "globe.svg",
+        attrs().size(20).aria_hidden().class("color-icon"),
     );
-    let menu = content_tag(
-        "div",
-        attrs()
-            .class("language-list-menu shadow")
-            .data("popup_target", "menu"),
-        &translations_for(key).0,
-    );
-    let details = attrs()
-        .class("position-relative")
-        .data("controller", "popup")
-        .data(
-            "action",
-            "keydown.esc->popup#close toggle->popup#toggle click@document->popup#closeOnClickOutside",
-        )
-        .data("popup_orientation_top_class", "popup-orientation-top");
-    campfire_views::helpers::html::Safe(
-        content_tag("details", &details, &format!("{}{}", summary.0, menu.0)).0,
-    )
+    campfire_view_kit::helpers::translations::translation_popup(&globe.0, key)
 }

@@ -115,6 +115,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
         "sudo-totp",
         "sudo-continue",
         "transfer",
+        "incompatible-browser",
     ] {
         let html = crate::controllers::users::people_tests::render_with(
             if name == "first-run" { &first } else { &app },
@@ -130,6 +131,7 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                         | "first-run"
                         | "two-factor-challenge-alert"
                         | "transfer"
+                        | "incompatible-browser"
                 ) {
                     ctx.current_user = None;
                 }
@@ -217,6 +219,10 @@ async fn auth_pages_screenshot_fixtures_match_rust_rendering() {
                             ctx: &ctx,
                             action: "/session/transfers/fixture-transfer-token".into(),
                         };
+                        shell(&ctx, page.page_title(), page.as_head(), page.as_content())
+                    }
+                    "incompatible-browser" => {
+                        let page = sessions::IncompatibleBrowser { ctx: &ctx };
                         shell(&ctx, page.page_title(), page.as_head(), page.as_content())
                     }
                     _ => unreachable!(),

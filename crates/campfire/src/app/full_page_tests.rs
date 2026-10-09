@@ -242,6 +242,24 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
                 !actual.contains("importmap"),
                 "{name}: no classic import map"
             );
+            assert_eq!(
+                actual.matches("rel=\"stylesheet\"").count(),
+                1,
+                "{name}: only the auth stylesheet, not the classic set"
+            );
+            assert!(
+                actual.contains("rel=\"stylesheet\" href=\"/assets/auth-")
+                    && actual.contains(".css\""),
+                "{name}: auth stylesheet"
+            );
+            assert!(
+                actual.contains("<script src=\"/assets/auth-") && actual.contains(".js\">"),
+                "{name}: auth script, which dismisses the translation popup"
+            );
+            assert!(
+                actual.contains("data-controller=\"popup\""),
+                "{name}: classic popup markup"
+            );
             crate::form_contracts::assert_text(&actual, "Upgrade to a supported web browser");
             crate::form_contracts::assert_text(
                 &actual,

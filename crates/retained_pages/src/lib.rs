@@ -15,7 +15,7 @@ pub mod sudos;
 pub mod two_factor;
 pub mod users;
 
-use campfire_views::{AccountSummary, CurrentUser, Platform};
+use campfire_view_kit::{AccountSummary, CurrentUser, Platform};
 
 /// Service-worker bits the auth shell prints. Nothing here names an import map or the
 /// classic stylesheet set.
@@ -44,12 +44,12 @@ impl Context<'_> {
     /// Marks the lazy flash as read, the same way the classic context does, so a rendered
     /// notice or alert is swept at the end of the request.
     pub fn flash_notice(&self) -> Option<&String> {
-        campfire_views::flash::read();
+        campfire_view_kit::flash::read();
         self.flash_notice.as_ref()
     }
 
     pub fn flash_alert(&self) -> Option<&String> {
-        campfire_views::flash::read();
+        campfire_view_kit::flash::read();
         self.flash_alert.as_ref()
     }
 

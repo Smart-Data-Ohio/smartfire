@@ -3848,3 +3848,246 @@
     }
   }
 }
+
+/*
+ * The unsupported-browser page keeps the classic panel markup. These are the classic panel,
+ * browser row, translate button, and language popup, drawn with the auth tokens. They travel in
+ * the auth bundle, so the page does not load the classic stylesheet set. The :has(.browser-list)
+ * scope keeps them off the other auth pages.
+ */
+@layer app {
+  body.auth:has(.browser-list) {
+    --inline-space: 1ch;
+    --inline-space-half: calc(var(--inline-space) / 2);
+    --inline-space-double: calc(var(--inline-space) * 2);
+    --block-space: 1rem;
+    --block-space-half: calc(var(--block-space) / 2);
+    --block-space-double: calc(var(--block-space) * 2);
+    --lch-always-black: 0% 0 0;
+    --color-bg: var(--bg-pane);
+    --color-text: var(--text);
+    --color-text-reversed: var(--bg-raised);
+    --color-border: var(--border);
+    --color-border-dark: var(--border);
+    --color-border-darker: var(--border-strong);
+    --btn-size: 2.65em;
+    --btn-background: var(--bg-raised);
+    --btn-border-color: var(--border-strong);
+    --btn-color: var(--text);
+    --icon-filter: var(--brand-icon-filter);
+  }
+
+  body.auth:has(.browser-list) .panel {
+    --panel-width: 50ch;
+    --panel-padding: 1em;
+
+    inline-size: var(--panel-width);
+    max-inline-size: 100%;
+    margin-inline: auto;
+    padding: var(--panel-padding);
+    color: var(--color-text);
+  }
+
+  @media (min-width: 100ch) {
+    body.auth:has(.browser-list) .panel {
+      --panel-padding: 2em;
+
+      background-color: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 0.8em;
+      box-shadow:
+        0 0 0 1px oklch(var(--lch-always-black) / 0.02),
+        0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
+        0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
+        0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
+        0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
+        0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+    }
+  }
+
+  body.auth:has(.browser-list) .txt-x-large {
+    font-size: 1.8rem;
+  }
+
+  body.auth:has(.browser-list) .txt-align-center {
+    text-align: center;
+  }
+
+  body.auth:has(.browser-list) .txt-tight-lines {
+    line-height: 1.2;
+  }
+
+  body.auth:has(.browser-list) .flex {
+    display: flex;
+  }
+
+  body.auth:has(.browser-list) .flex-column {
+    flex-direction: column;
+  }
+
+  body.auth:has(.browser-list) .flex-wrap {
+    flex-wrap: wrap;
+  }
+
+  body.auth:has(.browser-list) .align-center {
+    align-items: center;
+  }
+
+  body.auth:has(.browser-list) .align-start {
+    align-items: start;
+  }
+
+  body.auth:has(.browser-list) .justify-center {
+    justify-content: center;
+  }
+
+  body.auth:has(.browser-list) .gap {
+    column-gap: var(--column-gap, var(--inline-space));
+    row-gap: var(--row-gap, var(--block-space));
+  }
+
+  body.auth:has(.browser-list) .center {
+    margin-inline: auto;
+  }
+
+  body.auth:has(.browser-list) .margin-block {
+    margin-block: var(--block-space);
+  }
+
+  body.auth:has(.browser-list) .margin-block-end {
+    margin-block-end: var(--block-space);
+  }
+
+  body.auth:has(.browser-list) .margin-block-start-half {
+    margin-block-start: var(--block-space-half);
+  }
+
+  body.auth:has(.browser-list) .margin-none {
+    margin: 0;
+  }
+
+  body.auth:has(.browser-list) .margin-none-block-start {
+    margin-block-start: 0;
+  }
+
+  body.auth:has(.browser-list) .position-relative {
+    position: relative;
+  }
+
+  body.auth:has(.browser-list) .browser-list img {
+    aspect-ratio: 1;
+    block-size: auto;
+    inline-size: 7ch;
+    max-inline-size: 7ch;
+  }
+
+  body.auth:has(.browser-list) .browser {
+    flex-basis: 20%;
+  }
+
+  body.auth:has(.browser-list) .btn {
+    align-items: center;
+    background-color: var(--btn-background, var(--color-text-reversed));
+    border-radius: var(--btn-border-radius, 2em);
+    border: 1px solid var(--btn-border-color, var(--color-border-darker));
+    color: var(--btn-color, var(--color-text));
+    cursor: pointer;
+    display: inline-flex;
+    font-weight: 600;
+    gap: 0.5em;
+    justify-content: center;
+    padding: var(--btn-padding, 0.5em 1.1em);
+    text-align: center;
+  }
+
+  body.auth:has(.browser-list) .btn:where(:has(.for-screen-reader):has(img, figure)) {
+    --btn-border-radius: 50%;
+    --btn-padding: 0;
+
+    aspect-ratio: 1;
+    block-size: var(--btn-size);
+    display: grid;
+    inline-size: var(--btn-size);
+    place-items: center;
+  }
+
+  body.auth:has(.browser-list) .btn:where(:has(.for-screen-reader):has(img, figure)) > * {
+    grid-area: 1 / 1;
+  }
+
+  body.auth:has(.browser-list) .btn:where(summary) {
+    list-style: none;
+  }
+
+  body.auth:has(.browser-list) .btn:where(summary)::marker,
+  body.auth:has(.browser-list) .btn:where(summary)::-webkit-details-marker {
+    display: none;
+  }
+
+  body.auth:has(.browser-list) .for-screen-reader {
+    block-size: 1px;
+    clip-path: inset(50%);
+    inline-size: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+  }
+
+  body.auth:has(.browser-list) .shadow {
+    box-shadow:
+      0 0 0 1px oklch(var(--lch-always-black) / 0.02),
+      0 0.2em 1.6em -0.8em oklch(var(--lch-always-black) / 0.2),
+      0 0.4em 2.4em -1em oklch(var(--lch-always-black) / 0.3),
+      0 0.4em 0.8em -1.2em oklch(var(--lch-always-black) / 0.4),
+      0 0.8em 1.2em -1.6em oklch(var(--lch-always-black) / 0.5),
+      0 1.2em 1.6em -2em oklch(var(--lch-always-black) / 0.6);
+  }
+
+  body.auth:has(.browser-list) .language-list-menu {
+    --max-width: 40ch;
+
+    background-color: var(--color-border);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 0.5em;
+    inline-size: max-content;
+    inset: auto;
+    margin-inline: var(--inline-space);
+    max-inline-size: min(var(--max-width), 40ch);
+    overflow: clip;
+    position: absolute;
+    z-index: 3;
+  }
+
+  @media (max-width: 100ch) {
+    body.auth:has(.browser-list) .language-list-menu {
+      max-inline-size: min(
+        calc(var(--max-width) - var(--inline-space)),
+        calc(100% - var(--inline-space) * 2)
+      );
+    }
+  }
+
+  body.auth:has(.browser-list) details.position-relative:has(> .language-list-menu) {
+    position: static;
+  }
+
+  body.auth:has(.browser-list) :has(> details > .language-list-menu) {
+    position: relative;
+  }
+
+  body.auth:has(.browser-list) .language-list {
+    display: grid;
+    gap: var(--block-space-half) var(--inline-space);
+    grid-template-columns: min-content 1fr;
+    grid-template-rows: min-content;
+    justify-content: start;
+    margin: 0;
+    padding: var(--block-space) var(--inline-space-double);
+    text-align: start;
+  }
+
+  body.auth:has(.browser-list) .popup-orientation-top > .language-list-menu {
+    inset-block-end: 100%;
+    margin-block-end: var(--block-space-half);
+  }
+}

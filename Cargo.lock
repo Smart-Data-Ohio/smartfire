@@ -822,9 +822,8 @@ name = "campfire_retained"
 version = "0.1.0"
 dependencies = [
  "askama",
- "campfire_assets",
  "campfire_routes",
- "campfire_views",
+ "campfire_view_kit",
  "serde_json",
 ]
 
@@ -911,6 +910,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "campfire_view_kit"
+version = "0.1.0"
+dependencies = [
+ "askama",
+ "campfire_assets",
+ "campfire_routes",
+ "rails_compat",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "campfire_views"
 version = "0.1.0"
 dependencies = [
@@ -920,6 +931,7 @@ dependencies = [
  "campfire_richtext",
  "campfire_routes",
  "campfire_storage",
+ "campfire_view_kit",
  "jiff",
  "rails_compat",
  "regex",

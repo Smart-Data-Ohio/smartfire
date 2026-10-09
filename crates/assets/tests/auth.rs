@@ -19,6 +19,10 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     );
     assert!(css.contains("@layer tokens"));
     assert!(css.contains("@layer base"));
+    assert!(
+        css.contains(".browser-list") && css.contains(".language-list-menu"),
+        "the unsupported-browser panel and translation popup travel in the auth bundle"
+    );
     for logical in [
         "fonts/inter-latin-var.woff2",
         "fonts/inter-latin-var-italic.woff2",
@@ -51,6 +55,11 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     })
     .unwrap();
     assert_eq!(script.body.as_ref(), include_bytes!("../auth/auth.js"));
+    let script_text = std::str::from_utf8(&script.body).unwrap();
+    assert!(
+        script_text.contains("data-controller~='popup'"),
+        "auth.js dismisses the classic translation popup"
+    );
     assert!(!campfire_assets::all_stylesheet_paths().contains(&"auth.css"));
     assert!(
         !campfire_assets::stylesheet_link_tag_all(&[])

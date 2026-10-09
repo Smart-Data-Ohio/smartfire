@@ -5,8 +5,8 @@ use askama::Template;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
-pub use campfire_views::accounts::HelpContact;
-pub use campfire_views::sessions::ALLOW_BROWSER_VERSIONS;
+pub use campfire_view_kit::ALLOW_BROWSER_VERSIONS;
+pub use campfire_view_kit::HelpContact;
 
 #[derive(Template)]
 #[template(path = "sessions/new.html", blocks = ["head", "content"])]
