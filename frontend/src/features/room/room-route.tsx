@@ -14,6 +14,7 @@ import { RightPane } from "../panes/right-pane.tsx";
 import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes/use-right-pane.ts";
 import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
+import { JoinRoom } from "./join-preview.tsx";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
 import "./room.css";
@@ -61,7 +62,9 @@ function useClassicPage(): string {
 function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   const status = useStore((state) => state.rooms[roomId]?.status ?? "loading");
   const error = useStore((state) => state.rooms[roomId]?.error ?? null);
-  const kind = useStore((state) => state.rooms[roomId]?.detail?.room.kind ?? null);
+  const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
+  const preview = useStore((state) => state.rooms[roomId]?.preview ?? null);
+  const kind = detail?.room.kind ?? null;
   const paneOpen = useRightPaneView() !== null;
   const phone = usePhoneLayout();
   const covered = phone && paneOpen;
@@ -75,6 +78,10 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
       prefetchThreadMemberships(roomId);
     }
   }, [roomId, kind]);
+
+  if (preview !== null && detail === null) {
+    return <JoinRoom roomId={roomId} preview={preview} />;
+  }
 
   if (status === "error") {
     return (

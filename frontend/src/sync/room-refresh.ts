@@ -1,4 +1,6 @@
+import { Cause, Effect, Exit, Fiber, Result } from "effect";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { claimRoomReread, dropRoomReread, finishRoomReread } from "../store/join-state.ts";
 
 type Listener = () => void;
 
@@ -14,6 +16,16 @@ const changedAt = new Map<number, number>();
 let snapshotAt = 0;
 
 const listeners = new Map<number, Set<Listener>>();
+
+type RecoveryStop = {
+  readonly id: number;
+  readonly interrupt: Effect.Effect<void>;
+};
+
+/** The recovery fiber for each room, so leaving or a new visit can interrupt it. */
+const recoveryStops = new Map<number, RecoveryStop>();
+
+let nextRecoveryStop = 0;
 
 /** The management revision a pending header/member-list read must still match. */
 export function roomRevision(roomId: number): number {
@@ -85,6 +97,81 @@ export function onRoomRefresh(roomId: number, listener: Listener): () => void {
       listeners.delete(roomId);
     }
   };
+}
+
+/** Stops the room's recovery fiber. Leaving, or opening a new visit, calls this. */
+export function interruptRoomRecovery(roomId: number): Effect.Effect<void> {
+  const stop = recoveryStops.get(roomId);
+
+  if (stop === undefined) return Effect.void;
+
+  return stop.interrupt;
+}
+
+/**
+ * A room read lost to a newer membership fact. Starts one re-read for `visit`; `read` runs then,
+ * so it takes a new sequence. A loss while that re-read is in flight only marks it dirty. When
+ * the read finishes, a pending loss starts exactly one more. If `visit` is no longer current,
+ * the loop stops without writing and leaves the visit on screen alone — a dirty flag on the old
+ * visit is not handed off.
+ */
+export function recoverRejectedRoomRead<E, R>(
+  roomId: number,
+  visit: number | null,
+  owns: () => boolean,
+  read: () => Effect.Effect<void, E, R>,
+): Effect.Effect<void, E, R> {
+  if (!owns()) return Effect.void;
+
+  if (!claimRoomReread(roomId, visit)) return Effect.void;
+
+  return runRoomReread(roomId, visit, owns, read);
+}
+
+function runRoomReread<E, R>(
+  roomId: number,
+  visit: number | null,
+  owns: () => boolean,
+  read: () => Effect.Effect<void, E, R>,
+): Effect.Effect<void, E, R> {
+  const loop = Effect.gen(function* () {
+    while (true) {
+      if (!owns()) {
+        dropRoomReread(roomId, visit);
+
+        return;
+      }
+
+      const result = yield* Effect.result(read());
+
+      if (!owns()) {
+        dropRoomReread(roomId, visit);
+
+        return;
+      }
+
+      if (finishRoomReread(roomId, visit)) continue;
+
+      if (Result.isFailure(result)) return yield* Effect.fail(result.failure);
+
+      return;
+    }
+  }).pipe(Effect.onInterrupt(() => Effect.sync(() => dropRoomReread(roomId, visit))));
+
+  return Effect.gen(function* () {
+    const fiber = yield* Effect.forkChild(loop);
+    const id = ++nextRecoveryStop;
+
+    recoveryStops.set(roomId, { id, interrupt: Fiber.interrupt(fiber) });
+
+    const exit = yield* Fiber.await(fiber);
+
+    if (recoveryStops.get(roomId)?.id === id) recoveryStops.delete(roomId);
+
+    if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
+      return yield* Effect.failCause(exit.cause);
+    }
+  });
 }
 
 /** Once per room in a batch, including hidden removals whose membership is still readable. */
