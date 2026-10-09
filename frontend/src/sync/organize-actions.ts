@@ -22,7 +22,8 @@ import {
   type RoomSlot,
   type SidebarOverlay,
 } from "../store/organize.ts";
-import { mutations, sidebarRowClock, store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
+import { withRowTicket } from "./row-ticket.ts";
 
 /** One server change at a time, in order. */
 const lock = Semaphore.makeUnsafe(1);
@@ -75,7 +76,7 @@ const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>)
  * Lands an organising reply's rows: for a row the sidebar has, only the organisation fields (the
  * reply may be older than a sync event with newer counts); a row it lacks lands whole, through
  * the reducer the `sidebar.row.upserted` event uses, unless the sync path changed (or removed) it
- * after `since`, the `sidebarRowClock()` taken before the request.
+ * after `since`, the request's row ticket. After a sync resync, the whole reply is stale.
  */
 const landRows = Effect.fn("organize.landRows")(function* (
   rows: readonly SidebarRow[],
@@ -91,26 +92,36 @@ const landRows = Effect.fn("organize.landRows")(function* (
       : [],
   );
 
-  mutations.mergeOrganization(rows);
+  mutations.mergeOrganization(rows, since);
 
   if (fresh.length > 0) {
     mutations.landReplyRows(fresh, yield* Clock.currentTimeMillis, since);
   }
 });
 
+/** Sends an organising request holding a row ticket, then lands its reply's rows. */
+const organizing = <E, R>(request: Effect.Effect<readonly SidebarRow[], E, R>) =>
+  withRowTicket((since) => Effect.flatMap(request, (rows) => landRows(rows, since)));
+
 /** The server's copy of a row, without pending changes: what the next call starts from. */
 const serverRow = (roomId: number) => store.getState().sidebar.rows[roomId];
 
+/** How many times a refetch is read before it gives up on landing a reply a resync outdated. */
+const REFETCH_ATTEMPTS = 3;
+
 /**
  * Loads the sidebar again (after a 409, the list the client sent was stale). Rows the sync path
- * changed while it was on its way are newer than it, so they stay.
+ * changed while it was on its way are newer than it, so they stay. A reply a sync resync made
+ * stale is read again, three times in all; then the sync state stands as it is.
  */
-const refetchSidebar = Effect.suspend(() => {
-  const since = sidebarRowClock();
+const refetchSidebar = Effect.gen(function* () {
+  for (let attempt = 0; attempt < REFETCH_ATTEMPTS; attempt++) {
+    const landed = yield* withRowTicket((since) =>
+      Effect.map(fetchSidebar(), (sidebar) => mutations.loadSidebar(sidebar, since)),
+    );
 
-  return fetchSidebar().pipe(
-    Effect.tap((sidebar) => Effect.sync(() => mutations.loadSidebar(sidebar, since))),
-  );
+    if (landed) return;
+  }
 }).pipe(
   Effect.catch((error) => Effect.logWarning("organize: sidebar refetch failed", error.message)),
 );
@@ -153,9 +164,7 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
   if (slot.kind === "favorite") {
     if (!favorite) {
-      const since = sidebarRowClock();
-
-      yield* landRows([yield* api.favorite(roomId)], since);
+      yield* organizing(Effect.map(api.favorite(roomId), (row) => [row]));
     }
 
     const others = favoriteRows(store.getState().sidebar).filter(
@@ -164,26 +173,20 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
     // A new favourite lands at the end, which may already be where it was dropped.
     if (favorite || slot.index < others.length) {
-      const since = sidebarRowClock();
-
-      yield* landRows((yield* api.moveFavorite(roomId, slot.index)).rows, since);
+      yield* organizing(Effect.map(api.moveFavorite(roomId, slot.index), (reply) => reply.rows));
     }
 
     return;
   }
 
   if (favorite) {
-    const since = sidebarRowClock();
-
-    yield* landRows([yield* api.unfavorite(roomId)], since);
+    yield* organizing(Effect.map(api.unfavorite(roomId), (row) => [row]));
   }
 
   const categoryId = categoryAfter(slot, row.membership.roomCategoryId);
 
   if (canCategorize(row) && categoryId !== row.membership.roomCategoryId) {
-    const since = sidebarRowClock();
-
-    yield* landRows([yield* api.assignCategory(roomId, categoryId)], since);
+    yield* organizing(Effect.map(api.assignCategory(roomId, categoryId), (row) => [row]));
   }
 });
 
@@ -382,10 +385,10 @@ export const setInvolvement = Effect.fn("organize.setInvolvement")(function* (
 
   yield* pending(
     memberships({ [roomId]: patch }),
-    Effect.gen(function* () {
-      const since = sidebarRowClock();
-
-      mutations.setMembership(yield* api.updateInvolvement(roomId, involvement), since);
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateInvolvement(roomId, involvement), (membership) =>
+        mutations.setMembership(membership, since),
+      ),
+    ),
   );
 });

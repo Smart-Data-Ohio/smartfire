@@ -27,7 +27,7 @@ import {
   resetJoinState,
   resetRoomRereads,
 } from "../store/join-state.ts";
-import { mutations, sidebarRowClock, store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
@@ -38,6 +38,7 @@ import {
   recoverRejectedRoomRead,
   roomRevision,
 } from "./room-refresh.ts";
+import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -110,18 +111,17 @@ export const start = Effect.fn("session.start")(function* () {
   mutations.setMe(yield* me());
   mutations.setSidebarLoading();
 
-  const since = sidebarRowClock();
-
-  const loaded = yield* sidebar().pipe(
-    Effect.tapError(() => Effect.sync(() => mutations.setSidebarFailed())),
-    Effect.option,
+  const loaded = yield* withRowTicket((since) =>
+    sidebar().pipe(
+      Effect.tap((data) => Effect.sync(() => mutations.loadSidebar(data, since))),
+      Effect.tapError(() => Effect.sync(() => mutations.setSidebarFailed())),
+      Effect.option,
+    ),
   );
 
   if (Option.isNone(loaded)) {
     return;
   }
-
-  mutations.loadSidebar(loaded.value, since);
 
   const ids = presenceIds(loaded.value);
 
@@ -224,6 +224,8 @@ let retryRejectedLoad: (roomId: number, token: number) => Effect.Effect<void, ne
 const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (!sameVisit(roomId, token)) return;
 
+  const rowsSince = yield* rowTicket;
+
   const open = visits.get(roomId);
   const load = open?.token === token ? ++nextLoad : 0;
   const started = beginRoomRequest();
@@ -280,7 +282,7 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     }
 
     if (Predicate.isTagged(preview.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId, started);
+      mutations.setRoomUnavailable(roomId, started, rowsSince);
 
       return;
     }
@@ -291,7 +293,7 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   }
 
   mutations.setRoomError(roomId, loaded.failure.message);
-});
+}, Effect.scoped);
 
 /** The visit's own initial load. Recovery calls `readRoom` and leaves the visible state alone. */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
@@ -393,38 +395,14 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
       yield* Effect.sleep(attempt === 1 ? "200 millis" : "800 millis");
     }
 
-    const revision = invalidateRoom(roomId);
-    const since = managementEpoch();
-    const started = beginRoomRequest();
-    const fetched = yield* Effect.result(room(roomId));
-    const superseded = roomRevision(roomId) !== revision || changedSince(roomId, since);
+    const outcome = yield* rereadJoined(roomId);
 
-    if (Result.isSuccess(fetched) && !superseded) {
-      const row = store.getState().sidebar.rows[roomId];
-
-      yield* installJoined(
-        roomId,
-        withSidebarRow(fetched.success, row),
-        null,
-        started,
-        sidebarRowClock(),
-      );
-
+    if (outcome === true) {
       return;
     }
 
-    if (
-      Result.isFailure(fetched) &&
-      Predicate.isTagged(fetched.failure, "NotFound") &&
-      !superseded
-    ) {
-      mutations.setRoomUnavailable(roomId, started);
-
-      return;
-    }
-
-    if (Result.isFailure(fetched)) {
-      failure = fetched.failure.message;
+    if (outcome !== null) {
+      failure = outcome;
     }
   }
 
@@ -434,12 +412,41 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
 });
 
 /**
+ * One of `recoverJoin`'s reads: true once the room is settled (installed, or unavailable), else
+ * the failure's message, or null for a read a newer change superseded.
+ */
+const rereadJoined = Effect.fnUntraced(function* (roomId: number) {
+  const revision = invalidateRoom(roomId);
+  const since = managementEpoch();
+  const rowsSince = yield* rowTicket;
+  const started = beginRoomRequest();
+  const fetched = yield* Effect.result(room(roomId));
+  const superseded = roomRevision(roomId) !== revision || changedSince(roomId, since);
+
+  if (Result.isSuccess(fetched) && !superseded) {
+    const row = store.getState().sidebar.rows[roomId];
+
+    yield* installJoined(roomId, withSidebarRow(fetched.success, row), null, started, rowsSince);
+
+    return true;
+  }
+
+  if (Result.isFailure(fetched) && Predicate.isTagged(fetched.failure, "NotFound") && !superseded) {
+    mutations.setRoomUnavailable(roomId, started, rowsSince);
+
+    return true;
+  }
+
+  return Result.isFailure(fetched) ? fetched.failure.message : null;
+}, Effect.scoped);
+
+/**
  * Joins an open room. The POST body is a hint: it lands only when the epoch and the visit are
  * still the ones the request started with. Otherwise the room is read from the server.
  */
 export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
   const since = managementEpoch();
-  const rowsSince = sidebarRowClock();
+  const rowsSince = yield* rowTicket;
   const token = visits.get(roomId)?.token ?? null;
   const joined = yield* postJoin(roomId);
   const topics = yield* Topics;
@@ -453,7 +460,7 @@ export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId:
   }
 
   yield* installJoined(roomId, joined.detail, joined.row, beginRoomRequest(), rowsSince);
-});
+}, Effect.scoped);
 
 /**
  * Opens a room view: subscribes to its topic, says present, loads the detail and the first page

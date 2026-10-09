@@ -23,7 +23,7 @@ import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
-import { mutations, sidebarRowClock, store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
 import { captureWorkRead, workDetailStale } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
@@ -38,6 +38,7 @@ import {
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
+import { rowTicket, withRowTicket } from "./row-ticket.ts";
 import { roomVisitToken } from "./session.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
@@ -245,6 +246,7 @@ export class Engine extends Context.Service<
 
       /** Refetch room metadata at its current management revision, including lost access. */
       const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const rowsSince = yield* rowTicket;
         const started = beginRoomRequest();
         const detail = yield* Effect.result(room(roomId));
 
@@ -286,13 +288,13 @@ export class Engine extends Context.Service<
           }
 
           markRoomsChanged([roomId]);
-          mutations.setRoomUnavailable(roomId, unavailableAt);
+          mutations.setRoomUnavailable(roomId, unavailableAt, rowsSince);
 
           return false;
         }
 
         return true;
-      });
+      }, Effect.scoped);
 
       /**
        * A room's newest page, merged into the window the reader is on (`resync`); then, for a
@@ -484,16 +486,18 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
-            const since = sidebarRowClock();
-
-            yield* sidebar().pipe(
-              Effect.tap((data) =>
-                Effect.sync(() => {
-                  mutations.resyncSidebar(data, since);
-                  // The snapshot is newer than any room write still on its way.
-                  markSidebarSnapshot();
-                }),
+            yield* withRowTicket((since) =>
+              sidebar().pipe(
+                Effect.tap((data) =>
+                  Effect.sync(() => {
+                    // Authoritative: every HTTP reply already on its way is stale now.
+                    mutations.resyncSidebar(data, since);
+                    // The snapshot is newer than any room write still on its way.
+                    markSidebarSnapshot();
+                  }),
+                ),
               ),
+            ).pipe(
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
               ),
@@ -533,7 +537,7 @@ export class Engine extends Context.Service<
         );
 
       const refreshRoom = (roomId: number, revision: number, allow: () => boolean = () => true) =>
-        Effect.suspend(() => {
+        withRowTicket((rowsSince) => {
           if (!allow()) return Effect.void;
 
           const started = beginRoomRequest();
@@ -553,7 +557,7 @@ export class Engine extends Context.Service<
 
               return Effect.sync(() => {
                 if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
-                  mutations.setRoomUnavailable(roomId, started);
+                  mutations.setRoomUnavailable(roomId, started, rowsSince);
                 }
               }).pipe(
                 Effect.andThen(

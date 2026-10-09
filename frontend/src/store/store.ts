@@ -66,7 +66,14 @@ import type {
 } from "./model.ts";
 import * as organize from "./organize.ts";
 import * as reduce from "./reducers.ts";
-import { rowClock, touchRows, untouchedReplyEvents } from "./row-touches.ts";
+import {
+  isStale,
+  pruneTouches,
+  removalIsStale,
+  rowClock,
+  touchRows,
+  untouchedReplyEvents,
+} from "./row-touches.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
@@ -80,7 +87,10 @@ import { setWorkspaceBranding } from "./workspace.ts";
  */
 export const store = createStore<State>()(() => initialState);
 
-/** The sidebar row clock now: take it before a request whose reply installs sidebar rows. */
+/**
+ * The sidebar row clock now: the ticket a request opening now would hold. Requests take theirs
+ * through `withRowTicket` (src/sync/row-ticket.ts), which releases it too.
+ */
 export const sidebarRowClock = (): number => rowClock(store.getState());
 
 export function useStore<T>(selector: (state: State) => T): T {
@@ -107,8 +117,18 @@ export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, M
   );
 }
 
+/**
+ * The row tickets of the HTTP requests in flight, oldest first (several can share a clock). Not
+ * state anyone renders, so held outside the store: it only bounds the touches the store keeps.
+ */
+const heldTickets: number[] = [];
+
+/** Every change ends by forgetting the row touches no request in flight is older than. */
 const apply = (change: (state: State) => State) =>
-  store.setState((state) => agents.reconcileAgentBadges(change(state)), true);
+  store.setState(
+    (state) => agents.reconcileAgentBadges(pruneTouches(change(state), heldTickets[0])),
+    true,
+  );
 
 /**
  * Room-read bookkeeping for `sidebar.row.*` events about to land: a removal or a membership change
@@ -257,12 +277,37 @@ export const mutations = {
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "loading" } })),
   setSidebarFailed: () =>
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "error" } })),
-  /** A whole-sidebar reply; `since` is the `sidebarRowClock()` taken before its request. */
-  loadSidebar: (sidebar: Sidebar, since: number) =>
-    apply((state) => reduce.loadSidebar(state, sidebar, since)),
   /**
-   * A whole-sidebar snapshot the sync engine read (a gap's resync), `since` taken before its
-   * request: it outranks any HTTP reply already on its way, as a sync event would.
+   * A request whose reply installs or removes sidebar rows begins: answers its ticket, held until
+   * `closeRowTicket` (see `withRowTicket` in src/sync/row-ticket.ts).
+   */
+  openRowTicket: (): number => {
+    const since = rowClock(store.getState());
+
+    heldTickets.push(since);
+
+    return since;
+  },
+  /** The request holding `since` settled; touches no request in flight needs are dropped. */
+  closeRowTicket: (since: number) => {
+    const index = heldTickets.indexOf(since);
+
+    if (index >= 0) heldTickets.splice(index, 1);
+    apply((state) => state);
+  },
+  /**
+   * A whole-sidebar reply; `since` is its request's ticket. Answers whether it landed: a reply
+   * that started before a sync resync is stale, and leaves the store as it is.
+   */
+  loadSidebar: (sidebar: Sidebar, since: number): boolean => {
+    if (isStale(store.getState(), since)) return false;
+    apply((state) => reduce.loadSidebar(state, sidebar, since));
+
+    return true;
+  },
+  /**
+   * A whole-sidebar snapshot the sync engine read (a resync), `since` its own ticket: it is
+   * authoritative, so every HTTP reply already on its way becomes stale.
    */
   resyncSidebar: (sidebar: Sidebar, since: number) =>
     apply((state) => reduce.resyncSidebar(state, sidebar, since)),
@@ -276,12 +321,17 @@ export const mutations = {
     landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail, started: number) =>
     landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
-  /** Access is gone: the row leaves, and an older reply listing it can't bring it back. */
-  setRoomUnavailable: (roomId: number, started: number) =>
+  /**
+   * An HTTP 404 (or a delete or leave reply): access is gone. `rowsSince` is the request's
+   * ticket; a row a resync installed, or sync restored, after it began is newer, so the reply is
+   * dropped and answers false.
+   */
+  setRoomUnavailable: (roomId: number, started: number, rowsSince: number) =>
+    !removalIsStale(store.getState(), roomId, rowsSince) &&
     landRoom(roomId, started, (state) => {
       clearRoomJoin(roomId);
 
-      return touchRows(reduce.setRoomUnavailable(state, roomId), [roomId]);
+      return reduce.setRoomUnavailable(state, roomId);
     }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),
@@ -316,8 +366,8 @@ export const mutations = {
   },
   /**
    * An HTTP reply's rows, as the local `sidebar.row.*` events that land them. `since` is the
-   * `sidebarRowClock()` taken before the request: a room the sync path changed after it keeps
-   * the store's row.
+   * request's ticket: a room the sync path changed after it keeps the store's row, and none land
+   * once a resync made the reply stale.
    */
   landReplyRows: (events: readonly SyncEvent[], now: number, since: number) => {
     const fresh = untouchedReplyEvents(store.getState(), events, since);
@@ -577,8 +627,9 @@ export const mutations = {
     apply((state) => organize.dropOverlay(state, entry)),
   upsertCategory: (category: RoomCategory) =>
     apply((state) => organize.upsertCategory(state, category)),
-  mergeOrganization: (rows: readonly SidebarRow[]) =>
-    apply((state) => organize.mergeOrganization(state, rows)),
+  /** An organising reply's rows the sidebar has; `since` is the request's ticket. */
+  mergeOrganization: (rows: readonly SidebarRow[], since: number) =>
+    apply((state) => organize.mergeOrganization(state, rows, since)),
   landCreatedCategory: (
     category: RoomCategory,
     draft: organize.SidebarOverlay,
@@ -588,11 +639,14 @@ export const mutations = {
     apply((state) => organize.setCategories(state, categories)),
   removeCategory: (categoryId: number) =>
     apply((state) => organize.removeCategory(state, categoryId)),
-  /** A membership reply; `since` is the `sidebarRowClock()` taken before its request. */
+  /** A membership reply; `since` is its request's ticket. */
   setMembership: (membership: Membership, since: number) =>
     apply((state) => organize.setMembership(state, membership, since)),
   /** Back to an empty store (tests). */
-  reset: () => apply(() => initialState),
+  reset: () => {
+    heldTickets.length = 0;
+    apply(() => initialState);
+  },
 };
 
 export type Mutations = typeof mutations;

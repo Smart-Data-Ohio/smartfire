@@ -2982,7 +2982,7 @@ describe("room access refresh", () => {
         yield* api.route("GET /rooms/12", () => Deferred.await(deletedReply));
         yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
         yield* settle;
-        mutations.setRoomUnavailable(12, beginRoomRequest());
+        mutations.setRoomUnavailable(12, beginRoomRequest(), sidebarRowClock());
         invalidateRoom(12);
         yield* Deferred.succeed(deletedReply, roomDetailFixture(12));
         yield* settle;

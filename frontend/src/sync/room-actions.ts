@@ -7,8 +7,9 @@ import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
-import { mutations, sidebarRowClock, store } from "../store/store.ts";
+import { mutations, store } from "../store/store.ts";
 import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
+import { rowTicket, withRowTicket } from "./row-ticket.ts";
 
 const landForm = (form: RoomForm): RoomForm => {
   mutations.mergeUsers(form.users);
@@ -24,6 +25,7 @@ const landForm = (form: RoomForm): RoomForm => {
 const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId: number) {
   const revision = invalidateRoom(roomId);
   const since = managementEpoch();
+  const rowsSince = yield* rowTicket;
   const started = beginRoomRequest();
   const fetched = yield* Effect.result(room(roomId));
 
@@ -41,7 +43,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 
   if (Result.isFailure(fetched)) {
     if (Predicate.isTagged(fetched.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId, started);
+      mutations.setRoomUnavailable(roomId, started, rowsSince);
     }
 
     return;
@@ -61,13 +63,13 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
         },
     started,
   );
-});
+}, Effect.scoped);
 
 /**
  * Lands a create/update reply, unless a management change to the room reached the store after the
  * write began (`since`, a `managementEpoch()`): then the reply could bring back what that change
  * took away, so the room is read again instead. Its sidebar row leaves alone a row the sync path
- * changed after `rowsSince` (a `sidebarRowClock()`).
+ * changed after `rowsSince` (the write's row ticket).
  */
 const landMutation = Effect.fn("rooms.landMutation")(function* (
   result: RoomMutation,
@@ -85,7 +87,7 @@ const landMutation = Effect.fn("rooms.landMutation")(function* (
 
   const landed =
     result.detail === null
-      ? mutations.setRoomUnavailable(result.room.id, started)
+      ? mutations.setRoomUnavailable(result.room.id, started, rowsSince)
       : mutations.setRoomDetail(result.detail, started);
 
   if (!landed) {
@@ -124,36 +126,42 @@ export const editForm = Effect.fn("rooms.editForm")(function* (roomId: number) {
 /** `body.clientRoomId` names the attempt: sending it again returns the room it already made. */
 export const create = Effect.fn("rooms.create")(function* (body: CreateRoom) {
   const since = managementEpoch();
-  const rowsSince = sidebarRowClock();
 
-  return yield* landMutation(yield* api.createRoom(body), since, rowsSince);
+  return yield* withRowTicket((rowsSince) =>
+    api.createRoom(body).pipe(Effect.flatMap((result) => landMutation(result, since, rowsSince))),
+  );
 });
 
 export const update = Effect.fn("rooms.update")(function* (roomId: number, body: UpdateRoom) {
   const since = managementEpoch();
-  const rowsSince = sidebarRowClock();
 
-  return yield* landMutation(yield* api.updateRoom(roomId, body), since, rowsSince);
+  return yield* withRowTicket((rowsSince) =>
+    api
+      .updateRoom(roomId, body)
+      .pipe(Effect.flatMap((result) => landMutation(result, since, rowsSince))),
+  );
 });
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {
+  const rowsSince = yield* rowTicket;
   const result = yield* api.removeRoom(roomId);
   const started = beginRoomRequest();
 
-  if (mutations.setRoomUnavailable(result.roomId, started)) {
+  if (mutations.setRoomUnavailable(result.roomId, started, rowsSince)) {
     invalidateRoom(result.roomId);
   }
 
   return result;
-});
+}, Effect.scoped);
 
 export const leaveDirect = Effect.fn("rooms.leaveDirect")(function* (roomId: number) {
+  const rowsSince = yield* rowTicket;
   const result = yield* api.leaveDirectRoom(roomId);
   const started = beginRoomRequest();
 
-  if (mutations.setRoomUnavailable(result.roomId, started)) {
+  if (mutations.setRoomUnavailable(result.roomId, started, rowsSince)) {
     invalidateRoom(result.roomId);
   }
 
   return result;
-});
+}, Effect.scoped);

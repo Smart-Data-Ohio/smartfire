@@ -27,7 +27,7 @@ import type {
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { removeCategory, upsertCategory } from "./organize.ts";
-import { changedRowIds, touchedSince, touchRows } from "./row-touches.ts";
+import { changedRowIds, isStale, markResynced, touchedSince, touchRows } from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -71,11 +71,28 @@ function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly 
 }
 
 /**
- * Installs a whole-sidebar snapshot. `since` is the `rowClock` taken before its request: a room
- * the sync path changed after that keeps the store's row, or stays gone if sync removed it, and
- * a row sync added that the snapshot predates stays too.
+ * Installs a whole-sidebar HTTP reply. `since` is its request's ticket: once a sync resync has
+ * landed after it the reply is stale and changes nothing; otherwise it installs as
+ * `installSidebar` does.
  */
 export function loadSidebar(state: State, sidebar: Sidebar, since: number): State {
+  return isStale(state, since) ? state : installSidebar(state, sidebar, since);
+}
+
+/**
+ * A whole-sidebar snapshot the sync engine read (a resync), `since` its own ticket: installed as
+ * `installSidebar` does, then every HTTP reply to a request already in flight is stale.
+ */
+export function resyncSidebar(state: State, sidebar: Sidebar, since: number): State {
+  return markResynced(installSidebar(state, sidebar, since));
+}
+
+/**
+ * Installs a whole-sidebar snapshot. `since` is its request's ticket: a room the sync path
+ * changed after that keeps the store's row, or stays gone if sync removed it, and a row sync
+ * added that the snapshot predates stays too.
+ */
+function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   const rows: Record<number, SidebarRow> = {};
   const installed: SidebarRow[] = [];
 
@@ -621,7 +638,8 @@ export function moveUnreadDivider(state: State, roomId: number, fromId: number):
 /**
  * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
  * what the divider counts (at least 1, when the message is outside the loaded window). A row the
- * sync path changed after the request began (`since`, a `rowClock`) is newer, so it stays.
+ * sync path changed after the request began (`since`, its ticket) is newer, so it stays, and
+ * after a resync the whole reply is stale.
  */
 export function markUnreadFrom(
   state: State,
@@ -634,7 +652,7 @@ export function markUnreadFrom(
   const timeline = moved.timelines[roomId];
   const count = timeline?.unreadFromId === fromId ? timeline.unreadCount : 0;
 
-  if (touchedSince(moved, roomId, since)) {
+  if (isStale(moved, since) || touchedSince(moved, roomId, since)) {
     return moved;
   }
 
@@ -1136,21 +1154,6 @@ function syncTouchedRooms(
   }
 
   return [...ids];
-}
-
-/**
- * A whole-sidebar snapshot the sync engine read (a gap's resync): installed as `loadSidebar`
- * does, then every room it lists or drops is touched, so an HTTP reply that started before it
- * (a refetch still on its way) can't land older rows over it or bring a dropped room back.
- */
-export function resyncSidebar(state: State, sidebar: Sidebar, since: number): State {
-  const ids = new Set(Object.keys(state.sidebar.rows).map(Number));
-
-  for (const row of sidebar.rows) {
-    ids.add(row.room.id);
-  }
-
-  return touchRows(loadSidebar(state, sidebar, since), ids);
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */

@@ -372,7 +372,7 @@ describe("organize actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
-  it.effect("keep a gap resync's rows over a 409 refetch that started before it", () =>
+  it.effect("read a 409 refetch again after a resync outdates it, then give up", () =>
     Effect.gen(function* () {
       const pinged = { ...general, unreadCount: 3, notificationCount: 1 };
 
@@ -388,8 +388,8 @@ describe("organize actions", () => {
         Effect.fail(new Conflict({ message: "Stale" })),
       );
       yield* fake.route("GET /sidebar", () => {
-        // While the refetch is on its way, a sync gap's resync installs the read row (and no
-        // later event says so again); then the refetch, read before, arrives.
+        // While each read is on its way, a sync resync installs the read row (and no later
+        // event says so again); then the read, older than the resync, arrives.
         mutations.resyncSidebar(
           {
             ...sidebarFixture([{ ...general, unreadCount: 0, notificationCount: 0 }, design]),
@@ -406,11 +406,48 @@ describe("organize actions", () => {
 
       yield* Effect.exit(organize.reorderCategories([2, 1]));
 
-      expect((yield* fake.requests).at(-1)?.path).toBe("/sidebar");
+      const reads = (yield* fake.requests).filter((request) => request.path === "/sidebar");
+
+      expect(reads).toHaveLength(3);
       expect(store.getState().sidebar.rows[1]?.notificationCount).toBe(0);
-      // The resync dropped these rooms; the older refetch can't bring them back.
+      // The resync dropped these rooms; the older reads can't bring them back.
       expect(store.getState().sidebar.rows[3]).toBeUndefined();
       expect(store.getState().sidebar.rows[4]).toBeUndefined();
+      expect(store.getState().rowTouches.at).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("land a 409 refetch read again after a resync outdated the first", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      let reads = 0;
+
+      yield* fake.route("PUT /room_categories/order", () =>
+        Effect.fail(new Conflict({ message: "Stale" })),
+      );
+      yield* fake.route("GET /sidebar", () => {
+        reads += 1;
+
+        if (reads === 1) {
+          mutations.resyncSidebar(
+            { ...sidebarFixture([general, design]), categories: [launch, team] },
+            sidebarRowClock(),
+          );
+        }
+
+        return Effect.succeed({
+          ...sidebarFixture([general, design, engineering]),
+          categories: [team, launch],
+        });
+      });
+
+      yield* Effect.exit(organize.reorderCategories([2, 1]));
+
+      expect(reads).toBe(2);
+      expect(store.getState().sidebar.rows[3]).toEqual(engineering);
+      expect(store.getState().sidebar.categories).toEqual([team, launch]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

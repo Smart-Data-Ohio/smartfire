@@ -1,30 +1,55 @@
 /**
- * When the sync path (or a read made here) last changed each sidebar row, on a client clock.
+ * Which HTTP replies are older than the sidebar rows they would install, on a client clock.
  *
  * Sidebar rows arrive two ways: sync events, which the server publishes after every write that
- * changes a row, in order; and HTTP replies (the whole sidebar, an organising reply, a join),
- * which are snapshots taken when the server answered. A reply can be older than a sync row that
- * landed while it was in flight, so every HTTP install takes the clock before its request and
- * leaves alone any row touched after that. Preferring the sync row converges: whatever the
- * reply knew that the sync row didn't, the server publishes again.
+ * changes a row, in order; and HTTP replies (the whole sidebar, an organising reply, a join, a
+ * 404), which are snapshots taken when the server answered. A reply can be older than what sync
+ * landed while it was in flight, so every HTTP request that installs or removes rows holds a
+ * ticket (the clock when it began) from before the request until its reply has landed or failed.
+ *
+ * Two things make a reply older than the store:
+ * - a sync resync (a gap, a rollover, a welcome that couldn't resume) landed after its ticket:
+ *   the resync is authoritative, so the whole reply is stale;
+ * - the sync path (or a read made here) touched a room after its ticket: that room keeps the
+ *   store's row. Touches are kept only while a request older than them is in flight (the store
+ *   tracks the tickets held, and prunes after every change).
+ *
+ * Preferring sync converges: whatever the reply knew that sync didn't, the server publishes again.
  */
 import type { SidebarRow, SyncEvent } from "./model.ts";
 import type { State } from "./state.ts";
 
 export interface RowTouches {
   readonly clock: number;
-  /** The clock at each room's latest touch, kept after its row leaves. */
+  /** The clock when the latest sync resync landed: a ticket from before it is stale. */
+  readonly resyncEpoch: number;
+  /**
+   * The clock at each room's latest touch, kept after its row leaves, only while a request
+   * older than the touch is in flight (`pruneTouches`).
+   */
   readonly at: Readonly<Record<number, number>>;
 }
 
-export const noRowTouches: RowTouches = { clock: 0, at: {} };
+export const noRowTouches: RowTouches = { clock: 0, resyncEpoch: 0, at: {} };
 
-/** The clock now: take it before an HTTP request whose reply installs sidebar rows. */
+/** The clock now: the ticket of a request beginning now. */
 export function rowClock(state: State): number {
   return state.rowTouches.clock;
 }
 
-/** Whether the sync path changed `roomId`'s row after `since` (a `rowClock`). */
+/** Whether a sync resync landed after the request holding `since` began: its reply is stale. */
+export function isStale(state: State, since: number): boolean {
+  return since < state.rowTouches.resyncEpoch;
+}
+
+/** A sync resync landed: every reply to a request already in flight is stale. */
+export function markResynced(state: State): State {
+  const clock = state.rowTouches.clock + 1;
+
+  return { ...state, rowTouches: { ...state.rowTouches, clock, resyncEpoch: clock } };
+}
+
+/** Whether the sync path changed `roomId`'s row after `since` (a ticket still held). */
 export function touchedSince(state: State, roomId: number, since: number): boolean {
   return (state.rowTouches.at[roomId] ?? 0) > since;
 }
@@ -40,7 +65,35 @@ export function touchRows(state: State, roomIds: Iterable<number>): State {
     touched = true;
   }
 
-  return touched ? { ...state, rowTouches: { clock, at } } : state;
+  return touched ? { ...state, rowTouches: { ...state.rowTouches, clock, at } } : state;
+}
+
+/**
+ * Forgets the touches no request in flight can be older than: those at or before `oldest`, the
+ * oldest ticket still held, or every one when none is (`undefined`). The same state when nothing
+ * goes.
+ */
+export function pruneTouches(state: State, oldest: number | undefined): State {
+  const entries = Object.entries(state.rowTouches.at);
+  const kept = entries.filter(([, clock]) => oldest !== undefined && clock > oldest);
+
+  if (kept.length === entries.length) {
+    return state;
+  }
+
+  return { ...state, rowTouches: { ...state.rowTouches, at: Object.fromEntries(kept) } };
+}
+
+/**
+ * Whether an HTTP 404 (the request holding `since`) is older than the store's row for `roomId`:
+ * a row a resync installed, or sync restored, after the request began stays. With no row, the
+ * store already agrees the room is gone.
+ */
+export function removalIsStale(state: State, roomId: number, since: number): boolean {
+  return (
+    state.sidebar.rows[roomId] !== undefined &&
+    (isStale(state, since) || touchedSince(state, roomId, since))
+  );
 }
 
 /** Rooms whose row is a different object (changed, added or removed) between two states. */
@@ -71,13 +124,17 @@ export function changedRowIds(
 
 /**
  * An HTTP reply's rows as local sync events, less any row event for a room the sync path changed
- * after `since` (the `rowClock` taken before the request).
+ * after `since` (the request's ticket); none at all once a resync made the reply stale.
  */
 export function untouchedReplyEvents(
   state: State,
   events: readonly SyncEvent[],
   since: number,
 ): readonly SyncEvent[] {
+  if (isStale(state, since)) {
+    return [];
+  }
+
   return events.filter((event) => {
     switch (event.type) {
       case "sidebar.row.upserted":

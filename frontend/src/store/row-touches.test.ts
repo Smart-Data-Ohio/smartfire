@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
+import { beginRoomRequest } from "./join-state.ts";
 import type { SidebarRow, SyncEvent } from "./model.ts";
-import { setMembership } from "./organize.ts";
+import { mergeOrganization, setMembership } from "./organize.ts";
 import {
   applyEvents,
   loadSidebar,
@@ -9,8 +10,15 @@ import {
   markUnreadFrom,
   resyncSidebar,
 } from "./reducers.ts";
-import { rowClock, touchedSince, touchRows, untouchedReplyEvents } from "./row-touches.ts";
+import {
+  pruneTouches,
+  rowClock,
+  touchedSince,
+  touchRows,
+  untouchedReplyEvents,
+} from "./row-touches.ts";
 import { initialState, type State } from "./state.ts";
+import { mutations, store } from "./store.ts";
 
 const general = sidebarRowFixture(1, "general");
 
@@ -111,6 +119,42 @@ describe("sidebar row touches", () => {
     expect(replied.sidebar.rows[2]).toBeUndefined();
   });
 
+  it("an unseen room created and deleted during a gap stays gone under an older reply", () => {
+    // A refetch goes out and its snapshot lists room 9; the socket misses room 9's creation and
+    // deletion; the resync (without it) lands; then the refetch, and a join's row, arrive.
+    const nine = sidebarRowFixture(9, "pop-up");
+    const before = loaded([general]);
+    const since = rowClock(before);
+    const resynced = resyncSidebar(before, sidebarFixture([general]), rowClock(before));
+
+    expect(loadSidebar(resynced, sidebarFixture([general, nine]), since)).toBe(resynced);
+    expect(untouchedReplyEvents(resynced, [upserted(nine)], since)).toEqual([]);
+  });
+
+  it("a reply that started before a resync is stale as a whole", () => {
+    const before = loaded([pinged(general)]);
+    const since = rowClock(before);
+    const resynced = resyncSidebar(before, sidebarFixture([read(general)]), rowClock(before));
+    const membership = { ...pinged(general).membership, involvement: "mentions" as const };
+
+    expect(setMembership(resynced, membership, since)).toBe(resynced);
+    expect(mergeOrganization(resynced, [{ ...general, membership }], since)).toBe(resynced);
+    expect(markUnreadFrom(resynced, 1, 40, 0, since).sidebar).toBe(resynced.sidebar);
+    // A request that began after the resync lands as usual.
+    expect(
+      setMembership(resynced, membership, rowClock(resynced)).sidebar.rows[1]?.membership
+        .involvement,
+    ).toBe("mentions");
+  });
+
+  it("forgets the touches no request in flight is older than", () => {
+    const touched = touchRows(touchRows(loaded([general, design]), [1]), [2]);
+
+    expect(Object.keys(pruneTouches(touched, 1).rowTouches.at)).toEqual(["2"]);
+    expect(pruneTouches(touched, undefined).rowTouches.at).toEqual({});
+    expect(pruneTouches(touched, 0)).toBe(touched);
+  });
+
   it("a gap's resync still keeps rows sync changed while it was on its way", () => {
     const before = loaded([pinged(general)]);
     const since = rowClock(before);
@@ -176,5 +220,87 @@ describe("sidebar row touches", () => {
     const replied = markUnreadFrom(synced, 1, 40, 0, since);
 
     expect(replied.sidebar.rows[1]).toBe(synced.sidebar.rows[1]);
+  });
+});
+
+describe("sidebar row tickets in the store", () => {
+  beforeEach(() => mutations.reset());
+
+  const rows = () => store.getState().sidebar.rows;
+
+  it("a 404 from before access came back doesn't block the restored row", () => {
+    // Room 2 was lost. Its 404 read goes out; access comes back during a gap; a resync reads.
+    mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
+
+    const notFound = mutations.openRowTicket();
+    const resync = mutations.openRowTicket();
+
+    // The 404 lands while the resync is on its way: the store already agrees the room is gone.
+    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(true);
+    mutations.resyncSidebar(sidebarFixture([general, design]), resync);
+    mutations.closeRowTicket(resync);
+
+    expect(rows()[2]).toEqual(design);
+
+    // Read again, it lands after the resync: stale, so the restored row stays.
+    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(false);
+    mutations.closeRowTicket(notFound);
+
+    expect(rows()[2]).toEqual(design);
+  });
+
+  it("a 404 from before sync restored the row leaves it", () => {
+    mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
+
+    const notFound = mutations.openRowTicket();
+
+    mutations.applyEvents([upserted(design)], 0);
+
+    expect(mutations.setRoomUnavailable(2, beginRoomRequest(), notFound)).toBe(false);
+    expect(rows()[2]).toEqual(design);
+    mutations.closeRowTicket(notFound);
+  });
+
+  it("keeps no touches once every request has settled", () => {
+    mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
+    mutations.applyEvents([upserted(read(general))], 0);
+
+    // Nothing in flight: nothing to outrank, so nothing is kept.
+    expect(store.getState().rowTouches.at).toEqual({});
+
+    const first = mutations.openRowTicket();
+
+    mutations.applyEvents([upserted(pinged(general))], 0);
+
+    const second = mutations.openRowTicket();
+
+    mutations.applyEvents([upserted(design)], 0);
+
+    expect(Object.keys(store.getState().rowTouches.at).sort()).toEqual(["1", "2"]);
+
+    // Only the second request is older than room 2's touch now.
+    mutations.closeRowTicket(first);
+
+    expect(Object.keys(store.getState().rowTouches.at)).toEqual(["2"]);
+
+    mutations.closeRowTicket(second);
+
+    expect(store.getState().rowTouches.at).toEqual({});
+  });
+
+  it("stays bounded while rooms come and go around short requests", () => {
+    mutations.loadSidebar(sidebarFixture([general]), rowClock(store.getState()));
+
+    for (let roomId = 100; roomId < 600; roomId++) {
+      const since = mutations.openRowTicket();
+
+      mutations.applyEvents([upserted(sidebarRowFixture(roomId, `pop-up ${roomId}`))], 0);
+      mutations.applyEvents([removed(roomId)], 0);
+
+      expect(Object.keys(store.getState().rowTouches.at).length).toBeLessThanOrEqual(1);
+      mutations.closeRowTicket(since);
+    }
+
+    expect(store.getState().rowTouches.at).toEqual({});
   });
 });
