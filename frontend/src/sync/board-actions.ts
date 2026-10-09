@@ -160,3 +160,9 @@ export const handoff = Effect.fn("boards.handoffWork")(function* (
 ) {
   yield* workActions.handOff(threadId, body);
 });
+
+export const linkForm = workActions.linkForm;
+
+export const addLink = workActions.addLink;
+
+export const removeLink = workActions.removeLink;

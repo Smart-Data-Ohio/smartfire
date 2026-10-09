@@ -1008,8 +1008,8 @@ async fn settings_and_profile_aliases_follow_through_for_each_ui() {
     assert_eq!(path, format!("/app/r/{closed}/settings"));
     assert_page(&path, &page, false);
     let (path, page) = follow(&mut next, &format!("/rooms/{board}/settings")).await;
-    assert_eq!(path, format!("/rooms/boards/{board}/edit?classic=1"));
-    assert_page(&path, &page, true);
+    assert_eq!(path, format!("/app/r/{board}/settings"));
+    assert_page(&path, &page, false);
     let (path, page) = follow(&mut next, &format!("/rooms/{direct}/settings")).await;
     assert_eq!(path, format!("/rooms/directs/{direct}/edit?classic=1"));
     assert_page(&path, &page, true);
@@ -1027,6 +1027,9 @@ async fn settings_and_profile_aliases_follow_through_for_each_ui() {
     let mut classic = a.sign_in(DAVID).await;
     let (path, page) = follow(&mut classic, &format!("/rooms/{closed}/settings")).await;
     assert_eq!(path, format!("/rooms/closeds/{closed}/edit"));
+    assert_page(&path, &page, true);
+    let (path, page) = follow(&mut classic, &format!("/rooms/{board}/settings")).await;
+    assert_eq!(path, format!("/rooms/boards/{board}/edit"));
     assert_page(&path, &page, true);
     let (path, page) = follow(&mut classic, &format!("/users/{JASON}/profile")).await;
     assert_eq!(path, format!("/users/{JASON}"));

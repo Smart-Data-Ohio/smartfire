@@ -10,7 +10,7 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
-import { HandoffResolver } from "./handoff-resolver.tsx";
+import { HandoffResolver, LinksResolver } from "./handoff-resolver.tsx";
 import {
   factsFixture,
   threadDetailFixture,
@@ -48,8 +48,24 @@ async function mount(path: string) {
     component: () => <p>Handoff destination</p>,
   });
 
+  const linksResolver = createRoute({
+    getParentRoute: () => root,
+    path: "/t/$threadId/links",
+    params: {
+      parse: ({ threadId }) => ({ threadId: Number(threadId) }),
+      stringify: ({ threadId }) => ({ threadId: String(threadId) }),
+    },
+    component: LinksResolver,
+  });
+
+  const links = createRoute({
+    getParentRoute: () => thread,
+    path: "links",
+    component: () => <p>Links destination</p>,
+  });
+
   const router = createRouter({
-    routeTree: root.addChildren([resolver, thread.addChildren([handoff])]),
+    routeTree: root.addChildren([resolver, linksResolver, thread.addChildren([handoff, links])]),
     basepath: "/app",
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -126,6 +142,41 @@ describe("HandoffResolver", () => {
     );
     expect(screen.queryByText("Handoff destination")).toBeNull();
     expect(router.history.location.href).toBe("/app/t/7/handoff");
+    expect(router.history.length).toBe(1);
+  });
+});
+
+describe("LinksResolver", () => {
+  it("finds the thread's room and replaces itself with the link editor", async () => {
+    const read = vi
+      .spyOn(actions.threads, "read")
+      .mockResolvedValue(threadDetailFixture(7, factsFixture(), workDetailFixture()));
+
+    const router = await mount("/app/t/7/links");
+
+    await screen.findByText("Links destination");
+    expect(read).toHaveBeenCalledWith(7);
+    expect(router.history.location.href).toBe("/app/r/4/t/7/links");
+    expect(router.history.length).toBe(1);
+  });
+
+  it("shows the unavailable page for a thread the viewer can't see", async () => {
+    vi.spyOn(actions.threads, "read").mockRejectedValue(new ActionError("NotFound", "Not found"));
+    const router = await mount("/app/t/7/links");
+
+    await screen.findByRole("region", { name: "Page not found" });
+    expect(router.history.location.href).toBe("/app/t/7/links");
+  });
+
+  it("explains an untracked thread and does not open the editor", async () => {
+    vi.spyOn(actions.threads, "read").mockResolvedValue(threadDetailFixture(7, null, null));
+    const router = await mount("/app/t/7/links");
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This thread isn't tracked as work",
+    );
+    expect(screen.queryByText("Links destination")).toBeNull();
+    expect(router.history.location.href).toBe("/app/t/7/links");
     expect(router.history.length).toBe(1);
   });
 });

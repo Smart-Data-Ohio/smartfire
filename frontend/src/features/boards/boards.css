@@ -914,6 +914,79 @@
     color: var(--danger-text);
   }
 
+  .post-link-remove {
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0.6;
+  }
+
+  .post-link-state + .post-link-remove {
+    margin-left: 0;
+  }
+
+  .post-link:hover .post-link-remove,
+  .post-link-remove:focus-visible {
+    opacity: 1;
+  }
+
+  .post-link-add {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .post-link-add-field {
+    padding-top: var(--space-3);
+  }
+
+  .post-link-add-note {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .post-link-add-error {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  /* Pinned to the bottom of whichever scrollport holds the form: the work toolbar, or the
+     thread when a post's intro is taller than the pane. The negative margin fills the form's
+     padding so the bar covers what scrolls underneath it. */
+  .post-link-add-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    background: var(--bg-sunken);
+  }
+
+  /* A long list would push Cancel and the submit button off the screen: the work toolbar only
+     gets a slice of the pane, and a post's intro starts at the top of the thread. The list
+     scrolls and the form stays under it, at every width. */
+  .post-links:has(.post-link-add) .post-link-list {
+    max-height: 8rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  @media (hover: none) {
+    .post-link-remove {
+      opacity: 1;
+    }
+  }
+
   .post-result {
     padding: var(--space-3);
     border-radius: var(--radius-md);

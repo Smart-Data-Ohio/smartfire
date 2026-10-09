@@ -155,12 +155,12 @@ describe("URL pane navigation", () => {
     expect(screen.getByRole("status").textContent).toBe("null");
   });
 
-  it("shows no pane for an automations URL on a non-board room", async () => {
+  it("opens an automations URL on a non-board room so the pane can explain", async () => {
     mutations.setRoomDetail(roomDetailFixture(4), beginRoomRequest());
     openPane("files");
     const router = await mount("/r/4/automations");
     expect(router.state.location.pathname).toBe("/r/4/automations");
-    expect(screen.getByRole("status").textContent).toBe("null");
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"automations"}');
   });
 
   it("opens the mapped pane and closes both the pane and its URL", async () => {

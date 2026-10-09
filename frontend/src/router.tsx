@@ -152,6 +152,21 @@ const handoffResolverRoute = createRoute({
   ),
 });
 
+/** The classic links page names only the thread: resolve its room, then open the form. */
+const linksResolverRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "t/$threadId/links",
+  params: {
+    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
+    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
+  },
+  ...chunked(() =>
+    import("./features/work/handoff-resolver.tsx").then((module) => ({
+      default: module.LinksResolver,
+    })),
+  ),
+});
+
 /** Bare classic message links resolve their conversation before opening its permalink. */
 const messageRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -248,6 +263,13 @@ const threadRoute = createRoute({
 const handoffRoute = createRoute({
   getParentRoute: () => threadRoute,
   path: "handoff",
+  component: () => null,
+});
+
+/** `/app/r/$roomId/t/$threadId/links`: the thread pane with its link editor open. */
+const linksRoute = createRoute({
+  getParentRoute: () => threadRoute,
+  path: "links",
   component: () => null,
 });
 
@@ -598,13 +620,14 @@ const routeTree = rootRoute.addChildren([
     personRoute,
     messageRoute,
     handoffResolverRoute,
+    linksResolverRoute,
     ...newRoomRoutes,
     roomRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,
       newThreadRoute,
       newBoardPostRoute,
-      threadRoute.addChildren([threadFizzyCardRoute, handoffRoute]),
+      threadRoute.addChildren([threadFizzyCardRoute, handoffRoute, linksRoute]),
       ...roomControlRoutes,
     ]),
     eventsRoute.addChildren([newEventRoute]),

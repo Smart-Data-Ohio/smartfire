@@ -10,7 +10,7 @@ import {
 import { clampPaneWidth } from "./right-pane.tsx";
 
 describe("selectRightPaneView", () => {
-  it("opens automations only for boards, including locally remembered panes", () => {
+  it("opens an automations URL on any room, and a remembered one only on a board", () => {
     const input = {
       threadId: null,
       newThreadParent: null,
@@ -24,7 +24,11 @@ describe("selectRightPaneView", () => {
     });
 
     for (const roomKind of ["open", "closed", "direct", "voice", "stage", undefined] as const) {
-      expect(selectRightPaneView({ ...input, roomKind })).toBeNull();
+      // The URL still opens the pane, so the pane can explain the refusal.
+      expect(selectRightPaneView({ ...input, roomKind })).toEqual({
+        kind: "pane",
+        pane: "automations",
+      });
       expect(
         selectRightPaneView({ ...input, roomKind, routePane: null, openPane: "automations" }),
       ).toBeNull();

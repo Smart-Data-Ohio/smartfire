@@ -183,9 +183,10 @@ pub use thread::{
 };
 pub use user::{CustomStatus, User, UserList, UserRole, UserStatus};
 pub use work::{
-    CreateWorkHandoff, UpdateWork, WorkDetail, WorkFacts, WorkFilter, WorkHandoffReceiver,
-    WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink, WorkLinkKind, WorkList,
-    WorkListRow, WorkOwnerCandidate, WorkOwnerSnapshot, WorkPullRequestState,
+    CreateWorkHandoff, CreateWorkLink, UpdateWork, WorkDetail, WorkFacts, WorkFilter,
+    WorkHandoffReceiver, WorkHistoryEntry, WorkHistoryHandoff, WorkHistoryKind, WorkLink,
+    WorkLinkEventCandidate, WorkLinkForm, WorkLinkKind, WorkList, WorkListRow, WorkOwnerCandidate,
+    WorkOwnerSnapshot, WorkPullRequestState,
 };
 
 /// A UTC instant as Rails' JSON encodes it: RFC 3339 with millisecond precision and a `Z`

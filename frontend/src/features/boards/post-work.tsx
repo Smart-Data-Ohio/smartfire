@@ -3,8 +3,6 @@ import type { AgentStep } from "../../gen/AgentStep.ts";
 import type { User } from "../../gen/User.ts";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
-import type { WorkLink } from "../../gen/WorkLink.ts";
-import type { WorkLinkKind } from "../../gen/WorkLinkKind.ts";
 import type { WorkOwnerSnapshot } from "../../gen/WorkOwnerSnapshot.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -14,7 +12,7 @@ import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Accordion } from "../../ui/accordion.tsx";
 import { Button } from "../../ui/button.tsx";
-import { Icon, type IconName } from "../../ui/icons/icon.tsx";
+import { Icon } from "../../ui/icons/icon.tsx";
 import { Menu, MenuGroup, MenuRadioItem, MenuSeparator } from "../../ui/menu.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -25,7 +23,6 @@ import { useNow } from "../threads/use-now.ts";
 import { handoffRefusal } from "../work/handoff-access.ts";
 import { HandoffDialog, useHandoffRoute } from "../work/handoff-dialog.tsx";
 import {
-  classicWorkUrl,
   parseTags,
   safeHttpsUrl,
   stepDuration,
@@ -35,6 +32,7 @@ import {
   WORK_STATUSES,
 } from "./board-format.ts";
 import { OwnerLine, StatusChip, TagList, UserFace } from "./board-parts.tsx";
+import { PostLinks } from "./post-links.tsx";
 
 const RESULT_MAX = 20_000;
 
@@ -284,52 +282,6 @@ function TagsFact({
   );
 }
 
-const LINK_ICON = {
-  pull_request: "git-pull-request",
-  event: "calendar",
-  drive_file: "file-text",
-} as const satisfies Record<WorkLinkKind, IconName>;
-
-/** A link goes into an `href` only when it's `https://` or a site path, as the contract says. */
-function linkHref(url: string): string | null {
-  return url.startsWith("https://") || (url.startsWith("/") && !url.startsWith("//")) ? url : null;
-}
-
-function LinkRow({ link }: { readonly link: WorkLink }) {
-  const href = linkHref(link.url);
-  const icon: IconName = LINK_ICON[link.kind] ?? "link";
-
-  const detail =
-    link.pullRequestState === null
-      ? link.eventCancelled
-        ? "Cancelled"
-        : null
-      : link.pullRequestState.replace("_", " ");
-
-  return (
-    <li className="post-link" data-kind={link.kind}>
-      <Icon name={icon} size={14} />
-      {href === null ? (
-        <span className="post-link-label">{link.label}</span>
-      ) : (
-        <a
-          className="post-link-label"
-          href={href}
-          {...(href.startsWith("https://") ? { target: "_blank", rel: "noreferrer" } : {})}
-        >
-          {link.label}
-        </a>
-      )}
-      {link.title === null ? null : <span className="post-link-title">{link.title}</span>}
-      {detail === null ? null : (
-        <span className="post-link-state" data-state={link.pullRequestState ?? "cancelled"}>
-          {detail}
-        </span>
-      )}
-    </li>
-  );
-}
-
 function ResultSection({
   threadId,
   detail,
@@ -563,10 +515,7 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/**
- * What a manager can do beyond the facts: hand the work to an agent (the dialog's URL over this
- * pane) and manage its links, still a classic page.
- */
+/** What a manager can do beyond the facts: hand the work to an agent (the dialog's URL over this pane). */
 function PostWorkActions({
   threadId,
   detail,
@@ -585,40 +534,36 @@ function PostWorkActions({
       receiverCount: detail.handoffReceivers.length,
     }) === null;
 
+  if (!offering || detail === null) {
+    return null;
+  }
+
   return (
     <div className="post-classic">
-      <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
-        Manage links
-        <Icon name="arrow-up-right" size={12} />
-      </a>
-      {offering && detail !== null ? (
-        <>
-          <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
-            Hand off to an agent
-          </Button>
-          <HandoffDialog
-            threadId={threadId}
-            threadName={name}
-            work={detail}
-            open={handingOff}
-            onOpenChange={(open) => {
-              if (!open) closeHandoff();
-            }}
-          />
-        </>
-      ) : null}
+      <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
+        Hand off to an agent
+      </Button>
+      <HandoffDialog
+        threadId={threadId}
+        threadName={name}
+        work={detail}
+        open={handingOff}
+        onOpenChange={(open) => {
+          if (!open) closeHandoff();
+        }}
+      />
     </div>
   );
 }
 
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
- * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, the agent's steps, the work history, the handoff dialog, and the way to the classic
- * links page.
+ * a control for whoever may change it), the agent's run, what's linked (with its editor), the
+ * pinned result with its editor, the agent's steps, the work history and the handoff dialog.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
+  const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
   const detail = useStore((state) => state.threadPanes[threadId]?.work ?? null);
 
   const permissions: ThreadPermissions | null = useStore(
@@ -664,19 +609,16 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
           </Fact>
         )}
       </dl>
-      {work.links.length > 0 ? (
-        <section className="post-links" aria-label="Linked">
-          <h3 className="post-section-title">
-            <Icon name="link" size={14} />
-            Linked
-          </h3>
-          <ul className="post-link-list">
-            {work.links.map((link) => (
-              <LinkRow key={link.id} link={link} />
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      {roomId === null ? null : (
+        <PostLinks
+          // Another post's links start afresh: no busy change or draft carries over.
+          key={threadId}
+          threadId={threadId}
+          roomId={roomId}
+          links={work.links}
+          editable={permissions !== null}
+        />
+      )}
       <ResultSection
         threadId={threadId}
         detail={detail}
