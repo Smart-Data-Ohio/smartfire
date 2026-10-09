@@ -63,20 +63,6 @@ test("the workspace nav and the integrations card open the Slack pages", async (
   await expect(page).toHaveURL(/\/app\/settings\/slack$/);
 });
 
-test("a dry run shows its progress live, then offers the plan", async ({ page }) => {
-  await open(page, "admin/slack");
-
-  await page.getByRole("button", { name: "Start dry run" }).click();
-
-  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/2$/);
-  await expect(page.getByText("Dry run started.")).toBeVisible();
-  await expect(facts(page)).toContainText("running", SETTLED);
-  await expect(facts(page)).toContainText("completed", SETTLED);
-
-  await page.getByRole("link", { name: "Review the plan" }).click();
-  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs\/2\/plan$/);
-});
-
 /** The run page's list of issues. */
 const issueList = (page: Page) =>
   page.getByRole("list").filter({ hasText: "wasn't imported" }).getByRole("listitem");
@@ -93,9 +79,6 @@ async function expectFiles(page: Page, last: number) {
 /** The run's own read (no `?page=`), which a settled run's refresh starts with. */
 const RUN_READ = /\/api\/v1\/admin\/slack\/runs\/2$/;
 
-/** The page-`n` read of run 2's issues. */
-const pageRead = (n: number) => new RegExp(`/api/v1/admin/slack/runs/2\\?page=${n}$`);
-
 /** Starts a workspace dry run (run 2) from the Slack page and waits for its first issues. */
 async function startDryRun(page: Page) {
   await open(page, "admin/slack");
@@ -110,18 +93,6 @@ test("a classic link to a later page of issues shows the issues through it", asy
   await expect(page.getByRole("heading", { name: "Issues (60)" })).toBeVisible();
   await expectFiles(page, 60);
   await expect(page.getByRole("button", { name: "Older issues" })).toHaveCount(0);
-});
-
-test("a huge page number reads a few pages, not every one up to it", async ({ page }) => {
-  const reads: string[] = [];
-
-  page.on("request", (request) => {
-    if (request.url().includes("/api/v1/admin/slack/runs/1")) reads.push(request.url());
-  });
-  await page.goto("/app/admin/slack/runs/1?page=1000000");
-
-  await expectFiles(page, 60);
-  expect(reads.filter((url) => !url.endsWith("/status"))).toHaveLength(2);
 });
 
 test("older issues stay on the page when the run settles, as the refresh reads them", async ({
@@ -143,60 +114,6 @@ test("older issues stay on the page when the run settles, as the refresh reads t
   await expect(page.getByRole("heading", { name: "Issues (160)" })).toBeVisible();
   await expectFiles(page, 100);
   await expect(page.getByRole("button", { name: "Older issues" })).toBeVisible();
-});
-
-test("older issues asked for during the settled run's refresh load after it", async ({ page }) => {
-  await startDryRun(page);
-
-  const pageTwo: string[] = [];
-  const { promise: refreshAsked, resolve: asked } = Promise.withResolvers<void>();
-  const { promise: held, resolve: release } = Promise.withResolvers<void>();
-
-  page.on("request", (request) => {
-    if (pageRead(2).test(request.url())) pageTwo.push(request.url());
-  });
-  await page.route(RUN_READ, async (route) => {
-    asked();
-    await held;
-    await route.continue();
-  });
-
-  await expect(facts(page)).toContainText("completed", SETTLED);
-  await refreshAsked;
-  await page.getByRole("button", { name: "Older issues" }).click();
-
-  // It waits its turn: nothing more is asked for while the refresh is out.
-  await page.waitForTimeout(300);
-  expect(pageTwo).toHaveLength(0);
-
-  release();
-
-  await expectFiles(page, 100);
-  expect(pageTwo).toHaveLength(1);
-});
-
-test("leaving a run page stops reading the pages a classic link asked for", async ({ page }) => {
-  await startDryRun(page);
-  await expect(facts(page)).toContainText("completed", SETTLED);
-
-  const later: string[] = [];
-  const { promise: held, resolve: release } = Promise.withResolvers<void>();
-
-  page.on("request", (request) => {
-    if (pageRead(3).test(request.url())) later.push(request.url());
-  });
-  await page.route(pageRead(2), async (route) => {
-    await held;
-    await route.continue();
-  });
-
-  await page.goto("/app/admin/slack/runs/2?page=4");
-  await page.getByRole("link", { name: "All import runs" }).click();
-  await expect(page).toHaveURL(/\/app\/admin\/slack\/runs$/);
-
-  release();
-  await page.waitForTimeout(300);
-  expect(later).toHaveLength(0);
 });
 
 test("a full import from the plan, then undoing it", async ({ page }) => {

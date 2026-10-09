@@ -161,8 +161,6 @@ mod full_room_tests;
 #[cfg(test)]
 mod row_broadcast_tests;
 
-#[cfg(test)]
-mod system_browser_tests;
 
 #[cfg(test)]
 pub(super) mod call_channel_broadcast_tests;

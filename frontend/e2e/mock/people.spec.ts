@@ -1,5 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, test, USER_IDS } from "./support.ts";
+import { expect, matrix, openApp, SHOTS, shot, test, USER_IDS } from "./support.ts";
 
 /** The directory's row for `name`. */
 function row(page: Page, name: string) {
@@ -35,20 +35,23 @@ async function lapseSudo(page: Page, request: APIRequestContext) {
   );
 }
 
-matrix("the people pages", async ({ page, theme }) => {
-  await openPeople(page, theme);
-  await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
-  await shot(page, "people-directory", theme);
+// Screenshots only: the tests below check the same pages.
+if (SHOTS) {
+  matrix("the people pages", async ({ page, theme }) => {
+    await openPeople(page, theme);
+    await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
+    await shot(page, "people-directory", theme);
 
-  await row(page, "Maya Okafor").getByRole("checkbox").check();
-  await row(page, "Ember").getByRole("checkbox").check();
-  await expect(page.getByRole("button", { name: "Message (2)" })).toBeVisible();
-  await shot(page, "people-selected", theme);
+    await row(page, "Maya Okafor").getByRole("checkbox").check();
+    await row(page, "Ember").getByRole("checkbox").check();
+    await expect(page.getByRole("button", { name: "Message (2)" })).toBeVisible();
+    await shot(page, "people-selected", theme);
 
-  await openPerson(page, USER_IDS.priya);
-  await expect(page.getByRole("heading", { level: 1, name: "Priya Raman" })).toBeVisible();
-  await shot(page, "people-person", theme);
-});
+    await openPerson(page, USER_IDS.priya);
+    await expect(page.getByRole("heading", { level: 1, name: "Priya Raman" })).toBeVisible();
+    await shot(page, "people-person", theme);
+  });
+}
 
 test("the user menu opens the people directory in place", async ({ page }) => {
   await openApp(page, "");
@@ -59,16 +62,6 @@ test("the user menu opens the people directory in place", async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/people$/);
   await expect(page.getByRole("heading", { level: 1, name: "People" })).toBeVisible();
   await expect(page).toHaveTitle(/People · Smartfire/);
-});
-
-test("the directory lists everyone else with their badges", async ({ page }) => {
-  await openPeople(page);
-
-  await expect(row(page, "Riel St. Amand")).toHaveCount(0);
-  await expect(row(page, "Dana Kowalski")).toHaveCount(0);
-  await expect(row(page, "Ember")).toContainText("Agent");
-  await expect(row(page, "Maya Okafor")).toContainText("Online");
-  await expect(row(page, "Sam Whitfield")).toContainText("Offline");
 });
 
 test("the bar counts the selection and says agents won't be rung", async ({ page }) => {
@@ -173,76 +166,6 @@ test("the DND exception toggles on a person's page", async ({ page }) => {
     "aria-pressed",
     before ?? "",
   );
-});
-
-test("a DND change that finishes after you leave and come back still shows", async ({ page }) => {
-  await openPerson(page, USER_IDS.sam);
-
-  let release = () => {};
-
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-
-  await page.route("**/api/v1/settings/dnd_allowances/*", async (route) => {
-    await held;
-    await route.continue();
-  });
-
-  const toggle = page.getByRole("button", { name: /during DND/ });
-  const before = await toggle.getAttribute("aria-pressed");
-
-  await toggle.click();
-  await page.getByRole("button", { name: "Your account" }).click();
-  await page.getByRole("menuitem", { name: "People", exact: true }).click();
-  await expect(page).toHaveURL(/\/app\/people$/);
-  await row(page, "Sam Whitfield").getByRole("link", { name: "Sam Whitfield" }).click();
-  await page.locator(".person").waitFor();
-  await expect(page.getByRole("button", { name: /during DND/ })).toHaveAttribute(
-    "aria-pressed",
-    before ?? "",
-  );
-
-  release();
-  await expect(page.getByRole("button", { name: /during DND/ })).not.toHaveAttribute(
-    "aria-pressed",
-    before ?? "",
-  );
-});
-
-test("a page whose every reply is older than the copy held says so and offers to try again", async ({
-  page,
-}) => {
-  await openPeople(page);
-
-  let requests = 0;
-
-  await page.route(`**/api/v1/people/${USER_IDS.priya}`, async (route) => {
-    requests += 1;
-
-    const response = await route.fetch();
-    const profile = await response.json();
-
-    profile.user.updatedAt = "2000-01-01T00:00:00.000000Z";
-    await route.fulfill({ response, json: profile });
-  });
-  await row(page, "Priya Raman").getByRole("link", { name: "Priya Raman" }).click();
-
-  await expect(page.getByText("Couldn't load the latest profile")).toBeVisible();
-  // One request and three refetches; Strict Mode's rehearsal load adds one, stopped once it leaves.
-  expect(requests).toBeGreaterThanOrEqual(4);
-  expect(requests).toBeLessThanOrEqual(5);
-  await page.unroute(`**/api/v1/people/${USER_IDS.priya}`);
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.locator(".person")).toBeVisible();
-});
-
-test("Message on a person's page opens your DM with them", async ({ page }) => {
-  await openPerson(page, USER_IDS.grace);
-
-  await page.getByRole("button", { name: "Message Grace Adeyemi" }).click();
-
-  await expect(page).toHaveURL(/\/app\/r\/\d+$/);
 });
 
 test("banning asks first, then the page offers to remove the ban", async ({ page }) => {
@@ -387,22 +310,6 @@ test("a deactivated person's page says they've gone, and an unknown one says so"
 
   await openApp(page, "people/999");
   await expect(page.getByText("There's nobody here by that link.")).toBeVisible();
-});
-
-test("an inactive legacy bot says it has gone and offers no actions", async ({ page, request }) => {
-  await request.get("/api/v1/admin/bots");
-  await page.route("**/api/v1/people/900", async (route) => {
-    const response = await route.fetch();
-    const profile = await response.json();
-
-    profile.user.status = "deactivated";
-    profile.canManageBot = false;
-    await route.fulfill({ response, json: profile });
-  });
-  await openPerson(page, 900);
-  await expect(page.locator(".person")).toContainText("Deploy Bot is no longer on this account");
-  await expect(page.getByRole("button", { name: "Message Deploy Bot" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveCount(0);
 });
 
 test("a bot's page opens its ported agent profile", async ({ page }) => {

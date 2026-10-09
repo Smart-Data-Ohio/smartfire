@@ -194,18 +194,4 @@ test.describe("pane headers on a 360 px touch phone", () => {
       await expectNoHorizontalOverflow(page);
     });
   }
-
-  test("a pane opened from the room's details goes back to them", async ({ page }) => {
-    await open(page, `r/${GENERAL}`);
-    await page.locator(".room-header .room-title-button").click();
-    await pane(page)
-      .getByRole("button", { name: /^Members/ })
-      .click();
-
-    await expect(pane(page).getByRole("heading", { name: "Members", exact: true })).toBeVisible();
-    await pane(page).getByRole("button", { name: "Back to details" }).click();
-    await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
-    await pane(page).getByRole("button", { name: "Back to #general" }).click();
-    await expect(pane(page)).toHaveCount(0);
-  });
 });

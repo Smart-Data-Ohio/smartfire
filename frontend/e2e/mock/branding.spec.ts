@@ -1,6 +1,6 @@
 import { crc32, deflateSync } from "node:zlib";
 import type { Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, syncWelcomed, test } from "./support.ts";
+import { expect, matrix, openApp, SHOTS, shot, syncWelcomed, test } from "./support.ts";
 
 /** One PNG chunk: length, type, data and the CRC over type and data. */
 function chunk(type: string, data: Buffer): Buffer {
@@ -473,21 +473,24 @@ test("the banner folds into the plain header as the list scrolls", async ({ page
   await expect(image).toHaveAttribute("src", /\/blobs\//);
 });
 
-matrix("the workspace profile", async ({ page, theme, phone }) => {
-  await openProfile(page, theme);
-  await upload(page, "icon", LOGO);
-  await upload(page, "banner", BANNER);
-  await page.mouse.move(0, 0);
-  await shot(page, "branding-admin", theme);
+// Screenshots only: the first test covers the rail and sidebar.
+if (SHOTS) {
+  matrix("the workspace profile", async ({ page, theme, phone }) => {
+    await openProfile(page, theme);
+    await upload(page, "icon", LOGO);
+    await upload(page, "banner", BANNER);
+    await page.mouse.move(0, 0);
+    await shot(page, "branding-admin", theme);
 
-  await page.goto("/app/");
-  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
-  await expect(sidebarHeader(page).locator(".sidebar-banner-image")).toBeVisible();
+    await page.goto("/app/");
+    await page.getByRole("complementary", { name: "Conversations" }).waitFor();
+    await expect(sidebarHeader(page).locator(".sidebar-banner-image")).toBeVisible();
 
-  if (!phone) {
-    await expect(railTile(page).locator("img")).toBeVisible();
-  }
+    if (!phone) {
+      await expect(railTile(page).locator("img")).toBeVisible();
+    }
 
-  await page.mouse.move(0, 0);
-  await shot(page, "branding-sidebar", theme);
-});
+    await page.mouse.move(0, 0);
+    await shot(page, "branding-sidebar", theme);
+  });
+}

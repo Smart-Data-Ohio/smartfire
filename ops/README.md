@@ -175,8 +175,9 @@ The nightly backup script uses the shared admin path.
 `restore-check.sh --image REF` (the monthly workflow builds REF from the checkout)
 migrates a disposable copy and runs `db-check` on it.
 
-`publish-image.yml` publishes `rust-git-<full SHA>` to `GCP_IMAGE` on every push to
-main. `deploy-gcp.yml` deploys only that tag, and
+`deploy-gcp.yml` calls `publish-image.yml` to publish a missing `rust-git-<full SHA>`
+image to `GCP_IMAGE` before release. Existing immutable tags retain their digest.
+The deploy workflow resolves that tag, and
 production only from a run dispatched on main. Its gate is a successful `rust.yml`
 push or scheduled run for the revision with a successful `Rust port` job. Preflight
 refuses an image whose `GIT_REVISION` isn't that revision (`EXPECTED_GIT_REVISION`), and

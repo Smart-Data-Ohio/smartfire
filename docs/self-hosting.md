@@ -4,32 +4,22 @@ Smartfire's Docker image contains everything needed for a fully-functional, sing
 This includes the web app, background jobs, caching, file serving, and SSL.
 This guide covers running the Docker image by hand.
 
-We recommend using `ghcr.io/smart-data-ohio/smartfire:main`, which tracks the default branch.
-It changes with every merged pull request, so it's the newest - but least battle-tested - version of Smartfire.
-Images are published for `linux/amd64` and `linux/arm64`, and signed with cosign.
+### Build the image
 
-Every push to the default branch also publishes a `sha-<short-sha>` tag for that exact commit,
-so you can pin your deployment to a specific version if you want to avoid unexpected changes:
-
-```bash
-# exactly one commit
-ghcr.io/smart-data-ohio/smartfire:sha-1a2b3c4
+```sh
+git clone https://github.com/Smart-Data-Ohio/smartfire.git
+cd smartfire
+docker build -t smartfire .
 ```
 
-Version tags (`v*`) additionally publish semver tags (`2.0.0`, `2.0`, `2`) and `latest`, so `latest` is always the newest release.
+The image is built from the [`Dockerfile`](../Dockerfile), with the repository root as the build context.
+To pin a version, check out a commit or a `v*` tag before building.
+To upgrade, pull the repository and rebuild.
 
 To run it you'll need three things:
 1. a machine that runs Docker
 2. a mounted volume (so that your database and file attachments are kept around between restarts)
 3. some environment variables for configuration
-
-If you'd rather build the image yourself from your own copy of the source, you can do that too:
-
-```sh
-docker build -t smartfire .
-```
-
-The image is built from the [`Dockerfile`](../Dockerfile), with the repository root as the build context.
 
 ### Mounting a storage volume
 
@@ -39,7 +29,7 @@ By default Docker containers don't persist storage between runs, so you'll want 
 The simplest way to do this is with the `--volume` flag with `docker run`. For example:
 
 ```sh
-docker run --volume smartfire:/rails/storage ghcr.io/smart-data-ohio/smartfire:main
+docker run --volume smartfire:/rails/storage smartfire
 ```
 
 That will create a named volume (called `smartfire`) and mount it into the correct path.
@@ -179,7 +169,7 @@ docker run \
   --env VAPID_PUBLIC_KEY=$YOUR_PUBLIC_KEY \
   --env VAPID_PRIVATE_KEY=$YOUR_PRIVATE_KEY \
   --env TLS_DOMAIN=chat.example.com \
-  ghcr.io/smart-data-ohio/smartfire:main
+  smartfire
 ```
 
 And here's an equivalent `docker-compose.yml` that you could use to run Smartfire via `docker compose up`:
@@ -187,7 +177,7 @@ And here's an equivalent `docker-compose.yml` that you could use to run Smartfir
 ```yaml
 services:
   web:
-    image: ghcr.io/smart-data-ohio/smartfire:main
+    image: smartfire
     restart: unless-stopped
     ports:
       - "80:80"
@@ -217,10 +207,10 @@ To support entirely distinct groups of customers, you would deploy multiple inst
 
 ### Upgrading
 
-All of Smartfire's state lives in the mounted volume, so upgrading is a matter of pulling a newer image and recreating the container:
+All of Smartfire's state lives in the mounted volume, so upgrading is a matter of rebuilding the image and recreating the container:
 
 ```sh
-docker pull ghcr.io/smart-data-ohio/smartfire:main
+git pull && docker build -t smartfire .
 ```
 
 The server never migrates the database on boot: it refuses to start on a database whose schema version differs from its own.
@@ -229,7 +219,7 @@ When a release brings migrations, take a backup (below), stop the container, and
 ```sh
 docker stop smartfire
 docker run --rm --volume smartfire:/rails/storage \
-  ghcr.io/smart-data-ohio/smartfire:main \
+  smartfire \
   campfire db-migrate /rails/storage/db/production.sqlite3
 ```
 
@@ -255,7 +245,7 @@ docker run --rm \
   --user root \
   --volume smartfire:/rails/storage \
   --volume "$PWD":/backup \
-  ghcr.io/smart-data-ohio/smartfire:main \
+  smartfire \
   tar czf "/backup/smartfire-backup.tar.gz" -C /rails storage
 ```
 
@@ -269,7 +259,7 @@ docker run --rm \
   --user root \
   --volume smartfire:/rails/storage \
   --volume "$PWD":/backup \
-  ghcr.io/smart-data-ohio/smartfire:main \
+  smartfire \
   bash -c "tar xzf /backup/smartfire-backup.tar.gz -C /rails &&
            cp /rails/storage/backups/production.sqlite3 /rails/storage/db/production.sqlite3 &&
            rm -f /rails/storage/db/production.sqlite3-wal /rails/storage/db/production.sqlite3-shm &&

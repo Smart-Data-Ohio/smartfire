@@ -8,17 +8,14 @@ inputs:
       none: no seeds.
     default: seeds
   toolchain:
-    description: Build the toolchain image from the main-written Buildx cache
+    description: Pull the input-addressed GHCR toolchain image, or build it locally if unavailable
     default: 'true'
   cargo-cache:
-    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds through ci/exec.sh), stable (the production toolchain check), or none'
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), or none'
     default: none
   free-disk:
     description: Delete unused preinstalled SDKs in the background
     default: 'true'
-  save-caches:
-    description: Write the toolchain image's Buildx cache (pushes to main only)
-    default: 'false'
 outputs:
   cargo-cache-hit:
     description: Whether the exact Cargo cache was restored (then nothing needs saving)
@@ -32,7 +29,7 @@ runs:
   using: composite
   steps:
     # Deleting these SDKs takes one to two minutes; nothing below needs the space at once.
-    - name: Make room for media, targets, and pinned browsers
+    - name: Make room for media and targets
       if: ${{ inputs.free-disk == 'true' }}
       shell: bash
       run: nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc >/dev/null 2>&1 &
@@ -44,30 +41,51 @@ runs:
       shell: bash
       run: python3 parity/bin/frozen-seeds restore
 
+    - name: Hash toolchain inputs
+      id: toolchain-inputs
+      if: ${{ inputs.toolchain == 'true' || inputs.cargo-cache != 'none' }}
+      shell: bash
+      run: echo "hash=$(python3 ci/toolchain-inputs.py)" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      if: ${{ inputs.toolchain == 'true' }}
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+
     - name: Set up Docker Buildx
       if: ${{ inputs.toolchain == 'true' }}
       uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      with:
+        driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
-    # The Dockerfile's toolchain stage: Rust with the image's own libvips and ffmpeg builds.
-    # Only pushes to main write caches. PRs and branch pushes may read but never write: this
-    # prevents cache poisoning and keeps their multi-gigabyte targets from evicting the image
-    # caches. Use immutable GitHub context directly, never a step-writable environment variable.
-    - name: Build toolchain image
+    - name: Pull toolchain image by digest
+      id: pull
       if: ${{ inputs.toolchain == 'true' }}
+      shell: bash
+      env:
+        TOOLCHAIN_REF: ghcr.io/smart-data-ohio/smartfire-toolchain:${{ steps.toolchain-inputs.outputs.hash }}
+      run: bash ci/pull-toolchain.sh "$TOOLCHAIN_REF"
+
+    # A PR with new toolchain inputs has no published tag yet. Build the same stage locally,
+    # without writing any shared image cache or publishing from a PR's checkout.
+    - name: Build toolchain image
+      if: ${{ inputs.toolchain == 'true' && steps.pull.outputs.pulled != 'true' }}
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         context: .
         file: Dockerfile
         target: toolchain
         tags: campfire-toolchain
+        build-args: BASE_REGISTRY=mirror.gcr.io
+        platforms: linux/amd64
         load: true
         push: false
-        cache-from: type=gha,scope=rust-toolchain
-        cache-to: ${{ inputs.save-caches == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
 
     # One cache per kind of build: the nextest harnesses' dependencies, clippy's check-mode
-    # dependencies plus the binaries' and doctests', or the correctness suites' stable-toolchain
-    # builds. Workspace crates are pruned before saving (ci/prune-target.py): a fresh
+    # dependencies plus the binaries' and doctests'. Workspace crates are pruned before saving (ci/prune-target.py): a fresh
     # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
     # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
     # and toolchain image), so an entry built by another compiler is never restored. The cache
@@ -78,7 +96,7 @@ runs:
       if: ${{ inputs.cargo-cache != 'none' }}
       shell: bash
       env:
-        TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'Dockerfile') }}-
+        TOOLCHAIN: rust-cargo-v5-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain-inputs.outputs.hash }}-
         INPUTS: ${{ hashFiles('Cargo.toml', 'crates/*/Cargo.toml', 'bench/*/Cargo.toml', '.cargo/config.toml', 'ci/cargo.sh', 'ci/cargo-config.toml') }}-
         LOCK: ${{ hashFiles('Cargo.lock') }}-
       run: |

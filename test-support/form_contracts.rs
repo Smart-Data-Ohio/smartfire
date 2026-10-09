@@ -215,7 +215,9 @@ pub fn assert_forms(name: &str, actual: &str, rails: &str) {
 /// Whether a response is one of the pages restyled in the SPA's look (the auth and public
 /// layouts). Their Rails vectors pin the forms, not the markup; every other page stays exact.
 pub fn reskinned(html: &str) -> bool {
-    html.contains("<body class=\"auth\">") || html.contains("<body class=\"public-page")
+    html.contains("<body class=\"auth\">")
+        || html.contains("<body class=\"auth ")
+        || html.contains("<body class=\"public-page")
 }
 
 /// The page's head metadata and its own forms (action, method, fields and values), comparable

@@ -1,6 +1,0 @@
-INSERT INTO channel_threads(id,auto_archive_after_minutes,closed_at,created_at,creator_id,last_activity_at,locked_at,messages_count,name,parent_message_id,result_markdown,result_updated_at,result_updated_by_id,room_id,run_url,updated_at,work_owner_id,work_status,work_status_changed_at) VALUES(9,4320,NULL,'2026-03-02 16:00:00',773523953,'2026-03-02 16:00:00',NULL,0,'Ship it',NULL,NULL,NULL,NULL,699448333,NULL,'2026-03-02 16:00:00',NULL,'planned','2026-03-02 16:00:00');
-INSERT INTO memberships(id,connected_at,connections,created_at,favorite_position,hand_raised_at,involvement,last_huddle_join_push_at,last_read_message_id,room_category_id,room_id,server_muted_at,stage_role,unread_at,updated_at,user_id) VALUES(1021579704,NULL,0,'2026-03-02 16:00:00.000',NULL,NULL,'mentions',NULL,NULL,NULL,699448333,NULL,NULL,NULL,'2026-03-02 16:00:00.000',773523953);
-INSERT INTO rooms(id,created_at,creator_id,deleted_at,destroy_enqueued_at,direct_member_key,icon_name,inbound_email_token,name,pins_changed_at,type,updated_at) VALUES(699448333,'2026-03-02 16:00:00',773523953,NULL,NULL,NULL,NULL,NULL,'Launch',NULL,'Rooms::Board','2026-03-02 16:00:00');
-UPDATE sqlite_sequence SET seq=9 WHERE rowid=13;
-UPDATE sqlite_sequence SET seq=1021579704 WHERE rowid=66;
-UPDATE sqlite_sequence SET seq=699448333 WHERE rowid=67;

@@ -54,6 +54,8 @@ export default defineConfig(({ mode }) => {
     ["/cable", { ...rust, ws: true }],
     ["/rails", rust],
     ["/session", rust],
+    // Classic's product tour stamp (src/api/tour-endpoints.ts).
+    ["/users/me/tour", rust],
   ]);
 
   if (!isMockEnabled(mode)) proxy.set("/api", { ...rust, ws: true });

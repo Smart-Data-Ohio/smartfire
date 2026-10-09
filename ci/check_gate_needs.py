@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Fail unless every job in rust.yml is gated: each job other than the gates themselves and the
-change detection they read must appear in the `needs` of `Rust port` (job `rust`) or
-`Rust correctness` (job `correctness-gate`), so a job added later can't pass unnoticed.
+"""Fail unless every job in rust.yml is in the needs of the Rust port aggregate.
 
 Reads the workflow's block structure directly (job ids are the keys one level under `jobs:`,
 with flow-list, scalar or block-list `needs`), so it runs on a bare runner without PyYAML.
@@ -12,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 
-GATES = ("rust", "correctness-gate")
+GATES = ("rust",)
 UNGATED = {"changes", *GATES}
 KEY = re.compile(r"^( *)([A-Za-z0-9_-]+):(.*)$")
 

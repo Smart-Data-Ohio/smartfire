@@ -21,8 +21,6 @@ pub mod controllers {
 
 // The app layer, under the paths this code used inside the campfire crate.
 use campfire_app::{cable, icons, integrations, queue, ruby, security, state};
-#[cfg(any(test, feature = "test-support"))]
-use campfire_app::test_support;
 
 mod app {
     pub(crate) use campfire_app::app::*;
