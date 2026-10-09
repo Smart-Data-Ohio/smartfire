@@ -7,15 +7,17 @@ use std::sync::atomic::Ordering;
 
 use campfire_api_types::{ClientFrame, ServerFrame};
 use futures_util::StreamExt;
-use futures_util::stream::{BoxStream, SelectAll};
 use tokio::io::WriteHalf;
 use tokio::sync::mpsc;
 use tokio::time::{Instant, sleep_until};
 
 use super::{Engine, Entry, Read, USER_TOPIC};
 use crate::Server;
-use crate::connection::{Io, close_socket, process_internal_reconnect, spawn_reader};
-use crate::pubsub::{Delivery, Frame, RecvError};
+use crate::connection::{
+    InternalMessages, Io, close_socket, poll_remote_reconnect, process_internal_reconnect,
+    spawn_reader,
+};
+use crate::pubsub::Frame;
 use crate::server::{ConnectRequest, Identified, internal_channel};
 use crate::socket::{Incoming, Writer};
 
@@ -40,6 +42,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     let (reader, mut incoming) = spawn_reader(crate::socket::Reader::new(read, deflate));
     let config = engine.ring.config().clone();
     let close_timeout = server.config().close_timeout;
+    let internal_capacity = server.config().stream_capacity;
 
     let unauthorized = Bye {
         reconnect: false,
@@ -49,7 +52,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
         say_bye(&mut sink, &mut incoming, unauthorized, close_timeout).await;
         return reader.abort();
     };
-    let mut internal = SelectAll::<BoxStream<'static, Result<Delivery, RecvError>>>::new();
+    let mut internal = InternalMessages::new();
     let identifier = user.connection_identifier();
     if !identifier.is_empty() {
         internal.push(
@@ -152,13 +155,15 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     loop {
         let ping_at = connection.last_sent + config.ping_after;
         let flush_at = connection.flush_at;
+        let mut disconnect = None;
+        let mut resync = None;
         tokio::select! {
             biased;
             Some(message) = internal.next() => {
                 if let Ok(message) = message
                     && let Some(reconnect) = process_internal_reconnect(message.frame.as_str())
                 {
-                    bye = Some(Bye { reconnect, reason: "remote" });
+                    disconnect = Some((message.sequence, reconnect));
                 }
             }
             Ok(()) = restarts.recv() => bye = Some(Bye { reconnect: true, reason: "server_restart" }),
@@ -189,15 +194,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
             Ok(()) = head.changed() => {
                 head.mark_unchanged();
-                if let Some(resync) = connection.catch_up(false) {
-                    // Write what came before the gap, then ask for the refetch.
-                    let frames = connection.take_batches();
-                    if connection.send(&mut sink, &frames).await.is_err()
-                        || connection.send(&mut sink, &[encode(&resync)]).await.is_err()
-                    {
-                        break;
-                    }
-                }
+                resync = connection.catch_up(false);
             }
             () = sleep_until(flush_at.unwrap_or_else(Instant::now)), if flush_at.is_some() => {}
             () = sleep_until(ping_at) => {
@@ -210,6 +207,23 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
         }
 
+        if let Some(remote) = connection.disconnect(disconnect, &mut internal, internal_capacity) {
+            // Once the person is disconnected, a refetch is moot.
+            resync = None;
+            bye.get_or_insert(remote);
+        }
+        if let Some(resync) = resync {
+            // Write what came before the gap, then ask for the refetch.
+            let frames = connection.take_batches();
+            if connection.send(&mut sink, &frames).await.is_err()
+                || connection
+                    .send(&mut sink, &[encode(&resync)])
+                    .await
+                    .is_err()
+            {
+                break;
+            }
+        }
         let due = connection.flush_at.is_some_and(|at| at <= Instant::now());
         if due || connection.pending.len() >= config.flush_max || bye.is_some() {
             let frames = connection.take_batches();
@@ -381,6 +395,26 @@ impl<U> Connection<U> {
         if self.flush_at.is_none() {
             self.flush_at = Some(Instant::now() + self.engine.ring.config().flush_interval);
         }
+    }
+
+    /// The `bye` for a remote disconnect: the one `seen` this turn, else one published since.
+    /// Like the classic connection, this looks again before anything pending goes out: a
+    /// disconnect published after select chose the head's change can precede events
+    /// `catch_up` then read. Only events published before the disconnect may still be sent
+    /// (the hub assigns ring and internal-channel sequences under one lock), so the rest are
+    /// dropped.
+    fn disconnect(
+        &mut self,
+        seen: Option<(u64, bool)>,
+        internal: &mut InternalMessages,
+        capacity: usize,
+    ) -> Option<Bye> {
+        let (sequence, reconnect) = seen.or_else(|| poll_remote_reconnect(internal, capacity))?;
+        self.pending.retain(|entry| entry.seq < sequence);
+        Some(Bye {
+            reconnect,
+            reason: "remote",
+        })
     }
 
     /// The pending events as `batch` frames of at most `flush_max` events each.
@@ -711,6 +745,69 @@ mod tests {
         unsubscribe(&connection, 2);
         assert!(connection.catch_up(false).is_none());
         assert!(!connection.topics.contains_key("room:1"));
+    }
+
+    /// A hub whose internal channel for user 1 the connection follows, as [`run`] does.
+    fn internal_channel_for_user_1() -> (Arc<crate::pubsub::Hub>, InternalMessages) {
+        let hub = crate::pubsub::Hub::new(16);
+        let mut internal = InternalMessages::new();
+        internal.push(
+            hub.subscribe(&internal_channel("1"), None)
+                .ordered_deliveries(),
+        );
+        (hub, internal)
+    }
+
+    fn pending_seqs(connection: &Connection<()>) -> Vec<u64> {
+        connection.pending.iter().map(|entry| entry.seq).collect()
+    }
+
+    /// Seq 1 moves the head, a revocation's disconnect is seq 2 and a later post seq 3, both
+    /// committed before `catch_up` reads the ring.
+    fn head_change_then_disconnect_and_post(hub: &crate::pubsub::Hub, connection: &Connection<()>) {
+        hub.sequenced(|seq| publish(connection, seq, Audience::User(1)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":false}"#,
+        );
+        hub.sequenced(|seq| publish(connection, seq, Audience::User(1)));
+    }
+
+    #[tokio::test]
+    async fn a_post_after_a_disconnect_read_before_it_is_seen_never_goes_out() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        // The select chose the head's change while no disconnect was waiting.
+        head_change_then_disconnect_and_post(&hub, &connection);
+        assert!(connection.catch_up(false).is_none());
+        assert_eq!(pending_seqs(&connection), [1, 3]);
+        // Before anything pending is written, the disconnect is looked for again.
+        let bye = connection
+            .disconnect(None, &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        assert!(!bye.reconnect);
+        assert_eq!(bye.reason, "remote");
+        assert_eq!(
+            pending_seqs(&connection),
+            [1],
+            "what came before the disconnect still goes out; the later post never does"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_disconnect_seen_on_a_later_turn_drops_what_was_read_past_it() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        head_change_then_disconnect_and_post(&hub, &connection);
+        assert!(connection.catch_up(false).is_none());
+        // The next turn's select takes the disconnect itself.
+        let message = internal.next().await.unwrap().unwrap();
+        let reconnect = crate::connection::process_internal_reconnect(message.frame.as_str());
+        let seen = reconnect.map(|reconnect| (message.sequence, reconnect));
+        assert_eq!(seen, Some((2, false)));
+        let bye = connection.disconnect(seen, &mut internal, 16).unwrap();
+        assert_eq!((bye.reconnect, bye.reason), (false, "remote"));
+        assert_eq!(pending_seqs(&connection), [1]);
     }
 
     #[test]
