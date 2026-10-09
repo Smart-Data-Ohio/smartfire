@@ -18,6 +18,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { LazyCreatePollDialog } from "../cards/lazy-create-poll-dialog.tsx";
+import { startHuddleFromCommand } from "../huddle/slash-huddle.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
@@ -432,11 +433,13 @@ export function Composer({
         }
 
         return;
-      case "start_huddle":
-        toast({
-          title: `Huddles in #${result.roomName} aren't in this app yet`,
-          description: "Start it from the classic view for now.",
-        });
+      case "start_huddle": {
+        const outcome = startHuddleFromCommand(result.roomId, result.roomName);
+
+        if (outcome.kind === "refused") {
+          toast({ title: outcome.title, description: outcome.description });
+        }
+      }
     }
   };
 
