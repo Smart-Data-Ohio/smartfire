@@ -219,6 +219,10 @@ async fn join_publishes_the_sidebar_row_once() {
     let mut david = app.sign_in(DAVID).await;
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
+    // Kevin already belongs. His open room reloads from the same twin.
+    let kevin = app.sign_in(KEVIN).await;
+    let mut kevin_sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    kevin_sync.welcome().await;
 
     let joined = david
         .write(post_join(&format!("/api/v1/rooms/{HQ}/join")))
@@ -240,6 +244,23 @@ async fn join_publishes_the_sidebar_row_once() {
     };
     assert_eq!(row.display_name, "HQ");
     assert_eq!(row.membership.user_id, DAVID);
+    assert_eq!(row.refresh_room, Some(true));
+
+    let others = kevin_sync
+        .until(
+            |event| {
+                matches!(
+                    &event.payload,
+                    api::SyncPayload::SidebarRowUpserted(row) if row.room.id == HQ
+                )
+            },
+            |_| false,
+        )
+        .await;
+    let api::SyncPayload::SidebarRowUpserted(row) = others.payload else {
+        unreachable!()
+    };
+    assert_eq!(row.membership.user_id, KEVIN);
     assert_eq!(row.refresh_room, Some(true));
 
     let again = david
