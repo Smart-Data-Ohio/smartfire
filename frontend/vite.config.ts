@@ -91,6 +91,9 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    // The code-highlight worker (src/lib/code-highlight) loads each grammar as its own chunk,
+    // which needs a module worker.
+    worker: { format: "es" },
     server: { proxy: Object.fromEntries(proxy) },
     test: {
       include: [
