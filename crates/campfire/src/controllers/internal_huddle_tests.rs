@@ -495,7 +495,7 @@ async fn start_node_fixture() -> String {
 async fn huddle_gateway_own_node_suite_against_rust_endpoints() {
     use axum::{Json, Router, routing::post};
     let rust = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let gateway = campfire_db::fixtures::reference_path("script/livekit-gateway").canonicalize().unwrap();
+    let gateway = rust.join("huddle-gateway").canonicalize().unwrap();
     // Build from the committed gateway lockfile in this test's own temporary directory.
     // A clean checkout must not rely on the worker's untracked .scratch/node-deps.
     let dependencies = tempfile::Builder::new().prefix("ws13-gateway-").tempdir().unwrap();

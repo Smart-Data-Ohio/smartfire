@@ -16,7 +16,7 @@ class CorrectnessArchive(unittest.TestCase):
         self.addCleanup(self.scratch.cleanup)
         self.root = Path(self.scratch.name)
         for directory in ("ci", ".github/workflows", "parity", "bin", "target/debug",
-                          "web/bin", "web/.bundle/livekit"):
+                          "huddle-gateway/.bundle/livekit"):
             (self.root / directory).mkdir(parents=True)
         for name in ("correctness.sh", "ignored_tests.py", "nextest_archive.py"):
             shutil.copyfile(ROOT / "ci" / name, self.root / "ci" / name)
@@ -31,8 +31,8 @@ class CorrectnessArchive(unittest.TestCase):
             'suite: [browsers, drive, livekit]\nbash ci/correctness.sh "$SUITE"\n')
         for name in ("Dockerfile.playwright", "package.json", "package-lock.json"):
             (self.root / "parity" / name).write_text("pinned input\n")
-        (self.root / "web/.bundle/livekit/env").write_text("")
-        self.executable("web/bin/livekit-local", '#!/bin/sh\n[ "$1" != start ] || exec sleep 30\n')
+        (self.root / "huddle-gateway/.bundle/livekit/env").write_text("")
+        self.executable("huddle-gateway/livekit-local", '#!/bin/sh\n[ "$1" != start ] || exec sleep 30\n')
         self.executable("bin/curl", "#!/bin/sh\nexit 0\n")
         self.executable("bin/docker", "#!/bin/sh\nexit 0\n")
         self.executable("bin/cargo", '''#!/usr/bin/env python3

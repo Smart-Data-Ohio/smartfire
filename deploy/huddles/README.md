@@ -55,7 +55,7 @@ LIVEKIT_API_SECRET=<same value as media host>
 LIVEKIT_GATEWAY_SECRET=<same value as media host>
 ```
 
-The gateway callback is fixed inside the deployment package as `https://chat.smartdata.net`. Never copy credentials from `.bundle/livekit`; those belong only to local development.
+The gateway callback is fixed inside the deployment package as `https://chat.smartdata.net`. Never copy credentials from `huddle-gateway/.bundle/livekit`; those belong only to local development.
 
 ## Start and update
 

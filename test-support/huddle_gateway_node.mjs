@@ -15,7 +15,7 @@ registerHooks({
   },
   load(url, context, next) {
     const loaded = next(url, context);
-    if (!url.endsWith("/script/livekit-gateway/gateway.test.mjs")) return loaded;
+    if (!url.endsWith("/huddle-gateway/gateway.test.mjs")) return loaded;
     let source = loaded.source.toString();
     source = replaceOne(source, 'const TOKEN = "header.payload.signature";', 'const TOKEN = process.env.WS13_JOIN_TOKEN;');
     source = replaceOne(source, 'const GRANT = Object.freeze({ grant_id: 17, room_name: "opaque-room", identity: "opaque-identity" });', 'const GRANT = Object.freeze({ grant_id: 17, room_name: "ws13-security-room", identity: "ws13-security-participant" });');

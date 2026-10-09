@@ -1,6 +1,6 @@
 // Unchanged gateway implementation; only its local test listener/callback differ.
 import { publishGatewayPort } from './ws13-gateway-readiness.mjs';
-import { createGateway } from '../../web/script/livekit-gateway/gateway.mjs';
+import { createGateway } from '../../huddle-gateway/gateway.mjs';
 const [campfireUrl,portFile]=process.argv.slice(2);
 let gateway;
 for(let port=52300;port<=52349;port++) {

@@ -119,7 +119,7 @@ Every shared screen now carries an always-visible **Expand** and **Full screen**
 
 ### How to verify
 
-1. Join a huddle in two browsers with `web/bin/livekit-local serve` as described in [local operation](huddles.md).
+1. Join a huddle in two browsers with `huddle-gateway/livekit-local serve` as described in [local operation](huddles.md).
 2. Share a screen showing small code text. Click Expand in the other browser and confirm the text becomes readable rather than an upscaled thumbnail. In Chrome, `chrome://webrtc-internals` should show the inbound frame width rising after expanding.
 3. Press Escape, then use Full screen and Escape again. Focus should land back on the control you used.
 4. With the huddle connected, run this in the console to confirm the processor is on the published track:

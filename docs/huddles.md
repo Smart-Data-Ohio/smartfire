@@ -7,8 +7,8 @@ Smartfire huddles use a project-local LiveKit Server for development. The setup 
 From the repository root:
 
 ```sh
-web/bin/livekit-local setup
-web/bin/livekit-local serve
+huddle-gateway/livekit-local setup
+huddle-gateway/livekit-local serve
 ```
 
 `serve` is the normal way to run the huddle infrastructure. It keeps the private LiveKit server and the authorization gateway in one foreground process. If either exits, it stops the other. This prevents media from continuing after the gateway can no longer enforce access. Smartfire itself runs cleanup reconciliation in-process, so there is no separate reconciler to start.
@@ -16,14 +16,14 @@ web/bin/livekit-local serve
 In another terminal, verify both endpoints:
 
 ```sh
-web/bin/livekit-local status
-web/bin/livekit-local gateway-status
+huddle-gateway/livekit-local status
+huddle-gateway/livekit-local gateway-status
 ```
 
-Setup stores the binary, archive, config, and credentials under the git-ignored `web/.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
+Setup stores the binary, archive, config, and credentials under the git-ignored `huddle-gateway/.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
 
 ```sh
-source web/.bundle/livekit/env
+source huddle-gateway/.bundle/livekit/env
 ```
 
 It exports the public `LIVEKIT_URL=ws://127.0.0.1:7883`, the private `LIVEKIT_INTERNAL_URL=http://127.0.0.1:7880`, and locally generated API and gateway secrets. Running setup again migrates an older local environment to this layout while preserving its existing LiveKit API key and secret. Setup never prints secret values. Do not copy these development credentials to a deployed environment.
@@ -31,11 +31,11 @@ It exports the public `LIVEKIT_URL=ws://127.0.0.1:7883`, the private `LIVEKIT_IN
 Keep `serve` running in the first terminal. In a second terminal, load its environment and start Smartfire as described in the [development guide](development.md#running-the-server):
 
 ```sh
-source web/.bundle/livekit/env
+source huddle-gateway/.bundle/livekit/env
 SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 cargo run -p campfire -- server
 ```
 
-The real-media huddle browser test runs in the `livekit` correctness suite (`bash ci/correctness.sh livekit`, see [`ci/README.md`](../ci/README.md)), which starts the private server with `livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
+The real-media huddle browser test runs in the `livekit` correctness suite (`bash ci/correctness.sh livekit`, see [`ci/README.md`](../ci/README.md)), which starts the private server with `huddle-gateway/livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
 
 Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../web/script/livekit-client/README.md) when updating its pinned version.
 
