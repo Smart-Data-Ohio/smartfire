@@ -4,13 +4,7 @@
  * URL hasn't got it), the room under it goes inert, it holds focus while open and gives it back
  * to the call bar's "Show call" when it closes. Desktop keeps the controller's `viewOpen`.
  */
-import {
-  useLocation,
-  useMatchRoute,
-  useNavigate,
-  useRouter,
-  useSearch,
-} from "@tanstack/react-router";
+import { useMatchRoute, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { type RefObject, useEffect, useRef } from "react";
 import { parseBoardSearch, type RoomSearch } from "../../lib/board-search.ts";
 import { usePhoneLayout } from "../panes/use-right-pane.ts";
@@ -127,41 +121,24 @@ function carriesCallParam(router: ReturnType<typeof useRouter>): boolean {
 let closing: object | null = null;
 
 /**
- * Keeps `call=1` honest: where it can't show (a desktop, no call on in the room) it comes off the
- * URL by replacing this entry. Only a call that ends while its view shows on this very entry
- * counts as the person closing it (which may step back); arriving at a stale `call=1` (Back,
- * Forward, a reload, a link) never does.
+ * Keeps `call=1` honest: where it can't show (a desktop, no call on in the room, as when the call
+ * ends) it comes off the URL by replacing this entry, path and other parameters kept. Only a
+ * person closing the view ever steps back.
  */
 export function useCallParamCleanup(roomId: number, close: CallViewNavigation["close"]): void {
   const phone = usePhoneLayout();
   const active = useCall((state) => callActiveIn(state, roomId));
   const asked = useCallParam();
-  const entry = useLocation({ select: (location) => location.state.__TSR_key });
-  const covers = phone && active && asked;
-  const stale = asked && !covers;
-
-  // The entry the view last showed on, while it did.
-  const shownOn = useRef<string | undefined | null>(null);
+  const stale = asked && !(phone && active);
   const closeRef = useRef(close);
 
   closeRef.current = close;
 
   useEffect(() => {
-    if (covers) {
-      shownOn.current = entry;
+    if (stale) {
+      closeRef.current("replace");
     }
-  }, [covers, entry]);
-
-  useEffect(() => {
-    if (!stale) {
-      return;
-    }
-
-    const endedHere = phone && shownOn.current === entry;
-
-    shownOn.current = null;
-    closeRef.current(endedHere ? "user" : "replace");
-  }, [stale, phone, entry]);
+  }, [stale]);
 }
 
 /**

@@ -414,6 +414,59 @@ test.describe("on a touch phone", () => {
     await expect(view).toBeVisible();
   });
 
+  test("a call that ends after Back leaves Forward on the plain room", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const general = new RegExp(`/r/${GENERAL}$`);
+    const index = () => page.evaluate(() => Number(window.history.state?.__TSR_index));
+    const roomIndex = await index();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(bar).toHaveCount(0);
+
+    // Forward reaches the call's old entry, now just the room: call=1 replaced off, no bounce.
+    await page.goForward();
+    await expect(page).toHaveURL(general);
+    await expect.poll(index).toBe(roomIndex + 1);
+    await page.waitForTimeout(500);
+    expect(await index(), "Forward stays put").toBe(roomIndex + 1);
+    await expect(view).toHaveCount(0);
+  });
+
+  test("a call that ends under its open view takes call=1 off in place", async ({ page }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const general = new RegExp(`/r/${GENERAL}$`);
+    const index = () => page.evaluate(() => Number(window.history.state?.__TSR_index));
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+
+    const callIndex = await index();
+
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(general);
+    expect(await index(), "replaced, not stepped back").toBe(callIndex);
+
+    // Back is ordinary: the room page the call opened over, then the room before it.
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+  });
+
   test("a call ended elsewhere leaves its old call=1 entry to Back and Forward", async ({
     page,
   }) => {
