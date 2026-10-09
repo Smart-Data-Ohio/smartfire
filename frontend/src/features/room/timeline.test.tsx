@@ -7,6 +7,7 @@ import {
 import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
+import type { Poll } from "../../gen/Poll.ts";
 import type { Timeline as RoomTimeline } from "../../store/model.ts";
 import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
@@ -21,6 +22,24 @@ const FOCUS = 3;
 
 /** Frames the timeline waits for a viewport before it must release newer paging anyway. */
 const ANCHOR_ATTEMPTS = 30;
+
+/** How long a permalink may stay hidden on a window or cards that never arrive. */
+const PLACEMENT_WAIT_MS = 2000;
+
+const cardsGate = vi.hoisted(() => ({ settled: true }));
+
+vi.mock("../cards/card-slot.tsx", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../cards/card-slot.tsx")>();
+
+  return {
+    ...actual,
+    useCardsChunkSettled: () => {
+      const settled = actual.useCardsChunkSettled();
+
+      return cardsGate.settled && settled;
+    },
+  };
+});
 
 const frames = new Map<number, FrameRequestCallback>();
 
@@ -123,7 +142,7 @@ class SilentObserver implements ResizeObserver {
  * ignores elements whose `offsetParent` is null, so rows report one. The callback is deferred so
  * it does not flush React from inside the list's own layout effect.
  */
-function measureList(): () => void {
+function measureList(row = 48, boxHeight = 360): () => void {
   const previousObserver = globalThis.ResizeObserver;
 
   const previousOffsetParent = Object.getOwnPropertyDescriptor(
@@ -139,7 +158,7 @@ function measureList(): () => void {
     }
 
     observe(target: Element): void {
-      const height = target.hasAttribute("data-message-row") ? 48 : 360;
+      const height = target.hasAttribute("data-message-row") ? row : boxHeight;
       const box = DOMRectReadOnly.fromRect({ width: 320, height });
 
       queueMicrotask(() => {
@@ -190,6 +209,7 @@ describe("permalink placement", () => {
 
   beforeEach(() => {
     store.setState(initialState, true);
+    cardsGate.settled = true;
     emitScroll = false;
     scrolls.length = 0;
     frames.clear();
@@ -330,6 +350,7 @@ describe("permalink placement", () => {
     scrolls.length = 0;
 
     // Above the centred row, and short of the end, so following the present cannot explain a jump.
+    // A touch is reader input. A later measurement's scroll event is not.
     const away = 48;
 
     await act(async () => {
@@ -338,7 +359,14 @@ describe("permalink placement", () => {
       }
 
       list.scrollTop = away;
-      list.dispatchEvent(new Event("scroll"));
+      const start = new TouchEvent("touchstart", { bubbles: true, cancelable: true });
+
+      Object.defineProperty(start, "touches", { value: [{ identifier: 1, clientY: 180 }] });
+      list.dispatchEvent(start);
+      const move = new TouchEvent("touchmove", { bubbles: true, cancelable: true });
+
+      Object.defineProperty(move, "touches", { value: [{ identifier: 1, clientY: 120 }] });
+      list.dispatchEvent(move);
     });
 
     const held = list?.scrollTop ?? away;
@@ -378,4 +406,140 @@ describe("permalink placement", () => {
     expect(store.getState().timelines[ROOM]?.ids).toEqual([]);
     expect(loadNewer).toHaveBeenCalledWith(ROOM);
   });
+
+  it("recentres when a later measurement scrolls without reader input", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+    await renderTimeline(FOCUS);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+
+    // The one-frame placing guard has cleared. Virtua then scrolls again while measuring.
+    for (let frame = 0; frame < 3; frame += 1) {
+      await flushFrame();
+    }
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+
+    expect(list).not.toBeNull();
+    scrolls.length = 0;
+
+    await act(async () => {
+      if (list === null) {
+        return;
+      }
+
+      list.scrollTop += 16;
+      list.dispatchEvent(new Event("scroll"));
+    });
+
+    const ids = [10, 11, 12, FOCUS];
+
+    await act(async () => {
+      store.setState({
+        messages: {
+          ...store.getState().messages,
+          ...Object.fromEntries(ids.map((id) => [id, messageFixture(id, ROOM)])),
+        },
+      });
+      patchTimeline({ ids, before: 9, after: 13, generation: 2 });
+    });
+
+    expect(scrolls.length).toBeGreaterThan(0);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+    expect(rowIndex(FOCUS)).toBeGreaterThan(0);
+  });
+
+  it("shows the loaded messages and pages newer when cards never settle", async () => {
+    let now = 0;
+
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    cardsGate.settled = false;
+    // Short rows, so the released list is within a page of the newer edge.
+    restoreMeasure = measureList(24, 24);
+    install([1, 2, FOCUS, 4], { after: 4 });
+    store.setState({
+      messages: {
+        ...store.getState().messages,
+        [FOCUS]: messageFixture(FOCUS, ROOM, { poll: heldPoll(FOCUS) }),
+      },
+    });
+    await renderTimeline(FOCUS);
+
+    const shell = document.querySelector(".t-skel");
+
+    expect(shell).not.toBeNull();
+    expect(shell?.classList.contains("is-revealed")).toBe(false);
+    expect(loadNewer).not.toHaveBeenCalled();
+
+    now = PLACEMENT_WAIT_MS - 1;
+    await flushFrame();
+    expect(shell?.classList.contains("is-revealed")).toBe(false);
+    expect(loadNewer).not.toHaveBeenCalled();
+
+    now = PLACEMENT_WAIT_MS;
+    await flushFrame();
+    const content = document.querySelector(".t-skel-content");
+
+    expect(shell?.classList.contains("is-revealed")).toBe(true);
+    expect(content?.hasAttribute("inert")).toBe(false);
+    expect(content?.textContent).toContain("Message 1");
+    expect(loadNewer).toHaveBeenCalledWith(ROOM);
+  });
+
+  it("does not yank after a wheel when a delayed around replacement lands", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+    await renderTimeline(FOCUS);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+
+    for (let frame = 0; frame < ANCHOR_ATTEMPTS && frames.size > 0; frame += 1) {
+      await flushFrame();
+    }
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+
+    expect(list).not.toBeNull();
+
+    await act(async () => {
+      list?.dispatchEvent(
+        new WheelEvent("wheel", { deltaY: -48, bubbles: true, cancelable: true }),
+      );
+    });
+
+    const held = list?.scrollTop ?? 0;
+
+    scrolls.length = 0;
+
+    const ids = [10, 11, 12, FOCUS];
+
+    await act(async () => {
+      store.setState({
+        messages: {
+          ...store.getState().messages,
+          ...Object.fromEntries(ids.map((id) => [id, messageFixture(id, ROOM)])),
+        },
+      });
+      patchTimeline({ ids, before: 9, after: 13, generation: 2 });
+    });
+
+    expect(scrolls).toEqual([]);
+    expect(list?.scrollTop).toBe(held);
+  });
 });
+
+function heldPoll(messageId: number): Poll {
+  return {
+    id: 40,
+    messageId,
+    asOf: "2026-10-06T00:00:00.000Z",
+    multiple: false,
+    anonymous: false,
+    closesAt: null,
+    closedAt: null,
+    closed: false,
+    totalVotes: 0,
+    options: [{ id: 401, label: "Tea", votes: 0, voterIds: [] }],
+  };
+}

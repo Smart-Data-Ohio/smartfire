@@ -80,6 +80,7 @@ export function useViewportAnchor({
   placed,
   cardsLoaded,
   parentId = null,
+  onTakeControl,
 }: {
   readonly containerRef: RefObject<HTMLElement | null>;
   readonly listRef: RefObject<VListHandle | null>;
@@ -88,6 +89,8 @@ export function useViewportAnchor({
   readonly placed: boolean;
   readonly cardsLoaded: boolean;
   readonly parentId?: number | null;
+  /** Real reader input. Layout scrolls do not call this. */
+  readonly onTakeControl?: () => void;
 }) {
   const anchorRef = useRef<Anchor | null>(null);
   const finishCardsRef = useRef<(() => void) | null>(null);
@@ -697,7 +700,14 @@ export function useViewportAnchor({
     },
   );
 
-  const takeControl = (allowEnd = false) => cancelPlacement(true, allowEnd);
+  const noteReaderInput = useEffectEvent(() => {
+    onTakeControl?.();
+  });
+
+  const takeControl = (allowEnd = false) => {
+    noteReaderInput();
+    cancelPlacement(true, allowEnd);
+  };
 
   const finishPlacement = useEffectEvent(() => {
     const state = placementRef.current;
@@ -986,8 +996,14 @@ export function useViewportAnchor({
         middlePressed = event.type !== "auxclick";
         away = true;
       } else if (typeof PointerEvent !== "undefined" && event instanceof PointerEvent) {
+        const onScroller =
+          event.button === 0 &&
+          (event.target === element ||
+            (event.target instanceof Node && element.contains(event.target)));
+
         if (retainRow(event.target)) {
           retentionPendingRef.current = retainedIdRef.current;
+          noteReaderInput();
 
           return;
         }
@@ -1000,8 +1016,11 @@ export function useViewportAnchor({
           event.target !== element ||
           event.clientX < bounds.right - gutter ||
           element.scrollHeight <= element.clientHeight
-        )
+        ) {
+          if (onScroller) noteReaderInput();
+
           return;
+        }
 
         const thumb = Math.max(20, element.clientHeight ** 2 / element.scrollHeight);
 
@@ -1023,6 +1042,7 @@ export function useViewportAnchor({
       // to reassert the initial position when another row measurement arrives.
       cancelAnimationFrame(frame);
       // An away gesture must relinquish end intent before its first scroll event.
+      noteReaderInput();
       cancelPlacement(true, !away);
     };
 
@@ -1032,6 +1052,7 @@ export function useViewportAnchor({
 
         if (y === undefined || y === touchY) return;
 
+        noteReaderInput();
         cancelPlacement(true, y < touchY);
         touchY = y;
       } else if (

@@ -37,6 +37,12 @@ const LIVE_WINDOW_MS = 8000;
 const FOCUS_ANCHOR_ATTEMPTS = 30;
 
 /**
+ * How long a permalink may stay hidden while its window or cards are still loading.
+ * Past this, placement releases, the messages show, and the unread or bottom fallback runs.
+ */
+const PLACEMENT_WAIT_MS = 2000;
+
+/**
  * Placement done belongs to the focused message and the window generation it was placed in.
  * An `around` replacement bumps the generation, so that window is placed again unless the reader
  * has already taken the focus.
@@ -119,10 +125,10 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     n: 0,
   });
 
-  // Set while a scrollToIndex from here is what will move the list, so that scroll is not the
-  // reader taking over.
-  const placingRef = useRef(false);
-  const placeTokenRef = useRef(0);
+  // Wakes the placement effect while a window or its cards are still loading, until the deadline.
+  const [, setWaitTick] = useState(0);
+  const waitRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
+  const claimReaderRef = useRef<() => void>(() => undefined);
 
   const committedRef = useRef<
     CommittedEdges & { readonly last: string | null; readonly count: number }
@@ -197,6 +203,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     placement,
     placed: ready && placed === placement,
     cardsLoaded,
+    onTakeControl: () => claimReaderRef.current(),
   });
 
   /** Ends placement for `key`, so newer paging is allowed to follow the present. */
@@ -225,27 +232,13 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
   };
 
-  /** Scrolls programmatically. The scroll event this raises is not the reader taking over. */
+  claimReaderRef.current = claimReader;
+
   const scrollList = (
     index: number,
     options: { align: "center" | "start" | "end" | "nearest"; offset?: number; smooth?: boolean },
   ) => {
-    const list = listRef.current;
-
-    if (list === null) {
-      return;
-    }
-
-    const token = placeTokenRef.current + 1;
-
-    placeTokenRef.current = token;
-    placingRef.current = true;
-    list.scrollToIndex(index, options);
-    requestAnimationFrame(() => {
-      if (placeTokenRef.current === token) {
-        placingRef.current = false;
-      }
-    });
+    listRef.current?.scrollToIndex(index, options);
   };
 
   /** Tells the viewport anchor and the virtualiser about one programmatic place. */
@@ -305,10 +298,54 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       markPlaced();
     };
 
-    // Not loaded yet, or cards are still settling: the attempt has not started. Releasing here
-    // would let paging walk off a permalink that is about to be placed. The effect runs again
-    // when either changes.
+    if (anchor !== null && settledKeyRef.current === anchor) {
+      return () => cancelAnimationFrame(frame);
+    }
+
+    // The reader already left this focus. End the new window without scrolling back to it.
+    if (readerOwnsFocus && anchor !== null) {
+      releasePlacement(anchor);
+      markPlaced();
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    // Not loaded yet, or cards are still settling. The wait is bounded: a stalled import or a
+    // window that never arrives releases, shows whatever has loaded, and uses the fallback.
     if (!ready || awaitingCards) {
+      const key = anchor ?? placement;
+
+      if (waitRef.current.key !== key) {
+        waitRef.current = { key, at: performance.now() };
+      }
+
+      if (performance.now() - waitRef.current.at < PLACEMENT_WAIT_MS) {
+        frame = requestAnimationFrame(() => {
+          setWaitTick((tick) => tick + 1);
+        });
+
+        return () => cancelAnimationFrame(frame);
+      }
+
+      if (anchor !== null) {
+        releasePlacement(anchor);
+      }
+
+      if (ready || anchor !== null) {
+        markPlaced();
+      }
+
+      if (ready && list !== null && items.length > 0) {
+        if (focusIndex >= 0 && list.scrollSize > 0 && list.viewportSize > 0) {
+          atBottomRef.current = false;
+          placeRow(focusIndex, { align: "center" });
+        } else if (unreadIndex >= 0) {
+          placeRow(unreadIndex, { align: "start", offset: -8 });
+        } else {
+          placeRow(items.length - 1, { align: "end" });
+        }
+      }
+
       return () => cancelAnimationFrame(frame);
     }
 
@@ -327,18 +364,6 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
           placeRow(items.length - 1, { align: "end" });
         }
       }
-
-      return () => cancelAnimationFrame(frame);
-    }
-
-    if (settledKeyRef.current === anchor) {
-      return () => cancelAnimationFrame(frame);
-    }
-
-    // The reader already left this focus. End the new window without scrolling back to it.
-    if (readerOwnsFocus) {
-      releasePlacement(anchor);
-      markPlaced();
 
       return () => cancelAnimationFrame(frame);
     }
@@ -517,12 +542,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
-    // A scroll we didn't ask for means the reader has the list. That survives a later generation.
-    // The viewport anchor takes control from real input itself; its own corrections also scroll.
-    if (!placingRef.current && !awaitingCards && list.scrollSize > 0 && list.viewportSize > 0) {
-      claimReader();
-    }
-
+    // Layout and virtualizer scrolls are not the reader. Ownership comes from wheel, touch,
+    // scrollbar or scroller presses, navigation keys, and the jump and row-navigation calls.
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
