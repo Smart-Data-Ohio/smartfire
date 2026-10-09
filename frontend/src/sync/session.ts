@@ -138,8 +138,13 @@ const loadFirstPage = Effect.fnUntraced(function* (
   roomId: number,
   token: number,
   unread: { readonly firstUnreadMessageId: number; readonly count: number } | null,
+  load: number | null,
 ) {
-  if (!sameVisit(roomId, token)) {
+  // A newer read of this visit (a recovery) loads its own page: this one's page, or its
+  // failure, no longer counts.
+  const current = () => sameVisit(roomId, token) && (load === null || latestLoad(roomId, load));
+
+  if (!current()) {
     return;
   }
 
@@ -155,7 +160,7 @@ const loadFirstPage = Effect.fnUntraced(function* (
   yield* messages(roomId, cursor).pipe(
     Effect.tap((page) =>
       Effect.sync(() => {
-        if (!sameVisit(roomId, token)) {
+        if (!current()) {
           return;
         }
 
@@ -164,7 +169,8 @@ const loadFirstPage = Effect.fnUntraced(function* (
     ),
     Effect.catch((error) =>
       Effect.sync(() => {
-        if (!sameVisit(roomId, token)) {
+        // The room left the screen meanwhile (unavailable, or a preview): that outcome stays.
+        if (!current() || store.getState().rooms[roomId]?.detail == null) {
           return;
         }
 
@@ -175,19 +181,29 @@ const loadFirstPage = Effect.fnUntraced(function* (
   );
 });
 
-/** Boards keep their posts. A chat room replaces the window with this visit's first page. */
+/**
+ * Boards keep their posts. A chat room replaces the window with this visit's first page. `load`
+ * is the visit load of the read that landed `detail` (`null` for a join's), so a newer read's
+ * page wins.
+ */
 const loadTimeline = Effect.fnUntraced(function* (
   roomId: number,
   token: number,
   detail: RoomDetail,
+  load: number | null,
 ) {
   if (detail.room.kind === "board") {
     return;
   }
 
   mutations.setPageReplacing(roomId);
-  yield* loadFirstPage(roomId, token, detail.unread);
+  yield* loadFirstPage(roomId, token, detail.unread, load);
 });
+
+/** Whether `load` is still the visit's latest room read. */
+function latestLoad(roomId: number, load: number): boolean {
+  return visits.get(roomId)?.load === load;
+}
 
 /** How many times a superseded join re-reads the room before it gives up and shows the load error. */
 const RECOVERY_ATTEMPTS = 3;
@@ -245,7 +261,7 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 
     if (mutations.setRoomDetail(detail, started)) {
       clearRoomJoin(roomId);
-      yield* loadTimeline(roomId, token, detail);
+      yield* loadTimeline(roomId, token, detail, load);
     } else {
       yield* retryRejectedLoad(roomId, token);
     }
@@ -253,21 +269,25 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     return;
   }
 
+  // A failure from a read this visit has since read again (a recovery) changes nothing: the newer
+  // read owns the screen.
+  if (!latestLoad(roomId, load)) {
+    return;
+  }
+
   const kept = currentJoinDetail(roomId);
 
   if (kept !== null) {
     if (mutations.setRoomDetail(kept, started)) {
-      yield* loadTimeline(roomId, token, kept);
+      yield* loadTimeline(roomId, token, kept, load);
     }
 
     return;
   }
 
-  mutations.setPageFailed(roomId);
-
   if (Predicate.isTagged(loaded.failure, "NotFound")) {
     const preview = yield* Effect.result(openRoomPreview(roomId));
-    const latest = sameVisit(roomId, token) && visits.get(roomId)?.load === load;
+    const latest = sameVisit(roomId, token) && latestLoad(roomId, load);
 
     if (!latest) {
       return;
@@ -276,24 +296,45 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     if (Result.isSuccess(preview)) {
       if (mutations.setRoomPreview(roomId, preview.success, started)) {
         clearRoomJoin(roomId);
+        mutations.setPageFailed(roomId);
       }
 
       return;
     }
 
     if (Predicate.isTagged(preview.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId, started, rowsSince);
+      if (mutations.setRoomUnavailable(roomId, started, rowsSince)) {
+        mutations.setPageFailed(roomId);
+      }
 
       return;
     }
 
-    mutations.setRoomError(roomId, preview.failure.message);
+    yield* failRead(roomId, token, started, preview.failure.message);
 
     return;
   }
 
-  mutations.setRoomError(roomId, loaded.failure.message);
+  yield* failRead(roomId, token, started, loaded.failure.message);
 }, Effect.scoped);
+
+/**
+ * A room read (the visit's latest, outcome sequence `started`) failed: the error shows, and the
+ * page stops waiting, only when no newer room outcome has landed. When one has (a membership
+ * fact), the room is read again rather than left as it was.
+ */
+const failRead = Effect.fnUntraced(function* (
+  roomId: number,
+  token: number,
+  started: number,
+  message: string,
+) {
+  if (mutations.setRoomError(roomId, message, started)) {
+    mutations.setPageFailed(roomId);
+  } else {
+    yield* retryRejectedLoad(roomId, token);
+  }
+});
 
 /** The visit's own initial load. Recovery calls `readRoom` and leaves the visible state alone. */
 const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
@@ -318,7 +359,7 @@ retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) 
  * Rooms a resync gave the viewer a membership in (`mutations.resyncSidebar`'s answer): an open
  * visit with no detail on screen (unavailable after a 404, a join preview, or a first read whose
  * outcome the resync claimed) reads its room again. One re-read per visit at a time, started only
- * here, so it can't loop.
+ * for a read whose outcome a newer fact claimed, so it can't loop.
  */
 export const recoverResyncedRooms = Effect.fnUntraced(function* (roomIds: readonly number[]) {
   for (const roomId of roomIds) {
@@ -394,7 +435,7 @@ const installJoined = Effect.fnUntraced(function* (
     return;
   }
 
-  yield* loadTimeline(roomId, visit.token, detail);
+  yield* loadTimeline(roomId, visit.token, detail, null);
 });
 
 /**
@@ -405,6 +446,7 @@ const installJoined = Effect.fnUntraced(function* (
  */
 const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
   let failure = "Couldn't load this room";
+  let started = 0;
 
   for (let attempt = 0; attempt < RECOVERY_ATTEMPTS; attempt++) {
     if (attempt > 0) {
@@ -417,19 +459,25 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
       return;
     }
 
-    if (outcome !== null) {
-      failure = outcome;
+    started = outcome.started;
+
+    if (outcome.failure !== null) {
+      failure = outcome.failure;
     }
   }
 
   clearRoomJoin(roomId);
-  mutations.setPageFailed(roomId);
-  mutations.setRoomError(roomId, failure);
+
+  // The error lands only when no room outcome newer than the last read has.
+  if (mutations.setRoomError(roomId, failure, started)) {
+    mutations.setPageFailed(roomId);
+  }
 });
 
 /**
  * One of `recoverJoin`'s reads: true once the room is settled (installed, or unavailable), else
- * the failure's message, or null for a read a newer change superseded.
+ * the read's outcome sequence and its failure's message (null for a read a newer change
+ * superseded).
  */
 const rereadJoined = Effect.fnUntraced(function* (roomId: number) {
   const revision = invalidateRoom(roomId);
@@ -453,7 +501,7 @@ const rereadJoined = Effect.fnUntraced(function* (roomId: number) {
     return true;
   }
 
-  return Result.isFailure(fetched) ? fetched.failure.message : null;
+  return { failure: Result.isFailure(fetched) ? fetched.failure.message : null, started };
 }, Effect.scoped);
 
 /**

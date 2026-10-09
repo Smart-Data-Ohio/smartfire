@@ -333,8 +333,19 @@ export const mutations = {
   markRoomRead: (roomId: number) =>
     apply((state) => touchRows(reduce.markRoomRead(state, roomId), [roomId])),
   setRoomLoading: (roomId: number) => apply((state) => reduce.setRoomLoading(state, roomId)),
-  setRoomError: (roomId: number, error: string) =>
-    apply((state) => reduce.setRoomError(state, roomId, error)),
+  /**
+   * A room read failed. With `started` (the read's outcome sequence) it lands only when no newer
+   * room outcome has, like a read's detail, preview or 404; answers whether it landed.
+   */
+  setRoomError: (roomId: number, error: string, started?: number): boolean => {
+    if (started === undefined) {
+      apply((state) => reduce.setRoomError(state, roomId, error));
+
+      return true;
+    }
+
+    return landRoom(roomId, started, (state) => reduce.setRoomError(state, roomId, error));
+  },
   setRoomPreview: (roomId: number, preview: OpenRoomPreview, started: number) =>
     landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail, started: number) =>

@@ -1392,6 +1392,56 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("keeps a recovered room when the older first read then fails", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const release = yield* Deferred.make<void>();
+        let reads = 0;
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        // The first read is held and then fails; the recovery's read finds the room.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Deferred.await(release).pipe(
+                Effect.andThen(Effect.fail(new ServerError({ status: 500, message: "boom" }))),
+              )
+            : Effect.succeed(roomDetailFixture(12));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* settle;
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(timelineIds(12)).toEqual([1]);
+
+        // The old 500 arrives last: the recovered room stays.
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.error).toBeNull();
+        expect(store.getState().rooms[12]?.detail).not.toBeNull();
+        expect(timelineIds(12)).toEqual([1]);
+        expect(store.getState().timelines[12]?.status).toBe("ready");
+        expect(reads).toBe(2);
+      }),
+    ),
+  );
+
   it.effect("refetches a subscribed thread's header and replies", () =>
     withSync(
       Effect.gen(function* () {
