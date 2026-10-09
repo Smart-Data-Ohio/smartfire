@@ -23,6 +23,7 @@ import { useAnnouncer } from "../destinations/live-region.tsx";
 import { isAgent, UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { threadTitle } from "../threads/thread-format.ts";
+import { handoffRefusal } from "./handoff-access.ts";
 import { HandoffDialog, useHandoffRoute } from "./handoff-dialog.tsx";
 import { WorkHistory, WorkResult, WorkStepsSection } from "./work-details.tsx";
 import { WorkLinks, WorkOwner, WorkStatusPill } from "./work-facts.tsx";
@@ -271,7 +272,13 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
     return null;
   }
 
-  const canHandOff = permissions.canManageWork && (work?.handoffReceivers.length ?? 0) > 0;
+  const canHandOff =
+    work !== undefined &&
+    handoffRefusal({
+      tracked: true,
+      canManage: permissions.canManageWork,
+      receiverCount: work.handoffReceivers.length,
+    }) === null;
 
   return (
     <section className="work-bar" aria-label="Work">
@@ -311,7 +318,7 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
             threadId={threadId}
             threadName={name}
             work={work}
-            open={handingOff && permissions.canManageWork}
+            open={handingOff && canHandOff}
             onOpenChange={(next) => {
               if (!next) closeHandoff();
             }}

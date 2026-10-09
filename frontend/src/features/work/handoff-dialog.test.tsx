@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mutations, store } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
+import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
 import { HandoffDialog, useHandoffRoute } from "./handoff-dialog.tsx";
 import {
   factsFixture,
@@ -109,6 +110,10 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   mutations.reset();
+
+  for (const record of toastSnapshot()) {
+    removeToast(record.id);
+  }
 });
 
 describe("the handoff route", () => {
@@ -156,6 +161,35 @@ describe("the handoff route", () => {
     await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
 
     await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+    await act(async () => router.history.back());
+    expect(router.history.location.pathname).toBe("/earlier");
+  });
+
+  it("ignores a handoff that succeeds after cancel", async () => {
+    const pending = Promise.withResolvers<ReturnType<typeof threadDetailFixture>>();
+
+    const handOff = vi.spyOn(actions.work, "handOff").mockReturnValue(pending.promise);
+    const router = await mount(`/r/4/t/${THREAD}`);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Open handoff" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+    expect(handOff).toHaveBeenCalledOnce();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+
+    await act(async () => {
+      pending.resolve(threadDetailFixture(THREAD, factsFixture(), workDetailFixture()));
+      await pending.promise;
+    });
+
+    expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`);
+    expect(toastSnapshot()).toEqual([]);
     await act(async () => router.history.back());
     expect(router.history.location.pathname).toBe("/earlier");
   });
@@ -208,5 +242,82 @@ describe("the handoff form's server errors", () => {
     expect(
       within(dialog).queryByText("Summary is too long (maximum is 2000 characters)."),
     ).toBeNull();
+  });
+
+  it("moves focus to the first field a server refusal names", async () => {
+    vi.spyOn(actions.work, "handOff").mockRejectedValue(
+      new ActionError("Validation", "Summary is too long (maximum is 2000 characters)", {
+        links: ["must be http(s) URLs"],
+        summary: ["is too long (maximum is 2000 characters)"],
+      }),
+    );
+
+    loadThread();
+
+    const work = store.getState().work.details[THREAD];
+
+    if (work === undefined) {
+      throw new Error("expected the work detail");
+    }
+
+    const user = userEvent.setup();
+
+    render(
+      <HandoffDialog
+        threadId={THREAD}
+        threadName="Cursor pagination"
+        work={work}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+    const summary = within(dialog).getByRole("textbox", { name: "Summary" });
+
+    await user.type(summary, "Over to you");
+    summary.blur();
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+
+    expect(
+      await within(dialog).findByText("Summary is too long (maximum is 2000 characters)."),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+  });
+
+  it("moves focus to the form alert when a server refusal names no field", async () => {
+    vi.spyOn(actions.work, "handOff").mockRejectedValue(
+      new ActionError("Forbidden", "You cannot manage work in this thread"),
+    );
+
+    loadThread();
+
+    const work = store.getState().work.details[THREAD];
+
+    if (work === undefined) {
+      throw new Error("expected the work detail");
+    }
+
+    const user = userEvent.setup();
+
+    render(
+      <HandoffDialog
+        threadId={THREAD}
+        threadName="Cursor pagination"
+        work={work}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+
+    const alert = await within(dialog).findByRole("alert");
+
+    expect(alert.textContent).toBe("You cannot manage work in this thread");
+    await waitFor(() => expect(document.activeElement).toBe(alert));
   });
 });

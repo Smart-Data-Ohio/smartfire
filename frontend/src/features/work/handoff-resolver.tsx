@@ -15,9 +15,9 @@ interface Blocked {
  * `/app/t/$threadId/handoff`, where the classic handoff page
  * (`/threads/:id/work/handoff/new`) lands: it names only the thread, so this learns the thread's
  * room and replaces itself with the room's thread pane and its handoff dialog. A thread the
- * viewer can't see is a 404. A thread that isn't tracked, or that this viewer can't manage
- * (a board post included), stays here and says why: sending it on to the dialog and straight
- * back would loop.
+ * viewer can't see is a 404. A thread that isn't tracked, that this viewer can't manage
+ * (a board post included), or that no agent can take, stays here and says why: sending it on
+ * to the dialog and straight back would loop.
  */
 export function HandoffResolver() {
   const params = useParams({ strict: false });
@@ -40,6 +40,7 @@ export function HandoffResolver() {
         const message = handoffRefusal({
           tracked: detail.thread.work !== null,
           canManage: detail.permissions.canManageWork,
+          receiverCount: detail.work?.handoffReceivers.length ?? null,
         });
 
         if (message !== null) {

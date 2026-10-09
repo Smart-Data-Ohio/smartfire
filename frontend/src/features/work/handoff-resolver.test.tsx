@@ -114,4 +114,18 @@ describe("HandoffResolver", () => {
     expect(router.history.location.href).toBe("/app/t/7/handoff");
     expect(router.history.length).toBe(1);
   });
+
+  it("explains a thread no agent can take, and does not open the dialog", async () => {
+    vi.spyOn(actions.threads, "read").mockResolvedValue(
+      threadDetailFixture(7, factsFixture(), workDetailFixture({ handoffReceivers: [] })),
+    );
+    const router = await mount("/app/t/7/handoff");
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "No agent here can take this work. An agent needs to be in this room and allowed to post, manage threads and read messages.",
+    );
+    expect(screen.queryByText("Handoff destination")).toBeNull();
+    expect(router.history.location.href).toBe("/app/t/7/handoff");
+    expect(router.history.length).toBe(1);
+  });
 });

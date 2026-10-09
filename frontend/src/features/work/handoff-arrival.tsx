@@ -7,10 +7,10 @@ import { useHandoffRoute } from "./handoff-dialog.tsx";
 
 /**
  * The handoff URL over a thread that can't be handed off. The work bar and a board post only
- * mount the dialog for a manager of tracked work, so an untracked thread or a non-manager (a
- * board post's included) would otherwise sit on `/handoff` with nothing to see. Says why, once,
- * and leaves the URL the same way a close does: back when the app pushed it, otherwise replacing
- * it with the thread, so it never bounces onto itself.
+ * mount the dialog when an agent can take the work, so an untracked thread, a non-manager (a
+ * board post included), or a manager with nobody to receive it would otherwise sit on `/handoff`
+ * with nothing to see. Says why, once, and leaves the URL the same way a close does: back when
+ * the app pushed it, otherwise replacing it with the thread, so it never bounces onto itself.
  */
 export function HandoffArrival({ threadId }: { readonly threadId: number }) {
   const matchRoute = useMatchRoute();
@@ -21,6 +21,12 @@ export function HandoffArrival({ threadId }: { readonly threadId: number }) {
   const canManage = useStore(
     (state) => state.threadPanes[threadId]?.permissions?.canManageWork ?? null,
   );
+
+  const receiverCount = useStore((state) => {
+    const detail = state.threadPanes[threadId]?.work ?? null;
+
+    return detail === null ? null : detail.handoffReceivers.length;
+  });
 
   const { closeHandoff } = useHandoffRoute(threadId);
   const closeRef = useRef(closeHandoff);
@@ -39,7 +45,7 @@ export function HandoffArrival({ threadId }: { readonly threadId: number }) {
       return;
     }
 
-    const message = handoffRefusal({ tracked, canManage });
+    const message = handoffRefusal({ tracked, canManage, receiverCount });
 
     if (message === null) {
       return;
@@ -48,7 +54,7 @@ export function HandoffArrival({ threadId }: { readonly threadId: number }) {
     refused.current = true;
     toast({ title: message, tone: "danger" });
     closeRef.current();
-  }, [open, ready, canManage, tracked]);
+  }, [open, ready, canManage, tracked, receiverCount]);
 
   return null;
 }

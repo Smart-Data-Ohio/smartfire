@@ -22,6 +22,7 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
+import { handoffRefusal } from "../work/handoff-access.ts";
 import { HandoffDialog, useHandoffRoute } from "../work/handoff-dialog.tsx";
 import {
   classicWorkUrl,
@@ -576,13 +577,21 @@ function PostWorkActions({
   const name = useStore((state) => state.threads[threadId]?.name ?? "Post");
   const { open: handingOff, openHandoff, closeHandoff } = useHandoffRoute(threadId);
 
+  const offering =
+    detail !== null &&
+    handoffRefusal({
+      tracked: true,
+      canManage: true,
+      receiverCount: detail.handoffReceivers.length,
+    }) === null;
+
   return (
     <div className="post-classic">
       <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
         Manage links
         <Icon name="arrow-up-right" size={12} />
       </a>
-      {detail === null || detail.handoffReceivers.length === 0 ? null : (
+      {offering && detail !== null ? (
         <>
           <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
             Hand off to an agent
@@ -597,7 +606,7 @@ function PostWorkActions({
             }}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 }
