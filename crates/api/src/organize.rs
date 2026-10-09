@@ -7,7 +7,7 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
-use campfire_db::{Involvement, Membership, Room, RoomCategory, RoomType};
+use campfire_db::{Involvement, Membership, RoomCategory, RoomType};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_rooms::controllers::rooms::involvements;
 use campfire_web::concerns::{self, cast_integer};
@@ -150,12 +150,14 @@ async fn put_order(c: &mut Ctx) -> Result {
     )
 }
 
-/// The membership's row as it is now, hidden or not.
-async fn row(c: &Ctx, room: Room, membership_id: i64) -> Result<api::SidebarRow> {
+/// The membership's row as it is now, hidden or not: the membership and its room both read in
+/// the snapshot that renders them.
+async fn row(c: &Ctx, membership_id: i64) -> Result<api::SidebarRow> {
     c.app()
         .db
         .read_snapshot(move |conn| {
             let membership = Membership::find(conn, membership_id)?;
+            let room = membership.room(conn)?;
             dto::membership_row(conn, &room, &membership)
         })
         .await
@@ -185,7 +187,7 @@ async fn put_category(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let row = row(c, room, membership_id).await?;
+    let row = row(c, membership_id).await?;
     c.json(StatusCode::OK, &row)
 }
 
@@ -199,7 +201,7 @@ async fn delete_favorite(c: &mut Ctx) -> Result {
 
 async fn toggle_favorite(c: &mut Ctx, favorite: bool) -> Result {
     before_actions(c).await?;
-    let (mut membership, room) = set_room(c).await?;
+    let (mut membership, _) = set_room(c).await?;
     let membership_id = membership.id;
     c.app()
         .db
@@ -212,7 +214,7 @@ async fn toggle_favorite(c: &mut Ctx, favorite: bool) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let row = row(c, room, membership_id).await?;
+    let row = row(c, membership_id).await?;
     c.json(StatusCode::OK, &row)
 }
 

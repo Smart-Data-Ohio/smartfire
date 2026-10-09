@@ -150,6 +150,8 @@ async fn post_direct(c: &mut Ctx) -> Result {
         .app()
         .db
         .read_snapshot(move |conn| {
+            // Both read again in the snapshot that renders the row.
+            let room = Room::find(conn, room.id)?;
             let membership = Membership::find_by_room_and_user(conn, room.id, viewer)?
                 .ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
             dto::sidebar_row(conn, &room, &membership)

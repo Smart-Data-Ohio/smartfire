@@ -576,6 +576,9 @@ async fn mutation(c: &Ctx, room: Room) -> Result<api::RoomMutation> {
     c.app()
         .db
         .read_snapshot(move |conn| {
+            // The room and the membership both read in the snapshot that renders them. A room
+            // gone altogether took its memberships with it, so the one passed in still names it.
+            let room = Room::find_by_id(conn, room.id)?.unwrap_or(room);
             let membership = Membership::find_by_room_and_user(conn, room.id, viewer.id)?;
             let (detail, row) = match membership {
                 Some(membership) if !room.deleted() => (
