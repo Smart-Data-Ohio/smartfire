@@ -23,6 +23,7 @@ import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { EventDetail } from "../gen/EventDetail.ts";
@@ -65,6 +66,7 @@ import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
+import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
@@ -323,6 +325,11 @@ const work = {
     runAction(boardActions.update(threadId, body)),
   handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
     runAction(boardActions.handoff(threadId, body)),
+  linkForm: (threadId: number): Promise<WorkLinkForm> => runAction(workActions.linkForm(threadId)),
+  addLink: (threadId: number, input: CreateWorkLink): Promise<ThreadDetail> =>
+    runAction(workActions.addLink(threadId, input)),
+  removeLink: (threadId: number, linkId: number): Promise<ThreadDetail> =>
+    runAction(workActions.removeLink(threadId, linkId)),
   list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
   /** Loads (or reloads) a filter of the work list. */
   loadList: (filter: WorkFilter): Promise<void> => runAction(workActions.loadList(filter)),

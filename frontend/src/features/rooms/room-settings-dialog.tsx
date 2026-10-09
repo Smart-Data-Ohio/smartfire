@@ -80,10 +80,12 @@ function Pending({ load }: { readonly load: Load }) {
 
 /**
  * A room's settings (`/app/r/:id/settings`, the classic `rooms/<kind>/:id/edit` pages): its name
- * and icon, whether a text channel is private, who's in it (with stage roles), Delete, the GitHub
- * repositories it subscribes to, and (except on a board) its inbound email address. The creator
- * and administrators can change them; everyone else reads the room and is refused the two
- * integrations. Nothing about the room itself is written until "Save changes".
+ * and icon, whether a text channel is private, who's in it (with stage roles), and Delete. A board
+ * has the same name, icon and members, and a way through to its automations. Every room, including
+ * a board, can subscribe GitHub repositories here; inbound email is offered except on a board.
+ * The creator and administrators can change them; everyone else reads the room and is refused the
+ * two integrations. Nothing about the room itself is written until "Save changes"; then the room's
+ * header, sidebar row and member list update in place.
  */
 export default function RoomSettingsDialog({
   roomId,
@@ -397,6 +399,19 @@ export default function RoomSettingsDialog({
                   : "Everyone in the workspace is in it."
               }
             />
+          </div>
+        ) : null}
+        {kind === "board" && form.canSubmit ? (
+          <div className="room-privacy">
+            <Button
+              variant="secondary"
+              icon="settings"
+              onClick={() => {
+                void navigate({ to: "/r/$roomId/automations", params: { roomId } });
+              }}
+            >
+              Board automations
+            </Button>
           </div>
         ) : null}
         {readOnly ? (

@@ -5,6 +5,39 @@ use serde_json::json;
 use crate::tests::{assert_wire, user};
 use crate::*;
 
+#[test]
+fn work_link_form_and_create_round_trip() {
+    assert_wire(
+        &WorkLinkForm {
+            events: vec![WorkLinkEventCandidate {
+                id: 9,
+                title: "Review".into(),
+                starts_at: "2026-10-08T14:00:00.000Z".into(),
+                time_zone: "America/New_York".into(),
+            }],
+        },
+        json!({"events": [{"id":9,"title":"Review","startsAt":"2026-10-08T14:00:00.000Z","timeZone":"America/New_York"}]}),
+    );
+    for (kind, input) in [
+        (
+            WorkLinkKind::PullRequest,
+            json!({"kind":"pull_request","pullRequestUrl":"https://github.com/owner/repo/pull/123"}),
+        ),
+        (WorkLinkKind::Event, json!({"kind":"event","eventId":9})),
+        (
+            WorkLinkKind::DriveFile,
+            json!({"kind":"drive_file","driveUrl":"https://docs.google.com/document/d/abc/edit"}),
+        ),
+    ] {
+        let decoded: CreateWorkLink = serde_json::from_value(input.clone()).unwrap();
+        assert_eq!(decoded.kind, kind);
+        assert_wire(&decoded, input);
+    }
+    let empty: CreateWorkLink =
+        serde_json::from_value(json!({"kind":"event","eventId":null})).unwrap();
+    assert_eq!(empty.event_id, None);
+}
+
 fn post() -> Thread {
     Thread {
         id: 301,

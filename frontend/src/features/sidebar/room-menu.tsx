@@ -111,17 +111,12 @@ export function RoomMenuItems({ row, categories, onNewCategory }: RoomMenuItemsP
   const { kind } = row.room;
 
   const openSettings = () => {
-    if (kind === "board") {
-      // Boards live on their classic pages until they're ported.
-      window.location.assign(`/rooms/boards/${row.room.id}/edit`);
-    } else {
-      // Closing settings steps back to whatever page this menu was opened on.
-      void navigate({
-        to: "/r/$roomId/settings",
-        params: { roomId: row.room.id },
-        state: settingsOverState(row.room.id),
-      });
-    }
+    // Closing settings steps back to whatever page this menu was opened on.
+    void navigate({
+      to: "/r/$roomId/settings",
+      params: { roomId: row.room.id },
+      state: settingsOverState(row.room.id),
+    });
   };
 
   return (

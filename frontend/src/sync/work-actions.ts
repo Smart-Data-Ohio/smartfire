@@ -8,7 +8,9 @@
 import { Effect } from "effect";
 import { thread as fetchThread } from "../api/thread-endpoints.ts";
 import * as api from "../api/work-endpoints.ts";
+import * as links from "../api/work-link-endpoints.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFacts } from "../gen/WorkFacts.ts";
@@ -213,4 +215,23 @@ export const handOff = Effect.fn("work.handOff")(function* (
 /** Updates board work fields through the same serialized write path as the work controls. */
 export const update = Effect.fn("work.update")(function* (threadId: number, body: UpdateWork) {
   return yield* write(threadId, null, () => api.updateWork(threadId, body));
+});
+
+/** The event picker for adding a link. A read: it doesn't install a thread detail. */
+export const linkForm = links.workLinkForm;
+
+/** Adds one link and lands the detail the server answers. Not optimistic. */
+export const addLink = Effect.fn("work.addLink")(function* (
+  threadId: number,
+  input: CreateWorkLink,
+) {
+  return yield* write(threadId, null, () => links.createWorkLink(threadId, input));
+});
+
+/** Removes one link and lands the detail the server answers. Not optimistic. */
+export const removeLink = Effect.fn("work.removeLink")(function* (
+  threadId: number,
+  linkId: number,
+) {
+  return yield* write(threadId, null, () => links.deleteWorkLink(threadId, linkId));
 });

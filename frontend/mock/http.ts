@@ -83,11 +83,15 @@ export const conflict = (message: string) => plainError(409, "Conflict", message
 
 const VALIDATION: ApiError["_tag"] = "Validation";
 
-/** 422 `Validation` with one message on one field, as Rails' `errors.full_messages` reads. */
-export const validation = (field: string, message: string) =>
+/** 422 `Validation` on one field; `alert` may supply the classic controller's whole sentence. */
+export const validation = (
+  field: string,
+  message: string,
+  alert = `Validation failed: ${message}`,
+) =>
   new HttpError(422, {
     _tag: VALIDATION,
-    message: `Validation failed: ${message}`,
+    message: alert,
     fields: { [field]: [message] },
   });
 

@@ -16,6 +16,7 @@ import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { HandoffArrival } from "../work/handoff-arrival.tsx";
+import { LinksArrival } from "../work/links-arrival.tsx";
 import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
 import { foreignThreadHref } from "./thread-target.ts";
@@ -572,6 +573,7 @@ export function ThreadPane({
       />
       <WorkLive threadId={threadId} />
       <HandoffArrival threadId={threadId} />
+      <LinksArrival threadId={threadId} />
     </PaneFrame>
   );
 }

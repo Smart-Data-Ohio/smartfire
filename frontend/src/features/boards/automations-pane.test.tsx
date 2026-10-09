@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BoardAutomations } from "../../gen/BoardAutomations.ts";
 import { initialState } from "../../store/state.ts";
 import { mutations, store } from "../../store/store.ts";
+import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { BOARD, boardAutomations } from "../../test/board-fixtures.ts";
 import { BoardAutomationsPane } from "./automations-pane.tsx";
@@ -257,5 +258,31 @@ describe("the board automations pane", () => {
     );
     expect(field("Tag").value).toBe("");
     expect(field("Tag").disabled).toBe(false);
+  });
+
+  it("explains a member who cannot administer, without offering a retry", async () => {
+    vi.spyOn(actions.boards, "automations").mockRejectedValue(
+      new ActionError("Forbidden", "Not allowed"),
+    );
+
+    render(<BoardAutomationsPane roomId={BOARD} />);
+
+    expect(await screen.findByText("Automations are limited")).toBeTruthy();
+    expect(
+      screen.getByText("Only the person who made this board and administrators can open them."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("explains a board that isn't available, instead of a blank pane", async () => {
+    vi.spyOn(actions.boards, "automations").mockRejectedValue(
+      new ActionError("NotFound", "Not found"),
+    );
+
+    render(<BoardAutomationsPane roomId={BOARD} />);
+
+    expect(await screen.findByText("This board isn't available")).toBeTruthy();
+    expect(screen.getByText("You aren't in it, or it isn't a board.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 });
