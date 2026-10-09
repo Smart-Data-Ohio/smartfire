@@ -153,7 +153,8 @@ jobs:
                        b".github/actions/rust-setup/", b"frontend/src/gen/",
                        b"frontend/src/auth/", b"frontend/src/styles/", b"frontend/src/motion/",
                        b"frontend/dist/")
-          RUST_FILES = (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml", b"Dockerfile",
+          RUST_FILES = (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml", b"clippy.toml",
+                        b".clippy.toml", b"rustfmt.toml", b"Dockerfile",
                         b".dockerignore", b".github/workflows/rust.yml",
                         b"frontend/src/ui/button.css", b"frontend/src/ui/text-field.css",
                         b"frontend/src/ui/checkbox.css")

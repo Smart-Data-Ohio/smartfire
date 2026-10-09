@@ -43,8 +43,7 @@ and open http://localhost:3000.
 - Developing and testing: [docs/development.md](docs/development.md) covers prerequisites,
   tests (`cargo nextest`), lint, migrations and CI.
   [docs/rust-port.md](docs/rust-port.md) describes the port's status and verification.
-- Self-hosting the Docker image (`ghcr.io/smart-data-ohio/smartfire`, or
-  `docker build -t smartfire .`): [docs/self-hosting.md](docs/self-hosting.md).
+- Self-hosting the Docker image (`docker build -t smartfire .`): [docs/self-hosting.md](docs/self-hosting.md).
 
 When you start Smartfire for the first time, you'll be guided through a wizard to create an admin account. The email address that you enter for the admin account will be visible on the sign-in page, it's there so that people have someone to contact if they need help with their account. If that bothers you, put in any email address you want and create yourself a new admin account.
 

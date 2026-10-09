@@ -87,7 +87,7 @@ jobs:
       - name: Decide whether these checks are needed
         id: scope
         env:
-          PATTERN: '^(ops/|deploy/|\.github/workflows/)|^\.github/scripts/check-paths\.py$|^\.github/workflows/repo\.yml$'
+          PATTERN: '^(ops/|deploy/|\.github/workflows/)|^(Dockerfile|\.dockerignore)$|^\.github/scripts/check-paths\.py$|^\.github/workflows/repo\.yml$'
         run: python3 .github/scripts/check-paths.py
 
       - name: Test the release contract and workflows (ops)
