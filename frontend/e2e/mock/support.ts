@@ -1,7 +1,13 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, test as base, type Page } from "@playwright/test";
+import {
+  type APIRequestContext,
+  test as base,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 /** The seeded ids (mock/seed.ts). */
 export { ROOM_IDS, USER_IDS } from "../../mock/seed.ts";
@@ -14,6 +20,43 @@ export const PHONE = { width: 390, height: 844 } as const;
 export const TABLET = { width: 900, height: 1000 } as const;
 
 export type Theme = "light" | "dark";
+
+/** Wait for a native wheel gesture to move the list and finish scrolling. */
+export async function scrollByWheel(page: Page, list: Locator, delta: number): Promise<void> {
+  if (delta === 0) return;
+
+  await list.hover();
+  await list.evaluate((element) => {
+    const offset = element.scrollTop;
+
+    element.setAttribute("data-wheel-settled", "false");
+    element.addEventListener(
+      "wheel",
+      () => {
+        // Passive wheel listeners can run after the compositor has already scrolled.
+        let moved = element.scrollTop !== offset;
+
+        const scroll = () => {
+          moved ||= element.scrollTop !== offset;
+        };
+
+        const end = (event: Event) => {
+          if (event.target !== element || !moved) return;
+
+          element.setAttribute("data-wheel-settled", "true");
+          element.removeEventListener("scroll", scroll);
+          element.removeEventListener("scrollend", end);
+        };
+
+        element.addEventListener("scroll", scroll);
+        element.addEventListener("scrollend", end);
+      },
+      { capture: true, passive: true, once: true },
+    );
+  });
+  await page.mouse.wheel(0, delta);
+  await expect(list).toHaveAttribute("data-wheel-settled", "true");
+}
 
 /** Each test starts on a fresh seed: `/__mock/reset` (it also drops sync connections). */
 export const test = base.extend<{ resetMock: undefined }>({
@@ -28,7 +71,7 @@ export const test = base.extend<{ resetMock: undefined }>({
   ],
 });
 
-export { expect } from "@playwright/test";
+export { expect };
 
 interface HoldOptions {
   /**
@@ -79,6 +122,21 @@ export async function postMessage(request: APIRequestContext, body: MockPost): P
   const state = await (await request.get("/__mock/state")).json();
 
   await request.post("/__mock/post", { headers: { "X-CSRF-Token": state.csrfToken }, data: body });
+}
+
+/** Restores an ordinary thread for scenarios that need its full conversation viewport. */
+export async function stopTrackingThread(
+  request: APIRequestContext,
+  threadId: number,
+): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.patch(`/api/v1/threads/${threadId}/work`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { status: null, ownerId: null },
+  });
+
+  expect(response.ok()).toBe(true);
 }
 
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */

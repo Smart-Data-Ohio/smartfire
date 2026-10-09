@@ -10,8 +10,9 @@ import { useStore } from "../../store/store.ts";
 /**
  * A per-viewer preview from the store, fetched (through `load`) when the card mounts and the
  * store has none, or only a stale one, and whenever the preview changes to one that needs it. A
- * failed fetch stays failed until the card's Retry; `message.cards` drops the preview, so a
- * mounted card fetches it again. Staleness is judged in the effect, so rendering stays pure.
+ * failed fetch stays failed until the card's Retry; `message.cards` invalidates the preview
+ * (drops it, or marks a GitHub one stale), so a mounted card fetches it again. Staleness is
+ * judged in the effect, so rendering stays pure.
  */
 export function usePreview<Kind extends PreviewKind>(
   kind: Kind,

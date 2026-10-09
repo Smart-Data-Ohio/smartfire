@@ -8,10 +8,11 @@ import { store, useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
-import { hasCards, useCardsChunkSettled } from "../cards/card-slot.tsx";
+import { hasCards, useCardsChunkLoaded, useCardsChunkSettled } from "../cards/card-slot.tsx";
 import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
+import { useViewportAnchor } from "../messages/viewport-anchor.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { useFollowPosted } from "./follow-posted.ts";
 import { MessageRow, PendingRow } from "./message-row.tsx";
@@ -23,7 +24,7 @@ import {
   timelineItems,
 } from "./timeline-items.ts";
 
-/** Within this many px of the end counts as "at the bottom" (live messages keep it pinned). */
+/** Within this many px of the end, clear unread and new-message indicators. */
 const BOTTOM_SLOP = 40;
 
 /** Start fetching the next page when this close to an edge. */
@@ -153,6 +154,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const ready = timeline.status === "ready";
   const placement = `${roomId}:${timeline.generation}:${focusMessageId ?? ""}`;
   const cardsSettled = useCardsChunkSettled();
+  const cardsLoaded = useCardsChunkLoaded();
 
   // A loaded window that holds cards stays under the skeleton, unplaced, until their chunk
   // settles: placed earlier, the cards growing in above a permalinked row would push it out of
@@ -165,11 +167,37 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     items.some((item) => item.kind === "message" && hasCards(item.message));
 
   const firstKey = items[0]?.key ?? null;
-  const lastKey = items.at(-1)?.key ?? null;
+  // The loading row disappears when a newer page lands; follow from the previous content.
+  const lastKey = items.findLast((item) => item.kind !== "loading")?.key ?? null;
 
   // Older rows went in above the previous first row: keep the view anchored from the end.
   const shift = prepended(items, committedRef.current);
   const anchor = focusKey(focusMessageId, timeline.generation);
+
+  const focusIndex =
+    focusMessageId === null
+      ? -1
+      : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+
+  const unreadIndex = items.findIndex((item) => item.kind === "unread");
+
+  const {
+    capture: captureAnchor,
+    settle: settleAnchor,
+    place: placeAnchor,
+    isPlacing,
+    canFollow,
+    followEnd,
+    takeControl,
+    keepMounted,
+  } = useViewportAnchor({
+    containerRef,
+    listRef,
+    items,
+    placement,
+    placed: ready && placed === placement,
+    cardsLoaded,
+  });
 
   /** Ends placement for `key`, so newer paging is allowed to follow the present. */
   const releasePlacement = (key: string) => {
@@ -218,6 +246,24 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
         placingRef.current = false;
       }
     });
+  };
+
+  /** Tells the viewport anchor and the virtualiser about one programmatic place. */
+  const placeRow = (
+    index: number,
+    options: { align: "center" | "start" | "end"; offset?: number },
+  ) => {
+    const viewport = containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
+
+    if (viewport != null) {
+      viewport.dataset.scrollSettled = "false";
+    }
+
+    if (items[index] !== undefined) {
+      placeAnchor(index, options);
+    }
+
+    scrollList(index, options);
   };
 
   // Place the view once per (focus, generation): on the permalinked message, on the unread
@@ -269,13 +315,16 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     if (anchor === null) {
       if (list !== null && items.length > 0 && placed !== placement) {
         setPlaced(placement);
+        const viewport = containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
 
-        const unreadIndex = items.findIndex((item) => item.kind === "unread");
+        if (viewport != null) {
+          viewport.dataset.scrollSettled = "false";
+        }
 
         if (unreadIndex >= 0) {
-          scrollList(unreadIndex, { align: "start", offset: -8 });
+          placeRow(unreadIndex, { align: "start", offset: -8 });
         } else {
-          scrollList(items.length - 1, { align: "end" });
+          placeRow(items.length - 1, { align: "end" });
         }
       }
 
@@ -309,10 +358,6 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return () => cancelAnimationFrame(frame);
     }
 
-    const focusIndex = items.findIndex(
-      (item) => item.kind === "message" && item.message.id === focusMessageId,
-    );
-
     if (focusIndex >= 0) {
       const key = anchor;
       const measured = list.scrollSize > 0 && list.viewportSize > 0;
@@ -321,7 +366,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       atBottomRef.current = false;
 
       if (measured) {
-        scrollList(focusIndex, { align: "center" });
+        placeRow(focusIndex, { align: "center" });
         releasePlacement(key);
         markPlaced();
       } else {
@@ -338,12 +383,10 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       releasePlacement(anchor);
       markPlaced();
 
-      const unreadIndex = items.findIndex((item) => item.kind === "unread");
-
       if (unreadIndex >= 0) {
-        scrollList(unreadIndex, { align: "start", offset: -8 });
+        placeRow(unreadIndex, { align: "start", offset: -8 });
       } else {
-        scrollList(items.length - 1, { align: "end" });
+        placeRow(items.length - 1, { align: "end" });
       }
     }
 
@@ -353,7 +396,12 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   // Follow new rows at the bottom; count them when scrolled up.
   useLayoutEffect(() => {
     const previous = committedRef.current;
-    const appended = previous.last !== null && lastKey !== previous.last && !shift;
+
+    const appended =
+      previous.last !== null &&
+      lastKey !== previous.last &&
+      !shift &&
+      items.some((item) => item.key === previous.last);
 
     committedRef.current = {
       first: firstKey,
@@ -362,21 +410,24 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       count: items.length,
     };
 
-    if (!appended || !ready) {
+    // A reader already at the bottom still follows while a place is settling: the viewport
+    // anchor's 1px check can stay open across the page that arrives after a long absence.
+    if (!appended || !ready || placed !== placement || (isPlacing() && !atBottomRef.current)) {
       return;
     }
 
     const last = items.at(-1);
     const mine = last?.kind === "pending";
 
-    if (atBottomRef.current || mine) {
+    if (canFollow() || atBottomRef.current || mine) {
+      followEnd();
       scrollList(items.length - 1, { align: "end" });
     } else if (timeline.after === null) {
       setNewBelow((count) => count + Math.max(1, items.length - previous.count));
     }
   });
 
-  useFollowPosted(`room:${roomId}`, items, listRef);
+  useFollowPosted(`room:${roomId}`, items, listRef, followEnd);
 
   // A resync can leave the window short of the present with the reader at its end (more was
   // posted than a page holds while they were away): page on and offer the jump without a scroll.
@@ -413,6 +464,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     );
 
     if (index >= 0) {
+      claimReader();
+      takeControl();
       scrollList(index, { align: "nearest" });
     }
   }, [editingId]);
@@ -465,6 +518,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
 
     // A scroll we didn't ask for means the reader has the list. That survives a later generation.
+    // The viewport anchor takes control from real input itself; its own corrections also scroll.
     if (!placingRef.current && !awaitingCards && list.scrollSize > 0 && list.viewportSize > 0) {
       claimReader();
     }
@@ -472,6 +526,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const distance = list.scrollSize - offset - list.viewportSize;
 
     atBottomRef.current = distance < BOTTOM_SLOP;
+    captureAnchor();
 
     if (atBottomRef.current) {
       setNewBelow(0);
@@ -493,6 +548,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const jumpToPresent = () => {
     setNewBelow(0);
     claimReader();
+    takeControl();
 
     if (focusMessageId !== null) {
       void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
@@ -504,6 +560,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
+    followEnd();
     scrollList(items.length - 1, { align: "end", smooth: true });
   };
 
@@ -537,6 +594,10 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             mentionsMe={mentionsViewer(item.message.bodyHtml, viewerId)}
             focused={item.message.id === focusMessageId}
             live={created > openedAt && now - created < LIVE_WINDOW_MS}
+            onNavigate={(allowEnd) => {
+              claimReader();
+              takeControl(allowEnd);
+            }}
           />
         );
       }
@@ -554,13 +615,28 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             style={LIST_STYLE}
             shift={shift}
             bufferSize={600}
+            keepMounted={keepMounted}
             onScroll={onScroll}
+            onScrollCapture={(event) => {
+              if (event.target === event.currentTarget)
+                event.currentTarget.dataset.scrollSettled = "false";
+            }}
+            onScrollEnd={() => {
+              const viewport =
+                containerRef.current?.querySelector<HTMLElement>("[data-message-list]");
+
+              if (viewport) viewport.dataset.scrollSettled = "true";
+
+              settleAnchor();
+            }}
             data={items}
             aria-label="Messages"
             role="log"
             // Focusable from script only: Home/End hold focus here while the edge row is drawn.
             tabIndex={-1}
             data-message-list
+            data-scroll-settled="false"
+            data-placement-settled="false"
           >
             {renderItem}
           </VList>
