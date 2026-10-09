@@ -283,7 +283,8 @@ test.describe("on a 360 px touch phone", () => {
     const input = page.locator(".composer-input").first();
 
     await input.fill("Standup notes are in the doc");
-    await page.getByRole("button", { name: "Schedule message" }).click();
+    // On a touch phone the schedule chevron folds into send; a long press on send opens it.
+    await longPress(page.getByRole("button", { name: "Send message" }));
 
     const sheet = page.getByRole("menu", { name: "Schedule message" });
 

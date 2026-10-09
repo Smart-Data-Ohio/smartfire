@@ -13,8 +13,10 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { SpeakingRing } from "../../ui/speaking-ring.tsx";
 import { Toggle } from "../../ui/toggle.tsx";
+import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { callController } from "./call-controller.ts";
 import { type CallPhase, livePhase, useCall } from "./call-store.ts";
+import { useCallViewCovers, useCallViewNavigation } from "./call-view-cover.ts";
 import { DevicePickers, MeterBar } from "./device-pickers.tsx";
 import { formatConnectionStats } from "./engine/stats.ts";
 import type { ConnectionQuality } from "./engine/transport.ts";
@@ -218,6 +220,10 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
   const live = livePhase(phase);
   const elapsed = useElapsed(phase === "connected" || phase === "reconnecting");
   const beaming = useJoinBeam(phase, roomId);
+  const phone = usePhoneLayout();
+  // A phone's call view is the URL's (`call=1`), a page over the room (call-view-cover.ts).
+  const covering = useCallViewCovers(roomId ?? 0);
+  const callView = useCallViewNavigation();
 
   if (phase === "idle" || phase === "prejoin" || roomId === null) {
     return null;
@@ -225,7 +231,7 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
 
   const connected = phase === "connected";
   const inRoom = viewedRoomId === roomId;
-  const shown = inRoom && viewOpen;
+  const shown = phone ? covering : inRoom && viewOpen;
 
   const statusLine =
     phase === "reconnecting" && reconnectSeconds !== null
@@ -344,6 +350,7 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 icon={screen ? "screen-share-off" : "screen-share"}
                 label={screen ? "Stop sharing" : "Share your screen"}
                 size="sm"
+                className="huddle-dock-share"
                 aria-pressed={screen}
                 data-on={screen || undefined}
                 disabled={!connected || !canPublish || busy.screen || streaming}
@@ -354,7 +361,19 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 label={shown ? "Hide call" : "Show call"}
                 size="sm"
                 aria-pressed={shown}
+                // Where the phone's covering call view hands focus back (call-view-cover.ts).
+                data-call-view-toggle={compact || undefined}
                 onClick={() => {
+                  if (phone) {
+                    if (shown) {
+                      callView.close("user");
+                    } else {
+                      callView.open(roomId);
+                    }
+
+                    return;
+                  }
+
                   // The call shows in its own room: from anywhere else, go there.
                   if (!inRoom) {
                     callController.setViewOpen(true);

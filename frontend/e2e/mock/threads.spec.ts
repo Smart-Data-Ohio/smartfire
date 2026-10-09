@@ -1,6 +1,16 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { MESSAGE_IDS, seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, syncWelcomed, type Theme, test } from "./support.ts";
+import {
+  expect,
+  matrix,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  simulateKeyboard,
+  syncWelcomed,
+  type Theme,
+  test,
+} from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -253,5 +263,64 @@ test.describe("phone", () => {
     await pane(page).getByRole("button", { name: "Back to #general" }).click();
     await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
     await expect(page.getByRole("log", { name: "Messages" })).toBeVisible();
+  });
+});
+
+test.describe("on a touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("the work facts fold to one line, and give way to the replies while typing", async ({
+    page,
+  }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+    const work = pane(page).getByRole("region", { name: "Work" });
+
+    await expect(work.getByRole("button", { name: /^Status: / })).toBeVisible();
+
+    // One line: the status, the owner and the details toggle share a row.
+    const middle = async (name: string | RegExp) => {
+      const box = await work.getByRole("button", { name }).boundingBox();
+
+      return (box?.y ?? 0) + (box?.height ?? 0) / 2;
+    };
+
+    const status = await middle(/^Status: /);
+    const toggle = await middle("Result, steps and history");
+
+    expect(Math.abs(status - toggle), "the toggle beside the status").toBeLessThan(4);
+
+    const section = await work.boundingBox();
+
+    expect(section?.height ?? 999, "one line").toBeLessThanOrEqual(52);
+
+    const keyboard = 320;
+    const visible = PHONE_TOUCH.viewport.height - keyboard;
+
+    await pane(page).getByRole("textbox", { name: "Reply…" }).click();
+    await simulateKeyboard(page, keyboard);
+    await expect(work).toBeHidden();
+
+    const log = await pane(page).getByRole("log", { name: "Replies" }).boundingBox();
+
+    expect(log?.height ?? 0, "the replies keep half the visible screen").toBeGreaterThanOrEqual(
+      visible * 0.5,
+    );
+  });
+
+  test("editing the work result keeps the editor in view while typing", async ({ page }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+    const work = pane(page).getByRole("region", { name: "Work" });
+
+    await work.getByRole("button", { name: "Result, steps and history" }).click();
+    await work.getByRole("button", { name: /^(Add|Edit) result$/ }).click();
+
+    const editor = work.getByRole("textbox", { name: "Result" });
+
+    await editor.click();
+    await simulateKeyboard(page, 320);
+    await expect(editor).toBeVisible();
+    await expect(editor).toBeFocused();
   });
 });

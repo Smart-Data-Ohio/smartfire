@@ -55,4 +55,12 @@
     background: var(--danger-soft);
     color: var(--danger-text);
   }
+
+  /* Phones: the 10 px tag grows to 11 px. */
+  @media (width < 720px) {
+    .agent-badge,
+    .agent-state {
+      font-size: 11px;
+    }
+  }
 }
