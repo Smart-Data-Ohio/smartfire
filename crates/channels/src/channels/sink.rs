@@ -22,15 +22,7 @@ use askama::Template;
 pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
     match event {
         Event::DisconnectUser { user_id, reconnect } => {
-            // Behind any sidebar removal still queued for them (a leave emits both), so the
-            // removal reaches their sockets first; otherwise at once.
-            let queued = app.is_some_and(|app| {
-                app.broadcasts
-                    .sync_disconnect_after_leaves(*user_id, *reconnect)
-            });
-            if !queued {
-                revocation::disconnect_user(cable, *user_id, *reconnect);
-            }
+            revocation::disconnect_user(cable, *user_id, *reconnect);
             true
         }
         Event::Broadcast(request) => {

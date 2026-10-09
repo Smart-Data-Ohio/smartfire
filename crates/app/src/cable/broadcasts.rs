@@ -281,29 +281,10 @@ impl Broadcasts {
     }
 
     /// `sidebar.row.removed` after a person left a room (`Membership#broadcast_room_removal_to_user`,
-    /// which the cable sink sends on the database writer): queued, and published later under the
-    /// room's lock, after any row of the room read before the leave.
+    /// which the cable sink sends on the database writer): published later under the room's
+    /// lock, after any row of the room read before the leave.
     pub fn sync_row_removed(&self, user_id: i64, room_id: i64) {
         sync::sidebar_row_removed_later(&self.server, &self.sync, user_id, room_id);
-    }
-
-    /// Queues closing the person's connections behind their queued leave removals, so each
-    /// removal goes out first; `false` when none is queued and the caller disconnects at once.
-    pub fn sync_disconnect_after_leaves(&self, user_id: i64, reconnect: bool) -> bool {
-        sync::disconnect_after_leaves(&self.sync, user_id, reconnect)
-    }
-
-    /// Runs `hook` on the writer once the next leave queue is created, before its drain is
-    /// scheduled.
-    #[cfg(feature = "test-support")]
-    pub fn after_next_sync_leave_queued(&self, hook: impl FnOnce() + Send + 'static) {
-        self.sync.after_next_leave_queued(hook);
-    }
-
-    /// Whether any of the person's leave steps is still queued.
-    #[cfg(feature = "test-support")]
-    pub fn sync_leaves_queued(&self, user_id: i64) -> bool {
-        self.sync.leaves_queued(user_id)
     }
 
     // The primitives

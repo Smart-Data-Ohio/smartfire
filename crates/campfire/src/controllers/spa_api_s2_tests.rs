@@ -1159,8 +1159,8 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
         .await
         .expect("the row was rendered")
         .unwrap();
-    // The writer doesn't wait for the paused row: the leave answers, and a write to another
-    // room commits, while this room is still held.
+    // The writer doesn't wait for the paused row: the leave answers, its disconnect closes
+    // Kevin's socket at once, and a write to another room commits, while this room is held.
     let reply = tokio::time::timeout(
         Duration::from_secs(5),
         kevin.write(json_body(
@@ -1172,6 +1172,27 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
     .await
     .expect("the leave doesn't wait for the room's lock");
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let mut before_bye = Vec::new();
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Batch { events }) => before_bye.extend(
+                events
+                    .into_iter()
+                    .filter(|event| row_event(room)(event))
+                    .map(|event| event.payload),
+            ),
+            Some(api::ServerFrame::Ping) => {}
+            Some(api::ServerFrame::Bye {
+                reconnect: true, ..
+            }) => break,
+            other => panic!("expected the leave's bye, got {other:?}"),
+        }
+    }
+    assert!(sync.next().await.is_none());
+    assert!(
+        before_bye.is_empty(),
+        "the paused row and the removal behind it are still waiting: {before_bye:?}"
+    );
     let body = json!({"clientMessageId": "elsewhere", "markdownSource": "Another room"});
     let reply = tokio::time::timeout(
         Duration::from_secs(5),
@@ -1184,61 +1205,43 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
     .await
     .expect("another room's write isn't held up by this room's lock");
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
-    let overtaking = tokio::time::timeout(
-        Duration::from_millis(300),
-        sync.until(row_event(room), |_| false),
-    )
-    .await
-    .map(|event| event.payload);
-    assert!(
-        overtaking.is_err(),
-        "the removal waits for the paused row: {overtaking:?}"
-    );
-    hold.release.send(()).unwrap();
 
-    // The paused row goes out, then the removal, then the leave's disconnect: nothing after the
-    // removal brings the row back (once the socket is gone, a row would only record a gap).
-    let mut events = Vec::new();
-    loop {
-        match sync.next().await {
-            Some(api::ServerFrame::Batch { events: batch }) => events.extend(
-                batch
-                    .into_iter()
-                    .filter(|event| row_event(room)(event))
-                    .map(|event| event.payload),
-            ),
-            Some(api::ServerFrame::Ping) => {}
-            Some(api::ServerFrame::Bye { .. }) | None => break,
-            Some(other) => panic!("unexpected {other:?}"),
-        }
-    }
-    assert!(
-        matches!(
-            events.first(),
-            Some(api::SyncPayload::SidebarRowUpserted(_))
-        ),
-        "{events:?}"
-    );
-    assert!(
-        matches!(events.last(), Some(api::SyncPayload::SidebarRowRemoved(gone)) if gone.room_id == room),
-        "the row stays gone: {events:?}"
-    );
+    // Kevin reconnects (as the client does after the bye), then the paused row goes out, then
+    // the removal: nothing after the removal brings the row back.
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    assert!(matches!(
+        sync.next().await,
+        Some(api::ServerFrame::Welcome { .. })
+    ));
+    hold.release.send(()).unwrap();
+    sync.until(
+        move |event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room),
+        |_| false,
+    )
+    .await;
+    let after = remaining_row_events(&a, &mut sync, room).await;
+    assert!(after.is_empty(), "the row stays gone: {after:?}");
     let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
     assert!(sidebar.rows.iter().all(|row| row.room.id != room));
     server.abort();
 }
 
-/// The last sync socket closes after a leave queues its removal, before the drain is scheduled:
-/// the drain still runs, so the leave's disconnect (queued behind the removal) closes the
-/// person's classic socket as it did before sync, and the queue empties.
+/// Kevin's leave was published while he had no socket: the client resumes from its cursor and
+/// still learns the room is gone (replayed, or refetched after a resync).
 #[tokio::test]
-async fn a_leave_disconnects_classic_sockets_when_the_last_sync_socket_closes_meanwhile() {
-    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-
+async fn a_client_resuming_after_a_leave_sees_the_removal() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
     let mut david = a.sign_in(DAVID).await;
     let mut kevin = a.sign_in(KEVIN).await;
+    // David's socket keeps the sync engine wanted while Kevin's is gone.
+    let mut watcher = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    watcher.welcome().await;
+    let cookie = kevin.cookie_header();
+    let mut sync = Sync::connect(addr, &cookie, &[]).await;
+    let Some(api::ServerFrame::Welcome { epoch, mut seq, .. }) = sync.next().await else {
+        panic!("a welcome")
+    };
     let reply = david
         .write(json_body(
             Method::POST,
@@ -1249,7 +1252,82 @@ async fn a_leave_disconnects_classic_sockets_when_the_last_sync_socket_closes_me
     assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
     let room = parse::<api::SidebarRow>(&reply).room.id;
 
-    // Kevin's classic socket.
+    let reply = kevin
+        .write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/rooms/{room}/membership"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Batch { events }) => {
+                seq = events.last().map_or(seq, |event| event.seq);
+            }
+            Some(api::ServerFrame::Ping) => {}
+            Some(api::ServerFrame::Bye {
+                reconnect: true, ..
+            }) => break,
+            other => panic!("expected the leave's bye, got {other:?}"),
+        }
+    }
+    a.booted.app.broadcasts.settle_sync().await;
+
+    let mut sync = Sync::open(addr, &cookie, &[], json!({"epoch": epoch, "seq": seq})).await;
+    match sync.next().await {
+        // Replayed past the cursor, or a resync for what Kevin missed: either way the room goes.
+        Some(api::ServerFrame::Welcome { resumed: true, .. }) => loop {
+            match sync.next().await {
+                Some(api::ServerFrame::Batch { events })
+                    if events.iter().any(|event| {
+                        matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room)
+                    }) =>
+                {
+                    break;
+                }
+                Some(api::ServerFrame::Resync { topics, .. }) => {
+                    assert!(topics.iter().any(|topic| topic == "user"), "{topics:?}");
+                    break;
+                }
+                Some(api::ServerFrame::Batch { .. } | api::ServerFrame::Ping) => {}
+                other => panic!("expected the removal or a resync, got {other:?}"),
+            }
+        },
+        // Too far behind to resume: the client refetches everything.
+        Some(api::ServerFrame::Welcome { resumed: false, .. }) => {}
+        other => panic!("expected a welcome, got {other:?}"),
+    }
+    let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+    assert!(sidebar.rows.iter().all(|row| row.room.id != room));
+    server.abort();
+}
+
+/// A revocation closes the person's sockets when it commits, not once the room's rows are out:
+/// while a row of the room is paused, a message posted after the revocation reaches neither
+/// their classic subscription nor their sync socket.
+#[tokio::test]
+async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+
+    // Kevin follows the room on a sync socket past its hello, and on a classic subscription.
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[format!("room:{room}")]).await;
+    sync.welcome().await;
+    remaining_row_events(&a, &mut sync, room).await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let cable_addr = listener.local_addr().unwrap();
     let router = a.booted.app.cable.router::<()>("/cable");
@@ -1268,80 +1346,111 @@ async fn a_leave_disconnects_classic_sockets_when_the_last_sync_socket_closes_me
         socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
     };
     assert_eq!(classic.next_text().await, r#"{"type":"welcome"}"#);
-
-    // The only sync socket, Kevin's, before its hello: it closes without the writer, which the
-    // hook below holds (a socket past its hello writes on close).
-    let mut request = format!("ws://{addr}/api/v1/sync")
-        .into_client_request()
+    let gid = a
+        .db()
+        .read(move |conn| campfire_db::Room::find(conn, room))
+        .await
+        .map(|room| crate::channels::room_gid(&room).to_param())
         .unwrap();
-    let headers = request.headers_mut();
-    headers.insert("cookie", kevin.cookie_header().parse().unwrap());
-    headers.insert("host", "campfire.test".parse().unwrap());
-    headers.insert("origin", "http://campfire.test".parse().unwrap());
-    let (mut sync, _) = tokio_tungstenite::connect_async(request).await.unwrap();
-    let cable = a.booted.app.cable.clone();
+    let identifier = crate::channels::tests::support::identifier(json!({
+        "channel": "RoomMessagesChannel",
+        "signed_stream_name": rails_compat::turbo::signed_stream_name(
+            &a.booted.app.secrets,
+            &[&gid, "messages"],
+        ),
+    }));
+    classic.confirm(&identifier).await;
+
+    // A row of the room is rendered and paused, holding the room's lock.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let post = |client: &str| {
+        json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": client, "markdownSource": client}),
+        )
+    };
+    let reply = david.write(post("held")).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the row was rendered")
+        .unwrap();
+
+    // Kevin is revoked, then David posts at once, before the paused row is released.
+    let publications = a.booted.app.cable.capture_every_publication();
+    a.db()
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room)?.revoke_from(tx, &[KEVIN]))
+        .await
+        .unwrap();
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        david.write(post("after-revocation")),
+    )
+    .await
+    .expect("the post doesn't wait for the room's lock");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+
+    // Kevin's disconnect was published before anything of the post.
+    let published = publications.take();
+    let kevins = format!("/User/{KEVIN}");
+    let disconnect = published.iter().position(|(broadcasting, payload)| {
+        broadcasting.starts_with("action_cable/")
+            && broadcasting.ends_with(&kevins)
+            && payload.contains(r#""type":"disconnect""#)
+    });
+    let posted = published
+        .iter()
+        .position(|(_, payload)| payload.contains("after-revocation"));
+    assert!(
+        disconnect.is_some() && posted.is_some() && disconnect < posted,
+        "the disconnect goes out when the revocation commits: {:?}",
+        published
+            .iter()
+            .map(|(broadcasting, _)| broadcasting)
+            .collect::<Vec<_>>()
+    );
+
+    // Both sockets close, still with the row paused, and neither got the later message.
+    let frames = tokio::time::timeout(Duration::from_secs(5), classic.until_closed())
+        .await
+        .expect("the classic socket is disconnected while the row is paused");
+    assert_eq!(
+        frames.last().map(String::as_str),
+        Some(r#"{"type":"disconnect","reason":"remote","reconnect":true}"#),
+        "{frames:?}"
+    );
+    assert!(
+        frames
+            .iter()
+            .all(|frame| !frame.contains("after-revocation")),
+        "{frames:?}"
+    );
+    let mut events = Vec::new();
     tokio::time::timeout(Duration::from_secs(5), async {
-        while !cable.sync_wanted() {
-            tokio::time::sleep(Duration::from_millis(5)).await;
+        loop {
+            match sync.next().await {
+                Some(api::ServerFrame::Batch { events: batch }) => events.extend(batch),
+                Some(api::ServerFrame::Ping) => {}
+                Some(api::ServerFrame::Bye {
+                    reconnect: true, ..
+                }) => break,
+                other => panic!("expected the revocation's bye, got {other:?}"),
+            }
         }
     })
     .await
-    .expect("the sync socket is counted");
-
-    // Right after the leave queues its removal, the sync socket closes, and the hook returns
-    // only once no sync socket is wanted.
-    let (close, closing) = tokio::sync::oneshot::channel::<()>();
-    let closed_meanwhile = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let closed = closed_meanwhile.clone();
-    a.booted
-        .app
-        .broadcasts
-        .after_next_sync_leave_queued(move || {
-            let _ = close.send(());
-            let deadline = std::time::Instant::now() + Duration::from_secs(5);
-            while cable.sync_wanted() && std::time::Instant::now() < deadline {
-                std::thread::sleep(Duration::from_millis(5));
-            }
-            closed.store(!cable.sync_wanted(), std::sync::atomic::Ordering::SeqCst);
-        });
-    let closer = tokio::spawn(async move {
-        closing.await.unwrap();
-        sync.close(None).await.unwrap();
-        sync
-    });
-
-    let reply = tokio::time::timeout(
-        Duration::from_secs(10),
-        kevin.write(json_body(
-            Method::DELETE,
-            &format!("/api/v1/rooms/{room}/membership"),
-            &json!({}),
-        )),
-    )
-    .await
-    .expect("the leave answers");
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    let _sync = tokio::time::timeout(Duration::from_secs(5), closer)
-        .await
-        .expect("the leave queued a removal")
-        .unwrap();
+    .expect("the sync socket is disconnected while the row is paused");
+    assert!(sync.next().await.is_none());
     assert!(
-        closed_meanwhile.load(std::sync::atomic::Ordering::SeqCst),
-        "the last sync socket closed between the queueing and the drain"
+        events
+            .iter()
+            .all(|event| !format!("{event:?}").contains("after-revocation")),
+        "{events:?}"
     );
 
-    let frames = tokio::time::timeout(Duration::from_secs(5), classic.until_closed())
-        .await
-        .expect("the leave's disconnect reaches the classic socket");
-    assert_eq!(
-        frames,
-        vec![r#"{"type":"disconnect","reason":"remote","reconnect":true}"#.to_string()]
-    );
+    hold.release.send(()).unwrap();
     a.booted.app.broadcasts.settle_sync().await;
-    assert!(
-        !a.booted.app.broadcasts.sync_leaves_queued(KEVIN),
-        "the leave queue empties"
-    );
     cable_server.abort();
     server.abort();
 }
