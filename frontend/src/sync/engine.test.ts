@@ -3522,6 +3522,90 @@ describe("room access refresh", () => {
     ),
   );
 
+  it.effect("a first read absorbed by a refresh's re-read still ends in error, not loading", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const row = sidebarRowFixture(12, "general");
+        const fail = Effect.fail(new ServerError({ status: 500, message: "boom" }));
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const refreshStarted = yield* Deferred.make<void>();
+        const releaseRefresh = yield* Deferred.make<void>();
+        const retryStarted = yield* Deferred.make<void>();
+        const releaseRetry = yield* Deferred.make<void>();
+        let reads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* api.reply("GET /users", { users: [] });
+        // 1: the visit's first read, which fails. 2: a metadata refresh a membership fact
+        // supersedes. 3: that refresh's re-read, which holds the slot and fails. Then 500s.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.andThen(fail),
+            );
+          }
+
+          if (reads === 2) {
+            return Deferred.succeed(refreshStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseRefresh)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          if (reads === 3) {
+            return Deferred.succeed(retryStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseRetry)),
+              Effect.andThen(fail),
+            );
+          }
+
+          return fail;
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents({
+          seq: 1,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: { ...row, refreshRoom: true },
+        });
+        yield* Deferred.await(refreshStarted);
+        yield* pushEvents(membershipUpsert(2, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseRefresh, undefined);
+        yield* Deferred.await(retryStarted);
+
+        // The first read fails while the refresh's re-read holds the slot.
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Fiber.join(opening);
+
+        expect(store.getState().rooms[12]?.status).toBe("loading");
+
+        yield* Deferred.succeed(releaseRetry, undefined);
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("error");
+        expect(store.getState().rooms[12]?.error).toBe("boom");
+        expect(reads).toBe(4);
+
+        // Nothing loops.
+        yield* TestClock.adjust("5 seconds");
+
+        expect(reads).toBe(4);
+      }),
+    ),
+  );
+
   it.effect("five membership upserts during one re-read schedule a single follow-up", () =>
     withSync(
       Effect.gen(function* () {
@@ -4817,4 +4901,157 @@ describe("boards and open work panes", () => {
       }),
     ),
   );
+});
+
+describe("an open room visit always settles", () => {
+  type Outcome = "ok" | "404" | "500";
+
+  const outcomes: readonly Outcome[] = ["ok", "404", "500"];
+
+  /** Every order of three requests. */
+  const orders: readonly (readonly number[])[] = [
+    [1, 2, 3],
+    [1, 3, 2],
+    [2, 1, 3],
+    [2, 3, 1],
+    [3, 1, 2],
+    [3, 2, 1],
+  ];
+
+  const cases = (["resync", "upsert"] as const).flatMap((fact) =>
+    orders.flatMap((order) =>
+      outcomes.flatMap((first) =>
+        outcomes.flatMap((refresh) =>
+          outcomes.flatMap((third) =>
+            (["ok", "500"] as const).map((later) => ({
+              fact,
+              order,
+              answers: [first, refresh, third] as const,
+              later,
+            })),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  const answer = (outcome: Outcome) => {
+    if (outcome === "ok") return Effect.succeed(roomDetailFixture(12));
+
+    return Effect.fail(
+      outcome === "404"
+        ? new NotFound({ message: "gone" })
+        : new ServerError({ status: 500, message: "boom" }),
+    );
+  };
+
+  for (const { fact, order, answers, later } of cases) {
+    // Request 1 is the visit's first read and 2 a metadata refresh. Then a membership fact
+    // supersedes both: a user resync that gives the room back (request 3 is its recovery read),
+    // or a membership push (request 3 is the refresh's re-read, holding the slot). Any later
+    // read is a re-read.
+    it.effect(
+      `${fact}: first ${answers[0]}, refresh ${answers[1]}, third ${answers[2]}, landing ${order.join("")}, re-reads ${later}`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            const socket = yield* MemorySocket;
+            const api = yield* FakeApi;
+
+            const held: { readonly ordinal: number; readonly gate: Deferred.Deferred<Outcome> }[] =
+              [];
+
+            let issued = 0;
+
+            const land = (ordinal: number, outcome: Outcome) =>
+              Effect.gen(function* () {
+                const index = held.findIndex((entry) => entry.ordinal === ordinal);
+
+                if (index === -1) return;
+
+                const [entry] = held.splice(index, 1);
+
+                if (entry !== undefined) yield* Deferred.succeed(entry.gate, outcome);
+
+                yield* settle;
+                yield* settle;
+              });
+
+            const row = sidebarRowFixture(12, "general");
+
+            const muted = {
+              ...row,
+              membership: { ...row.membership, involvement: "muted" as const },
+            };
+
+            yield* api.reply("GET /sidebar", sidebarFixture(fact === "resync" ? [] : [row]));
+            yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+            yield* api.reply("GET /users", { users: [] });
+            yield* api.route("GET /rooms/12/preview", () =>
+              Effect.fail(new NotFound({ message: "gone" })),
+            );
+            yield* api.route("GET /rooms/12", () =>
+              Effect.gen(function* () {
+                const gate = yield* Deferred.make<Outcome>();
+
+                issued += 1;
+                held.push({ ordinal: issued, gate });
+
+                return yield* answer(yield* Deferred.await(gate));
+              }),
+            );
+            yield* startEngine;
+            yield* welcome(0, false);
+            yield* Effect.forkChild(session.openRoom(12, null));
+            yield* settle;
+
+            if (fact === "resync") {
+              // The push adds the row, muted; the resync gives it back as it was.
+              yield* pushEvents({
+                seq: 1,
+                topic: "user",
+                type: "sidebar.row.upserted",
+                data: { ...muted, refreshRoom: true },
+              });
+              yield* api.reply("GET /sidebar", sidebarFixture([row]));
+              yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+              yield* settle;
+              yield* settle;
+            } else {
+              yield* pushEvents({
+                seq: 1,
+                topic: "user",
+                type: "sidebar.row.upserted",
+                data: { ...row, refreshRoom: true },
+              });
+              yield* pushEvents({
+                seq: 2,
+                topic: "user",
+                type: "sidebar.row.upserted",
+                data: muted,
+              });
+              // The refresh lands first, rejected, so its re-read holds the slot.
+              yield* land(2, answers[1]);
+            }
+
+            for (const ordinal of order) {
+              yield* land(ordinal, answers[ordinal - 1] ?? later);
+            }
+
+            // Re-reads land in order. A loop would never drain.
+            for (let round = 0; round < 12 && held.length > 0; round++) {
+              const next = held[0];
+
+              if (next !== undefined) yield* land(next.ordinal, later);
+
+              if (held.length === 0) yield* TestClock.adjust("2 seconds");
+            }
+
+            expect(held).toEqual([]);
+            expect(session.roomVisitToken(12)).not.toBeNull();
+            expect(["ready", "error"]).toContain(store.getState().rooms[12]?.status);
+          }),
+        ),
+    );
+  }
 });

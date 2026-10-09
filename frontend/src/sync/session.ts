@@ -36,6 +36,7 @@ import {
   invalidateRoom,
   managementEpoch,
   recoverRejectedRoomRead,
+  resetRoomHandoffs,
   roomRevision,
 } from "./room-refresh.ts";
 import { rowTicket, withRowTicket } from "./row-ticket.ts";
@@ -85,6 +86,7 @@ export function resetRoomVisits(): void {
   visits.clear();
   resetJoinState();
   resetRoomRereads();
+  resetRoomHandoffs();
   nextVisitToken = 0;
   nextLoad = 0;
 }
@@ -293,10 +295,14 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
       return;
     }
 
+    // A newer room outcome (a membership fact) outranks this preview or 404: read the room
+    // again, as for a rejected detail, rather than leave the visit loading.
     if (Result.isSuccess(preview)) {
       if (mutations.setRoomPreview(roomId, preview.success, started)) {
         clearRoomJoin(roomId);
         mutations.setPageFailed(roomId);
+      } else {
+        yield* retryRejectedLoad(roomId, token);
       }
 
       return;
@@ -305,6 +311,8 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     if (Predicate.isTagged(preview.failure, "NotFound")) {
       if (mutations.setRoomUnavailable(roomId, started, rowsSince)) {
         mutations.setPageFailed(roomId);
+      } else {
+        yield* retryRejectedLoad(roomId, token);
       }
 
       return;
@@ -347,11 +355,17 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (!sameVisit(roomId, token)) return;
 
+  const context = yield* Effect.context<ApiClient>();
+  const read = () => readRoom(roomId, token);
+
+  // A metadata refresh's re-read may hold the slot: it then reads the room in full for this visit,
+  // so the visit still reaches ready, error, unavailable or a preview.
   yield* recoverRejectedRoomRead(
     roomId,
     token,
     () => sameVisit(roomId, token),
-    () => readRoom(roomId, token),
+    read,
+    () => read().pipe(Effect.provideContext(context)),
   );
 });
 
