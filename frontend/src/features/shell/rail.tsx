@@ -7,7 +7,9 @@ import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { UserAvatar } from "../people/user-avatar.tsx";
 import { rowPillCount, sidebarTotals } from "../sidebar/sections.ts";
+import { UserMenu } from "./user-menu.tsx";
 import { type Destination, setDestination, useDestination } from "./view-store.ts";
 
 interface RailItemProps {
@@ -31,13 +33,16 @@ function RailItem({ label, active, unread = false, count = 0, onSelect, children
           aria-pressed={active}
           onClick={onSelect}
         >
-          {children}
-          <Badge count={count} floating label={`${count} unread`} />
+          <span className="rail-icon">
+            {children}
+            <Badge count={count} floating label={`${count} unread`} />
+          </span>
+          {/* Inside the button, so on a phone's tab bar the caption is part of the tap. */}
+          <span className="rail-caption" aria-hidden="true">
+            {label}
+          </span>
         </button>
       </Tooltip>
-      <span className="rail-caption" aria-hidden="true">
-        {label}
-      </span>
     </div>
   );
 }
@@ -140,9 +145,45 @@ function useDirectUnread(): number {
 }
 
 /**
+ * The phone tab bar's last tab (Slack's "You"): your avatar, opening your menu (profile and
+ * settings, people, the workspace), in place of the sidebar's own panel. Selected while one of
+ * those pages shows. The rail beside a wider screen has no use for it: the sidebar has the panel.
+ */
+function YouTab() {
+  const userId = useStore((state) => state.me?.user.id ?? state.boot?.user.id);
+  const matchRoute = useMatchRoute();
+
+  const active = ["/settings", "/people", "/admin"].some(
+    (to) => matchRoute({ to, fuzzy: true }) !== false,
+  );
+
+  if (userId === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="rail-item rail-you" data-active={active || undefined}>
+      <UserMenu
+        placement="top-end"
+        trigger={(props) => (
+          <button {...props} type="button" className="rail-button" aria-label="You">
+            <span className="rail-icon">
+              <UserAvatar userId={userId} size={24} presence decorative />
+            </span>
+            <span className="rail-caption" aria-hidden="true">
+              You
+            </span>
+          </button>
+        )}
+      />
+    </div>
+  );
+}
+
+/**
  * The workspace rail: Discord's spatial model. The workspace tile, then the destinations, each
  * with Discord's pill (a nub when unread, taller on hover, full when selected). On phones the
- * same items become the bottom tab bar.
+ * same items become the bottom tab bar, with You at its end.
  */
 export function Rail() {
   const destination = useDestination();
@@ -197,6 +238,7 @@ export function Rail() {
       >
         <Icon name="inbox" size={20} />
       </RailItem>
+      <YouTab />
     </nav>
   );
 }

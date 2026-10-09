@@ -187,6 +187,8 @@ interface SectionProps {
   readonly drop: SectionDrop;
   /** Dragging the heading reorders a category. */
   readonly onHeadingPointerDown?: ((event: PointerEvent<HTMLElement>) => void) | undefined;
+  /** Direct rows show their newest message (the DMs tab). */
+  readonly preview?: boolean;
 }
 
 /**
@@ -203,6 +205,7 @@ function Section({
   empty,
   drop,
   onHeadingPointerDown,
+  preview = false,
 }: SectionProps) {
   const id = useId();
 
@@ -264,6 +267,7 @@ function Section({
                 main
                 dropEdge={edgeFor(row)}
                 dragging={row.room.id === drop.roomId}
+                preview={preview}
               />
             ))}
             {section.rows.length === 0 ? <li className="sidebar-empty">{empty}</li> : null}
@@ -273,7 +277,12 @@ function Section({
       {peeking.length > 0 ? (
         <ul className="sidebar-rows">
           {peeking.map((row) => (
-            <SidebarRow key={row.room.id} row={row} selected={row.room.id === selectedRoomId} />
+            <SidebarRow
+              key={row.room.id}
+              row={row}
+              selected={row.room.id === selectedRoomId}
+              preview={preview}
+            />
           ))}
         </ul>
       ) : null}
@@ -540,7 +549,10 @@ const THEME_NEXT = { system: "light", light: "dark", dark: "system" } as const;
 
 const THEME_ICON = { system: "monitor", light: "sun", dark: "moon" } as const;
 
-/** Discord's user panel: who you are (it opens your menu), your presence, and the appearance switch. */
+/**
+ * Discord's user panel: who you are (it opens your menu), your presence, and the appearance
+ * switch. Phones have the tab bar's You tab instead.
+ */
 function YouPanel() {
   const me = useStore((state) => state.me);
   const bootUser = useStore((state) => state.boot?.user ?? null);
@@ -569,15 +581,19 @@ function YouPanel() {
 
   return (
     <footer className="sidebar-you">
-      <UserMenu>
-        <UserAvatar userId={userId} size={32} presence decorative />
-        <span className="sidebar-you-text">
-          <span className="sidebar-you-name">
-            {me?.user.name ?? bootUser?.name ?? UNKNOWN_NAME}
-          </span>
-          <span className="sidebar-you-status">{status?.statusText ?? "Active"}</span>
-        </span>
-      </UserMenu>
+      <UserMenu
+        trigger={(props) => (
+          <button {...props} type="button" className="sidebar-you-button" aria-label="Your account">
+            <UserAvatar userId={userId} size={32} presence decorative />
+            <span className="sidebar-you-text">
+              <span className="sidebar-you-name">
+                {me?.user.name ?? bootUser?.name ?? UNKNOWN_NAME}
+              </span>
+              <span className="sidebar-you-status">{status?.statusText ?? "Active"}</span>
+            </span>
+          </button>
+        )}
+      />
       <IconButton
         icon={THEME_ICON[theme]}
         label={`Theme: ${theme}`}
@@ -1077,6 +1093,7 @@ export function Sidebar() {
                     heading={headingFor(section)}
                     empty={emptyFor(section)}
                     drop={sectionDrop(drag, section, categories)}
+                    preview={destination === "dms"}
                     onHeadingPointerDown={
                       section.category === null
                         ? undefined

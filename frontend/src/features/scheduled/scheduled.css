@@ -207,5 +207,11 @@
       gap: 10px;
       padding-inline: var(--space-3) var(--space-2);
     }
+
+    /* A tap on a sent row opens its message, as does its sheet: no tiny link beside the outcome. */
+    .scheduled-view,
+    .scheduled-outcome > [aria-hidden="true"]:has(+ .scheduled-view) {
+      display: none;
+    }
   }
 }

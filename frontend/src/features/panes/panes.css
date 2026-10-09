@@ -709,17 +709,26 @@
 
   /* ── Files ─────────────────────────────────────────────────────────────── */
 
+  /* A pane's list (files, threads) under its skeleton reveal takes the pane's width, not its own
+     widest line's: the reveal's grid would otherwise size to it and the pane scroll sideways. */
+  .pane-body > .t-skel > .t-skel-content {
+    min-width: 0;
+  }
+
   .file-list {
     display: flex;
     flex-direction: column;
+    min-width: 0;
     padding: var(--space-1) var(--space-2) var(--space-2);
     list-style: none;
   }
 
+  /* A row is the list's width, however long its name and meta: they clip, not the pane. */
   .file-row {
     position: relative;
     display: flex;
     align-items: center;
+    min-width: 0;
     border-radius: var(--radius-md);
     transition: background-color var(--duration-micro-exit) var(--ease-exit);
   }
@@ -803,6 +812,18 @@
     font-size: var(--text-meta);
     line-height: var(--leading-meta);
     white-space: nowrap;
+  }
+
+  /* Short of room the poster's name gives way first, so the size and the age stay whole. */
+  .file-row-meta > * {
+    flex-shrink: 0;
+  }
+
+  .file-row-meta > .file-row-poster {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .file-ext {

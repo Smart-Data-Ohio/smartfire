@@ -845,6 +845,28 @@ fn mention_counts(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
+/// A direct room's newest root message that isn't a system note, its excerpt read from the
+/// search index (the plain text `create_in_index` stores) with whitespace collapsed.
+fn last_direct_message(conn: &Connection, room_id: i64) -> Result<Option<api::SidebarLastMessage>> {
+    use rusqlite::OptionalExtension as _;
+    let mut statement = conn.prepare_cached(
+        r#"SELECT "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS NULL AND NOT "messages"."system_note" ORDER BY "messages"."created_at" DESC, "messages"."id" DESC LIMIT 1"#,
+    )?;
+    let last = statement
+        .query_row([room_id], |row| {
+            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, Timestamp>(2)?))
+        })
+        .optional()?;
+    Ok(last.map(|(creator_id, body, created_at)| {
+        let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
+        api::SidebarLastMessage {
+            creator_id,
+            excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
+            created_at: time(created_at),
+        }
+    }))
+}
+
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
 fn visible(room: &Room, membership: &Membership) -> bool {
     !room.deleted()
@@ -873,6 +895,10 @@ fn sidebar_row_with(
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
     let unread_count = room_shell::first_unread(conn, membership)?.map_or(0, |(_, count)| count);
+    let last_message = match members {
+        Some(_) => last_direct_message(conn, room.id)?,
+        None => None,
+    };
     Ok(api::SidebarRow {
         room: self::room(room),
         membership: self::membership(membership),
@@ -880,6 +906,7 @@ fn sidebar_row_with(
         direct_member_ids,
         unread_count,
         mention_count,
+        last_message,
         refresh_room: None,
     })
 }

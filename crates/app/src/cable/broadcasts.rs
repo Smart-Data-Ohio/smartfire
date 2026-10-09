@@ -447,7 +447,9 @@ impl Broadcasts {
                     mentioned.contains(&user_id),
                 );
             }
-            sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
+            // A direct row previews its newest message, so every member's row changes.
+            let rows_for = if room.direct() { None } else { Some(user_ids) };
+            sync::sidebar_rows_later(&self.server, &self.sync, room.id, rows_for);
         }
         Ok(())
     }

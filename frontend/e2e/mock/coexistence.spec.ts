@@ -1,10 +1,11 @@
 import screens from "../../src/gen/screens.json" with { type: "json" };
 import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
 
-matrix("the user menu offers the way back to classic", async ({ page, theme }) => {
+matrix("the user menu offers the way back to classic", async ({ page, theme, phone }) => {
   await openApp(page, "", theme);
 
-  await page.getByRole("button", { name: "Your account" }).click();
+  // A phone has it under the tab bar's You, the sidebar's foot on wider screens.
+  await page.getByRole("button", { name: phone ? "You" : "Your account" }).click();
 
   const menu = page.getByRole("menu", { name: "Your account" });
 
