@@ -113,6 +113,13 @@
     font-size: var(--text-meta);
   }
 
+  /* The membership-refresh error, on the footer's leading edge beside Save. */
+  .room-member-sync {
+    align-self: center;
+    margin-right: auto;
+    min-width: 0;
+  }
+
   /* The kind cards: Discord's channel type list. */
   .kind-cards {
     display: flex;

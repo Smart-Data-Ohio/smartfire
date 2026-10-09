@@ -603,6 +603,99 @@ test.describe("room settings", () => {
     expect(body.userIds).toEqual(expect.arrayContaining([1, 2, 3, 6, GITHUB_BOT_ID]));
   });
 
+  test("Save stays off until the member refresh after subscribing finishes", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await expect(dialog.getByLabel("Name", { exact: true })).toBeVisible();
+
+    let release: () => void = () => undefined;
+
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await page.route("**/api/v1/rooms/*/edit", async (route) => {
+      await held;
+      await route.continue();
+    });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByText("Updating members…")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    release();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+  });
+
+  test("a failed member refresh keeps Save off until retry", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await expect(dialog.getByLabel("Name", { exact: true })).toBeVisible();
+
+    let failRefresh = true;
+
+    await page.route("**/api/v1/rooms/*/edit", async (route) => {
+      if (failRefresh) {
+        await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByText("Couldn't update the member list.")).toBeVisible();
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeDisabled();
+
+    failRefresh = false;
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    await dialog.getByRole("button", { name: "Try again" }).click();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Save changes" })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+  });
+
   test("subscribes and unsubscribes a repository, and shows the room's email address", async ({
     page,
   }) => {

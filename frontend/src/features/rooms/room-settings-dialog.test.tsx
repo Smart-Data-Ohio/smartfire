@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GithubSubscriptionList } from "../../gen/GithubSubscriptionList.ts";
 import type { InboundEmail } from "../../gen/InboundEmail.ts";
@@ -82,22 +83,39 @@ function githubList(
 
 function held<T>() {
   let release: (value: T) => void = () => undefined;
+  let reject: (error: Error) => void = () => undefined;
 
-  const promise = new Promise<T>((resolve) => {
+  const promise = new Promise<T>((resolve, refuse) => {
     release = resolve;
+    reject = refuse;
   });
 
-  return { promise, release };
+  return { promise, release, reject };
 }
 
-async function mount(roomId = BOARD) {
-  const root = createRootRoute({
-    component: () => (
+async function mount(roomId = BOARD, closable = false) {
+  function Harness() {
+    const [open, setOpen] = useState(true);
+
+    return (
       <>
-        <RoomSettingsDialog roomId={roomId} open onOpenChange={() => undefined} />
+        {closable ? (
+          <button type="button" onClick={() => setOpen(true)}>
+            Reopen settings
+          </button>
+        ) : null}
+        <RoomSettingsDialog
+          roomId={roomId}
+          open={open}
+          onOpenChange={closable ? setOpen : () => undefined}
+        />
         <Outlet />
       </>
-    ),
+    );
+  }
+
+  const root = createRootRoute({
+    component: Harness,
   });
 
   const room = createRoute({
@@ -365,6 +383,146 @@ describe("room integration membership", () => {
     });
     expect(screen.getByText("rails/rails")).toBeTruthy();
     expect(screen.queryByText("No repositories subscribed yet.")).toBeNull();
+  });
+
+  it("disables Save while the member list is refreshing after a subscription", async () => {
+    const refresh = held<RoomForm>();
+
+    vi.spyOn(actions.rooms, "editForm")
+      .mockResolvedValueOnce(closedForm())
+      .mockImplementation(() => refresh.promise);
+    vi.spyOn(actions.rooms, "githubSubscriptions").mockResolvedValue(githubList());
+    vi.spyOn(actions.rooms, "subscribeRepository").mockResolvedValue(RAILS);
+
+    const update = vi.spyOn(actions.rooms, "update").mockResolvedValue(savedRoom("renamed"));
+    const user = userEvent.setup();
+
+    await mount(CLOSED);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "GitHub" }));
+    await user.type(screen.getByLabelText("Repository"), "rails/rails");
+    await user.click(screen.getByRole("button", { name: "Subscribe" }));
+    expect(await screen.findByText("rails/rails")).toBeTruthy();
+    expect(await screen.findByText("Updating members…")).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "General" }));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "renamed");
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+    await user.keyboard("{Enter}");
+    expect(update).not.toHaveBeenCalled();
+
+    refresh.release(closedForm({ userIds: [1, 2, BOT], memberIds: [1, 2, BOT] }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty(
+        "disabled",
+        false,
+      ),
+    );
+    expect(screen.queryByText("Updating members…")).toBeNull();
+    expect(screen.getByRole("tab", { name: "Members · 3" })).toBeTruthy();
+  });
+
+  it("blocks Save when the member refresh fails, and a retry keeps the GitHub bot", async () => {
+    vi.spyOn(actions.rooms, "editForm")
+      .mockResolvedValueOnce(closedForm())
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(closedForm({ userIds: [1, 2, BOT], memberIds: [1, 2, BOT] }));
+    vi.spyOn(actions.rooms, "githubSubscriptions").mockResolvedValue(githubList());
+    vi.spyOn(actions.rooms, "subscribeRepository").mockResolvedValue(RAILS);
+
+    const update = vi.spyOn(actions.rooms, "update").mockResolvedValue(savedRoom("renamed"));
+    const user = userEvent.setup();
+
+    await mount(CLOSED);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "GitHub" }));
+    await user.type(screen.getByLabelText("Repository"), "rails/rails");
+    await user.click(screen.getByRole("button", { name: "Subscribe" }));
+    expect(await screen.findByText("rails/rails")).toBeTruthy();
+
+    expect(await screen.findByText("Couldn't update the member list.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+
+    await user.click(screen.getByRole("tab", { name: "General" }));
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "renamed");
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+    await user.keyboard("{Enter}");
+    expect(update).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty(
+        "disabled",
+        false,
+      ),
+    );
+    expect(screen.queryByText("Couldn't update the member list.")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(CLOSED, {
+        type: "closed",
+        name: "renamed",
+        userIds: [1, 2, BOT],
+      }),
+    );
+  });
+
+  it("clears a failed member refresh when the dialog closes and reopens", async () => {
+    const refresh = held<RoomForm>();
+    let edits = 0;
+
+    vi.spyOn(actions.rooms, "editForm").mockImplementation(() => {
+      edits += 1;
+
+      if (edits === 1) return Promise.resolve(closedForm());
+
+      if (edits === 2) return refresh.promise;
+
+      return Promise.resolve(closedForm({ userIds: [1, 2, BOT], memberIds: [1, 2, BOT] }));
+    });
+    vi.spyOn(actions.rooms, "githubSubscriptions").mockResolvedValue(githubList());
+    vi.spyOn(actions.rooms, "subscribeRepository").mockResolvedValue(RAILS);
+
+    const update = vi.spyOn(actions.rooms, "update").mockResolvedValue(savedRoom("renamed"));
+    const user = userEvent.setup();
+
+    await mount(CLOSED, true);
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    await user.click(screen.getByRole("tab", { name: "GitHub" }));
+    await user.type(screen.getByLabelText("Repository"), "rails/rails");
+    await user.click(screen.getByRole("button", { name: "Subscribe" }));
+    expect(await screen.findByText("Updating members…")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "Channel settings" })).toBeNull(),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reopen settings" }));
+    await screen.findByRole("dialog", { name: "Channel settings" });
+    expect(await screen.findByLabelText("Name")).toHaveProperty("value", "launch-planning");
+    refresh.reject(new Error("offline"));
+    await act(async () => {
+      await refresh.promise.catch(() => undefined);
+    });
+    expect(screen.queryByText("Couldn't update the member list.")).toBeNull();
+    expect(screen.queryByText("Updating members…")).toBeNull();
+
+    await user.clear(screen.getByLabelText("Name"));
+    await user.type(screen.getByLabelText("Name"), "renamed");
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", false);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(CLOSED, {
+        type: "closed",
+        name: "renamed",
+        userIds: [1, 2, BOT],
+      }),
+    );
   });
 
   it("shows an email address that finished rotating while the Email tab was unmounted", async () => {

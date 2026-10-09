@@ -37,6 +37,9 @@ type Load =
   | { readonly status: "error"; readonly message: string }
   | { readonly status: "ready"; readonly form: RoomForm };
 
+/** A refetch of membership after subscribe or unsubscribe. Save waits until it succeeds. */
+type MemberSync = "idle" | "pending" | "error";
+
 type Tab = "general" | "members" | "github" | "email";
 
 const NOUN = {
@@ -122,11 +125,22 @@ export default function RoomSettingsDialog({
   const [iconError, setIconError] = useState<string | undefined>(undefined);
   const [problem, setProblem] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [memberSync, setMemberSync] = useState<MemberSync>("idle");
+  const [memberSyncScope, setMemberSyncScope] = useState({ open, roomId });
   // Which opening of the dialog this is, and whether it's still open: a save or delete that
   // completes after the viewer closed it (or after it reopened) mustn't close or navigate again.
   const opening = useRef({ id: 0, open: false });
   const membershipForm = useRef<RoomForm | null>(null);
   const membershipSeq = useRef(0);
+  // Bumped when this opening ends, so a refresh still in flight cannot block the next one.
+  const membershipEpoch = useRef(0);
+
+  if (memberSyncScope.open !== open || memberSyncScope.roomId !== roomId) {
+    setMemberSyncScope({ open, roomId });
+    membershipEpoch.current += 1;
+
+    if (memberSync !== "idle") setMemberSync("idle");
+  }
 
   useEffect(() => {
     opening.current = open
@@ -141,6 +155,8 @@ export default function RoomSettingsDialog({
 
   const close = () => {
     opening.current = { ...opening.current, open: false };
+    membershipEpoch.current += 1;
+    setMemberSync("idle");
     onOpenChange(false);
   };
 
@@ -273,20 +289,29 @@ export default function RoomSettingsDialog({
   /**
    * Subscribe and unsubscribe add or remove the GitHub bot on the server. The dialog's member
    * list is what Save sends, so it has to include that change or the next save drops the bot.
-   * The delta comes from a refetch, and unsaved member edits are left in place.
+   * The delta comes from a refetch, and unsaved member edits are left in place. Save stays off
+   * until that refetch succeeds: one started while it is in flight, or after it failed, would
+   * still send the member list from before the bot changed.
    */
   const reconcileMembership = () => {
     const seq = membershipSeq.current + 1;
 
     membershipSeq.current = seq;
 
+    const epoch = membershipEpoch.current;
     const showing = stillShowing();
     const before = membershipForm.current?.userIds ?? [];
 
+    setMemberSync("pending");
+
+    const applies = () =>
+      membershipEpoch.current === epoch && showing() && membershipSeq.current === seq;
+
     actions.rooms.editForm(roomId).then(
       (next) => {
-        if (!showing() || membershipSeq.current !== seq) return;
+        if (!applies()) return;
 
+        setMemberSync("idle");
         setLoad((current) =>
           current.status === "ready"
             ? { status: "ready", form: withMembership(current.form, next) }
@@ -297,7 +322,9 @@ export default function RoomSettingsDialog({
           userIds: reconcileMembers(draft.userIds, before, next.userIds),
         }));
       },
-      () => undefined,
+      () => {
+        if (applies()) setMemberSync("error");
+      },
     );
   };
 
@@ -326,7 +353,7 @@ export default function RoomSettingsDialog({
   };
 
   const save = () => {
-    if (form === null || readOnly || busy || !dirty) {
+    if (form === null || readOnly || busy || !dirty || memberSync !== "idle") {
       return;
     }
 
@@ -384,7 +411,18 @@ export default function RoomSettingsDialog({
     </Button>
   ) : (
     <>
-      {dirty ? (
+      {memberSync === "pending" ? (
+        <span className="room-form-dirty" role="status">
+          Updating members…
+        </span>
+      ) : memberSync === "error" ? (
+        <p className="picker-note picker-error room-form-load-error room-member-sync" role="alert">
+          <span>Couldn't update the member list.</span>
+          <Button variant="link" size="sm" onClick={reconcileMembership}>
+            Try again
+          </Button>
+        </p>
+      ) : dirty ? (
         <span className="room-form-dirty enter-fade" aria-live="polite">
           Unsaved changes
         </span>
@@ -396,7 +434,7 @@ export default function RoomSettingsDialog({
         type="submit"
         form={formId}
         variant="primary"
-        disabled={!dirty}
+        disabled={!dirty || memberSync !== "idle"}
         loading={busy}
         loadingLabel="Saving…"
       >
