@@ -6,6 +6,7 @@ import type { RoomForm } from "../gen/RoomForm.ts";
 import type { RoomKind } from "../gen/RoomKind.ts";
 import type { RoomMutation } from "../gen/RoomMutation.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { changedSince, invalidateRoom, managementEpoch, roomRevision } from "./room-refresh.ts";
 
@@ -23,6 +24,7 @@ const landForm = (form: RoomForm): RoomForm => {
 const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId: number) {
   const revision = invalidateRoom(roomId);
   const since = managementEpoch();
+  const started = beginRoomRequest();
   const fetched = yield* Effect.result(room(roomId));
 
   if (roomRevision(roomId) !== revision) {
@@ -39,7 +41,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
 
   if (Result.isFailure(fetched)) {
     if (Predicate.isTagged(fetched.failure, "NotFound")) {
-      mutations.setRoomUnavailable(roomId);
+      mutations.setRoomUnavailable(roomId, started);
     }
 
     return;
@@ -57,6 +59,7 @@ const refetchSuperseded = Effect.fn("rooms.refetchSuperseded")(function* (roomId
           displayName: row.displayName,
           directMemberIds: row.directMemberIds,
         },
+    started,
   );
 });
 
@@ -75,10 +78,16 @@ const landMutation = Effect.fn("rooms.landMutation")(function* (
     return result;
   }
 
-  if (result.detail === null) {
-    mutations.setRoomUnavailable(result.room.id);
-  } else {
-    mutations.setRoomDetail(result.detail);
+  // The server confirmed this reply now. A read that started while the write was in flight is older.
+  const started = beginRoomRequest();
+
+  const landed =
+    result.detail === null
+      ? mutations.setRoomUnavailable(result.room.id, started)
+      : mutations.setRoomDetail(result.detail, started);
+
+  if (!landed) {
+    return result;
   }
 
   const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
@@ -124,18 +133,22 @@ export const update = Effect.fn("rooms.update")(function* (roomId: number, body:
 
 export const remove = Effect.fn("rooms.remove")(function* (roomId: number) {
   const result = yield* api.removeRoom(roomId);
+  const started = beginRoomRequest();
 
-  mutations.setRoomUnavailable(result.roomId);
-  invalidateRoom(result.roomId);
+  if (mutations.setRoomUnavailable(result.roomId, started)) {
+    invalidateRoom(result.roomId);
+  }
 
   return result;
 });
 
 export const leaveDirect = Effect.fn("rooms.leaveDirect")(function* (roomId: number) {
   const result = yield* api.leaveDirectRoom(roomId);
+  const started = beginRoomRequest();
 
-  mutations.setRoomUnavailable(result.roomId);
-  invalidateRoom(result.roomId);
+  if (mutations.setRoomUnavailable(result.roomId, started)) {
+    invalidateRoom(result.roomId);
+  }
 
   return result;
 });
