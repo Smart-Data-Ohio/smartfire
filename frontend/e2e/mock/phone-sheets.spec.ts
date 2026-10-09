@@ -119,6 +119,10 @@ function slug(title: string): string {
   return title.toLowerCase().replaceAll(" ", "-");
 }
 
+/** A field that raises the on-screen keyboard when it takes focus. */
+const TEXT_FIELD =
+  "textarea, [contenteditable='true'], input:not([type='button'], [type='checkbox'], [type='radio'], [type='range'], [type='submit'])";
+
 /** The focused element when it is a field that raises the keyboard, else null. */
 function focusedField(page: Page): Promise<string | null> {
   return page.evaluate(() => {
@@ -201,8 +205,11 @@ test.describe("on a 360 px touch phone", () => {
       expect(close.width).toBeGreaterThanOrEqual(44);
       expect(close.height).toBeGreaterThanOrEqual(44);
 
-      // An overlaid keyboard (iOS) takes the bottom 320 px: the footer sits right above it.
+      // Tapping a field raises an overlaid keyboard (iOS) over the bottom 320 px: the footer sits
+      // right above it. The shell only reads a keyboard while a text field has focus.
+      await dialog.locator(TEXT_FIELD).first().focus();
       await simulateKeyboard(page, PHONE_SMALL.height - 420);
+      await expect(page.locator("html")).toHaveAttribute("data-keyboard", "open");
 
       const footer = dialog.locator(".dialog-footer, [data-dialog-actions]").first();
       const header = await box(dialog.locator(".dialog-header"));
@@ -226,6 +233,20 @@ test.describe("on a 360 px touch phone", () => {
     await page.setViewportSize({ width: PHONE_SMALL.width, height: 420 });
 
     await expect.poll(async () => (await box(dialog)).bottom).toBe(420);
+    await expect(dialog.getByRole("button", { name: "Schedule event" })).toBeInViewport();
+  });
+
+  test("a keyboard that pans the page up keeps the sheet in the visible area", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Schedule an event" });
+
+    await sheet("Schedule an event").open(page, dialog);
+    await dialog.getByLabel("Title").focus();
+    // iOS pans the layout viewport 100 px up to the field: the visible area is 100 to 420 + 100.
+    await simulateKeyboard(page, PHONE_SMALL.height - 420, { offsetTop: 100 });
+
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(520);
+    expect((await box(dialog)).y).toBe(100 + SHEET_GAP);
+    await expect(dialog.getByRole("button", { name: "Close" })).toBeInViewport();
     await expect(dialog.getByRole("button", { name: "Schedule event" })).toBeInViewport();
   });
 

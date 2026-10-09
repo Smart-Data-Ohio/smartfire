@@ -78,13 +78,15 @@
 
   /*
    * Phones: a sheet from the bottom edge, as Slack's and Discord's. Full height, short of the
-   * status bar, or as tall as its content at size="sm". It ends at the keyboard (the shell's
-   * --keyboard-inset), so the pinned header and footer stay on screen with the body scrolling
-   * between them, and the last row keeps clear of the home indicator. The modal recipe slides it.
+   * status bar, or as tall as its content at size="sm". While an overlaid keyboard is up it fills
+   * the visible area (--viewport-height) and ends at the keyboard (--keyboard-inset), even with the
+   * page panned up to a field, so the pinned header and footer stay on screen with the body
+   * scrolling between them, and the last row keeps clear of the home indicator. The modal recipe
+   * slides it.
    */
   @media (width < 720px) {
     .dialog {
-      --sheet-height: calc(100dvh - var(--keyboard-inset) - var(--safe-top) - var(--space-2));
+      --sheet-height: calc(var(--viewport-height) - var(--safe-top) - var(--space-2));
       --sheet-pad: var(--space-4);
 
       inset: auto 0 var(--keyboard-inset);
