@@ -233,6 +233,25 @@
     min-width: 0;
   }
 
+  /* Cancel and the submit stay on screen at every width. The list above the form scrolls and the
+     actions pin to the bottom of their scrollport (boards.css). If the editor is still taller
+     than the toolbar's share of the pane, the toolbar scrolls too. */
+  .pane-frame:has(.work-bar-editor) > .pane-toolbar {
+    max-height: calc(var(--viewport-height) - var(--pane-header-height) - 8rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* A wide bar wraps its chips. Two rows, then they scroll, so the editor below still meets the
+     toolbar and the actions can pin to its bottom. A phone keeps the chips on one sideways strip. */
+  @media (720px <= width) {
+    .work-bar:has(.work-bar-editor) .work-links {
+      max-height: calc(2 * 22px + var(--space-1));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+  }
+
   .work-control {
     max-width: 100%;
     padding-inline: var(--space-1);
@@ -294,29 +313,11 @@
       flex-shrink: 0;
     }
 
-    /* The editor takes the next row; the details drop below it while both are open.
-       Its link list scrolls (see boards.css) so Cancel and the submit button stay in view.
-       If the form is still taller than the toolbar's share of the screen, the toolbar scrolls
-       and those actions stay pinned to the bottom of that scrollport. */
-    .pane-frame:has(.work-bar-editor) > .pane-toolbar {
-      max-height: calc(var(--viewport-height) - var(--pane-header-height) - 8rem);
-      overflow-y: auto;
-      overscroll-behavior: contain;
-    }
-
+    /* The editor takes the next row; the details drop below it while both are open. */
     .work-bar-editor {
       grid-row: 2;
       grid-column: 1 / -1;
       padding-top: var(--space-2);
-    }
-
-    .work-bar-editor .post-link-add-actions {
-      position: sticky;
-      bottom: 0;
-      z-index: 1;
-      margin: 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
-      padding: var(--space-2) var(--space-3) var(--space-3);
-      background: var(--bg-sunken);
     }
 
     .work-bar .accordion-heading {

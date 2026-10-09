@@ -96,6 +96,93 @@ test("Back after closing an in-app links editor leaves the thread", async ({ pag
   await expect(page).not.toHaveURL(thread);
 });
 
+test("a desktop work thread keeps cancel and submit on screen when it has many links", async ({
+  page,
+  request,
+}) => {
+  const threadId = S4_WORK_IDS.agentOwned;
+  const state = await (await request.get("/__mock/state")).json();
+
+  for (let index = 0; index < 16; index += 1) {
+    const response = await request.post(`/api/v1/threads/${threadId}/work/links`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        kind: "pull_request",
+        pullRequestUrl: `https://github.com/acme/api/pull/${400 + index}`,
+      },
+    });
+
+    expect(response.ok()).toBe(true);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openApp(page, `r/${ROOM_IDS.general}/t/${threadId}`);
+
+  const work = page.locator("aside.right-pane").getByRole("region", { name: "Work" });
+
+  await work.getByRole("button", { name: "Link", exact: true }).click();
+
+  const form = work.getByRole("form", { name: "Link to this work" });
+  const submit = form.getByRole("button", { name: "Link pull request" });
+  const cancel = form.getByRole("button", { name: "Cancel" });
+
+  await expect(submit).toBeInViewport({ ratio: 1 });
+  await expect(cancel).toBeInViewport({ ratio: 1 });
+  await expect(submit).toBeEnabled();
+  await expect(cancel).toBeEnabled();
+  await submit.click({ trial: true });
+  await cancel.click({ trial: true });
+
+  await form.getByLabel("Pull request URL").fill("https://github.com/acme/api/pull/499");
+  await expect(submit).toBeInViewport({ ratio: 1 });
+  await expect(cancel).toBeInViewport({ ratio: 1 });
+
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await expect(submit).toBeInViewport({ ratio: 1 });
+  await expect(cancel).toBeInViewport({ ratio: 1 });
+  await submit.click({ trial: true });
+  await cancel.click({ trial: true });
+  await submit.click();
+  await expect(form).toHaveCount(0);
+});
+
+test("a desktop board post keeps cancel and submit on screen when it has many links", async ({
+  page,
+  request,
+}) => {
+  const state = await (await request.get("/__mock/state")).json();
+
+  for (let index = 0; index < 16; index += 1) {
+    const response = await request.post(`/api/v1/threads/${POST}/work/links`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        kind: "pull_request",
+        pullRequestUrl: `https://github.com/acme/api/pull/${500 + index}`,
+      },
+    });
+
+    expect(response.ok()).toBe(true);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await openApp(page, `r/${BOARD_ROOM_ID}/t/${POST}`);
+
+  const linked = page.locator("aside.right-pane").getByRole("region", { name: "Linked" });
+
+  await linked.getByRole("button", { name: "Link", exact: true }).click();
+
+  const form = linked.getByRole("form", { name: "Link to this work" });
+  const submit = form.getByRole("button", { name: "Link pull request" });
+  const cancel = form.getByRole("button", { name: "Cancel" });
+
+  await expect(submit).toBeInViewport({ ratio: 1 });
+  await expect(cancel).toBeInViewport({ ratio: 1 });
+  await expect(submit).toBeEnabled();
+  await expect(cancel).toBeEnabled();
+  await submit.click({ trial: true });
+  await cancel.click({ trial: true });
+});
+
 test.describe("a phone's links editor", () => {
   test.use(PHONE_TOUCH);
 
