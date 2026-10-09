@@ -21,7 +21,11 @@ type RoomReread = {
   dirty: boolean;
 };
 
-const roomRereads = new Map<number, RoomReread>();
+/**
+ * Per room, then per visit (`null` when the recovery started with no visit open). An old visit's
+ * in-flight read must not block the visit now on screen.
+ */
+const roomRereads = new Map<number, Map<number | null, RoomReread>>();
 
 export function resetJoinState(): void {
   joinedAt.clear();
@@ -61,19 +65,34 @@ export function claimRoomOutcome(roomId: number, started: number): boolean {
   return true;
 }
 
-/** A membership fact arrived during the in-flight re-read, so it must run once more. */
-export function dirtyRoomReread(roomId: number): void {
-  const current = roomRereads.get(roomId);
+function forgetRoomReread(
+  roomId: number,
+  visits: Map<number | null, RoomReread>,
+  visit: number | null,
+): void {
+  visits.delete(visit);
 
-  if (current?.inFlight) current.dirty = true;
+  if (visits.size === 0) roomRereads.delete(roomId);
+}
+
+/** A membership fact arrived during the in-flight re-read, so that visit must run once more. */
+export function dirtyRoomReread(roomId: number): void {
+  const visits = roomRereads.get(roomId);
+
+  if (visits === undefined) return;
+
+  for (const current of visits.values()) {
+    if (current.inFlight) current.dirty = true;
+  }
 }
 
 /**
- * A room read lost to a newer membership fact. The caller starts one re-read when this returns
- * true. A loss while that re-read is in flight only marks it dirty.
+ * A room read lost to a newer membership fact. The caller starts one re-read for `visit` when
+ * this returns true. A loss while that re-read is in flight only marks it dirty.
  */
-export function claimRoomReread(roomId: number): boolean {
-  const current = roomRereads.get(roomId);
+export function claimRoomReread(roomId: number, visit: number | null): boolean {
+  const visits = roomRereads.get(roomId) ?? new Map<number | null, RoomReread>();
+  const current = visits.get(visit);
 
   if (current?.inFlight) {
     current.dirty = true;
@@ -81,7 +100,8 @@ export function claimRoomReread(roomId: number): boolean {
     return false;
   }
 
-  roomRereads.set(roomId, { inFlight: true, dirty: false });
+  visits.set(visit, { inFlight: true, dirty: false });
+  roomRereads.set(roomId, visits);
 
   return true;
 }
@@ -90,15 +110,16 @@ export function claimRoomReread(roomId: number): boolean {
  * The in-flight re-read applied, was rejected, or errored. Returns whether exactly one more
  * should start. A failure with nothing pending returns false, so a network error cannot spin.
  */
-export function finishRoomReread(roomId: number): boolean {
-  const current = roomRereads.get(roomId);
+export function finishRoomReread(roomId: number, visit: number | null): boolean {
+  const visits = roomRereads.get(roomId);
+  const current = visits?.get(visit);
 
-  if (current === undefined) return false;
+  if (current === undefined || visits === undefined) return false;
 
   current.inFlight = false;
 
   if (!current.dirty) {
-    roomRereads.delete(roomId);
+    forgetRoomReread(roomId, visits, visit);
 
     return false;
   }
@@ -109,9 +130,13 @@ export function finishRoomReread(roomId: number): boolean {
   return true;
 }
 
-/** The recovery fiber was interrupted. Drop the hold so the next visit can read. */
-export function dropRoomReread(roomId: number): void {
-  roomRereads.delete(roomId);
+/** This visit's recovery stopped or was interrupted. Drop its hold and leave every other visit. */
+export function dropRoomReread(roomId: number, visit: number | null): void {
+  const visits = roomRereads.get(roomId);
+
+  if (visits === undefined) return;
+
+  forgetRoomReread(roomId, visits, visit);
 }
 
 export function noteJoined(roomId: number, epoch: number): void {

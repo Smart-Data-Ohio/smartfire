@@ -32,6 +32,7 @@ import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
   changedSince,
+  interruptRoomRecovery,
   invalidateRoom,
   managementEpoch,
   recoverRejectedRoomRead,
@@ -71,6 +72,11 @@ function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
 
 function sameVisit(roomId: number, token: number): boolean {
   return visits.get(roomId)?.token === token;
+}
+
+/** The visit on screen, or `null` when the room is closed. Recovery loops stop when it changes. */
+export function roomVisitToken(roomId: number): number | null {
+  return visits.get(roomId)?.token ?? null;
 }
 
 /** Test isolation. Visit tokens and join epochs outlive the store. */
@@ -208,8 +214,14 @@ let retryRejectedLoad: (roomId: number, token: number) => Effect.Effect<void, ne
  * room is unavailable. A preview applies only when its load is still the visit's latest. An older
  * room outcome cannot replace a newer one. Cached membership never overrides a 404, except detail
  * this session's join installed while that join's epoch is still current.
+ *
+ * A recovery re-read does not call `setRoomLoading`: it keeps whatever is on screen and replaces
+ * it only when the fresh response still belongs to this visit. Only the visit's own initial load
+ * sets `loading`.
  */
-const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token)) return;
+
   const open = visits.get(roomId);
   const load = open?.token === token ? ++nextLoad : 0;
   const started = beginRoomRequest();
@@ -217,8 +229,6 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (open !== undefined && open.token === token) {
     visits.set(roomId, { ...open, load });
   }
-
-  mutations.setRoomLoading(roomId);
 
   const loaded = yield* Effect.result(room(roomId));
 
@@ -281,10 +291,23 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   mutations.setRoomError(roomId, loaded.failure.message);
 });
 
+/** The visit's own initial load. Recovery calls `readRoom` and leaves the visible state alone. */
+const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token)) return;
+
+  mutations.setRoomLoading(roomId);
+  yield* readRoom(roomId, token);
+});
+
 retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (!sameVisit(roomId, token)) return;
 
-  yield* recoverRejectedRoomRead(roomId, () => loadRoom(roomId, token));
+  yield* recoverRejectedRoomRead(
+    roomId,
+    token,
+    () => sameVisit(roomId, token),
+    () => readRoom(roomId, token),
+  );
 });
 
 /** The sidebar row's facts win over a room read that raced a rename or a membership change. */
@@ -430,6 +453,9 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
   focusMessageId: number | null,
 ) {
   const visit = beginVisit(roomId, focusMessageId);
+
+  yield* interruptRoomRecovery(roomId);
+
   const topics = yield* Topics;
   const presenceService = yield* Presence;
 
@@ -445,12 +471,14 @@ export const reloadRoom = Effect.fn("session.reloadRoom")(function* (
 ) {
   const visit = beginVisit(roomId, focusMessageId);
 
+  yield* interruptRoomRecovery(roomId);
   yield* loadRoom(roomId, visit.token);
 });
 
 /** Closes a room view: releases its topic, says absent, stops typing, forgets the divider. */
 export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: number) {
   visits.delete(roomId);
+  yield* interruptRoomRecovery(roomId);
 
   const topics = yield* Topics;
   const presenceService = yield* Presence;

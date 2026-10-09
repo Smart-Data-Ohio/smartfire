@@ -38,6 +38,7 @@ import {
   roomRefreshIds,
   roomRevision,
 } from "./room-refresh.ts";
+import { roomVisitToken } from "./session.ts";
 import { paneProblem, UNAVAILABLE } from "./settle.ts";
 import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
@@ -529,34 +530,45 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
-      const refreshRoom = (roomId: number, revision: number) => {
-        const started = beginRoomRequest();
+      const refreshRoom = (roomId: number, revision: number, allow: () => boolean = () => true) =>
+        Effect.suspend(() => {
+          if (!allow()) return Effect.void;
 
-        return room(roomId).pipe(
-          Effect.tap((detail) =>
-            Effect.gen(function* () {
-              if (landRefreshedRoom(detail, revision, started) === "rejected") {
-                yield* retryRejectedRefresh(roomId);
-              }
-            }),
-          ),
-          Effect.catch((error) =>
-            Effect.sync(() => {
-              if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
-                mutations.setRoomUnavailable(roomId, started);
-              }
-            }).pipe(
-              Effect.andThen(
-                Effect.logWarning("sync: room metadata refresh failed", error.message),
-              ),
+          const started = beginRoomRequest();
+
+          return room(roomId).pipe(
+            Effect.tap((detail) =>
+              Effect.gen(function* () {
+                if (!allow()) return;
+
+                if (landRefreshedRoom(detail, revision, started) === "rejected") {
+                  yield* retryRejectedRefresh(roomId);
+                }
+              }),
             ),
-          ),
-          Effect.provideContext(api),
-        );
-      };
+            Effect.catch((error) => {
+              if (!allow()) return Effect.void;
+
+              return Effect.sync(() => {
+                if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
+                  mutations.setRoomUnavailable(roomId, started);
+                }
+              }).pipe(
+                Effect.andThen(
+                  Effect.logWarning("sync: room metadata refresh failed", error.message),
+                ),
+              );
+            }),
+          );
+        }).pipe(Effect.provideContext(api));
 
       retryRejectedRefresh = Effect.fnUntraced(function* (roomId: number) {
-        yield* recoverRejectedRoomRead(roomId, () => refreshRoom(roomId, roomRevision(roomId)));
+        const visit = roomVisitToken(roomId);
+        const owns = () => roomVisitToken(roomId) === visit;
+
+        yield* recoverRejectedRoomRead(roomId, visit, owns, () =>
+          refreshRoom(roomId, roomRevision(roomId), owns),
+        );
       });
 
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */

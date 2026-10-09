@@ -3418,6 +3418,202 @@ describe("room access refresh", () => {
       }),
     ),
   );
+
+  it.effect("a dirtied recovery cannot leave the next visit stuck loading after an error", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const recoveryStarted = yield* Deferred.make<void>();
+        const releaseRecovery = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        let reads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* api.reply("GET /users", { users: [] });
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          if (reads === 2) {
+            return Deferred.succeed(recoveryStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseRecovery)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          return Effect.fail(new NetworkError({ message: "offline" }));
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents(membershipUpsert(1, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Deferred.await(recoveryStarted);
+        yield* pushEvents(membershipUpsert(2, { involvement: "mentions" }));
+        yield* session.closeRoom(12);
+
+        const reopening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Fiber.join(reopening);
+        yield* Deferred.succeed(releaseRecovery, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("error");
+        expect(store.getState().rooms[12]?.error).toBe("offline");
+      }),
+    ),
+  );
+
+  it.effect("a dirtied recovery cannot clear the preview the next visit opened", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const recoveryStarted = yield* Deferred.make<void>();
+        const releaseRecovery = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        const preview = { id: 12, name: "general" };
+        let reads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+        yield* api.reply("GET /rooms/12/preview", preview);
+        yield* api.reply("GET /users", { users: [] });
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          if (reads === 2) {
+            return Deferred.succeed(recoveryStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseRecovery)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          return Effect.fail(new NotFound({ message: "Room not found" }));
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents(membershipUpsert(1, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Deferred.await(recoveryStarted);
+        yield* pushEvents(membershipUpsert(2, { involvement: "mentions" }));
+        yield* session.closeRoom(12);
+
+        const reopening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Fiber.join(reopening);
+        yield* Deferred.succeed(releaseRecovery, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]).toMatchObject({
+          status: "ready",
+          detail: null,
+          preview,
+        });
+      }),
+    ),
+  );
+
+  it.effect("a recovery re-read never sets loading while room content is already shown", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const firstStarted = yield* Deferred.make<void>();
+        const releaseFirst = yield* Deferred.make<void>();
+        const messagesStarted = yield* Deferred.make<void>();
+        const releaseMessages = yield* Deferred.make<void>();
+        const followStarted = yield* Deferred.make<void>();
+        const releaseFollow = yield* Deferred.make<void>();
+        const row = sidebarRowFixture(12, "general");
+        let reads = 0;
+        let messageReads = 0;
+
+        yield* api.reply("GET /sidebar", sidebarFixture([row]));
+        yield* api.reply("GET /users", { users: [] });
+        yield* api.route("GET /rooms/12/messages", () => {
+          messageReads += 1;
+
+          if (messageReads === 1) {
+            return Deferred.succeed(messagesStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseMessages)),
+              Effect.as(pageFixture([])),
+            );
+          }
+
+          return Effect.succeed(pageFixture([]));
+        });
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          if (reads === 1) {
+            return Deferred.succeed(firstStarted, undefined).pipe(
+              Effect.andThen(Deferred.await(releaseFirst)),
+              Effect.as(roomDetailFixture(12)),
+            );
+          }
+
+          if (reads === 2) {
+            return Effect.succeed({ ...roomDetailFixture(12), memberCount: 3 });
+          }
+
+          return Deferred.succeed(followStarted, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseFollow)),
+            Effect.as({ ...roomDetailFixture(12), memberCount: 8 }),
+          );
+        });
+        yield* startEngine;
+        yield* welcome(0, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* Deferred.await(firstStarted);
+        yield* pushEvents(membershipUpsert(1, { involvement: "muted" }));
+        yield* Deferred.succeed(releaseFirst, undefined);
+        yield* Deferred.await(messagesStarted);
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(3);
+        yield* pushEvents(membershipUpsert(2, { involvement: "mentions" }));
+        yield* Deferred.succeed(releaseMessages, undefined);
+        yield* Deferred.await(followStarted);
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail).not.toBeNull();
+
+        yield* Deferred.succeed(releaseFollow, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail?.memberCount).toBe(8);
+      }),
+    ),
+  );
 });
 
 describe("decoding", () => {
