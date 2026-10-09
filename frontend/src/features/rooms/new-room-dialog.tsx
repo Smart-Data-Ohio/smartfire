@@ -173,6 +173,15 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const effectivePrivate = privacy === "both" ? isPrivate : privacy === "closed";
   const kind = kindOf(channel, effectivePrivate);
   const { form } = choice;
+
+  const dirty =
+    name !== "" ||
+    iconName !== null ||
+    members.length > 0 ||
+    step !== "details" ||
+    channel !== channelOf(preset) ||
+    isPrivate !== (preset === "closed");
+
   const needsMembers = hasMemberList(kind);
   // Nothing is created from a form that hasn't loaded: its default name is the server's.
   const ready = form !== null;
@@ -298,6 +307,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
       open={open}
       onOpenChange={onOpenChange}
       title={step === "details" ? TITLE[channel] : "Add people"}
+      dirty={dirty}
       description={
         step === "members" && kind !== "open" ? (
           <span className="room-form-description">

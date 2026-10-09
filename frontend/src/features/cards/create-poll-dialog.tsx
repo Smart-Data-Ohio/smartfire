@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { uuid7 } from "../../lib/uuid7.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -84,6 +84,7 @@ export function CreatePollDialog(props: CreatePollDialogProps) {
   // A fresh form (and client id) for each opening.
   const [opened, setOpened] = useState(0);
   const [wasOpen, setWasOpen] = useState(props.open);
+  const [dirty, setDirty] = useState(false);
 
   if (props.open !== wasOpen) {
     setWasOpen(props.open);
@@ -100,13 +101,24 @@ export function CreatePollDialog(props: CreatePollDialogProps) {
       title="Create a poll"
       description="Everyone in the room can vote."
       size="md"
+      dirty={dirty}
     >
-      <CreatePollForm key={opened} {...props} />
+      <CreatePollForm key={opened} {...props} onDirty={setDirty} />
     </Dialog>
   );
 }
 
-function CreatePollForm({ roomId, onOpenChange, initialQuestion = "" }: CreatePollDialogProps) {
+interface CreatePollFormProps extends CreatePollDialogProps {
+  /** Whether anything differs from how the form opened. */
+  readonly onDirty: (dirty: boolean) => void;
+}
+
+function CreatePollForm({
+  roomId,
+  onOpenChange,
+  initialQuestion = "",
+  onDirty,
+}: CreatePollFormProps) {
   const [sent, setSent] = useState<Sent | null>(null);
   const [question, setQuestion] = useState(initialQuestion);
   const [options, setOptions] = useState<readonly string[]>(["", ""]);
@@ -117,6 +129,18 @@ function CreatePollForm({ roomId, onOpenChange, initialQuestion = "" }: CreatePo
   const [failure, setFailure] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  const dirty =
+    question !== initialQuestion ||
+    options.length !== MIN_OPTIONS ||
+    options.some((option) => option !== "") ||
+    multiple ||
+    anonymous ||
+    closes !== "never";
+
+  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+
+  useEffect(() => () => onDirty(false), [onDirty]);
 
   const setOption = (index: number, value: string) => {
     setOptions((current) => current.map((option, at) => (at === index ? value : option)));

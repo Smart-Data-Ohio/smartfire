@@ -81,6 +81,7 @@ export default function RenameDirectDialog({
       onOpenChange={onOpenChange}
       title="Rename conversation"
       size="sm"
+      dirty={!unchanged}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

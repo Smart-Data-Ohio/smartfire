@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import { Button } from "../../ui/button.tsx";
@@ -30,6 +30,7 @@ interface EditScheduledDialogProps {
  */
 export function EditScheduledDialog({ item, onClose, onSave }: EditScheduledDialogProps) {
   const [shown, setShown] = useState<ScheduledMessage | null>(item);
+  const [dirty, setDirty] = useState(false);
 
   // Keep the last message while the dialog plays its exit.
   if (item !== null && item !== shown) {
@@ -46,9 +47,16 @@ export function EditScheduledDialog({ item, onClose, onSave }: EditScheduledDial
       }}
       title="Edit scheduled message"
       size="md"
+      dirty={dirty}
     >
       {shown === null ? null : (
-        <EditForm key={shown.id} item={shown} onClose={onClose} onSave={onSave} />
+        <EditForm
+          key={shown.id}
+          item={shown}
+          onClose={onClose}
+          onSave={onSave}
+          onDirty={setDirty}
+        />
       )}
     </Dialog>
   );
@@ -58,9 +66,11 @@ interface EditFormProps {
   readonly item: ScheduledMessage;
   readonly onClose: () => void;
   readonly onSave: (item: ScheduledMessage, edit: ScheduledEdit) => Promise<void>;
+  /** Whether the text or the time differs from the saved message. */
+  readonly onDirty: (dirty: boolean) => void;
 }
 
-function EditForm({ item, onClose, onSave }: EditFormProps) {
+function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const textId = useId();
   const [text, setText] = useState(item.markdownSource);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
@@ -76,6 +86,11 @@ function EditForm({ item, onClose, onSave }: EditFormProps) {
   const at = fromLocalInput(when);
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
+  const dirty = textChanged || timeChanged;
+
+  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+
+  useEffect(() => () => onDirty(false), [onDirty]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

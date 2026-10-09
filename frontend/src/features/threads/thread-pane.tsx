@@ -273,6 +273,7 @@ function RenameDialog({
       onOpenChange={onOpenChange}
       title={`Rename ${noun}`}
       size="sm"
+      dirty={name !== current}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

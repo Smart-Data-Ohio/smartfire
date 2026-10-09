@@ -35,8 +35,8 @@ interface DialogProps {
   readonly onExited?: () => void;
   /**
    * Whether the form holds unsaved input. A phone sheet's swipe down then springs back instead of
-   * closing; Esc and the close button still ask `onOpenChange`. Left out, anything typed or
-   * chosen in the dialog since it opened counts.
+   * closing; Esc and the close button still ask `onOpenChange`. Left out, a swipe closes it.
+   * The owner computes it from its own state: what it would lose, not what was touched.
    */
   readonly dirty?: boolean;
 }
@@ -301,8 +301,6 @@ export function Dialog({
   const returnFocusFirstRef = useRef(returnFocusFirst);
   const onExitedRef = useRef(onExited);
   const dirtyRef = useRef(dirty);
-  // Typed or chosen since the dialog opened: the unsaved input `dirty` stands for when left out.
-  const editedRef = useRef(false);
   const presence = usePresence<HTMLDialogElement>(open);
   const titleId = `${id}-title`;
   const descriptionId = `${id}-description`;
@@ -329,7 +327,6 @@ export function Dialog({
       dialog.setAttribute("open", "");
     }
 
-    editedRef.current = false;
     initialFocus(dialog).focus();
 
     return () => {
@@ -351,7 +348,7 @@ export function Dialog({
   }, [presence.mounted, presence.ref]);
 
   const close = () => onOpenChange(false);
-  const swipe = useSwipeDown(close, () => dirtyRef.current ?? editedRef.current);
+  const swipe = useSwipeDown(close, () => dirtyRef.current === true);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDialogElement>) => {
     if (event.key === "Escape") {
@@ -417,9 +414,6 @@ export function Dialog({
       data-size={size}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      onInput={() => {
-        editedRef.current = true;
-      }}
       onCancel={onCancel}
       onClick={onClick}
     >

@@ -325,6 +325,45 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog).toBeHidden();
   });
 
+  test("a poll with only a toggle flipped springs back from a swipe", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Create a poll" });
+    const anonymous = dialog.getByRole("switch", { name: "Anonymous" });
+
+    await sheet("Create a poll").open(page, dialog);
+    await anonymous.click();
+    await expect(anonymous).toHaveAttribute("aria-checked", "true");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeVisible();
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+    await expect(anonymous).toHaveAttribute("aria-checked", "true");
+  });
+
+  test("a new message with a recipient tapped, nothing typed, springs back", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "New message" });
+
+    await sheet("New message").open(page, dialog);
+    await dialog.getByRole("option").first().click();
+    await expect(dialog.locator(".picker-chip")).toHaveCount(1);
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeVisible();
+    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
+    await expect(dialog.locator(".picker-chip")).toHaveCount(1);
+  });
+
+  test("a forward with a search typed and cleared still swipes away", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Forward message" });
+    const search = dialog.getByRole("searchbox", { name: "Search conversations" });
+
+    await sheet("Forward message").open(page, dialog);
+    await search.fill("gen");
+    await search.fill("");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
+  });
+
   test("a sheet that won't close while sending springs back with its footer", async ({ page }) => {
     let release: () => void = () => undefined;
 

@@ -119,6 +119,14 @@ export default function FizzyCardDialog({
   const connectRef = useRef<HTMLAnchorElement | null>(null);
   const form = load.status === "ready" ? load.loaded.form : null;
   const editable = form !== null && draft !== null && stage.kind !== "disconnected";
+  const start = form === null ? null : initialDraft(form);
+
+  const dirty =
+    draft !== null &&
+    start !== null &&
+    (draft.boardId !== start.boardId ||
+      draft.title !== start.title ||
+      draft.description !== start.description);
 
   // The overlay mounts the dialog afresh for each opening, so this reads the form once per
   // opening; a retry (`tries`) reads it again.
@@ -287,6 +295,7 @@ export default function FizzyCardDialog({
         )
       }
       size="md"
+      dirty={dirty}
       footer={footer}
       {...(returnFocus === undefined ? {} : { returnFocus })}
       returnFocusFirst={returnFocusFirst}
