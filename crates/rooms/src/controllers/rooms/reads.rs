@@ -18,7 +18,9 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (mut membership, room) = concerns::set_room(c).await?;
     c.app().db.write(move |tx| membership.read(tx)).await.map_err(db_error)?;
-    crate::channels::broadcasts::read_room(&c.app().cable, require_current_user(c)?.id, room.id);
+    let user_id = require_current_user(c)?.id;
+    crate::channels::broadcasts::read_room(&c.app().cable, user_id, room.id);
+    c.app().broadcasts.sync_read_row(user_id, room.id);
     c.json(StatusCode::OK, &ReadState {room_id:room.id,unread:false,first_unread_message_id:None})
 }
 

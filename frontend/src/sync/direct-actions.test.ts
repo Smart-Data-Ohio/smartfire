@@ -9,7 +9,7 @@ import {
   sidebarRowFixture,
   userFixture,
 } from "../api/testing.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import * as directs from "./direct-actions.ts";
 
 function seed(): void {
@@ -20,6 +20,7 @@ function seed(): void {
       sidebarRowFixture(1, "general"),
       sidebarRowFixture(20, "Grace and Ada", "direct", [3, 4]),
     ]),
+    sidebarRowClock(),
   );
 }
 

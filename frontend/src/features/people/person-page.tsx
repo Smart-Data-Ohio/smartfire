@@ -1,10 +1,11 @@
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
+import { Link, Navigate, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { PersonProfile } from "../../gen/PersonProfile.ts";
 import { useStore } from "../../store/store.ts";
 import { peoplePages } from "../../sync/admin.ts";
 import { directs } from "../../sync/directs.ts";
 import { ActionError } from "../../sync/run.ts";
+import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -254,6 +255,40 @@ function Profile({
           },
     );
 
+  if (user.role === "bot") {
+    return (
+      <div className="person" data-status={user.status}>
+        <Avatar name={user.name} userId={user.id} src={user.avatarUrl} size={96} />
+        <span className="people-badge">Bot</span>
+        {active ? (
+          <div className="person-actions">
+            <Button
+              variant="primary"
+              icon="message-circle"
+              aria-label={`Message ${user.name}`}
+              loading={messaging}
+              onClick={message}
+            >
+              Message
+            </Button>
+            {profile.canManageBot ? (
+              <Link
+                to="/admin/bots/$botId/grants"
+                params={{ botId: `${user.id}` }}
+                className="button"
+                data-variant="secondary"
+              >
+                Manage capability grants
+              </Link>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-muted">{user.name} is no longer on this account</p>
+        )}
+      </div>
+    );
+  }
+
   if (deactivated) {
     return (
       <div className="person" data-status="deactivated">
@@ -325,7 +360,7 @@ function Profile({
 /**
  * `/app/people/$userId`: someone's page, as the classic `users#show` shows it to this viewer:
  * their status, the DND exception, Message and, for administrators, their email, sign-in link
- * and the ban button. A bot's page opens its agent profile, or the classic page.
+ * and the ban button. A bot with an agent record opens its agent profile.
  */
 export function PersonPage({
   userId,
@@ -383,7 +418,12 @@ export function PersonPage({
   };
 
   const bot =
-    load.status === "ready" && load.profile.user.role === "bot" ? load.profile.user : null;
+    load.status === "ready" &&
+    load.profile.user.role === "bot" &&
+    load.profile.user.agent !== null &&
+    hasAgentPage
+      ? load.profile.user
+      : null;
 
   useEffect(() => {
     if (bot === null || left.current) {
@@ -394,11 +434,7 @@ export function PersonPage({
 
     const target = botPage(bot, hasAgentPage);
 
-    if (target.startsWith("/app/")) {
-      void navigate({ href: target.slice("/app".length), replace: true });
-    } else {
-      window.location.replace(target);
-    }
+    void navigate({ href: target.slice("/app".length), replace: true });
   }, [bot, hasAgentPage, navigate]);
 
   const heldUser = useStore((state) => state.users[userId]);
@@ -446,6 +482,10 @@ export function PersonPage({
 export function PersonRoute() {
   const { userId } = useParams({ from: "/shell/people/$userId" });
   const viewerId = useStore((state) => state.me?.user.id);
+
+  if (userId === viewerId) {
+    return <Navigate to="/settings" replace />;
+  }
 
   return <PersonPage key={userId} userId={userId} viewerId={viewerId} />;
 }

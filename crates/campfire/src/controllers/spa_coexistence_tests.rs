@@ -466,8 +466,6 @@ async fn only_html_navigations_of_ported_pages_redirect() {
         Req::new(Method::GET, &room_path).header("accept", "text/vnd.turbo-stream.html"),
         Req::new(Method::GET, &format!("{room_path}/events")).header("accept", "application/json"),
         // Unported pages, and paths a ported pattern doesn't cover.
-        Req::new(Method::GET, "/users/7/profile"),
-        Req::new(Method::GET, "/users/me/profile/edit"),
         Req::new(Method::GET, "/rooms/new"),
         Req::new(Method::GET, &format!("{room_path}/messages")),
     ];
@@ -484,6 +482,71 @@ async fn only_html_navigations_of_ported_pages_redirect() {
     // Signed out, a ported page asks for a sign-in as ever.
     let signed_out = a.anonymous().get(&room_path).await;
     assert_eq!(signed_out.location(), Some(to("/session/new").as_str()));
+}
+
+#[tokio::test]
+async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
+    let Some(a) = enabled().await else { return };
+    let bot = a.db().write(|tx| {
+        let bot = campfire_db::User::create_bot(tx, "Legacy Bot", None)?;
+        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+        Ok(bot.id)
+    }).await.unwrap();
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut b = a.sign_in(DAVID).await;
+    for (id, destination) in [
+        (DAVID, "/app/settings".to_string()),
+        (JASON, format!("/app/people/{JASON}")),
+        (bot, format!("/app/people/{bot}")),
+    ] {
+        for suffix in ["", "/profile", "/profile/edit"] {
+            let path = format!("/users/{id}{suffix}?source=profile");
+            let reply = b.get(&path).await;
+            assert_eq!(reply.status, StatusCode::FOUND, "{path}: {}", reply.text());
+            assert_eq!(reply.location(), Some(to(&format!("{destination}?source=profile")).as_str()), "{path}");
+        }
+    }
+    assert_eq!(b.get("/users/me/profile/edit").await.location(), Some(to("/app/settings").as_str()));
+    assert_eq!(b.get("/users/me/profile/edit?classic=1").await.status, StatusCode::NOT_FOUND);
+    assert_eq!(b.get(&format!("/users/{bot}?classic=1")).await.status, StatusCode::OK);
+}
+
+async fn profile_edit_is_not_found(browser: &mut Browser<'_>, query: &str) {
+    for user in ["me".to_string(), DAVID.to_string(), JASON.to_string()] {
+        let path = format!("/users/{user}/profile/edit{query}");
+        let reply = browser.get(&path).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}: {}", reply.text());
+        assert_eq!(reply.location(), None, "{path}");
+    }
+}
+
+#[tokio::test]
+async fn signed_out_profile_edit_keeps_classic_not_found() {
+    let Some(a) = enabled().await else { return };
+    let mut browser = a.anonymous();
+    profile_edit_is_not_found(&mut browser, "?classic=1").await;
+    profile_edit_is_not_found(&mut browser, "").await;
+}
+
+#[tokio::test]
+async fn bot_key_profile_edit_keeps_classic_not_found() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else { return };
+    let mut browser = a.anonymous();
+    profile_edit_is_not_found(&mut browser, &format!("?classic=1&bot_key={BENDER_KEY}")).await;
+    profile_edit_is_not_found(&mut browser, &format!("?bot_key={BENDER_KEY}")).await;
+}
+
+#[tokio::test]
+async fn disabled_spa_profile_edit_keeps_classic_not_found() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app(&[("SPA_ENABLED", "0"), ("SPA_DEFAULT", "next")]).await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    profile_edit_is_not_found(&mut a.anonymous(), "").await;
+    profile_edit_is_not_found(&mut a.anonymous(), &format!("?bot_key={BENDER_KEY}")).await;
+    profile_edit_is_not_found(&mut a.sign_in(DAVID).await, "").await;
 }
 
 /// A classic action that leaves a notice for the next page keeps that page classic, so the

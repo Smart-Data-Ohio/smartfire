@@ -529,7 +529,7 @@ FOREIGN KEY ("configured_by_id")
 );
 CREATE INDEX "index_slack_workspaces_on_configured_by_id" ON "slack_workspaces" ("configured_by_id");
 CREATE UNIQUE INDEX "index_slack_workspaces_on_team_id" ON "slack_workspaces" ("team_id");
-CREATE TABLE "thread_memberships" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "involvement" varchar DEFAULT 'mentions' NOT NULL, "joined_at" datetime(6) NOT NULL, "thread_id" integer NOT NULL, "unread_at" datetime(6), "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL, CONSTRAINT "fk_rails_21cece547a"
+CREATE TABLE "thread_memberships" ("id" integer PRIMARY KEY AUTOINCREMENT NOT NULL, "created_at" datetime(6) NOT NULL, "involvement" varchar DEFAULT 'mentions' NOT NULL, "joined_at" datetime(6) NOT NULL, "thread_id" integer NOT NULL, "unread_at" datetime(6), "updated_at" datetime(6) NOT NULL, "user_id" integer NOT NULL, "last_read_message_id" integer, CONSTRAINT "fk_rails_21cece547a"
 FOREIGN KEY ("thread_id")
   REFERENCES "channel_threads" ("id")
  ON DELETE CASCADE, CONSTRAINT "fk_rails_00c95cb16e"
@@ -963,3 +963,4 @@ BEGIN
 END;
 CREATE UNIQUE INDEX "index_rooms_on_creator_id_and_client_room_id" ON "rooms" ("creator_id", "client_room_id") WHERE client_room_id IS NOT NULL;
 CREATE UNIQUE INDEX "index_channel_threads_on_room_creator_client_post_id" ON "channel_threads" ("room_id", "creator_id", "client_post_id") WHERE client_post_id IS NOT NULL;
+CREATE INDEX "index_activity_items_on_unread_message_pings" ON "activity_items" ("user_id", "event_type") WHERE read_at IS NULL AND source_type = 'Message';

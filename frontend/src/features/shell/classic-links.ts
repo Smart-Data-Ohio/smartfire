@@ -1,6 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { spaUrlFor } from "../../lib/screens.ts";
+import { useStore } from "../../store/store.ts";
 import { messageLinkSnapshot } from "../room/message-link.ts";
 
 /** A plain left click: no modifier keys, so it isn't asking for a new tab or window. */
@@ -24,6 +25,7 @@ function isPlainClick(event: MouseEvent): boolean {
 export function inPlaceTarget(
   anchor: HTMLAnchorElement,
   origin = window.location.origin,
+  viewerId?: number,
 ): string | null {
   const target = anchor.getAttribute("target");
 
@@ -37,7 +39,7 @@ export function inPlaceTarget(
     return null;
   }
 
-  const spa = spaUrlFor(url.pathname, url.search);
+  const spa = spaUrlFor(url.pathname, url.search, viewerId);
 
   return spa === null ? null : `${spa}${url.hash}`;
 }
@@ -49,6 +51,7 @@ export function inPlaceTarget(
  */
 export function useClassicLinks(): void {
   const router = useRouter();
+  const viewerId = useStore((state) => state.me?.user.id);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
@@ -62,7 +65,7 @@ export function useClassicLinks(): void {
         return;
       }
 
-      const spa = inPlaceTarget(anchor);
+      const spa = inPlaceTarget(anchor, window.location.origin, viewerId);
 
       if (spa === null) {
         return;
@@ -82,5 +85,5 @@ export function useClassicLinks(): void {
     document.addEventListener("click", onClick);
 
     return () => document.removeEventListener("click", onClick);
-  }, [router]);
+  }, [router, viewerId]);
 }

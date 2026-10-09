@@ -13,6 +13,27 @@ use crate::models::{Room, User};
 use crate::sql::{self, CachedStatements, query_all, query_one};
 use crate::time::Timestamp;
 
+/// The person read the room by being present in it in the classic app (`PresenceChannel#present`,
+/// which reads the membership). The cable sink then publishes the single-page app's
+/// `sidebar.row.upserted` for their row, read after the commit, so a row read before the read
+/// can't leave a cleared badge up.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PresentRead {
+    pub user_id: i64,
+    pub room_id: i64,
+}
+
+impl Broadcast for PresentRead {
+    const KIND: &'static str = "Membership#sync_present_read";
+}
+
+impl PresentRead {
+    /// Publishes the row after `tx` commits.
+    pub fn emit(self, tx: &mut Tx<'_>) {
+        tx.emit_after_commit(Event::broadcast(&self));
+    }
+}
+
 /// `enum :involvement, %w[ invisible nothing muted mentions everything ].index_by(&:itself)`
 /// (`app/models/membership.rb`). A muted room goes unread only when the member is mentioned
 /// (`Room#unread_memberships`).
