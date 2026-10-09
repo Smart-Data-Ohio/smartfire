@@ -367,6 +367,8 @@ describe("store-backed deletion with real Virtua", () => {
     // Timeline places, before this file's smooth-scroll mock is installed.
     previousScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollTo");
     HTMLElement.prototype.scrollTo = () => undefined;
+    // Full motion: Jump to present scrolls smoothly (jsdom has no media query to ask).
+    document.documentElement.dataset.motion = "full";
   });
 
   afterEach(() => {
@@ -379,6 +381,7 @@ describe("store-backed deletion with real Virtua", () => {
     cleanup();
     vi.unstubAllGlobals();
     store.setState(initialState, true);
+    delete document.documentElement.dataset.motion;
   });
 
   it("production Timeline preserves forward find through last-row deletion before settlement", async () => {
@@ -451,6 +454,96 @@ describe("store-backed deletion with real Virtua", () => {
       await measureTimeline();
       expect(element.scrollTop).toBe(stopped);
       expect(scrollTo).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /** The production Timeline over five 200 px rows, placed at the end (700), the reader at 100. */
+  async function placedTimeline() {
+    mutations.applyPage(
+      ROOM,
+      pageFixture([1, 2, 3, 4, 5].map((id) => messageFixture(id, ROOM))),
+      "replace",
+    );
+
+    const rootRoute = createRootRoute({
+      component: () => <Timeline roomId={ROOM} focusMessageId={null} />,
+    });
+
+    const router = createRouter({
+      routeTree: rootRoute,
+      history: createMemoryHistory({ initialEntries: ["/"] }),
+    });
+
+    const view = render(<RouterProvider router={router} />);
+
+    await act(() => router.load());
+
+    for (let frame = 0; frame < 10 && viewport().dataset.placementSettled !== "true"; frame += 1) {
+      await measureTimeline();
+      await act(async () => vi.advanceTimersToNextFrame());
+      fireEvent.scroll(viewport());
+    }
+
+    expect(viewport().scrollTop).toBe(700);
+
+    const element = viewport();
+
+    element.scrollTop = 100;
+    fireEvent.scroll(element);
+    fireEvent(element, new Event("scrollend"));
+
+    return { view, element };
+  }
+
+  it("production Jump to present goes at once when motion is reduced", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
+    document.documentElement.dataset.motion = "reduce";
+
+    try {
+      const { view, element } = await placedTimeline();
+      const { scrollTo } = animateScroll(element);
+
+      await act(async () => fireEvent.click(view.getByRole("button", { name: "Jump to present" })));
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: "instant" });
+      expect(element.scrollTop).toBe(700);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("production Jump to present finishes at once when Virtua drops its smooth scroll", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
+
+    try {
+      const { view, element } = await placedTimeline();
+
+      // A smooth scroll that never starts: Virtua gave up waiting for the end rows' sizes.
+      const scrollTo = vi.fn(
+        (...args: [options?: ScrollToOptions | undefined] | [x: number, y: number]) => {
+          const options: ScrollToOptions =
+            args.length === 2 ? { left: args[0], top: args[1] } : (args[0] ?? {});
+
+          if (options.behavior === "smooth") return;
+
+          element.scrollTop = options.top ?? element.scrollTop;
+          fireEvent.scroll(element);
+          fireEvent(element, new Event("scrollend"));
+        },
+      );
+
+      element.scrollTo = scrollTo;
+      await act(async () => fireEvent.click(view.getByRole("button", { name: "Jump to present" })));
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: "smooth" });
+
+      for (let frame = 0; frame < 20 && element.scrollTop === 100; frame += 1) {
+        await act(async () => vi.advanceTimersToNextFrame());
+      }
+
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: "instant" });
+      expect(element.scrollTop).toBe(700);
     } finally {
       vi.useRealTimers();
     }
