@@ -7,6 +7,7 @@ import {
 import type { PeopleDirectory } from "../../src/gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../../src/gen/PersonProfile.ts";
 import type { Json } from "../json.ts";
+import { AGENT_IDS } from "../s4/agents.ts";
 import { BOT_ID, DEACTIVATED_ID, USER_IDS, VIEWER_ID } from "../seed.ts";
 import { errorOf, expectStatus, get, harness, send } from "./testing.ts";
 
@@ -78,6 +79,36 @@ describe("the mock's people pages", () => {
     expect(bot.canManageBot).toBe(true);
     await send(server, "POST", "/__mock/viewer-role", { role: "member" });
     expect((await get<PersonProfile>(server, "/api/v1/people/900")).canManageBot).toBe(false);
+  });
+
+  it("lets a non-admin owner manage their active bot, but no other bots", async () => {
+    const { server } = harness();
+
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+
+    const owned = await get<PersonProfile>(server, `/api/v1/people/${BOT_ID}`);
+    const another = await get<PersonProfile>(server, `/api/v1/people/${AGENT_IDS.scout}`);
+    const ownerless = await get<PersonProfile>(server, `/api/v1/people/${AGENT_IDS.herald}`);
+
+    expect(owned.canManageBot).toBe(true);
+    expect(another.canManageBot).toBe(false);
+    expect(ownerless.canManageBot).toBe(false);
+  });
+
+  it("hides inactive bot management from administrators and owners", async () => {
+    const { server } = harness();
+
+    const banned = await expectStatus<PersonProfile>(
+      server,
+      "POST",
+      `/api/v1/people/${BOT_ID}/ban`,
+      null,
+      200,
+    );
+
+    expect(banned).toMatchObject({ canManageBot: false, user: { status: "banned" } });
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    expect((await get<PersonProfile>(server, `/api/v1/people/${BOT_ID}`)).canManageBot).toBe(false);
   });
 
   it("bans and removes the ban, asking for the password once it has lapsed", async () => {

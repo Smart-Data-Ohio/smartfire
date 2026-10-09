@@ -511,6 +511,44 @@ async fn legacy_bot_and_numeric_profile_aliases_open_the_spa() {
     assert_eq!(b.get(&format!("/users/{bot}?classic=1")).await.status, StatusCode::OK);
 }
 
+async fn profile_edit_is_not_found(browser: &mut Browser<'_>, query: &str) {
+    for user in ["me".to_string(), DAVID.to_string(), JASON.to_string()] {
+        let path = format!("/users/{user}/profile/edit{query}");
+        let reply = browser.get(&path).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}: {}", reply.text());
+        assert_eq!(reply.location(), None, "{path}");
+    }
+}
+
+#[tokio::test]
+async fn signed_out_profile_edit_keeps_classic_not_found() {
+    let Some(a) = enabled().await else { return };
+    let mut browser = a.anonymous();
+    profile_edit_is_not_found(&mut browser, "?classic=1").await;
+    profile_edit_is_not_found(&mut browser, "").await;
+}
+
+#[tokio::test]
+async fn bot_key_profile_edit_keeps_classic_not_found() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app(&[("SPA_ENABLED", "1"), ("SPA_DEFAULT", "next")]).await else { return };
+    let mut browser = a.anonymous();
+    profile_edit_is_not_found(&mut browser, &format!("?classic=1&bot_key={BENDER_KEY}")).await;
+    profile_edit_is_not_found(&mut browser, &format!("?bot_key={BENDER_KEY}")).await;
+}
+
+#[tokio::test]
+async fn disabled_spa_profile_edit_keeps_classic_not_found() {
+    use crate::controllers::presenters::test_support::BENDER_KEY;
+
+    let Some(a) = app(&[("SPA_ENABLED", "0"), ("SPA_DEFAULT", "next")]).await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    profile_edit_is_not_found(&mut a.anonymous(), "").await;
+    profile_edit_is_not_found(&mut a.anonymous(), &format!("?bot_key={BENDER_KEY}")).await;
+    profile_edit_is_not_found(&mut a.sign_in(DAVID).await, "").await;
+}
+
 /// A classic action that leaves a notice for the next page keeps that page classic, so the
 /// notice shows; the next visit, with the flash shown, goes to the SPA again.
 #[tokio::test]
