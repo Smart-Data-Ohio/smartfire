@@ -130,6 +130,67 @@
     white-space: nowrap;
   }
 
+  /* The message being replied to, above the text: who, the start of it, Notify author and ×. */
+  .composer-reply {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: var(--space-1-5) var(--space-1-5) 0;
+    padding: var(--space-0-5) var(--space-0-5) var(--space-0-5) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .composer-reply-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .composer-reply-copy {
+    display: flex;
+    flex: 1;
+    gap: var(--space-1-5);
+    min-width: 0;
+    margin: 0;
+  }
+
+  /* A long unbroken name ends in an ellipsis and leaves room for the excerpt. */
+  .composer-reply-label {
+    flex-shrink: 0;
+    max-width: 60%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .composer-reply-label strong {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .composer-reply-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .composer-reply-notify {
+    flex-shrink: 0;
+  }
+
+  .composer-reply-notify .checkbox-row {
+    gap: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
   .composer-hint {
     display: inline-flex;
     align-items: center;
@@ -257,6 +318,27 @@
     .composer-usage-text {
       display: none;
     }
+
+    /* The quote takes two lines (who, then what) and Notify author drops below it. */
+    .composer-reply {
+      flex-wrap: wrap;
+      row-gap: 0;
+    }
+
+    .composer-reply-copy {
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .composer-reply-label {
+      max-width: 100%;
+    }
+
+    .composer-reply-notify {
+      order: 1;
+      flex-basis: 100%;
+      padding-left: calc(14px + var(--space-2));
+    }
   }
 
   /* Touch phones: each toolbar control is a 44 px target that paints a 36 px button inside it
@@ -278,6 +360,24 @@
 
     .composer-toolbar .composer-scheduled.button {
       margin-right: 0;
+    }
+
+    .composer-reply-cancel.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+      padding: var(--space-1);
+      background-clip: content-box;
+    }
+
+    /* The whole "Notify author" line is the box's input, so a finger anywhere on it ticks it. */
+    .composer-reply-notify .checkbox-row {
+      position: relative;
+      min-height: var(--touch-target);
+    }
+
+    .composer-reply-notify .checkbox {
+      position: static;
     }
   }
 }

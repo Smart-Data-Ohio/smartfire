@@ -75,6 +75,18 @@ describe("message permissions", () => {
     expect(messagePermissions(note, member).fizzy).toBe(false);
   });
 
+  it("offers an inline reply on any message but a system note or one in a locked thread", () => {
+    const reply = messageFixture(9, ROOM, { threadId: 5 });
+    const note = messageFixture(10, ROOM, { systemNote: true });
+
+    expect(messagePermissions(theirs, member).reply).toBe(true);
+    expect(messagePermissions(own, member).reply).toBe(true);
+    expect(messagePermissions(theirs, { ...member, roomKind: "direct" }).reply).toBe(true);
+    expect(messagePermissions(reply, { ...member, threadStatus: "active" }).reply).toBe(true);
+    expect(messagePermissions(reply, { ...member, threadStatus: "locked" }).reply).toBe(false);
+    expect(messagePermissions(note, member).reply).toBe(false);
+  });
+
   it("offers threads on root messages outside direct rooms, and mark unread on the timeline", () => {
     const reply = messageFixture(6, ROOM, { threadId: 5 });
 
@@ -94,7 +106,7 @@ describe("message menu", () => {
     expect(
       commands(menuSections({ permissions, pinned: false, saved: false, inThread: false })),
     ).toEqual([
-      ["thread", "react", "boost"],
+      ["reply", "thread", "react", "boost"],
       ["edit", "copy-text", "copy-link"],
       ["pin", "save", "forward", "unread", "fizzy"],
       ["delete"],
@@ -111,6 +123,7 @@ describe("message menu", () => {
     expect(sections.flat()).not.toContain("edit");
     expect(sections.flat()).not.toContain("delete");
     expect(sections.flat()).not.toContain("thread");
+    expect(sections.flat()).toContain("reply");
     expect(sections).toHaveLength(3);
   });
 

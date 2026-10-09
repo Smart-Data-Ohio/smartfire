@@ -75,6 +75,8 @@ const pending: PendingMessage = {
   threadId: null,
   attachmentSignedId: null,
   attachment: null,
+  replyToMessageId: null,
+  replyNotifyAuthor: null,
   creatorId: 1,
   markdownSource: "hello",
   createdAt: "2026-10-06T09:30:00.000Z",
