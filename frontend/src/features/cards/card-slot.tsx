@@ -63,6 +63,8 @@ const snapshot = () => loaded;
 
 const settledSnapshot = () => loaded !== null || failed;
 
+const loadedSnapshot = () => loaded !== null;
+
 /** Whether a message shows anything from the cards chunk: a poll or a card. */
 export function hasCards(message: MessageDTO): boolean {
   return message.poll !== null || message.cards.length > 0;
@@ -75,6 +77,11 @@ export function hasCards(message: MessageDTO): boolean {
  */
 export function useCardsChunkSettled(): boolean {
   return useSyncExternalStore(subscribe, settledSnapshot, settledSnapshot);
+}
+
+/** A successful reveal, including a retry after the initial fetch failed. */
+export function useCardsChunkLoaded(): boolean {
+  return useSyncExternalStore(subscribe, loadedSnapshot, loadedSnapshot);
 }
 
 /**

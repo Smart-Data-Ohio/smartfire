@@ -11,8 +11,10 @@ import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { AgentApproval } from "../gen/AgentApproval.ts";
 import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
 import type { CancelEvent } from "../gen/CancelEvent.ts";
+import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
 import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
@@ -29,6 +31,10 @@ import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
+import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
+import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
@@ -47,6 +53,7 @@ import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateEvent } from "../gen/UpdateEvent.ts";
 import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
@@ -90,7 +97,7 @@ import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
 import * as workActions from "./work-actions.ts";
 
-export type { EventPrefill };
+export type { EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
 
@@ -404,6 +411,47 @@ const cards = {
   ): Promise<void> => runAction(cardActions.respond(roomId, eventId, response, applyToFuture)),
   loadGithub: (roomId: number, pullRequestId: number, scope: GithubCardScope): Promise<void> =>
     runAction(cardActions.loadGithub(roomId, pullRequestId, scope)),
+  /** What this viewer can post. The card shows a control only when its flag is set. */
+  githubActions: (roomId: number, pullRequestId: number): Promise<GithubPullRequestActions> =>
+    runAction(cardActions.githubActions(roomId, pullRequestId)),
+  /**
+   * One shared `/actions` read for this room and pull request. `reason` names the completed
+   * preview load (and a retry); a read already in flight for that reason is joined.
+   */
+  loadGithubActions: (roomId: number, pullRequestId: number, reason: string): Promise<void> =>
+    runAction(cardActions.loadGithubActions(roomId, pullRequestId, reason)),
+  /** Classic Discuss: the mapping row, then the card reloads so `/actions` can answer. */
+  discussGithub: (
+    roomId: number,
+    pullRequestId: number,
+    messageId: number,
+  ): Promise<GithubDiscussion> =>
+    runAction(cardActions.discussGithub(roomId, pullRequestId, messageId)),
+  /** Posts an issue comment as the viewer; the card refetches when it lands. */
+  commentOnGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.commentOnGithub(roomId, pullRequestId, scope, body)),
+  /** Approves, requests changes, or leaves a review comment; the card refetches when it lands. */
+  reviewGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    event: GithubReviewKind,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.reviewGithub(roomId, pullRequestId, scope, event, body)),
+  /** Asks those GitHub usernames to review; the card refetches when it lands. */
+  requestGithubReviewers: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    reviewers: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.requestGithubReviewers(roomId, pullRequestId, scope, reviewers)),
   loadFizzy: (roomId: number, fizzyCardId: number, messageId: number): Promise<void> =>
     runAction(cardActions.loadFizzy(roomId, fizzyCardId, messageId)),
   loadQuote: (roomId: number, referenceId: number): Promise<void> =>
@@ -467,6 +515,14 @@ const events = {
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   boards: {
+    automations: (roomId: number): Promise<BoardAutomations> =>
+      runAction(boardActions.automations(roomId)),
+    addTagRule: (roomId: number, input: CreateBoardTagRule): Promise<BoardAutomations> =>
+      runAction(boardActions.addTagRule(roomId, input)),
+    removeTagRule: (roomId: number, ruleId: number): Promise<BoardAutomations> =>
+      runAction(boardActions.removeTagRule(roomId, ruleId)),
+    saveSlaTimers: (roomId: number, input: UpdateBoardSlaTimers): Promise<BoardAutomations> =>
+      runAction(boardActions.saveSlaTimers(roomId, input)),
     open: (roomId: number, query: BoardQuery): Promise<void> =>
       runAction(boardActions.open(roomId, query)),
     loadMore: (roomId: number): Promise<void> => runAction(boardActions.loadMore(roomId)),

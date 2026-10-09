@@ -141,6 +141,17 @@ async fn state(app: &TestApp, blob: i64) -> (Option<String>, Option<Timestamp>, 
     }).await.unwrap()
 }
 
+/// Aborts the cable server if an assertion fails before the test reaches an explicit abort.
+/// Dropping the `JoinHandle` only detaches `axum::serve`, so the accept loop keeps the
+/// process alive and the failure looks like a hang.
+struct AbortServer(tokio::task::JoinHandle<()>);
+
+impl Drop for AbortServer {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
 pub(crate) async fn subscribe(
     app: &TestApp,
 ) -> (
@@ -559,6 +570,7 @@ async fn attachment_processing_restart_performs_the_persisted_job() {
 async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails() {
     let (app, _, id, blob_id) = setup(false).await;
     let (_client, server) = subscribe(&app).await;
+    let server = AbortServer(server);
     let expected = oracle()["success"].clone();
     assert_eq!(render(&app, id).await, expected["before"].as_str().unwrap());
     let (token, expires, count) = state(&app, blob_id).await;
@@ -581,10 +593,12 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
     assert_eq!(json!(frames), expected["frames"]);
     assert_eq!(render(&app, id).await, expected["after"].as_str().unwrap());
     let storage = app.booted.app.storage.clone();
+    let expected_message = expected["message"].clone();
+    let expected_blob = expected["blob"].clone();
     let actual = app.db().read(move |conn| {
         let row = crate::controllers::agent_review_r2_tests::row_state;
-        let message = row(conn, &format!("SELECT * FROM messages WHERE id={id}"), &expected["message"])?;
-        let blob = row(conn, &format!("SELECT * FROM active_storage_blobs WHERE id={blob_id}"), &expected["blob"])?;
+        let message = row(conn, &format!("SELECT * FROM messages WHERE id={id}"), &expected_message)?;
+        let blob = row(conn, &format!("SELECT * FROM active_storage_blobs WHERE id={blob_id}"), &expected_blob)?;
         let source = Blob::find(conn, blob_id).unwrap().unwrap();
         let preview = storage.existing_preview_image(conn, &source).unwrap().unwrap();
         let webp = storage.existing_variant(conn, &preview, &campfire_storage::Variation::format_only("webp")).unwrap().unwrap();
@@ -593,16 +607,16 @@ async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails()
             let bytes = storage.service.download(&b.key).unwrap();
             json!({"content_type":b.content_type,"bytes":bytes.len(),"sha256":format!("{:x}", sha2::Sha256::digest(&bytes))})
         });
-        assert_eq!(serde_json::from_str::<serde_json::Value>(&preview.metadata.encode()).unwrap(), expected["preview_metadata"]);
-        assert_eq!(json!(files), expected["files"]);
-        assert_eq!(message, expected["message"]);
-        assert_eq!(blob, expected["blob"]);
+        let preview_metadata = serde_json::from_str::<serde_json::Value>(&preview.metadata.encode()).unwrap();
         let analysis = conn.prepare("SELECT json_extract(arguments,'$.blob_id') FROM background_jobs WHERE job_class='ActiveStorage::AnalyzeJob' ORDER BY id")?.query_map([], |r| r.get::<_,i64>(0))?.collect::<Result<Vec<_>,_>>()?;
-        assert_eq!(json!(analysis), expected["image_analysis_jobs"]);
-        Ok(())
-    }).await;
-    actual.unwrap();
-    server.abort();
+        Ok((preview_metadata, json!(files), message, blob, json!(analysis)))
+    }).await.unwrap();
+    drop(server);
+    assert_eq!(actual.0, expected["preview_metadata"]);
+    assert_eq!(actual.1, expected["files"]);
+    assert_eq!(actual.2, expected["message"]);
+    assert_eq!(actual.3, expected["blob"]);
+    assert_eq!(actual.4, expected["image_analysis_jobs"]);
 }
 
 #[tokio::test]

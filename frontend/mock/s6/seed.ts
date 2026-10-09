@@ -18,6 +18,8 @@ export const BOARD_ROOM_ID = 900;
 /** How many messages the long discussion (Keyboard navigation in dialogs) holds. */
 export const LONG_DISCUSSION = 64;
 
+export const BOARD_TAG_RULE_IDS = { bug: 9101, design: 9102 } as const;
+
 export const BOARD_POST_IDS = {
   onboardingChecklist: 9001,
   launchWeek: 9002,
@@ -169,6 +171,14 @@ export function seedBoards(world: World, now: number, seed: number): void {
     },
     messages: [],
     mentionCount: 0,
+    boardAutomations: {
+      tagRules: [
+        { id: BOARD_TAG_RULE_IDS.bug, tag: "bug", assigneeId: BOT_ID },
+        { id: BOARD_TAG_RULE_IDS.design, tag: "design", assigneeId: USER_IDS.maya },
+      ],
+      slaTimers: [{ status: "planned", nudgeAfterMinutes: 1440, escalateAfterMinutes: 2880 }],
+      nextTagRuleId: 9103,
+    },
     boardDigest: {
       date: iso(now).slice(0, 10),
       text: "Verify backup restore and Fix retries duplicating sends are waiting for their owners.",

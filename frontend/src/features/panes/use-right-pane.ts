@@ -2,6 +2,7 @@ import { useMatchRoute, useNavigate, useParams, useSearch } from "@tanstack/reac
 import { useEffect, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import { PHONE_QUERY } from "../../lib/breakpoints.ts";
+import { useStore } from "../../store/store.ts";
 import {
   closeStep,
   isPaneShowing,
@@ -32,6 +33,10 @@ function useRoutePane(): RoutePaneKind | null {
     return "files";
   }
 
+  if (matchRoute({ to: "/r/$roomId/automations" }) !== false) {
+    return "automations";
+  }
+
   return matchRoute({ to: "/r/$roomId/pins" }) === false ? null : "pins";
 }
 
@@ -42,6 +47,13 @@ export function useRightPaneView(): RightPaneView | null {
   const matchRoute = useMatchRoute();
   const pane = useOpenPane(params.roomId ?? 0);
   const routePane = useRoutePane();
+
+  const roomKind = useStore(
+    (state) =>
+      state.rooms[params.roomId ?? 0]?.detail?.room.kind ??
+      state.sidebar.rows[params.roomId ?? 0]?.room.kind,
+  );
+
   const drafting = matchRoute({ to: "/r/$roomId/t/new" }) !== false;
   // The notification URL is the room with its header menu open, never under a side pane. Read
   // at render, so the conversation is not inert when the menu mounts and takes focus.
@@ -49,6 +61,7 @@ export function useRightPaneView(): RightPaneView | null {
   const notifying = matchRoute({ to: "/r/$roomId/notifications" }) !== false;
 
   return selectRightPaneView({
+    roomKind,
     newBoardPost: posting,
     threadId: params.threadId ?? null,
     newThreadParent: drafting ? (search.parent ?? null) : null,
@@ -153,6 +166,22 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
       }
     },
     toggle: (pane) => {
+      if (pane === "automations") {
+        openPane(null);
+
+        if (isPaneShowing(view, pane)) {
+          leaveThread();
+        } else {
+          void navigate({
+            to: "/r/$roomId/automations",
+            params: { roomId },
+            search: parseBoardSearch,
+          });
+        }
+
+        return;
+      }
+
       if (routePane !== null) {
         openPane(null);
 

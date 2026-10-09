@@ -141,7 +141,7 @@
     --leading-ui: 1.25rem;
     --text-body: 0.9375rem; /* 15/22: message body, as Slack */
     --leading-body: 1.375rem;
-    --text-input: var(--text-ui); /* 14: form fields; 16 on touch, so iOS never zooms */
+    --text-input: var(--text-ui); /* 14: form fields; 16 on touch phones, so iOS never zooms */
     --text-composer: 1rem; /* 16: composer, so iOS never zooms */
     --leading-composer: 1.5rem;
     --text-title: 1.125rem; /* 18: pane header title */
@@ -199,13 +199,19 @@
   }
 
   /*
-   * iOS zooms into a focused field whose text is under 16 px, so on touch screens no field drops
-   * below it: form fields grow to 16 px, and the composer size holds at the smaller text sizes.
+   * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
+   * use the composer size never drop below it at the smaller text sizes, and on touch phones form
+   * fields grow to 16 px too (a desktop layout keeps its 14 px fields).
    */
   @media (pointer: coarse) {
     :root {
-      --text-input: max(1rem, 16px);
       --text-composer: max(1rem, 16px);
+    }
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --text-input: max(1rem, 16px);
     }
   }
 }

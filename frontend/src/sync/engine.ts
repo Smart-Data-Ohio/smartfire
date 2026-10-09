@@ -254,6 +254,9 @@ export class Engine extends Context.Service<
           state.rooms[roomId]?.detail?.room.kind ?? state.sidebar.rows[roomId]?.room.kind;
 
         if (kind === "board") {
+          // A missed `board.automations.changed` can't be replayed either.
+          mutations.boardAutomationsChanged(roomId);
+
           if (held !== undefined) mutations.setBoardLoading(roomId, held.query);
           const generation = store.getState().boards[roomId]?.generation;
 

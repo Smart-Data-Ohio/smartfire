@@ -1,4 +1,6 @@
 import type { BoardDigest } from "../src/gen/BoardDigest.ts";
+import type { BoardSlaTimer } from "../src/gen/BoardSlaTimer.ts";
+import type { BoardTagRule } from "../src/gen/BoardTagRule.ts";
 /**
  * The mock workspace: people, rooms, the viewer's memberships and a realistic message history,
  * all generated from a seed and placed relative to `now`, so day dividers and "5 minutes ago"
@@ -105,6 +107,11 @@ export function seededMessageId(roomId: number, index: number): number {
 /** A room as the mock keeps it: the DTO plus what the viewer's sidebar row and detail need. */
 export interface RoomRecord {
   boardDigest?: BoardDigest | null;
+  boardAutomations?: {
+    tagRules: BoardTagRule[];
+    slaTimers: BoardSlaTimer[];
+    nextTagRuleId: number;
+  };
   room: Room;
   /** Everyone in the room, in membership order (oldest first), viewer included. */
   memberIds: number[];

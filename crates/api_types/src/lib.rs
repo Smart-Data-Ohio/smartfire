@@ -21,6 +21,7 @@ mod admin;
 mod agents;
 mod attachment;
 mod board;
+mod board_automations;
 mod bots;
 mod cards;
 mod composer;
@@ -82,6 +83,10 @@ pub use board::{
     BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
     CreateBoardPost,
 };
+pub use board_automations::{
+    BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
+    UpdateBoardSlaTimers,
+};
 pub use bots::{
     Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
     BotSummary, ConnectGithub, CreateBot, CreateCredential, CreateGrant, Credential,
@@ -89,10 +94,13 @@ pub use bots::{
     UpdateBotAgent,
 };
 pub use cards::{
-    AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
-    FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
-    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubPullRequest, GithubPullRequestCard,
-    GithubPullRequestStatus, GithubReview, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
+    AttendanceResponse, CardFetch, CreateGithubComment, CreateGithubDiscussion, CreateGithubReview,
+    CreateGithubReviewRequest, CreatePoll, DriveFileCard, EventAttendance, EventCard,
+    FizzyAssignee, FizzyCard,
+    FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubAccountLink, GithubCardRef,
+    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubDiscussion, GithubPullRequest,
+    GithubPullRequestActions, GithubPullRequestCard, GithubPullRequestStatus, GithubReview,
+    GithubReviewKind, GithubWriteResult, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
     PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview, QuotePreviewResult,
     RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
 };
