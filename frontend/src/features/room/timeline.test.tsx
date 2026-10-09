@@ -833,6 +833,71 @@ describe("permalink placement", () => {
     }
   });
 
+  it("still recentres after Tab in the right pane then a close pointer within 100ms", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    const restoreMedia = installMatchMedia();
+
+    try {
+      vi.spyOn(panes, "members").mockResolvedValue({ members: [], users: [] });
+      install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+      await renderTimelinePane(FOCUS);
+      expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+      await settlePlacement();
+
+      const row = document.querySelector<HTMLElement>(
+        `[data-message-row][data-message-id="${FOCUS}"]`,
+      );
+
+      expect(row).not.toBeNull();
+
+      if (row === null) {
+        return;
+      }
+
+      // The permalink left this row focused. Opening the sheet from it is not reader input.
+      await act(async () => {
+        row.focus();
+        openPane("members");
+      });
+
+      for (let frame = 0; frame < 5 && document.activeElement === row; frame += 1) {
+        await flushFrame();
+      }
+
+      const pane = document.querySelector(".right-pane");
+      const close = pane?.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
+
+      expect(pane).not.toBeNull();
+      expect(close).not.toBeNull();
+      expect(document.activeElement).not.toBe(row);
+      expect(pane?.contains(document.activeElement ?? null)).toBe(true);
+
+      // Tab inside the sheet, then Close in the same window. The click hands focus back
+      // to the timeline row. That hand-back is the pane's, so the late page still centres.
+      await act(async () => {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+        );
+        close?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+        close?.click();
+      });
+
+      expect(document.activeElement).toBe(row);
+      scrolls.length = 0;
+
+      await act(async () => {
+        replaceAround([10, 11, 12, FOCUS]);
+      });
+
+      expect(scrolls.length).toBeGreaterThan(0);
+      expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+      expect(rowIndex(FOCUS)).toBeGreaterThan(0);
+    } finally {
+      restoreMedia();
+    }
+  });
+
   it("still recentres after an emoji picker autofocuses inside the timeline", async () => {
     emitScroll = true;
     restoreMeasure = measureList();

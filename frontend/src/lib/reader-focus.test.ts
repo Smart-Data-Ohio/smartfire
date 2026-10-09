@@ -59,6 +59,24 @@ describe("readerMovedFocus", () => {
     expect(readerMovedFocus(row)).toBe(false);
   });
 
+  it("keeps only the latest input, so a click after Tab is not Tab", () => {
+    const row = document.createElement("div");
+    const link = document.createElement("a");
+    const close = document.createElement("button");
+
+    row.append(link);
+    document.body.append(row, close);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    close.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    expect(readerMovedFocus(link)).toBe(false);
+    expect(readerMovedFocus(close)).toBe(true);
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
+    );
+    expect(readerMovedFocus(link)).toBe(true);
+  });
+
   it("stays quiet inside duringAppFocus even after Tab", () => {
     const link = document.createElement("a");
 

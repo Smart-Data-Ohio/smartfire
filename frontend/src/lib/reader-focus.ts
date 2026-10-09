@@ -2,18 +2,21 @@
  * Whether a focus move inside the timeline belongs to the reader.
  *
  * Tab changes focus after keydown, so the viewport anchor cannot see it on the key itself.
- * A focusin counts only when the last keydown in this window was Tab (with or without Shift)
- * and no other key followed it, or when the last pointerdown landed on the newly focused
- * element or an ancestor of it. Escape, Enter, Space and every other key are the app moving
- * focus. `duringAppFocus` still covers a `focus()` the app already knows is its own.
+ * One slot remembers the latest keydown or pointerdown. A focusin counts only when that
+ * latest input is a Tab (with or without Shift) inside the window, or a pointerdown inside
+ * the window on the newly focused element or an ancestor of it. A click after Tab replaces
+ * the Tab. Escape, Enter, Space and every other key are the app moving focus.
+ * `duringAppFocus` still covers a `focus()` the app already knows is its own.
  */
 
 /** How recently a Tab or a click still explains the focus that follows it. */
 const READER_FOCUS_WINDOW_MS = 100;
 
-let lastKey: { readonly key: string; readonly at: number } | null = null;
+type LastInput =
+  | { readonly kind: "key"; readonly key: string; readonly at: number }
+  | { readonly kind: "pointer"; readonly target: EventTarget | null; readonly at: number };
 
-let lastPointer: { readonly target: EventTarget | null; readonly at: number } | null = null;
+let lastInput: LastInput | null = null;
 
 let appFocus = 0;
 
@@ -24,16 +27,15 @@ function onKeyDown(event: Event): void {
     return;
   }
 
-  lastKey = { key: event.key, at: performance.now() };
+  lastInput = { kind: "key", key: event.key, at: performance.now() };
 }
 
 function onPointerDown(event: Event): void {
-  lastPointer = { target: event.target, at: performance.now() };
+  lastInput = { kind: "pointer", target: event.target, at: performance.now() };
 }
 
 function forgetInput(): void {
-  lastKey = null;
-  lastPointer = null;
+  lastInput = null;
 }
 
 /**
@@ -79,26 +81,24 @@ export function duringAppFocus<T>(run: () => T): T {
 }
 
 /**
- * A focusin that followed the person's Tab, or a click on `focused` (or an ancestor of it).
- * Any other key, and a click that landed somewhere else, is the app.
+ * A focusin that followed the person's latest input when that input was Tab, or a click
+ * on `focused` (or an ancestor of it). A later key or click replaces the earlier one.
  */
 export function readerMovedFocus(
   focused: EventTarget | null = null,
   at = performance.now(),
 ): boolean {
-  if (appFocus !== 0) {
+  if (appFocus !== 0 || lastInput === null || at - lastInput.at > READER_FOCUS_WINDOW_MS) {
     return false;
   }
 
-  if (lastKey?.key === "Tab" && at - lastKey.at <= READER_FOCUS_WINDOW_MS) {
-    return true;
+  if (lastInput.kind === "key") {
+    return lastInput.key === "Tab";
   }
 
   return (
     focused instanceof Node &&
-    lastPointer !== null &&
-    lastPointer.target instanceof Node &&
-    at - lastPointer.at <= READER_FOCUS_WINDOW_MS &&
-    lastPointer.target.contains(focused)
+    lastInput.target instanceof Node &&
+    lastInput.target.contains(focused)
   );
 }
