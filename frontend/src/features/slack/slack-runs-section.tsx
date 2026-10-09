@@ -4,7 +4,13 @@ import type { SlackRunList } from "../../gen/SlackRunList.ts";
 import { slack } from "../../sync/admin.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { auditTime } from "../admin/admin-format.ts";
-import { AdministratorsOnly, useAdmin } from "../admin/admin-parts.tsx";
+import {
+  AdministratorsOnly,
+  CardCell,
+  CardRow,
+  CardTable,
+  useAdmin,
+} from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsPage } from "../settings/settings-parts.tsx";
 import { modeLabel } from "./slack-format.ts";
@@ -57,34 +63,22 @@ export function SlackRunsSection() {
       ) : null}
       {load.status === "ready" && load.list.runs.length > 0 ? (
         <section className="admin-audit-wrap" aria-label="Import runs">
-          <table className="admin-audit-table" data-cards>
-            <thead>
-              <tr>
-                <th scope="col">Run</th>
-                <th scope="col">Kind</th>
-                <th scope="col">Mode</th>
-                <th scope="col">Status</th>
-                <th scope="col">Started by</th>
-                <th scope="col">When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {load.list.runs.map((run) => (
-                <tr key={run.id}>
-                  <td data-title>
-                    <Link to="/admin/slack/runs/$runId" params={{ runId: `${run.id}` }}>
-                      #{run.id}
-                    </Link>
-                  </td>
-                  <td data-label="Kind">{run.kind}</td>
-                  <td data-label="Mode">{modeLabel(run.mode)}</td>
-                  <td data-label="Status">{run.status}</td>
-                  <td data-label="Started by">{run.startedBy}</td>
-                  <td data-label="When">{auditTime(run.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CardTable columns={["Run", "Kind", "Mode", "Status", "Started by", "When"]}>
+            {load.list.runs.map((run) => (
+              <CardRow key={run.id}>
+                <CardCell column="Run" title>
+                  <Link to="/admin/slack/runs/$runId" params={{ runId: `${run.id}` }}>
+                    #{run.id}
+                  </Link>
+                </CardCell>
+                <CardCell column="Kind">{run.kind}</CardCell>
+                <CardCell column="Mode">{modeLabel(run.mode)}</CardCell>
+                <CardCell column="Status">{run.status}</CardCell>
+                <CardCell column="Started by">{run.startedBy}</CardCell>
+                <CardCell column="When">{auditTime(run.createdAt)}</CardCell>
+              </CardRow>
+            ))}
+          </CardTable>
         </section>
       ) : null}
     </SettingsPage>

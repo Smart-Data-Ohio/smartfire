@@ -1,10 +1,12 @@
 import type { Page } from "@playwright/test";
 import {
+  DESKTOP,
   expect,
   expectNoHorizontalOverflow,
   expectTouchTargets,
   matrix,
   openApp,
+  PHONE_SMALL,
   PHONE_TOUCH,
   shot,
   test,
@@ -283,8 +285,37 @@ test.describe("on a phone", () => {
       PHONE_TOUCH.viewport.width,
     );
     expect(cells.find((cell) => cell.title)?.top).toBe(Math.min(...cells.map((cell) => cell.top)));
-    await expect(page.locator(".admin-audit-table thead")).toBeHidden();
     await shot(page, "admin-audit-cards", "light");
+
+    // Still a table to a screen reader: its headers hidden only visually, each value under one.
+    const table = page.getByRole("table");
+
+    await expect(table.getByRole("columnheader")).toHaveText([
+      "Time",
+      "Actor",
+      "Action",
+      "Target",
+      "Changes",
+      "IP",
+    ]);
+    await expect(table.locator("thead")).toHaveCSS("clip-path", "inset(50%)");
+    await expect(table.getByRole("row").nth(1).getByRole("cell")).toHaveCount(6);
+    await expect(table).toMatchAriaSnapshot(`
+      - table:
+        - rowgroup:
+          - row:
+            - columnheader "Time"
+            - columnheader "Actor"
+            - columnheader "Action"
+            - columnheader "Target"
+            - columnheader "Changes"
+            - columnheader "IP"
+        - rowgroup:
+          - row:
+            - cell
+            - cell
+            - cell "account.settings.change"
+    `);
   });
 
   test("the import runs are cards, and the run page goes back to Slack import", async ({
@@ -310,5 +341,52 @@ test.describe("on a phone", () => {
     expect((await preview.boundingBox())?.height).toBeLessThan(140);
     await expectNoHorizontalOverflow(page);
     await shot(page, "admin-workspace-preview", "light");
+  });
+});
+
+test.describe("across the phone breakpoint", () => {
+  test.use({ viewport: DESKTOP });
+
+  test("workspace drafts survive the window narrowing and widening again", async ({ page }) => {
+    // The root's own section, which the phone list covers.
+    await openAdmin(page, "");
+
+    const name = page.getByRole("textbox", { name: "Name" });
+
+    await name.fill("Smart Data, unsaved");
+    await page.setViewportSize(PHONE_SMALL);
+    await expect(nav(page).getByRole("link", { name: "Audit log" })).toBeVisible();
+    await page.setViewportSize(DESKTOP);
+    await expect(name).toHaveValue("Smart Data, unsaved");
+
+    // A section page, pushed on phones.
+    await nav(page).getByRole("link", { name: "Custom styles" }).click();
+
+    const css = page.getByRole("textbox", { name: "Custom CSS" });
+
+    await css.fill("a { color: teal; }");
+    await page.setViewportSize(PHONE_SMALL);
+    await expect(page.getByRole("link", { name: "Back to Workspace" })).toBeVisible();
+    await expect(css).toHaveValue("a { color: teal; }");
+    await page.setViewportSize(DESKTOP);
+    await expect(css).toHaveValue("a { color: teal; }");
+  });
+
+  test("the browser's Back and a reload keep the phone pages in place", async ({ page }) => {
+    await page.setViewportSize(PHONE_SMALL);
+    await openApp(page, "admin");
+
+    await nav(page).getByRole("link", { name: "Workspace", exact: true }).click();
+    await expect(page).toHaveURL(/\/app\/admin\/workspace$/);
+
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 2, name: "Workspace profile" })).toBeVisible();
+    await expect(
+      page.locator(".settings-header").getByText("Workspace", { exact: true }),
+    ).toBeVisible();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/app\/admin$/);
+    await expect(nav(page).getByRole("link", { name: "People" })).toBeVisible();
   });
 });

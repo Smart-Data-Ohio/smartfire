@@ -57,6 +57,8 @@ export function useTitleInHeader(title: string): boolean {
  * Wide screens show the nav beside the section. On phones they are list and detail, as iOS and
  * Slack lay out settings: the root is a grouped list of the sections, and a section is a page
  * pushed over it, its header's back button returning to the list (or, under a section, to it).
+ * The breakpoint only changes the layout, never what is mounted: the root's own section stays
+ * rendered under the list on phones, hidden, so a draft typed into it survives a resize.
  */
 export function SectionsLayout<S extends Section>({
   root,
@@ -136,12 +138,4 @@ export function SectionsLayout<S extends Section>({
       </div>
     </div>
   );
-}
-
-/**
- * The root's own route (`/settings`, `/admin`): the first section beside the nav, and nothing on
- * phones, where the root is the list.
- */
-export function RootSection({ children }: { readonly children: ReactNode }) {
-  return usePhoneLayout() ? null : children;
 }

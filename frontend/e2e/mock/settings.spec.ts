@@ -1,10 +1,12 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import {
+  DESKTOP,
   expect,
   expectNoHorizontalOverflow,
   expectTouchTargets,
   matrix,
   openApp,
+  PHONE_SMALL,
   PHONE_TOUCH,
   shot,
   test,
@@ -839,5 +841,55 @@ test.describe("on a phone", () => {
     await expect(header.getByText("Integrations", { exact: true })).toBeVisible();
     await header.getByRole("link", { name: "Back to Integrations" }).click();
     await expect(page).toHaveURL(/\/app\/settings\/integrations$/);
+  });
+});
+
+test.describe("across the phone breakpoint", () => {
+  test.use({ viewport: DESKTOP });
+
+  test("a profile draft survives the window narrowing to the list and widening again", async ({
+    page,
+  }) => {
+    await openSettings(page, "");
+
+    const name = page.getByRole("textbox", { name: "Name", exact: true });
+
+    await name.fill("Riel, unsaved");
+
+    await page.setViewportSize(PHONE_SMALL);
+    await expect(nav(page).getByRole("link", { name: "Notifications" })).toBeVisible();
+    await expect(name).toBeHidden();
+
+    await page.setViewportSize(DESKTOP);
+    await expect(name).toHaveValue("Riel, unsaved");
+  });
+
+  test("the browser's Back leaves a pushed section for the list", async ({ page }) => {
+    await page.setViewportSize(PHONE_SMALL);
+    await openApp(page, "settings");
+
+    await nav(page).getByRole("link", { name: "Rooms" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Rooms" })).toBeAttached();
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/app\/settings$/);
+    await expect(nav(page).getByRole("link", { name: "Rooms" })).toBeVisible();
+  });
+
+  test("the profile's phone page reloads as itself, at either width", async ({ page }) => {
+    await page.setViewportSize(PHONE_SMALL);
+    await openSettings(page, "profile");
+    await page.reload();
+
+    const header = page.locator(".settings-header");
+
+    await expect(header.getByText("Profile", { exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
+
+    await page.setViewportSize(DESKTOP);
+    await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
