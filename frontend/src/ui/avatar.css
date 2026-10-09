@@ -76,4 +76,12 @@
   .avatar-presence[data-presence="offline"] {
     background: radial-gradient(circle, var(--avatar-ring) 34%, var(--presence-offline) 36%);
   }
+
+  /* Phones: initials in the small faces (a facepile, a thread's repliers) read at 11 px, not
+     the 8-9 px that 40 % of 20-22 px gives; the tiniest faces stop at 55 % of their size. */
+  @media (width < 720px) {
+    .avatar {
+      font-size: max(calc(var(--avatar-size) * 0.4), min(11px, calc(var(--avatar-size) * 0.55)));
+    }
+  }
 }

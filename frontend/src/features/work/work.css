@@ -232,6 +232,72 @@
     height: 28px;
   }
 
+  /* Phones: the section folds to one line: the status, the owner, the links as a strip that
+     scrolls sideways, and the details toggle (its name kept for assistive tech). Opened, the
+     details drop below the line. While the keyboard is up the section gives way to the replies. */
+  @media (width < 720px) {
+    .pane-toolbar:has(> .work-bar) {
+      padding: var(--space-1) var(--space-3) 0;
+    }
+
+    :root[data-keyboard="open"] .pane-toolbar:has(> .work-bar) {
+      display: none;
+    }
+
+    .work-bar {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0 var(--space-1);
+    }
+
+    .work-bar-facts,
+    .work-bar-details,
+    .work-bar-details > .accordion {
+      display: contents;
+    }
+
+    .work-bar .work-links {
+      grid-row: 1;
+      grid-column: 3;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      mask-image: linear-gradient(to right, #000 calc(100% - var(--space-4)), transparent);
+    }
+
+    .work-bar .work-links > li {
+      flex-shrink: 0;
+    }
+
+    .work-bar .accordion-heading {
+      grid-row: 1;
+      grid-column: 4;
+    }
+
+    .work-bar-details .accordion-trigger {
+      position: relative;
+      justify-content: center;
+      width: var(--control-md);
+      height: var(--control-md);
+      padding: 0;
+    }
+
+    .work-bar-details .accordion-trigger > :last-child {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .work-bar .t-acc-panel {
+      grid-row: 2;
+      grid-column: 1 / -1;
+    }
+  }
+
   .work-details {
     display: flex;
     flex-direction: column;
