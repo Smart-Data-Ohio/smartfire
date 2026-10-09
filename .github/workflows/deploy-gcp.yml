@@ -736,6 +736,17 @@ jobs:
             | gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
                 --command 'sudo python3 /opt/campfire-deploy/configure-spa.py'
 
+      # The release script checks the built SPA shell only when the SPA was already on, and the
+      # mode above is applied after it, so turning the SPA on is checked here once it is applied.
+      # Read-only: the application stays as deployed whatever this finds.
+      - name: Check the SPA shell the new mode serves
+        if: (inputs.spa_mode == 'opt-in' || inputs.spa_mode == 'default-next') && steps.plan.outputs.dry_run != 'true' && steps.spa_configuration.conclusion == 'success'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 deploy/gcp/check-frontend.py "https://${GCP_APP_HOST}" --spa
+
       # Runs on failure, cancellation and timeout alike: anything that leaves the
       # write freeze without a successful cutover needs the host dealt with.
       #

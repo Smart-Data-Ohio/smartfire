@@ -905,9 +905,45 @@ async fn an_invalid_interval_disables_only_its_loop() {
 
 // --- Latency ------------------------------------------------------------------------------------------
 
-/// How long a push notification's job waits between the write that asks for it and its handler
-/// starting: the enqueue (a row in the write's transaction), the commit, the wake and the claim.
-/// `cargo test -p campfire --release push_latency -- --ignored --nocapture`
+#[test]
+fn ws8_periodic_tasks_match_rails_names_and_intervals() {
+    let golden: serde_json::Value =
+        serde_json::from_str(include_str!("../../../web/src/ws8_runtime_vectors.json")).unwrap();
+    let periodic = periodic::periodic(periodic::PeriodicIntervals {
+        reminders: Duration::from_secs(17),
+        retention: Duration::from_secs(123),
+    });
+    let tasks: Vec<_> = periodic
+        .tasks()
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
+        .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
+        .collect();
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
+    // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
+    let retention = expected.pop().unwrap();
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"slack imports","seconds":30}));
+    expected.push(retention);
+    expected.push(ws17["presence_task"].clone());
+    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
+    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    let board:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/board_automations.json")).unwrap();
+    expected.extend(board["cadence"].as_array().unwrap().iter().cloned());
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
+    let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
+    assert_eq!(events.interval(), Duration::from_secs(17));
+    let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
+    assert_eq!(recovery.interval(), Duration::from_secs(30));
+    // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
+    let ws11:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_streaming_contract.json")).unwrap();
+    let mut tasks:Vec<_>=periodic.tasks().filter(|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].contains(&t.name())).map(|t|serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()})).collect();
+    tasks.sort_by_key(|t|t["name"].as_str().unwrap().to_owned());
+    assert_eq!(serde_json::json!(tasks),ws11["results"]["tasks"]);
+}
+
 #[tokio::test]
 async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let (booted, _dir) = app().await;
