@@ -13,6 +13,7 @@ import { composerActions } from "../../sync/composer-actions.ts";
 import { actions } from "../../sync/runtime.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { editingId, stopEditing } from "../messages/editing-store.ts";
+import { clearCommandCache } from "./autocomplete/suggestions.ts";
 import { Composer } from "./composer.tsx";
 import { draftKey } from "./draft.ts";
 import {
@@ -21,6 +22,7 @@ import {
   replyTarget,
   resetReplies,
   setReplyNotify,
+  snapshotReply,
   startReply,
   trackSentReply,
 } from "./reply-store.ts";
@@ -44,8 +46,12 @@ let refuse: ((body: CreateMessage) => boolean) | null = null;
 /** What a refusal waits on before it answers, to let the test act while the send is in flight. */
 let hold: Promise<void> = Promise.resolve();
 
-/** POSTs to paths ending in `suffix` wait for `until` before they go through. */
-let delay: { readonly suffix: string; readonly until: Promise<void> } | null = null;
+/** Requests (`method`, default POST) to paths ending in `suffix` wait for `until`. */
+let delay: {
+  readonly method?: string;
+  readonly suffix: string;
+  readonly until: Promise<void>;
+} | null = null;
 
 /** A loaded #general message by someone other than the viewer (not `except`). */
 function seeded(except: number | null = null): MessageDTO {
@@ -98,7 +104,11 @@ beforeAll(async () => {
       }
     }
 
-    if (request.method === "POST" && delay !== null && path.endsWith(delay.suffix)) {
+    if (
+      delay !== null &&
+      request.method === (delay.method ?? "POST") &&
+      path.endsWith(delay.suffix)
+    ) {
       await delay.until;
     }
 
@@ -143,6 +153,7 @@ beforeEach(async () => {
   refuse = null;
   hold = Promise.resolve();
   delay = null;
+  clearCommandCache();
 });
 
 /** The pending messages that failed for good. */
@@ -329,9 +340,9 @@ describe("the composer's reply", () => {
     render(<Composer roomId={ROOM} />);
     act(() => startReply(message));
 
-    const target = replyTarget(key);
+    const snapshot = snapshotReply(key);
 
-    expect(target).not.toBeNull();
+    expect(snapshot.target).not.toBeNull();
 
     const reply = { messageId: message.id, notify: true };
 
@@ -342,9 +353,7 @@ describe("the composer's reply", () => {
         reply,
         clientMessageId: fileId,
       });
-      cancelReply(key);
-
-      if (target !== null) trackSentReply(key, target, ids);
+      trackSentReply(key, snapshot, ids);
     });
 
     await waitFor(() =>
@@ -554,5 +563,51 @@ describe("the composer's reply", () => {
 
     expect(replyTarget(draftKey(ROOM, null))).toBeNull();
     run.mockRestore();
+  });
+
+  it("keeps a reply picked while the command list was still loading", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+    const run = vi.spyOn(composerActions, "runSlashCommand");
+
+    delay = { method: "GET", suffix: "/slash_commands", until: gate.promise };
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "/shrug fine{Enter}");
+    expect(run).not.toHaveBeenCalled();
+
+    act(() => startReply(second));
+    gate.resolve();
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await expect(run.mock.results[0]?.value).resolves.toMatchObject({ status: "posted" });
+    });
+
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(second.id);
+    run.mockRestore();
+  });
+
+  it("sends a slash-looking message with the reply it was submitted with", async () => {
+    const user = userEvent.setup();
+    const first = seeded();
+    const second = seeded(first.id);
+    const gate = Promise.withResolvers<void>();
+
+    delay = { method: "GET", suffix: "/slash_commands", until: gate.promise };
+    render(<Composer roomId={ROOM} />);
+    act(() => startReply(first));
+    await user.type(input(), "/nope is fine{Enter}");
+
+    act(() => startReply(second));
+    gate.resolve();
+
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0]).toMatchObject({
+      markdownSource: "/nope is fine",
+      replyToMessageId: first.id,
+    });
+    expect(replyTarget(draftKey(ROOM, null))?.messageId).toBe(second.id);
   });
 });

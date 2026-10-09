@@ -247,6 +247,44 @@ test("a file send that fails brings the reply back", async ({ page }) => {
   await expect(composer(page)).toBeFocused();
 });
 
+test("a send waiting on an upload carries the reply it was submitted with", async ({ page }) => {
+  await openOn(page, TARGET);
+
+  const upload = Promise.withResolvers<void>();
+
+  // Holds the file's direct upload until the reply has been dropped.
+  await page.route("**/*", async (route) => {
+    if (route.request().method() === "PUT") {
+      await upload.promise;
+    }
+
+    await route.fallback();
+  });
+
+  const bar = await hoverBar(row(page, TARGET));
+
+  await bar.getByRole("button", { name: "Reply", exact: true }).click();
+  await page
+    .locator('.composer input[type="file"]')
+    .setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("notes") });
+  await composer(page).fill("With notes");
+  await composer(page).press("Enter");
+  await expect(page.getByRole("button", { name: "Sending when uploads finish" })).toBeVisible();
+
+  await chip(page).getByRole("button", { name: "Cancel reply" }).click();
+  await expect(chip(page)).toBeHidden();
+
+  const create = nextCreate(page);
+
+  upload.resolve();
+  expect((await create).postDataJSON()).toMatchObject({
+    markdownSource: "With notes",
+    replyToMessageId: TARGET,
+  });
+  await sentRow(page, "With notes");
+  await expect(chip(page)).toBeHidden();
+});
+
 test.describe("on a 360 px touch phone", () => {
   test.use(PHONE_TOUCH);
 

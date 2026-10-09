@@ -68,6 +68,19 @@ export function cancelReply(key: string): void {
   });
 }
 
+/** A composer's reply as a submit found it, before anything async: what that submit carries. */
+export interface ReplySnapshot {
+  readonly target: ReplyTarget | null;
+  readonly revision: number;
+}
+
+/** The reply a submit takes, read when the author submits (before any lookup or upload wait). */
+export function snapshotReply(key: string | null): ReplySnapshot {
+  return key === null
+    ? { target: null, revision: 0 }
+    : { target: replyTarget(key), revision: replyRevision(key) };
+}
+
 /**
  * Drops the reply only if nothing was picked or cancelled since `revision` was read: a schedule
  * or command that took the reply when it started leaves a reply picked while it ran.
@@ -155,16 +168,25 @@ function settle(pending: Readonly<Record<string, PendingMessage>>): void {
 }
 
 /**
- * Follows a send that carried `target` (the composer drops the chip as it sends). If any of its
- * messages fails, the reply comes back with its notify choice, as classic keeps reply mode until
- * the send succeeds; it keeps its pick number, so the composer doesn't take the focus again. Call
- * it right after dropping the chip: any pick or cancel after that wins over the restore.
+ * A send that took `snapshot`'s reply has gone out as `clientMessageIds`. The chip goes with it,
+ * unless a reply was picked or cancelled since the snapshot (newer input wins, and nothing comes
+ * back over it). Then if any of those messages fails, the reply comes back with its notify choice,
+ * as classic keeps reply mode until the send succeeds; it keeps its pick number, so the composer
+ * doesn't take the focus again. A pick or cancel after the send also wins over the restore.
  */
 export function trackSentReply(
   key: string,
-  target: ReplyTarget,
+  snapshot: ReplySnapshot,
   clientMessageIds: readonly string[],
 ): void {
+  const target = snapshot.target;
+
+  if (target === null || replyRevision(key) !== snapshot.revision) {
+    return;
+  }
+
+  cancelReply(key);
+
   const pending = store.getState().pending;
 
   const group: SentReply = {

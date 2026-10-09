@@ -43,9 +43,9 @@ import { ReplyChip } from "./reply-chip.tsx";
 import {
   cancelReply,
   cancelReplyAt,
-  replyRevision,
-  replyTarget,
+  type ReplySnapshot,
   setReplyNotify,
+  snapshotReply,
   trackSentReply,
   useReplyTarget,
 } from "./reply-store.ts";
@@ -368,14 +368,14 @@ export function Composer({
 
   /**
    * Posts the text with the first file, and each further file as its own message. Each carries
-   * the reply, if there is one, as classic's text and uploads do. The chip goes with the send; a
-   * send that fails puts it back (`trackSentReply`).
+   * the reply the submit took (`snapshot`, read before any await), as classic's text and uploads
+   * do. The chip goes with the send; a send that fails puts it back (`trackSentReply`).
    */
-  const deliver = (markdown: string, files: readonly TrayFile[]) => {
+  const deliver = (markdown: string, files: readonly TrayFile[], snapshot: ReplySnapshot) => {
     toPresent();
 
     const [first, ...rest] = files;
-    const target = creating ? null : replyTarget(key);
+    const target = snapshot.target;
 
     const replying =
       target === null ? null : { messageId: target.messageId, notify: target.notify };
@@ -403,11 +403,7 @@ export function Composer({
 
     attachments.clearSent();
 
-    if (target !== null) {
-      cancelReply(key);
-      trackSentReply(key, target, sentIds);
-    }
-
+    trackSentReply(key, snapshot, sentIds);
     clear();
   };
 
@@ -459,12 +455,13 @@ export function Composer({
     }
   };
 
-  const runCommand = async (typed: string) => {
+  // The reply is read before the command-list lookup: one picked during it is newer input.
+  const runCommand = async (typed: string, snapshot: ReplySnapshot = currentReply()) => {
     const commands = await loadCommands(roomId, threadId).catch(() => []);
     const route = routeSlash(typed, commands);
 
     if (route.kind === "message") {
-      deliver(route.markdown, []);
+      deliver(route.markdown, [], snapshot);
 
       return;
     }
@@ -473,12 +470,10 @@ export function Composer({
     actions.setTyping(roomId, false, threadId);
     clear();
 
-    const revision = replyRevision(key);
-
     try {
       const result = await composerActions.runSlashCommand(roomId, route.text, threadId);
 
-      showResult(result, typed, revision);
+      showResult(result, typed, snapshot.revision);
     } catch (error) {
       update(typed);
       toast({
@@ -492,7 +487,13 @@ export function Composer({
     }
   };
 
-  const send = () => {
+  /** The reply a submit takes, read as the author submits; a new thread's never has one. */
+  const currentReply = () => snapshotReply(creating ? null : key);
+
+  /** What a send waiting on uploads took when Enter was pressed. */
+  const waitingReply = useRef<ReplySnapshot | null>(null);
+
+  const send = (snapshot: ReplySnapshot = currentReply()) => {
     if (!canSend) {
       return;
     }
@@ -509,11 +510,13 @@ export function Composer({
     }
 
     if (!attachments.ready) {
+      waitingReply.current = snapshot;
       setWaiting(true);
 
       return;
     }
 
+    waitingReply.current = null;
     setWaiting(false);
 
     const markdown = text.trimEnd();
@@ -547,12 +550,12 @@ export function Composer({
     }
 
     if (files.length === 0 && looksLikeCommand(markdown)) {
-      void runCommand(markdown);
+      void runCommand(markdown, snapshot);
 
       return;
     }
 
-    deliver(markdown, files);
+    deliver(markdown, files, snapshot);
   };
 
   // Enter while files upload: send as soon as they're all up (or stop if one fails).
@@ -566,13 +569,13 @@ export function Composer({
 
   useEffect(() => {
     if (waiting && uploadsSettled) {
-      sendRef.current();
+      sendRef.current(waitingReply.current ?? undefined);
     }
   }, [waiting, uploadsSettled]);
 
   const schedule = (at: Date): Promise<void> => {
     const markdown = text.trimEnd();
-    const revision = replyRevision(key);
+    const taken = currentReply();
 
     return scheduled
       .create(roomId, {
@@ -580,12 +583,12 @@ export function Composer({
         sendAt: at.toISOString(),
         threadId,
         // Classic's schedule menu keeps the draft's reply target too.
-        replyToMessageId: replyTarget(key)?.messageId ?? null,
+        replyToMessageId: taken.target?.messageId ?? null,
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
         // The reply it took, not one picked while the request was out.
-        cancelReplyAt(key, revision);
+        cancelReplyAt(key, taken.revision);
         clear();
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
@@ -879,7 +882,7 @@ export function Composer({
             <SendButton
               canSend={canSend}
               waiting={waiting || running}
-              onSend={send}
+              onSend={() => send()}
               schedule={
                 creating
                   ? null
