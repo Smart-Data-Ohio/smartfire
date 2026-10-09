@@ -43,6 +43,7 @@ import { createBots } from "./s2/bots.ts";
 import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
 import { dispatch, type S2Context } from "./s2/context.ts";
 import { createDirects } from "./s2/directs.ts";
+import { createDrive } from "./s2/drive.ts";
 import { createMessages } from "./s2/messages.ts";
 import {
   buildMessage,
@@ -55,7 +56,7 @@ import {
 } from "./s2/model.ts";
 import { createPanes } from "./s2/panes.ts";
 import { createPeople } from "./s2/people.ts";
-import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
+import { clientMessageIdOf, driveCards, parseMessage } from "./s2/posting.ts";
 import { MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
 import { createSettings } from "./s2/settings.ts";
 import { createSlack } from "./s2/slack.ts";
@@ -710,6 +711,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       ...plainDraft(VIEWER_ID, parsed.markdown, clientMessageId),
       replyToMessageId: replyTo,
       attachment: parsed.attachment,
+      cards: driveCards(parsed.driveFileIds),
     });
 
     world.sentByClientId.set(key, message);
@@ -931,6 +933,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...boards.routes,
     ...createWorkLinks(ctx, threads).routes,
     ...messageActions.routes,
+    ...createDrive().routes,
     ...composer.routes,
     ...createDirects(ctx).routes,
     ...createPanes(ctx).routes,

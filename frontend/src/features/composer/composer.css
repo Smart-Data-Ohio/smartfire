@@ -280,4 +280,98 @@
       margin-right: 0;
     }
   }
+
+  .drive-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .drive-picker-search {
+    width: 100%;
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    color: inherit;
+    font: inherit;
+  }
+
+  .drive-picker-results {
+    display: flex;
+    flex-direction: column;
+    max-height: 240px;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+
+  .drive-option {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    width: 100%;
+    min-height: 36px;
+    padding: var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+  }
+
+  .drive-option[aria-selected="true"] {
+    background: var(--bg-sunken);
+  }
+
+  .drive-option-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drive-option-kind,
+  .drive-recipient-email,
+  .drive-picker-status,
+  .drive-picker-notice {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .drive-picker-disconnected,
+  .drive-recipients {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .composer-drive-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3) 0;
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    .drive-picker-search,
+    .drive-option,
+    .drive-remove,
+    .drive-picker-disconnected .button {
+      min-height: var(--touch-target);
+    }
+
+    .drive-remove {
+      min-width: var(--touch-target);
+    }
+  }
 }

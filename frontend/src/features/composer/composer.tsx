@@ -33,6 +33,8 @@ import { loadCommands, selectable } from "./autocomplete/suggestions.ts";
 import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
 import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
+import { attachDriveFile, type DrivePick } from "./drive-picker.ts";
+import { DrivePendingChips, DrivePicker } from "./drive-picker.tsx";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
@@ -52,6 +54,8 @@ export interface ComposerDraft {
   readonly markdown: string;
   /** A finished direct upload's signed id, or `null`. */
   readonly attachmentSignedId: string | null;
+  /** Drive files pinned on the message. Empty when there are none. */
+  readonly driveFileIds: readonly string[];
 }
 
 export interface ComposerProps {
@@ -189,12 +193,15 @@ export function Composer({
   const placeholder = placeholderOverride ?? placeholderFor(conversation);
   const agentReplying = useAgentReplying(roomId);
   const attachments = useAttachments(creating ? 1 : MAX_FILES);
+  const [driveFiles, setDriveFiles] = useState<readonly DrivePick[]>([]);
+  const [driveOpen, setDriveOpen] = useState(false);
   const scheduledHere = useScheduled(roomId, threadId, !creating);
   const trigger = focused ? findTrigger(text, caret.start, caret.end) : null;
   const autocomplete = useAutocomplete(roomId, threadId, trigger, !creating);
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
-  const canSend = (hasText || hasFiles) && !running;
+  const hasDrive = driveFiles.length > 0;
+  const canSend = (hasText || hasFiles || hasDrive) && !running;
 
   // Grow with the text; CSS caps it at half the viewport and scrolls beyond that.
   useLayoutEffect(() => {
@@ -292,6 +299,8 @@ export function Composer({
   const clear = () => {
     setText("");
     writeDraft(key, "");
+    setDriveFiles([]);
+    setDriveOpen(false);
     setPreviewOpen(false);
     focusInput();
   };
@@ -336,6 +345,7 @@ export function Composer({
       threadId,
       attachmentSignedId: first?.snapshot.signedId ?? null,
       attachment: first === undefined ? null : pendingAttachment(first),
+      driveFileIds: driveFiles.map((file) => file.id),
     });
 
     for (const entry of rest) {
@@ -462,7 +472,11 @@ export function Composer({
       submitting.current = true;
       setRunning(true);
 
-      void onSubmit({ markdown, attachmentSignedId: files[0]?.snapshot.signedId ?? null })
+      void onSubmit({
+        markdown,
+        attachmentSignedId: files[0]?.snapshot.signedId ?? null,
+        driveFileIds: driveFiles.map((file) => file.id),
+      })
         .then(
           () => {
             attachments.clearSent();
@@ -645,7 +659,7 @@ export function Composer({
     }
   };
 
-  const scheduleBlocked = hasFiles ? "Files can't be scheduled" : null;
+  const scheduleBlocked = hasFiles || hasDrive ? "Files can't be scheduled" : null;
 
   const plusActions: PlusAction[] = [
     {
@@ -654,6 +668,12 @@ export function Composer({
       icon: "paperclip",
       shortcut: shortcutKeys("upload"),
       onSelect: openPicker,
+    },
+    {
+      id: "drive",
+      label: "From Google Drive",
+      icon: "file-text",
+      onSelect: () => setDriveOpen(true),
     },
   ];
 
@@ -706,7 +726,11 @@ export function Composer({
   });
 
   return (
-    <div className="composer" ref={rootRef} data-holding={hasText || hasFiles || undefined}>
+    <div
+      className="composer"
+      ref={rootRef}
+      data-holding={hasText || hasFiles || hasDrive || undefined}
+    >
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>
@@ -723,6 +747,28 @@ export function Composer({
             files={attachments.files}
             onRemove={attachments.remove}
             onRetry={attachments.retry}
+          />
+          <DrivePendingChips
+            files={driveFiles}
+            onRemove={(id) => setDriveFiles((current) => current.filter((file) => file.id !== id))}
+          />
+          <DrivePicker
+            roomId={roomId}
+            open={driveOpen}
+            onOpenChange={setDriveOpen}
+            onAttach={(file) => {
+              const result = attachDriveFile(driveFiles, file);
+
+              if (result.status === "full") {
+                toast({ title: "Up to 10 Drive files per message" });
+
+                return;
+              }
+
+              if (result.status === "attached") {
+                setDriveFiles(result.files);
+              }
+            }}
           />
           {usage === null ? null : (
             <p className="composer-usage" aria-live="polite">

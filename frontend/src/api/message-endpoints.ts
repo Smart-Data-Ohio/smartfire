@@ -44,9 +44,15 @@ export const readMessage = Effect.fn("api.readMessage")(function* (messageId: nu
 export const updateMessage = Effect.fn("api.updateMessage")(function* (
   messageId: number,
   markdownSource: string,
+  removeDriveFileIds?: readonly string[],
 ) {
+  const body =
+    removeDriveFileIds === undefined || removeDriveFileIds.length === 0
+      ? { markdownSource }
+      : { markdownSource, removeDriveFileIds: [...removeDriveFileIds] };
+
   return yield* call(
-    { method: "PATCH", path: `/messages/${messageId}`, body: { markdownSource } },
+    { method: "PATCH", path: `/messages/${messageId}`, body },
     wire<MessageDTO>(MessageSchema),
   );
 });

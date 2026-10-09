@@ -2,7 +2,10 @@ import { beforeEach, describe, expect, it } from "@effect/vitest";
 import { Clock, Deferred, Effect, Fiber, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { NetworkError, NotFound, ServerError, Validation } from "../api/errors.ts";
-import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
+import {
+  CreateMessage as CreateMessageSchema,
+  type CreateMessage as DecodedCreateMessage,
+} from "../api/schema/message.ts";
 import {
   FakeApi,
   meFixture,
@@ -15,7 +18,6 @@ import {
 } from "../api/testing.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
-import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -2262,7 +2264,7 @@ describe("outbox", () => {
     withSync(
       Effect.gen(function* () {
         const api = yield* FakeApi;
-        const posted = yield* Ref.make<CreateMessage | null>(null);
+        const posted = yield* Ref.make<DecodedCreateMessage | null>(null);
 
         yield* serve([messageFixture(1, 12)]);
         yield* api.route("POST /threads/88/messages", (request) =>

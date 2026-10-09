@@ -2,6 +2,7 @@ import { type Effect, Layer, ManagedRuntime } from "effect";
 import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import { driveRecipients, searchDriveFiles, shareDriveFile } from "../api/drive-endpoints.ts";
 import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
@@ -25,6 +26,9 @@ import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { DriveFileList } from "../gen/DriveFileList.ts";
+import type { DriveRecipientList } from "../gen/DriveRecipientList.ts";
+import type { DriveShare } from "../gen/DriveShare.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { EventDetail } from "../gen/EventDetail.ts";
 import type { EventForm } from "../gen/EventForm.ts";
@@ -141,8 +145,11 @@ export const runAction = <A, E extends ActionFailure>(
 const messages = {
   /** Reads one reachable message without opening or caching its conversation. */
   read: (messageId: number): Promise<MessageRead> => runAction(readMessage(messageId)),
-  edit: (messageId: number, markdown: string): Promise<MessageDTO> =>
-    runAction(messageActions.edit(messageId, markdown)),
+  edit: (
+    messageId: number,
+    markdown: string,
+    removeDriveFileIds?: readonly string[],
+  ): Promise<MessageDTO> => runAction(messageActions.edit(messageId, markdown, removeDriveFileIds)),
   source: (messageId: number): Promise<string> => runAction(messageActions.source(messageId)),
   remove: (messageId: number): Promise<void> => runAction(messageActions.remove(messageId)),
   toggleReaction: (
@@ -205,6 +212,7 @@ const threads = {
       readonly name?: string | null;
       readonly attachmentSignedId?: string | null;
       readonly clientMessageId?: string;
+      readonly driveFileIds?: readonly string[];
     },
   ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),
   update: (threadId: number, body: UpdateThread): Promise<void> =>
@@ -565,6 +573,12 @@ export const actions = {
       runAction(boardActions.createPost(roomId, input)),
   },
   messages,
+  drive: {
+    search: (query: string): Promise<DriveFileList> => runAction(searchDriveFiles(query)),
+    recipients: (roomId: number): Promise<DriveRecipientList> => runAction(driveRecipients(roomId)),
+    share: (roomId: number, fileId: string, userIds: readonly string[]): Promise<DriveShare> =>
+      runAction(shareDriveFile(roomId, fileId, userIds)),
+  },
   threads,
   activity,
   saved,

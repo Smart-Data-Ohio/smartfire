@@ -29,6 +29,8 @@ export interface SendOptions {
   readonly attachmentSignedId?: string | null;
   /** What the pending row shows for that file. */
   readonly attachment?: PendingAttachment | null;
+  /** Drive files pinned on this message. Left out when there are none. */
+  readonly driveFileIds?: readonly string[];
 }
 
 /**
@@ -65,13 +67,20 @@ export class Outbox extends Context.Service<
       const post = Effect.fnUntraced(function* (pending: PendingMessage) {
         const step = yield* Schedule.toStep(resendSchedule);
 
-        const body = {
+        const driveFileIds = pending.driveFileIds;
+
+        const message = {
           clientMessageId: pending.clientMessageId,
           markdownSource: pending.markdownSource,
           replyToMessageId: null,
           replyNotifyAuthor: null,
           attachmentSignedId: pending.attachmentSignedId,
         };
+
+        const body =
+          driveFileIds !== undefined && driveFileIds.length > 0
+            ? { ...message, driveFileIds: [...driveFileIds] }
+            : message;
 
         const attempt =
           pending.threadId === null
@@ -116,7 +125,9 @@ export class Outbox extends Context.Service<
         const clientMessageId = uuid7(now);
         const state = store.getState();
 
-        const pending: PendingMessage = {
+        const driveFileIds = options.driveFileIds;
+
+        const pendingBase = {
           clientMessageId,
           roomId,
           threadId: options.threadId ?? null,
@@ -125,9 +136,14 @@ export class Outbox extends Context.Service<
           creatorId: state.me?.user.id ?? state.boot?.user.id ?? 0,
           markdownSource: markdown,
           createdAt: new Date(now).toISOString(),
-          state: "sending",
+          state: "sending" as const,
           error: null,
         };
+
+        const pending: PendingMessage =
+          driveFileIds !== undefined && driveFileIds.length > 0
+            ? { ...pendingBase, driveFileIds }
+            : pendingBase;
 
         mutations.addPending(pending);
 

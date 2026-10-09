@@ -14,7 +14,7 @@ import type { PinState } from "../../src/gen/PinState.ts";
 import type { Reaction } from "../../src/gen/Reaction.ts";
 import type { SavedItem } from "../../src/gen/SavedItem.ts";
 import { forbidden, type MockResponse, noContent, notFound, ok, validation } from "../http.ts";
-import { field, intField, isRecord, type Json, stringField } from "../json.ts";
+import { field, intField, isRecord, type Json, stringArrayField, stringField } from "../json.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { VIEWER_ID } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
@@ -102,9 +102,15 @@ export function createMessages(
 
     const current = location.message;
 
+    const remove = new Set(stringArrayField(body, "removeDriveFileIds") ?? []);
+
+    const cards = current.cards.filter(
+      (card) => card.kind !== "drive" || !remove.has(card.data.fileId),
+    );
+
     const markdown = checkMarkdown(
       stringField(body, "markdownSource"),
-      current.attachment !== null,
+      current.attachment !== null || cards.some((card) => card.kind === "drive"),
     );
 
     const updatedAt = touched(ctx.now(), current.updatedAt);
@@ -114,6 +120,7 @@ export function createMessages(
       ...current,
       bodyHtml: renderMarkdown(markdown, ctx.mentionables()),
       markdownSource: markdown,
+      cards,
       editedAt: changed ? updatedAt : current.editedAt,
       updatedAt,
     };

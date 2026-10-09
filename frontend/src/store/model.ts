@@ -101,6 +101,8 @@ export interface PendingMessage {
   /** A finished direct upload's signed id, posted as the message's file. */
   readonly attachmentSignedId: string | null;
   readonly attachment: PendingAttachment | null;
+  /** Drive file ids pinned on the pending message; absent when there are none. */
+  readonly driveFileIds?: readonly string[];
   readonly creatorId: number;
   readonly markdownSource: string;
   /** Local clock, RFC 3339: pending rows sort after every confirmed row by this. */
