@@ -10,6 +10,12 @@
     outline: none;
   }
 
+  /* Virtua suppresses pointer events during scrolling. A press must still release on
+   * its row, and focused controls and open popups must stay usable through measurements. */
+  .message:where(:active, :focus-within, [data-editing], :has(.message-popup-anchor)) {
+    pointer-events: auto;
+  }
+
   /*
    * A room's or thread's list holds focus while Home/End draws a far row (list-edges.ts): ringed
    * inside, where it isn't clipped, and only once the wait outlasts a blink (usually the row takes

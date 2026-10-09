@@ -11,6 +11,7 @@ import type { Threads } from "../s2/threads.ts";
 import type { Uploads } from "../s2/uploads.ts";
 import type { Work } from "../s4/work.ts";
 import { rowTimestamp, VIEWER_ID } from "../seed.ts";
+import { autoAssignedBoardOwner, createBoardAutomations } from "./automations.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
 import { emptyWorkDetail, newWorkFacts, ownerCandidates, tagsOf } from "./work.ts";
 
@@ -184,7 +185,12 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
     const status = statusOf(field(body, "status"), "planned");
     const tags = tagsOf(body);
     const ownerId = checkedOwner(roomId, body);
-    const owner = ownerId === null ? null : (ctx.world().users.get(ownerId) ?? null);
+
+    const owner =
+      ownerId === null
+        ? autoAssignedBoardOwner(ctx.world(), roomId, tags)
+        : (ctx.world().users.get(ownerId) ?? null);
+
     const source = stringField(messageBody, "markdownSource") ?? "";
 
     if ([...source].length > 50000)
@@ -220,7 +226,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
       work: {
         ...newWorkFacts(status, rowTimestamp(ctx.now())),
         ...emptyWorkDetail,
-        ownerId,
+        ownerId: owner?.id ?? null,
         owner,
         ownerActive: owner !== null,
         tags,
@@ -255,6 +261,7 @@ export function createBoards(ctx: S2Context, threads: Threads, uploads: Uploads,
 
   return {
     routes: [
+      ...createBoardAutomations(ctx).routes,
       route("GET", /^\/rooms\/(\d+)\/board$/, (request) =>
         ok(listing(firstId(request), request.query)),
       ),

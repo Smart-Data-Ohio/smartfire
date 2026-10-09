@@ -1,11 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import {
   expect,
   holdSync,
   matrix,
   postMessage,
   ROOM_IDS,
+  scrollByWheel,
   shot,
   type Theme,
   test,
@@ -309,21 +311,24 @@ test("the sync welcome's refetch leaves a reader on the unread divider", async (
   const divider = log.locator(".unread-divider");
 
   await expect(divider).toBeInViewport();
+  await expect(log).toHaveAttribute("data-placement-settled", "true");
+  await expect(log).toHaveAttribute("data-scroll-settled", "true");
 
   // Page down to the present and back up to the divider before the welcome arrives.
-  const top = await log.evaluate((element) => {
-    const at = element.scrollTop;
+  const top = await log.evaluate((element) => element.scrollTop);
 
-    element.scrollTop = element.scrollHeight;
-
-    return at;
-  });
+  await scrollByWheel(page, log, 10_000);
 
   await (await newer).finished();
   await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
-  await log.evaluate((element, at) => {
-    element.scrollTop = at;
-  }, top);
+
+  const remaining = await log.evaluate(
+    (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+  );
+
+  if (remaining > 1) await scrollByWheel(page, log, remaining);
+
+  await scrollByWheel(page, log, top - (await log.evaluate((element) => element.scrollTop)));
   await expect(divider).toBeInViewport();
 
   // Someone posts while the socket is held. The welcome refetches the newest page, which holds
@@ -371,7 +376,23 @@ test("a reader at the bottom through a long absence is paged on to the present",
     (url) => url.searchParams.has("around"),
     (route) => route.abort(),
   );
+
+  const paged = page.waitForResponse(async (response) => {
+    const url = new URL(response.url());
+
+    if (
+      url.pathname !== `/api/v1/rooms/${ROOM_IDS.engineering}/messages` ||
+      !url.searchParams.has("after")
+    )
+      return false;
+
+    const body: MessagePage = await response.json();
+
+    return body.after === null;
+  });
+
   release();
+  await (await paged).finished();
   await expect(log.getByText("while away 45", { exact: true })).toBeInViewport();
 });
 

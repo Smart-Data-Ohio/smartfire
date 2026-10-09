@@ -8,6 +8,8 @@ import {
   boardSearch,
   classicWorkUrl,
   digestDate,
+  MAX_SLA_MINUTES,
+  minutesLabel,
   ownerLabel,
   parseTags,
   safeHttpsUrl,
@@ -119,5 +121,15 @@ describe("agent steps", () => {
   it("links a post's classic pages", () => {
     expect(classicWorkUrl(9006, "links")).toBe("/threads/9006/work/links?classic=1");
     expect(classicWorkUrl(9006, "handoff")).toBe("/threads/9006/work/handoff/new?classic=1");
+  });
+});
+
+describe("SLA minutes", () => {
+  it("reads minutes as days, hours and minutes", () => {
+    expect(minutesLabel(45)).toBe("45 min");
+    expect(minutesLabel(120)).toBe("2 h");
+    expect(minutesLabel(1680)).toBe("1 d 4 h");
+    expect(minutesLabel(1710)).toBe("1 d 4 h 30 min");
+    expect(minutesLabel(MAX_SLA_MINUTES)).toBe("30 d");
   });
 });

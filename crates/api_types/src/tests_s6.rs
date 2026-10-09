@@ -138,3 +138,60 @@ fn the_new_post_form_and_create_round_trip() {
         }),
     );
 }
+
+#[test]
+fn board_automations_round_trip() {
+    assert_wire(
+        &BoardAutomations {
+            room_id: 40,
+            tag_rules: vec![BoardTagRule {
+                id: 3,
+                tag: "bug".into(),
+                assignee_id: 7,
+            }],
+            sla_timers: vec![BoardSlaTimer {
+                status: WorkStatus::InProgress,
+                nudge_after_minutes: 60,
+                escalate_after_minutes: 240,
+            }],
+            candidates: vec![7],
+            users: vec![user()],
+        },
+        json!({
+            "roomId": 40,
+            "tagRules": [{"id": 3, "tag": "bug", "assigneeId": 7}],
+            "slaTimers": [{"status": "in_progress", "nudgeAfterMinutes": 60, "escalateAfterMinutes": 240}],
+            "candidates": [7],
+            "users": [serde_json::to_value(user()).unwrap()],
+        }),
+    );
+    assert_wire(
+        &CreateBoardTagRule {
+            tag: "bug".into(),
+            assignee_id: None,
+        },
+        json!({"tag": "bug", "assigneeId": null}),
+    );
+    let off = BoardSlaTimerInput {
+        nudge_after_minutes: None,
+        escalate_after_minutes: None,
+    };
+    assert_wire(
+        &UpdateBoardSlaTimers {
+            planned: Some(BoardSlaTimerInput {
+                nudge_after_minutes: Some(30),
+                escalate_after_minutes: Some(90),
+            }),
+            in_progress: Some(off),
+            blocked: None,
+        },
+        json!({
+            "planned": {"nudgeAfterMinutes": 30, "escalateAfterMinutes": 90},
+            "inProgress": {"nudgeAfterMinutes": null, "escalateAfterMinutes": null},
+        }),
+    );
+    assert_wire(
+        &SyncPayload::BoardAutomationsChanged(BoardAutomationsChanged { room_id: 40 }),
+        json!({"type": "board.automations.changed", "data": {"roomId": 40}}),
+    );
+}

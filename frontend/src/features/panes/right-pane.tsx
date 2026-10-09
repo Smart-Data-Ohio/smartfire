@@ -12,6 +12,7 @@ import { usePresence } from "../../motion/presence.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
+import { usePendingVisible } from "../shell/route-pending.tsx";
 import { type PaneChrome, PaneChromeContext, PaneFrame } from "./pane-frame.tsx";
 import { PANE_TITLES, type RightPaneView, viewKey } from "./pane-selection.ts";
 import { PaneListSkeleton } from "./pane-states.tsx";
@@ -103,6 +104,9 @@ const loadFilesPane = () => loadForUpdate(() => import("./files-pane.tsx"));
 
 const loadStagePane = () => loadForUpdate(() => import("../huddle/stage-pane.tsx"));
 
+const loadBoardAutomationsPane = () =>
+  loadForUpdate(() => import("../boards/automations-pane.tsx"));
+
 const ThreadPane = lazy(async () => {
   const module = await loadThreadPane();
 
@@ -145,6 +149,12 @@ const StagePane = lazy(async () => {
   return { default: module.StagePane };
 });
 
+const BoardAutomationsPane = lazy(async () => {
+  const module = await loadBoardAutomationsPane();
+
+  return { default: module.BoardAutomationsPane };
+});
+
 let preloaded = false;
 
 /** Fetches every pane's chunk once the page is idle, so later opens don't wait on the network. */
@@ -164,6 +174,7 @@ function preloadPanes(): void {
       loadPinsPane,
       loadFilesPane,
       loadStagePane,
+      loadBoardAutomationsPane,
     ]) {
       void loader().catch(() => undefined);
     }
@@ -189,12 +200,9 @@ function fallbackTitle(view: RightPaneView): string {
 
 function PaneFallback({ view }: { readonly view: RightPaneView }) {
   const title = fallbackTitle(view);
+  const visible = usePendingVisible();
 
-  return (
-    <PaneFrame title={title}>
-      <PaneListSkeleton rows={4} />
-    </PaneFrame>
-  );
+  return <PaneFrame title={title}>{visible ? <PaneListSkeleton rows={4} /> : null}</PaneFrame>;
 }
 
 function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: RightPaneView }) {
@@ -215,6 +223,8 @@ function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: Ri
           return <ThreadsPane roomId={roomId} />;
         case "stage":
           return <StagePane roomId={roomId} />;
+        case "automations":
+          return <BoardAutomationsPane roomId={roomId} />;
       }
   }
 }

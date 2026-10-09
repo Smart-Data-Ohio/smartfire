@@ -40,7 +40,7 @@ describe("usePreview", () => {
 
     const load = vi.fn(() => Promise.resolve());
 
-    cardMutations.previewLoaded("quotes", KEY, 3, { state: "hidden" }, now - PREVIEW_TTL_MS - 1);
+    cardMutations.previewLoaded("quotes", KEY, 3, { state: "hidden" }, now - PREVIEW_TTL_MS - 1, 0);
 
     const view = render(<Probe load={load} />);
 
@@ -50,7 +50,7 @@ describe("usePreview", () => {
     // A fresh one stays as it is.
     view.unmount();
     load.mockClear();
-    cardMutations.previewLoaded("quotes", KEY, 3, { state: "hidden" }, now);
+    cardMutations.previewLoaded("quotes", KEY, 3, { state: "hidden" }, now, 0);
     render(<Probe load={load} />);
     expect(load).not.toHaveBeenCalled();
   });

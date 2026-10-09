@@ -59,10 +59,10 @@
     color: inherit;
   }
 
-  /* Touch screens: iOS zooms into a focused field under 16 px and stays zoomed, so every text
+  /* Touch phones: iOS zooms into a focused field under 16 px and stays zoomed, so every text
      field is --text-input (16 px there), whatever its component says; something laid over a
      field's text (a placeholder mirror) sizes itself with --text-input too. */
-  @media (pointer: coarse) {
+  @media (width < 720px) and (pointer: coarse) {
     input:not(
         [type="checkbox"],
         [type="radio"],
