@@ -80,7 +80,7 @@ if name == "docker":
             print("fixture-volume")
         elif '"once"' in fmt:
             print(json.dumps({"host": "fixture.invalid", "image": state["image"],
-                "env": {"SECRET_KEY_BASE": "fixture"}, "autoUpdate": False}))
+                "env": {"SECRET_KEY_BASE": "fixture", "SPA_ENABLED": "1"}, "autoUpdate": False}))
         elif fmt == "{{.Image}}":
             print("sha256:" + "9" * 64)
         else:
@@ -185,7 +185,24 @@ elif name == "once":
     elif args[0] != "version":
         sys.exit("unhandled once " + repr(args))
 elif name == "curl":
-    print("200" if serving() else "000", end="")
+    if "--write-out" in args:
+        path = args[-1].split("fixture.invalid", 1)[-1]
+        output = pathlib.Path(args[args.index("--output") + 1])
+        if path in ("/", "/session/new"):
+            body = '<script src="/assets/auth-abc123.js"></script><link href="/assets/auth-abc123.css">'
+            content_type = "text/html"
+        elif path == "/app/offline.html":
+            body = '<script src="/app/assets/index-Abc12345.js"></script><link href="/app/assets/index-Abc12345.css">'
+            content_type = "text/html"
+            if os.environ.get("SPA_STUB"):
+                body = "stub page"
+        else:
+            body = "export {}" if path.endswith(".js") else "body {}"
+            content_type = "text/javascript" if path.endswith(".js") else "text/css"
+        output.write_text(body)
+        print("200\n" + content_type, end="")
+    else:
+        print("200" if serving() else "000", end="")
 elif name == "df":
     print("Filesystem 1M-blocks Used Available Use% Mounted on")
     print("fixture 100000 100 99900 1% /")
@@ -660,6 +677,17 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(self.host.json("rollback-result.json")["action"], "refused-application-healthy")
         self.assertFalse(any(c[:2] == ["once", "stop"] for c in commands))
         self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated")
+
+    def test_a_missing_spa_build_fails_read_only_after_health_and_preserves_writes(self):
+        results = self.host.release(SPA_STUB="1", CANDIDATE_WRITES="1")
+        result, _ = results["cutover"]
+        self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+        self.assertIn("frontend check", result.stderr)
+        written = self.host.db.read_bytes()
+        result, commands = self.host.run("rollback")
+        self.assertEqual(result.returncode, 30)
+        self.assertFalse(any(command[:2] == ["once", "stop"] for command in commands))
+        self.assertEqual(self.host.db.read_bytes(), written)
 
     def test_a_missing_server_process_fails_after_health(self):
         results = self.host.release(PROCESSES="unrelated")

@@ -35,7 +35,10 @@ source huddle-gateway/.bundle/livekit/env
 SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 cargo run -p campfire -- server
 ```
 
-The real-media huddle browser test runs in the `livekit` correctness suite (`bash ci/correctness.sh livekit`, see [`ci/README.md`](../ci/README.md)), which starts the private server with `huddle-gateway/livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
+The separate real-media browser suite has been removed. Gateway authorization
+and connection-race tests run on relevant PRs. The `start` and `gateway` commands
+run the private server or gateway separately for diagnosis. Use `serve` for
+normal operation so a LiveKit process cannot outlive gateway enforcement.
 
 Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../web/script/livekit-client/README.md) when updating its pinned version.
 

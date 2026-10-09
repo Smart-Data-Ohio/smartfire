@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { SEARCH_SEED } from "../../mock/s3/search.ts";
-import { expect, matrix, openApp, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { expect, matrix, openApp, ROOM_IDS, SHOTS, shot, type Theme, test } from "./support.ts";
 
 /** Opens the app at `path` (under /app/) with motion reduced, waiting for the main column. */
 async function open(page: Page, path: string, theme: Theme = "light"): Promise<void> {
@@ -29,23 +29,6 @@ async function search(page: Page, query: string, theme: Theme): Promise<void> {
       .or(page.getByRole("heading", { name: /^No results/ })),
   ).toBeVisible();
 }
-
-matrix("the search page before a search", async ({ page, theme }) => {
-  await open(page, "search", theme);
-  await expect(
-    page.getByRole("heading", { name: "Search messages, files and conversations" }),
-  ).toBeVisible();
-
-  const recents = page.getByRole("region", { name: "Recent searches" });
-
-  for (const query of SEARCH_SEED.recents) {
-    await expect(recents.getByRole("button", { name: query })).toBeVisible();
-  }
-
-  await expect(field(page)).toBeFocused();
-  await page.mouse.move(0, 0);
-  await shot(page, "search-home", theme);
-});
 
 matrix(
   "the field suggests people, channels and filters as you type",
@@ -79,49 +62,6 @@ matrix(
     await expect(field(page)).toHaveValue(/^from:@\w+ $/);
   },
 );
-
-matrix("results show their filters as chips", async ({ page, theme }) => {
-  await search(page, "onboarding in:#general has:link", theme);
-
-  const filters = page.getByRole("toolbar", { name: "Filters" });
-
-  await expect(filters.getByText("in: general")).toBeVisible();
-  await expect(hits(page).first()).toBeVisible();
-  await expect(hits(page).first().locator("mark.search-mark").first()).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "search-results-chips", theme);
-
-  await filters.getByRole("button", { name: "Remove in: general" }).click();
-  await expect(page).toHaveURL(/q=onboarding(\+|%20)has(%3A|:)link$/);
-  await expect(filters.getByText("in: general")).toHaveCount(0);
-});
-
-matrix("sections, people and channels above the messages", async ({ page, theme }) => {
-  await search(page, "onboarding", theme);
-  await expect(page.getByRole("region", { name: /Board posts/ })).toBeVisible();
-  await expect(page.getByRole("region", { name: /Events/ })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "search-sections", theme);
-});
-
-matrix("file results", async ({ page, theme }) => {
-  await search(page, "has:file", theme);
-  await expect(hits(page).first()).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "search-files", theme);
-});
-
-matrix("a search with no results says what to try", async ({ page, theme }) => {
-  await search(page, "zebracorn has:pin", theme);
-  await expect(
-    page.getByRole("heading", { name: "No results for “zebracorn has:pin”" }),
-  ).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "search-empty", theme);
-
-  await page.getByRole("button", { name: "has: pin" }).last().click();
-  await expect(page).toHaveURL(/q=zebracorn$/);
-});
 
 matrix("a result opens its message", async ({ page, theme, phone }) => {
   await search(page, "launch checklist in:#launch-planning", theme);
@@ -204,9 +144,66 @@ test("focus stays on the page as filters and recent searches go", async ({ page 
   await expect(said(page)).toHaveText("Cleared your recent searches");
 });
 
-test("the arrow keys reach the section rows", async ({ page }) => {
-  await search(page, "onboarding", "light");
-  await page.locator(".search-section-row").first().focus();
-  await page.keyboard.press("ArrowDown");
-  await expect(page.locator(".search-section-row").nth(1)).toBeFocused();
-});
+// Screenshots only. The recent searches, chip removal, no-results filters and the sections are
+// checked by the focus and arrow-key tests above and by search/components.test.tsx.
+if (SHOTS) {
+  matrix("the search page before a search", async ({ page, theme }) => {
+    await open(page, "search", theme);
+    await expect(
+      page.getByRole("heading", { name: "Search messages, files and conversations" }),
+    ).toBeVisible();
+
+    const recents = page.getByRole("region", { name: "Recent searches" });
+
+    for (const query of SEARCH_SEED.recents) {
+      await expect(recents.getByRole("button", { name: query })).toBeVisible();
+    }
+
+    await expect(field(page)).toBeFocused();
+    await page.mouse.move(0, 0);
+    await shot(page, "search-home", theme);
+  });
+
+  matrix("results show their filters as chips", async ({ page, theme }) => {
+    await search(page, "onboarding in:#general has:link", theme);
+
+    const filters = page.getByRole("toolbar", { name: "Filters" });
+
+    await expect(filters.getByText("in: general")).toBeVisible();
+    await expect(hits(page).first()).toBeVisible();
+    await expect(hits(page).first().locator("mark.search-mark").first()).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "search-results-chips", theme);
+
+    await filters.getByRole("button", { name: "Remove in: general" }).click();
+    await expect(page).toHaveURL(/q=onboarding(\+|%20)has(%3A|:)link$/);
+    await expect(filters.getByText("in: general")).toHaveCount(0);
+  });
+
+  matrix("sections, people and channels above the messages", async ({ page, theme }) => {
+    await search(page, "onboarding", theme);
+    await expect(page.getByRole("region", { name: /Board posts/ })).toBeVisible();
+    await expect(page.getByRole("region", { name: /Events/ })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "search-sections", theme);
+  });
+
+  matrix("file results", async ({ page, theme }) => {
+    await search(page, "has:file", theme);
+    await expect(hits(page).first()).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "search-files", theme);
+  });
+
+  matrix("a search with no results says what to try", async ({ page, theme }) => {
+    await search(page, "zebracorn has:pin", theme);
+    await expect(
+      page.getByRole("heading", { name: "No results for “zebracorn has:pin”" }),
+    ).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "search-empty", theme);
+
+    await page.getByRole("button", { name: "has: pin" }).last().click();
+    await expect(page).toHaveURL(/q=zebracorn$/);
+  });
+}

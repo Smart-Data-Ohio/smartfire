@@ -56,7 +56,7 @@ fn overridden() -> BTreeMap<String, (String, String)> {
 fn added() -> Vec<String> {
     let reference = json_fixture("manifest.json");
     let mut files = override_files().into_iter().filter(|logical| reference.get(logical).is_none()).collect::<Vec<_>>();
-    files.extend(["auth.css", "auth.js", "fonts/inter-latin-var.woff2", "fonts/inter-latin-var-italic.woff2", "fonts/jetbrains-mono-latin-var.woff2", "fonts/SourceSerif4-Regular.ttf.woff2", "fonts/SourceSerif4-It.ttf.woff2", "fonts/SourceSerif4-Semibold.ttf.woff2", "fonts/SourceSerif4-SemiboldIt.ttf.woff2", "fonts/atkinson-hyperlegible-next-latin-var.woff2", "fonts/atkinson-hyperlegible-next-latin-var-italic.woff2"].into_iter().map(str::to_owned));
+    files.extend(["auth.css", "auth.js", "unsupported.js", "fonts/inter-latin-var.woff2", "fonts/inter-latin-var-italic.woff2", "fonts/jetbrains-mono-latin-var.woff2", "fonts/SourceSerif4-Regular.ttf.woff2", "fonts/SourceSerif4-It.ttf.woff2", "fonts/SourceSerif4-Semibold.ttf.woff2", "fonts/SourceSerif4-SemiboldIt.ttf.woff2", "fonts/atkinson-hyperlegible-next-latin-var.woff2", "fonts/atkinson-hyperlegible-next-latin-var-italic.woff2"].into_iter().map(str::to_owned));
     files
 }
 

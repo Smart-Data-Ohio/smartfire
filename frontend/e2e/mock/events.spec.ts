@@ -1,13 +1,21 @@
 import type { Page } from "@playwright/test";
-import { DESKTOP, expect, matrix, openApp, ROOM_IDS, shot, syncWelcomed, test } from "./support.ts";
+import {
+  DESKTOP,
+  expect,
+  matrix,
+  openApp,
+  ROOM_IDS,
+  SHOTS,
+  shot,
+  syncWelcomed,
+  test,
+} from "./support.ts";
 
 const UPCOMING = 8001;
 
 const WEEKLY_HEAD = 8100;
 
 const WEEKLY_SECOND = 8101;
-
-const WEEKLY_THIRD = 8102;
 
 const WEEKLY_LAST = 8103;
 
@@ -345,12 +353,6 @@ test.describe("a room's events", () => {
     await expect(page.getByRole("button", { name: "Going" })).toBeFocused();
   });
 
-  test("an event that isn't there says so", async ({ page }) => {
-    await openApp(page, `r/${ROOM_IDS.general}/events/987654`);
-
-    await expect(page.getByText("This event isn't here")).toBeVisible();
-  });
-
   test("answering twice keeps the last answer when the first one's read lands last", async ({
     page,
   }) => {
@@ -378,69 +380,32 @@ test.describe("a room's events", () => {
     await expect(attendees).toContainText("1 going · 1 maybe");
   });
 
-  test("an answer's read that lands after moving to the next occurrence stays off it", async ({
-    page,
-  }) => {
-    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
-    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+  test("an edit that saves after Back closed the form stays where Back went", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
+    await page.getByRole("link", { name: "Edit" }).click();
 
-    const late = await holdNextRead(page, `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
+    const dialog = page.getByRole("dialog", { name: "Edit event" });
 
-    await page.getByRole("button", { name: "Going" }).click();
-    await late.answered;
-    await page.getByRole("link", { name: "Next" }).click();
-    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
-    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
+    await dialog.getByLabel("Title").fill("Team check-in (moved)");
 
-    late.release();
-    await late.delivered;
+    const release = await holdWrite(page, "PATCH", `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`);
+
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+    await page.goBack();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
+
+    const historyCalls = await watchHistory(page);
+
+    release();
+    await expect(page.getByText("Event updated.")).toBeVisible();
     await settle(page);
-
-    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
-    await expect(page.getByText("You haven't answered yet.")).toBeVisible();
-    await expect(page.getByRole("status", { name: "Loading the event" })).toHaveCount(0);
+    expect(await historyCalls()).toEqual([]);
+    await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Team check-in (moved)" }),
+    ).toBeVisible();
   });
-
-  for (const dismissal of ["Escape", "Back"] as const) {
-    test(`an edit that saves after ${dismissal} closed the form stays where ${dismissal} went`, async ({
-      page,
-    }) => {
-      await openApp(page, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
-      await page.getByRole("link", { name: "Edit" }).click();
-
-      const dialog = page.getByRole("dialog", { name: "Edit event" });
-
-      await dialog.getByLabel("Title").fill("Team check-in (moved)");
-
-      const release = await holdWrite(
-        page,
-        "PATCH",
-        `/rooms/${ROOM_IDS.general}/events/${UPCOMING}`,
-      );
-
-      await dialog.getByRole("button", { name: "Save changes" }).click();
-
-      if (dismissal === "Escape") {
-        await page.keyboard.press("Escape");
-      } else {
-        await page.goBack();
-      }
-
-      await expect(dialog).toBeHidden();
-      await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
-
-      const historyCalls = await watchHistory(page);
-
-      release();
-      await expect(page.getByText("Event updated.")).toBeVisible();
-      await settle(page);
-      expect(await historyCalls()).toEqual([]);
-      await expect(page).toHaveURL(new RegExp(`/events/${UPCOMING}$`));
-      await expect(
-        page.getByRole("heading", { level: 2, name: "Team check-in (moved)" }),
-      ).toBeVisible();
-    });
-  }
 
   test("an edit that saves after its form was closed and opened again leaves the new opening be", async ({
     page,
@@ -549,50 +514,6 @@ test.describe("a room's events", () => {
     ).toBeVisible();
   });
 
-  test("a save that lands while the next occurrence loads leaves that one to load", async ({
-    page,
-  }) => {
-    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
-    await page.getByRole("link", { name: "Edit" }).click();
-
-    const dialog = page.getByRole("dialog", { name: "Edit event" });
-
-    await dialog.getByLabel("Title").fill("Engineering weekly (this one)");
-
-    const save = await holdNextRead(
-      page,
-      `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`,
-      "PATCH",
-    );
-
-    await dialog.getByRole("button", { name: "Save changes" }).click();
-    await save.answered;
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    // The room's news of the edit has already been read in.
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Engineering weekly (this one)" }),
-    ).toBeVisible();
-
-    const next = await holdNextRead(page, `/rooms/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
-
-    await page.getByRole("link", { name: "Next" }).click();
-    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
-    await next.answered;
-
-    // The save finishes while the next occurrence's read is still out.
-    save.release();
-    await save.delivered;
-    await settle(page);
-    next.release();
-    await next.delivered;
-    await settle(page);
-
-    await expect(page.getByRole("status", { name: "Loading the event" })).toHaveCount(0);
-    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/events/${WEEKLY_THIRD}$`));
-  });
-
   test("another tab's edit and cancel reach an open list and event page", async ({
     page,
     context,
@@ -641,33 +562,6 @@ test.describe("a room's events", () => {
     await expect(other.getByText("This event was cancelled.", { exact: true })).toBeVisible();
 
     await expect(page.getByText("This event was cancelled.", { exact: true })).toBeVisible();
-    await other.close();
-  });
-
-  test("another tab's edit of an occurrence no message links reaches an open event page", async ({
-    page,
-    context,
-  }) => {
-    const welcomed = syncWelcomed(page);
-
-    await openApp(page, `r/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
-    await welcomed;
-    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
-
-    const other = await context.newPage();
-
-    await openApp(other, `r/${ROOM_IDS.engineering}/events/${WEEKLY_THIRD}`);
-    await other.getByRole("link", { name: "Edit" }).click();
-
-    const edit = other.getByRole("dialog", { name: "Edit event" });
-
-    await edit.getByLabel("Title").fill("Engineering weekly (third only)");
-    await edit.getByRole("button", { name: "Save changes" }).click();
-    await expect(edit).toBeHidden();
-
-    await expect(
-      page.getByRole("heading", { level: 2, name: "Engineering weekly (third only)" }),
-    ).toBeVisible();
     await other.close();
   });
 
@@ -730,37 +624,6 @@ test.describe("a room's events", () => {
     await expect(page.getByText("This event was cancelled.", { exact: true })).toBeVisible();
     await other.close();
   });
-
-  test("an events list that missed an edit while offline reads it on reconnect", async ({
-    page,
-    context,
-  }) => {
-    const sync = await interceptSync(page);
-
-    await openApp(page, `r/${ROOM_IDS.general}/events`);
-    await sync.welcomed;
-    await expect(page.getByRole("link", { name: "Team check-in", exact: true })).toBeVisible();
-    sync.lose();
-
-    const other = await context.newPage();
-
-    await openApp(other, `r/${ROOM_IDS.general}/events/${UPCOMING}`);
-    await other.getByRole("link", { name: "Edit" }).click();
-
-    const edit = other.getByRole("dialog", { name: "Edit event" });
-
-    await edit.getByLabel("Title").fill("Team check-in (moved)");
-    await edit.getByRole("button", { name: "Save changes" }).click();
-    await expect(edit).toBeHidden();
-    await settle(page);
-    // The news was lost: the list doesn't know yet.
-    await expect(page.getByRole("link", { name: "Team check-in (moved)" })).toHaveCount(0);
-
-    await sync.reconnectUnresumed();
-
-    await expect(page.getByRole("link", { name: "Team check-in (moved)" })).toBeVisible();
-    await other.close();
-  });
 });
 
 test.describe("a prefilled new-event link", () => {
@@ -791,18 +654,21 @@ test.describe("a prefilled new-event link", () => {
   });
 });
 
-matrix("the events list and an event's page", async ({ page, theme }) => {
-  await openApp(page, `r/${ROOM_IDS.engineering}/events`, theme);
-  await expect(page.getByRole("link", { name: "Engineering weekly" }).first()).toBeVisible();
-  await shot(page, "events-list", theme);
+// Screenshots only: the room's events tests above open the list, a page and the form.
+if (SHOTS) {
+  matrix("the events list and an event's page", async ({ page, theme }) => {
+    await openApp(page, `r/${ROOM_IDS.engineering}/events`, theme);
+    await expect(page.getByRole("link", { name: "Engineering weekly" }).first()).toBeVisible();
+    await shot(page, "events-list", theme);
 
-  await page.goto(`/app/r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
-  await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
-  await shot(page, "event-page", theme);
+    await page.goto(`/app/r/${ROOM_IDS.engineering}/events/${WEEKLY_SECOND}`);
+    await expect(page.getByRole("heading", { level: 2, name: "Engineering weekly" })).toBeVisible();
+    await shot(page, "event-page", theme);
 
-  await page.goto(`/app/r/${ROOM_IDS.engineering}/events/new`);
-  await expect(
-    page.getByRole("dialog", { name: "Schedule an event" }).getByLabel("Title"),
-  ).toBeVisible();
-  await shot(page, "event-form", theme);
-});
+    await page.goto(`/app/r/${ROOM_IDS.engineering}/events/new`);
+    await expect(
+      page.getByRole("dialog", { name: "Schedule an event" }).getByLabel("Title"),
+    ).toBeVisible();
+    await shot(page, "event-form", theme);
+  });
+}

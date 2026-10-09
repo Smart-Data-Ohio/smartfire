@@ -266,27 +266,18 @@ impl FragmentCache {
 
 thread_local! {
     static CURRENT: RefCell<Option<Arc<FragmentCache>>> = const { RefCell::new(None) };
-    /// How many fragments for the cache are being rendered, one inside another.
-    static RENDERING: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
 /// Runs `render` as a fragment for the cache: one whoever renders it next is shown, so what
 /// belongs to this render's session is left as slots (see `request_forgery::token_tag`).
 fn for_the_cache<R>(render: impl FnOnce() -> R) -> R {
-    struct Leave;
-    impl Drop for Leave {
-        fn drop(&mut self) {
-            RENDERING.with(|depth| depth.set(depth.get() - 1));
-        }
-    }
-    RENDERING.with(|depth| depth.set(depth.get() + 1));
-    let _leave = Leave;
+    let _guard = campfire_view_kit::helpers::request_forgery::enter_fragment_render();
     render()
 }
 
 /// Whether a fragment for the cache is being rendered on this thread.
 pub fn rendering_fragment() -> bool {
-    RENDERING.with(|depth| depth.get() > 0)
+    campfire_view_kit::helpers::request_forgery::rendering_fragment()
 }
 
 /// Runs `f` with `cache` as this thread's current store.
@@ -632,6 +623,74 @@ mod tests {
         );
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(1)), Ok(1));
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(2)), Ok(1));
+    }
+
+    #[test]
+    fn a_cached_fragment_has_each_renders_own_tokens() {
+        use crate::helpers::request_forgery::{
+            AuthenticityTokens, RequestSecrets, fill_token_slots, has_token_slots, rendering_with,
+            token_tag,
+        };
+
+        struct Viewer(&'static str);
+        impl AuthenticityTokens for Viewer {
+            fn global(&self) -> String {
+                format!("{}:global", self.0)
+            }
+            fn for_form(&self, action: &str, method: &str) -> String {
+                format!("{}:{method}:{action}", self.0)
+            }
+        }
+        fn as_viewer<R>(name: &'static str, render: impl FnOnce() -> R) -> R {
+            rendering_with(
+                RequestSecrets {
+                    tokens: Box::new(Viewer(name)),
+                    csp_nonce: None,
+                },
+                render,
+            )
+        }
+
+        let cache = FragmentCache::new(BIG);
+        let boost = || format!("<form>{}</form>", token_tag("/messages/1/boosts", "post").0);
+        let message = || {
+            cache.fetch("message", || {
+                format!("<div>{}</div>", cache.fetch("boost", boost))
+            })
+        };
+        let field = |value: &str| {
+            format!(
+                "<div><form><input type=\"hidden\" name=\"authenticity_token\" value=\"{value}\" /></form></div>"
+            )
+        };
+        assert_eq!(
+            as_viewer("david", message),
+            field("david:post:/messages/1/boosts"),
+            "cold"
+        );
+        assert_eq!(
+            as_viewer("jason", message),
+            field("jason:post:/messages/1/boosts"),
+            "warm, for someone else"
+        );
+        assert_eq!(
+            message(),
+            "<div><form></form></div>",
+            "a broadcast's render has none"
+        );
+        for key in ["message", "boost"] {
+            let stored: Fragment = cache.get(key).unwrap();
+            assert!(
+                has_token_slots(&stored) && !stored.contains("david"),
+                "{key}: {stored}"
+            );
+        }
+        let stored: Fragment = cache.get("message").unwrap();
+        assert_eq!(
+            as_viewer("kevin", || fill_token_slots(&stored).into_owned()),
+            field("kevin:post:/messages/1/boosts"),
+            "read up front"
+        );
     }
 
     #[test]

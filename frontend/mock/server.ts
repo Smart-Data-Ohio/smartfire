@@ -28,6 +28,7 @@ import {
   type MockBinaryResponse,
   type MockRequest,
   type MockResponse,
+  noContent,
   notFound,
   plainError,
   queryOf,
@@ -169,7 +170,10 @@ export interface MockServerOptions {
 }
 
 export interface MockServer {
-  /** Serves `/api/v1/*` and `/__mock/*`. Held sends resolve when released. */
+  /**
+   * Serves `/api/v1/*`, `/__mock/*` and classic's tour stamp (`/users/me/tour`). Held sends
+   * resolve when released.
+   */
   handle(request: MockRequest): Promise<MockResponse>;
   /** Serves the byte routes: the upload `PUT`, blob downloads and icon images. */
   handleBinary(request: MockBinaryRequest): Promise<MockBinaryResponse>;
@@ -262,6 +266,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   let held: (() => void)[] = [];
   let holdingJoins = false;
   let heldJoins: (() => void)[] = [];
+  /**
+   * The viewer's `tour_completed_at`: set, so the product tour stays out of every spec's way;
+   * `/__mock/tour` clears it for the tour's own specs. `tourStamps` counts the stamps sent.
+   */
+  let tourCompleted = true;
+  let tourStamps = 0;
 
   const epochFor = () => `${now().toString(36)}-${seed.toString(36)}-${restarts}`;
 
@@ -449,7 +459,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
-      tourCompleted: true,
+      tourCompleted,
       voiceMode: "voice_activity",
       pushToTalkKey: "Space",
     },
@@ -1173,6 +1183,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     switch (action) {
       case "state":
         return { status: 200, json: state() };
+      case "tour":
+        tourCompleted = flag("completed", false);
+
+        return ok;
       case "pause":
         server.pause();
 
@@ -1381,6 +1395,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     }
   };
 
+  /** Classic's users/tours#update: skipping and finishing both stamp the tour done; 204. */
+  const stampTour = (request: MockRequest): MockResponse => {
+    const method = request.method.toUpperCase();
+
+    if (method !== "PATCH" && method !== "PUT")
+      throw notFound(`No route for ${method} ${request.path}`);
+
+    if (headerOf(request.headers, "x-csrf-token") !== csrf) {
+      throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
+    }
+
+    tourCompleted = true;
+    tourStamps += 1;
+
+    return noContent();
+  };
+
   const state = (): JsonRecord => ({
     epoch: hub.epoch(),
     seq: hub.seq(),
@@ -1393,6 +1424,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     presentRoomIds: [...hub.presentRooms()].sort((left, right) => left - right),
     pendingUploads: uploads.pending(),
     csrfToken: csrf,
+    tourCompleted,
+    tourStamps,
     ids: SEED_IDS,
   });
 
@@ -1404,6 +1437,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         if (path.startsWith("/api/v1/")) return await api(request, path.slice("/api/v1".length));
 
         if (path.startsWith("/__mock/")) return control(request, path.slice("/__mock/".length));
+
+        if (TOUR_PATHS.has(path)) return stampTour(request);
 
         throw notFound(`No route for ${path}`);
       } catch (error) {
@@ -1447,6 +1482,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     reset() {
       release();
       holdingJoins = false;
+      tourCompleted = true;
+      tourStamps = 0;
 
       const waitingJoins = heldJoins;
 
@@ -1501,9 +1538,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   return server;
 }
 
+/** Classic's tour stamp, which the SPA calls outside `/api/v1`. */
+const TOUR_PATHS = new Set(["/users/me/tour", "/users/me/tour.json"]);
+
 /** Whether a request path is one the mock serves as JSON. */
 export function isMockPath(path: string): boolean {
-  return path.startsWith("/api/v1/") || path.startsWith("/__mock/");
+  return path.startsWith("/api/v1/") || path.startsWith("/__mock/") || TOUR_PATHS.has(path);
 }
 
 /** Whether a request path is one the mock serves at all, as JSON or bytes. */

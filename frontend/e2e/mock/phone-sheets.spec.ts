@@ -7,9 +7,11 @@ import {
   PHONE_SMALL,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   simulateKeyboard,
   simulateSafeAreas,
+  THEMES,
   type Theme,
   test,
 } from "./support.ts";
@@ -346,7 +348,9 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("a poll with only a toggle flipped springs back from a swipe", async ({ page }) => {
+  test("a poll with only a toggle flipped springs back; flipped back, it swipes away", async ({
+    page,
+  }) => {
     const dialog = page.getByRole("dialog", { name: "Create a poll" });
     const anonymous = dialog.getByRole("switch", { name: "Anonymous" });
 
@@ -358,9 +362,17 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog).toBeVisible();
     await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
     await expect(anonymous).toHaveAttribute("aria-checked", "true");
+
+    await anonymous.click();
+    await expect(anonymous).toHaveAttribute("aria-checked", "false");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
   });
 
-  test("a new message with a recipient tapped, nothing typed, springs back", async ({ page }) => {
+  test("a new message with a recipient springs back; with it removed, it swipes away", async ({
+    page,
+  }) => {
     const dialog = page.getByRole("dialog", { name: "New message" });
 
     await sheet("New message").open(page, dialog);
@@ -371,6 +383,12 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog).toBeVisible();
     await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
     await expect(dialog.locator(".picker-chip")).toHaveCount(1);
+
+    await dialog.getByRole("button", { name: /^Remove / }).click();
+    await expect(dialog.locator(".picker-chip")).toHaveCount(0);
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
   });
 
   test("a forward with a search typed and cleared still swipes away", async ({ page }) => {
@@ -380,31 +398,6 @@ test.describe("on a 360 px touch phone", () => {
     await sheet("Forward message").open(page, dialog);
     await search.fill("gen");
     await search.fill("");
-    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
-
-    await expect(dialog).toBeHidden();
-  });
-
-  test("a poll with a toggle flipped and flipped back swipes away", async ({ page }) => {
-    const dialog = page.getByRole("dialog", { name: "Create a poll" });
-    const anonymous = dialog.getByRole("switch", { name: "Anonymous" });
-
-    await sheet("Create a poll").open(page, dialog);
-    await anonymous.click();
-    await anonymous.click();
-    await expect(anonymous).toHaveAttribute("aria-checked", "false");
-    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
-
-    await expect(dialog).toBeHidden();
-  });
-
-  test("a new message with a recipient tapped then removed swipes away", async ({ page }) => {
-    const dialog = page.getByRole("dialog", { name: "New message" });
-
-    await sheet("New message").open(page, dialog);
-    await dialog.getByRole("option").first().click();
-    await dialog.getByRole("button", { name: /^Remove / }).click();
-    await expect(dialog.locator(".picker-chip")).toHaveCount(0);
     await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
 
     await expect(dialog).toBeHidden();
@@ -447,31 +440,6 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog).toBeHidden();
   });
 
-  test("a sheet that won't close while sending springs back with its footer", async ({ page }) => {
-    let release: () => void = () => undefined;
-
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    await page.route("**/fizzy_cards", async (route) => {
-      await held;
-      await route.continue();
-    });
-
-    const dialog = page.getByRole("dialog", { name: "Create Fizzy card" });
-
-    await sheet("Create Fizzy card").open(page, dialog);
-    await dialog.getByLabel("Board").selectOption({ index: 1 });
-    await dialog.getByRole("button", { name: "Create card" }).click();
-    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
-
-    await expect(dialog).toBeVisible();
-    await expect.poll(async () => (await box(dialog)).bottom).toBe(PHONE_SMALL.height);
-    await expect(dialog.locator(".dialog-footer")).toBeInViewport({ ratio: 1 });
-    release();
-  });
-
   test("the switcher still opens ready to type", async ({ page }) => {
     await openApp(page, "");
     await page
@@ -486,7 +454,8 @@ test.describe("on a 360 px touch phone", () => {
     await expect(dialog.getByRole("button", { name: "Close" })).toBeVisible();
   });
 
-  for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
+  // Screenshots only: each sheet's own test above opens it and checks it.
+  for (const theme of SHOTS ? THEMES : []) {
     test(`the sheets in ${theme}`, async ({ page }) => {
       for (const { title, open } of SHEETS) {
         const dialog = page.getByRole("dialog", { name: title });

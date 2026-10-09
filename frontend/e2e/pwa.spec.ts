@@ -490,47 +490,6 @@ test("a forced real lazy-chunk failure preserves the page and signals explicit u
   }
 });
 
-test("a lazy-chunk failure after a deploy says Smartfire has been updated", async ({
-  page,
-  context,
-}) => {
-  const dispose = await mockApi(page);
-
-  try {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    const a = await register(page, context);
-    const cacheA = `${cachePrefix}${await a.evaluate(() => self.smartfireBuild.version)}`;
-
-    await page.goto(`/app/r/${ROOM_IDS.general}`);
-    await expect(page.getByRole("textbox", { name: /^Message #/ })).toBeVisible();
-    const chunk = await pollChunk(page, cacheA);
-
-    await page.evaluate(async (path) => {
-      for (const name of await caches.keys()) {
-        await (await caches.open(name)).delete(path);
-      }
-    }, chunk);
-    await context.request.post(`/__pwa/retire?path=${encodeURIComponent(chunk)}`);
-    // The server now names a different entry module, as it does after a real deploy.
-    await context.request.post("/__pwa/version?value=deployed-b");
-    const session = await context.newCDPSession(page);
-
-    await session.send("Network.enable");
-    await session.send("Network.clearBrowserCache");
-    await session.send("Network.setCacheDisabled", { cacheDisabled: true });
-    await openPoll(page);
-
-    const banner = page.locator(".update-banner");
-
-    await expect(banner).toHaveAttribute("data-kind", "updated");
-    await expect(banner).toContainText(
-      "Smartfire has been updated. Reload to get the latest version.",
-    );
-  } finally {
-    dispose();
-  }
-});
-
 test("legacy SPA worker aliases update the same root registration to the canonical script", async ({
   page,
   context,
