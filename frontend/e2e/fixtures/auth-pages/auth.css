@@ -1137,7 +1137,8 @@
  * Changes from the recipe: the tunables point at the motion tokens (medium,
  * medium-exit, --scale-surface). Dialog (src/ui) is a native <dialog>: the enter plays from
  * @starting-style when showModal() puts it in the top layer, `data-state="closing"` plays the exit
- * before close(), and the ::backdrop fades on the same clock.
+ * before close(), and the ::backdrop fades on the same clock. On phones, where the dialog is a
+ * sheet, it rises from the bottom edge and drops back instead of scaling, and follows a swipe.
  */
 
 @layer recipes {
@@ -1198,6 +1199,44 @@
     opacity: 0;
     transition-duration: var(--modal-close-dur);
     transition-timing-function: var(--modal-close-ease);
+  }
+
+  /*
+   * Phones: the sheet (dialog.css) slides up from the bottom edge and back down, on the large
+   * clock as a pane does. A swipe moves it with `translate` (dialog.tsx), untransitioned while the
+   * finger is down; let go short and it springs back, far enough and it leaves from there. Reduced
+   * motion keeps only the fade, as below.
+   */
+  @media (width < 720px) {
+    :root {
+      --modal-sheet-open-dur: var(--duration-large);
+      --modal-sheet-close-dur: var(--duration-large-exit);
+    }
+
+    .t-modal {
+      transform: translateY(0);
+      transition:
+        transform var(--modal-sheet-open-dur) var(--modal-ease),
+        translate var(--modal-sheet-open-dur) var(--modal-ease),
+        opacity var(--modal-sheet-open-dur) var(--modal-ease),
+        display var(--modal-sheet-open-dur),
+        overlay var(--modal-sheet-open-dur);
+    }
+
+    @starting-style {
+      .t-modal[open] {
+        transform: translateY(100%);
+      }
+    }
+
+    .t-modal[data-state="closing"] {
+      transform: translateY(100%);
+      transition-duration: var(--modal-sheet-close-dur);
+    }
+
+    .t-modal[data-dragging] {
+      transition-property: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
