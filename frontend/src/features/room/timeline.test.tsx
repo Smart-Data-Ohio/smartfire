@@ -8,6 +8,7 @@ import { act, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
 import type { Timeline as RoomTimeline } from "../../store/model.ts";
+import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -310,5 +311,71 @@ describe("permalink placement", () => {
     expect(recentred).not.toBeNull();
     expect(scrolls.length).toBeGreaterThan(0);
     expect(rowIndex(FOCUS)).toBeGreaterThan(0);
+  });
+
+  it("does not yank a reader back when a delayed around replacement lands", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+    await renderTimeline(FOCUS);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+
+    for (let frame = 0; frame < ANCHOR_ATTEMPTS && frames.size > 0; frame += 1) {
+      await flushFrame();
+    }
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+
+    expect(list).not.toBeNull();
+    scrolls.length = 0;
+
+    // Above the centred row, and short of the end, so following the present cannot explain a jump.
+    const away = 48;
+
+    await act(async () => {
+      if (list === null) {
+        return;
+      }
+
+      list.scrollTop = away;
+      list.dispatchEvent(new Event("scroll"));
+    });
+
+    const held = list?.scrollTop ?? away;
+    const ids = [10, 11, 12, FOCUS];
+
+    await act(async () => {
+      store.setState({
+        messages: {
+          ...store.getState().messages,
+          ...Object.fromEntries(ids.map((id) => [id, messageFixture(id, ROOM)])),
+        },
+      });
+      patchTimeline({ ids, before: 9, after: 13, generation: 2 });
+    });
+
+    expect(scrolls).toEqual([]);
+    expect(list?.scrollTop).toBe(held);
+  });
+
+  it("releases newer paging when deletion empties the window before placement", async () => {
+    install([1, 2, FOCUS, 4], { before: 1, after: 4 });
+    await renderTimeline(FOCUS);
+    expect(loadNewer).not.toHaveBeenCalled();
+
+    // Every loaded row is deleted before the list can place, and both cursors stay.
+    await act(async () => {
+      const next = [1, 2, FOCUS, 4].reduce(
+        (state, id) => removeMessage(state, id, ROOM, null, Date.now()),
+        store.getState(),
+      );
+
+      store.setState(next);
+    });
+
+    expect(store.getState().timelines[ROOM]?.before).not.toBeNull();
+    expect(store.getState().timelines[ROOM]?.after).not.toBeNull();
+    expect(store.getState().timelines[ROOM]?.ids).toEqual([]);
+    expect(loadNewer).toHaveBeenCalledWith(ROOM);
   });
 });

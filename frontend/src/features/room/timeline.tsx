@@ -36,8 +36,9 @@ const LIVE_WINDOW_MS = 8000;
 const FOCUS_ANCHOR_ATTEMPTS = 30;
 
 /**
- * The permalink placement belongs to: the focused message and the window generation it is being
- * placed in. An `around` replacement bumps the generation, so that window is placed again.
+ * Placement done belongs to the focused message and the window generation it was placed in.
+ * An `around` replacement bumps the generation, so that window is placed again unless the reader
+ * has already taken the focus.
  */
 function focusKey(focusMessageId: number | null, generation: number): string | null {
   return focusMessageId === null ? null : `${focusMessageId}:${generation}`;
@@ -102,11 +103,14 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const listRef = useRef<VListHandle | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
-  // The (focus, generation) whose placement attempt has ended. Newer paging waits on the current
-  // pair, then follows the present. Released on every ending: centred, a fallback, the target
-  // gone, the retry cap, or the reader scrolling or jumping away.
+  // Placement done for this (focus, generation). Newer paging waits on the current pair, then
+  // follows the present. Released on every ending: centred, a fallback, the target gone (including
+  // an empty window), the retry cap, or the reader taking the focus.
   const settledKeyRef = useRef<string | null>(null);
   const [settledKey, setSettledKey] = useState<string | null>(null);
+  // The focus the reader has taken. It survives a generation change and clears only when the
+  // focus changes, so a late `around` replacement cannot yank them back.
+  const takenFocusRef = useRef<number | null>(null);
 
   // Frames spent waiting for this pair's list to measure.
   const [anchorAttempt, setAnchorAttempt] = useState<{ readonly key: string; readonly n: number }>({
@@ -177,6 +181,22 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     setSettledKey(key);
   };
 
+  /**
+   * The reader owns this focus: a later generation may finish placing, but it must not scroll.
+   * Cleared only when the focus id changes.
+   */
+  const claimReader = () => {
+    if (focusMessageId === null) {
+      return;
+    }
+
+    takenFocusRef.current = focusMessageId;
+
+    if (anchor !== null) {
+      releasePlacement(anchor);
+    }
+  };
+
   /** Scrolls programmatically. The scroll event this raises is not the reader taking over. */
   const scrollList = (
     index: number,
@@ -201,65 +221,129 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   };
 
   // Place the view once per (focus, generation): on the permalinked message, on the unread
-  // divider (clamped, so a short unread run just lands at the bottom), or at the bottom. The
-  // attempt ends on every outcome, which releases newer paging; only an unmeasured list keeps
-  // retrying, and only for a few frames.
+  // divider (clamped, so a short unread run just lands at the bottom), or at the bottom.
+  // A new generation re-centres only when the reader has not taken this focus. Every attempt
+  // either retries for a few frames or ends, which releases newer paging.
   useLayoutEffect(() => {
     const list = listRef.current;
     let frame = 0;
 
-    if (ready && !awaitingCards && list !== null && items.length > 0) {
-      const focusIndex =
-        focusMessageId === null
-          ? -1
-          : items.findIndex(
-              (item) => item.kind === "message" && item.message.id === focusMessageId,
-            );
+    if (takenFocusRef.current !== null && takenFocusRef.current !== focusMessageId) {
+      takenFocusRef.current = null;
+    }
 
-      const tries = anchorAttempt.key === anchor ? anchorAttempt.n : 0;
+    const readerOwnsFocus = focusMessageId !== null && takenFocusRef.current === focusMessageId;
 
-      // Centre once the list has measured. An unmeasured list reports no viewport, so this retries
-      // for a few frames; paging newer stays held until the attempt ends.
-      if (anchor !== null && settledKeyRef.current !== anchor && focusIndex >= 0) {
-        const key = anchor;
-        const measured = list.scrollSize > 0 && list.viewportSize > 0;
+    const markPlaced = () => {
+      if (placed !== placement) {
+        setPlaced(placement);
+      }
+    };
 
-        // Not the bottom: a page that arrives after this must not yank back to the end.
-        atBottomRef.current = false;
+    const retryOrRelease = (key: string) => {
+      const tries = anchorAttempt.key === key ? anchorAttempt.n : 0;
 
-        if (measured) {
-          scrollList(focusIndex, { align: "center" });
-          releasePlacement(key);
-        } else if (tries < FOCUS_ANCHOR_ATTEMPTS) {
-          scrollList(focusIndex, { align: "center" });
-          frame = requestAnimationFrame(() => {
-            setAnchorAttempt((current) => {
-              const n = current.key === key ? current.n : 0;
+      if (tries < FOCUS_ANCHOR_ATTEMPTS) {
+        frame = requestAnimationFrame(() => {
+          setAnchorAttempt((current) => {
+            const n = current.key === key ? current.n : 0;
 
-              return { key, n: n + 1 };
-            });
+            return { key, n: n + 1 };
           });
-        } else {
-          // The list never measured. Stop retrying and let paging follow the present.
-          releasePlacement(key);
-        }
-      } else if (anchor !== null && settledKeyRef.current !== anchor) {
-        // The target is missing or was deleted before it could be centred.
-        releasePlacement(anchor);
+        });
+
+        return;
       }
 
-      if (frame === 0 && placed !== placement) {
+      releasePlacement(key);
+      markPlaced();
+    };
+
+    // Not loaded yet, or cards are still settling: the attempt has not started. Releasing here
+    // would let paging walk off a permalink that is about to be placed. The effect runs again
+    // when either changes.
+    if (!ready || awaitingCards) {
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (anchor === null) {
+      if (list !== null && items.length > 0 && placed !== placement) {
         setPlaced(placement);
 
-        if (focusIndex < 0) {
-          const unreadIndex = items.findIndex((item) => item.kind === "unread");
+        const unreadIndex = items.findIndex((item) => item.kind === "unread");
 
-          if (unreadIndex >= 0) {
-            scrollList(unreadIndex, { align: "start", offset: -8 });
-          } else {
-            scrollList(items.length - 1, { align: "end" });
-          }
+        if (unreadIndex >= 0) {
+          scrollList(unreadIndex, { align: "start", offset: -8 });
+        } else {
+          scrollList(items.length - 1, { align: "end" });
         }
+      }
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (settledKeyRef.current === anchor) {
+      return () => cancelAnimationFrame(frame);
+    }
+
+    // The reader already left this focus. End the new window without scrolling back to it.
+    if (readerOwnsFocus) {
+      releasePlacement(anchor);
+      markPlaced();
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    // An empty window is the target already gone. Release so newer paging is not held; there
+    // is no row to fall back onto.
+    if (items.length === 0) {
+      releasePlacement(anchor);
+      markPlaced();
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (list === null) {
+      retryOrRelease(anchor);
+
+      return () => cancelAnimationFrame(frame);
+    }
+
+    const focusIndex = items.findIndex(
+      (item) => item.kind === "message" && item.message.id === focusMessageId,
+    );
+
+    if (focusIndex >= 0) {
+      const key = anchor;
+      const measured = list.scrollSize > 0 && list.viewportSize > 0;
+
+      // Not the bottom: a page that arrives after this must not yank back to the end.
+      atBottomRef.current = false;
+
+      if (measured) {
+        scrollList(focusIndex, { align: "center" });
+        releasePlacement(key);
+        markPlaced();
+      } else {
+        const tries = anchorAttempt.key === key ? anchorAttempt.n : 0;
+
+        if (tries < FOCUS_ANCHOR_ATTEMPTS) {
+          scrollList(focusIndex, { align: "center" });
+        }
+
+        retryOrRelease(key);
+      }
+    } else {
+      // The target is missing. Release, then the unread or bottom fallback.
+      releasePlacement(anchor);
+      markPlaced();
+
+      const unreadIndex = items.findIndex((item) => item.kind === "unread");
+
+      if (unreadIndex >= 0) {
+        scrollList(unreadIndex, { align: "start", offset: -8 });
+      } else {
+        scrollList(items.length - 1, { align: "end" });
       }
     }
 
@@ -380,16 +464,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
-    // A scroll we didn't ask for means the reader has the list. Placement stops here.
-    if (
-      anchor !== null &&
-      settledKeyRef.current !== anchor &&
-      !placingRef.current &&
-      !awaitingCards &&
-      list.scrollSize > 0 &&
-      list.viewportSize > 0
-    ) {
-      releasePlacement(anchor);
+    // A scroll we didn't ask for means the reader has the list. That survives a later generation.
+    if (!placingRef.current && !awaitingCards && list.scrollSize > 0 && list.viewportSize > 0) {
+      claimReader();
     }
 
     const distance = list.scrollSize - offset - list.viewportSize;
@@ -415,10 +492,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   const jumpToPresent = () => {
     setNewBelow(0);
-
-    if (anchor !== null) {
-      releasePlacement(anchor);
-    }
+    claimReader();
 
     if (focusMessageId !== null) {
       void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
