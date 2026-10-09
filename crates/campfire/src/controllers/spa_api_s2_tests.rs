@@ -1022,9 +1022,7 @@ async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
         )
         .await;
     assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
-    let row_for_room = move |event: &api::SyncEvent| {
-        matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == room)
-    };
+    let row_for_room = move |event: &api::SyncEvent| matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == room);
     let overtaking = tokio::time::timeout(
         Duration::from_millis(200),
         sync.until(row_for_room, |_| false),
@@ -1090,6 +1088,234 @@ async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
         sync.until(row_for_room, |_| false),
     )
     .await;
-    assert!(later.is_err(), "an older root's edit sends no row: {later:?}");
+    assert!(
+        later.is_err(),
+        "an older root's edit sends no row: {later:?}"
+    );
+    server.abort();
+}
+
+/// A sidebar row event (upsert or removal) for `room_id`.
+fn row_event(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+    move |event| match &event.payload {
+        api::SyncPayload::SidebarRowUpserted(row) => row.room.id == room_id,
+        api::SyncPayload::SidebarRowRemoved(gone) => gone.room_id == room_id,
+        _ => false,
+    }
+}
+
+/// Every row event for `room_id` until the socket goes quiet, once deferred publications settle.
+async fn remaining_row_events(a: &TestApp, sync: &mut Sync, room_id: i64) -> Vec<api::SyncPayload> {
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("the publications settled");
+    let mut events = Vec::new();
+    while let Ok(event) = tokio::time::timeout(
+        Duration::from_millis(300),
+        sync.until(row_event(room_id), |_| false),
+    )
+    .await
+    {
+        events.push(event.payload);
+    }
+    events
+}
+
+#[tokio::test]
+async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    remaining_row_events(&a, &mut sync, room).await;
+
+    // A new message's reader renders Kevin's row, then pauses before publishing it; Kevin
+    // leaves meanwhile, and the removal must wait for it rather than go out first.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let body = json!({"clientMessageId": "before-leaving", "markdownSource": "Still here?"});
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &body,
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the row was rendered")
+        .unwrap();
+    let leave = async {
+        kevin
+            .write(json_body(
+                Method::DELETE,
+                &format!("/api/v1/rooms/{room}/membership"),
+                &json!({}),
+            ))
+            .await
+    };
+    let release = async {
+        let overtaking = tokio::time::timeout(
+            Duration::from_millis(300),
+            sync.until(row_event(room), |_| false),
+        )
+        .await;
+        hold.release.send(()).unwrap();
+        overtaking.map(|event| event.payload)
+    };
+    let (reply, overtaking) = tokio::join!(leave, release);
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert!(
+        overtaking.is_err(),
+        "the removal waits for the paused row: {overtaking:?}"
+    );
+
+    // The paused row goes out, then the removal, then the leave's disconnect: nothing after the
+    // removal brings the row back (once the socket is gone, a row would only record a gap).
+    let mut events = Vec::new();
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Batch { events: batch }) => events.extend(
+                batch
+                    .into_iter()
+                    .filter(|event| row_event(room)(event))
+                    .map(|event| event.payload),
+            ),
+            Some(api::ServerFrame::Ping) => {}
+            Some(api::ServerFrame::Bye { .. }) | None => break,
+            Some(other) => panic!("unexpected {other:?}"),
+        }
+    }
+    assert!(
+        matches!(
+            events.first(),
+            Some(api::SyncPayload::SidebarRowUpserted(_))
+        ),
+        "{events:?}"
+    );
+    assert!(
+        matches!(events.last(), Some(api::SyncPayload::SidebarRowRemoved(gone)) if gone.room_id == room),
+        "the row stays gone: {events:?}"
+    );
+    let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+    assert!(sidebar.rows.iter().all(|row| row.room.id != room));
+    server.abort();
+}
+
+/// Waits until the room's name, as committed, is `name`.
+async fn room_named(a: &TestApp, room: i64, name: &'static str) {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let now = a
+                .db()
+                .read(move |conn| {
+                    Ok(
+                        conn.query_row("SELECT name FROM rooms WHERE id = ?", [room], |row| {
+                            row.get::<_, String>(0)
+                        })?,
+                    )
+                })
+                .await
+                .unwrap();
+            if now == name {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("{name} committed"));
+}
+
+#[tokio::test]
+async fn a_rename_paused_across_a_newer_rename_ends_on_the_newer_name() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = first
+        .write(json_body(
+            Method::POST,
+            "/api/v1/rooms",
+            &json!({"type": "closed", "name": "Before", "iconName": "smile",
+                    "clientRoomId": uuid::Uuid::new_v4().to_string(),
+                    "userIds": [DAVID, JASON, KEVIN]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::RoomMutation>(&reply).room.id;
+    remaining_row_events(&a, &mut sync, room).await;
+    let rename = |name: &'static str| json!({"type": "closed", "name": name, "iconName": "smile", "userIds": [DAVID, JASON, KEVIN]});
+    let path = format!("/api/v1/rooms/{room}");
+
+    // An unread row of Kevin's is rendered and paused, holding the room. Both renames commit
+    // meanwhile, and their rows wait: each must read the room when it publishes, so no row
+    // after the pause carries the older name.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let body = json!({"clientMessageId": "before-renames", "markdownSource": "Renaming soon"});
+    let reply = first
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &body,
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the unread row was rendered")
+        .unwrap();
+    let older = first.write(json_body(Method::PATCH, &path, &rename("Older")));
+    let newer = async {
+        room_named(&a, room, "Older").await;
+        second
+            .write(json_body(Method::PATCH, &path, &rename("Newer")))
+            .await
+    };
+    let release = async {
+        room_named(&a, room, "Newer").await;
+        hold.release.send(()).unwrap();
+    };
+    let (older, newer, ()) = tokio::join!(older, newer, release);
+    assert_eq!(older.status, StatusCode::OK, "{}", older.text());
+    assert_eq!(newer.status, StatusCode::OK, "{}", newer.text());
+
+    let events = remaining_row_events(&a, &mut sync, room).await;
+    let names: Vec<_> = events
+        .iter()
+        .map(|event| match event {
+            api::SyncPayload::SidebarRowUpserted(row) => row.room.name.clone(),
+            other => panic!("only upserts: {other:?}"),
+        })
+        .collect();
+    assert_eq!(
+        names.first(),
+        Some(&Some("Before".to_string())),
+        "{names:?}"
+    );
+    assert!(names.len() > 1, "the renames publish rows: {names:?}");
+    assert!(
+        names[1..]
+            .iter()
+            .all(|name| name.as_deref() == Some("Newer")),
+        "every row after the pause has the newer name: {names:?}"
+    );
     server.abort();
 }

@@ -278,6 +278,12 @@ impl Broadcasts {
         sync::membership_row(&self.server, &self.sync, conn, membership_id);
     }
 
+    /// `sidebar.row.removed` after a person left a room (`Membership#broadcast_room_removal_to_user`,
+    /// which the cable sink sent): read under the room's lock, so it follows any row read before.
+    pub fn sync_row_removed(&self, conn: &Connection, user_id: i64, room_id: i64) {
+        sync::sidebar_row_removed(&self.server, &self.sync, conn, user_id, room_id);
+    }
+
     // The primitives
 
     /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`
@@ -571,7 +577,7 @@ impl Broadcasts {
     /// RoomsController#destroy: remove `[room, :list]` from everyone's `:rooms`.
     pub fn room_remove(&self, room: &Room) {
         self.remove(&Stream::rooms(), &room_dom_id(room, "list"));
-        sync::room_removed(&self.server, room.id);
+        sync::room_removed(&self.server, &self.sync, room.id);
     }
 
     /// Rooms::OpensController#create: prepend to everyone's `shared_rooms`.
