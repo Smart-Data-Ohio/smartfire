@@ -2,21 +2,42 @@
  * What the UI asks for, as Effect programs. `runtime.ts` runs them for React as `actions`.
  * Failures land in the store (room errors, failed pages, failed sends), so these rarely fail.
  */
-import { Effect, Option } from "effect";
+import { Clock, Effect, Option, Predicate, Result } from "effect";
 import { readBoot } from "../api/boot.ts";
+import type { ApiClient } from "../api/client.ts";
 import {
   me,
   messages,
+  openRoomPreview,
   type PageCursor,
+  joinOpenRoom as postJoin,
   markRead as postRead,
   presence,
   room,
   sidebar,
 } from "../api/endpoints.ts";
+import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
+import type { SidebarRow } from "../gen/SidebarRow.ts";
+import {
+  beginRoomRequest,
+  clearRoomJoin,
+  joinedAtEpoch,
+  noteJoined,
+  resetJoinState,
+  resetRoomRereads,
+} from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import {
+  changedSince,
+  interruptRoomRecovery,
+  invalidateRoom,
+  managementEpoch,
+  recoverRejectedRoomRead,
+  roomRevision,
+} from "./room-refresh.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
 
@@ -24,6 +45,48 @@ import { Typing } from "./typing.ts";
 export const OPEN_AT_UNREAD_ABOVE = 40;
 
 const roomTopic = (roomId: number) => `room:${roomId}`;
+
+/**
+ * One open of a room. `openRoom` replaces it before yielding, so a preview, a timeline page, or a
+ * join that started on an older visit cannot paint over the one on screen. The focus message is
+ * this visit's, never the one captured when Join was clicked.
+ */
+interface RoomVisit {
+  readonly token: number;
+  readonly focusMessageId: number | null;
+  readonly load: number;
+}
+
+let nextVisitToken = 0,
+  nextLoad = 0;
+
+const visits = new Map<number, RoomVisit>();
+
+function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
+  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId, load: 0 };
+
+  visits.set(roomId, visit);
+
+  return visit;
+}
+
+function sameVisit(roomId: number, token: number): boolean {
+  return visits.get(roomId)?.token === token;
+}
+
+/** The visit on screen, or `null` when the room is closed. Recovery loops stop when it changes. */
+export function roomVisitToken(roomId: number): number | null {
+  return visits.get(roomId)?.token ?? null;
+}
+
+/** Test isolation. Visit tokens and join epochs outlive the store. */
+export function resetRoomVisits(): void {
+  visits.clear();
+  resetJoinState();
+  resetRoomRereads();
+  nextVisitToken = 0;
+  nextLoad = 0;
+}
 
 /** Everyone the sidebar shows a presence dot for: direct-message members and placeholders. */
 function presenceIds(data: Sidebar): readonly number[] {
@@ -68,28 +131,17 @@ export const start = Effect.fn("session.start")(function* () {
   }
 });
 
-/** The room's detail, then its first page: at the focused message, the unread divider or the end. */
-const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: number | null) {
-  mutations.setRoomLoading(roomId);
-  mutations.setPageReplacing(roomId);
-
-  const detail = yield* room(roomId).pipe(
-    Effect.tapError((error) =>
-      Effect.sync(() => {
-        mutations.setPageFailed(roomId);
-        mutations.setRoomError(roomId, error.message);
-      }),
-    ),
-    Effect.option,
-  );
-
-  if (Option.isNone(detail)) {
+/** The first page: at the visit's focused message, the unread divider or the end. */
+const loadFirstPage = Effect.fnUntraced(function* (
+  roomId: number,
+  token: number,
+  unread: { readonly firstUnreadMessageId: number; readonly count: number } | null,
+) {
+  if (!sameVisit(roomId, token)) {
     return;
   }
 
-  mutations.setRoomDetail(detail.value);
-
-  const unread = detail.value.unread;
+  const focusMessageId = visits.get(roomId)?.focusMessageId ?? null;
   let cursor: PageCursor = null;
 
   if (focusMessageId !== null) {
@@ -99,14 +151,297 @@ const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: nu
   }
 
   yield* messages(roomId, cursor).pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
+    Effect.tap((page) =>
+      Effect.sync(() => {
+        if (!sameVisit(roomId, token)) {
+          return;
+        }
+
+        mutations.applyPage(roomId, page, "replace");
+      }),
+    ),
     Effect.catch((error) =>
       Effect.sync(() => {
+        if (!sameVisit(roomId, token)) {
+          return;
+        }
+
         mutations.setPageFailed(roomId);
         mutations.setRoomError(roomId, error.message);
       }),
     ),
   );
+});
+
+/** Boards keep their posts. A chat room replaces the window with this visit's first page. */
+const loadTimeline = Effect.fnUntraced(function* (
+  roomId: number,
+  token: number,
+  detail: RoomDetail,
+) {
+  if (detail.room.kind === "board") {
+    return;
+  }
+
+  mutations.setPageReplacing(roomId);
+  yield* loadFirstPage(roomId, token, detail.unread);
+});
+
+/** How many times a superseded join re-reads the room before it gives up and shows the load error. */
+const RECOVERY_ATTEMPTS = 3;
+
+/** Detail a join installed, and only while that join's epoch is still current. */
+function currentJoinDetail(roomId: number): RoomDetail | null {
+  const at = joinedAtEpoch(roomId);
+
+  if (at === undefined || changedSince(roomId, at)) {
+    return null;
+  }
+
+  return store.getState().rooms[roomId]?.detail ?? null;
+}
+
+/**
+ * The read lost to a membership fact that arrived while it was in flight. A later read, with a
+ * new sequence, fills what that fact did not (member counts, or the first detail). Losses while
+ * that re-read is in flight share one follow-up. Confirmed mutations are not reads.
+ */
+let retryRejectedLoad: (roomId: number, token: number) => Effect.Effect<void, never, ApiClient> =
+  () => Effect.void;
+
+/**
+ * The room's detail, then its first page. A 404 fetches the join preview; a preview 404 means the
+ * room is unavailable. A preview applies only when its load is still the visit's latest. An older
+ * room outcome cannot replace a newer one. Cached membership never overrides a 404, except detail
+ * this session's join installed while that join's epoch is still current.
+ *
+ * A recovery re-read does not call `setRoomLoading`: it keeps whatever is on screen and replaces
+ * it only when the fresh response still belongs to this visit. Only the visit's own initial load
+ * sets `loading`.
+ */
+const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token)) return;
+
+  const open = visits.get(roomId);
+  const load = open?.token === token ? ++nextLoad : 0;
+  const started = beginRoomRequest();
+
+  if (open !== undefined && open.token === token) {
+    visits.set(roomId, { ...open, load });
+  }
+
+  const loaded = yield* Effect.result(room(roomId));
+
+  if (!sameVisit(roomId, token)) {
+    return;
+  }
+
+  if (Result.isSuccess(loaded)) {
+    const detail = withSidebarRow(loaded.success, store.getState().sidebar.rows[roomId]);
+
+    if (mutations.setRoomDetail(detail, started)) {
+      clearRoomJoin(roomId);
+      yield* loadTimeline(roomId, token, detail);
+    } else {
+      yield* retryRejectedLoad(roomId, token);
+    }
+
+    return;
+  }
+
+  const kept = currentJoinDetail(roomId);
+
+  if (kept !== null) {
+    if (mutations.setRoomDetail(kept, started)) {
+      yield* loadTimeline(roomId, token, kept);
+    }
+
+    return;
+  }
+
+  mutations.setPageFailed(roomId);
+
+  if (Predicate.isTagged(loaded.failure, "NotFound")) {
+    const preview = yield* Effect.result(openRoomPreview(roomId));
+    const latest = sameVisit(roomId, token) && visits.get(roomId)?.load === load;
+
+    if (!latest) {
+      return;
+    }
+
+    if (Result.isSuccess(preview)) {
+      if (mutations.setRoomPreview(roomId, preview.success, started)) {
+        clearRoomJoin(roomId);
+      }
+
+      return;
+    }
+
+    if (Predicate.isTagged(preview.failure, "NotFound")) {
+      mutations.setRoomUnavailable(roomId, started);
+
+      return;
+    }
+
+    mutations.setRoomError(roomId, preview.failure.message);
+
+    return;
+  }
+
+  mutations.setRoomError(roomId, loaded.failure.message);
+});
+
+/** The visit's own initial load. Recovery calls `readRoom` and leaves the visible state alone. */
+const loadRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token)) return;
+
+  mutations.setRoomLoading(roomId);
+  yield* readRoom(roomId, token);
+});
+
+retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) {
+  if (!sameVisit(roomId, token)) return;
+
+  yield* recoverRejectedRoomRead(
+    roomId,
+    token,
+    () => sameVisit(roomId, token),
+    () => readRoom(roomId, token),
+  );
+});
+
+/** The sidebar row's facts win over a room read that raced a rename or a membership change. */
+function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined): RoomDetail {
+  if (row === undefined) {
+    return detail;
+  }
+
+  return {
+    ...detail,
+    room: row.room,
+    membership: row.membership,
+    displayName: row.displayName,
+    directMemberIds: row.directMemberIds,
+  };
+}
+
+/**
+ * Lands a join the server just confirmed. The visit on screen, if any, loads around its own
+ * focus. No visit records the membership and leaves the timeline to the next open.
+ */
+const installJoined = Effect.fnUntraced(function* (
+  roomId: number,
+  detail: RoomDetail,
+  row: SidebarRow | null,
+  started: number,
+) {
+  if (!mutations.setRoomDetail(detail, started)) {
+    return;
+  }
+
+  if (row !== null) {
+    const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
+
+    mutations.applyEvents(
+      [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: row }],
+      yield* Clock.currentTimeMillis,
+    );
+  }
+
+  invalidateRoom(roomId);
+  noteJoined(roomId, managementEpoch());
+
+  // The preview's `present` was refused. Say it again only while this visit is still open.
+  const visitBefore = visits.get(roomId);
+
+  if (visitBefore !== undefined) {
+    const presenceService = yield* Presence;
+
+    yield* presenceService.enter(roomId);
+  }
+
+  const visit = visits.get(roomId);
+
+  if (visit === undefined) {
+    if (visitBefore !== undefined) {
+      const presenceService = yield* Presence;
+
+      yield* presenceService.leave(roomId);
+    }
+
+    return;
+  }
+
+  yield* loadTimeline(roomId, visit.token, detail);
+});
+
+/**
+ * The join body is stale: the epoch moved, or the visit changed, while the POST was in flight.
+ * Re-read the room. A 404 whose revision stays put is final. Anything else, including a read a
+ * newer change superseded, tries again — three times, then the room's ordinary load error.
+ * Try again repeats this read. The stale body is never installed.
+ */
+const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
+  let failure = "Couldn't load this room";
+
+  for (let attempt = 0; attempt < RECOVERY_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      yield* Effect.sleep(attempt === 1 ? "200 millis" : "800 millis");
+    }
+
+    const revision = invalidateRoom(roomId);
+    const since = managementEpoch();
+    const started = beginRoomRequest();
+    const fetched = yield* Effect.result(room(roomId));
+    const superseded = roomRevision(roomId) !== revision || changedSince(roomId, since);
+
+    if (Result.isSuccess(fetched) && !superseded) {
+      const row = store.getState().sidebar.rows[roomId];
+
+      yield* installJoined(roomId, withSidebarRow(fetched.success, row), null, started);
+
+      return;
+    }
+
+    if (
+      Result.isFailure(fetched) &&
+      Predicate.isTagged(fetched.failure, "NotFound") &&
+      !superseded
+    ) {
+      mutations.setRoomUnavailable(roomId, started);
+
+      return;
+    }
+
+    if (Result.isFailure(fetched)) {
+      failure = fetched.failure.message;
+    }
+  }
+
+  clearRoomJoin(roomId);
+  mutations.setPageFailed(roomId);
+  mutations.setRoomError(roomId, failure);
+});
+
+/**
+ * Joins an open room. The POST body is a hint: it lands only when the epoch and the visit are
+ * still the ones the request started with. Otherwise the room is read from the server.
+ */
+export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
+  const since = managementEpoch();
+  const token = visits.get(roomId)?.token ?? null;
+  const joined = yield* postJoin(roomId);
+  const topics = yield* Topics;
+
+  yield* topics.forgetRejected(roomTopic(roomId));
+
+  if (changedSince(roomId, since) || (visits.get(roomId)?.token ?? null) !== token) {
+    yield* recoverJoin(roomId);
+
+    return;
+  }
+
+  yield* installJoined(roomId, joined.detail, joined.row, beginRoomRequest());
 });
 
 /**
@@ -117,12 +452,16 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
   roomId: number,
   focusMessageId: number | null,
 ) {
+  const visit = beginVisit(roomId, focusMessageId);
+
+  yield* interruptRoomRecovery(roomId);
+
   const topics = yield* Topics;
   const presenceService = yield* Presence;
 
   yield* topics.acquire(roomTopic(roomId));
   yield* presenceService.enter(roomId);
-  yield* loadRoom(roomId, focusMessageId);
+  yield* loadRoom(roomId, visit.token);
 });
 
 /** Loads an open room again after an error; the subscription and presence `openRoom` took hold. */
@@ -130,11 +469,17 @@ export const reloadRoom = Effect.fn("session.reloadRoom")(function* (
   roomId: number,
   focusMessageId: number | null,
 ) {
-  yield* loadRoom(roomId, focusMessageId);
+  const visit = beginVisit(roomId, focusMessageId);
+
+  yield* interruptRoomRecovery(roomId);
+  yield* loadRoom(roomId, visit.token);
 });
 
 /** Closes a room view: releases its topic, says absent, stops typing, forgets the divider. */
 export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: number) {
+  visits.delete(roomId);
+  yield* interruptRoomRecovery(roomId);
+
   const topics = yield* Topics;
   const presenceService = yield* Presence;
   const typing = yield* Typing;
@@ -146,6 +491,7 @@ export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: numbe
 });
 
 const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older" | "newer") {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   const timeline = store.getState().timelines[roomId];
 
   if (timeline === undefined) {
@@ -159,11 +505,15 @@ const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older"
     return;
   }
 
-  mutations.setPageLoading(roomId, direction);
+  // A replace bumps this id. A late page or error is dropped once it no longer matches.
+  const request = mutations.setPageLoading(roomId, direction);
 
   yield* messages(roomId, direction === "older" ? { before: from } : { after: from }).pipe(
-    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, direction))),
-    Effect.catch(() => Effect.sync(() => mutations.setPageFailed(roomId))),
+    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, direction, request))),
+    Effect.catch(() => Effect.sync(() => mutations.setPageFailed(roomId, direction, request))),
+    Effect.onInterrupt(() =>
+      Effect.sync(() => mutations.setPageFailed(roomId, direction, request)),
+    ),
   );
 });
 
@@ -175,6 +525,7 @@ export const loadAround = Effect.fn("session.loadAround")(function* (
   roomId: number,
   messageId: number,
 ) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, { around: messageId }).pipe(
@@ -199,6 +550,7 @@ export const loadNewer = Effect.fn("session.loadNewer")(function* (roomId: numbe
 
 /** Replaces the window with the newest page. */
 export const jumpToPresent = Effect.fn("session.jumpToPresent")(function* (roomId: number) {
+  if (store.getState().rooms[roomId]?.detail?.room.kind === "board") return;
   mutations.setPageReplacing(roomId);
 
   yield* messages(roomId, null).pipe(

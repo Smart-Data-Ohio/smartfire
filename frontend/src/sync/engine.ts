@@ -3,6 +3,7 @@ import {
   Context,
   Effect,
   Layer,
+  Predicate,
   Queue,
   Ref,
   Result,
@@ -10,24 +11,48 @@ import {
   type Scope,
   Stream,
 } from "effect";
-import { activityUnreadCount } from "../api/activity-endpoints.ts";
+import { board } from "../api/board-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
-import { messages, sidebar, users } from "../api/endpoints.ts";
-import { thread, threadMessages } from "../api/thread-endpoints.ts";
+import { messages, openRoomPreview, room, sidebar, users } from "../api/endpoints.ts";
+import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
+import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
 import { mutations, store } from "../store/store.ts";
+import { captureWorkRead, workDetailStale } from "../store/work.ts";
+import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
-import { emitSyncEvents } from "./signals.ts";
+import {
+  invalidateRoom,
+  markRoomsChanged,
+  markSidebarSnapshot,
+  recoverRejectedRoomRead,
+  roomRefreshIds,
+  roomRevision,
+} from "./room-refresh.ts";
+import { roomVisitToken } from "./session.ts";
+import { paneProblem, UNAVAILABLE } from "./settle.ts";
+import { emitResync, emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
+import {
+  beginThreadLoad,
+  finishThreadLoad,
+  isGoneFocus,
+  isLatestThreadLoad,
+  loadThreadHeader,
+  openAtNewest,
+  pendingThreadFocus,
+} from "./thread-loads.ts";
 import { Topics } from "./topics.ts";
+import { refresh as refreshWork } from "./work-actions.ts";
 
 /**
  * A loaded window that stops short of the present: a permalink, a jump back, or a window the
@@ -62,14 +87,16 @@ export const reconnectSchedule = Schedule.min([
 ]);
 
 /**
- * Events whose effect a fresh sidebar snapshot already includes. After a reload they are replayed
- * from the stored cursor on top of a sidebar fetched since, so applying them would count twice.
+ * Events covered by fresh sidebar and activity snapshots. After a reload, replay starts at the
+ * stored cursor, so replaying covered events would change the freshly loaded state.
  */
 const SNAPSHOT_EVENTS: ReadonlySet<SyncEvent["type"]> = new Set([
   "room.unread",
   "room.read",
   "sidebar.row.upserted",
   "sidebar.row.removed",
+  "activity.item",
+  "activity.removed",
 ]);
 
 /** Frames this close together land in one store commit. */
@@ -112,7 +139,10 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   const missing = new Set<number>();
 
   for (const event of events) {
-    if (event.type === "message.created" && known[event.data.creatorId] === undefined) {
+    if (
+      (event.type === "message.created" || event.type === "thread.created") &&
+      known[event.data.creatorId] === undefined
+    ) {
       missing.add(event.data.creatorId);
     }
 
@@ -123,9 +153,54 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
         missing.add(creatorId);
       }
     }
+
+    if (event.type === "sidebar.row.upserted") {
+      for (const userId of event.data.directMemberIds) {
+        if (known[userId] === undefined) {
+          missing.add(userId);
+        }
+      }
+    }
   }
 
   return [...missing];
+}
+
+function landRefreshedRoom(
+  detail: RoomDetail,
+  revision: number,
+  started: number,
+): "applied" | "skipped" | "rejected" {
+  const state = store.getState();
+  const roomId = detail.room.id;
+  const view = state.rooms[roomId];
+
+  if (roomRevision(roomId) !== revision || view == null) {
+    return "skipped";
+  }
+
+  // Unavailable, or a join preview, has no detail this refresh may replace. A first load does.
+  if (view.detail == null && view.status !== "loading") {
+    return "skipped";
+  }
+
+  // A read/unread or placement row may have landed while this request was pending.
+  const row = state.sidebar.rows[roomId];
+
+  const landed = mutations.setRoomDetail(
+    row === undefined
+      ? detail
+      : {
+          ...detail,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+    started,
+  );
+
+  return landed ? "applied" : "rejected";
 }
 
 /**
@@ -153,19 +228,143 @@ export class Engine extends Context.Service<
       const api = yield* Effect.context<ApiClient>();
       /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
       const restored = yield* Ref.make((yield* cursor.get) !== null);
-      /** Replayed sidebar events up to this seq are already in the refetched sidebar. */
+      /** Snapshot events through this sequence are covered by the initial refetch. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
+
+      const activitySnapshotThrough = yield* Ref.make({
+        generation: store.getState().activity.generation,
+        through: Number.NEGATIVE_INFINITY,
+      });
+
+      /**
+       * A refresh lost to a membership fact. A later read, at the room's current revision and a
+       * new sequence, replaces it. Losses while that re-read is in flight share one follow-up.
+       * The fact itself is not read again.
+       */
+      let retryRejectedRefresh: (roomId: number) => Effect.Effect<void> = () => Effect.void;
+
+      /** Refetch room metadata at its current management revision, including lost access. */
+      const resyncRoomDetail = Effect.fnUntraced(function* (roomId: number, revision: number) {
+        const started = beginRoomRequest();
+        const detail = yield* Effect.result(room(roomId));
+
+        if (Result.isSuccess(detail) && roomRevision(roomId) === revision) {
+          markRoomsChanged([roomId]);
+
+          if (landRefreshedRoom(detail.success, revision, started) === "rejected") {
+            yield* retryRejectedRefresh(roomId);
+          }
+        } else if (
+          Result.isFailure(detail) &&
+          roomRevision(roomId) === revision &&
+          Predicate.isTagged(detail.failure, "NotFound")
+        ) {
+          // A previewed room is not a membership: this 404 is expected. Reload the preview
+          // instead of treating the reconnect as lost access.
+          let unavailableAt = started;
+
+          if (store.getState().rooms[roomId]?.preview != null) {
+            unavailableAt = beginRoomRequest();
+            const preview = yield* Effect.result(openRoomPreview(roomId));
+
+            if (roomRevision(roomId) !== revision) {
+              return "preview";
+            }
+
+            if (Result.isSuccess(preview)) {
+              // A join can install the membership while this refetch is in flight.
+              if (store.getState().rooms[roomId]?.detail == null) {
+                mutations.setRoomPreview(roomId, preview.success, unavailableAt);
+              }
+
+              return "preview";
+            }
+
+            if (!Predicate.isTagged(preview.failure, "NotFound")) {
+              return "preview";
+            }
+          }
+
+          markRoomsChanged([roomId]);
+          mutations.setRoomUnavailable(roomId, unavailableAt);
+
+          return false;
+        }
+
+        return true;
+      });
 
       /**
        * A room's newest page, merged into the window the reader is on (`resync`); then, for a
        * window away from the present, the page around its middle re-read in place.
        */
       const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
+        const state = store.getState();
+        const held = state.boards[roomId];
+        const revision = roomRevision(roomId);
+
+        const kind =
+          state.rooms[roomId]?.detail?.room.kind ?? state.sidebar.rows[roomId]?.room.kind;
+
+        if (kind === "board") {
+          // A missed `board.automations.changed` can't be replayed either.
+          mutations.boardAutomationsChanged(roomId);
+
+          if (held !== undefined) mutations.setBoardLoading(roomId, held.query);
+          const generation = store.getState().boards[roomId]?.generation;
+
+          const read = captureWorkRead(store.getState());
+
+          const [available, listing] = yield* Effect.all(
+            [
+              resyncRoomDetail(roomId, revision),
+              held === undefined
+                ? Effect.succeed(null)
+                : Effect.result(board(roomId, { ...held.query, page: held.page })),
+            ],
+            { concurrency: 2 },
+          );
+
+          if (available !== true) {
+            if (available === false && generation !== undefined) {
+              mutations.setBoardError(roomId, generation, "This room is no longer available.");
+            }
+
+            return;
+          }
+
+          if (listing !== null && generation !== undefined) {
+            if (Result.isSuccess(listing)) {
+              mutations.loadBoardListing(listing.success, generation, read);
+            } else {
+              mutations.setBoardError(roomId, generation, listing.failure.message);
+              yield* Effect.logWarning("sync: board resync failed", listing.failure.message);
+            }
+          }
+
+          return;
+        }
+
         mutations.setPageReplacing(roomId);
 
-        const newest = yield* messages(roomId, null);
+        const [available, newest] = yield* Effect.all(
+          [resyncRoomDetail(roomId, revision), Effect.result(messages(roomId, null))],
+          { concurrency: 2 },
+        );
 
-        mutations.applyPage(roomId, newest, "resync");
+        if (available !== true) {
+          if (available === false) {
+            mutations.setPageFailed(roomId);
+          }
+
+          return;
+        }
+
+        if (Result.isFailure(newest)) {
+          return yield* Effect.fail(newest.failure);
+        }
+
+        mutations.applyPage(roomId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().timelines[roomId]);
 
@@ -182,18 +381,56 @@ export class Engine extends Context.Service<
 
       /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
       const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+        // A permalink's load this supersedes still wants its reply: open around it instead.
+        const focus = pendingThreadFocus(threadId);
+        const load = beginThreadLoad(threadId, focus);
+
         mutations.setThreadPageReplacing(threadId);
 
         const [detail, newest] = yield* Effect.all(
-          [Effect.result(thread(threadId)), threadMessages(threadId, null)],
+          [
+            loadThreadHeader(threadId, load),
+            Effect.result(threadMessages(threadId, focus === null ? null : { around: focus })),
+          ],
           { concurrency: 2 },
         );
 
-        if (Result.isSuccess(detail)) {
-          mutations.loadThreadDetail(detail.success);
+        // A newer load (the pane's Try again, or another resync) decides what the pane shows.
+        if (!isLatestThreadLoad(threadId, load)) {
+          return;
         }
 
-        mutations.applyThreadPage(threadId, newest, "resync");
+        const problem = paneProblem(detail);
+        const pane = store.getState().threadPanes[threadId];
+
+        // A pane already showing the thread keeps it through a failed refresh; one still loading
+        // (whose own load this superseded) or failed says why, with Try again.
+        if (
+          problem !== null &&
+          pane !== undefined &&
+          (problem === UNAVAILABLE || pane.status !== "ready")
+        ) {
+          mutations.setThreadPaneError(threadId, problem);
+        }
+
+        if (Result.isFailure(newest)) {
+          // The permalink's reply may be gone while the thread is still there (see `openAtNewest`).
+          if (focus !== null && problem === null && isGoneFocus(newest.failure)) {
+            return yield* openAtNewest(threadId, load);
+          }
+
+          return yield* Effect.fail(newest.failure);
+        }
+
+        // Only once its page is in does a permalink's focus stop carrying over (see `loadPane`).
+        if (focus !== null) {
+          mutations.applyThreadPage(threadId, newest.success, "replace");
+          finishThreadLoad(threadId, load);
+
+          return;
+        }
+
+        mutations.applyThreadPage(threadId, newest.success, "resync");
 
         const anchor = middleOf(store.getState().threadTimelines[threadId]);
 
@@ -203,31 +440,58 @@ export class Engine extends Context.Service<
 
         const page = yield* threadMessages(threadId, { around: anchor });
 
-        if (readingHistory(store.getState().threadTimelines[threadId])) {
+        if (
+          isLatestThreadLoad(threadId, load) &&
+          readingHistory(store.getState().threadTimelines[threadId])
+        ) {
           mutations.applyThreadPage(threadId, page, "refresh");
         }
       });
 
       /** The badge from the server; a failure keeps the count shown. */
-      const refreshUnreadCount = activityUnreadCount().pipe(
-        Effect.tap(({ unreadCount }) =>
-          Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
-        ),
-        Effect.catch((error) =>
-          Effect.logWarning("sync: activity count refresh failed", error.message),
-        ),
-        Effect.provideContext(api),
-      );
+      const refreshUnreadCount = (through?: number) => {
+        const generation = store.getState().activity.generation;
+
+        return loadUnreadCount(generation).pipe(
+          Effect.timeout(ACTIVITY_REQUEST_TIMEOUT),
+          Effect.tap(() =>
+            through === undefined
+              ? Effect.void
+              : Ref.update(activitySnapshotThrough, (held) =>
+                  held.generation === generation &&
+                  store.getState().activity.generation === generation
+                    ? { generation, through: Math.max(held.through, through) }
+                    : held,
+                ),
+          ),
+          Effect.catch((error) =>
+            Effect.logWarning("sync: activity count refresh failed", error.message),
+          ),
+          Effect.provideContext(api),
+        );
+      };
 
       /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
-      const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
+      const resync = Effect.fnUntraced(function* (
+        topicList: readonly string[],
+        activityThrough?: number,
+      ) {
+        // What the store doesn't hold (an open calendar's events) reads itself again meanwhile.
+        emitResync(topicList);
+
         for (const topic of topicList) {
           const roomId = roomIdOf(topic);
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
             yield* sidebar().pipe(
-              Effect.tap((data) => Effect.sync(() => mutations.loadSidebar(data))),
+              Effect.tap((data) =>
+                Effect.sync(() => {
+                  mutations.loadSidebar(data);
+                  // The snapshot is newer than any room write still on its way.
+                  markSidebarSnapshot();
+                }),
+              ),
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
               ),
@@ -236,7 +500,7 @@ export class Engine extends Context.Service<
             // The inbox, saved and scheduled lists can't be replayed either: they reload when
             // next shown, and the badge refreshes now.
             mutations.markInboxStale();
-            yield* refreshUnreadCount;
+            yield* Effect.forkChild(refreshUnreadCount(activityThrough));
           } else if (roomId !== null) {
             yield* resyncRoom(roomId).pipe(
               Effect.catch((error) =>
@@ -266,6 +530,47 @@ export class Engine extends Context.Service<
           Effect.provideContext(api),
         );
 
+      const refreshRoom = (roomId: number, revision: number, allow: () => boolean = () => true) =>
+        Effect.suspend(() => {
+          if (!allow()) return Effect.void;
+
+          const started = beginRoomRequest();
+
+          return room(roomId).pipe(
+            Effect.tap((detail) =>
+              Effect.gen(function* () {
+                if (!allow()) return;
+
+                if (landRefreshedRoom(detail, revision, started) === "rejected") {
+                  yield* retryRejectedRefresh(roomId);
+                }
+              }),
+            ),
+            Effect.catch((error) => {
+              if (!allow()) return Effect.void;
+
+              return Effect.sync(() => {
+                if (roomRevision(roomId) === revision && Predicate.isTagged(error, "NotFound")) {
+                  mutations.setRoomUnavailable(roomId, started);
+                }
+              }).pipe(
+                Effect.andThen(
+                  Effect.logWarning("sync: room metadata refresh failed", error.message),
+                ),
+              );
+            }),
+          );
+        }).pipe(Effect.provideContext(api));
+
+      retryRejectedRefresh = Effect.fnUntraced(function* (roomId: number) {
+        const visit = roomVisitToken(roomId);
+        const owns = () => roomVisitToken(roomId) === visit;
+
+        yield* recoverRejectedRoomRead(roomId, visit, owns, () =>
+          refreshRoom(roomId, roomRevision(roomId), owns),
+        );
+      });
+
       /** Applies batch events past the cursor in one store commit, then advances the cursor. */
       const applyEvents = Effect.fnUntraced(function* (
         events: readonly SyncEvent[],
@@ -273,6 +578,13 @@ export class Engine extends Context.Service<
       ) {
         const point = yield* cursor.get;
         const covered = yield* Ref.get(snapshotThrough);
+        const activitySnapshot = yield* Ref.get(activitySnapshotThrough);
+
+        const activityCovered =
+          activitySnapshot.generation === store.getState().activity.generation
+            ? activitySnapshot.through
+            : Number.NEGATIVE_INFINITY;
+
         const fresh: SyncEvent[] = [];
         const start = point?.seq ?? Number.NEGATIVE_INFINITY;
         let seq = start;
@@ -281,7 +593,12 @@ export class Engine extends Context.Service<
           if (event.seq > seq) {
             seq = event.seq;
 
-            if (!(event.seq <= covered && SNAPSHOT_EVENTS.has(event.type))) {
+            const through =
+              event.type === "activity.item" || event.type === "activity.removed"
+                ? activityCovered
+                : covered;
+
+            if (!(event.seq <= through && SNAPSHOT_EVENTS.has(event.type))) {
               fresh.push(event);
             }
           }
@@ -301,6 +618,42 @@ export class Engine extends Context.Service<
 
         mutations.applyEvents(fresh, now);
         emitSyncEvents(fresh);
+        const open = new Set(yield* topics.subscribed);
+
+        const workIds = new Set(
+          fresh.flatMap((event) =>
+            event.type === "thread.updated" &&
+            open.has(`thread:${event.data.id}`) &&
+            workDetailStale(store.getState(), event.data.id)
+              ? [event.data.id]
+              : [],
+          ),
+        );
+
+        for (const threadId of workIds) {
+          yield* Effect.forkIn(refreshWork(threadId).pipe(Effect.provideContext(api)), scope);
+        }
+
+        const refreshes = roomRefreshIds(fresh)
+          .map((roomId) => ({
+            roomId,
+            revision: invalidateRoom(roomId),
+          }))
+          .filter(({ roomId }) => {
+            const view = store.getState().rooms[roomId];
+
+            // A revocation can arrive before the first GET installs detail. Refresh anyway.
+            return view?.detail != null || view?.status === "loading";
+          });
+
+        if (refreshes.length > 0) {
+          yield* Effect.forkIn(
+            Effect.forEach(refreshes, ({ roomId, revision }) => refreshRoom(roomId, revision), {
+              concurrency: 4,
+            }),
+            scope,
+          );
+        }
 
         yield* cursor.set({ epoch: point?.epoch ?? "", seq });
 
@@ -315,23 +668,32 @@ export class Engine extends Context.Service<
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 
+        const newEpoch = point?.epoch !== frame.epoch;
+
+        // The epoch fence relies on restores restarting the server (docs/backups.md, "Restore onto the VM").
+        mutations.beginActivityGeneration(newEpoch);
+        yield* Ref.set(activitySnapshotThrough, {
+          generation: store.getState().activity.generation,
+          through: Number.NEGATIVE_INFINITY,
+        });
+
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
 
-          // After a reload the sidebar was fetched before this socket, while the replay starts
-          // at the stored cursor: some replayed unreads are already counted, others (those since
-          // the fetch) aren't. Refetch now, after every replayed event happened, and skip the
-          // replayed sidebar events the new snapshot covers.
+          // The stored cursor predates the page reload. Refetch after every replayed event
+          // happened, then skip sidebar and activity events the fresh snapshots cover.
           if (afterReload && frame.seq > point.seq) {
             yield* Ref.set(snapshotThrough, frame.seq);
-            yield* resync(["user"]);
+            yield* resync(["user"], frame.seq);
+          } else {
+            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
           }
 
           return;
         }
 
         yield* cursor.set({ epoch: frame.epoch, seq: frame.seq });
-        yield* resync(["user", ...(yield* topics.subscribed)]);
+        yield* resync(["user", ...(yield* topics.subscribed)], frame.seq);
       });
 
       /**
@@ -519,7 +881,7 @@ export class Engine extends Context.Service<
         while (true) {
           yield* Queue.take(grew);
           mutations.markActivityStale();
-          yield* refreshUnreadCount;
+          yield* refreshUnreadCount();
         }
       });
 

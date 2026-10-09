@@ -950,11 +950,10 @@ async fn attendance_answers_and_takes_responses() {
     .await;
     assert_eq!(fields(&reply), ["response"]);
 
-    // A bot sees the counts but can't respond.
+    // Like the classic event controller, every attendance action requires an active human.
     sql(&a, "UPDATE users SET role = 2 WHERE id = ?", vec![KEVIN]).await;
-    let shown: api::EventAttendance = ok(&kevin.send(get(&path)).await);
-    assert!(!shown.respondable);
-    assert_eq!(shown.going_count, before.going_count);
+    let shown = kevin.send(get(&path)).await;
+    assert_eq!(shown.status, StatusCode::FORBIDDEN);
     let reply = send(
         &mut kevin,
         Method::PUT,
@@ -962,7 +961,7 @@ async fn attendance_answers_and_takes_responses() {
         json!({"response": "going", "applyToFuture": false}),
     )
     .await;
-    assert_eq!(fields(&reply), ["response"]);
+    assert_eq!(reply.status, StatusCode::FORBIDDEN);
     sql(&a, "UPDATE users SET role = 0 WHERE id = ?", vec![KEVIN]).await;
 
     // Another room's event, through this room, is a 404.

@@ -24,7 +24,19 @@ fn rows(conn: &campfire_db::Connection, table: &str) -> campfire_db::Result<Vec<
         .query_map([], |r| {
             let mut object = serde_json::Map::new();
             for (i, name) in columns.iter().enumerate() {
+                // Port-only counter for the SPA activity badge that Rails doesn't have.
+                if table == "users" && name == "activity_revision" {
+                    continue;
+                }
                 use rusqlite::types::ValueRef;
+                // The API's per-attempt creation key is port-only; classic paths leave it null.
+                if crate::controllers::presenters::test_support::rust_only_column(table, name) {
+                    assert!(
+                        matches!(r.get_ref(i)?, ValueRef::Null),
+                        "classic paths never set API creation keys"
+                    );
+                    continue;
+                }
                 object.insert(
                     name.clone(),
                     match r.get_ref(i)? {

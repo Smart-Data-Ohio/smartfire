@@ -7,9 +7,12 @@ import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
 import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
+import { WorkspaceBranding } from "./admin.ts";
 import { AgentStatusChanged, AgentStepsChanged, ApprovalUpdated } from "./agents.ts";
+import { BoardAutomationsChanged } from "./board-automations.ts";
 import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
+import { EventsChanged } from "./events.ts";
 import { HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged } from "./huddle.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
@@ -78,6 +81,10 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ type: Schema.Literal("thread.updated"), data: Thread }),
   Schema.Struct({ type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({
+    type: Schema.Literal("board.automations.changed"),
+    data: BoardAutomationsChanged,
+  }),
   Schema.Struct({ type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ type: Schema.Literal("saved.changed"), data: SavedChanged }),
@@ -90,6 +97,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({ type: Schema.Literal("events.changed"), data: EventsChanged }),
   Schema.Struct({ type: Schema.Literal("agent.status"), data: AgentStatusChanged }),
   Schema.Struct({ type: Schema.Literal("agent.steps"), data: AgentStepsChanged }),
   Schema.Struct({ type: Schema.Literal("approval.updated"), data: ApprovalUpdated }),
@@ -99,6 +107,7 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("huddle.ring"), data: HuddleRing }),
   Schema.Struct({ type: Schema.Literal("stage.updated"), data: StageState }),
   Schema.Struct({ type: Schema.Literal("stage.stream.stopped"), data: StageStreamStopped }),
+  Schema.Struct({ type: Schema.Literal("workspace.updated"), data: WorkspaceBranding }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -139,6 +148,11 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.created"), data: Thread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.updated"), data: Thread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("board.automations.changed"),
+    data: BoardAutomationsChanged,
+  }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("saved.changed"), data: SavedChanged }),
@@ -175,6 +189,7 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: PollUpdated }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("events.changed"), data: EventsChanged }),
   Schema.Struct({
     ...eventFields,
     type: Schema.Literal("agent.status"),
@@ -199,6 +214,11 @@ export const SyncEvent = Schema.Union([
     ...eventFields,
     type: Schema.Literal("stage.stream.stopped"),
     data: StageStreamStopped,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("workspace.updated"),
+    data: WorkspaceBranding,
   }),
 ]);
 

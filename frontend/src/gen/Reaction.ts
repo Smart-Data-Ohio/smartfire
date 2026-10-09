@@ -3,22 +3,22 @@
 /**
  * One reaction pill: everyone who reacted with the same content.
  */
-export type Reaction = { 
+export type Reaction = {
 /**
  * The stored, canonical content: an emoji character (shortcodes like `:tada:` are stored
  * as the emoji), or `:name:` for a brand or workspace icon. Posting it again toggles.
  */
-content: string, 
+content: string,
 /**
  * The tooltip name (`ReactionContent.title`): the quick reaction's label, the emoji's name,
  * or the icon's title.
  */
-title: string, 
+title: string,
 /**
  * Icons only: the image to draw instead of text (`/icons/:name`, or a brand asset);
  * `null` for emoji.
  */
-imageUrl: string | null, 
+imageUrl: string | null,
 /**
  * Distinct reactors, in order of reaction. The pill's count is its length; the viewer's own
  * id here means "you reacted" (highlighted, and clicking removes it).

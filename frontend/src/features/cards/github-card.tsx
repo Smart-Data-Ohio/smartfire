@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { type ReactNode, useCallback } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 import type { GithubCardRef } from "../../gen/GithubCardRef.ts";
 import type { GithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks } from "../../gen/GithubChecks.ts";
@@ -8,14 +8,16 @@ import type { GithubPullRequestStatus } from "../../gen/GithubPullRequestStatus.
 import type { GithubReview } from "../../gen/GithubReview.ts";
 import { githubKey } from "../../store/cards.ts";
 import type { MessageDTO } from "../../store/model.ts";
-import { actions } from "../../sync/runtime.ts";
+import { actions, type GithubCardScope } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { useNow } from "../threads/use-now.ts";
 import { BrandMark } from "./brand-marks.tsx";
 import { ago } from "./format.ts";
+import { GithubActions } from "./github-actions.tsx";
 import { usePreview } from "./use-preview.ts";
 
 interface Look {
@@ -112,14 +114,84 @@ function ChangedFiles({ files }: { readonly files: GithubChangedFiles }) {
   );
 }
 
+/** Classic Discuss: `discuss` creates the mapping, then this card reloads and the thread opens. */
+function DiscussButton({
+  roomId,
+  pullRequestId,
+  messageId,
+}: {
+  readonly roomId: number;
+  readonly pullRequestId: number;
+  readonly messageId: number;
+}) {
+  const navigate = useNavigate();
+  const [pending, setPending] = useState(false);
+
+  return (
+    <Button
+      variant="link"
+      size="sm"
+      className="github-discuss"
+      icon="message-circle"
+      loading={pending}
+      loadingLabel="Starting"
+      onClick={() => {
+        if (pending) {
+          return;
+        }
+
+        setPending(true);
+
+        actions.cards.discussGithub(roomId, pullRequestId, messageId).then(
+          (created) => {
+            void navigate({
+              to: "/r/$roomId/t/$threadId",
+              params: { roomId, threadId: created.threadId },
+            });
+          },
+          (error: Error) => {
+            setPending(false);
+            toast({
+              title: "Couldn't start the discussion",
+              description: error.message,
+              tone: "danger",
+            });
+          },
+        );
+      }}
+    >
+      Discuss
+    </Button>
+  );
+}
+
 interface LoadedProps {
   readonly message: MessageDTO;
   readonly pull: GithubPullRequest;
+  readonly pullRequestId: number;
+  readonly scope: GithubCardScope;
   /** It heads the pull request's discussion thread: files instead of "Discuss". */
   readonly header: boolean;
+  /**
+   * The generation of a preview load that has finished. `null` while a refresh is still on its
+   * way, so write actions are asked for once per completed load.
+   */
+  readonly loadedGeneration: number | null;
+  /** A refresh failed; the pull request above is the last one that loaded. */
+  readonly refreshError: string | null;
+  readonly onRetry: () => void;
 }
 
-function Loaded({ message, pull, header }: LoadedProps) {
+function Loaded({
+  message,
+  pull,
+  pullRequestId,
+  scope,
+  header,
+  loadedGeneration,
+  refreshError,
+  onRetry,
+}: LoadedProps) {
   const now = useNow();
   const status = STATUS[pull.status];
 
@@ -184,16 +256,11 @@ function Loaded({ message, pull, header }: LoadedProps) {
           </span>
         )}
         {header ? null : pull.discussionThreadId === null ? (
-          <Link
-            to="/r/$roomId/t/new"
-            params={{ roomId: message.roomId }}
-            search={{ parent: message.id }}
-            className="card-link github-discuss"
-            preload={false}
-          >
-            <Icon name="message-circle" size={14} />
-            Discuss
-          </Link>
+          <DiscussButton
+            roomId={message.roomId}
+            pullRequestId={pullRequestId}
+            messageId={message.id}
+          />
         ) : (
           <Link
             to="/r/$roomId/t/$threadId"
@@ -207,6 +274,23 @@ function Loaded({ message, pull, header }: LoadedProps) {
         )}
       </div>
       {header && pull.files !== null ? <ChangedFiles files={pull.files} /> : null}
+      {refreshError === null ? null : (
+        <div className="github-refresh-error">
+          <div className="card-error" role="alert">
+            <Icon name="circle-alert" size={14} />
+            <span>Couldn't refresh this pull request. {refreshError}</span>
+          </div>
+          <Button variant="secondary" size="sm" icon="refresh-cw" onClick={onRetry}>
+            Retry
+          </Button>
+        </div>
+      )}
+      <GithubActions
+        roomId={message.roomId}
+        pullRequestId={pullRequestId}
+        scope={scope}
+        loadedGeneration={loadedGeneration}
+      />
     </section>
   );
 }
@@ -258,26 +342,23 @@ interface PreviewProps {
 
 /** The pull request fetched in one scope: under the message, or as a thread's header. */
 function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
-  const load = useCallback(
-    () =>
-      actions.cards.loadGithub(
-        message.roomId,
-        card.pullRequestId,
-        threadId === null ? { messageId: message.id } : { threadId },
-      ),
-    [message.roomId, card.pullRequestId, message.id, threadId],
+  const scope = useMemo<GithubCardScope>(
+    () => (threadId === null ? { messageId: message.id } : { threadId }),
+    [threadId, message.id],
   );
 
-  const key = githubKey(
-    message.roomId,
-    card.pullRequestId,
-    threadId === null ? { messageId: message.id } : { threadId },
+  const load = useCallback(
+    () => actions.cards.loadGithub(message.roomId, card.pullRequestId, scope),
+    [message.roomId, card.pullRequestId, scope],
   );
+
+  const key = githubKey(message.roomId, card.pullRequestId, scope);
 
   const preview = usePreview("github", key, load);
   const value = preview?.value ?? null;
   const retry = () => load().catch(() => undefined);
 
+  // A refresh keeps the last loaded value, so this skeleton is the first fetch only.
   if (value === null) {
     if (preview?.status !== "error") {
       return <GithubSkeleton card={card} />;
@@ -298,7 +379,22 @@ function GithubPreview({ message, card, threadId, fallback }: PreviewProps) {
     case "failed":
       return <Failed card={card} reason={value.message} onRetry={retry} />;
     case "loaded":
-      return <Loaded message={message} pull={value} header={threadId !== null} />;
+      return (
+        <Loaded
+          message={message}
+          pull={value}
+          pullRequestId={card.pullRequestId}
+          scope={scope}
+          header={threadId !== null}
+          loadedGeneration={
+            preview !== undefined && preview.status === "ready" && preview.fetchedAt > 0
+              ? preview.generation
+              : null
+          }
+          refreshError={preview?.status === "error" ? (preview.error ?? "") : null}
+          onRetry={retry}
+        />
+      );
   }
 }
 

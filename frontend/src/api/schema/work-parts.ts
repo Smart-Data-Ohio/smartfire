@@ -14,7 +14,7 @@ import type { WorkStatus as GeneratedWorkStatus } from "../../gen/WorkStatus.ts"
 import { AgentStep } from "./agents.ts";
 import { AgentId, UserId, WorkEventId, WorkLinkId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
-import { Timestamp } from "./time.ts";
+import { RowTimestamp, Timestamp } from "./time.ts";
 import { tolerantLiterals } from "./tolerant.ts";
 import { User } from "./user.ts";
 
@@ -116,6 +116,10 @@ export const WorkFacts = Schema.Struct({
   runUrl: RunUrl,
   resultUpdatedAt: Schema.NullOr(Timestamp),
   links: WorkLinks,
+  tags: Schema.Array(Schema.String),
+  /** Every message, streaming ones and system notes included, as classic board rows count. */
+  messageCount: Schema.Number,
+  updatedAt: RowTimestamp,
 });
 
 export type WorkFacts = typeof WorkFacts.Type;

@@ -6,16 +6,17 @@ import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 
-export function StageButton({
-  roomId,
-  pressed,
-  onClick,
-}: {
-  readonly roomId: number;
-  readonly pressed: boolean;
-  readonly onClick: () => void;
-}) {
-  const hands = useStore((state) => {
+/** What a screen reader hears for the count: "1 raised hand", "3 raised hands". */
+export function raisedHandsLabel(count: number): string {
+  return count === 1 ? "1 raised hand" : `${count} raised hands`;
+}
+
+/**
+ * The stage's raised hands, counted for the viewer only when they can act on them (a host or an
+ * administrator); 0 for everyone else.
+ */
+export function useRaisedHands(roomId: number): number {
+  return useStore((state) => {
     const stage = state.stages[roomId];
     const viewerId = state.me?.user.id;
     const viewer = stage?.members.find((member) => member.userId === viewerId);
@@ -25,6 +26,18 @@ export function StageButton({
       ? (stage?.members.filter((member) => member.handRaisedAt !== null).length ?? 0)
       : 0;
   });
+}
+
+export function StageButton({
+  roomId,
+  pressed,
+  onClick,
+}: {
+  readonly roomId: number;
+  readonly pressed: boolean;
+  readonly onClick: () => void;
+}) {
+  const hands = useRaisedHands(roomId);
 
   return (
     <span className="pane-button-wrap">

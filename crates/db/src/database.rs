@@ -214,6 +214,12 @@ impl<'c> Tx<'c> {
         self.env.now()
     }
 
+    /// A row change sorts after its persisted version, even when the clock repeats or regresses.
+    pub fn revision_after(&self, previous: Timestamp) -> Timestamp {
+        self.now()
+            .max(previous.since(jiff::SignedDuration::from_micros(1)))
+    }
+
     pub fn rich_text(&self) -> &'c dyn RichText {
         &*self.env.rich_text
     }
@@ -330,6 +336,13 @@ impl<'c> Tx<'c> {
         } else {
             self.collect_settled_broadcast(event);
         }
+    }
+
+    pub(crate) fn has_settled_broadcast<B: crate::Broadcast>(&self, broadcast: &B) -> bool {
+        let event = Event::broadcast(broadcast);
+        self.after_commit.iter().any(|pending| {
+            matches!(pending, AfterCommit::SettledBroadcast(existing) if existing == &event)
+        }) || self.settled_broadcasts.borrow().contains(&event)
     }
 
     fn collect_settled_broadcast(&self, event: Event) {
@@ -1025,6 +1038,61 @@ impl Database {
     pub fn read_blocking<T>(&self, f: impl FnOnce(&Connection) -> Result<T>) -> Result<T> {
         self.readers.with(f)
     }
+
+    /// [`Database::read`] inside one read transaction: everything `f` reads comes from one
+    /// SQLite snapshot (see [`Snapshot`]).
+    pub async fn read_snapshot<T, F>(&self, f: F) -> Result<T>
+    where
+        T: Send + 'static,
+        F: FnOnce(&Snapshot<'_>) -> Result<T> + Send + 'static,
+    {
+        self.read(move |conn| f(&Snapshot::begin(conn)?)).await
+    }
+}
+
+/// A connection inside one transaction, so every read through it comes from one SQLite snapshot
+/// (WAL mode takes it at the transaction's first read): nothing read through it can see a commit
+/// that something read earlier predates. The pooled readers otherwise commit each statement on
+/// its own, so a membership read by one statement could let the next see a message posted after
+/// it was revoked. Whatever must be read consistently (who may see something, then what they
+/// see) takes a `&Snapshot` rather than a `&Connection`.
+pub struct Snapshot<'c> {
+    conn: &'c Connection,
+    /// The read transaction this snapshot opened, rolled back (it wrote nothing) when dropped;
+    /// `None` inside a write transaction, which already reads one state.
+    _read: Option<rusqlite::Transaction<'c>>,
+}
+
+impl<'c> Snapshot<'c> {
+    /// Opens a read transaction (`BEGIN DEFERRED`) on `conn`, which must not be in one already.
+    /// Read through the snapshot only from here on: what `conn` read before isn't part of it.
+    pub fn begin(conn: &'c Connection) -> Result<Self> {
+        Ok(Self {
+            conn,
+            _read: Some(conn.unchecked_transaction()?),
+        })
+    }
+
+    /// The write's own state, while it is in its transaction; a fresh read transaction on the
+    /// writer while after-commit work runs outside it.
+    pub fn of_write(tx: &Tx<'c>) -> Result<Self> {
+        if tx.in_transaction {
+            Ok(Self {
+                conn: tx.conn,
+                _read: None,
+            })
+        } else {
+            Self::begin(tx.conn)
+        }
+    }
+}
+
+impl std::ops::Deref for Snapshot<'_> {
+    type Target = Connection;
+
+    fn deref(&self) -> &Connection {
+        self.conn
+    }
 }
 
 /// Prepared statements each connection keeps.
@@ -1195,12 +1263,7 @@ struct QueryTrace<'a>(&'a Connection, Option<QueryLog>);
 impl<'a> QueryTrace<'a> {
     fn enter(conn: &'a Connection, log: Arc<Mutex<Vec<String>>>) -> Self {
         fn record(event: rusqlite::trace::TraceEvent<'_>) {
-            // SQLite also reports what runs inside a trigger, as `-- `-prefixed comments (each
-            // statement of the body, or `-- TRIGGER name`). The app didn't issue those, and Rails'
-            // query log never shows them, so skip them.
-            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event
-                && !sql.starts_with("-- ")
-            {
+            if let rusqlite::trace::TraceEvent::Stmt(_, sql) = event {
                 READ_QUERIES.with(|log| {
                     if let Some(log) = log.borrow().as_ref() {
                         log.lock().unwrap().push(sql.into());

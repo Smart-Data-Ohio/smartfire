@@ -1,9 +1,11 @@
 /**
  * The mock's stand-in for the server's Markdown pipeline: paragraphs, line breaks, `- ` lists,
- * fenced code, inline code, **bold**, *em*, links and @mentions (`@[Exact Name]` and the older
- * `@name`), rendered to the small, already
+ * fenced code, inline code, **bold**, *em*, links, @mentions (`@[Exact Name]` and the older
+ * `@name`) and `:name:` brand and workspace icons, rendered to the small, already
  * sanitized HTML subset the real `bodyHtml` uses. Everything that isn't markup is escaped.
  */
+
+import { BRAND_ICONS, CUSTOM_ICONS, iconImageUrl } from "./s2/emoji.ts";
 
 /** Someone an `@name` can refer to: their full name or first name, case-insensitively. */
 export interface Mentionable {
@@ -47,6 +49,22 @@ export function mentionsUser(html: string, userId: number): boolean {
   return html.includes(`data-user-id="${userId}"`);
 }
 
+/**
+ * A `:name:` brand or workspace icon as the server renders it (`crates/richtext/src/markdown.rs`
+ * `icon_node`); `null` for a name that is neither (emoji shortcodes stay text here).
+ */
+function iconHtml(name: string): string | null {
+  const brand = BRAND_ICONS.find((icon) => icon.name === name);
+  const custom = brand === undefined ? CUSTOM_ICONS.find((icon) => icon.name === name) : undefined;
+  const icon = brand ?? custom;
+
+  if (icon === undefined) return null;
+
+  const kind = brand === undefined ? "custom" : "brand";
+
+  return `<img class="icon icon--${kind}" src="${iconImageUrl(kind, name)}" alt=":${name}:" title="${escapeHtml(icon.title)}" draggable="false">`;
+}
+
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -74,6 +92,12 @@ function renderText(text: string, people: readonly Mentionable[]): string {
   out = out.replace(/\bhttps?:\/\/[^\s<\uE000]*[^\s<.,:;"')\]!?\uE000]/g, (url) =>
     hold(linkHtml(url, url)),
   );
+
+  out = out.replace(/:([a-z0-9_]+):/g, (match, name: string) => {
+    const html = iconHtml(name);
+
+    return html === null ? match : hold(html);
+  });
 
   // `@[Exact Name]`, what the composer inserts: a mention only when exactly one person has it.
   out = out.replace(/@\[([^\]\n]+)\]/g, (match, name: string) => {

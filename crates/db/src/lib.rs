@@ -24,7 +24,7 @@ mod sql;
 
 pub use sql::CachedStatements;
 
-pub use database::{Config, Database, Env, Tx, run_write};
+pub use database::{Config, Database, Env, Snapshot, Tx, run_write};
 pub use error::{Error, Errors, Result};
 pub use events::{Broadcast, BroadcastRequest, Event, EventSink, Job, JobRequest, NullSink, RecordingSink};
 pub use models::*;

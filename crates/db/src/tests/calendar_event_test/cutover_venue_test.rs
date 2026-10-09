@@ -160,6 +160,27 @@ fn cutover_venue_destroy_clears_link_and_preserves_event() {
     assert_eq!(saved.venue_room_id, None);
     assert_eq!(saved.title, "Planning session");
 }
+// Deleting a room clears the venue of events elsewhere that met there in one statement, past
+// the event callbacks, so it tells those events' rooms itself.
+#[test]
+fn deleting_a_venue_room_tells_the_rooms_of_events_that_met_there() {
+    let t = frozen();
+    let vid = venue(&t, RoomType::Voice, "Lounge");
+    event(&t, Some(vid), false);
+    t.sink.take();
+    t.write(move |tx| {
+        room_delete::begin_destroy(tx, &Room::find(tx.conn(), vid)?, &HuddleConfig::default())
+    });
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(room_delete::perform_with_config(
+            &t.db,
+            vid,
+            HuddleConfig::default(),
+        ))
+        .unwrap();
+    assert_eq!(rooms_told(&t), [id("designers")]);
+}
 #[test]
 fn cutover_venue_series_copies_to_all_occurrences() {
     let t = frozen();

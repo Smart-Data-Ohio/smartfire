@@ -125,6 +125,11 @@ impl Hub {
         publish(state.sequence)
     }
 
+    /// The latest publication sequence taken: every publication from here on gets a later one.
+    pub(crate) fn sequence(&self) -> u64 {
+        self.state.lock().unwrap().sequence
+    }
+
     /// Subscribes to `broadcasting`, receiving each payload wrapped as a message frame for the
     /// encoded channel `identifier`, or raw when it's `None`.
     pub fn subscribe(self: &Arc<Self>, broadcasting: &str, identifier: Option<Arc<str>>) -> Subscriber {

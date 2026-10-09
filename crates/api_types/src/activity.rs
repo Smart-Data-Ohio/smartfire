@@ -229,6 +229,9 @@ pub struct ActivityList {
     pub users: Vec<User>,
     /// The viewer's unread items across every type (the badge), as `unreadCount` below.
     pub unread_count: i64,
+    /// Per-user server revision of this count. Ignore counts from older revisions.
+    #[ts(type = "number")]
+    pub unread_revision: i64,
     /// Pass as `before` for the next page; `null` when this is the last. Set only when an older
     /// row exists past this page (the server reads 101), unlike the classic `next_cursor`,
     /// which is set on any full page.
@@ -250,6 +253,9 @@ pub struct ActivityList {
 #[ts(export)]
 pub struct ActivityUnreadCount {
     pub unread_count: i64,
+    /// Per-user server revision of this count. Ignore counts from older revisions.
+    #[ts(type = "number")]
+    pub unread_revision: i64,
 }
 
 /// `PATCH /api/v1/activity/:id`: apply one of the classic state actions, replacing the classic
@@ -325,6 +331,9 @@ pub struct ActivityItemChanged {
     pub item: ActivityItem,
     /// The owner's unread count afterwards.
     pub unread_count: i64,
+    /// Per-user server revision of this count. Ignore counts from older revisions.
+    #[ts(type = "number")]
+    pub unread_revision: i64,
 }
 
 /// The `activity.removed` event on the owner's `user` topic: an item went with its source
@@ -336,4 +345,7 @@ pub struct ActivityItemChanged {
 pub struct ActivityItemRemoved {
     pub id: i64,
     pub unread_count: i64,
+    /// Per-user server revision of this count. Ignore counts from older revisions.
+    #[ts(type = "number")]
+    pub unread_revision: i64,
 }

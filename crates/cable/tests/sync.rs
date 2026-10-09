@@ -410,6 +410,45 @@ async fn an_unsubscribe_publication_stops_the_topic() {
 }
 
 #[tokio::test]
+async fn a_publication_read_before_a_fencing_event_is_refused() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    let server = &app.cable.server;
+    let event = |data: &str| {
+        SyncPublication::new(
+            Audience::User(1),
+            json!({ "type": "test", "data": data }).to_string(),
+        )
+    };
+    let read = server.sync_head();
+    let fence = server
+        .sync_publish_fencing(event("read"), "unread:1:7".into())
+        .unwrap();
+    // Read before the fencing event: refused, and nothing is sent.
+    assert_eq!(
+        server.sync_publish_fresh(event("stale row"), "unread:1:7", read),
+        Err(campfire_cable::sync::Stale)
+    );
+    // Another key isn't fenced, and a fresh read goes out.
+    let other = server
+        .sync_publish_fresh(event("other room"), "unread:1:8", read)
+        .unwrap()
+        .unwrap();
+    let fresh = server
+        .sync_publish_fresh(event("fresh row"), "unread:1:7", server.sync_head())
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        client.batch().await,
+        [
+            (fence, "user".into(), json!("read")),
+            (other, "user".into(), json!("other room")),
+            (fresh, "user".into(), json!("fresh row")),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn a_remote_disconnect_says_bye_and_closes() {
     let app = app(fast()).await;
     let (mut client, _) = app.hello(1, Value::Null, &[]).await;
@@ -432,6 +471,49 @@ async fn a_remote_disconnect_says_bye_and_closes() {
         json!({ "t": "bye", "reconnect": true, "reason": "server_restart" })
     );
     other.closed().await;
+}
+
+#[tokio::test]
+async fn a_remote_disconnect_sends_nothing_published_after_it() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    // Disconnected, then published at once (a revocation, then a post the revoked person can no
+    // longer read): the bye comes first, and nothing follows it. A resume picks the event up
+    // only if it's still theirs to read.
+    for round in 0..20 {
+        assert!(app.cable.server.disconnect("user-1", true) >= 1);
+        app.publish(Audience::User(1), json!(round));
+        assert_eq!(
+            client.next().await,
+            json!({ "t": "bye", "reconnect": true, "reason": "remote" })
+        );
+        client.closed().await;
+        (client, _) = app.hello(1, Value::Null, &[]).await;
+    }
+}
+
+#[tokio::test]
+async fn a_remote_disconnect_sends_what_came_before_it_and_nothing_after() {
+    let app = app(SyncConfig {
+        flush_interval: Duration::from_secs(60),
+        ..SyncConfig::default()
+    })
+    .await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    // All three land before the connection's task runs again (this runtime has one thread), so
+    // it sees the disconnect with the earlier event still unread in the ring.
+    let before = app.publish(Audience::User(1), json!("before"));
+    assert!(app.cable.server.disconnect("user-1", false) >= 1);
+    app.publish(Audience::User(1), json!("after"));
+    assert_eq!(
+        client.batch().await,
+        [(before, "user".into(), json!("before"))]
+    );
+    assert_eq!(
+        client.next().await,
+        json!({ "t": "bye", "reconnect": false, "reason": "remote" })
+    );
+    client.closed().await;
 }
 
 #[tokio::test]
@@ -543,6 +625,24 @@ async fn a_skip_for_someone_without_a_socket_ends_their_resume_only() {
         .hello(1, json!({ "epoch": epoch, "seq": after }), &[])
         .await;
     assert_eq!(welcome["resumed"], false, "{welcome}");
+}
+
+#[tokio::test]
+async fn every_skip_after_a_live_resync_resyncs_again() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    let resync = json!({ "t": "resync", "topics": ["user"], "reason": "skipped" });
+    for _ in 0..3 {
+        // A skip while the socket is open (an event that couldn't be built in time): each one
+        // after the last resync is a resync of its own, on the same socket.
+        app.cable.server.sync_skipped_for(1);
+        assert_eq!(client.next().await, resync);
+    }
+    let after = app.publish(Audience::User(1), json!("after"));
+    assert_eq!(
+        client.batch().await,
+        [(after, "user".into(), json!("after"))]
+    );
 }
 
 /// Waits until person 1's sockets have closed `count` times in all.

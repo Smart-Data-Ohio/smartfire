@@ -83,9 +83,29 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
     let mut rows = stmt.query([]).unwrap();
     let mut out = Vec::new();
     while let Some(row) = rows.next().unwrap() {
+        // These rows pin the Rails-era schema, before port-owned migrations.
+        if table == "schema_migrations" {
+            let version: String = row.get("version").unwrap();
+            if !crate::schema::baseline_versions().any(|baseline| baseline == version) {
+                continue;
+            }
+        }
         let fields: Vec<String> = names
             .iter()
             .enumerate()
+            .filter(|(i, name)| {
+                if (table == "rooms" && name.as_str() == "client_room_id")
+                    || (table == "channel_threads" && name.as_str() == "client_post_id")
+                {
+                    let key: Option<String> = row.get(*i).unwrap();
+                    assert_eq!(key, None, "classic fixtures never set API creation keys");
+                    false
+                } else {
+                    true
+                }
+            })
+            // Port-only counter for the SPA activity badge that Rails doesn't have.
+            .filter(|(_, name)| !(table == "users" && name.as_str() == "activity_revision"))
             .map(|(i, name)| {
                 let value: rusqlite::types::Value = row.get(i).unwrap();
                 let rendered = match (name.as_str(), value) {
@@ -105,12 +125,10 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
     out
 }
 
-/// Every table but `ar_internal_metadata` and `sidebar_revisions`, the Rust-only counter the
-/// sidebar triggers bump, which the Rails reference never had.
 fn tables(conn: &Connection) -> Vec<String> {
     crate::sql::query_all(
         conn,
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT IN ('ar_internal_metadata', 'sidebar_revisions') ORDER BY name",
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'ar_internal_metadata' ORDER BY name",
         [],
         |r| r.get(0),
     )
@@ -171,7 +189,7 @@ pub(super) fn assert_frozen_rows(name: &str, actual: &BTreeMap<String, Vec<Strin
 
 /// `fixtures_match_ruby_row_for_row` without the reference: the rows the reference's
 /// `db:fixtures:load` wrote at `FROZEN_FIXTURES_NOW` (pinned Rails, recorded 2026-10-05 when
-/// that test last passed), every table `tables` lists.
+/// that test last passed), every table but `ar_internal_metadata`.
 #[test]
 fn fixtures_match_frozen_rails_rows() {
     let now = crate::Timestamp::parse_db(FROZEN_FIXTURES_NOW).unwrap();
@@ -186,4 +204,3 @@ fn fixtures_match_frozen_rails_rows() {
     assert_frozen_rows("fixtures_rails_rows.json", &rows);
     assert_eq!(fixture_sets().len(), 20);
 }
-

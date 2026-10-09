@@ -1,12 +1,25 @@
 import { Schema } from "effect";
 import type { RoomCategory as GeneratedRoomCategory } from "../../gen/RoomCategory.ts";
 import type { Sidebar as GeneratedSidebar } from "../../gen/Sidebar.ts";
+import type { SidebarLastMessage as GeneratedSidebarLastMessage } from "../../gen/SidebarLastMessage.ts";
 import type { SidebarRow as GeneratedSidebarRow } from "../../gen/SidebarRow.ts";
 import type { SidebarRowRemoved as GeneratedSidebarRowRemoved } from "../../gen/SidebarRowRemoved.ts";
 import { RoomCategoryId, RoomId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Membership, Room } from "./room.ts";
+import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
+
+/** A direct room's newest root message, previewed under its row on phones. */
+export const SidebarLastMessage = Schema.Struct({
+  creatorId: UserId,
+  excerpt: Schema.String,
+  createdAt: Timestamp,
+});
+
+export type SidebarLastMessagePin = Assert<
+  Pinned<typeof SidebarLastMessage, GeneratedSidebarLastMessage>
+>;
 
 /** A room as it appears in one person's sidebar, with its unread, mention and notification counts. */
 export const SidebarRow = Schema.Struct({
@@ -18,7 +31,8 @@ export const SidebarRow = Schema.Struct({
   mentionCount: Schema.Int,
   notificationCount: Schema.Int,
   threadNotificationCount: Schema.Int,
-  revision: Schema.Int,
+  lastMessage: Schema.optionalKey(SidebarLastMessage),
+  refreshRoom: Schema.optionalKey(Schema.Boolean),
 });
 
 export type SidebarRow = typeof SidebarRow.Type;
@@ -51,7 +65,10 @@ export type Sidebar = typeof Sidebar.Type;
 export type SidebarPin = Assert<Pinned<typeof Sidebar, GeneratedSidebar>>;
 
 /** The `sidebar.row.removed` event's data. */
-export const SidebarRowRemoved = Schema.Struct({ roomId: RoomId });
+export const SidebarRowRemoved = Schema.Struct({
+  roomId: RoomId,
+  refreshRoom: Schema.optionalKey(Schema.Boolean),
+});
 
 export type SidebarRowRemovedPin = Assert<
   Pinned<typeof SidebarRowRemoved, GeneratedSidebarRowRemoved>

@@ -341,6 +341,146 @@ fn ws12_generic_recorder_batches_source_and_human_facts_at_two_sizes() {
 }
 
 #[test]
+fn ws12_generic_recorder_batch_preserves_order_duplicates_state_and_callbacks() {
+    let vector = oracle();
+    let t = prepare(&vector["setup"]);
+    let first = 901880001;
+    let second = 901880002;
+    let inactive = 901880003;
+    let bot = 901880004;
+    let handled = t.write(move |tx| {
+        for (user, role, status) in [(first, 0, 0), (second, 0, 0), (inactive, 0, 1), (bot, 2, 0)] {
+            tx.conn().execute(
+                "INSERT INTO users(id,name,role,status,created_at,updated_at) VALUES(?,'Batch recipient',?,?,?,?)",
+                rusqlite::params![user, role, status, tx.now(), tx.now()],
+            )?;
+        }
+        ActivityItem::record_from_source(
+            tx, id("jason"), &RoomSource(901840001),
+            ActivityEventType::parse("work_update")?, SourceAuthorization::CallerAuthorized,
+        )?.unwrap().mark_handled(tx)
+    });
+    t.sink.take();
+    let before = t.read(move |conn| ActivityItem::unread_snapshot(conn, first));
+    let recipients = [
+        second,
+        id("jason"),
+        first,
+        second,
+        inactive,
+        bot,
+        id("david"),
+        -1,
+    ];
+    let recorded = t.write(move |tx| {
+        ActivityItem::record_source_for_recipients(
+            tx,
+            &recipients,
+            &RoomSource(901840001),
+            ActivityEventType::parse("work_update")?,
+            SourceAuthorization::CallerAuthorized,
+        )
+    });
+    assert_eq!(
+        recorded.iter().map(|item| item.user_id).collect::<Vec<_>>(),
+        [second, id("jason"), first, second]
+    );
+    assert_eq!(
+        recorded[1], handled,
+        "a duplicate keeps its handled row unchanged"
+    );
+    assert_eq!(
+        recorded[0], recorded[3],
+        "a repeated recipient returns the same row"
+    );
+    assert!(
+        recorded[0].id < recorded[2].id,
+        "insertion follows recipient order"
+    );
+    let frames = t
+        .sink
+        .take()
+        .into_iter()
+        .map(|event| match event.as_broadcast().unwrap() {
+            crate::broadcasts::Broadcast::Cable { stream, payload } => (stream, payload),
+            _ => panic!("expected activity frame"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        frames,
+        vec![
+            (
+                format!("user_{second}_activity"),
+                json!({"activityItemId": recorded[0].id})
+            ),
+            (
+                format!("user_{first}_activity"),
+                json!({"activityItemId": recorded[2].id})
+            ),
+        ]
+    );
+    let created = t.read(move |conn| ActivityItem::unread_snapshot(conn, first));
+    assert_eq!(created.revision, before.revision + 1);
+
+    let repeated = t.write(move |tx| {
+        ActivityItem::record_source_for_recipients(
+            tx,
+            &recipients,
+            &RoomSource(901840001),
+            ActivityEventType::parse("mention")?,
+            SourceAuthorization::CallerAuthorized,
+        )
+    });
+    assert_eq!(
+        repeated, recorded,
+        "repeats preserve state, type, timestamps and order"
+    );
+    let denied = t.write(move |tx| {
+        ActivityItem::record_source_for_recipients(
+            tx,
+            &recipients,
+            &RoomSource(901840001),
+            ActivityEventType::parse("work_update")?,
+            SourceAuthorization::SourceRecipients,
+        )
+    });
+    assert!(
+        denied.is_empty(),
+        "caller authorization never leaks into source policy"
+    );
+    assert!(t.sink.take().is_empty());
+    assert_eq!(
+        t.read(move |conn| ActivityItem::unread_snapshot(conn, first)),
+        created
+    );
+
+    let rollback_before = t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz")));
+    let failed: Result<()> = t.try_write(move |tx| {
+        ActivityItem::record_source_for_recipients(
+            tx,
+            &[id("jz"), first],
+            &RoomSource(901840001),
+            ActivityEventType::parse("work_update")?,
+            SourceAuthorization::CallerAuthorized,
+        )?;
+        Err(Error::Other("source transaction failed".into()))
+    });
+    assert!(failed.is_err());
+    assert!(
+        t.read(|conn| ActivityItem::find_by_user_and_source(conn, id("jz"), "Room", 901840001))
+            .is_none()
+    );
+    assert_eq!(
+        t.read(|conn| ActivityItem::unread_snapshot(conn, id("jz"))),
+        rollback_before
+    );
+    assert!(
+        t.sink.take().is_empty(),
+        "rolled-back batches publish no frames"
+    );
+}
+
+#[test]
 fn ws12_budget_notice_batch_reader_and_recorder_reads_at_two_sizes() {
     let vector = oracle();
     let rails: Value = serde_json::from_str(include_str!(

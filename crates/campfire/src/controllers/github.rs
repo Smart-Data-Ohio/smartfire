@@ -26,6 +26,9 @@ mod discussion_tests;
 mod write_tests;
 
 #[cfg(test)]
+mod spa_write_tests;
+
+#[cfg(test)]
 mod lifecycle_tests;
 
 #[cfg(test)]

@@ -30,6 +30,11 @@ export function userFixture(id: number, name = `User ${id}`): User {
   };
 }
 
+/** A server row version with fixed-width microseconds, as on users and the S4 records. */
+export function rowVersionFixture(ms: number): string {
+  return new Date(ms).toISOString().replace(/Z$/, "000Z");
+}
+
 /** A root message in `roomId`, created `id` seconds after midnight so ids and times agree. */
 export function messageFixture(
   id: number,
@@ -130,7 +135,6 @@ export function sidebarRowFixture(
     mentionCount: 0,
     notificationCount: 0,
     threadNotificationCount: 0,
-    revision: 0,
   };
 }
 

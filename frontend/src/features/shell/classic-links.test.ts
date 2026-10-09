@@ -23,6 +23,10 @@ describe("links to classic pages", () => {
     );
     expect(inPlaceTarget(link("/users/me/profile"), origin)).toBe("/app/settings");
     expect(inPlaceTarget(link("/activity"), origin)).toBe("/app/activity");
+    expect(inPlaceTarget(link("/work?state=done"), origin)).toBe("/app/work?state=done");
+    expect(inPlaceTarget(link("/rooms/12/events/34/attendance"), origin)).toBe(
+      "/app/r/12/events/34/attendance",
+    );
     expect(inPlaceTarget(link("/rooms/12/messages/34/fizzy_cards/new"), origin)).toBe(
       "/app/r/12/m/34/fizzy/new",
     );
@@ -33,7 +37,7 @@ describe("links to classic pages", () => {
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/rooms/12/events"),
+      link("/rooms/boards/12/edit"),
       link("/users/7/profile"),
       link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),

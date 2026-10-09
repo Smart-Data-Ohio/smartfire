@@ -190,7 +190,8 @@ impl AgentStep {
             )?
         };
         let position = position.unwrap_or(-1) + 1;
-        let id=tx.conn().query_row("INSERT INTO agent_steps(agent_id,message_id,channel_thread_id,name,status,input_summary,output_summary,duration_ms,position,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.message_id,a.channel_thread_id,a.name,a.status,a.input_summary,a.output_summary,a.duration_ms,position,tx.now(),tx.now()],|r|r.get(0))?;
+        let now = tx.now();
+        let id=tx.conn().query_row("INSERT INTO agent_steps(agent_id,message_id,channel_thread_id,name,status,input_summary,output_summary,duration_ms,position,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id",params![a.agent_id,a.message_id,a.channel_thread_id,a.name,a.status,a.input_summary,a.output_summary,a.duration_ms,position,now,now],|r|r.get(0))?;
         Ok(Self::find(tx.conn(), id)?.expect("inserted step"))
     }
     fn attributes(&self) -> NewAgentStep {
@@ -230,8 +231,9 @@ impl AgentStep {
             || candidate.output_summary != before.output_summary
             || candidate.duration_ms != before.duration_ms
         {
-            tx.conn().execute("UPDATE agent_steps SET name=?,status=?,input_summary=?,output_summary=?,duration_ms=?,updated_at=? WHERE id=?",params![candidate.name,candidate.status,candidate.input_summary,candidate.output_summary,candidate.duration_ms,tx.now(),self.id])?;
-            candidate.updated_at = tx.now();
+            let revision = tx.revision_after(before.updated_at);
+            tx.conn().execute("UPDATE agent_steps SET name=?,status=?,input_summary=?,output_summary=?,duration_ms=?,updated_at=? WHERE id=?",params![candidate.name,candidate.status,candidate.input_summary,candidate.output_summary,candidate.duration_ms,revision,self.id])?;
+            candidate.updated_at = revision;
         }
         *self = candidate;
         Ok(())

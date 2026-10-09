@@ -21,6 +21,16 @@ const yearFormat = new Intl.DateTimeFormat(undefined, {
 
 const fullFormat = new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "short" });
 
+const shortWeekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
+
+const shortDateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
+
+const shortYearFormat = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
 const DAY_MS = 86_400_000;
 
 /** Milliseconds since the epoch for a wire timestamp. */
@@ -70,4 +80,26 @@ export function formatDay(millis: number, now: number): string {
   return new Date(millis).getFullYear() === new Date(now).getFullYear()
     ? weekdayFormat.format(millis)
     : yearFormat.format(millis);
+}
+
+/** A list row's time: "9:41 AM" today, then "Yesterday", the weekday within a week, "Oct 3". */
+export function formatListTime(timestamp: string, now: number): string {
+  const millis = toMillis(timestamp);
+  const days = Math.round((startOfDay(now) - startOfDay(millis)) / DAY_MS);
+
+  if (days <= 0) {
+    return timeFormat.format(millis);
+  }
+
+  if (days === 1) {
+    return "Yesterday";
+  }
+
+  if (days < 7) {
+    return shortWeekdayFormat.format(millis);
+  }
+
+  return new Date(millis).getFullYear() === new Date(now).getFullYear()
+    ? shortDateFormat.format(millis)
+    : shortYearFormat.format(millis);
 }

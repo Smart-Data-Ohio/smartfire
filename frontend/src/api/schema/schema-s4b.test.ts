@@ -95,11 +95,14 @@ const ledgerEventJson = {
 } as const;
 
 const workFactsJson = {
+  tags: [],
+  messageCount: 4,
   status: "in_progress",
   owner: agentUserJson,
   ownerActive: true,
   runUrl: "https://ci.example.com/runs/7",
   resultUpdatedAt: null,
+  updatedAt: "2026-10-06T09:00:00.000000Z",
   links: [
     {
       id: 31,
@@ -172,6 +175,16 @@ const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S
   expect(Schema.encodeSync(schema)(Schema.decodeUnknownSync(schema)(wire))).toEqual(wire);
 
 describe("S4 contract B schemas", () => {
+  it("keeps work revisions as fixed-width strings and rejects millisecond versions", () => {
+    const updatedAt = "2026-10-06T09:00:00.123456Z";
+
+    const decode = (version: string) =>
+      Schema.decodeUnknownSync(WorkFacts)({ ...workFactsJson, updatedAt: version });
+
+    expect(decode(updatedAt).updatedAt).toBe(updatedAt);
+    expect(() => decode("2026-10-06T09:00:00.123Z")).toThrow();
+  });
+
   it("round-trip the ledger", () => {
     roundTrips(AgentLedgerPage, {
       events: [

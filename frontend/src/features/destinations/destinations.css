@@ -10,35 +10,7 @@
     min-height: 0;
   }
 
-  .page-header {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-2);
-    height: var(--pane-header-height);
-    padding: 0 var(--space-3) 0 var(--space-5);
-    box-shadow: 0 1px 0 var(--border);
-    z-index: 2;
-  }
-
-  .page-back {
-    display: none;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    margin-left: calc(var(--space-2) * -1);
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-  }
-
-  .page-heading {
-    display: flex;
-    flex: 1;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-
+  /* The header is a PageHeader (src/ui/page-header.css): the glyph, title and count in it. */
   .page-heading-icon {
     flex-shrink: 0;
     color: var(--text-muted);
@@ -65,13 +37,6 @@
     font-variant-numeric: tabular-nums;
     font-weight: var(--weight-medium);
     line-height: 18px;
-  }
-
-  .page-tools {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-1);
   }
 
   .page-toolbar {
@@ -338,20 +303,116 @@
     --button-height: var(--control-sm);
   }
 
-  /* Touch screens have no hover: the actions sit in the row, always there. */
+  /*
+   * Touch screens have a long press (the row's menu) and a swipe instead of hover, so the actions
+   * stay out of the way. They show only to a keyboard's focus; a screen reader still finds them.
+   * A tap's focus (or the hover a tap leaves behind) doesn't count.
+   */
   @media (hover: none) {
-    .list-row-bar {
-      position: static;
-      justify-content: flex-end;
-      margin: calc(var(--space-1) * -1) var(--space-2) var(--space-2) auto;
-      padding: 0;
-      width: fit-content;
-      background: none;
-      box-shadow: none;
+    .list-row-inner:is(:hover, :focus-within) > .list-row-bar {
+      opacity: 0;
+      translate: 0 var(--distance-micro);
+      pointer-events: none;
+    }
+
+    .list-row-inner:has(:focus-visible) > .list-row-bar,
+    .list-row-inner > .list-row-bar:has([aria-expanded="true"]) {
       opacity: 1;
-      translate: none;
+      translate: 0 0;
       pointer-events: auto;
     }
+
+    /* A long press opens the menu, not the text selection or the system's callout. */
+    .list-row {
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+  }
+
+  /* ── Swipe ─────────────────────────────────────────────────────────────── */
+
+  /* A vertical drag scrolls the list; a sideways one is the row's (row-gestures.ts). */
+  .list-row-inner {
+    touch-action: pan-y;
+  }
+
+  .list-row-swipe {
+    display: none;
+  }
+
+  /* While a finger slides the row: it covers its action, which shows as the row moves aside. */
+  .list-row[data-swipe] .list-row-clip {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+  }
+
+  .list-row[data-swipe] .list-row-inner {
+    background: var(--bg-pane);
+    transition: translate var(--duration-small) var(--ease-move);
+  }
+
+  .list-row[data-swipe="done"] .list-row-inner {
+    transition-duration: var(--duration-medium);
+  }
+
+  .list-row:is([data-swipe="dragging"], [data-swipe="armed"]) .list-row-inner {
+    transition: none;
+  }
+
+  .list-row[data-swipe] .list-row-swipe {
+    --swipe-bg: var(--bg-sunken);
+    --swipe-fg: var(--text-muted);
+
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding-inline: var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--swipe-bg);
+    color: var(--swipe-fg);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      color var(--duration-small) var(--ease-enter);
+  }
+
+  .list-row-swipe[data-tone="success"] {
+    --swipe-bg: color-mix(in oklch, var(--success) 16%, var(--bg-pane));
+    --swipe-fg: var(--success-text);
+  }
+
+  .list-row-swipe[data-tone="danger"] {
+    --swipe-bg: var(--danger-soft);
+    --swipe-fg: var(--danger-text);
+  }
+
+  /* Past the line, letting go does it: the action fills in. */
+  .list-row:is([data-swipe="armed"], [data-swipe="done"]) .list-row-swipe {
+    --swipe-bg: var(--bg-active);
+    --swipe-fg: var(--text);
+  }
+
+  .list-row:is([data-swipe="armed"], [data-swipe="done"]) .list-row-swipe[data-tone="success"] {
+    --swipe-bg: var(--success);
+    --swipe-fg: var(--neutral-0);
+  }
+
+  .list-row:is([data-swipe="armed"], [data-swipe="done"]) .list-row-swipe[data-tone="danger"] {
+    --swipe-bg: var(--danger-solid);
+    --swipe-fg: var(--on-danger);
+  }
+
+  .list-row-swipe .icon {
+    transition: scale var(--duration-small) var(--ease-spring);
+  }
+
+  .list-row:is([data-swipe="armed"], [data-swipe="done"]) .list-row-swipe .icon {
+    scale: 1.15;
   }
 
   .point-menu-anchor {
@@ -422,18 +483,6 @@
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (width < 720px) {
-    .page-header {
-      padding: 0 var(--space-2) 0 var(--space-4);
-    }
-
-    .page-header:has(.page-back) {
-      padding-left: var(--space-2);
-    }
-
-    .page-back {
-      display: grid;
-    }
-
     .page-toolbar {
       flex-wrap: wrap;
       gap: var(--space-2);
@@ -456,6 +505,18 @@
 
     .list-row {
       padding-inline: var(--space-1);
+    }
+
+    /* Finger-sized filter tabs; the strip still scrolls sideways when they don't all fit. */
+    .page-toolbar .tab {
+      justify-content: center;
+      min-width: var(--touch-target);
+      height: var(--touch-target);
+    }
+
+    /* The actions a keyboard's focus shows, at the touch size. */
+    .list-row-bar .button[data-variant] {
+      --button-height: var(--touch-target);
     }
 
     .page-skeleton {

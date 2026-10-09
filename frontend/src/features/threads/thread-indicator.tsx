@@ -2,9 +2,10 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { WorkLinks, WorkSummary } from "../work/work-facts.tsx";
 import { AvatarGroup } from "./avatar-group.tsx";
 import { useEnsureUsers } from "./ensure-users.ts";
-import { lastReplyLabel, replyCountLabel } from "./thread-format.ts";
+import { lastReplyLabel, replyCountLabel, threadTitle } from "./thread-format.ts";
 import { useNow } from "./use-now.ts";
 import "./threads.css";
 
@@ -14,7 +15,7 @@ const NO_IDS: readonly number[] = [];
  * Under a message that started a thread: the last repliers' faces, the reply count, "Last reply
  * 2 hours ago" and, on hover, "View thread"; a dot when the thread is unread for the viewer. It
  * follows `thread.indicator` events (the message's `thread` changes) and the viewer's membership,
- * and opens the thread in the right pane.
+ * and opens the thread in the right pane. A tracked thread's status, owner and links follow it.
  */
 export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
   const navigate = useNavigate();
@@ -28,6 +29,11 @@ export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
   const unread = useStore((state) =>
     threadId === null ? false : (state.threadMemberships[threadId]?.unreadAt ?? null) !== null,
   );
+
+  // The indicator carries no work facts: they come with the thread (the room's active threads
+  // are fetched when it opens, others once listed or opened).
+  const thread = useStore((state) => (threadId === null ? undefined : state.threads[threadId]));
+  const work = thread?.work ?? null;
 
   if (indicator === null || indicator.replyCount === 0) {
     return null;
@@ -66,6 +72,16 @@ export function ThreadIndicator({ message }: { readonly message: MessageDTO }) {
           <Icon name="chevron-right" size={14} />
         </span>
       </button>
+      {work === null ? null : (
+        <span className="thread-indicator-work">
+          <WorkSummary facts={work} />
+          <WorkLinks
+            links={work.links}
+            runUrl={work.runUrl}
+            label={`Links for ${threadTitle(thread)}`}
+          />
+        </span>
+      )}
     </div>
   );
 }

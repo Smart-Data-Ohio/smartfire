@@ -102,6 +102,10 @@
     --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
     --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
     --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+    /* Behind an inline image: only its transparent pixels show it, so a dark logo on a
+       transparent ground still reads in the dark theme while a photo covers it entirely. */
+    --image-backdrop-a: light-dark(var(--neutral-0), var(--neutral-250));
+    --image-backdrop-b: light-dark(var(--neutral-100), var(--neutral-300));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
     /* Unread names and markers: the ink at full strength, white on dark (Discord's unread channel). */
@@ -187,6 +191,31 @@
     --pane-header-height: 48px;
     --right-pane-width: 380px;
 
+    /* ── Phone: breakpoint, touch sizes, safe areas, keyboard ───────────────────── */
+
+    /* For reference only: a custom property can't sit in a media query, so phone rules spell it
+       `@media (width < 720px)` (src/lib/breakpoints.ts in script); tokens.test.ts holds them to it. */
+    --bp-phone: 720px;
+    /* The smallest box a finger hits reliably (Apple's 44 pt): the hit area of a tappable thing. */
+    --touch-target: 44px;
+    /* The control height on touch phones, which --control-md and --control-lg take there. */
+    --control-touch: 44px;
+    /* The notch, rounded corners and home indicator; 0 off phones (viewport-fit=cover in index.html). */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    /* The layout viewport's bottom strip an overlaid keyboard covers (iOS), set by
+       src/lib/keyboard-inset.ts. The shell already fits above it; only position: fixed adds it. */
+    --keyboard-inset: 0px;
+    /* The strip above the visible area while iOS pans the page up to a focused field (same hook). */
+    --viewport-top-inset: 0px;
+    /* The visible area's height: the full dynamic viewport, or the visual viewport's while an
+       overlaid keyboard is up (same hook). */
+    --viewport-height: 100dvh;
+    /* What a viewport-anchored (position: fixed) surface keeps clear at the bottom. */
+    --viewport-bottom-inset: max(var(--safe-bottom), var(--keyboard-inset));
+
     /* ── Density: comfortable (default) ─────────────────────────────────────────── */
 
     --message-avatar-size: 36px;
@@ -195,6 +224,10 @@
     --message-group-gap: var(--space-2);
     --sidebar-row-height: 28px;
     --sidebar-row-gap: 1px;
+
+    /* Brand icons (vendor/icons.yml) are one black glyph on transparency: inverted in the dark
+       theme, as the classic UI's --icon-filter does. A filter isn't a colour, so no light-dark(). */
+    --brand-icon-filter: none;
   }
 
   :root[data-theme="light"] {
@@ -203,6 +236,26 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
+    --brand-icon-filter: invert(1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand-icon-filter: invert(1);
+    }
+  }
+
+  /* Touch phones: finger-sized default and large controls. --control-sm stays compact. */
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --control-md: var(--control-touch);
+      --control-lg: var(--control-touch);
+    }
+  }
+
+  /* An open keyboard covers the home indicator, so nothing above it keeps clear of that. */
+  :root[data-keyboard="open"] {
+    --safe-bottom: 0px;
   }
 
   /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
@@ -259,6 +312,71 @@
     U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
 }
 
+/*
+ * The font presets people can pick for their device (Settings → Appearance), self-hosted by
+ * tools/fonts/subset.sh. A face downloads only once a page uses it.
+ */
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/atkinson-hyperlegible-next-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/*
+ * Source Serif 4 ships as upstream's own web fonts, unmodified (its licence reserves the name
+ * "Source" for the original): the Text optical size, regular and semibold, and their italics. The
+ * regular face also serves weight 500, as the type scale has no medium cut of it.
+ */
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-Regular.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-It.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-Semibold.ttf.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/SourceSerif4-SemiboldIt.ttf.woff2") format("woff2");
+}
+
 /* Arial tuned to Inter's metrics, so the swap from the fallback doesn't shift layout. */
 @font-face {
   font-family: "Inter Fallback";
@@ -271,7 +389,17 @@
 
 @layer tokens {
   :root {
-    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    /*
+     * Font presets (`<html data-font>`): each stack ends in the system's fonts, and only Inter
+     * takes Inter's character variants. Line heights are rem, so layout holds in every face.
+     */
+    --font-preset-inter: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-system: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    --font-preset-atkinson: "Atkinson Hyperlegible Next", ui-sans-serif, system-ui, sans-serif;
+    --font-preset-serif: "Source Serif 4", "Iowan Old Style", Georgia, ui-serif, serif;
+    --font-preset-mono:
+      "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-sans: var(--font-preset-inter);
     --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     --font-features: "cv11", "ss01", "calt";
 
@@ -284,6 +412,7 @@
     --leading-ui: 1.25rem;
     --text-body: 0.9375rem; /* 15/22: message body, as Slack */
     --leading-body: 1.375rem;
+    --text-input: var(--text-ui); /* 14: form fields; 16 on touch phones, so iOS never zooms */
     --text-composer: 1rem; /* 16: composer, so iOS never zooms */
     --leading-composer: 1.5rem;
     --text-title: 1.125rem; /* 18: pane header title */
@@ -297,6 +426,64 @@
 
     --tracking-tight: -0.011em;
     --tracking-title: -0.017em;
+  }
+
+  /*
+   * The account's text size (`<html data-text-size>`), as the classic pages scale it: every text
+   * token above is in rem, so the root size scales all text together while spacing (px) holds.
+   * Percentages stack on the browser's own default, so an OS or browser text size still applies.
+   */
+  :root[data-font="system"] {
+    --font-sans: var(--font-preset-system);
+    --font-features: normal;
+  }
+
+  :root[data-font="atkinson"] {
+    --font-sans: var(--font-preset-atkinson);
+    --font-features: normal;
+  }
+
+  :root[data-font="serif"] {
+    --font-sans: var(--font-preset-serif);
+    --font-features: normal;
+  }
+
+  :root[data-font="mono"] {
+    --font-sans: var(--font-preset-mono);
+    --font-features: normal;
+  }
+
+  :root[data-text-size="smaller"] {
+    font-size: 87.5%;
+  }
+
+  :root[data-text-size="small"] {
+    font-size: 93.75%;
+  }
+
+  :root[data-text-size="large"] {
+    font-size: 106.25%;
+  }
+
+  :root[data-text-size="larger"] {
+    font-size: 112.5%;
+  }
+
+  /*
+   * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
+   * use the composer size never drop below it at the smaller text sizes, and on touch phones form
+   * fields grow to 16 px too (a desktop layout keeps its 14 px fields).
+   */
+  @media (pointer: coarse) {
+    :root {
+      --text-composer: max(1rem, 16px);
+    }
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --text-input: max(1rem, 16px);
+    }
   }
 }
 
@@ -409,6 +596,15 @@
     max-width: 100%;
   }
 
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from its own /assets/icons/brands/ and marks body ones `icon--brand`.
+     Anchored to that local prefix, so a remote image whose URL merely contains the path (a
+     full-colour link preview, say) is never inverted. */
+  img.icon--brand,
+  img[src^="/assets/icons/brands/"] {
+    filter: var(--brand-icon-filter);
+  }
+
   input,
   button,
   textarea,
@@ -416,6 +612,28 @@
     font: inherit;
     letter-spacing: inherit;
     color: inherit;
+  }
+
+  /* Touch phones: iOS zooms into a focused field under 16 px and stays zoomed, so every text
+     field is --text-input (16 px there), whatever its component says; something laid over a
+     field's text (a placeholder mirror) sizes itself with --text-input too. */
+  @media (width < 720px) and (pointer: coarse) {
+    input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"]
+      ),
+    textarea,
+    select {
+      /* biome-ignore lint/complexity/noImportantStyles: an important in the base layer outranks every later layer, and components' `font: inherit` must not undo this. */
+      font-size: var(--text-input) !important;
+    }
   }
 
   button {
@@ -921,7 +1139,8 @@
  * Changes from the recipe: the tunables point at the motion tokens (medium,
  * medium-exit, --scale-surface). Dialog (src/ui) is a native <dialog>: the enter plays from
  * @starting-style when showModal() puts it in the top layer, `data-state="closing"` plays the exit
- * before close(), and the ::backdrop fades on the same clock.
+ * before close(), and the ::backdrop fades on the same clock. On phones, where the dialog is a
+ * sheet, it rises from the bottom edge and drops back instead of scaling, and follows a swipe.
  */
 
 @layer recipes {
@@ -982,6 +1201,44 @@
     opacity: 0;
     transition-duration: var(--modal-close-dur);
     transition-timing-function: var(--modal-close-ease);
+  }
+
+  /*
+   * Phones: the sheet (dialog.css) slides up from the bottom edge and back down, on the large
+   * clock as a pane does. A swipe moves it with `translate` (dialog.tsx), untransitioned while the
+   * finger is down; let go short and it springs back, far enough and it leaves from there. Reduced
+   * motion keeps only the fade, as below.
+   */
+  @media (width < 720px) {
+    :root {
+      --modal-sheet-open-dur: var(--duration-large);
+      --modal-sheet-close-dur: var(--duration-large-exit);
+    }
+
+    .t-modal {
+      transform: translateY(0);
+      transition:
+        transform var(--modal-sheet-open-dur) var(--modal-ease),
+        translate var(--modal-sheet-open-dur) var(--modal-ease),
+        opacity var(--modal-sheet-open-dur) var(--modal-ease),
+        display var(--modal-sheet-open-dur),
+        overlay var(--modal-sheet-open-dur);
+    }
+
+    @starting-style {
+      .t-modal[open] {
+        transform: translateY(100%);
+      }
+    }
+
+    .t-modal[data-state="closing"] {
+      transform: translateY(100%);
+      transition-duration: var(--modal-sheet-close-dur);
+    }
+
+    .t-modal[data-dragging] {
+      transition-property: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -2782,7 +3039,7 @@
     background: var(--bg-sunken);
     box-shadow: inset 0 0 0 1px var(--border);
     color: var(--text);
-    font-size: var(--text-ui);
+    font-size: var(--text-input);
   }
 
   .input::placeholder {
@@ -2944,7 +3201,7 @@
     animation: none;
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     body.auth {
       justify-content: flex-start;
       padding: var(--space-4) var(--space-3) var(--space-8);
@@ -3582,7 +3839,7 @@
     font-size: var(--text-meta);
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     .public-main {
       padding-block: var(--space-6);
     }

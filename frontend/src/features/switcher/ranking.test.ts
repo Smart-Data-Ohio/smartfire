@@ -24,7 +24,6 @@ function unread(row: SidebarRow, mentions = 0): SidebarRow {
     mentionCount: mentions,
     notificationCount: mentions,
     threadNotificationCount: 0,
-    revision: 0,
     membership: {
       ...row.membership,
       involvement: "mentions",

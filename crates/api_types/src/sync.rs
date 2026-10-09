@@ -5,9 +5,9 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged, MessageCards,
-    MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory,
-    RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
+    ApprovalUpdated, BoardAutomationsChanged, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
+    MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
+    RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
     ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
 };
@@ -106,6 +106,9 @@ pub struct SyncEvent {
 #[serde(tag = "type", content = "data")]
 #[ts(export)]
 pub enum SyncPayload {
+    /// On everyone's `user` topic: the workspace name or images changed.
+    #[serde(rename = "workspace.updated")]
+    WorkspaceUpdated(WorkspaceBranding),
     /// On `room:<id>` (or `thread:<id>` for a reply): a message was posted. Carries the same
     /// [`MessageDTO`] the `POST` returns, so `clientMessageId` reconciles a pending send.
     #[serde(rename = "message.created")]
@@ -151,18 +154,25 @@ pub enum SyncPayload {
     ThreadIndicator(ThreadIndicatorChanged),
     /// On `room:<id>` only: a thread was started there (a new thread has no followers yet but
     /// its creator, whose tab has the `POST` response). New: the classic app shows new threads
-    /// only through the parent's indicator. Board posts don't publish it.
+    /// only through the parent's indicator. A board post publishes it too, however it was created
+    /// (the JSON twin of the classic board-row prepend).
     #[serde(rename = "thread.created")]
     ThreadCreated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was renamed, closed, reopened, locked or
     /// unlocked, or its reply count or last activity moved, or its work changed (status, owner,
-    /// result, run URL, links, a handoff; see [`crate::WorkFacts`]). New, as `thread.created`.
+    /// result, run URL, links, a handoff, a board post's tags; see [`crate::WorkFacts`]). New, as
+    /// `thread.created`; on a board it is the JSON twin of the board-row replace, so a board
+    /// post's reply also publishes it (its `replyCount` and `lastActivityAt` moved).
     #[serde(rename = "thread.updated")]
     ThreadUpdated(Thread),
     /// On `room:<id>` and `thread:<id>`: a thread was deleted. Connections following
     /// `thread:<id>` stop following it.
     #[serde(rename = "thread.removed")]
     ThreadRemoved(ThreadRemoved),
+    /// On `room:<id>`: a board's tag rules or SLA timers changed (see
+    /// [`BoardAutomationsChanged`]). New.
+    #[serde(rename = "board.automations.changed")]
+    BoardAutomationsChanged(BoardAutomationsChanged),
     /// On a member's `user` topic: a thread went unread for them, or needs refreshing.
     #[serde(rename = "thread.unread")]
     ThreadUnread(ThreadUnread),
@@ -204,6 +214,10 @@ pub enum SyncPayload {
     /// On the message's conversation topic: its cards changed (see [`MessageCards`]).
     #[serde(rename = "message.cards")]
     MessageCards(MessageCards),
+    /// On `room:<id>`: an event there was scheduled, edited, cancelled or removed (see
+    /// [`EventsChanged`]). New.
+    #[serde(rename = "events.changed")]
+    EventsChanged(EventsChanged),
     /// On every active human's `user` topic: an agent's status, note, suspension or working
     /// presence changed (see [`AgentStatusChanged`]).
     #[serde(rename = "agent.status")]
@@ -237,6 +251,18 @@ pub enum SyncPayload {
     /// On the presenter's `user` topic: someone else ended their stream.
     #[serde(rename = "stage.stream.stopped")]
     StageStreamStopped(StageStreamStopped),
+}
+
+/// Workspace images as the SPA uses them; animated sources have a PNG still URL too.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct WorkspaceBranding {
+    pub name: String,
+    pub logo_url: Option<String>,
+    pub logo_still_url: Option<String>,
+    pub banner_url: Option<String>,
+    pub banner_still_url: Option<String>,
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseBoardSearch } from "./lib/board-search.ts";
 import { SCREENS } from "./lib/screens.ts";
 import { router } from "./router.tsx";
 
@@ -37,8 +38,17 @@ describe("the screen map and the router", () => {
       SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
 
-    // These are SPA-only tools, without a classic page of their own.
-    const internal = new Set(["/app/_kitchen-sink", "/app/r/:id/t/new"]);
+    // These are SPA-only tools, without a classic page of their own. Classic has no agent
+    // profile page (only /agents/:id/approvals and /agents/:id/events), so the profile is one.
+    // The profile and the workspace also have a phone page each, pushed from the section list
+    // their root shows there; the root itself maps to the classic page.
+    const internal = new Set([
+      "/app/_kitchen-sink",
+      "/app/r/:id/t/new",
+      "/app/agents/:id",
+      "/app/settings/profile",
+      "/app/admin/workspace",
+    ]);
 
     for (const route of Object.values(router.routesById)) {
       if (route.id === "__root__" || route.id === "/shell") {
@@ -49,5 +59,41 @@ describe("the screen map and the router", () => {
 
       expect(mapped.has(path) || internal.has(path), path).toBe(true);
     }
+  });
+});
+
+describe("board route search", () => {
+  it("keeps valid board search and drops invalid values", () => {
+    expect(parseBoardSearch({ view: "board", status: "all", owner: 7, tag: "api" })).toEqual({
+      view: "board",
+      status: "all",
+      owner: "7",
+      tag: "api",
+    });
+    expect(parseBoardSearch({ view: "other", status: "blocked", owner: [], tag: false })).toEqual(
+      {},
+    );
+  });
+
+  it("inherits board search on posts/new, threads and ordinary room child routes", () => {
+    for (const path of [
+      "/r/900/posts/new",
+      "/r/900/t/42",
+      "/r/900/files",
+      "/r/900/automations",
+      "/r/900/m/123",
+    ]) {
+      const leaf = router
+        .matchRoutes(path, { view: "board", status: "all", owner: "me", tag: "api", m: 123 })
+        .at(-1);
+
+      expect(leaf?.search).toMatchObject({ view: "board", status: "all", owner: "me", tag: "api" });
+
+      if (path === "/r/900/t/42") expect(leaf?.search).toHaveProperty("m", 123);
+    }
+
+    expect(
+      router.matchRoutes("/r/900/t/new", { parent: 123, status: "open" }).at(-1)?.search,
+    ).toMatchObject({ parent: 123, status: "open" });
   });
 });

@@ -4,10 +4,14 @@
  * stay RFC 3339 strings: the server's fixed `YYYY-MM-DDTHH:MM:SS.mmmZ` form sorts as text.
  */
 import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
+
+import type { WorkDetail } from "../gen/WorkDetail.ts";
+import type { WorkFacts } from "../gen/WorkFacts.ts";
 
 export type { Me } from "../gen/Me.ts";
 
@@ -16,6 +20,8 @@ export type { Membership } from "../gen/Membership.ts";
 export type { MessageDTO } from "../gen/MessageDTO.ts";
 
 export type { MessagePage } from "../gen/MessagePage.ts";
+
+export type { OpenRoomPreview } from "../gen/OpenRoomPreview.ts";
 
 export type { Presence } from "../gen/Presence.ts";
 
@@ -49,7 +55,18 @@ export type { UserPresence } from "../gen/UserPresence.ts";
  */
 export interface Boot {
   readonly user: { readonly id: number; readonly name: string; readonly avatarUrl: string };
-  readonly account: { readonly name: string | null };
+  /**
+   * The workspace: its name (`null` only before first run), and its logo and banner images when
+   * an administrator has uploaded them (`null` falls back to initials and the plain header). An
+   * animated image also has a still of its first frame, shown at rest and under reduced motion.
+   */
+  readonly account: {
+    readonly name: string | null;
+    readonly logoUrl: string | null;
+    readonly logoStillUrl: string | null;
+    readonly bannerUrl: string | null;
+    readonly bannerStillUrl: string | null;
+  };
   readonly theme: "system" | "light" | "dark";
   readonly textSize: "smaller" | "small" | "default" | "large" | "larger";
   readonly cableUrl: string;
@@ -107,6 +124,12 @@ export interface Timeline {
   /** A page in one direction is on its way. */
   readonly loadingOlder: boolean;
   readonly loadingNewer: boolean;
+  /**
+   * Identity of the latest page request in each direction. A replace bumps both. A page, its
+   * error, or its interrupt applies only while the id it captured is still current.
+   */
+  readonly olderRequest: number;
+  readonly newerRequest: number;
   /** Where the unread divider sits for this visit; fixed until the room is left. */
   readonly unreadFromId: number | null;
   readonly unreadCount: number;
@@ -124,6 +147,8 @@ export interface RoomState {
   readonly detail: RoomDetail | null;
   readonly status: LoadStatus;
   readonly error: string | null;
+  /** An open room the viewer may join. Set only while they are not a member. */
+  readonly preview: OpenRoomPreview | null;
 }
 
 export type TimelineMessage = MessageDTO;
@@ -133,6 +158,9 @@ export interface ThreadPaneState {
   readonly status: LoadStatus;
   readonly error: string | null;
   readonly permissions: ThreadPermissions | null;
+  readonly work: WorkDetail | null;
+  /** Facts at the last detail load, for detecting work changes through sync. */
+  readonly workFacts: WorkFacts | null;
 }
 
 /** One room's thread list (the Threads pane), for one filter. */

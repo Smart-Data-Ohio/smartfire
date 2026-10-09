@@ -1,12 +1,15 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Schema } from "effect";
 import {
+  AgentApproval,
   AgentApprovalPage,
   AgentCapability,
   AgentDirectory,
+  AgentDirectoryRow,
   AgentKind,
   AgentProfile,
   AgentStatus,
+  AgentStatusChanged,
   AgentStepStatus,
   ApprovalDecision,
   DecideApproval,
@@ -28,6 +31,7 @@ const directoryRowJson = {
   createdAt: "2026-09-01T10:00:00.000Z",
   statusChangedAt: "2026-10-06T09:00:00.000Z",
   lastSeenAt: null,
+  updatedAt: "2026-10-06T09:00:00.000000Z",
 } as const;
 
 const agentUserJson = {
@@ -84,6 +88,7 @@ const approvalJson = {
   adminOnly: true,
   approvable: false,
   deniable: true,
+  updatedAt: "2026-10-06T09:00:00.000000Z",
 } as const;
 
 const messageJson = {
@@ -128,6 +133,35 @@ const accepts = <S extends Schema.Codec<unknown, unknown>>(
 };
 
 describe("S4 contract A schemas", () => {
+  it("keeps fixed-width revisions as strings on directory rows, approvals and status events", () => {
+    const updatedAt = "2026-10-06T09:00:00.123456Z";
+
+    const decoders = [
+      (version: string) =>
+        Schema.decodeUnknownSync(AgentDirectoryRow)({ ...directoryRowJson, updatedAt: version })
+          .updatedAt,
+      (version: string) =>
+        Schema.decodeUnknownSync(AgentApproval)({ ...approvalJson, updatedAt: version }).updatedAt,
+      (version: string) =>
+        Schema.decodeUnknownSync(AgentStatusChanged)({
+          agentId: 3,
+          userId: 40,
+          status: "working",
+          statusNote: null,
+          statusChangedAt: null,
+          suspended: false,
+          workingPresence: null,
+          workingPresenceExpiresAt: null,
+          updatedAt: version,
+        }).updatedAt,
+    ];
+
+    for (const decode of decoders) {
+      expect(decode(updatedAt)).toBe(updatedAt);
+      expect(() => decode("2026-10-06T09:00:00.123Z")).toThrow();
+    }
+  });
+
   it("round-trip the agent enums", () => {
     accepts(AgentStatus, ["idle", "working", "waiting", "failed"]);
     accepts(AgentKind, ["personal", "workspace"]);
@@ -241,6 +275,7 @@ describe("S4 contract A sync events", () => {
           statusChangedAt: "2026-10-06T09:00:00.000Z",
           suspended: false,
           workingPresence: "Reviewing #42",
+          updatedAt: "2026-10-06T09:00:00.000000Z",
           workingPresenceExpiresAt: "2026-10-06T09:20:00.000Z",
         },
       },

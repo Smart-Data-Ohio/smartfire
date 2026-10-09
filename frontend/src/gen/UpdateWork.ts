@@ -11,11 +11,13 @@ import type { WorkStatus } from "./WorkStatus";
  * client showed; any refusal is a 403 and changes nothing:
  * - a status on an untracked thread starts tracking it: `canConvertWork`;
  * - `status: null` stops tracking it: `canAssignWork` (the client offers it per
- *   `canRemoveWork`, which is `false` for a board post; the server doesn't refuse it there, as
- *   in the classic app);
+ *   `canRemoveWork`, which is `false` for a board post; boards require a status and reject
+ *   stopping tracking with `Validation` on `status`, as in the classic app);
  * - another status on a tracked thread: `canUpdateWorkStatus`;
  * - `ownerId`: `canAssignWork`;
- * - `resultMarkdown`: `canManageWork`.
+ * - `resultMarkdown`: `canManageWork`;
+ * - `tags`: `canManageWork` on a board post; settings authority (`canRename`) on an ordinary
+ *   thread, as for classic `thread[tags]`. Ordinary tags are stored but not shown in work facts.
  *
  * Errors:
  * - 404 unless the viewer is an active human member of the thread's room;
@@ -25,16 +27,22 @@ import type { WorkStatus } from "./WorkStatus";
  *   no status: stopping tracking a thread with an owner needs `ownerId: null` too;
  * - `Validation` on `resultMarkdown` past 20,000 characters.
  */
-export type UpdateWork = { 
+export type UpdateWork = {
 /**
  * Omit to leave alone; `null` stops tracking.
  */
-status?: WorkStatus | null, 
+status?: WorkStatus | null,
 /**
  * Omit to leave alone; `null` unassigns.
  */
-ownerId?: number | null, 
+ownerId?: number | null,
 /**
  * Omit to leave alone; `null` or blank clears the result.
  */
-resultMarkdown?: string | null, };
+resultMarkdown?: string | null,
+/**
+ * Tags, replacing the set: omit to leave alone, `[]` clears them. Normalised as on
+ * [`crate::CreateBoardPost::tags`]; `canManageWork` on boards, settings authority on ordinary
+ * threads. `Validation` on `tags` as there. Only boards expose them in [`WorkFacts::tags`].
+ */
+tags?: Array<string>, };

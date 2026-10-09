@@ -116,12 +116,10 @@ async fn show_sidebar(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let viewer = concerns::require_current_user(c)?.clone();
     let (secrets, now) = (c.app().secrets.clone(), now(c));
-    #[cfg(feature = "test-support")]
-    crate::test_hooks::before_sidebar_read(viewer.id).await;
     let sidebar = c
         .app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             // `Current.user.administrator? || !Current.account.settings.restrict_room_creation_to_administrators?`
             let restricted = Account::first(conn)?.is_some_and(|account| {
                 account
@@ -131,7 +129,7 @@ async fn show_sidebar(c: &mut Ctx) -> Result {
             dto::sidebar(
                 conn,
                 &secrets,
-                viewer.id,
+                &viewer,
                 viewer.is_administrator() || !restricted,
                 now,
             )

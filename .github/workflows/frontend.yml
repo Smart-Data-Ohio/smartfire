@@ -22,9 +22,9 @@ on:
 permissions: {}
 
 # A new push to a pull request supersedes the run for its previous commit.
-# Pushes to main are never cancelled, so every main commit keeps a full run.
+# Other runs have unique groups so main keeps both queued and running jobs.
 concurrency:
-  group: frontend-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  group: frontend-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -51,6 +51,7 @@ jobs:
             .github/workflows/frontend.yml
             crates
             .cargo
+            vectors
 
       - name: Decide whether the frontend checks are needed
         id: scope
@@ -80,7 +81,7 @@ jobs:
 
       - name: Set up Node
         if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           package-manager-cache: false
@@ -164,9 +165,17 @@ jobs:
           CARGO_TERM_COLOR: always
         run: cargo test -p campfire_spa --locked -j 4
 
+      # The runner image usually has the shell's system libraries (it ships Chrome). Fetching
+      # them with apt only when the shell can't start keeps a slow mirror off the critical path.
       - name: Install the preview browser
         if: steps.scope.outputs.run == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install --only-shell chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then((browser) => browser.close())"; then
+            echo "The headless shell can't start yet; installing its system libraries."
+            pnpm exec playwright install-deps chromium
+          fi
 
       - name: Playwright (production preview and installed app)
         if: steps.scope.outputs.run == 'true'
@@ -194,6 +203,8 @@ jobs:
   # "Frontend e2e (i/n)". It runs when frontend/ or this workflow changes (a crates/api_types
   # change the SPA sees comes with its regenerated frontend/src/gen), on every push to main, and
   # when the PR diff can't be read. The browser is cached per Playwright version, saved from main.
+  # Six shards keep each one well inside the 15-minute timeout as the phone specs grow; at four,
+  # shards ran 12-15 minutes and the slowest were cancelled mid-run.
   e2e:
     name: Frontend e2e (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-latest
@@ -203,7 +214,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ 1, 2, 3 ]
+        shard: [ 1, 2, 3, 4, 5, 6 ]
     defaults:
       run:
         working-directory: frontend
@@ -246,7 +257,7 @@ jobs:
 
       - name: Set up Node
         if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           package-manager-cache: false
@@ -282,11 +293,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
 
-      # The specs run headless, so Chromium's headless shell is the only browser they launch. The
-      # system libraries it needs aren't cached: --with-deps installs them on every run.
+      # The specs run headless, so Chromium's headless shell is the only browser they launch. Its
+      # system libraries come with the runner image; apt runs only when the shell can't start,
+      # because a slow mirror once spent six minutes of the job's fifteen there.
       - name: Install the Playwright browser
         if: steps.scope.outputs.run == 'true'
-        run: pnpm exec playwright install --with-deps --only-shell chromium
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install --only-shell chromium
+          if ! node -e "require('@playwright/test').chromium.launch().then((browser) => browser.close())"; then
+            echo "The headless shell can't start yet; installing its system libraries."
+            pnpm exec playwright install-deps chromium
+          fi
 
       - name: Save the Playwright browser
         if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.browser-cache.outputs.cache-hit != 'true' }}
@@ -301,6 +319,15 @@ jobs:
           SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
           PLAYWRIGHT_HTML_OPEN: never
         run: pnpm exec playwright test -c playwright.mock.config.ts --fully-parallel --shard="$SHARD" --reporter=line,html
+
+      # The production build can order CSS differently from the dev server (shared chunks' sheets
+      # link ahead of the entry's), so the layout checks run against `vite build` too.
+      - name: Playwright (mock backend, production build)
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 }}
+        env:
+          SMARTFIRE_E2E_BUILD: "1"
+          PLAYWRIGHT_HTML_OPEN: never
+        run: pnpm exec playwright test -c playwright.mock.config.ts e2e/mock/inline-layout.spec.ts --reporter=line,html
 
       # The HTML report carries each failed test's trace (trace: retain-on-failure).
       - name: Keep the report of a failed run

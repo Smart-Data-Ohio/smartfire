@@ -76,7 +76,6 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
     mentionCount: mentions,
     notificationCount: options.notifications ?? policyCount(involvement, unread, mentions),
     threadNotificationCount: 0,
-    revision: 0,
   };
 }
 

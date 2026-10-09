@@ -206,7 +206,13 @@ async fn assert_headers_match(ssl: bool) {
     let mut mismatches = Vec::new();
     let mut check = |name: &str, reply: &Reply| {
         let vector = &section[name];
-        let expected = compared(|header| vector["headers"][header].as_str().map(str::to_string));
+        // PWA extraction keeps the recorded security policy; stable worker updates and
+        // personalized manifests now have explicit revalidation policies.
+        let expected = compared(|header| match (header, vector["path"].as_str()) {
+            ("cache-control", Some("/service-worker.js")) => Some("no-cache, no-transform".into()),
+            ("cache-control", Some("/webmanifest.json")) => Some("private, no-cache".into()),
+            _ => vector["headers"][header].as_str().map(str::to_string),
+        });
         let actual = compared(|header| reply.headers.get(header).map(|value| value.to_str().unwrap().to_string()));
         let status = vector["status"].as_u64().unwrap() as u16;
         if reply.status.as_u16() != status {

@@ -54,6 +54,19 @@ export const removeLogo = Effect.fn("api.removeLogo")(function* () {
   return yield* call({ method: "DELETE", path: "/admin/workspace/logo" }, workspaceReply);
 });
 
+/** `PUT /admin/workspace/banner`: an uploaded image becomes the sidebar's banner. */
+export const updateBanner = Effect.fn("api.updateBanner")(function* (signedId: string) {
+  return yield* call(
+    { method: "PUT", path: "/admin/workspace/banner", body: { signedId } },
+    workspaceReply,
+  );
+});
+
+/** `DELETE /admin/workspace/banner`: back to the plain header. */
+export const removeBanner = Effect.fn("api.removeBanner")(function* () {
+  return yield* call({ method: "DELETE", path: "/admin/workspace/banner" }, workspaceReply);
+});
+
 /** `POST /admin/workspace/join_code`: a new join link; the old one stops working. */
 export const resetJoinCode = Effect.fn("api.resetJoinCode")(function* () {
   return yield* call({ method: "POST", path: "/admin/workspace/join_code" }, workspaceReply);

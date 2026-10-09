@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+pub mod workspace_branding;
 pub mod github;
 pub mod status_settings;
 pub mod activity;

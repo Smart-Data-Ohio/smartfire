@@ -3,6 +3,7 @@ import type { DirectCandidate } from "../../gen/DirectCandidate.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { AgentBadge } from "../people/agent-badge.tsx";
 import { UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { MAX_OTHERS, pickerOptions, removeLast, toggleSelected } from "./picker.ts";
@@ -234,7 +235,7 @@ export function PeoplePicker({
                   <span className="picker-option-name">{option.name}</span>
                   {status === null ? null : <span className="picker-option-status">{status}</span>}
                 </span>
-                {option.agent ? <span className="picker-tag">Agent</span> : null}
+                {option.agent ? <AgentBadge userId={option.userId} /> : null}
                 {option.starred ? (
                   <span className="picker-star" role="img" aria-label="Starred">
                     <Icon name="star" size={14} />

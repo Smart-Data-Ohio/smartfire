@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import { forbidden, notFound } from "../../mock/http.ts";
 import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
 import { seededMessageId } from "../../mock/seed.ts";
-import { expect, ROOM_IDS, test } from "./support.ts";
+import { expect, openHeaderTool, ROOM_IDS, test } from "./support.ts";
 
 const ROOM = ROOM_IDS.general;
 
@@ -172,8 +172,8 @@ test.describe("phone", () => {
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
     await expect(menu).toHaveCount(0);
 
-    // The header button opens Threads as a local pane, a full page over the conversation.
-    await page.locator(".room-header").getByRole("button", { name: "Threads" }).click();
+    // The ⋯ menu opens Threads as a local pane, a full page over the conversation.
+    await openHeaderTool(page, "Threads");
     await expect(pane(page)).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
     await expect(conversation).toHaveAttribute("inert", "");
@@ -191,9 +191,15 @@ test.describe("phone", () => {
     await expect(menu.getByRole("menuitemradio", { name: "No notifications" })).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
-    await expect(
-      page.locator(".room-header").getByRole("button", { name: "Notifications: No notifications" }),
-    ).toBeVisible();
+    await expect(menu).toHaveCount(0);
+
+    // The ⋯ menu's notification levels show the new one.
+    await page.locator(".room-header").getByRole("button", { name: "More" }).click();
+    await page.getByRole("menuitem", { name: "Notifications" }).click();
+    await expect(page.getByRole("menuitemradio", { name: /^No notifications/ })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 });
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   classicPageFor,
-  classicToSpaUrl,
   classicUrlFor,
   SCREENS,
   spaUrlFor,
@@ -28,45 +27,6 @@ describe("the screen map", () => {
     expect(spaUrlFor("/rooms/12/@345")).toBe("/app/r/12/m/345");
     expect(spaUrlFor("/rooms/12/threads/9")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("//rooms/12/")).toBe("/app/r/12");
-  });
-
-  it("maps notification rooms, permalinks, threads and settings through the screen map", () => {
-    const origin = "https://smartfire.example";
-
-    expect(classicToSpaUrl("/rooms/12", origin)).toBe("/app/r/12");
-    expect(classicToSpaUrl("/rooms/12/@345", origin)).toBe("/app/r/12/m/345");
-    expect(classicToSpaUrl("/rooms/12/threads/9", origin)).toBe("/app/r/12/t/9");
-    expect(classicToSpaUrl("/users/me/profile", origin)).toBe("/app/settings");
-    expect(classicToSpaUrl(`${origin}/users/me/sessions`, origin)).toBe("/app/settings/sessions");
-  });
-
-  it("preserves a notification's query and fragment without rewriting their encoding", () => {
-    expect(
-      classicToSpaUrl(
-        "/rooms/12/threads/9?m=4&label=a%20b&classic=1&label=c+d#reply",
-        "https://smartfire.example",
-      ),
-    ).toBe("/app/r/12/t/9?m=4&label=a%20b&classic=1&label=c+d#reply");
-  });
-
-  it("opens a person's notification path on their SPA page", () => {
-    expect(classicToSpaUrl("/users/7", "https://smartfire.example")).toBe("/app/people/7");
-  });
-
-  it("leaves unported rows and unknown notification paths to classic", () => {
-    const origin = "https://smartfire.example";
-
-    expect(classicToSpaUrl("/work?status=open", origin)).toBeNull();
-    expect(classicToSpaUrl("/nowhere", origin)).toBeNull();
-  });
-
-  it("never maps a foreign origin or malformed notification URL", () => {
-    const origin = "https://smartfire.example";
-
-    expect(classicToSpaUrl("https://foreign.example/rooms/12", origin)).toBeNull();
-    expect(classicToSpaUrl("//foreign.example/rooms/12", origin)).toBeNull();
-    expect(classicToSpaUrl("http://[", origin)).toBeNull();
-    expect(classicToSpaUrl("/rooms/12", "invalid origin")).toBeNull();
   });
 
   it.each([
@@ -126,6 +86,34 @@ describe("the screen map", () => {
     expect(classicUrlFor("/app")).toBe("/");
     expect(classicUrlFor("/app/nowhere")).toBeNull();
     expect(classicUrlFor("/app/r/general")).toBeNull();
+  });
+
+  it("translates room notification queries into the thread and message routes", () => {
+    expect(spaUrlFor("/rooms/12", "?thread=9&message_id=4")).toBe("/app/r/12/t/9?m=4");
+    expect(spaUrlFor("/rooms/12", "?thread=9")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=4")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?x=1&thread=9&classic=1&y=2")).toBe("/app/r/12/t/9?x=1&y=2");
+    expect(spaUrlFor("/rooms/12", "?thread=nope&x=1")).toBe("/app/r/12?thread=nope&x=1");
+  });
+
+  it("decodes room notification ids and uses the classic duplicate", () => {
+    expect(spaUrlFor("/rooms/12", "?thread=%39")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=%34")).toBe("/app/r/12/m/4");
+    expect(spaUrlFor("/rooms/12", "?th%72ead=%39")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=9&thread=8")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=%39&thread=8")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?thread=nope&thread=9")).toBe("/app/r/12?thread=nope&thread=9");
+    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=5")).toBe("/app/r/12/m/5");
+    expect(spaUrlFor("/rooms/12", "?message_id=4&message_id=nope")).toBe(
+      "/app/r/12?message_id=4&message_id=nope",
+    );
+    expect(spaUrlFor("/rooms/12", "?thread=9&thread=8&message_id=4&message_id=5")).toBe(
+      "/app/r/12/t/9?m=4",
+    );
+    expect(spaUrlFor("/rooms/12", "?thread=9&message_id=nope&message_id=5")).toBe("/app/r/12/t/9");
+    expect(spaUrlFor("/rooms/12", "?message_id=nope&message_id=5")).toBe("/app/r/12/m/5");
+    // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins the translator.
+    expect(spaUrlFor("/rooms/12", "?thread=%ZZ&x=1")).toBe("/app/r/12?thread=%ZZ&x=1");
   });
 
   it("carries the query over without classic", () => {

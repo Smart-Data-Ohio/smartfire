@@ -1,5 +1,7 @@
-import { Outlet, useMatches, useMatchRoute, useParams } from "@tanstack/react-router";
+import { Outlet, useMatches, useMatchRoute, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -14,6 +16,7 @@ import { useBootFlash } from "./boot-flash.ts";
 import { useClassicLinks } from "./classic-links.ts";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
+import { ROUTE_PENDING_DELAY_MS, ROUTE_PENDING_MIN_MS } from "./route-pending.tsx";
 import { UpdateBanner } from "./update-banner.tsx";
 import "./app-shell.css";
 
@@ -45,7 +48,8 @@ function useDocumentTitle(roomId: number | null, page: Page): void {
 
 /**
  * Which column a phone shows: the conversation list, a tab's page beside the tab bar (the
- * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search).
+ * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search, Work, the
+ * agent pages).
  */
 function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
   const matchRoute = useMatchRoute();
@@ -54,7 +58,9 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
     matchRoute({ to: "/saved" }) !== false ||
     matchRoute({ to: "/scheduled" }) !== false ||
     matchRoute({ to: "/search" }) !== false ||
-    matchRoute({ to: "/m/$messageId" }) !== false;
+    matchRoute({ to: "/m/$messageId" }) !== false ||
+    matchRoute({ to: "/work" }) !== false ||
+    matchRoute({ to: "/agents", fuzzy: true }) !== false;
 
   if (roomId !== null || pushed) {
     return "room";
@@ -69,8 +75,18 @@ function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
  * (settings and the workspace pages are full screens too).
  */
 export function AppShell() {
+  const router = useRouter();
+  const reduced = useReducedMotion();
   const params = useParams({ strict: false });
   const roomId = params.roomId ?? null;
+
+  // Reduced motion shows the placeholder at once; otherwise the current screen stays briefly.
+  useEffect(() => {
+    router.update({
+      defaultPendingMs: reduced ? 0 : ROUTE_PENDING_DELAY_MS,
+      defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
+    });
+  }, [reduced, router]);
 
   // Settings, the workspace pages and the people pages fill the main column, so phones show them
   // rather than the conversation list.
@@ -92,6 +108,7 @@ export function AppShell() {
   useDocumentTitle(roomId, page);
   useClassicLinks();
   useBootFlash();
+  useKeyboardInset();
 
   const view = usePhoneView(roomId);
 

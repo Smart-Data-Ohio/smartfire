@@ -390,9 +390,15 @@ pub fn reset_webhook_signing_secret(
         ));
     }
     let (secret, encrypted) = super::webhook::new_signing_secret(encryption);
+    let previous: Timestamp = tx.conn().query_row(
+        "SELECT updated_at FROM agents WHERE id=?",
+        [agent_id],
+        |row| row.get(0),
+    )?;
+    let revision = tx.revision_after(previous);
     tx.conn().execute_cached(
         "UPDATE agents SET webhook_signing_secret = ?, updated_at = ? WHERE id = ?",
-        params![encrypted, tx.now(), agent_id],
+        params![encrypted, revision, agent_id],
     )?;
     Ok(secret)
 }

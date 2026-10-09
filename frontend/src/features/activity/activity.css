@@ -234,7 +234,23 @@
     font-size: var(--text-meta);
   }
 
+  /* The phone's Unread / Read / Handled button: the switch above doesn't fit beside the title. */
+  .activity-status-menu {
+    display: none;
+  }
+
   @media (width < 720px) {
+    .activity-status {
+      display: none;
+    }
+
+    .activity-status-menu {
+      --button-pad: var(--space-2);
+      --button-fg: var(--text-muted);
+
+      display: inline-flex;
+    }
+
     .activity-row {
       gap: 10px;
       padding-inline: var(--space-3) var(--space-2);

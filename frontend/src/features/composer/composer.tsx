@@ -34,7 +34,6 @@ import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
 import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
 import { ComposerEmojiButton } from "./emoji-button.tsx";
-import { useKeyboardInset } from "./keyboard-inset.ts";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
@@ -196,8 +195,6 @@ export function Composer({
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
   const canSend = (hasText || hasFiles) && !running;
-
-  useKeyboardInset(rootRef);
 
   // Grow with the text; CSS caps it at half the viewport and scrolls beyond that.
   useLayoutEffect(() => {

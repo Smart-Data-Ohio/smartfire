@@ -41,6 +41,15 @@
     max-width: 100%;
   }
 
+  /* Brand icons wherever they show (message bodies, reactions, autocomplete, room icons): the
+     server serves them from its own /assets/icons/brands/ and marks body ones `icon--brand`.
+     Anchored to that local prefix, so a remote image whose URL merely contains the path (a
+     full-colour link preview, say) is never inverted. */
+  img.icon--brand,
+  img[src^="/assets/icons/brands/"] {
+    filter: var(--brand-icon-filter);
+  }
+
   input,
   button,
   textarea,
@@ -48,6 +57,28 @@
     font: inherit;
     letter-spacing: inherit;
     color: inherit;
+  }
+
+  /* Touch phones: iOS zooms into a focused field under 16 px and stays zoomed, so every text
+     field is --text-input (16 px there), whatever its component says; something laid over a
+     field's text (a placeholder mirror) sizes itself with --text-input too. */
+  @media (width < 720px) and (pointer: coarse) {
+    input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"]
+      ),
+    textarea,
+    select {
+      /* biome-ignore lint/complexity/noImportantStyles: an important in the base layer outranks every later layer, and components' `font: inherit` must not undo this. */
+      font-size: var(--text-input) !important;
+    }
   }
 
   button {

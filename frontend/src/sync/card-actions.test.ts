@@ -4,8 +4,11 @@ import { TestClock } from "effect/testing";
 import { Forbidden, Validation } from "../api/errors.ts";
 import { FakeApi, meFixture, messageFixture, pageFixture } from "../api/testing.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
+import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
+import type { MessageCard } from "../gen/MessageCard.ts";
 import type { Poll } from "../gen/Poll.ts";
 import { attendanceKey, githubKey, shownAttendance } from "../store/cards.ts";
+import type { SyncEvent } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
 import * as cards from "./card-actions.ts";
 
@@ -321,5 +324,140 @@ describe("card actions", () => {
       expect(shown()).toMatchObject({ response: "maybe", maybeCount: 1 });
       expect(store.getState().cards.pendingAnswers[3]).toBeUndefined();
     }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  const pullRequestCard = (pullRequestId: number): MessageCard => ({
+    kind: "github",
+    data: {
+      pullRequestId,
+      owner: "acme",
+      repo: "app",
+      number: pullRequestId,
+      url: `https://github.com/acme/app/pull/${pullRequestId}`,
+    },
+  });
+
+  const loadedPull = (title: string): GithubPullRequestCard => ({
+    state: "loaded",
+    owner: "acme",
+    repo: "app",
+    number: 9,
+    title,
+    url: "https://github.com/acme/app/pull/9",
+    status: "open",
+    authorLogin: null,
+    authorAvatarUrl: null,
+    baseBranch: null,
+    headBranch: null,
+    review: null,
+    checks: null,
+    githubUpdatedAt: null,
+    discussionThreadId: null,
+    files: null,
+  });
+
+  /** A room message that links pull request 9, so `message.cards` can invalidate its preview. */
+  function seedPullRequest(): void {
+    mutations.reset();
+    mutations.setMe(meFixture);
+    mutations.applyPage(
+      ROOM,
+      pageFixture([messageFixture(1, ROOM, { cards: [pullRequestCard(9)], cardsAsOf: at(1) })]),
+      "replace",
+    );
+  }
+
+  function invalidatePullRequest(): void {
+    const event: SyncEvent = {
+      type: "message.cards",
+      seq: 1,
+      topic: `room:${ROOM}`,
+      data: {
+        messageId: 1,
+        roomId: ROOM,
+        threadId: null,
+        cards: [pullRequestCard(9)],
+        asOf: at(5),
+      },
+    };
+
+    mutations.applyEvents([event], Date.parse(at(5)));
+  }
+
+  const shownPull = () =>
+    store.getState().cards.previews.github[githubKey(ROOM, 9, { messageId: 1 })]?.value;
+
+  /**
+   * The get a comment starts, then the get `message.cards` starts. `firstFinishesLast` is the
+   * stale post-write response arriving after the webhook's.
+   */
+  const refreshRace = (firstFinishesLast: boolean) =>
+    Effect.gen(function* () {
+      seedPullRequest();
+
+      const fake = yield* FakeApi;
+      const postWrite = yield* Deferred.make<GithubPullRequestCard>();
+      const webhook = yield* Deferred.make<GithubPullRequestCard>();
+      let calls = 0;
+
+      const stale = loadedPull("stale");
+      const fresh = loadedPull("fresh");
+
+      yield* fake.reply("POST /rooms/12/github/pull_requests/9/comments", {
+        notice: "Comment posted.",
+      });
+      yield* fake.route("GET /rooms/12/github/pull_requests/9/card", () => {
+        calls += 1;
+
+        return Deferred.await(calls === 1 ? postWrite : webhook);
+      });
+
+      const write = yield* Effect.forkChild(
+        cards.commentOnGithub(ROOM, 9, { messageId: 1 }, "Looks good."),
+      );
+
+      for (let attempt = 0; calls < 1 && attempt < 40; attempt += 1) {
+        yield* Effect.yieldNow;
+      }
+
+      expect(calls).toBe(1);
+      invalidatePullRequest();
+
+      const refresh = yield* Effect.forkChild(cards.loadGithub(ROOM, 9, { messageId: 1 }));
+
+      for (let attempt = 0; calls < 2 && attempt < 40; attempt += 1) {
+        yield* Effect.yieldNow;
+      }
+
+      expect(calls).toBe(2);
+
+      if (firstFinishesLast) {
+        yield* Deferred.succeed(webhook, fresh);
+        yield* Fiber.join(refresh);
+        expect(shownPull()).toEqual(fresh);
+
+        yield* Deferred.succeed(postWrite, stale);
+        yield* Fiber.join(write);
+      } else {
+        yield* Deferred.succeed(postWrite, stale);
+        yield* Fiber.join(write);
+
+        // The post-write body arrived first. The webhook's get is already current, so it does not paint.
+        expect(shownPull()).toBeNull();
+
+        yield* Deferred.succeed(webhook, fresh);
+        yield* Fiber.join(refresh);
+      }
+
+      expect(calls).toBe(2);
+      expect(shownPull()).toEqual(fresh);
+    }).pipe(Effect.provide(FakeApi.layerClient));
+
+  it.effect("keeps the webhook's pull request when the post-write get finishes last", () =>
+    refreshRace(true),
+  );
+
+  it.effect("keeps the webhook's pull request when the post-write get finishes first", () =>
+    refreshRace(false),
   );
 });

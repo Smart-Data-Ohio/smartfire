@@ -1,6 +1,8 @@
-/* Admin: what the settings layout doesn't already cover (people rows, icons, the audit table). */
+/*
+ * Admin: what the settings layout doesn't already cover (people rows, icons, the audit table), and
+ * how they fit a phone: stacked people rows, the tables as cards.
+ */
 @layer app {
-  .admin-logo,
   .admin-icon-image {
     flex-shrink: 0;
     border-radius: var(--radius-md);
@@ -10,6 +12,264 @@
 
   .admin-icon-image {
     border-radius: var(--radius-sm);
+  }
+
+  /* ── Workspace profile: a preview of the rail and sidebar, and a slot per image ─────────── */
+
+  .profile {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .profile-preview {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    width: min(100%, 360px);
+    height: 200px;
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-sidebar);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .profile-preview-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding-top: var(--space-3);
+    background: var(--bg-app);
+  }
+
+  .profile-preview-icon {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--accent-solid);
+    color: var(--on-accent);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .profile-preview-icon[data-logo] {
+    background: var(--bg-pane);
+  }
+
+  .profile-preview-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-preview-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-sidebar);
+  }
+
+  .profile-preview-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* As the sidebar header shows it: 16:9-ish, a top shade, the name in white. */
+  .profile-preview-banner {
+    position: relative;
+    isolation: isolate;
+    height: 112px;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-sidebar);
+  }
+
+  .profile-preview-banner:not([data-empty])::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      oklch(0% 0 0 / 60%),
+      oklch(0% 0 0 / 60%) 44px,
+      oklch(0% 0 0 / 0%) 100%
+    );
+    content: "";
+  }
+
+  .profile-preview-banner[data-empty] {
+    height: 44px;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .profile-preview-banner-image {
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-preview-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .profile-preview-banner:not([data-empty]) .profile-preview-name {
+    color: oklch(100% 0 0);
+    text-shadow: 0 1px 2px oklch(0% 0 0 / 45%);
+  }
+
+  .profile-preview-name-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .profile-preview-lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .profile-preview-lines span {
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-hover);
+  }
+
+  .profile-preview-lines span:nth-child(2n) {
+    width: 70%;
+  }
+
+  .profile-preview-lines span:nth-child(3n) {
+    width: 55%;
+  }
+
+  .profile-slots {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  /* A drop target: a quiet dashed edge that firms up while a file is held over it. */
+  .profile-slot {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition:
+      background-color var(--duration-small) var(--ease-enter),
+      box-shadow var(--duration-small) var(--ease-enter);
+  }
+
+  .profile-slot[data-over] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .profile-slot-thumb {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--bg-hover);
+    color: var(--text-faint);
+  }
+
+  .profile-slot[data-kind="banner"] .profile-slot-thumb {
+    width: 100px;
+  }
+
+  .profile-slot-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .profile-slot-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .profile-slot-title {
+    margin: 0;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .settings-group-body .profile-slot-hint {
+    color: var(--text-muted);
+  }
+
+  .profile-slot-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .profile-slot-progress progress {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-pill);
+    appearance: none;
+    background: var(--bg-hover);
+    accent-color: var(--accent);
+  }
+
+  .profile-slot-progress progress::-webkit-progress-bar {
+    background: var(--bg-hover);
+  }
+
+  .profile-slot-progress progress::-webkit-progress-value {
+    background: var(--accent-solid);
+    transition: inline-size var(--duration-small) var(--ease-move);
+  }
+
+  .profile-slot-progress progress::-moz-progress-bar {
+    background: var(--accent-solid);
+  }
+
+  .settings-group-body .profile-slot-error {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  .profile-slot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  .settings-group-body .profile-formats {
+    color: var(--text-faint);
   }
 
   .admin-person[data-banned] {
@@ -176,5 +436,157 @@
 
   .admin-bot-row > details {
     flex-basis: 100%;
+  }
+
+  /* ── Phones ────────────────────────────────────────────────────────────── */
+
+  @media (width < 720px) {
+    /* The preview keeps what matters, the icon and the sidebar header, at its natural height;
+       the placeholder rail buttons and sidebar rows read as a page still loading on a phone. */
+    .profile-preview {
+      width: 100%;
+      height: auto;
+    }
+
+    .profile-preview-rail {
+      padding-bottom: var(--space-3);
+    }
+
+    .profile-preview-dot,
+    .profile-preview-lines {
+      display: none;
+    }
+
+    .profile-preview-banner[data-empty] {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      box-shadow: none;
+    }
+
+    /* A person: the name over the email, "My settings" and the ⋯ menu trailing. */
+    .admin-person {
+      padding-right: var(--space-1);
+    }
+
+    .admin-person-name {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: var(--space-2);
+      min-width: 0;
+    }
+
+    .admin-person-name-text,
+    .admin-person-email {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .admin-person-name .settings-badge {
+      flex-shrink: 0;
+      margin-left: 0;
+    }
+
+    .admin-person-actions {
+      flex-wrap: nowrap;
+      gap: 0;
+    }
+
+    .admin-person-settings {
+      display: inline-flex;
+      align-items: center;
+      min-height: var(--touch-target);
+      padding-inline: var(--space-2);
+      border-radius: var(--radius-sm);
+      color: var(--accent);
+      font-size: var(--text-sidebar);
+      font-weight: var(--weight-medium);
+      text-decoration: none;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .admin-person-settings:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: -2px;
+    }
+
+    .admin-person-more {
+      --button-height: var(--touch-target);
+    }
+
+    /* A table (the audit log, the import runs) as a stack of cards: the row's title cell first,
+       every other cell a "label value" line under it. */
+    .admin-audit-wrap:has(> [data-cards]) {
+      overflow: visible;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .admin-audit-table[data-cards],
+    .admin-audit-table[data-cards] tbody,
+    .admin-audit-table[data-cards] td {
+      display: block;
+    }
+
+    /* The column headers stay for screen readers: the visually-hidden utility's clip. */
+    .admin-audit-table[data-cards] thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .admin-audit-table[data-cards] tbody {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+
+    .admin-audit-table[data-cards] tr {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      background: var(--bg-sunken);
+      font-size: var(--text-sidebar);
+    }
+
+    .admin-audit-table[data-cards] td,
+    .admin-audit-table[data-cards] tbody tr + tr td {
+      display: flex;
+      gap: var(--space-3);
+      min-width: 0;
+      padding: 0;
+      box-shadow: none;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .admin-audit-table[data-cards] td[data-label]::before {
+      flex: 0 0 5.5rem;
+      color: var(--text-muted);
+      content: attr(data-label);
+    }
+
+    .admin-audit-table[data-cards] td[data-title] {
+      order: -1;
+      margin-bottom: var(--space-0-5);
+      font-size: var(--text-ui);
+      font-weight: var(--weight-semibold);
+    }
+
+    .admin-audit-table[data-cards] .admin-audit-changes {
+      min-width: 0;
+    }
   }
 }

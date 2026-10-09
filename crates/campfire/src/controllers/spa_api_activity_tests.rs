@@ -225,6 +225,69 @@ async fn the_inbox_lists_changes_and_publishes_items() {
 }
 
 #[tokio::test]
+async fn activity_count_persists_in_both_uis_across_fresh_sessions() {
+    let a = app(true)
+        .await
+        .expect("activity count test requires the default seed");
+    a.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("DELETE FROM activity_items WHERE user_id=?", [DAVID])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let read = item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 60).await;
+    let handled = item(&a, DAVID, ("Message", ROOT_MESSAGE), "reply", 30).await;
+    let mut david = a.sign_in(DAVID).await;
+    let count: api::ActivityUnreadCount =
+        parse(&david.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(count.unread_count, 2);
+
+    // SPA "Mark handled" and classic "Mark read" must clear the same persisted count.
+    let changed: api::ActivityItemChanged = parse(
+        &david
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/activity/{handled}"),
+                &json!({"action": "handled"}),
+            ))
+            .await,
+    );
+    assert_eq!(changed.unread_count, 1);
+    assert_eq!(changed.unread_revision, count.unread_revision + 1);
+    assert!(changed.item.read_at.is_some() && changed.item.handled_at.is_some());
+    let response = david
+        .write(
+            Req::new(Method::PATCH, &format!("/activity/{read}/read"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+
+    let mut reopened = a.sign_in(DAVID).await;
+    let final_count: api::ActivityUnreadCount =
+        parse(&reopened.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(final_count.unread_count, 0);
+    assert_eq!(final_count.unread_revision, changed.unread_revision + 1);
+    for path in ["/api/v1/activity/unread_count", "/activity/unread_count"] {
+        let response = reopened.send(get(path)).await;
+        assert_eq!(response.status, StatusCode::OK, "{}", response.text());
+        assert_eq!(response.header("cache-control"), Some("no-store"));
+        let count = serde_json::from_slice::<serde_json::Value>(&response.body).unwrap();
+        assert_eq!(
+            count.get("unreadCount").or_else(|| count.get("unread_count")),
+            Some(&json!(0)),
+            "{path}"
+        );
+    }
+    let page: api::ActivityList = parse(&reopened.send(get("/api/v1/activity")).await);
+    assert!(page.items.is_empty());
+    assert_eq!(page.unread_count, 0);
+    assert_eq!(page.unread_revision, final_count.unread_revision);
+}
+
+#[tokio::test]
 async fn the_inbox_pages_by_cursor() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
@@ -414,7 +477,8 @@ async fn saved_items_list_page_change_and_drop_their_reminders() {
         removed,
         api::ActivityItemRemoved {
             id: reminder,
-            unread_count: count.unread_count
+            unread_count: count.unread_count,
+            unread_revision: count.unread_revision,
         }
     );
     server.abort();
@@ -1561,9 +1625,17 @@ async fn the_sidebar_reads_its_counts_in_one_snapshot() {
     a.db().stop_capturing_read_queries();
     assert_eq!(response.status, StatusCode::OK, "{}", response.text());
     let log = log.lock().unwrap().clone();
-    let position = |needle: &str| log.iter().position(|sql| sql.contains(needle));
-    let begin = position(r#"SAVEPOINT "sidebar_snapshot""#).expect("the sidebar opens a snapshot");
-    let end = position(r#"RELEASE "sidebar_snapshot""#).expect("and closes it");
+    // `Snapshot::begin`: one read transaction, rolled back once read.
+    let begin = log
+        .iter()
+        .position(|sql| sql.trim_start().starts_with("BEGIN"))
+        .expect("the sidebar opens a snapshot");
+    let end = log
+        .iter()
+        .skip(begin)
+        .position(|sql| sql.trim_start().starts_with("ROLLBACK"))
+        .map(|offset| begin + offset)
+        .expect("and closes it");
     // Every membership, message and inbox read falls inside it.
     for (index, sql) in log.iter().enumerate() {
         if ["memberships", "messages", "activity_items"].iter().any(|table| sql.contains(table)) {
@@ -1680,39 +1752,4 @@ async fn being_present_in_the_classic_app_republishes_the_read_row() {
     // can't leave the badge up.
     assert_eq!(counts(&next_designers_row(&mut sync).await), (0, 0, 0));
     server.abort();
-}
-
-#[tokio::test]
-async fn a_sidebar_read_from_newer_data_carries_the_higher_revision() {
-    let Some(a) = app(true).await else { return };
-    let mut first = a.sign_in(DAVID).await;
-    let mut second = a.sign_in(DAVID).await;
-    quiet_designers(&a, "everything").await;
-    let designers = |sidebar: &api::Sidebar| {
-        sidebar.rows.iter().find(|row| row.room.id == DESIGNERS).cloned().expect("Designers")
-    };
-
-    // The first read is held before it reads; the second starts after it but reads before a
-    // write; then the first reads, after the write.
-    let hold = campfire_api::test_hooks::hold_before_sidebar_read(DAVID);
-    let (held, stale) = tokio::join!(first.send(get("/api/v1/sidebar")), async {
-        hold.reached.wait().await;
-        let stale: api::Sidebar = parse(&second.send(get("/api/v1/sidebar")).await);
-        let message = designers_message(&a, None, false, 10).await;
-        unread_from(&a, message).await;
-        hold.release.wait().await;
-        stale
-    });
-    let (fresh, stale) = (designers(&parse(&held)), designers(&stale));
-    assert_eq!((counts(&stale), counts(&fresh)), ((0, 0, 0), (1, 1, 0)));
-    assert!(
-        fresh.revision > stale.revision,
-        "the row read from newer data must win: fresh {} vs stale {}",
-        fresh.revision,
-        stale.revision
-    );
-
-    // Read again with nothing written since: the same revision, and the very same row.
-    let again = designers(&parse(&second.send(get("/api/v1/sidebar")).await));
-    assert_eq!(again, fresh);
 }

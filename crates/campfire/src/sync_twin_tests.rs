@@ -19,6 +19,8 @@ const PRIMITIVES: &[&str] = &[
     "sync_unread_rows",
     "sync_membership_row",
     "sync_read_row",
+    "sync_row_removed",
+    "sync_disconnect_after_leaves",
     "sync_activity_stream",
     "sync_activity_item",
     "sync_organized",
@@ -28,6 +30,7 @@ const PRIMITIVES: &[&str] = &[
     "sync_agent_steps",
     "sync_approval",
     "sync_poll",
+    "sync_events_changed",
     "sync_message_cards",
     "turbo",
     "append",
@@ -45,6 +48,7 @@ const FIXED: &[&str] = &[
     "broadcasts::read_room",
     "TypingNotificationsChannel",
     "campfire_api::saved_items",
+    "workspace_branding::publish",
 ];
 
 fn read(path: &str) -> String {

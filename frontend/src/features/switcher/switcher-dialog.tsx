@@ -8,6 +8,7 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { GroupAvatars } from "../sidebar/group-avatars.tsx";
@@ -108,6 +109,7 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       <span className="switcher-label">
         <Highlighted text={item.label} query={query} />
       </span>
+      {item.kind === "person" && item.userId !== null ? <AgentBadge userId={item.userId} /> : null}
       {detail === null ? null : <span className="switcher-detail">{detail}</span>}
       <span className="switcher-meta">
         {busy ? <Spinner label="Opening" /> : null}
@@ -254,7 +256,7 @@ export default function SwitcherDialog({ open, onOpenChange }: SwitcherDialogPro
             autoComplete="off"
             spellCheck={false}
             value={query}
-            data-autofocus
+            data-autofocus="always"
             onChange={(event) => {
               setQuery(event.target.value);
               setActiveIndex(0);

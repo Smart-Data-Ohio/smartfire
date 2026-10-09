@@ -21,6 +21,8 @@ import {
   validation,
 } from "../http.ts";
 import { intField, type Json, stringField } from "../json.ts";
+import { workDetail, workUserIds } from "../s4/work-model.ts";
+import { threadPermissions } from "../s6/work.ts";
 import { VIEWER_ID } from "../seed.ts";
 import type { Outgoing } from "../sync.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -51,13 +53,17 @@ export interface Threads {
   /** The thread, if the viewer belongs to its room; 404 otherwise. */
   threadOr404(threadId: number): ThreadRecord;
   /** Posts a reply with everything that follows: indicator, thread events, unread. */
-  postReply(thread: ThreadRecord, draft: MessageDraft): MessageDTO;
+  postReply(thread: ThreadRecord, draft: MessageDraft, fresh?: boolean): MessageDTO;
   /** After a reply was deleted: the recount and the refresh events. */
   replyRemoved(thread: ThreadRecord): void;
   /** After a root message was deleted: a thread it started stays, with no parent. */
   parentRemoved(messageId: number): void;
   /** Starts or stops `userId` typing in a thread (fanned out to `thread:<id>`). */
   typing(threadId: number, userId: number, on: boolean): void;
+  /** The viewer's `ThreadDetail`, as `GET /threads/:id` answers it. */
+  detail(thread: ThreadRecord): ThreadDetail;
+  /** The `thread.updated` events for the thread, on `room:<id>` and `thread:<id>`. */
+  updated(thread: ThreadRecord): Outgoing[];
 }
 
 /** Creates the threads module. `held` applies the send hold to posting requests. */
@@ -76,30 +82,7 @@ export function createThreads(
     return thread;
   };
 
-  const moderator = (roomId: number): boolean =>
-    ctx.world().users.get(VIEWER_ID)?.role === "administrator" ||
-    ctx.world().rooms.get(roomId)?.room.creatorId === VIEWER_ID;
-
-  const permissions = (thread: ThreadRecord): ThreadPermissions => {
-    const status = threadStatus(thread, ctx.now());
-    const moderates = moderator(thread.roomId);
-    const manages = moderates || thread.creatorId === VIEWER_ID;
-
-    return {
-      canRename: manages,
-      canClose: manages && status === "active",
-      canReopen: status === "closed",
-      canLock: moderates && status !== "locked",
-      canUnlock: moderates && status === "locked",
-      canDelete: moderates,
-      // No mock thread is tracked as work yet.
-      canConvertWork: false,
-      canManageWork: false,
-      canUpdateWorkStatus: false,
-      canAssignWork: false,
-      canRemoveWork: false,
-    };
-  };
+  const permissions = (thread: ThreadRecord): ThreadPermissions => threadPermissions(ctx, thread);
 
   const parentOf = (thread: ThreadRecord): MessageDTO | null => {
     if (thread.parentMessageId === null) return null;
@@ -111,14 +94,20 @@ export function createThreads(
 
   const detail = (thread: ThreadRecord): ThreadDetail => {
     const parent = parentOf(thread);
+    const allowed = permissions(thread);
+    const work = workDetail(ctx.world(), thread, allowed);
 
     return {
       thread: threadDto(thread, ctx.now()),
       membership: thread.viewerMembership,
       parentMessage: parent,
-      permissions: permissions(thread),
-      work: null,
-      users: ctx.usersFor([thread.creatorId, ...(parent === null ? [] : [parent.creatorId])]),
+      permissions: allowed,
+      work,
+      users: ctx.usersFor([
+        thread.creatorId,
+        ...(parent === null ? [] : [parent.creatorId]),
+        ...workUserIds(thread, work),
+      ]),
     };
   };
 
@@ -189,6 +178,7 @@ export function createThreads(
     join(thread, draft.creatorId, null);
     thread.closed = false;
     thread.lastActivityAt = createdAt;
+    thread.updatedAt = createdAt;
 
     const message = buildMessage(
       world.nextMessageId++,
@@ -272,6 +262,8 @@ export function createThreads(
   const create = (roomId: number, body: Json | undefined): MockResponse => {
     const world = ctx.world();
     const record = ctx.roomOr404(roomId);
+
+    if (record.room.kind === "board") throw forbidden("Board rooms take posts, not threads");
 
     if (record.room.kind === "direct") throw forbidden("Direct messages don't have threads");
 
@@ -535,7 +527,7 @@ export function createThreads(
       route("POST", /^\/threads\/(\d+)\/read$/, (request) => ok(read(firstId(request)))),
     ],
     threadOr404,
-    postReply: (thread, draft) => postReply(thread, draft),
+    postReply: (thread, draft, fresh) => postReply(thread, draft, fresh),
     replyRemoved(thread) {
       const events = [...syncIndicator(thread), ...updated(thread)];
 
@@ -554,5 +546,7 @@ export function createThreads(
     typing(threadId, userId, on) {
       ctx.publish([{ topic: `thread:${threadId}`, type: "typing", data: { userId, on } }]);
     },
+    detail,
+    updated,
   };
 }

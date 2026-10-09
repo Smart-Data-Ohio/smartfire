@@ -1,12 +1,15 @@
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useActivityUnread } from "../../store/inbox-hooks.ts";
 import { organizedSidebar } from "../../store/organize.ts";
 import { useStore } from "../../store/store.ts";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { UserAvatar } from "../people/user-avatar.tsx";
 import { rowPillCount, sidebarTotals } from "../sidebar/sections.ts";
+import { UserMenu } from "./user-menu.tsx";
 import { type Destination, setDestination, useDestination } from "./view-store.ts";
 
 interface RailItemProps {
@@ -30,13 +33,16 @@ function RailItem({ label, active, unread = false, count = 0, onSelect, children
           aria-pressed={active}
           onClick={onSelect}
         >
-          {children}
-          <Badge count={count} floating label={`${count} unread`} />
+          <span className="rail-icon">
+            {children}
+            <Badge count={count} floating label={`${count} unread`} />
+          </span>
+          {/* Inside the button, so on a phone's tab bar the caption is part of the tap. */}
+          <span className="rail-caption" aria-hidden="true">
+            {label}
+          </span>
         </button>
       </Tooltip>
-      <span className="rail-caption" aria-hidden="true">
-        {label}
-      </span>
     </div>
   );
 }
@@ -49,6 +55,70 @@ function initialsOf(name: string): string {
     .map((word) => [...word][0] ?? "")
     .join("")
     .toUpperCase();
+}
+
+interface WorkspaceTileProps {
+  readonly name: string;
+  readonly logoUrl: string | null;
+  /** An animated logo's first frame, shown at rest; `null` for a still logo. */
+  readonly stillUrl: string | null;
+}
+
+/**
+ * The workspace's tile at the top of the rail: its logo when one is uploaded (and loads), else
+ * its initials. Round at rest, it squares off under the pointer, as a Discord server does. An
+ * animated logo rests on its first frame and plays only while pointed at or focused (never under
+ * reduced motion), starting from the top each time.
+ */
+function WorkspaceTile({ name, logoUrl, stillUrl }: WorkspaceTileProps) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+  const reduced = useReducedMotion();
+
+  const rest = stillUrl ?? logoUrl;
+  const logo = rest !== null && rest !== broken ? rest : null;
+  const playing = live && !reduced && stillUrl !== null && logoUrl !== null && logoUrl !== broken;
+
+  return (
+    <Tooltip content={name} placement="right" describe={false}>
+      <Link
+        to="/"
+        className="rail-workspace"
+        aria-label={name}
+        data-logo={logo !== null || undefined}
+        onPointerEnter={() => setLive(true)}
+        onPointerLeave={() => setLive(false)}
+        onFocus={() => setLive(true)}
+        onBlur={() => setLive(false)}
+      >
+        {logo === null ? (
+          initialsOf(name)
+        ) : (
+          <img
+            className="rail-workspace-logo"
+            src={logo}
+            alt=""
+            width={40}
+            height={40}
+            draggable={false}
+            onError={() => setBroken(logo)}
+          />
+        )}
+        {playing ? (
+          <img
+            className="rail-workspace-logo"
+            data-animated=""
+            src={logoUrl}
+            alt=""
+            width={40}
+            height={40}
+            draggable={false}
+            onError={() => setBroken(logoUrl)}
+          />
+        ) : null}
+      </Link>
+    </Tooltip>
+  );
 }
 
 /** Unread direct messages across the sidebar, for the DMs destination. */
@@ -75,13 +145,51 @@ function useDirectUnread(): number {
 }
 
 /**
+ * The phone tab bar's last tab (Slack's "You"): your avatar, opening your menu (profile and
+ * settings, people, the workspace), in place of the sidebar's own panel. Selected while one of
+ * those pages shows. The rail beside a wider screen has no use for it: the sidebar has the panel.
+ */
+function YouTab() {
+  const userId = useStore((state) => state.me?.user.id ?? state.boot?.user.id);
+  const matchRoute = useMatchRoute();
+
+  const active = ["/settings", "/people", "/admin"].some(
+    (to) => matchRoute({ to, fuzzy: true }) !== false,
+  );
+
+  if (userId === undefined) {
+    return null;
+  }
+
+  return (
+    <div className="rail-item rail-you" data-active={active || undefined}>
+      <UserMenu
+        placement="top-end"
+        trigger={(props) => (
+          <button {...props} type="button" className="rail-button" aria-label="You">
+            <span className="rail-icon">
+              <UserAvatar userId={userId} size={24} presence decorative />
+            </span>
+            <span className="rail-caption" aria-hidden="true">
+              You
+            </span>
+          </button>
+        )}
+      />
+    </div>
+  );
+}
+
+/**
  * The workspace rail: Discord's spatial model. The workspace tile, then the destinations, each
  * with Discord's pill (a nub when unread, taller on hover, full when selected). On phones the
- * same items become the bottom tab bar.
+ * same items become the bottom tab bar, with You at its end.
  */
 export function Rail() {
   const destination = useDestination();
   const accountName = useStore((state) => state.boot?.account.name ?? "Smartfire");
+  const logoUrl = useStore((state) => state.boot?.account.logoUrl ?? null);
+  const logoStillUrl = useStore((state) => state.boot?.account.logoStillUrl ?? null);
   const unreadRooms = useStore((state) => sidebarTotals(state.sidebar).unreadRooms);
   const mentions = useStore((state) => sidebarTotals(state.sidebar).mentions);
   const directUnread = useDirectUnread();
@@ -101,11 +209,7 @@ export function Rail() {
 
   return (
     <nav className="rail" aria-label="Destinations">
-      <Tooltip content={accountName} placement="right" describe={false}>
-        <Link to="/" className="rail-workspace" aria-label={accountName}>
-          {initialsOf(accountName)}
-        </Link>
-      </Tooltip>
+      <WorkspaceTile name={accountName} logoUrl={logoUrl} stillUrl={logoStillUrl} />
       <span className="rail-divider" aria-hidden="true" />
       <RailItem
         label="Home"
@@ -134,6 +238,7 @@ export function Rail() {
       >
         <Icon name="inbox" size={20} />
       </RailItem>
+      <YouTab />
     </nav>
   );
 }

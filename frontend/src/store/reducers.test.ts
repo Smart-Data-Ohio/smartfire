@@ -286,7 +286,6 @@ describe("sidebar counts", () => {
     mentionCount: 0,
     notificationCount: 0,
     threadNotificationCount: 0,
-    revision: 0,
   };
 
   it("counts room.unread events and clears on read", () => {
@@ -355,35 +354,6 @@ describe("sidebar counts", () => {
       notificationCount: 1,
       threadNotificationCount: 1,
     });
-  });
-
-  it("never lets an older server row replace a newer one", () => {
-    const newer = { ...row, revision: 20, notificationCount: 0 };
-    const older = { ...row, revision: 10, notificationCount: 4 };
-
-    const sidebarOf = (rows: (typeof row)[]) => ({
-      rows,
-      categories: [],
-      users: [],
-      directPlaceholderUserIds: [],
-      canCreateRooms: true,
-    });
-
-    const upserted = (revision: number, notificationCount: number) =>
-      event(revision, {
-        topic: "user",
-        type: "sidebar.row.upserted",
-        data: { ...row, revision, notificationCount },
-      });
-
-    const loaded = loadSidebar(initialState, sidebarOf([newer]));
-
-    // A late event and a slow sidebar response, both read before the row held: ignored.
-    expect(applyEvents(loaded, [upserted(10, 4)], 0).sidebar.rows[ROOM]).toBe(newer);
-    expect(loadSidebar(loaded, sidebarOf([older])).sidebar.rows[ROOM]).toBe(newer);
-    // A newer or equal one lands.
-    expect(applyEvents(loaded, [upserted(30, 2)], 0).sidebar.rows[ROOM]?.notificationCount).toBe(2);
-    expect(applyEvents(loaded, [upserted(20, 1)], 0).sidebar.rows[ROOM]?.notificationCount).toBe(1);
   });
 
   it("seeds the timeline's unread divider from the room detail", () => {

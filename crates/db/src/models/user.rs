@@ -488,13 +488,21 @@ impl User {
 
     /// `Current.user.touch(:tour_completed_at)`: refresh both stamps, skipping validations.
     pub fn complete_tour(tx: &Tx<'_>, user_id: i64) -> Result<()> {
-        tx.conn().execute("UPDATE users SET tour_completed_at=?,updated_at=? WHERE id=?", params![tx.now(),tx.now(),user_id])?;
+        let now = tx.now();
+        let revision = Self::revision_for_touch(tx, user_id, now)?;
+        tx.conn().execute(
+            "UPDATE users SET tour_completed_at=?,updated_at=? WHERE id=?",
+            params![now, revision, user_id],
+        )?;
         Ok(())
     }
 
     /// `user.update(attributes)`: writes only what changed, and nothing at all (not even
     /// `updated_at`) when nothing did.
     pub fn update(&mut self, tx: &mut Tx<'_>, changes: UserChanges) -> Result<()> {
+        let plain_bot_token = self.plain_bot_token.clone();
+        self.reload(tx.conn())?;
+        self.plain_bot_token = plain_bot_token;
         // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
         let zone = changes.time_zone
             .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
@@ -584,9 +592,13 @@ impl User {
         if sets.is_empty() {
             return Ok(());
         }
-        let now = tx.now();
-        self.updated_at = now;
-        sets.push(("updated_at", Box::new(now)));
+        // Rails stamps `updated_at = now`, even when a frozen clock repeats the stored value, and
+        // classic responses hash it (the avatar ETag is `users/<id>-<updated_at>`). Keep that
+        // value; only never move it backwards past a later persisted change. Two different rows
+        // can therefore share a revision (a ban and its unban on a repeated clock); the SPA
+        // orders those by request observation (`mergeUserList` in frontend/src/store/ordering.ts).
+        let revision = Self::revision_for_touch(tx, self.id, tx.now())?;
+        sets.push(("updated_at", Box::new(revision)));
         let assignments: Vec<String> = sets.iter().map(|(c, _)| format!(r#""{c}" = ?"#)).collect();
         let sql = format!(
             r#"UPDATE "users" SET {} WHERE "users"."id" = ?"#,
@@ -595,7 +607,23 @@ impl User {
         let mut values: Vec<&dyn rusqlite::ToSql> = sets.iter().map(|(_, v)| v.as_ref()).collect();
         values.push(&self.id);
         tx.conn().execute_cached(&sql, values.as_slice())?;
+        let plain_bot_token = self.plain_bot_token.clone();
+        self.reload(tx.conn())?;
+        self.plain_bot_token = plain_bot_token;
         Ok(())
+    }
+
+    pub(crate) fn revision_for_touch(
+        tx: &Tx<'_>,
+        user_id: i64,
+        now: Timestamp,
+    ) -> Result<Timestamp> {
+        let previous = tx.conn().query_row(
+            "SELECT updated_at FROM users WHERE id=?",
+            [user_id],
+            |row| row.get::<_, Timestamp>(0),
+        )?;
+        Ok(now.max(previous))
     }
 
     pub fn set_icon_name(&mut self, tx: &mut Tx<'_>, name: Option<&str>) -> Result<()> {
@@ -628,12 +656,12 @@ impl User {
         let token = generate_bot_token();
         let digest = digest_bot_token(&token);
         let now = tx.now();
+        let revision = Self::revision_for_touch(tx, self.id, now)?;
         tx.conn().execute_cached(
             r#"UPDATE "users" SET "bot_token" = NULL, "bot_token_digest" = ?, "updated_at" = ? WHERE "users"."id" = ?"#,
-            params![digest, now, self.id],
+            params![digest, revision, self.id],
         )?;
-        self.bot_token_digest = Some(digest);
-        self.updated_at = now;
+        self.reload(tx.conn())?;
         self.plain_bot_token = Some(token);
         Ok(self.bot_key())
     }

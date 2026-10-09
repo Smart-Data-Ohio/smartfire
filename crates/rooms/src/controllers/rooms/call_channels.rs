@@ -27,6 +27,9 @@ use serde_json::json;
 
 use crate::controllers::presenters::calls::row;
 
+type CreateOutcome = std::result::Result<Room, (Option<String>, Option<String>)>;
+type UpdateOutcome = std::result::Result<Room, (Room, Vec<String>)>;
+
 fn stage(c: &Ctx) -> bool {
     c.current::<crate::concerns::MatchedRoute>()
         .unwrap()
@@ -121,38 +124,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let grantees = user_ids_param(c);
     let creator = require_current_user(c)?.id;
     let kind = kind(c);
-    let app = c.app().clone();
-    let audit = audit_context(c)?;
-    let result = c
-        .app()
-        .db
-        .write(move |tx| {
-            if !valid_icon(tx.conn(), &app, icon.as_deref()) {
-                return Ok(Err((name, icon)));
-            }
-            let ids = existing_user_ids(tx.conn(), &grantees)?;
-            let mut room = Room::create_for(tx, kind, name.as_deref(), creator, &ids)?;
-            if icon.is_some() {
-                tx.conn().execute_cached(
-                    "UPDATE rooms SET icon_name=? WHERE id=?",
-                    rusqlite::params![icon, room.id],
-                )?;
-                room.reload(tx.conn())?;
-            }
-            AuditLog::record(
-                tx,
-                NewAuditLog {
-                    action: "room.create".into(),
-                    target: Some((&room).into()),
-                    changes: Some(json!({"name":room.name})),
-                    ..Default::default()
-                },
-                &audit,
-            )?;
-            Ok(Ok(room))
-        })
-        .await
-        .map_err(db_error)?;
+    let result = create_room(c, kind, name, icon, grantees).await?;
     let room = match result {
         Ok(room) => room,
         Err((name, icon_name)) => {
@@ -187,6 +159,47 @@ pub async fn create(c: &mut Ctx) -> Result {
     redirect_to_room(c, room.id)
 }
 
+pub async fn create_room(
+    c: &Ctx,
+    kind: RoomType,
+    name: Option<String>,
+    icon: Option<String>,
+    grantees: Vec<i64>,
+) -> Result<CreateOutcome> {
+    let creator = require_current_user(c)?.id;
+    let app = c.app().clone();
+    let audit = audit_context(c)?;
+    c.app()
+        .db
+        .write(move |tx| {
+            if !valid_icon(tx.conn(), &app, icon.as_deref()) {
+                return Ok(Err((name, icon)));
+            }
+            let ids = existing_user_ids(tx.conn(), &grantees)?;
+            let mut room = Room::create_for(tx, kind, name.as_deref(), creator, &ids)?;
+            if icon.is_some() {
+                tx.conn().execute_cached(
+                    "UPDATE rooms SET icon_name=? WHERE id=?",
+                    rusqlite::params![icon, room.id],
+                )?;
+                room.reload(tx.conn())?;
+            }
+            AuditLog::record(
+                tx,
+                NewAuditLog {
+                    action: "room.create".into(),
+                    target: Some((&room).into()),
+                    changes: Some(json!({"name":room.name})),
+                    ..Default::default()
+                },
+                &audit,
+            )?;
+            Ok(Ok(room))
+        })
+        .await
+        .map_err(db_error)
+}
+
 pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, scope(c)).await?;
@@ -199,9 +212,30 @@ pub async fn update(c: &mut Ctx) -> Result {
     let values = c.param("user_ids").and_then(campfire_kit::Param::as_array);
     let has_remaining_ids = values.is_some_and(|v| !v.is_empty()) || !ids.is_empty();
     let blank_only = values.is_some_and(|v| v.len() == 1 && v[0].as_str() == Some(""));
+    let result = update_room(c, room, name, icon, ids, has_remaining_ids, blank_only).await?;
+    match result {
+        Ok(room) => {
+            broadcast(c, &room, true).await?;
+            redirect_to_room(c, room.id)
+        }
+        Err((room, errors)) => {
+            let form = form(c, room, errors).await?;
+            render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await
+        }
+    }
+}
+pub async fn update_room(
+    c: &Ctx,
+    room: Room,
+    name: Option<Option<String>>,
+    icon: Option<Option<String>>,
+    ids: Vec<i64>,
+    has_remaining_ids: bool,
+    blank_only: bool,
+) -> Result<UpdateOutcome> {
     let app = c.app().clone();
     let audit = audit_context(c)?;
-    let result=c.app().db.write(move |tx| {
+    c.app().db.write(move |tx| {
         let mut room=Room::find(tx.conn(),room.id)?;
         // Re-read the hosts under the same immediate transaction as the revision.
         if room.stage() && has_remaining_ids {
@@ -232,18 +266,9 @@ pub async fn update(c: &mut Ctx) -> Result {
             AuditLog::record(tx,NewAuditLog{action:"room.membership.change".into(),target:Some((&room).into()),changes:Some(json!({"granted":names(&added)?,"revoked":names(&removed)?})),..Default::default()},&audit)?;
         }
         Ok(Ok(room))
-    }).await.map_err(db_error)?;
-    match result {
-        Ok(room) => {
-            broadcast(c, &room, true).await?;
-            redirect_to_room(c, room.id)
-        }
-        Err((room, errors)) => {
-            let form = form(c, room, errors).await?;
-            render(c, form, StatusCode::UNPROCESSABLE_ENTITY).await
-        }
-    }
+    }).await.map_err(db_error)
 }
+
 async fn form(c: &Ctx, room: Room, errors: Vec<String>) -> Result<CallForm> {
     let app = c.app().clone();
     let current = require_current_user(c)?.clone();
@@ -289,7 +314,7 @@ async fn render(c: &mut Ctx, form: CallForm, status: StatusCode) -> Result {
     }
 }
 
-async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let app = c.app().clone();
     let room = room.clone();
     let base = page::renderer_base_url(c);
@@ -324,6 +349,9 @@ async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
                     );
                 }
             }
+            for membership in room.memberships(conn)? {
+                app.broadcasts.sync_membership_row(membership.id);
+            }
             Ok(())
         })
         .await
@@ -333,6 +361,29 @@ async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
 /// Generic `/rooms/:id` deletion of a voice/stage channel delegates to WS8a's
 /// existing room-deletion seam so call grants and streams end synchronously.
 pub async fn destroy(c: &mut Ctx, room: Room) -> Result {
+    destroy_operation(c, &room).await?;
+    let json_response = *c
+        .respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])?
+        == campfire_kit::format::JSON;
+    if json_response {
+        c.json(StatusCode::OK, &json!({"deleted":true,"room_id":room.id}))
+    } else {
+        let root = c.url_for(&campfire_routes::root());
+        let notice = room
+            .name
+            .filter(|n| !campfire_richtext::ruby::is_blank(n))
+            .map(|n| format!("Deleted #{n}"));
+        c.redirect_to_with(
+            &root,
+            campfire_kit::Redirect {
+                notice,
+                ..Default::default()
+            },
+        )
+    }
+}
+
+pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
     let audit = audit_context(c)?;
     let config = campfire_db::models::room_delete::HuddleConfig {
         api_secret: c.app().config.huddle.api_secret.clone(),
@@ -365,24 +416,6 @@ pub async fn destroy(c: &mut Ctx, room: Room) -> Result {
         })
         .await
         .map_err(db_error)?;
-    c.app().broadcasts.room_remove(&room);
-    let json_response = *c
-        .respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])?
-        == campfire_kit::format::JSON;
-    if json_response {
-        c.json(StatusCode::OK, &json!({"deleted":true,"room_id":room.id}))
-    } else {
-        let root = c.url_for(&campfire_routes::root());
-        let notice = room
-            .name
-            .filter(|n| !campfire_richtext::ruby::is_blank(n))
-            .map(|n| format!("Deleted #{n}"));
-        c.redirect_to_with(
-            &root,
-            campfire_kit::Redirect {
-                notice,
-                ..Default::default()
-            },
-        )
-    }
+    c.app().broadcasts.room_remove(room);
+    Ok(())
 }

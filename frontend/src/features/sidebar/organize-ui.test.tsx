@@ -85,7 +85,6 @@ function row(name: string, options: RowOptions = {}): SidebarRow {
     mentionCount: 0,
     notificationCount: 0,
     threadNotificationCount: 0,
-    revision: 0,
   };
 }
 

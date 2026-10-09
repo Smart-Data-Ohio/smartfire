@@ -138,10 +138,10 @@ async fn google_sign_in_returns_directly_to_the_spa_after_the_last_factor() {
             ("/users/me/profile", "/app/settings"),
             ("/app/settings/security", "/app/settings/security"),
             (
-                "/rooms/486777696?message_id=9",
-                "/app/r/486777696?message_id=9",
+                "/rooms/486777696?message_id=217777555",
+                "/app/r/486777696/m/217777555",
             ),
-            ("/rooms/486777696/events", "/rooms/486777696/events"),
+            ("/rooms/486777696/events", "/app/r/486777696/events"),
         ] {
             let (a, r) = app_with_env(&[("SPA_ENABLED", "1")]).await;
             a.db()

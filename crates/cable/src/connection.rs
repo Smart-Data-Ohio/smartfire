@@ -45,7 +45,7 @@ enum Event {
     Restart,
 }
 
-type InternalMessages = SelectAll<BoxStream<'static, Result<Delivery, RecvError>>>;
+pub(crate) type InternalMessages = SelectAll<BoxStream<'static, Result<Delivery, RecvError>>>;
 
 /// Keep a publication's sequence until the final write; ordinary batches also race disconnect.
 struct PendingFrame {
@@ -292,6 +292,11 @@ fn drain_before_disconnect(deliveries: SelectAll<Deliveries>, sequence: u64) -> 
 /// A remote disconnect's `reconnect`, as the sync socket reads it (anything but `false` reconnects).
 pub(crate) fn process_internal_reconnect(message: &str) -> Option<bool> {
     process_internal_message(message).map(|close| close.reconnect != Value::Bool(false))
+}
+
+/// [`poll_remote_disconnect`] for the sync socket: the disconnect's sequence and `reconnect`.
+pub(crate) fn poll_remote_reconnect(internal: &mut InternalMessages, capacity: usize) -> Option<(u64, bool)> {
+    poll_remote_disconnect(internal, capacity).map(|(sequence, close)| (sequence, close.reconnect != Value::Bool(false)))
 }
 
 /// `InternalChannel#process_internal_message`.

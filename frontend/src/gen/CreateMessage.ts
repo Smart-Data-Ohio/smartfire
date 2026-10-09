@@ -12,25 +12,25 @@
  * returns the message already created, with 200 instead of 201. The response body is the
  * [`MessageDTO`], the same one the `message.created` event carries.
  */
-export type CreateMessage = { 
+export type CreateMessage = {
 /**
  * Chosen by the client (a UUID v7); the pending row is matched to the created message by
  * it, whichever of the response and the `message.created` event arrives first.
  */
-clientMessageId: string, 
+clientMessageId: string,
 /**
  * The Markdown source, rendered by the server's pipeline into `bodyHtml`. Up to
  * `Message::SOURCE_LIMIT` (50 000) characters. May be empty only with an attachment.
  */
-markdownSource: string, 
+markdownSource: string,
 /**
  * The message this one replies to, on the same timeline; `null` for none.
  */
-replyToMessageId: number | null, 
+replyToMessageId: number | null,
 /**
  * Whether the replied-to author is notified; `null` keeps the default (true).
  */
-replyNotifyAuthor: boolean | null, 
+replyNotifyAuthor: boolean | null,
 /**
  * A finished direct upload's `signedId` ([`crate::DirectUpload`]), attached as the
  * message's one file (`message[attachment]` given a signed blob id); `null` for none. Several

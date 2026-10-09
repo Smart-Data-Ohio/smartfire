@@ -119,6 +119,17 @@ describe("presenceOf", () => {
 });
 
 describe("newerUser", () => {
+  it("uses the canonical user's independently observed fields on a row-version tie", () => {
+    const captured = {
+      ...user(7, "member"),
+      customStatus: { emoji: "🌴", text: "Away", expiresAt: null },
+    };
+
+    const canonical = { ...captured, customStatus: null };
+
+    expect(newerUser(captured, canonical)).toBe(canonical);
+  });
+
   const at = (minute: number): User => ({
     ...user(5, "member"),
     updatedAt: `2026-10-07T10:0${minute}:00.000000Z`,

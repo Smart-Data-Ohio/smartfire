@@ -66,6 +66,20 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/t/:id",
         true,
     ),
+    // S6: boards share the room and thread pages above; their new-post and automation pages are
+    // distinct.
+    screen(
+        "channel_threads#new",
+        "/rooms/:room_id/threads/new",
+        "/app/r/:room_id/posts/new",
+        true,
+    ),
+    screen(
+        "rooms/boards/automations#show",
+        "/rooms/boards/:board_id/automations",
+        "/app/r/:board_id/automations",
+        true,
+    ),
     // S8: message aliases share the permalink; the room's permalink above wins on opt-out.
     screen(
         "messages#show",
@@ -118,6 +132,102 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/notifications",
         true,
     ),
+    // S8: making rooms. Each kind's new page opens the create dialog on that kind (the installed
+    // app's "New chat room" shortcut is the open one).
+    screen(
+        "rooms/opens#new",
+        "/rooms/opens/new",
+        "/app/rooms/new/open",
+        true,
+    ),
+    screen(
+        "rooms/closeds#new",
+        "/rooms/closeds/new",
+        "/app/rooms/new/closed",
+        true,
+    ),
+    screen(
+        "rooms/voices#new",
+        "/rooms/voices/new",
+        "/app/rooms/new/voice",
+        true,
+    ),
+    screen(
+        "rooms/stages#new",
+        "/rooms/stages/new",
+        "/app/rooms/new/stage",
+        true,
+    ),
+    screen(
+        "rooms/boards#new",
+        "/rooms/boards/new",
+        "/app/rooms/new/board",
+        true,
+    ),
+    // S8: a room's settings. The classic edit pages are one per kind, and a kind's form saved on
+    // another kind's room would convert it, so the shared settings screen falls back to the room
+    // itself. Boards keep their classic edit page until boards are ported.
+    screen("rooms#show", "/rooms/:id", "/app/r/:id/settings", true),
+    screen(
+        "rooms/opens#edit",
+        "/rooms/opens/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/closeds#edit",
+        "/rooms/closeds/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/voices#edit",
+        "/rooms/voices/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    screen(
+        "rooms/stages#edit",
+        "/rooms/stages/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    // `/rooms/:id/settings` is not a row here. Open, closed, voice and stage settings are this
+    // screen; a board or a direct message is not (the room page bounces a board to classic, and a
+    // direct's settings URL collapses to the conversation). The controller resolves the type and
+    // sends the others to that type's edit form. The rooms#show row above stays the classic
+    // fallback for `/app/r/:id/settings`.
+    // S8: a room's calendar, an event's page, its form and the viewer's response.
+    screen(
+        "rooms/events#index",
+        "/rooms/:room_id/events",
+        "/app/r/:room_id/events",
+        true,
+    ),
+    screen(
+        "rooms/events#new",
+        "/rooms/:room_id/events/new",
+        "/app/r/:room_id/events/new",
+        true,
+    ),
+    screen(
+        "rooms/events#show",
+        "/rooms/:room_id/events/:id",
+        "/app/r/:room_id/events/:id",
+        true,
+    ),
+    screen(
+        "rooms/events#edit",
+        "/rooms/:room_id/events/:id/edit",
+        "/app/r/:room_id/events/:id/edit",
+        true,
+    ),
+    screen(
+        "rooms/events/attendances#show",
+        "/rooms/:room_id/events/:event_id/attendance",
+        "/app/r/:room_id/events/:event_id/attendance",
+        true,
+    ),
     // S8: "Create Fizzy card" on a message, a dialog over its room or its thread.
     screen(
         "rooms/fizzy/message_cards#new",
@@ -140,8 +250,22 @@ pub const SCREENS: &[Screen] = &[
         "/app/scheduled",
         true,
     ),
+    // S4: agents.
+    screen("agents/directory#index", "/agents", "/app/agents", true),
+    screen(
+        "agents/approvals#for_agent",
+        "/agents/:id/approvals",
+        "/app/agents/:id/approvals",
+        true,
+    ),
+    screen(
+        "agents/events#ledger",
+        "/agents/:id/events",
+        "/app/agents/:id/events",
+        true,
+    ),
     screen("searches#index", "/searches", "/app/search", true),
-    screen("work_threads#index", "/work", "/app/work", false),
+    screen("work_threads#index", "/work", "/app/work", true),
     // S7: the signed-in person's own settings (`/users/me/...`).
     screen(
         "users/profiles#show",
@@ -212,7 +336,12 @@ pub const SCREENS: &[Screen] = &[
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
     screen("accounts#edit", "/account/edit", "/app/admin/people", true),
-    screen("accounts/icons#index", "/account/icons", "/app/admin/icons", true),
+    screen(
+        "accounts/icons#index",
+        "/account/icons",
+        "/app/admin/icons",
+        true,
+    ),
     screen(
         "accounts/custom_styles#edit",
         "/account/custom_styles/edit",
@@ -232,8 +361,18 @@ pub const SCREENS: &[Screen] = &[
         true,
     ),
     // S7: the chat bot pages. Their writes stay classic; only the pages move.
-    screen("accounts/bots#index", "/account/bots", "/app/admin/bots", true),
-    screen("accounts/bots#new", "/account/bots/new", "/app/admin/bots/new", true),
+    screen(
+        "accounts/bots#index",
+        "/account/bots",
+        "/app/admin/bots",
+        true,
+    ),
+    screen(
+        "accounts/bots#new",
+        "/account/bots/new",
+        "/app/admin/bots/new",
+        true,
+    ),
     screen(
         "accounts/bots#edit",
         "/account/bots/:id/edit",
@@ -277,7 +416,12 @@ pub const SCREENS: &[Screen] = &[
         "/app/admin/slack/runs/:id/plan",
         true,
     ),
-    screen("slack/imports#index", "/slack/imports", "/app/settings/slack", true),
+    screen(
+        "slack/imports#index",
+        "/slack/imports",
+        "/app/settings/slack",
+        true,
+    ),
     screen(
         "slack/imports#show",
         "/slack/imports/:id",
@@ -286,18 +430,217 @@ pub const SCREENS: &[Screen] = &[
     ),
 ];
 
+/// A room-query id the server has checked: it belongs to that room, and the viewer can see it.
+/// The screen map passes none of these and translates every well-formed id; it has no database.
+/// A well-formed id that isn't confirmed is left on the plain room route, as a value that isn't
+/// an id is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ConfirmedRoomQuery {
+    pub thread: Option<u64>,
+    pub message: Option<u64>,
+}
+
+/// The `thread` and `message_id` a classic room page would open from `query`.
+///
+/// Names and values are percent-decoded (`+` is a space) before the id check, so `thread=%39`
+/// is thread 9. `thread` is the first value, which is what the thread panel reads with
+/// `URLSearchParams.get`. A non-empty `thread` makes `message_id` the first value too: the
+/// panel forwards that id into the thread. With no thread (or an empty one), `message_id` is
+/// the last value, which is what the room controller reads from params. Only that value is
+/// parsed: another duplicate is not a fallback when the effective one isn't an id.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct RoomQueryIds {
+    pub thread: Option<u64>,
+    pub message: Option<u64>,
+}
+
+/// The room id of a `/rooms/:id` path, when the path is exactly that.
+pub fn room_show_id(path: &str) -> Option<i64> {
+    captures("/rooms/:id", path)?
+        .into_iter()
+        .find(|(name, _)| *name == "id")
+        .map(|(_, id)| id as i64)
+}
+
+pub fn room_query_ids(query: Option<&str>) -> RoomQueryIds {
+    let parsed = parse_room_query(query);
+    RoomQueryIds {
+        thread: parsed.thread,
+        message: parsed.message,
+    }
+}
+
 /// The SPA URL for a classic `GET` of `endpoint` at `path`, when the SPA has ported that screen.
-/// `query` (without its `?`) carries over, less `classic`.
+/// `query` (without its `?`) carries over, less `classic`. A room's `thread` and `message_id`
+/// parameters become the thread and message routes (`/app/r/:id/t/:thread` with `m` for a reply,
+/// or `/app/r/:id/m/:message` when there is no thread).
 pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
+    spa_url_inner(endpoint, path, query, None)
+}
+
+/// [`spa_url`], translating a room's `thread` and `message_id` only when `confirmed` names them.
+pub fn spa_url_confirmed(
+    endpoint: &str,
+    path: &str,
+    query: Option<&str>,
+    confirmed: ConfirmedRoomQuery,
+) -> Option<String> {
+    spa_url_inner(endpoint, path, query, Some(confirmed))
+}
+
+fn spa_url_inner(
+    endpoint: &str,
+    path: &str,
+    query: Option<&str>,
+    confirmed: Option<ConfirmedRoomQuery>,
+) -> Option<String> {
     SCREENS
         .iter()
         .filter(|screen| screen.ported && screen.endpoint == endpoint)
         .find_map(|screen| {
-            Some(with_query(
-                fill(screen.spa, &captures(screen.classic, path)?),
-                query,
-            ))
+            let spa = fill(screen.spa, &captures(screen.classic, path)?);
+            if screen.classic == "/rooms/:id"
+                && screen.spa == "/app/r/:id"
+                && let Some(url) = room_notification_url(&spa, query, confirmed)
+            {
+                return Some(url);
+            }
+            Some(with_query(spa, query))
         })
+}
+
+/// Notification links open a room as `/rooms/:id?thread=&message_id=`. The SPA reads a thread at
+/// `/app/r/:id/t/:thread` (`?m=` scrolls to a reply) and a timeline message at `/app/r/:id/m/:id`.
+/// `None` when neither effective value is a record id the caller accepts, so the plain room URL
+/// keeps the query. A duplicate of a rejected value is not tried.
+fn room_notification_url(
+    spa: &str,
+    query: Option<&str>,
+    confirmed: Option<ConfirmedRoomQuery>,
+) -> Option<String> {
+    let parsed = parse_room_query(query);
+    let accepted = |id, message: bool| match confirmed {
+        None => true,
+        Some(confirmed) if message => confirmed.message == Some(id),
+        Some(confirmed) => confirmed.thread == Some(id),
+    };
+    let thread = parsed.thread.filter(|id| accepted(*id, false));
+    let message = parsed.message.filter(|id| accepted(*id, true));
+    if thread.is_none() && message.is_none() {
+        return None;
+    }
+    let mut rest = parsed.rest;
+    let mut url = spa.to_string();
+    match (thread, message) {
+        (Some(thread), message) => {
+            url.push_str("/t/");
+            url.push_str(&thread.to_string());
+            if let Some(message) = message {
+                rest.insert(0, format!("m={message}"));
+            }
+        }
+        (None, Some(message)) => {
+            url.push_str("/m/");
+            url.push_str(&message.to_string());
+        }
+        (None, None) => return None,
+    }
+    if !rest.is_empty() {
+        url.push('?');
+        url.push_str(&rest.join("&"));
+    }
+    Some(url)
+}
+
+/// `thread` (first value) and `message_id` from `query`, plus every other pair.
+/// A non-empty `thread` selects the first `message_id`; otherwise the last. `classic` is
+/// dropped. A parameter whose effective value isn't an id stays `None`.
+struct ParsedRoomQuery {
+    thread: Option<u64>,
+    message: Option<u64>,
+    rest: Vec<String>,
+}
+
+fn parse_room_query(query: Option<&str>) -> ParsedRoomQuery {
+    let mut thread_pair: Option<Option<u64>> = None;
+    let mut thread_opens = false;
+    let mut message_first: Option<Option<u64>> = None;
+    let mut message_last: Option<u64> = None;
+    let mut rest = Vec::new();
+    for pair in query.unwrap_or("").split('&') {
+        if pair.is_empty() {
+            continue;
+        }
+        let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match query_component(name).as_deref() {
+            Some("classic") => {}
+            Some("thread") if thread_pair.is_none() => {
+                let decoded = query_component(value);
+                thread_opens = decoded.as_ref().is_some_and(|text| !text.is_empty());
+                thread_pair = Some(decoded.as_deref().and_then(id));
+            }
+            Some("thread") => {}
+            Some("message_id") => {
+                let parsed = record_id(value);
+                if message_first.is_none() {
+                    message_first = Some(parsed);
+                }
+                message_last = parsed;
+            }
+            _ => rest.push(pair.to_string()),
+        }
+    }
+    ParsedRoomQuery {
+        thread: thread_pair.flatten(),
+        message: if thread_opens {
+            message_first.flatten()
+        } else {
+            message_last
+        },
+        rest,
+    }
+}
+
+/// A record id from a query component, percent-decoded first.
+fn record_id(raw: &str) -> Option<u64> {
+    id(&query_component(raw)?)
+}
+
+/// One application/x-www-form-urlencoded component (`+` is a space). `None` when the encoding
+/// is broken, so the value cannot be a record id.
+fn query_component(raw: &str) -> Option<String> {
+    let mut out = Vec::with_capacity(raw.len());
+    let bytes = raw.as_bytes();
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'+' => {
+                out.push(b' ');
+                index += 1;
+            }
+            b'%' if index + 2 < bytes.len() => {
+                let hi = from_hex(bytes[index + 1])?;
+                let lo = from_hex(bytes[index + 2])?;
+                out.push((hi << 4) | lo);
+                index += 3;
+            }
+            b'%' => return None,
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+fn from_hex(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 /// The classic URL for an SPA `path` (under `/app/`), ported or not: where "Switch to classic"

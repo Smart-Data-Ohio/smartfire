@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, type MouseEvent, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { SavedFilter } from "../../gen/SavedFilter.ts";
 import type { SavedItem } from "../../gen/SavedItem.ts";
 import { type SavedRow as SavedEntry, useSavedList } from "../../store/inbox-hooks.ts";
@@ -150,10 +150,10 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
         failed("Couldn't remove it"),
       );
     },
-    onMenu: (item, event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => {
+    onMenu: (item, source) => {
       const id = (menu?.request.id ?? 0) + 1;
 
-      requestMenu(id, event, (request) => setMenu({ request, itemId: item.id }));
+      requestMenu(id, source, (request) => setMenu({ request, itemId: item.id }));
     },
   };
 

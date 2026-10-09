@@ -30,6 +30,7 @@ export function useFollowPosted(
   topic: string,
   items: readonly TimelineItem[],
   listRef: RefObject<Pick<VListHandle, "scrollToIndex"> | null>,
+  beforeFollow?: () => void,
 ): void {
   const postedId = useZustand(postedStore, (state) => state[topic] ?? null);
 
@@ -43,7 +44,8 @@ export function useFollowPosted(
       return;
     }
 
+    beforeFollow?.();
     listRef.current?.scrollToIndex(index, { align: "end" });
     forgetPosted(topic, postedId);
-  }, [topic, postedId, index, listRef]);
+  }, [topic, postedId, index, listRef, beforeFollow]);
 }

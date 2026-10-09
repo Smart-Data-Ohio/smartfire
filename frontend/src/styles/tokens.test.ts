@@ -1,7 +1,8 @@
 // @vitest-environment node
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { PHONE_QUERY } from "../lib/breakpoints.ts";
 import {
   composite,
   contrastRatio,
@@ -10,6 +11,7 @@ import {
   parseOklch,
   type Rgb,
 } from "../lib/color.ts";
+import { DEFAULT_PALETTE_TOKENS, PALETTES, paletteTokens } from "../lib/palette.ts";
 import { AVATAR_HUES } from "../ui/avatar-palette.ts";
 
 type Theme = "light" | "dark";
@@ -50,25 +52,32 @@ function splitPair(value: string): readonly [string, string] {
 // Read from disk: Vitest stubs CSS imports, `?raw` included, unless CSS processing is on.
 const TOKENS = readTokens(readFileSync(new URL("./tokens.css", import.meta.url), "utf8"));
 
-/** Resolves var() and light-dark() chains down to one oklch() colour for the theme. */
-function resolve(value: string, theme: Theme): string {
+/**
+ * Resolves var() and light-dark() chains down to one oklch() colour for the theme, reading
+ * `tokens` (tokens.css, or tokens.css under a palette's overrides).
+ */
+function resolve(
+  value: string,
+  theme: Theme,
+  tokens: ReadonlyMap<string, string> = TOKENS,
+): string {
   const variable = /^var\((--[\w-]+)\)$/.exec(value);
 
   if (variable !== null) {
     const name = variable[1] ?? "";
-    const next = TOKENS.get(name);
+    const next = tokens.get(name);
 
     if (next === undefined) {
       throw new Error(`unknown token ${name}`);
     }
 
-    return resolve(next, theme);
+    return resolve(next, theme, tokens);
   }
 
   if (value.startsWith("light-dark(") && value.endsWith(")")) {
     const [light, dark] = splitPair(value.slice("light-dark(".length, -1));
 
-    return resolve(theme === "light" ? light : dark, theme);
+    return resolve(theme === "light" ? light : dark, theme, tokens);
   }
 
   return value;
@@ -84,8 +93,8 @@ function parsed(value: string, label: string): Oklch {
   return color;
 }
 
-function color(token: string, theme: Theme): Rgb {
-  const value = parsed(resolve(`var(${token})`, theme), `${token} (${theme})`);
+function color(token: string, theme: Theme, tokens: ReadonlyMap<string, string> = TOKENS): Rgb {
+  const value = parsed(resolve(`var(${token})`, theme, tokens), `${token} (${theme})`);
 
   if (value.alpha !== 1) {
     throw new Error(`${token} is translucent in ${theme}; test it as "${token} over <surface>"`);
@@ -98,17 +107,17 @@ function color(token: string, theme: Theme): Rgb {
  * A background as painted: one opaque token, or translucent layers over one, written top first
  * ("--mention-chip-bg over --mention-bg over --bg-pane").
  */
-function surface(spec: string, theme: Theme): Rgb {
+function surface(spec: string, theme: Theme, tokens: ReadonlyMap<string, string> = TOKENS): Rgb {
   const layers = spec.split(" over ");
   const base = layers.pop() ?? spec;
 
   return layers.reduceRight(
     (below, token) => {
-      const layer = parsed(resolve(`var(${token})`, theme), `${token} (${theme})`);
+      const layer = parsed(resolve(`var(${token})`, theme, tokens), `${token} (${theme})`);
 
       return composite(oklchToRgb({ ...layer, alpha: 1 }), layer.alpha, below);
     },
-    color(base, theme),
+    color(base, theme, tokens),
   );
 }
 
@@ -124,9 +133,9 @@ const SURFACES = [
   "--bg-sunken",
 ];
 
-/** Text token → the backgrounds it is used on. */
-const PAIRS = new Map<string, readonly string[]>([
-  ["--text", SURFACES],
+/** Text token → the backgrounds it is used on; each text token once (a Map keeps the last). */
+const PAIR_LIST: readonly (readonly [string, readonly string[]])[] = [
+  ["--text", [...SURFACES, "--mention-bg over --bg-pane"]],
   ["--text-strong", SURFACES],
   ["--text-muted", SURFACES],
   ["--text-faint", SURFACES],
@@ -141,7 +150,6 @@ const PAIRS = new Map<string, readonly string[]>([
       "--bg-sidebar",
     ],
   ],
-  ["--text", ["--mention-bg over --bg-pane"]],
   ["--danger-text", ["--bg-pane", "--bg-raised", "--bg-hover", "--danger-soft"]],
   ["--success-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
   ["--warning-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
@@ -149,7 +157,9 @@ const PAIRS = new Map<string, readonly string[]>([
   ["--tooltip-text", ["--tooltip-bg"]],
   ["--on-accent", ["--accent-solid"]],
   ["--on-danger", ["--danger-solid"]],
-]);
+];
+
+const PAIRS = new Map(PAIR_LIST);
 
 /** A component's `--name: value;` declaration, read from its stylesheet in src/ui. */
 function declaration(file: string, name: string): string {
@@ -174,6 +184,23 @@ const AVATAR_CASES = (["light", "dark"] as const).flatMap((theme) =>
   AVATAR_HUES.map((hue) => ({ theme, hue })),
 );
 
+/** tokens.css as a palette leaves it: its tokens over the stylesheet's. */
+const PALETTE_CASES = PALETTES.filter((palette) => palette.seed !== null).flatMap((palette) => {
+  const tokens = new Map([...TOKENS, ...paletteTokens(palette.value)]);
+
+  return (["light", "dark"] as const).flatMap((theme) =>
+    [...PAIRS].flatMap(([text, backgrounds]) =>
+      backgrounds.map((background) => ({
+        palette: palette.label,
+        tokens,
+        theme,
+        text,
+        background,
+      })),
+    ),
+  );
+});
+
 const CASES = (["light", "dark"] as const).flatMap((theme) =>
   [...PAIRS].flatMap(([text, backgrounds]) =>
     backgrounds.map((background) => ({ theme, text, background })),
@@ -192,6 +219,32 @@ describe("design tokens", () => {
       ratio,
       `${text} on ${background} (${theme}) is ${ratio.toFixed(2)}:1`,
     ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(PALETTE_CASES)(
+    "$text on $background holds 4.5:1 in $theme with the $palette palette",
+    ({ tokens, theme, text, background }) => {
+      const ratio = contrastRatio(color(text, theme, tokens), surface(background, theme, tokens));
+
+      expect(
+        ratio,
+        `${text} on ${background} (${theme}) is ${ratio.toFixed(2)}:1`,
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
+  it("lists each text token's backgrounds once, so none is dropped from the checks", () => {
+    const names = PAIR_LIST.map(([text]) => text);
+
+    expect(new Set(names).size).toBe(names.length);
+    expect(PAIRS.get("--text")).toEqual(expect.arrayContaining([...SURFACES]));
+  });
+
+  it("knows the stylesheet's own value for every token a palette replaces", () => {
+    // The palette picker paints Smartfire's swatch with these, whatever palette is on the page.
+    for (const [name, value] of DEFAULT_PALETTE_TOKENS) {
+      expect(value, name).toBe(TOKENS.get(name));
+    }
   });
 
   it.each(AVATAR_CASES)("avatar initials hold 4.5:1 on hue $hue in $theme", ({ theme, hue }) => {
@@ -220,4 +273,98 @@ describe("design tokens", () => {
       expect(ratio, `${stop} (${theme}) is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
     },
   );
+});
+
+/** The `@layer a, b, c;` order statement in `text`, as a list of names. */
+function layerOrder(text: string): readonly string[] {
+  const match = /@layer\s+([\w\s,-]+);/.exec(text);
+
+  return (match?.[1] ?? "").split(",").map((name) => name.trim());
+}
+
+describe("cascade layers", () => {
+  // The production build links shared chunks' stylesheets before the entry's and minifies the
+  // order statement out of tokens.css, so index.html declares the order ahead of every sheet.
+  it("index.html declares the same layer order as tokens.css, ahead of any stylesheet", () => {
+    const tokens = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
+    const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
+    const style = /<style>([^<]*)<\/style>/.exec(html);
+
+    expect(layerOrder(tokens)).toEqual(["tokens", "base", "motion", "recipes", "ui", "app"]);
+    expect(style).not.toBeNull();
+    expect(layerOrder(style?.[1] ?? "")).toEqual(layerOrder(tokens));
+    expect(html.indexOf("<style>")).toBeLessThan(html.indexOf("<!--boot-->"));
+    expect(html).not.toMatch(/<link[^>]+stylesheet/);
+  });
+});
+
+/** `#rrggbb` for an sRGB colour, as a `<meta name="theme-color">` carries it. */
+function hex({ r, g, b }: Rgb): string {
+  return `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const SRC = new URL("../", import.meta.url);
+
+/** Every width a media query compares against in src (CSS and script), with where it is. */
+function widthQueries(): readonly { readonly where: string; readonly query: string }[] {
+  const files = readdirSync(SRC, { recursive: true, encoding: "utf8" }).filter(
+    (file) => /\.(css|tsx?)$/.test(file) && !/\.test\.tsx?$/.test(file) && !file.startsWith("gen/"),
+  );
+
+  return files.flatMap((file) => {
+    // Comments blanked to their line breaks, so a query quoted in prose isn't read as one.
+    const text = readFileSync(new URL(file, SRC), "utf8").replaceAll(
+      /\/\*[\s\S]*?\*\//g,
+      (comment) => comment.replaceAll(/[^\n]/g, ""),
+    );
+
+    const pattern = file.endsWith(".css")
+      ? /@media\s+([^{]*width[^{]*)\{/g
+      : /["'`](\([^"'`]*width[^"'`]*\))["'`]/g;
+
+    return [...text.matchAll(pattern)].map((match) => ({
+      where: `${file}:${text.slice(0, match.index).split("\n").length}`,
+      query: (match[1] ?? "").trim(),
+    }));
+  });
+}
+
+describe("phone foundation", () => {
+  const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
+
+  it("has one phone breakpoint, spelled `width < 720px` everywhere", () => {
+    expect(TOKENS.get("--bp-phone")).toBe("720px");
+    expect(PHONE_QUERY).toBe(`(width < ${TOKENS.get("--bp-phone")})`);
+
+    const queries = widthQueries();
+
+    // Below 720 px is the phone layout, so a width there is a second phone breakpoint; 720 itself
+    // must read `width < 720px` (or `720px <= width`), never `max-width: 720px`, which is off by one.
+    const strays = queries.filter(({ query }) =>
+      [...query.matchAll(/(\d+)px/g)].some(([, value]) => {
+        const px = Number(value);
+
+        return px < 720 || (px === 720 && !/width < 720px|720px <= width/.test(query));
+      }),
+    );
+
+    expect(queries.length).toBeGreaterThan(20);
+    expect(strays.map(({ where, query }) => `${where} ${query}`)).toEqual([]);
+  });
+
+  it("lets the app draw under the notch and has Android resize it for the keyboard", () => {
+    const viewport = /<meta\s+name="viewport"\s+content="([^"]+)"/.exec(html)?.[1] ?? "";
+
+    expect(viewport.split(/,\s*/)).toEqual(
+      expect.arrayContaining(["viewport-fit=cover", "interactive-widget=resizes-content"]),
+    );
+  });
+
+  it.each(["light", "dark"] as const)("colours the %s browser bar as the sidebar", (theme) => {
+    const meta = new RegExp(
+      `<meta name="theme-color" content="(#[0-9a-f]{6})" media="\\(prefers-color-scheme: ${theme}\\)" data-scheme="${theme}" />`,
+    ).exec(html);
+
+    expect(meta?.[1]).toBe(hex(color("--bg-sidebar", theme)));
+  });
 });

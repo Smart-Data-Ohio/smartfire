@@ -8,11 +8,11 @@ import type { User } from "./User";
  * DESC`), 30 a page. `filename` matches anywhere, case-insensitive; `page` starts at 1 and stops
  * at 20. Google Drive attachments aren't listed here.
  */
-export type FileList = { files: Array<RoomFile>, 
+export type FileList = { files: Array<RoomFile>,
 /**
  * The files' posters, once each.
  */
-users: Array<User>, 
+users: Array<User>,
 /**
  * The page to ask for next; `null` on the last one.
  */

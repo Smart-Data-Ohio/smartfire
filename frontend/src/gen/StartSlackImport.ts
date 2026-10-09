@@ -4,7 +4,7 @@ import type { SlackPreset } from "./SlackPreset";
 /**
  * `POST /api/v1/admin/slack/runs/:id/import` (`accounts/slack_import_runs#start_import`).
  */
-export type StartSlackImport = { conversationIds: Array<string>, 
+export type StartSlackImport = { conversationIds: Array<string>,
 /**
  * Each checked conversation's target, as [`SlackPlanConversation::target`] spells it.
  */

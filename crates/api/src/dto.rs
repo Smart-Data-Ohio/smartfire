@@ -8,7 +8,8 @@ use campfire_app::app::AppState;
 use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{
     CachedStatements, Connection, Involvement, Membership, Message, MessagePin, Result, Role, Room,
-    RoomType, StageRole, Status, Timestamp, User, UserStatusSettings, WorkspacePresenceLease,
+    RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
+    WorkspacePresenceLease,
 };
 use campfire_web::controllers::presenters::{self, Presenter, accounts, room_shell};
 use rails_compat::Secrets;
@@ -18,8 +19,8 @@ pub fn time(time: Timestamp) -> String {
     time.to_wire()
 }
 
-/// `users.updated_at` with fixed-width microseconds, so string order preserves row order.
-pub fn user_updated_at(time: Timestamp) -> String {
+/// A row version in UTC with exactly six fractional digits and `Z`, so string order is time order.
+pub fn row_version(time: Timestamp) -> String {
     time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()
 }
 
@@ -50,16 +51,23 @@ impl UserExtras {
             .map(|user| user.id)
             .collect();
         let agents = agent_badges(conn, &bots)?;
+        let icon_users: Vec<_> = users
+            .iter()
+            .filter(|user| {
+                user.is_bot() && !avatars.contains(&user.id) && user.icon_name.is_some()
+            })
+            .collect();
+        let custom_titles: HashMap<String, String> = if icon_users.is_empty() {
+            HashMap::new()
+        } else {
+            conn.prepare("SELECT name,title FROM workspace_icons")?
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?
+        };
         let mut icons = HashMap::new();
-        for user in users.iter().filter(|user| user.is_bot()) {
-            if avatars.contains(&user.id) {
-                continue;
-            }
-            if let Some(icon) = user
-                .icon_name
-                .as_deref()
-                .and_then(|name| avatar_icon(conn, name))
-            {
+        for user in icon_users {
+            let name = user.icon_name.as_deref().unwrap();
+            if let Some(icon) = avatar_icon(name, custom_titles.get(name).map(String::as_str)) {
                 icons.insert(user.id, icon);
             }
         }
@@ -118,9 +126,21 @@ pub fn agent_status(status: &str) -> api::AgentStatus {
 
 /// `users.icon_name` resolved as the classic avatar does (`resolve_avatar_icon`): a brand logo,
 /// else a workspace icon, else the built-in icon or emoji of that name.
-pub fn avatar_icon(conn: &Connection, name: &str) -> Option<api::Icon> {
+fn avatar_icon(name: &str, custom_title: Option<&str>) -> Option<api::Icon> {
     use campfire_views::helpers::AvatarIcon;
-    Some(match presenters::resolve_avatar_icon(conn, name)? {
+    let builtin = campfire_views::messages::reactions::static_icon(name);
+    let resolved = if matches!(builtin, Some(AvatarIcon::Image { brand: true, .. })) {
+        builtin
+    } else {
+        custom_title
+            .map(|title| AvatarIcon::Image {
+                title: title.to_string(),
+                url: format!("/icons/{name}"),
+                brand: false,
+            })
+            .or(builtin)
+    };
+    Some(match resolved? {
         AvatarIcon::Emoji { title, character } => api::Icon {
             name: name.to_string(),
             title,
@@ -183,7 +203,7 @@ pub fn user(
         avatar_icon: extras.icons.get(&user.id).cloned(),
         agent: extras.agents.get(&user.id).cloned(),
         created_at: time(user.created_at),
-        updated_at: user_updated_at(user.updated_at),
+        updated_at: row_version(user.updated_at),
     }
 }
 
@@ -428,7 +448,7 @@ fn agent_step(row: &rusqlite::Row<'_>) -> rusqlite::Result<api::AgentStep> {
         duration_ms: row.get(7)?,
         position: row.get(8)?,
         created_at: time(row.get(9)?),
-        updated_at: time(row.get(10)?),
+        updated_at: row_version(row.get(10)?),
     })
 }
 
@@ -880,17 +900,39 @@ pub(crate) fn notification_counts(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// Runs `read` in one read snapshot: a savepoint, which opens a transaction on a connection
-/// outside one and nests inside one, so every count it reads agrees.
-fn in_snapshot<T>(conn: &Connection, read: impl FnOnce() -> Result<T>) -> Result<T> {
-    conn.execute_batch(r#"SAVEPOINT "sidebar_snapshot""#)?;
-    let result = read();
-    let end = match result {
-        Ok(_) => r#"RELEASE "sidebar_snapshot""#,
-        Err(_) => r#"ROLLBACK TO "sidebar_snapshot"; RELEASE "sidebar_snapshot""#,
-    };
-    conn.execute_batch(end)?;
-    result
+/// Each direct room's newest root message that isn't a system note, by room: one statement,
+/// whose per-room subquery walks `index_messages_on_room_thread_created` back from the newest
+/// (SQLite's lateral join). The excerpt is the search index's body (the plain text
+/// `create_in_index` stores) with whitespace collapsed.
+fn last_direct_messages(
+    conn: &Connection,
+    room_ids: &[i64],
+) -> Result<HashMap<i64, api::SidebarLastMessage>> {
+    let rows = ids_query(
+        conn,
+        r#"SELECT "messages"."room_id", "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."id" IN (SELECT (SELECT "newest"."id" FROM "messages" AS "newest" WHERE "newest"."room_id" = "rooms"."id" AND "newest"."thread_id" IS NULL AND NOT "newest"."system_note" ORDER BY "newest"."created_at" DESC, "newest"."id" DESC LIMIT 1) FROM "rooms" WHERE "rooms"."id" IN ({}))"#,
+        room_ids,
+        |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Timestamp>(3)?,
+            ))
+        },
+    )?;
+    Ok(rows
+        .into_iter()
+        .map(|(room_id, creator_id, body, created_at)| {
+            let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
+            let last = api::SidebarLastMessage {
+                creator_id,
+                excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
+                created_at: time(created_at),
+            };
+            (room_id, last)
+        })
+        .collect())
 }
 
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
@@ -907,7 +949,7 @@ fn sidebar_row_with(
     viewer_name: &str,
     members: Option<&[(i64, String)]>,
     counts: RoomCounts,
-    revision: i64,
+    last_message: Option<api::SidebarLastMessage>,
 ) -> api::SidebarRow {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -929,55 +971,30 @@ fn sidebar_row_with(
         mention_count: counts.mentions,
         notification_count: counts.notifications,
         thread_notification_count: counts.thread_notifications,
-        revision,
+        last_message,
+        refresh_room: None,
     }
 }
 
-/// The sidebar's revision as of the open snapshot: a counter the `sidebar_revision_*` triggers
-/// bump in every write transaction that changes something a sidebar row is made from, so it
-/// follows commit order (see `SidebarRow::revision`). 0 until the first such write.
-fn sidebar_revision(conn: &Connection) -> Result<i64> {
-    Ok(conn.query_row_cached(
-        r#"SELECT COALESCE((SELECT "value" FROM "sidebar_revisions" WHERE "id" = 1), 0)"#,
-        [],
-        |row| row.get(0),
-    )?)
-}
-
-/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar (or the
-/// membership is gone). Everything is read afresh inside one snapshot with its revision.
-pub fn sidebar_row(conn: &Connection, membership_id: i64) -> Result<Option<api::SidebarRow>> {
-    in_snapshot(conn, || {
-        let revision = sidebar_revision(conn)?;
-        let membership = match Membership::find(conn, membership_id) {
-            Ok(membership) => membership,
-            Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
-            Err(error) => return Err(error),
-        };
-        let room = membership.room(conn)?;
-        if !visible(&room, &membership) {
-            return Ok(None);
-        }
-        row_in_snapshot(conn, &room, &membership, revision).map(Some)
-    })
+/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar. Read
+/// from one snapshot, as the membership must be: its direct preview is only what it could see.
+pub fn sidebar_row(
+    conn: &Snapshot<'_>,
+    room: &Room,
+    membership: &Membership,
+) -> Result<Option<api::SidebarRow>> {
+    if !visible(room, membership) {
+        return Ok(None);
+    }
+    membership_row(conn, room, membership).map(Some)
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
-/// answer to an organising call on a hidden room. Read in one snapshot, as [`sidebar_row`].
-pub fn membership_row(conn: &Connection, membership_id: i64) -> Result<api::SidebarRow> {
-    in_snapshot(conn, || {
-        let revision = sidebar_revision(conn)?;
-        let membership = Membership::find(conn, membership_id)?;
-        let room = membership.room(conn)?;
-        row_in_snapshot(conn, &room, &membership, revision)
-    })
-}
-
-fn row_in_snapshot(
-    conn: &Connection,
+/// answer to an organising call on a hidden room. From one snapshot, as [`sidebar_row`] is.
+pub fn membership_row(
+    conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
-    revision: i64,
 ) -> Result<api::SidebarRow> {
     let viewer = User::find(conn, membership.user_id)?;
     let members = if room.direct() {
@@ -988,41 +1005,41 @@ fn row_in_snapshot(
     let counts = notification_counts(conn, membership.user_id, Some(room.id))?
         .remove(&room.id)
         .unwrap_or_default();
+    let last_message = if room.direct() {
+        last_direct_messages(conn, &[room.id])?.remove(&room.id)
+    } else {
+        None
+    };
     Ok(sidebar_row_with(
         room,
         membership,
         &viewer.name,
         members.as_deref(),
         counts,
-        revision,
+        last_message,
     ))
 }
 
-/// The viewer's sidebar, read in one snapshot: its rows, their counts (one statement for every
-/// room) and the revision they all carry.
+/// The person's whole sidebar, from one snapshot: the memberships it lists, their counts (one
+/// statement for every room) and the direct previews it shows are read together, so neither a
+/// count nor a preview is newer than the membership.
 pub fn sidebar(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     secrets: &Secrets,
-    viewer_id: i64,
+    viewer: &User,
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
-    in_snapshot(conn, || {
-        sidebar_in_snapshot(conn, secrets, viewer_id, can_create_rooms, now)
-    })
-}
-
-fn sidebar_in_snapshot(
-    conn: &Connection,
-    secrets: &Secrets,
-    viewer_id: i64,
-    can_create_rooms: bool,
-    now: Timestamp,
-) -> Result<api::Sidebar> {
-    let revision = sidebar_revision(conn)?;
-    let viewer = User::find(conn, viewer_id)?;
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let counts = notification_counts(conn, viewer.id, None)?;
+    let direct_ids: Vec<i64> = all
+        .iter()
+        .filter(|(_, room)| room.direct())
+        .map(|(_, room)| room.id)
+        .collect();
+    let mut last_messages = last_direct_messages(conn, &direct_ids)?;
     let mut user_ids = BTreeSet::new();
     let mut rows = Vec::with_capacity(all.len());
     for (membership, room) in &all {
@@ -1037,12 +1054,12 @@ fn sidebar_in_snapshot(
             &viewer.name,
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
-            revision,
+            last_messages.remove(&room.id),
         );
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);
     }
-    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, &viewer)?
+    let placeholders: Vec<i64> = accounts::direct_placeholder_user_rows(conn, viewer)?
         .iter()
         .map(|user| user.id)
         .collect();
@@ -1455,19 +1472,35 @@ pub fn thread_list(
             })
             .collect(),
     };
-    let mut facts = crate::work::facts(conn, secrets, &threads, now)?;
-    let mut summaries = Vec::with_capacity(threads.len());
-    for thread in &threads {
-        let membership = thread.membership_for(conn, viewer_id)?;
-        summaries.push(api::ThreadSummary {
-            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
-            membership: membership.as_ref().map(thread_membership),
-        });
-    }
     Ok(api::ThreadList {
         users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
-        threads: summaries,
+        threads: thread_summaries(conn, secrets, viewer_id, room, &threads, now)?,
     })
+}
+
+/// Thread rows for a room page, with work facts and viewer memberships loaded in batches.
+pub(crate) fn thread_summaries(
+    conn: &Connection,
+    secrets: &Secrets,
+    viewer_id: i64,
+    room: &Room,
+    threads: &[campfire_db::ChannelThread],
+    now: Timestamp,
+) -> Result<Vec<api::ThreadSummary>> {
+    let mut facts = crate::work::facts(conn, secrets, threads, now)?;
+    let ids: Vec<i64> = threads.iter().map(|thread| thread.id).collect();
+    let memberships: HashMap<i64, campfire_db::ThreadMembership> =
+        campfire_db::ThreadMembership::for_user_threads(conn, viewer_id, &ids)?
+            .into_iter()
+            .map(|membership| (membership.thread_id, membership))
+            .collect();
+    Ok(threads
+        .iter()
+        .map(|thread| api::ThreadSummary {
+            thread: self::thread(thread, room, now, facts.remove(&thread.id)),
+            membership: memberships.get(&thread.id).map(thread_membership),
+        })
+        .collect())
 }
 
 /// Files a page of `GET /api/v1/rooms/:id/files` holds.
@@ -1560,7 +1593,85 @@ fn room_file_rows(
 
 #[cfg(test)]
 mod tests {
-    use super::inline_mentions;
+    use super::{Timestamp, api, avatar_icon, inline_mentions, row_version, time};
+
+    #[test]
+    fn preloaded_avatar_icons_preserve_brand_custom_and_emoji_precedence() {
+        assert_eq!(
+            avatar_icon("github", Some("Custom GitHub")),
+            Some(api::Icon {
+                name: "github".into(),
+                title: "GitHub".into(),
+                kind: api::IconKind::Brand,
+                character: None,
+                image_url: Some("icons/brands/github.svg".into()),
+            }),
+        );
+        assert_eq!(
+            avatar_icon("robot", Some("Workspace robot")),
+            Some(api::Icon {
+                name: "robot".into(),
+                title: "Workspace robot".into(),
+                kind: api::IconKind::Custom,
+                character: None,
+                image_url: Some("/icons/robot".into()),
+            }),
+        );
+        assert_eq!(
+            avatar_icon("robot", None),
+            Some(api::Icon {
+                name: "robot".into(),
+                title: "Robot".into(),
+                kind: api::IconKind::Emoji,
+                character: Some("🤖".into()),
+                image_url: None,
+            }),
+        );
+        assert_eq!(avatar_icon("missing-icon", None), None);
+    }
+
+    #[test]
+    fn row_versions_pad_seconds_and_preserve_microseconds() {
+        for (input, version, milliseconds) in [
+            (
+                "2026-10-07T10:15:00Z",
+                "2026-10-07T10:15:00.000000Z",
+                "2026-10-07T10:15:00.000Z",
+            ),
+            (
+                "2026-10-07T10:15:00.123Z",
+                "2026-10-07T10:15:00.123000Z",
+                "2026-10-07T10:15:00.123Z",
+            ),
+            (
+                "2026-10-07T10:15:00.123456Z",
+                "2026-10-07T10:15:00.123456Z",
+                "2026-10-07T10:15:00.123Z",
+            ),
+        ] {
+            let stamp = Timestamp::from_jiff(input.parse().unwrap());
+            assert_eq!(row_version(stamp), version);
+            assert_eq!(time(stamp), milliseconds);
+        }
+    }
+
+    #[test]
+    fn agent_step_revisions_pad_seconds_and_preserve_microseconds() {
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        for (input, expected) in [
+            ("2026-10-07 10:15:00", "2026-10-07T10:15:00.000000Z"),
+            ("2026-10-07 10:15:00.123456", "2026-10-07T10:15:00.123456Z"),
+        ] {
+            let step = conn
+                .query_row(
+                    "SELECT 1,NULL,NULL,'Check','done',NULL,NULL,NULL,0,?1,?1",
+                    [input],
+                    super::agent_step,
+                )
+                .unwrap();
+            assert_eq!(step.updated_at, expected);
+        }
+    }
 
     #[test]
     fn a_mention_wrapper_becomes_a_span_with_its_own_close() {

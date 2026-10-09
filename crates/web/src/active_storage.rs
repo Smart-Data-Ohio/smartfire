@@ -26,6 +26,55 @@ const SERVICE_URLS_EXPIRE_IN: i64 = 5 * 60;
 const HUNDRED_YEARS: u64 = 3_155_695_200;
 /// The most image and video jobs (variants, previews, analysis) that run at once.
 const MAX_MEDIA_JOBS: usize = 4;
+static MEDIA_PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(media_capacity())));
+
+// Codec calls may not observe cancellation. Keep branding from occupying attachment slots.
+const MAX_BRANDING_JOBS: usize = 1;
+static BRANDING_PERMITS: LazyLock<Arc<Semaphore>> =
+    LazyLock::new(|| Arc::new(Semaphore::new(MAX_BRANDING_JOBS)));
+
+fn media_capacity() -> usize {
+    std::thread::available_parallelism()
+        .map_or(2, |n| n.get())
+        .clamp(1, MAX_MEDIA_JOBS)
+}
+
+#[cfg(feature = "test-support")]
+pub fn media_permits() -> (usize, usize) {
+    (MEDIA_PERMITS.available_permits(), media_capacity())
+}
+
+#[cfg(feature = "test-support")]
+pub fn branding_permits() -> (usize, usize) {
+    (BRANDING_PERMITS.available_permits(), MAX_BRANDING_JOBS)
+}
+
+#[cfg(feature = "test-support")]
+pub mod test_hooks {
+    use std::sync::Mutex;
+
+    type Hook = Box<dyn FnOnce() + Send>;
+
+    static BETWEEN_ANALYSIS_READS: Mutex<Vec<(i64, Hook)>> = Mutex::new(Vec::new());
+
+    /// Run `hook` once on the reader, after analysis loads blob `blob_id` and before it decides
+    /// whether the blob is branding.
+    pub fn between_analysis_reads(blob_id: i64, hook: impl FnOnce() + Send + 'static) {
+        BETWEEN_ANALYSIS_READS.lock().unwrap().push((blob_id, Box::new(hook)));
+    }
+
+    pub(super) fn reached_analysis_classification(blob_id: i64) {
+        let hook = {
+            let mut hooks = BETWEEN_ANALYSIS_READS.lock().unwrap();
+            let found = hooks.iter().position(|(id, _)| *id == blob_id);
+            found.map(|index| hooks.swap_remove(index).1)
+        };
+
+        if let Some(hook) = hook {
+            hook();
+        }
+    }
+}
 
 // --- Blobs -----------------------------------------------------------------------------------------
 
@@ -142,33 +191,134 @@ pub async fn processed_variant_with(
     app: &App,
     blob: Blob,
     variation: Variation,
-    transform: impl FnOnce(&Storage, &Blob, &Variation) -> campfire_storage::Result<Staged> + Send + 'static,
+    transform: impl FnOnce(&Storage, &Blob, &Variation) -> campfire_storage::Result<Staged>
+    + Send
+    + 'static,
 ) -> Result<Blob> {
+    processed_variant_using(
+        app,
+        blob,
+        variation,
+        true,
+        |storage, blob, variation| async move {
+            process_media(move || transform(&storage, &blob, &variation)).await
+        },
+    )
+    .await
+}
+
+pub async fn processed_branding_variant_with_deadline(
+    app: &App,
+    blob: Blob,
+    variation: Variation,
+    timeout: std::time::Duration,
+    transform: impl FnOnce(
+        &Storage,
+        &Blob,
+        &Variation,
+        &campfire_storage::vips::Cancellation,
+    ) -> campfire_storage::Result<Staged>
+    + Send
+    + 'static,
+) -> Result<Blob> {
+    processed_variant_using(
+        app,
+        blob,
+        variation,
+        false,
+        |storage, blob, variation| async move {
+            process_branding_with_deadline(timeout, move |cancel| {
+                transform(&storage, &blob, &variation, &cancel)
+            })
+            .await
+        },
+    )
+    .await
+}
+
+async fn processed_variant_using<F: std::future::Future<Output = Result<Staged>>>(
+    app: &App,
+    blob: Blob,
+    variation: Variation,
+    defer_analysis: bool,
+    work: impl FnOnce(Arc<Storage>, Blob, Variation) -> F,
+) -> Result<Blob> {
+    let marker = rails_compat::blob_branding::Marker::new(&app.secrets);
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
     // Rails' processed? checks the record, not the file. The serving endpoints
     // handle a missing final file; a valid derivative needs no intermediate file.
-    let existing = app.db.read(move |conn| storage.existing_variant(conn, &source, &digested).map_err(storage_error)).await;
-    if let Some(image) = existing.map_err(Error::internal)? {
+    let (existing, branding) = app
+        .db
+        .read(move |conn| {
+            let existing = storage
+                .existing_variant(conn, &source, &digested)
+                .map_err(storage_error)?;
+            let branding = !defer_analysis || branding_blob(conn, marker, &source)?;
+            Ok((existing, branding))
+        })
+        .await
+        .map_err(Error::internal)?;
+    if let Some(mut image) = existing {
+        if branding && !verified_branding_mark(marker, &image) {
+            image = app
+                .db
+                .write(move |tx| {
+                    let mut image = Blob::find(tx.conn(), image.id)
+                        .map_err(storage_db_error)?
+                        .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+                    mark_branding_blob(tx.conn(), marker, &mut image)?;
+                    Ok(image)
+                })
+                .await
+                .map_err(Error::internal)?;
+        }
         return Ok(image);
     }
 
     let storage = app.storage.clone();
     let (source, digested) = (blob.clone(), variation.clone());
-    let image = process_media(move || transform(&storage, &source, &digested)).await?.defer_analysis();
+    let image = work(storage, source, digested).await?;
+    // Branding transforms supply dimensions on their bounded path; retain them and skip
+    // the attachment analyzer's after-commit callback.
+    let image = if defer_analysis {
+        image.defer_analysis()
+    } else {
+        image
+    };
 
     let storage = app.storage.clone();
     app.db
         .write(move |tx| {
             let conn = tx.conn();
+            let source = Blob::find(conn, blob.id)
+                .map_err(storage_db_error)?
+                .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
+            let branding = !defer_analysis || branding_blob(conn, marker, &source)?;
             match storage.record_variant(conn, &blob, &variation, &image, tx.now().jiff()).map_err(storage_error)? {
-                Some(recorded) => {
-                    crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
+                Some(mut recorded) => {
+                    if branding {
+                        mark_branding_blob(conn, marker, &mut recorded)?;
+                    }
+                    if defer_analysis {
+                        crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
+                    }
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
                 // Another request recorded it first; ours is dropped (and its file deleted).
-                None => storage.existing_variant(conn, &blob, &variation).map_err(storage_error)?.ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::VariantRecord")),
+                None => {
+                    let mut image = storage
+                        .existing_variant(conn, &blob, &variation)
+                        .map_err(storage_error)?
+                        .ok_or(campfire_db::Error::RecordNotFound(
+                            "ActiveStorage::VariantRecord",
+                        ))?;
+                    if branding {
+                        mark_branding_blob(conn, marker, &mut image)?;
+                    }
+                    Ok(image)
+                }
             }
         })
         .await
@@ -217,19 +367,48 @@ pub(crate) async fn analyze_explicit(app: &App, blob_id: i64) -> anyhow::Result<
     analyze_with(app, blob_id, false).await
 }
 
-async fn analyze_with(app: &App, blob_id: i64, skip_analyzed: bool) -> anyhow::Result<Option<Blob>> {
-    let blob = app
+async fn analyze_with(
+    app: &App,
+    blob_id: i64,
+    skip_analyzed: bool,
+) -> anyhow::Result<Option<Blob>> {
+    let marker = rails_compat::blob_branding::Marker::new(&app.secrets);
+    let classified = app
         .db
-        .read(move |conn| Blob::find(conn, blob_id).map_err(storage_db_error))
+        .read(move |conn| {
+            let blob = Blob::find(conn, blob_id).map_err(storage_db_error)?;
+            #[cfg(feature = "test-support")]
+            test_hooks::reached_analysis_classification(blob_id);
+            Ok(match blob {
+                Some(blob) if skip_analyzed && blob.is_analyzed() => Some((blob, false)),
+                // A row purged since `find` stops analysis, as Rails discards a purged blob's job:
+                // its file may not be deleted yet, so nothing may open it.
+                Some(blob) => {
+                    branding_classification(conn, marker, &blob)?.map(|branding| (blob, branding))
+                }
+                None => None,
+            })
+        })
         .await?;
-    let Some(blob) = blob else { return Ok(None) };
+    let Some((blob, branding)) = classified else { return Ok(None) };
     if skip_analyzed && blob.is_analyzed() {
         return Ok(Some(blob));
     }
     let storage = app.storage.clone();
     let mut source = blob.clone();
     source.metadata = Json::object();
-    let metadata = process_media_work(move || storage.analyzed_metadata(&source)).await?;
+    let metadata = if branding {
+        let timeout = campfire_storage::branding::processing_timeout(&source);
+        process_branding_work_with_deadline(timeout, move |cancel| {
+            campfire_storage::branding::analyzed_metadata(&storage, &source, &cancel)
+        })
+        .await?
+    } else {
+        process_blocking_work(MEDIA_PERMITS.clone(), move || {
+            storage.analyzed_metadata(&source)
+        })
+        .await?
+    };
     app.db
         .write(move |tx| {
             // Another delivery or synchronous message processing may have finished meanwhile.
@@ -249,6 +428,107 @@ async fn analyze_with(app: &App, blob_id: i64, skip_analyzed: bool) -> anyhow::R
         .map_err(Into::into)
 }
 
+fn branding_blob(
+    conn: &campfire_db::Connection,
+    marker: rails_compat::blob_branding::Marker,
+    blob: &Blob,
+) -> campfire_db::Result<bool> {
+    Ok(branding_classification(conn, marker, blob)?.unwrap_or(false))
+}
+
+/// Whether `blob` is workspace branding, or `None` once its row is gone (purged).
+fn branding_classification(
+    conn: &campfire_db::Connection,
+    marker: rails_compat::blob_branding::Marker,
+    blob: &Blob,
+) -> campfire_db::Result<Option<bool>> {
+    // One statement reads one snapshot. A replacement or removal marks the tree and deletes the
+    // Account association in one write transaction, so this sees the association or the mark,
+    // never neither; `blob` may have been loaded before that commit and lack the mark.
+    // Untagged legacy variants and previews still belong to the Account through their source
+    // tree: a variant's image climbs to its variant record's blob, a preview to the blob it
+    // previews.
+    let current = conn.query_row_cached(
+        "WITH RECURSIVE sources(id) AS (
+            VALUES (?1)
+            UNION
+            SELECT variants.blob_id FROM active_storage_attachments images
+            JOIN active_storage_variant_records variants ON variants.id = images.record_id
+            JOIN sources ON sources.id = images.blob_id
+            WHERE images.record_type = 'ActiveStorage::VariantRecord' AND images.name = 'image'
+            UNION
+            SELECT previews.record_id FROM active_storage_attachments previews
+            JOIN sources ON sources.id = previews.blob_id
+            WHERE previews.record_type = 'ActiveStorage::Blob' AND previews.name = 'preview_image'
+         ) SELECT blobs.metadata, EXISTS (
+            SELECT 1 FROM active_storage_attachments attachments JOIN sources ON sources.id = attachments.blob_id
+            WHERE attachments.record_type = 'Account' AND attachments.name IN ('logo', 'banner')
+         ) FROM active_storage_blobs blobs WHERE blobs.id = ?1",
+        [blob.id],
+        |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, bool>(1)?)),
+    );
+    let (metadata, attached) = match current {
+        Ok(current) => current,
+        Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    let metadata = metadata.and_then(|text| Json::parse(&text).ok());
+    Ok(Some(
+        attached || metadata.is_some_and(|metadata| mark_verifies(marker, &blob.key, &metadata)),
+    ))
+}
+
+fn verified_branding_mark(marker: rails_compat::blob_branding::Marker, blob: &Blob) -> bool {
+    mark_verifies(marker, &blob.key, &blob.metadata)
+}
+
+fn mark_verifies(marker: rails_compat::blob_branding::Marker, key: &str, metadata: &Json) -> bool {
+    metadata
+        .get(campfire_storage::branding::MARK_KEY)
+        .and_then(Json::as_str)
+        .is_some_and(|mark| marker.verifies(key, mark))
+}
+
+pub fn mark_branding_blob(
+    conn: &campfire_db::Connection,
+    marker: rails_compat::blob_branding::Marker,
+    blob: &mut Blob,
+) -> campfire_db::Result<()> {
+    blob.metadata.set(
+        campfire_storage::branding::MARK_KEY,
+        Json::String(marker.sign(&blob.key)),
+    );
+    blob.update_metadata(conn, blob.metadata.clone())
+        .map_err(storage_db_error)
+}
+
+/// Persist provenance before removing any associations that queued analysis may rely on.
+pub fn mark_branding_tree(
+    conn: &campfire_db::Connection,
+    marker: rails_compat::blob_branding::Marker,
+    blob_id: i64,
+) -> campfire_db::Result<()> {
+    let ids = query_ids(conn,
+        "WITH RECURSIVE images(id) AS (
+            VALUES (?1)
+            UNION
+            SELECT attachments.blob_id FROM active_storage_attachments attachments
+            JOIN active_storage_variant_records variants ON variants.id = attachments.record_id
+            JOIN images ON images.id = variants.blob_id
+            WHERE attachments.record_type = 'ActiveStorage::VariantRecord' AND attachments.name = 'image'
+            UNION
+            SELECT attachments.blob_id FROM active_storage_attachments attachments
+            JOIN images ON images.id = attachments.record_id
+            WHERE attachments.record_type = 'ActiveStorage::Blob' AND attachments.name = 'preview_image'
+         ) SELECT id FROM images", blob_id)?;
+    for id in ids {
+        if let Some(mut blob) = Blob::find(conn, id).map_err(storage_db_error)? {
+            mark_branding_blob(conn, marker, &mut blob)?;
+        }
+    }
+    Ok(())
+}
+
 /// Active Storage's blob-save callback touches every attached record; messages touch rooms too.
 pub(crate) fn touch_attachment_records(
     tx: &mut campfire_db::Tx<'_>,
@@ -259,9 +539,14 @@ pub(crate) fn touch_attachment_records(
     {
         match record_type.as_str() {
             "Message" => campfire_db::Message::find(tx.conn(), record_id)?.touch(tx)?,
-            "User" | "Account" | "WorkspaceIcon" => {
+            "User" => crate::controllers::presenters::accounts::touch(
+                tx.conn(),
+                "users",
+                record_id,
+                tx.now(),
+            )?,
+            "Account" | "WorkspaceIcon" => {
                 let table = match record_type.as_str() {
-                    "User" => "users",
                     "Account" => "accounts",
                     _ => "workspace_icons",
                 };
@@ -298,25 +583,61 @@ pub fn keep_after_commit(tx: &mut campfire_db::Tx<'_>, staged: Staged) {
 /// Runs libvips, ffmpeg or ffprobe work on the blocking pool, a few jobs at a time: each can take
 /// a lot of memory and CPU (libvips threads its own work), and uploads shouldn't queue behind
 /// more of them than the machine can run at once.
-async fn process_media<T: Send + 'static>(
+pub async fn process_media<T: Send + 'static>(
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> Result<T> {
-    process_media_work(work).await.map_err(Error::internal)
+    process_blocking_work(MEDIA_PERMITS.clone(), work)
+        .await
+        .map_err(Error::internal)
 }
 
-async fn process_media_work<T: Send + 'static>(
+/// The branding deadline includes waiting for its own slot. Cancellation is cooperative;
+/// timed out or disconnected work retains that slot until the blocking task actually ends.
+pub async fn process_branding_with_deadline<T: Send + 'static>(
+    timeout: std::time::Duration,
+    work: impl FnOnce(campfire_storage::vips::Cancellation) -> campfire_storage::Result<T>
+    + Send
+    + 'static,
+) -> Result<T> {
+    process_branding_work_with_deadline(timeout, work)
+        .await
+        .map_err(Error::internal)
+}
+
+async fn process_branding_work_with_deadline<T: Send + 'static>(
+    timeout: std::time::Duration,
+    work: impl FnOnce(campfire_storage::vips::Cancellation) -> campfire_storage::Result<T>
+    + Send
+    + 'static,
+) -> anyhow::Result<T> {
+    struct CancelOnDrop(campfire_storage::vips::Cancellation);
+    impl Drop for CancelOnDrop {
+        fn drop(&mut self) {
+            self.0.cancel();
+        }
+    }
+    let cancel = campfire_storage::vips::Cancellation::new(timeout);
+    let _guard = CancelOnDrop(cancel.clone());
+    tokio::time::timeout(
+        timeout,
+        process_blocking_work(BRANDING_PERMITS.clone(), move || {
+            cancel.check()?;
+            let result = work(cancel.clone());
+            // A failed still can degrade to static, but cancellation must reject the upload.
+            cancel.check()?;
+            result
+        }),
+    )
+    .await?
+}
+
+async fn process_blocking_work<T: Send + 'static>(
+    permits: Arc<Semaphore>,
     work: impl FnOnce() -> campfire_storage::Result<T> + Send + 'static,
 ) -> anyhow::Result<T> {
-    static PERMITS: LazyLock<Arc<Semaphore>> = LazyLock::new(|| {
-        Arc::new(Semaphore::new(
-            std::thread::available_parallelism()
-                .map_or(2, |n| n.get())
-                .clamp(1, MAX_MEDIA_JOBS),
-        ))
-    });
     // The permit goes with the work: a request that gives up (a timeout, a closed connection)
     // doesn't stop the blocking task, so it mustn't free the slot either.
-    let permit = PERMITS.clone().acquire_owned().await?;
+    let permit = permits.acquire_owned().await?;
     tokio::task::spawn_blocking(move || {
         let _permit = permit;
         work()
@@ -618,8 +939,11 @@ pub async fn create_direct_upload(
     byte_size: i64,
     checksum: String,
     content_type: Option<String>,
-    metadata: Json,
+    mut metadata: Json,
 ) -> Result<DirectUpload> {
+    if let Json::Object(entries) = &mut metadata {
+        entries.retain(|(key, _)| !key.starts_with("branding"));
+    }
     let storage = c.app().storage.clone();
     let now = c.now();
     let new_blob = campfire_storage::NewBlob {
@@ -711,6 +1035,7 @@ async fn require_active_storage_authentication(c: &mut Ctx) -> Result<()> {
 /// blob; destroys its variant records and preview image attachment, whose blobs are purged
 /// later), then delete the files.
 pub async fn purge(app: &App, blob_id: i64) -> anyhow::Result<()> {
+    let marker = rails_compat::blob_branding::Marker::new(&app.secrets);
     let destroyed = app
         .db
         .write(move |tx| {
@@ -719,6 +1044,9 @@ pub async fn purge(app: &App, blob_id: i64) -> anyhow::Result<()> {
             // before_destroy(prepend: true) { raise ActiveRecord::InvalidForeignKey if attachments.exists? }
             if !campfire_storage::blob::attachment_records(conn, blob_id).map_err(storage_error)?.is_empty() {
                 return Ok(None);
+            }
+            if branding_blob(conn, marker, &blob)? {
+                mark_branding_tree(conn, marker, blob_id)?;
             }
             let mut dependents = Vec::new();
             // before_destroy { variant_records.destroy_all }: each record's image attachment goes too.
@@ -789,6 +1117,188 @@ fn random_hex(bytes: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn branding_analysis_rejects_client_metadata() {
+        let marker =
+            rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("test-secret"));
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let mut blob = campfire_storage::NewBlob::unfurl(
+            b"image",
+            Filename::new("image.png"),
+            Some("image/png"),
+            "local",
+            false,
+        )
+        .insert(&conn, jiff::Timestamp::now())
+        .unwrap();
+        for metadata in [
+            r#"{"branding":true}"#,
+            r#"{"branding_animated":false}"#,
+            r#"{"branding":true,"branding_animated":true,"branding_mark":"made-up"}"#,
+        ] {
+            blob.metadata = Json::parse(metadata).unwrap();
+            blob.update_metadata(&conn, blob.metadata.clone()).unwrap();
+            assert!(!branding_blob(&conn, marker, &blob).unwrap(), "{metadata}");
+        }
+        blob.metadata.set(
+            campfire_storage::branding::MARK_KEY,
+            Json::String(marker.sign("another-key")),
+        );
+        blob.update_metadata(&conn, blob.metadata.clone()).unwrap();
+        assert!(!branding_blob(&conn, marker, &blob).unwrap());
+        blob.metadata.set(
+            campfire_storage::branding::MARK_KEY,
+            Json::String(marker.sign(&blob.key)),
+        );
+        blob.update_metadata(&conn, blob.metadata.clone()).unwrap();
+        assert!(branding_blob(&conn, marker, &blob).unwrap());
+        let other_secret =
+            rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("another-secret"));
+        assert!(!branding_blob(&conn, other_secret, &blob).unwrap());
+    }
+
+    #[test]
+    fn branding_analysis_follows_legacy_previews_and_stops_once_purged() {
+        use campfire_storage::blob::{NewBlob, insert_attachment, insert_variant_record};
+
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let now = jiff::Timestamp::now();
+        let marker =
+            rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("test-secret"));
+        let new_blob = |name: &str, content_type: &str| {
+            NewBlob::unfurl(b"bytes", Filename::new(name), Some(content_type), "local", false)
+                .insert(&conn, now)
+                .unwrap()
+        };
+        let original = new_blob("banner.mp4", "video/mp4");
+        let preview = new_blob("banner.png", "image/png");
+        let preview_variant = new_blob("banner.webp", "image/webp");
+        insert_attachment(&conn, "preview_image", "ActiveStorage::Blob", original.id, preview.id, now)
+            .unwrap();
+        let record = insert_variant_record(&conn, preview.id, "digest").unwrap().unwrap();
+        insert_attachment(
+            &conn,
+            "image",
+            "ActiveStorage::VariantRecord",
+            record,
+            preview_variant.id,
+            now,
+        )
+        .unwrap();
+        for blob in [&original, &preview, &preview_variant] {
+            assert!(!branding_blob(&conn, marker, blob).unwrap());
+        }
+
+        insert_attachment(&conn, "banner", "Account", 1, original.id, now).unwrap();
+        for blob in [&original, &preview, &preview_variant] {
+            assert_eq!(branding_classification(&conn, marker, blob).unwrap(), Some(true));
+        }
+
+        let purged = new_blob("purged.png", "image/png");
+        conn.execute("DELETE FROM active_storage_blobs WHERE id = ?1", [purged.id])
+            .unwrap();
+        assert_eq!(branding_classification(&conn, marker, &purged).unwrap(), None);
+    }
+
+    #[test]
+    fn branding_analysis_follows_legacy_variants_and_retains_detached_purpose() {
+        use campfire_storage::blob::{NewBlob, insert_attachment, insert_variant_record};
+
+        let conn = campfire_db::Connection::open_in_memory().unwrap();
+        conn.execute_batch(campfire_db::schema::SCHEMA_SQL).unwrap();
+        let now = jiff::Timestamp::now();
+        let marker =
+            rails_compat::blob_branding::Marker::new(&rails_compat::Secrets::new("test-secret"));
+        let new_blob = || {
+            NewBlob::unfurl(
+                b"image",
+                Filename::new("image.png"),
+                Some("image/png"),
+                "local",
+                false,
+            )
+            .insert(&conn, now)
+            .unwrap()
+        };
+        let mut original = new_blob();
+        let variant = new_blob();
+        let nested = new_blob();
+        let attachment = new_blob();
+        for (source, image) in [(&original, &variant), (&variant, &nested)] {
+            let record = insert_variant_record(&conn, source.id, "digest")
+                .unwrap()
+                .unwrap();
+            insert_attachment(
+                &conn,
+                "image",
+                "ActiveStorage::VariantRecord",
+                record,
+                image.id,
+                now,
+            )
+            .unwrap();
+        }
+        insert_attachment(&conn, "logo", "Account", 1, original.id, now).unwrap();
+        insert_attachment(&conn, "attachment", "Message", 1, attachment.id, now).unwrap();
+        insert_attachment(&conn, "other", "Account", 1, attachment.id, now).unwrap();
+        for blob in [&original, &variant, &nested] {
+            assert!(branding_blob(&conn, marker, blob).unwrap());
+        }
+        assert!(!branding_blob(&conn, marker, &attachment).unwrap());
+
+        conn.execute("DELETE FROM active_storage_attachments WHERE record_type = 'Account' AND name = 'logo'", []).unwrap();
+        original.metadata =
+            Json::parse(r#"{"branding":true,"branding_animated":false,"branding_mark":"forged"}"#)
+                .unwrap();
+        original
+            .update_metadata(&conn, original.metadata.clone())
+            .unwrap();
+        for blob in [&original, &variant, &nested] {
+            assert!(!branding_blob(&conn, marker, blob).unwrap());
+        }
+        mark_branding_tree(&conn, marker, original.id).unwrap();
+        for blob in [&original, &variant, &nested] {
+            let marked = Blob::find(&conn, blob.id).unwrap().unwrap();
+            assert!(branding_blob(&conn, marker, &marked).unwrap());
+            assert!(verified_branding_mark(marker, &marked));
+        }
+        assert!(!branding_blob(&conn, marker, &attachment).unwrap());
+    }
+
+    #[tokio::test]
+    async fn dropping_branding_request_cancels_work_and_releases_permit() {
+        let (started, start) = tokio::sync::oneshot::channel();
+        let (finished, finish) = tokio::sync::oneshot::channel();
+        let request = tokio::spawn(process_branding_with_deadline(
+            std::time::Duration::from_secs(10),
+            move |cancel| {
+                let _ = started.send(());
+                while !cancel.is_cancelled() {
+                    std::thread::sleep(std::time::Duration::from_millis(1));
+                }
+                let _ = finished.send(());
+                cancel.check()
+            },
+        ));
+        start.await.unwrap();
+        assert_eq!(BRANDING_PERMITS.available_permits(), 0);
+        assert_eq!(MEDIA_PERMITS.available_permits(), media_capacity());
+        request.abort();
+        let _ = request.await;
+        tokio::time::timeout(std::time::Duration::from_millis(500), async {
+            finish.await.unwrap();
+            while BRANDING_PERMITS.available_permits() != MAX_BRANDING_JOBS {
+                tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+            }
+        })
+        .await
+        .expect("dropping the request must cancel before its ten second deadline");
+        assert_eq!(BRANDING_PERMITS.available_permits(), MAX_BRANDING_JOBS);
+        assert_eq!(MEDIA_PERMITS.available_permits(), media_capacity());
+    }
 
     #[tokio::test]
     async fn byte_ranges_are_not_read_into_memory() {

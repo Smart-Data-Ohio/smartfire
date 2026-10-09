@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type MouseEvent, useId } from "react";
+import { type KeyboardEvent, useId } from "react";
 import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
@@ -10,6 +10,7 @@ import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import type { RowMotion } from "../destinations/list-motion.ts";
 import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
+import type { MenuSource } from "../destinations/point-menu.tsx";
 import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
@@ -88,19 +89,17 @@ interface ActivityRowProps {
   readonly celebrate: boolean;
   readonly onOpen: (item: ActivityItem) => void;
   readonly onAction: (item: ActivityItem, action: ActivityAction) => void;
-  /** A context menu for the row, at the pointer or (from the keyboard) the row. */
-  readonly onMenu: (
-    item: ActivityItem,
-    event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>,
-  ) => void;
+  /** A context menu for the row: at the pointer or a long press, or (from the keyboard) the row. */
+  readonly onMenu: (item: ActivityItem, source: MenuSource) => void;
 }
 
 /**
  * One inbox entry, Slack's activity row: who (their avatar, badged with the kind), what kind and
  * where, the excerpt, and how long ago. Unread rows carry a dot and a heavier title; handled ones
- * a check. The whole row opens it (named by a summary, described by the excerpt); hover (or focus) shows read and handled toggles and a menu.
- * Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, U toggles read, E toggles handled,
- * Shift+F10 the menu.
+ * a check. The whole row opens it (named by a summary, described by the excerpt); hover (or focus)
+ * shows read and handled toggles and a menu. On touch screens a long press opens the menu and a
+ * swipe toggles handled. Keys on a focused row: ↑/↓ move, Home/End jump, ⏎ opens, U toggles read,
+ * E toggles handled, Shift+F10 the menu.
  */
 export function ActivityRow({
   item,
@@ -163,6 +162,13 @@ export function ActivityRow({
       onContextMenu={(event) => {
         event.preventDefault();
         onMenu(item, event);
+      }}
+      onLongPress={(x, y) => onMenu(item, { x, y })}
+      swipe={{
+        label: handled ? "Not handled" : "Handled",
+        icon: handled ? "undo-2" : "circle-check",
+        tone: handled ? "neutral" : "success",
+        onSwipe: () => onAction(item, handledAction),
       }}
       actions={
         <>

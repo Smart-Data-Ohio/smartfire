@@ -8,8 +8,8 @@
   .message-cards {
     display: flex;
     flex-direction: column;
-    gap: var(--space-2);
-    margin-top: var(--space-1-5);
+    gap: var(--message-accessory-gap, var(--space-1-5));
+    margin-top: var(--message-accessory-gap, var(--space-1-5));
   }
 
   .message-cards:empty {
@@ -661,6 +661,54 @@
     color: var(--danger-text);
   }
 
+  .github-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  .github-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1-5);
+  }
+
+  .github-comment {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1-5);
+  }
+
+  .github-note {
+    height: auto;
+    min-block-size: 4.5rem;
+    padding-block: var(--space-2);
+    resize: vertical;
+  }
+
+  .github-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    inline-size: 100%;
+  }
+
+  .github-notice {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .github-refresh-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
   /* ── X ─────────────────────────────────────────────────────────────────── */
 
   .x-head {
@@ -1118,7 +1166,7 @@
 
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
-  @media (max-width: 640px) {
+  @media (width < 720px) {
     .card {
       width: 100%;
     }

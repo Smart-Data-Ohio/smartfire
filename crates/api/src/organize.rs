@@ -150,11 +150,16 @@ async fn put_order(c: &mut Ctx) -> Result {
     )
 }
 
-/// The membership's row as it is now, hidden or not.
+/// The membership's row as it is now, hidden or not: the membership and its room both read in
+/// the snapshot that renders them.
 async fn row(c: &Ctx, membership_id: i64) -> Result<api::SidebarRow> {
     c.app()
         .db
-        .read(move |conn| dto::membership_row(conn, membership_id))
+        .read_snapshot(move |conn| {
+            let membership = Membership::find(conn, membership_id)?;
+            let room = membership.room(conn)?;
+            dto::membership_row(conn, &room, &membership)
+        })
         .await
         .map_err(db_error)
 }
@@ -223,7 +228,7 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             membership.move_favorite_to(tx, position)?;
-            shown_favorites(tx.conn(), user_id)
+            shown_favorites(&campfire_db::Snapshot::of_write(tx)?, user_id)
         })
         .await
         .map_err(db_error)?;
@@ -232,12 +237,13 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
 
 /// The favourites the person's sidebar shows, in order.
 fn shown_favorites(
-    conn: &campfire_db::Connection,
+    conn: &campfire_db::Snapshot<'_>,
     user_id: i64,
 ) -> campfire_db::Result<Vec<api::SidebarRow>> {
     let mut rows = Vec::new();
     for membership in Membership::favorites_for_user(conn, user_id)? {
-        rows.extend(dto::sidebar_row(conn, membership.id)?);
+        let room = membership.room(conn)?;
+        rows.extend(dto::sidebar_row(conn, &room, &membership)?);
     }
     Ok(rows)
 }

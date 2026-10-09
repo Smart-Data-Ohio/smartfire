@@ -384,6 +384,7 @@ function ReauthDialog({ ask, twoFactor, onClose, onConfirm, onRefused }: ReauthD
         if (!open && !saving) onClose();
       }}
       size="sm"
+      dirty={reauth !== ""}
       returnFocus={twoFactorControl}
       title={text?.title ?? ""}
       description={text?.description}
