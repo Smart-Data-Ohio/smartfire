@@ -4946,10 +4946,12 @@ describe("an open room visit always settles", () => {
   };
 
   for (const { fact, order, answers, later } of cases) {
-    // Request 1 is the visit's first read and 2 a metadata refresh. Then a membership fact
-    // supersedes both: a user resync that gives the room back (request 3 is its recovery read),
-    // or a membership push (request 3 is the refresh's re-read, holding the slot). Any later
-    // read is a re-read.
+    // Requests are numbered as they arrive. 1 is the visit's first read and 2 a metadata refresh.
+    // Then a membership fact supersedes both: a user resync that gives the room back (3 is its
+    // recovery read), or a membership push (3 is the first re-read: the refresh's, holding the
+    // slot, when the refresh lands first, else the first read's). `order` is the order 1, 2 and 3
+    // land in; one not yet sent at its turn is skipped and lands later as a re-read. Re-reads
+    // answer `later`, in arrival order.
     it.effect(
       `${fact}: first ${answers[0]}, refresh ${answers[1]}, third ${answers[2]}, landing ${order.join("")}, re-reads ${later}`,
       () =>
@@ -5030,8 +5032,6 @@ describe("an open room visit always settles", () => {
                 type: "sidebar.row.upserted",
                 data: muted,
               });
-              // The refresh lands first, rejected, so its re-read holds the slot.
-              yield* land(2, answers[1]);
             }
 
             for (const ordinal of order) {
@@ -5052,6 +5052,110 @@ describe("an open room visit always settles", () => {
             expect(["ready", "error"]).toContain(store.getState().rooms[12]?.status);
           }),
         ),
+    );
+  }
+});
+
+describe("an open room visit settles within the cap while membership pushes keep coming", () => {
+  type Answer = "404" | "preview" | "ok" | "500";
+
+  /** What the visit shows once its third refused read lands its own outcome. */
+  const settled = (answer: Answer) => {
+    const room = store.getState().rooms[12];
+
+    if (answer === "404") return room?.status === "error" && room.error !== "boom";
+
+    if (answer === "preview") return room?.preview != null;
+
+    if (answer === "ok") return room?.status === "ready" && room.detail != null;
+
+    return room?.status === "error" && room.error === "boom";
+  };
+
+  for (const answer of ["404", "preview", "ok", "500"] as const) {
+    // Every room read is overtaken by a push that changes the membership, for five reads; then
+    // the pushes stop. A 404 also fetches the preview: a 404 (unavailable) or a preview.
+    it.effect(`every read answers ${answer}`, () =>
+      withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const row = sidebarRowFixture(12, "general");
+          const held: Deferred.Deferred<void>[] = [];
+          let reads = 0;
+          let seq = 0;
+
+          yield* api.reply("GET /sidebar", sidebarFixture([row]));
+          yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+          yield* api.reply("GET /users", { users: [] });
+
+          if (answer === "preview") {
+            yield* api.reply("GET /rooms/12/preview", { id: 12, name: "general" });
+          } else {
+            yield* api.route("GET /rooms/12/preview", () =>
+              Effect.fail(new NotFound({ message: "gone" })),
+            );
+          }
+
+          yield* api.route("GET /rooms/12", () =>
+            Effect.gen(function* () {
+              const gate = yield* Deferred.make<void>();
+
+              reads += 1;
+              held.push(gate);
+              yield* Deferred.await(gate);
+
+              if (answer === "ok") return roomDetailFixture(12);
+
+              return yield* Effect.fail(
+                answer === "500"
+                  ? new ServerError({ status: 500, message: "boom" })
+                  : new NotFound({ message: "gone" }),
+              );
+            }),
+          );
+          yield* startEngine;
+          yield* welcome(0, false);
+          yield* Effect.forkChild(session.openRoom(12, null));
+          yield* settle;
+
+          for (let round = 0; round < 12 && held.length > 0; round++) {
+            const gate = held.shift();
+
+            if (reads <= 5) {
+              seq += 1;
+              yield* pushEvents({
+                seq,
+                topic: "user",
+                type: "sidebar.row.upserted",
+                data: {
+                  ...row,
+                  membership: {
+                    ...row.membership,
+                    involvement: seq % 2 === 1 ? "muted" : "mentions",
+                  },
+                },
+              });
+            }
+
+            if (gate !== undefined) yield* Deferred.succeed(gate, undefined);
+
+            yield* settle;
+            yield* settle;
+
+            // Two refused reads read again; the third lands its own outcome.
+            if (reads < 3) expect(store.getState().rooms[12]?.status).toBe("loading");
+
+            if (round === 2) expect(settled(answer)).toBe(true);
+          }
+
+          yield* TestClock.adjust("5 seconds");
+
+          expect(held).toEqual([]);
+          expect(reads).toBeLessThanOrEqual(6);
+          expect(session.roomVisitToken(12)).not.toBeNull();
+          expect(settled(answer)).toBe(true);
+        }),
+      ),
     );
   }
 });

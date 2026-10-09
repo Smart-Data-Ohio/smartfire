@@ -57,6 +57,8 @@ interface RoomVisit {
   readonly token: number;
   readonly focusMessageId: number | null;
   readonly load: number;
+  /** This visit's reads a newer room outcome (a membership fact) refused. */
+  readonly refused: number;
 }
 
 let nextVisitToken = 0,
@@ -65,7 +67,7 @@ let nextVisitToken = 0,
 const visits = new Map<number, RoomVisit>();
 
 function beginVisit(roomId: number, focusMessageId: number | null): RoomVisit {
-  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId, load: 0 };
+  const visit: RoomVisit = { token: ++nextVisitToken, focusMessageId, load: 0, refused: 0 };
 
   visits.set(roomId, visit);
 
@@ -261,11 +263,14 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (Result.isSuccess(loaded)) {
     const detail = withSidebarRow(loaded.success, store.getState().sidebar.rows[roomId]);
 
-    if (mutations.setRoomDetail(detail, started)) {
+    const landed =
+      mutations.setRoomDetail(detail, started) ||
+      ((yield* rereadRefused(roomId, token)) &&
+        mutations.setRoomDetail(detail, beginRoomRequest()));
+
+    if (landed) {
       clearRoomJoin(roomId);
       yield* loadTimeline(roomId, token, detail, load);
-    } else {
-      yield* retryRejectedLoad(roomId, token);
     }
 
     return;
@@ -296,23 +301,29 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
     }
 
     // A newer room outcome (a membership fact) outranks this preview or 404: read the room
-    // again, as for a rejected detail, rather than leave the visit loading.
+    // again, as for a rejected detail, up to the cap; then this outcome lands.
     if (Result.isSuccess(preview)) {
-      if (mutations.setRoomPreview(roomId, preview.success, started)) {
+      const landed =
+        mutations.setRoomPreview(roomId, preview.success, started) ||
+        ((yield* rereadRefused(roomId, token)) &&
+          mutations.setRoomPreview(roomId, preview.success, beginRoomRequest()));
+
+      if (landed) {
         clearRoomJoin(roomId);
         mutations.setPageFailed(roomId);
-      } else {
-        yield* retryRejectedLoad(roomId, token);
       }
 
       return;
     }
 
     if (Predicate.isTagged(preview.failure, "NotFound")) {
-      if (mutations.setRoomUnavailable(roomId, started, rowsSince)) {
+      const landed =
+        mutations.setRoomUnavailable(roomId, started, rowsSince) ||
+        ((yield* rereadRefused(roomId, token)) &&
+          mutations.setRoomUnavailable(roomId, beginRoomRequest(), rowsSince));
+
+      if (landed) {
         mutations.setPageFailed(roomId);
-      } else {
-        yield* retryRejectedLoad(roomId, token);
       }
 
       return;
@@ -329,7 +340,7 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
 /**
  * A room read (the visit's latest, outcome sequence `started`) failed: the error shows, and the
  * page stops waiting, only when no newer room outcome has landed. When one has (a membership
- * fact), the room is read again rather than left as it was.
+ * fact), the room is read again rather than left as it was, up to the cap.
  */
 const failRead = Effect.fnUntraced(function* (
   roomId: number,
@@ -337,11 +348,41 @@ const failRead = Effect.fnUntraced(function* (
   started: number,
   message: string,
 ) {
-  if (mutations.setRoomError(roomId, message, started)) {
+  const landed =
+    mutations.setRoomError(roomId, message, started) ||
+    ((yield* rereadRefused(roomId, token)) &&
+      mutations.setRoomError(roomId, message, beginRoomRequest()));
+
+  if (landed) {
     mutations.setPageFailed(roomId);
-  } else {
-    yield* retryRejectedLoad(roomId, token);
   }
+});
+
+/** A visit reads its room at most this many times while newer membership facts refuse each read. */
+const REFUSED_READS = 3;
+
+/**
+ * A newer room outcome refused this visit's read. Below the cap the room is read again (false).
+ * At the cap there is no further read: answers whether the caller lands its own outcome under a
+ * new sequence, which it does only while the room is still loading. Pushes that keep coming
+ * still get their one follow-up each, and a read no fact overtakes lands as usual.
+ */
+const rereadRefused = Effect.fnUntraced(function* (roomId: number, token: number) {
+  const open = visits.get(roomId);
+
+  if (open === undefined || open.token !== token) return false;
+
+  const refused = open.refused + 1;
+
+  visits.set(roomId, { ...open, refused });
+
+  if (refused < REFUSED_READS) {
+    yield* retryRejectedLoad(roomId, token);
+
+    return false;
+  }
+
+  return store.getState().rooms[roomId]?.status === "loading";
 });
 
 /** The visit's own initial load. Recovery calls `readRoom` and leaves the visible state alone. */
