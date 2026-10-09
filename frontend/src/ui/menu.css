@@ -76,7 +76,8 @@
     white-space: nowrap;
   }
 
-  .menu-shortcut {
+  .menu-shortcut,
+  .menu-item-detail {
     margin-left: var(--space-4);
     color: var(--text-faint);
     font-size: var(--text-meta);
@@ -87,7 +88,8 @@
     color: var(--text-faint);
   }
 
-  .menu-item[data-tone="danger"]:focus .menu-shortcut {
+  .menu-item[data-tone="danger"]:focus .menu-shortcut,
+  .menu-item[data-tone="danger"]:focus .menu-item-detail {
     color: inherit;
   }
 
@@ -133,5 +135,112 @@
     color: var(--text-faint);
     font-size: var(--text-meta);
     text-overflow: ellipsis;
+  }
+
+  /* A row of round items (quick reactions): spread across a sheet, compact in a dropdown. */
+  .menu-quick-row {
+    display: flex;
+    gap: var(--space-1);
+    padding: var(--space-1);
+  }
+
+  .menu-quick-item {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--control-md);
+    height: var(--control-md);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 20px;
+    line-height: 1;
+    cursor: default;
+    user-select: none;
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .menu-quick-item:focus {
+    outline: none;
+    background: var(--bg-active);
+    transition-duration: 0s;
+  }
+
+  .menu-quick-item:active {
+    scale: var(--scale-press);
+  }
+
+  /*
+   * As an action sheet (a touch phone): 48 px rows in the body size, larger icons, and no shortcut
+   * hints, which name keys a phone doesn't have. A press shows straight away, as the row has no
+   * hover to warm it up.
+   */
+  .menu.action-sheet .menu-item {
+    gap: var(--space-3);
+    min-height: 48px;
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-md);
+  }
+
+  .menu.action-sheet .menu-item:active {
+    background: var(--bg-active);
+  }
+
+  .menu.action-sheet .menu-item .menu-item-icon,
+  .menu.action-sheet .menu-item .menu-item-check {
+    width: 20px;
+  }
+
+  .menu.action-sheet .menu-item-icon .icon,
+  .menu.action-sheet .menu-item-check .icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .menu.action-sheet .menu-item-lead {
+    height: 24px;
+  }
+
+  .menu.action-sheet .menu-item .menu-shortcut {
+    display: none;
+  }
+
+  .menu.action-sheet .menu-item-description {
+    white-space: normal;
+  }
+
+  .menu.action-sheet .menu-separator {
+    margin-inline: var(--space-3);
+  }
+
+  .menu.action-sheet .menu-group-label {
+    padding: var(--space-2) var(--space-3) var(--space-1);
+  }
+
+  /* A pushed submenu's title row: the way back, in the title's weight. */
+  .menu-sheet-back {
+    font-weight: var(--weight-semibold);
+  }
+
+  .menu.action-sheet .menu-sheet-back .menu-item-icon {
+    color: var(--text);
+  }
+
+  .menu.action-sheet .menu-quick-row {
+    justify-content: space-between;
+    margin-block-end: var(--space-1);
+    padding: var(--space-1) var(--space-1) var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Finger-sized, shrinking evenly on the narrowest phones rather than overflowing. */
+  .menu.action-sheet .menu-quick-item {
+    flex: 0 1 var(--touch-target);
+    width: auto;
+    height: auto;
+    aspect-ratio: 1;
+    font-size: 24px;
   }
 }

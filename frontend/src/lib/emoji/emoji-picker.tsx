@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { VList, type VListHandle } from "virtua";
+import { useActionSheet } from "../../ui/action-sheet.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
@@ -15,6 +16,7 @@ import { type EmojiData, GROUP_LABELS, loadEmojiData } from "./data.ts";
 import {
   layoutSections,
   moveActive,
+  PICKER_COLUMNS,
   type PickerCell,
   type PickerRow,
   pickerSections,
@@ -43,6 +45,11 @@ const TABS: readonly { id: SectionId; label: string; glyph: string }[] = [
 ];
 
 const LIST_HEIGHT = 288;
+
+/** In an action sheet (a touch phone): a taller grid of eight finger-sized columns, no preview. */
+const SHEET_LIST_HEIGHT = "min(360px, 48dvh)";
+
+const SHEET_COLUMNS = 8;
 
 function useEmojiData(): EmojiData | null | "error" {
   const [data, setData] = useState<EmojiData | null | "error">(null);
@@ -162,9 +169,15 @@ function Preview({ cell }: { readonly cell: PickerCell | undefined }) {
   );
 }
 
-function Body({ children }: { readonly children: ReactNode }) {
+function Body({
+  height,
+  children,
+}: {
+  readonly height: number | string;
+  readonly children: ReactNode;
+}) {
   return (
-    <div className="emoji-picker-status" style={{ height: LIST_HEIGHT }}>
+    <div className="emoji-picker-status" style={{ height }}>
       {children}
     </div>
   );
@@ -175,6 +188,7 @@ function Body({ children }: { readonly children: ReactNode }) {
  * Discord), category tabs that jump to their section and follow the scroll, a Frequently used
  * row from this browser's picks, the workspace's custom icons, and a preview footer. The grid is
  * virtualized, so ~1,900 emoji cost a screenful of nodes. Lazy-load it (`LazyEmojiPicker`).
+ * In an action sheet the search waits for a tap, so the keyboard doesn't hide the grid.
  */
 export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProps) {
   const id = useId();
@@ -187,15 +201,20 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
   const listRef = useRef<VListHandle | null>(null);
   const keyboardMove = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
+  const sheet = useActionSheet();
+  const columns = sheet ? SHEET_COLUMNS : PICKER_COLUMNS;
+  const listHeight = sheet ? SHEET_LIST_HEIGHT : LIST_HEIGHT;
 
   // Mounting late (the chunk loaded after the popover opened) still lands in the search box,
-  // unless focus has already moved on to something else in the page.
+  // unless focus has already moved on to something else in the page, or the picker is a sheet.
   useEffect(() => {
     const input = inputRef.current;
     const active = document.activeElement;
 
     if (
       input !== null &&
+      input.closest(".action-sheet") === null &&
       (active === null ||
         active === document.body ||
         active.contains(input) ||
@@ -208,7 +227,7 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
   const layout =
     data === null || data === "error"
       ? null
-      : layoutSections(pickerSections(data, query, recent, custom));
+      : layoutSections(pickerSections(data, query, recent, custom), columns);
 
   const cells = layout?.cells ?? [];
   const rows = layout?.rows ?? [];
@@ -235,6 +254,30 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
     }
   });
 
+  // In a sheet the tab strip scrolls sideways: keep the current section's tab on screen as the
+  // grid scrolls through the sections.
+  useLayoutEffect(() => {
+    const strip = tabsRef.current;
+    const tab = sheet ? strip?.querySelector("[data-active]") : null;
+
+    if (strip === null || tab === null || tab === undefined) {
+      return;
+    }
+
+    const box = tab.getBoundingClientRect();
+    const left = strip.getBoundingClientRect().left;
+
+    // The end padding sits under the fade: a tab only counts as shown clear of it.
+    const right =
+      left + strip.clientWidth - Number.parseFloat(getComputedStyle(strip).paddingRight);
+
+    if (box.left < left) {
+      strip.scrollLeft -= left - box.left;
+    } else if (box.right > right) {
+      strip.scrollLeft += box.right - right;
+    }
+  });
+
   const pick = (choice: EmojiChoice) => {
     recordRecentEmoji(choice);
     onPick(choice);
@@ -251,7 +294,7 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
       return;
     }
 
-    const next = moveActive(activeIndex, event.key, cells.length, undefined, rowStartsOf(rows));
+    const next = moveActive(activeIndex, event.key, cells.length, columns, rowStartsOf(rows));
 
     if (next !== null) {
       event.preventDefault();
@@ -295,15 +338,15 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
 
   if (data === null) {
     body = (
-      <Body>
+      <Body height={listHeight}>
         <Spinner label="Loading emoji" />
       </Body>
     );
   } else if (data === "error") {
-    body = <Body>Couldn't load emoji. Try again in a moment.</Body>;
+    body = <Body height={listHeight}>Couldn't load emoji. Try again in a moment.</Body>;
   } else if (cells.length === 0) {
     body = (
-      <Body>
+      <Body height={listHeight}>
         <span className="emoji-picker-empty-glyph" aria-hidden="true">
           🔍
         </span>
@@ -315,7 +358,7 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
       <VList
         ref={listRef}
         className="emoji-picker-grid"
-        style={{ height: LIST_HEIGHT }}
+        style={{ height: listHeight }}
         data={rows}
         bufferSize={160}
         onScroll={onScroll}
@@ -366,7 +409,12 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
         />
       </div>
       {searching ? null : (
-        <div className="emoji-picker-tabs" role="toolbar" aria-label="Emoji categories">
+        <div
+          ref={tabsRef}
+          className="emoji-picker-tabs"
+          role="toolbar"
+          aria-label="Emoji categories"
+        >
           {visibleTabs.map((tab) => (
             <Tooltip key={tab.id} content={tab.label} describe={false} placement="bottom">
               <Button
@@ -385,7 +433,7 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
         </div>
       )}
       {body}
-      <Preview cell={active} />
+      {sheet ? null : <Preview cell={active} />}
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SHEET_QUERY } from "./action-sheet.tsx";
 import { Button } from "./button.tsx";
-import { Menu, MenuItem, MenuSeparator, SubMenu } from "./menu.tsx";
+import { Menu, MenuItem, MenuQuickItem, MenuQuickRow, MenuSeparator, SubMenu } from "./menu.tsx";
 
 function MessageMenu({ onSelect }: { readonly onSelect: (item: string) => void }) {
   return (
@@ -187,5 +188,186 @@ describe("Menu", () => {
     await user.keyboard("{ArrowRight}{Enter}");
     expect(selected).toEqual(["general"]);
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
+});
+
+/** A touch phone: jsdom has no matchMedia, so this answers the sheet query, and only that, yes. */
+function emulateTouchPhone(): void {
+  window.matchMedia = (query: string) =>
+    Object.assign(new EventTarget(), {
+      matches: query === SHEET_QUERY,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+    });
+}
+
+/** A sheet query that starts unmatched and is flipped as turning a phone upright does. */
+class RotatingQuery extends EventTarget {
+  upright = false;
+  readonly media = SHEET_QUERY;
+  readonly onchange = null;
+  readonly addListener = () => undefined;
+  readonly removeListener = () => undefined;
+
+  get matches(): boolean {
+    return this.upright;
+  }
+}
+
+/** Answers the sheet query with one that can be flipped; returns the flip. */
+function emulateRotation(): (upright: boolean) => void {
+  const media = new RotatingQuery();
+
+  window.matchMedia = (query: string) =>
+    query === SHEET_QUERY
+      ? media
+      : Object.assign(new EventTarget(), {
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: () => undefined,
+          removeListener: () => undefined,
+        });
+
+  return (upright) => {
+    media.upright = upright;
+    act(() => {
+      media.dispatchEvent(new Event("change"));
+    });
+  };
+}
+
+/** Drags a sheet down by its handle, far enough to dismiss it. */
+function dragHandleDown(sheet: HTMLElement): void {
+  const handle = sheet.querySelector(".action-sheet-handle");
+
+  if (handle === null) {
+    throw new Error("The sheet has no handle");
+  }
+
+  fireEvent.pointerDown(handle, { pointerId: 3, button: 0, clientY: 0 });
+  fireEvent.pointerMove(handle, { pointerId: 3, clientY: 100 });
+  fireEvent.pointerUp(handle, { pointerId: 3, clientY: 100 });
+}
+
+function SheetMenu({ onSelect }: { readonly onSelect: (item: string) => void }) {
+  return (
+    <Menu
+      trigger={(props) => <Button {...props}>Message actions</Button>}
+      sheetHeader={
+        <MenuQuickRow label="Quick reactions">
+          <MenuQuickItem label="React with Thumbs up" onSelect={() => onSelect("thumbs up")}>
+            👍
+          </MenuQuickItem>
+        </MenuQuickRow>
+      }
+    >
+      <MenuItem shortcut={["T"]} onSelect={() => onSelect("thread")}>
+        Reply in thread
+      </MenuItem>
+      <SubMenu label="Move to">
+        <MenuItem onSelect={() => onSelect("general")}>General</MenuItem>
+      </SubMenu>
+    </Menu>
+  );
+}
+
+describe("Menu as an action sheet", () => {
+  it("keeps the sheet header out of a dropdown", async () => {
+    const user = userEvent.setup();
+
+    render(<SheetMenu onSelect={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Message actions" }));
+
+    const menu = screen.getByRole("menu", { name: "Message actions" });
+
+    expect(menu.classList.contains("floating")).toBe(true);
+    expect(menu.dataset.placement).toBe("bottom-start");
+    expect(screen.queryByRole("group", { name: "Quick reactions" })).toBeNull();
+  });
+
+  it("drops its anchored coordinates when an open dropdown turns into a sheet", async () => {
+    // jsdom claims anchor positioning; deny it, so the measured fallback places the dropdown.
+    const supports = vi.spyOn(CSS, "supports").mockReturnValue(false);
+    const rotate = emulateRotation();
+    const user = userEvent.setup();
+
+    render(<SheetMenu onSelect={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Message actions" }));
+
+    const menu = screen.getByRole("menu", { name: "Message actions" });
+
+    expect(menu.style.position).toBe("fixed");
+    rotate(true);
+    expect(menu.classList.contains("action-sheet")).toBe(true);
+    expect(menu.style.position).toBe("");
+    expect(menu.style.left).toBe("");
+    expect(menu.style.top).toBe("");
+    rotate(false);
+    expect(menu.classList.contains("floating")).toBe(true);
+    expect(menu.style.position).toBe("fixed");
+    supports.mockRestore();
+    Reflect.deleteProperty(window, "matchMedia");
+  });
+
+  describe("on a touch phone", () => {
+    beforeEach(emulateTouchPhone);
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, "matchMedia");
+    });
+
+    it("opens as a sheet, unanchored, with its header, and a header item closes it", async () => {
+      const user = userEvent.setup();
+      const selected: string[] = [];
+
+      render(<SheetMenu onSelect={(item) => selected.push(item)} />);
+      await user.click(screen.getByRole("button", { name: "Message actions" }));
+
+      const menu = screen.getByRole("menu", { name: "Message actions" });
+
+      expect(menu.classList.contains("action-sheet")).toBe(true);
+      expect(menu.classList.contains("floating")).toBe(false);
+      expect(menu.dataset.placement).toBeUndefined();
+      expect(menu.querySelector(".action-sheet-handle")).not.toBeNull();
+
+      await user.click(screen.getByRole("menuitem", { name: "React with Thumbs up" }));
+      expect(selected).toEqual(["thumbs up"]);
+      await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    });
+
+    it("pushes a submenu in place on a tap, never on hover, and goes back from its title row", async () => {
+      const user = userEvent.setup();
+
+      render(<SheetMenu onSelect={() => {}} />);
+      await user.click(screen.getByRole("button", { name: "Message actions" }));
+      await user.hover(screen.getByRole("menuitem", { name: "Move to" }));
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(screen.queryByRole("menu", { name: "Move to" })).toBeNull();
+
+      await user.click(screen.getByRole("menuitem", { name: "Move to" }));
+
+      const submenu = screen.getByRole("menu", { name: "Move to" });
+
+      expect(submenu.classList.contains("action-sheet")).toBe(true);
+      await user.click(screen.getByRole("menuitem", { name: "Back" }));
+      await waitFor(() => expect(screen.queryByRole("menu", { name: "Move to" })).toBeNull());
+      expect(screen.getByRole("menu", { name: "Message actions" })).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "Move to" }));
+    });
+
+    it("hands focus back to its trigger when dragged away by its handle", async () => {
+      const user = userEvent.setup();
+
+      render(<SheetMenu onSelect={() => {}} />);
+      await user.click(screen.getByRole("button", { name: "Message actions" }));
+      dragHandleDown(screen.getByRole("menu", { name: "Message actions" }));
+      await waitFor(() =>
+        expect(screen.queryByRole("menu", { name: "Message actions" })).toBeNull(),
+      );
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Message actions" }));
+    });
   });
 });

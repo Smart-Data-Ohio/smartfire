@@ -100,6 +100,9 @@ function overflows(point: Point, floating: DOMRect): boolean {
   );
 }
 
+/** The inline styles placeFloating writes. */
+const PLACED = ["position", "inset", "margin", "left", "top"] as const;
+
 /** Fallback placement: measures both boxes and writes fixed coordinates onto the floating one. */
 export function placeFloating(anchor: Element, floating: HTMLElement, placement: Placement): void {
   const anchorBox = anchor.getBoundingClientRect();
@@ -151,6 +154,12 @@ export function useAnchorFallback(
     return () => {
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
+
+      // Simpler than closing: a surface that stays open as something else (a menu rotated into
+      // an action sheet) mustn't keep the coordinates written for it here.
+      for (const property of PLACED) {
+        floating.style.removeProperty(property);
+      }
     };
   }, [anchorRef, floatingRef, placement, active]);
 }
