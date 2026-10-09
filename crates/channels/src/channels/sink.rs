@@ -371,7 +371,8 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
     if let Some(campfire_db::broadcasts::Partial::ThreadIndicator { message_id, .. }) = &frame.partial
         && cable.sync_wanted()
     {
-        app.db.read_blocking(|conn| { app.broadcasts.sync_thread_indicator(conn, *message_id); Ok(()) })?;
+        // Later, on a deferred reader: the sink runs on the database writer.
+        app.broadcasts.sync_thread_indicator(*message_id);
     }
     Ok(())
 }

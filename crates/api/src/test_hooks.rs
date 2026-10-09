@@ -195,3 +195,32 @@ pub fn hold_after_sidebar_snapshot(database: &Path, room_id: i64) -> SnapshotHol
 pub(crate) fn after_sidebar_snapshot(database: &Path, room_id: i64) {
     after_snapshot(&AFTER_SIDEBAR_SNAPSHOT, database, room_id);
 }
+
+static READ_AFTER_SIDEBAR_SNAPSHOT: Mutex<Option<HashMap<(PathBuf, i64), usize>>> =
+    Mutex::new(None);
+
+/// After each of the next `renders` sidebar rows rendered for this room, its viewer reads the
+/// room again (`room.read` goes out), as if their unread state kept changing faster than a row
+/// renders.
+pub fn read_after_sidebar_snapshots(database: &Path, room_id: i64, renders: usize) {
+    READ_AFTER_SIDEBAR_SNAPSHOT
+        .lock()
+        .unwrap()
+        .get_or_insert_with(HashMap::new)
+        .insert((database.to_owned(), room_id), renders);
+}
+
+/// Whether the row just rendered for this room is followed by a read: see
+/// [`read_after_sidebar_snapshots`].
+pub(crate) fn read_after_sidebar_snapshot(database: &Path, room_id: i64) -> bool {
+    let mut holds = READ_AFTER_SIDEBAR_SNAPSHOT.lock().unwrap();
+    let Some(left) = holds
+        .as_mut()
+        .and_then(|holds| holds.get_mut(&(database.to_owned(), room_id)))
+        .filter(|left| **left > 0)
+    else {
+        return false;
+    };
+    *left -= 1;
+    true
+}

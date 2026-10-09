@@ -131,6 +131,8 @@ struct RendererState {
     renderer: OnceLock<Arc<dyn SyncRenderer>>,
     threads: PublicationLocks,
     rooms: PublicationLocks,
+    /// Per parent message, for its `thread.indicator`.
+    indicators: PublicationLocks,
     /// Each person's leave steps not yet published, in order: see [`leave_later`].
     leaves: Mutex<HashMap<i64, VecDeque<LeaveStep>>>,
 }
@@ -190,6 +192,11 @@ impl RendererSlot {
     /// The room's sidebar rows, as [`Self::thread_lock`] is the thread's.
     fn room_lock(&self, room_id: i64) -> Arc<Mutex<()>> {
         publication_lock(&self.0.rooms, room_id)
+    }
+
+    /// A parent message's thread indicator, as [`Self::thread_lock`] is the thread's.
+    fn indicator_lock(&self, parent_message_id: i64) -> Arc<Mutex<()>> {
+        publication_lock(&self.0.indicators, parent_message_id)
     }
 }
 
@@ -904,26 +911,56 @@ pub fn thread_read(server: &Cable, user_id: i64, thread_id: i64, room_id: i64) {
 /// `thread.indicator` on the parent's room, for the indicator replace of `parent_message_id`;
 /// then, while the thread is there, `thread.updated` with its new count and activity. Nothing
 /// for a parent that's gone (its `message.removed` says so).
-pub fn thread_indicator(
-    server: &Cable,
-    slot: &RendererSlot,
-    conn: &Connection,
-    parent_message_id: i64,
-) {
+///
+/// The cable sink calls this on the database writer, so it only queues: later, the parent's
+/// indicator lock is taken, then a reader, and the indicator is read and published under both
+/// (as [`thread_changed_later`] does for the thread), so a slower snapshot can't publish an older
+/// count last. The `thread.updated` is queued after the indicator goes out.
+pub fn thread_indicator_later(server: &Cable, slot: &RendererSlot, parent_message_id: i64) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer_unread(Box::new(move |reader| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        let lock = slot.indicator_lock(parent_message_id);
+        let publication = hold(&lock);
+        let mut thread_id = None;
+        reader.read(&mut |conn| {
+            thread_id = thread_indicator(&server, renderer.as_ref(), conn, parent_message_id);
+        });
+        drop(publication);
+        if let Some(thread_id) = thread_id {
+            thread_changed_later(&server, &slot, thread_id, false);
+        }
+    }));
+}
+
+/// Publishes the parent's `thread.indicator`, returning the thread it shows.
+fn thread_indicator(
+    server: &Cable,
+    renderer: &dyn SyncRenderer,
+    conn: &Connection,
+    parent_message_id: i64,
+) -> Option<i64> {
     let parent = match Message::find_by_id(conn, parent_message_id) {
         Ok(Some(parent)) => parent,
-        Ok(None) => return,
+        Ok(None) => return None,
         Err(error) => {
-            return tracing::warn!(%error, parent_message_id, "sync: thread indicator not read");
+            tracing::warn!(%error, parent_message_id, "sync: thread indicator not read");
+            return None;
         }
     };
     let indicator = match renderer.thread_indicator(conn, &parent) {
         Ok(indicator) => indicator,
         Err(error) => {
-            return tracing::warn!(%error, parent_message_id, "sync: thread indicator not rendered");
+            tracing::warn!(%error, parent_message_id, "sync: thread indicator not rendered");
+            return None;
         }
     };
     let thread_id = indicator.as_ref().map(|indicator| indicator.thread_id);
@@ -937,10 +974,7 @@ pub fn thread_indicator(
         }),
         |publication| publication,
     );
-    // Later: this runs on the database writer, which must not wait for the thread's lock.
-    if let Some(thread_id) = thread_id {
-        thread_changed_later(server, slot, thread_id, false);
-    }
+    thread_id
 }
 
 /// `thread.created` on the thread's room, or `thread.updated` on its room and its own topic.

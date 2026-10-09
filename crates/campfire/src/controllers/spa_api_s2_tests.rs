@@ -1420,6 +1420,65 @@ async fn a_row_read_before_a_room_read_cannot_bring_the_badge_back() {
     server.abort();
 }
 
+/// Frames until a `resync`, which must come within five seconds.
+async fn resynced(sync: &mut Sync, what: &str) -> Vec<String> {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            match sync.next().await {
+                Some(api::ServerFrame::Resync { topics, .. }) => return topics,
+                Some(api::ServerFrame::Batch { .. } | api::ServerFrame::Ping) => {}
+                other => panic!("expected a resync, got {other:?}"),
+            }
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("{what}"))
+}
+
+#[tokio::test]
+async fn each_row_that_runs_out_of_tries_resyncs_the_live_socket() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/rooms",
+            &json!({"type": "closed", "name": "Before", "iconName": "smile",
+                    "clientRoomId": uuid::Uuid::new_v4().to_string(),
+                    "userIds": [DAVID, JASON, KEVIN]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::RoomMutation>(&reply).room.id;
+    remaining_row_events(&a, &mut sync, room).await;
+
+    // Kevin's unread state changes after every render of his row, so each rename's row runs out
+    // of tries. Each time, on the same socket, he is told to refetch, and the refetch has the
+    // rename.
+    for name in ["First", "Second"] {
+        campfire_api::test_hooks::read_after_sidebar_snapshots(a.db().path(), room, 8);
+        let reply = david
+            .write(json_body(
+                Method::PATCH,
+                &format!("/api/v1/rooms/{room}"),
+                &json!({"type": "closed", "name": name, "iconName": "smile",
+                        "userIds": [DAVID, JASON, KEVIN]}),
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+        let topics = resynced(&mut sync, &format!("the {name} row resyncs the socket")).await;
+        assert_eq!(topics, ["user"]);
+        let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+        let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
+        assert_eq!(row.room.name.as_deref(), Some(name));
+    }
+    server.abort();
+}
+
 #[tokio::test]
 async fn row_publications_waiting_on_a_room_hold_no_readers() {
     let Some(a) = app(true).await else { return };

@@ -347,9 +347,10 @@ impl<U: Send + Sync + 'static> Server<U> {
         })
     }
 
-    /// Records that an event for `user_id` was skipped while they had no socket open: a gap
-    /// marker on their `user` topic, so a resume of theirs from before it refetches. One marker
-    /// stands for every skip until their next socket opens.
+    /// Records that an event for `user_id` was skipped (they had no socket open, or it couldn't be
+    /// built in time): a gap marker on their `user` topic, so a live socket of theirs resyncs and
+    /// a resume from before it refetches. One marker stands for every skip until it is acted on:
+    /// their next socket opens, or a live one resyncs for it. A skip after that gets a new one.
     pub fn sync_skipped_for(&self, user_id: i64) {
         let Some(engine) = self.inner.sync.get() else {
             return;

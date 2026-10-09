@@ -103,6 +103,9 @@ impl SyncRenderer for Renderer {
         #[cfg(feature = "test-support")]
         if let Some(app) = self.app.upgrade() {
             crate::test_hooks::after_sidebar_snapshot(app.db.path(), room.id);
+            if crate::test_hooks::read_after_sidebar_snapshot(app.db.path(), room.id) {
+                campfire_app::cable::sync::room_read(&app.cable, membership.user_id, room.id);
+            }
         }
         row
     }

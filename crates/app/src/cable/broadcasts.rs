@@ -199,9 +199,9 @@ impl Broadcasts {
     }
 
     /// `thread.indicator` (and `thread.updated`) for the indicator replace of a thread's parent
-    /// message, which a broadcast point outside this type rendered.
-    pub fn sync_thread_indicator(&self, conn: &Connection, parent_message_id: i64) {
-        sync::thread_indicator(&self.server, &self.sync, conn, parent_message_id);
+    /// message, which a broadcast point outside this type rendered: read afresh later.
+    pub fn sync_thread_indicator(&self, parent_message_id: i64) {
+        sync::thread_indicator_later(&self.server, &self.sync, parent_message_id);
     }
 
     /// `sidebar.row.upserted` for the people a new message made the room unread for, read

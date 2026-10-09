@@ -350,6 +350,14 @@ impl<U> Connection<U> {
                     .iter()
                     .any(|entry| entry.gap && entry.delivered_to(self.user_id, |_| false));
                 if skipped {
+                    // Acted on: the resync refetches everything skipped so far, so a skip from
+                    // here on needs a marker of its own (one before now is collapsed into this).
+                    self.engine
+                        .people
+                        .lock()
+                        .unwrap()
+                        .gapped
+                        .remove(&self.user_id);
                     return Some(self.lost(head, "skipped"));
                 }
                 self.cursor = head;

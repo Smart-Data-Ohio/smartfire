@@ -402,14 +402,16 @@ pub(crate) struct Fences {
 }
 
 impl Fences {
-    /// Keys remembered before the oldest are forgotten all at once.
+    /// Keys remembered at most; when full, the older half is forgotten.
     const LIMIT: usize = 4096;
 
     /// An event was published under `key` at `seq`. The caller holds the hub lock.
     pub fn record(&mut self, key: String, seq: u64) {
         if self.latest.len() >= Self::LIMIT && !self.latest.contains_key(&key) {
-            self.forgotten_through = self.latest.values().copied().max().unwrap_or(0);
-            self.latest.clear();
+            let mut seqs: Vec<u64> = self.latest.values().copied().collect();
+            let (_, &mut cutoff, _) = seqs.select_nth_unstable(Self::LIMIT / 2);
+            self.latest.retain(|_, seq| *seq > cutoff);
+            self.forgotten_through = cutoff;
         }
         self.latest.insert(key, seq);
     }
@@ -425,7 +427,8 @@ impl Fences {
 pub(crate) struct People {
     /// Open sockets per person.
     pub open: HashMap<i64, usize>,
-    /// People with a [`Ring::push_gap`] marker since their last socket opened: one is enough.
+    /// People with a [`Ring::push_gap`] marker nobody has acted on yet: since their last socket
+    /// opened, or since a live socket of theirs last resynced for one. One is enough until then.
     pub gapped: HashSet<i64>,
 }
 
@@ -436,7 +439,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fences_forget_old_keys_by_fencing_everything_read_before_them() {
+    fn fences_forget_the_older_half_by_fencing_everything_read_before_it() {
         let mut fences = Fences::default();
         fences.record("a".into(), 5);
         assert!(fences.crossed("a", 4));
@@ -445,13 +448,15 @@ mod tests {
         for n in 0..Fences::LIMIT as u64 {
             fences.record(format!("k{n}"), 10 + n);
         }
-        // The last key found the map full: every earlier one is forgotten, so a read from before
-        // the latest of them is fenced under any key, and a read after it isn't.
-        let newest = 10 + Fences::LIMIT as u64 - 1;
-        assert_eq!(fences.latest.len(), 1);
-        assert!(fences.crossed("a", newest - 2));
-        assert!(!fences.crossed("a", newest - 1));
-        assert!(fences.crossed(&format!("k{}", Fences::LIMIT - 1), newest - 1));
+        // The last key found the map full: the older half went ("a" among them), so a read from
+        // before the newest forgotten one is fenced under any key, and the newer half stays.
+        let cutoff = 10 + (Fences::LIMIT / 2) as u64 - 1;
+        assert!(fences.latest.len() <= Fences::LIMIT / 2 + 1);
+        assert!(fences.crossed("a", cutoff - 1));
+        assert!(!fences.crossed("a", cutoff));
+        let newest = 10 + Fences::LIMIT as u64 - 2;
+        assert!(fences.crossed(&format!("k{}", Fences::LIMIT - 2), newest - 1));
+        assert!(!fences.crossed(&format!("k{}", Fences::LIMIT - 2), newest));
     }
 
     fn ring(capacity: usize, max_age: Duration) -> Ring {

@@ -603,6 +603,24 @@ async fn a_skip_for_someone_without_a_socket_ends_their_resume_only() {
     assert_eq!(welcome["resumed"], false, "{welcome}");
 }
 
+#[tokio::test]
+async fn every_skip_after_a_live_resync_resyncs_again() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    let resync = json!({ "t": "resync", "topics": ["user"], "reason": "skipped" });
+    for _ in 0..3 {
+        // A skip while the socket is open (an event that couldn't be built in time): each one
+        // after the last resync is a resync of its own, on the same socket.
+        app.cable.server.sync_skipped_for(1);
+        assert_eq!(client.next().await, resync);
+    }
+    let after = app.publish(Audience::User(1), json!("after"));
+    assert_eq!(
+        client.batch().await,
+        [(after, "user".into(), json!("after"))]
+    );
+}
+
 /// Waits until person 1's sockets have closed `count` times in all.
 async fn wait_for_closes(app: &App, count: usize) {
     let mut waits = 0;
