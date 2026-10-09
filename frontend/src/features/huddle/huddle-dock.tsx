@@ -344,6 +344,7 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 icon={screen ? "screen-share-off" : "screen-share"}
                 label={screen ? "Stop sharing" : "Share your screen"}
                 size="sm"
+                className="huddle-dock-share"
                 aria-pressed={screen}
                 data-on={screen || undefined}
                 disabled={!connected || !canPublish || busy.screen || streaming}

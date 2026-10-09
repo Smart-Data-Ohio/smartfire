@@ -1,5 +1,15 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test, USER_IDS } from "./support.ts";
+import {
+  expect,
+  expectTouchTargets,
+  matrix,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /**
  * Huddles against the mock backend and the fake LiveKit transport (`mock://` credentials): the
@@ -78,6 +88,11 @@ matrix("a voice room lists who's in its call", async ({ page, theme, phone }) =>
 matrix("in a call: the dock and the call view", async ({ page, theme, phone }) => {
   await open(page, LOUNGE, theme);
   await join(page, phone);
+
+  // A phone keeps the conversation on joining; the call bar opens the call view.
+  if (phone) {
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+  }
 
   const view = page.getByRole("region", { name: "Call" }).last();
 
@@ -234,4 +249,43 @@ test("Smartfire's motion setting overrides the system one in a call", async ({ p
     document.documentElement.dataset.motion = "reduce";
   });
   await expect.poll(transition).toBe("none");
+});
+
+test.describe("on a touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("a call keeps the conversation: one compact bar, the call a tap away", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const height = PHONE_TOUCH.viewport.height;
+
+    await expect(page.locator(".call-view")).toHaveCount(0);
+    expect((await bar.boundingBox())?.height ?? 999, "a 48 px bar").toBeLessThanOrEqual(48.5);
+
+    const timeline = await page.locator(".app-main .timeline").boundingBox();
+
+    expect(timeline?.height ?? 0, "the timeline keeps most of the screen").toBeGreaterThanOrEqual(
+      height * 0.6,
+    );
+    // The room's name stretches its hit area over the bar's text, so its own box is exempt.
+    await expectTouchTargets(page, ".app-main-dock .huddle-dock", { ignore: ".huddle-dock-room" });
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+
+    const view = page.locator(".call-view");
+
+    await expect(view.locator(".call-tile")).toHaveCount(1);
+
+    const viewBox = await view.boundingBox();
+    const room = await page.locator(".room").boundingBox();
+
+    expect(viewBox?.height ?? 0, "the call fills the room").toBeGreaterThanOrEqual(
+      (room?.height ?? 999) - 1,
+    );
+
+    await bar.getByRole("button", { name: "Hide call" }).click();
+    await expect(view).toHaveCount(0);
+  });
 });
