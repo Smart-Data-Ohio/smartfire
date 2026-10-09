@@ -53,7 +53,7 @@ import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
-import { parseBoardSearch } from "./lib/board-search.ts";
+import { parseRoomSearch } from "./lib/board-search.ts";
 import { isModuleResourceLoadError, loadForUpdate } from "./service-worker/update-required.ts";
 
 export type { BoardSearch } from "./lib/board-search.ts";
@@ -118,7 +118,7 @@ const homeRoute = createRoute({
 const roomRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "r/$roomId",
-  validateSearch: parseBoardSearch,
+  validateSearch: parseRoomSearch,
   params: {
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),

@@ -342,29 +342,75 @@ test.describe("on a touch phone", () => {
     await expect(view).toHaveCount(0);
   });
 
-  test("leaving the room with the call open leaves no second Back stop", async ({ page }) => {
+  test("the full-screen call is in the URL: Back closes it, Forward reopens it", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}\\?call=1$`));
+
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
+
+    await page.goForward();
+    await expect(view).toBeVisible();
+  });
+
+  test("switching rooms with the call open keeps Back and Forward ordinary", async ({ page }) => {
     await open(page, LOUNGE);
     await open(page, GENERAL);
     await join(page, true);
 
     const view = page.locator("section.call-view");
+    const covered = new RegExp(`/r/${GENERAL}\\?call=1$`);
     const general = new RegExp(`/r/${GENERAL}$`);
-    const marked = () => page.evaluate(() => window.history.state?.smartfireCallView !== undefined);
 
     await dock(page, true).getByRole("button", { name: "Show call" }).click();
     await expect(view).toBeVisible();
     await page.keyboard.press("Alt+ArrowDown");
-    await expect(page).not.toHaveURL(general);
+    await expect(page).not.toHaveURL(covered);
 
-    // Back lands on the room, the call bar's, without the view over it ...
+    const next = page.url();
+
+    // Back returns to each page as it was: the call over the room, then the room alone ...
+    await page.goBack();
+    await expect(page).toHaveURL(covered);
+    await expect(view).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(general);
-    await expect.poll(marked, { message: "past the view's old entry" }).toBe(false);
     await expect(view).toHaveCount(0);
-    await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
 
-    // ... and the next Back leaves it.
-    await page.goBack();
+    // ... and Forward retraces them to the next room.
+    await page.goForward();
+    await expect(view).toBeVisible();
+    await page.goForward();
+    await expect(page).toHaveURL(next);
+    await expect(view).toHaveCount(0);
+  });
+
+  test("a rapid double Back from the open call leaves the room, with no extra stop", async ({
+    page,
+  }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(page.locator("section.call-view")).toBeVisible();
+
+    await page.evaluate(() => {
+      window.history.back();
+      window.history.back();
+    });
+
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+    // Nothing steps on afterwards.
+    await page.waitForTimeout(500);
     await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
   });
 });

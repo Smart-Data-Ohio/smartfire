@@ -1,105 +1,138 @@
 /**
- * On a phone the call view covers the whole conversation, so it behaves as a page pushed over
- * it: the room under it goes inert, it holds focus while open and gives it back to the call
- * bar's "Show call" when it closes, and it owns a history entry, so Back closes it rather than
- * leaving the room.
+ * On a phone the call view covers the whole conversation, so it behaves as a page over it: it is
+ * open while the room's URL carries `call=1` (Back closes it, Forward reopens it, another room's
+ * URL hasn't got it), the room under it goes inert, it holds focus while open and gives it back
+ * to the call bar's "Show call" when it closes. Desktop keeps the controller's `viewOpen`.
  */
-import { useLocation, useRouter } from "@tanstack/react-router";
+import { useMatchRoute, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { type RefObject, useEffect, useRef } from "react";
+import { parseBoardSearch, type RoomSearch } from "../../lib/board-search.ts";
 import { usePhoneLayout } from "../panes/use-right-pane.ts";
-import { callController } from "./call-controller.ts";
 import { type CallState, useCall } from "./call-store.ts";
 
 declare module "@tanstack/react-router" {
   interface HistoryState {
-    /** The room whose phone call view pushed this entry over it: Back closes the view. */
-    readonly smartfireCallView?: number;
+    /** "Show call" pushed this entry over the room's own page: closing steps back to it. */
+    readonly smartfireCallOver?: boolean;
   }
 }
 
-/** Whether `roomId`'s call view shows (in its room, open, and in a call that's on or coming). */
-export function callViewShown(state: CallState, roomId: number): boolean {
+/** Whether `roomId`'s call is on (or coming), so it has a view to show. */
+export function callActiveIn(state: CallState, roomId: number): boolean {
   return (
     state.roomId === roomId &&
-    state.viewOpen &&
     (state.phase === "connecting" || state.phase === "connected" || state.phase === "reconnecting")
   );
 }
 
-/** Whether `roomId`'s call view covers its conversation (a phone). */
-export function useCallViewCovers(roomId: number): boolean {
-  const phone = usePhoneLayout();
-  const shown = useCall((state) => callViewShown(state, roomId));
-
-  return phone && shown;
+/** Whether the URL asks for the call view over the room (`call=1`). */
+function useCallParam(): boolean {
+  return useSearch({ strict: false, select: (search) => search.call === 1 });
 }
 
-/**
- * The covering view's history entry, which lets Back close it: pushed when it opens, stepped
- * back over when it closes some other way (Hide call, Escape, leaving the call), and closing the
- * view when Back pops it. Leaving the room with the view open closes it too, so the entry it
- * leaves behind is one Back steps straight over (it isn't covering when that lands there), not
- * a second stop. One per room: the call view keeps it.
- */
-export function useCallViewHistory(roomId: number, covers: boolean): void {
+/** Whether `roomId`'s call view covers its conversation: a phone, its call on, and `call=1`. */
+export function useCallViewCovers(roomId: number): boolean {
+  const phone = usePhoneLayout();
+  const active = useCall((state) => callActiveIn(state, roomId));
+  const asked = useCallParam();
+
+  return phone && active && asked;
+}
+
+export interface CallViewNavigation {
+  /** Pushes `roomId`'s page with the call view over it. */
+  readonly open: (roomId: number) => void;
+  /**
+   * Takes the call view away: back to the room's page it was opened over, else (or when
+   * `replace`) by replacing this entry with the room's page.
+   */
+  readonly close: (roomId: number, replace?: "replace") => void;
+}
+
+/** Opening and closing the phone's call view, as navigations to the room with or without `call=1`. */
+export function useCallViewNavigation(): CallViewNavigation {
+  const navigate = useNavigate();
   const router = useRouter();
+  const matchRoute = useMatchRoute();
 
-  // Only this room's entry: another room's call view, on its way out, mustn't act on it.
-  const marked = useLocation({
-    select: (location) => location.state.smartfireCallView === roomId,
-  });
+  return {
+    open: (roomId) => {
+      // Over the room's own page, closing can step back to it; from anywhere else it replaces.
+      const onRoomPage =
+        matchRoute({ to: "/r/$roomId", params: { roomId } }) !== false && !carriesCallParam(router);
 
-  // Our entry is on top (`marked` has been seen while covering), being pushed, or being left.
-  const entry = useRef<"none" | "pushing" | "top" | "leaving">("none");
-
-  // The room the view covered as of the last commit, for the cleanup below.
-  const covering = useRef<number | null>(null);
-
-  // Another room (or none) is showing: a view left open would cover it again on the way Back.
-  useEffect(
-    () => () => {
-      if (covering.current === roomId) {
-        covering.current = null;
-        callController.setViewOpen(false);
-      }
+      void navigate({
+        to: "/r/$roomId",
+        params: { roomId },
+        search: (previous): RoomSearch =>
+          onRoomPage ? { ...parseBoardSearch(previous), call: 1 } : { call: 1 },
+        state: onRoomPage ? { smartfireCallOver: true } : {},
+      });
     },
-    [roomId],
-  );
+    close: (roomId, replace) => {
+      const location = router.state.location;
+
+      if (closing === location || !carriesCallParam(router)) {
+        return;
+      }
+
+      closing = location;
+
+      if (replace === undefined && location.state.smartfireCallOver === true) {
+        router.history.back();
+
+        return;
+      }
+
+      void navigate({
+        to: "/r/$roomId",
+        params: { roomId },
+        search: parseBoardSearch,
+        replace: true,
+      });
+    },
+  };
+}
+
+/** Whether the current location carries `call=1` (read at the moment, outside render). */
+function carriesCallParam(router: ReturnType<typeof useRouter>): boolean {
+  return router.state.location.search.call === 1;
+}
+
+/** The location a close is already leaving, so a second Escape or tap before it lands is a no-op. */
+let closing: object | null = null;
+
+/**
+ * Keeps `call=1` honest: where it can't show (a desktop, or no call on in the room, as when the
+ * call ends) it comes off the URL, so Back never lands on a cover that isn't there.
+ */
+export function useCallParamCleanup(roomId: number, close: CallViewNavigation["close"]): void {
+  const phone = usePhoneLayout();
+  const active = useCall((state) => callActiveIn(state, roomId));
+  const asked = useCallParam();
+  const stale = asked && !(phone && active);
+  // A desktop never showed the cover, so it only takes the parameter off; an ended call closes it.
+  const replace = phone ? undefined : "replace";
+  const closeRef = useRef(close);
+
+  closeRef.current = close;
 
   useEffect(() => {
-    covering.current = covers ? roomId : null;
-
-    if (covers) {
-      if (marked) {
-        entry.current = "top";
-      } else if (entry.current === "top") {
-        // Back (or a navigation) took the entry away: the view goes with it.
-        entry.current = "none";
-        callController.setViewOpen(false);
-      } else if (entry.current !== "pushing") {
-        entry.current = "pushing";
-        router.history.push(router.history.location.href, { smartfireCallView: roomId });
-      }
-
-      return;
+    if (stale) {
+      closeRef.current(roomId, replace);
     }
-
-    if (!marked) {
-      entry.current = "none";
-    } else if (entry.current !== "leaving") {
-      // Closed some other way, or Back landed on an entry the view left behind: step over it
-      // (once, though a remount's effect runs again before the step lands).
-      entry.current = "leaving";
-      router.history.back();
-    }
-  }, [covers, marked, router, roomId]);
+  }, [stale, roomId, replace]);
 }
 
 /**
  * Escape anywhere in the covering view or on the call bar over it closes the view, unless
  * something in there (a menu, a popover) took the key first.
  */
-export function useCallViewEscape(covers: boolean): void {
+export function useCallViewEscape(covers: boolean, close: () => void): void {
+  const closeRef = useRef(close);
+
+  closeRef.current = close;
+
   useEffect(() => {
     if (!covers) {
       return;
@@ -113,7 +146,7 @@ export function useCallViewEscape(covers: boolean): void {
         event.target.closest(".call-view, .app-main-dock") !== null
       ) {
         event.preventDefault();
-        callController.setViewOpen(false);
+        closeRef.current();
       }
     };
 
