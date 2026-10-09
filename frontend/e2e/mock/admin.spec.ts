@@ -1,5 +1,14 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, test } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  expectTouchTargets,
+  matrix,
+  openApp,
+  PHONE_TOUCH,
+  shot,
+  test,
+} from "./support.ts";
 
 /** Opens an admin section (`""` for the workspace) with motion reduced. */
 async function openAdmin(page: Page, section: string, theme: "light" | "dark" = "light") {
@@ -25,8 +34,9 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
-matrix("the admin sections", async ({ page, theme }) => {
-  await openAdmin(page, "", theme);
+matrix("the admin sections", async ({ page, theme, phone }) => {
+  // On phones the root is the list of sections: the workspace is pushed from it, at its own address.
+  await openAdmin(page, phone ? "workspace" : "", theme);
 
   await expect(page.getByRole("heading", { level: 1, name: "Workspace" })).toBeVisible();
   await settle(page);
@@ -39,6 +49,10 @@ matrix("the admin sections", async ({ page, theme }) => {
     ["Audit log", "Audit log", "admin-audit-log"],
     ["Integration health", "Integration health", "admin-integrations"],
   ] as const) {
+    if (phone) {
+      await page.getByRole("link", { name: "Back to Workspace" }).click();
+    }
+
     await nav(page).getByRole("link", { name: link }).click();
     await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     await settle(page);
@@ -165,4 +179,136 @@ test("the audit log filters by action", async ({ page }) => {
   await expect(page.getByText("No audit entries match these filters.")).toBeVisible();
   await page.getByRole("button", { name: "Clear" }).click();
   await expect(page.getByRole("cell", { name: "account.settings.change" })).toBeVisible();
+});
+
+test.describe("on a phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("the workspace is a list of sections, each pushed over it with a way back", async ({
+    page,
+  }) => {
+    await openApp(page, "admin");
+
+    const list = nav(page);
+
+    await expect(list.getByRole("link")).toHaveCount(8);
+    await expectTouchTargets(page, ".settings-nav");
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "admin-list", "light");
+
+    await list.getByRole("link", { name: "People" }).click();
+    await expect(page).toHaveURL(/\/app\/admin\/people$/);
+    await expect(list).toBeHidden();
+
+    await page.getByRole("link", { name: "Back to Workspace" }).click();
+    await expect(page).toHaveURL(/\/app\/admin$/);
+    await expect(list).toBeVisible();
+  });
+
+  test("people rows stack, their changes in a ⋯ menu, nothing overlapping", async ({ page }) => {
+    await openAdmin(page, "people");
+    await page.locator(".admin-person").first().waitFor();
+
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(page, ".settings");
+    await shot(page, "admin-people-rows", "light");
+
+    const collisions = await page.locator(".admin-person").evaluateAll((rows) =>
+      rows.flatMap((row) => {
+        const parts = [
+          ...row.querySelectorAll<HTMLElement>(
+            ".admin-person-name-text, .settings-badge, .admin-person-email, .admin-person-actions > *",
+          ),
+        ];
+
+        return parts.flatMap((part, index) =>
+          parts.slice(index + 1).flatMap((other) => {
+            const a = part.getBoundingClientRect();
+            const b = other.getBoundingClientRect();
+
+            const hit =
+              a.left < b.right - 0.5 &&
+              b.left < a.right - 0.5 &&
+              a.top < b.bottom - 0.5 &&
+              b.top < a.bottom - 0.5;
+
+            return hit ? [`${part.className} × ${other.className}`] : [];
+          }),
+        );
+      }),
+    );
+
+    expect(collisions, "overlapping parts of a person row").toEqual([]);
+
+    // Your own row says "My settings" in words, not as a floating button.
+    const you = page.locator(".admin-person", { hasText: "Riel" });
+
+    await expect(you.getByRole("link", { name: "My settings" })).toBeVisible();
+    // The desktop row's buttons are gone: the role and the rest are in the menu.
+    await expect(page.getByRole("switch")).toHaveCount(0);
+
+    const maya = page.locator(".admin-person", { hasText: "Maya" });
+
+    await maya.getByRole("button", { name: "Role and access for Maya Okafor" }).click();
+
+    const menu = page.getByRole("menu", { name: "Maya Okafor: role and access" });
+
+    await expect(menu.getByRole("menuitem", { name: "Remove from workspace" })).toBeVisible();
+    await menu.getByRole("menuitem", { name: "Make an administrator" }).click();
+    await expect(
+      page.getByRole("region", { name: "Administrators" }).getByText("maya@smartdata.example"),
+    ).toBeVisible();
+  });
+
+  test("the audit log is a stack of cards", async ({ page }) => {
+    await openAdmin(page, "audit-log");
+
+    const entry = page.getByRole("cell", { name: "account.settings.change" });
+
+    await expect(entry).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    // A card: the action heads it, the other cells are labelled lines under it, all on screen.
+    const card = page.locator(".admin-audit-table tbody tr").first();
+
+    const cells = await card.locator("td").evaluateAll((tds) =>
+      tds.map((td) => {
+        const box = td.getBoundingClientRect();
+
+        return { right: box.right, top: box.top, title: td.hasAttribute("data-title") };
+      }),
+    );
+
+    expect(Math.max(...cells.map((cell) => cell.right))).toBeLessThanOrEqual(
+      PHONE_TOUCH.viewport.width,
+    );
+    expect(cells.find((cell) => cell.title)?.top).toBe(Math.min(...cells.map((cell) => cell.top)));
+    await expect(page.locator(".admin-audit-table thead")).toBeHidden();
+    await shot(page, "admin-audit-cards", "light");
+  });
+
+  test("the import runs are cards, and the run page goes back to Slack import", async ({
+    page,
+  }) => {
+    await openAdmin(page, "slack/runs");
+
+    await expect(page.getByRole("link", { name: "#1" })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await expectTouchTargets(page, ".settings-header");
+
+    await page.getByRole("link", { name: "Back to Slack import" }).click();
+    await expect(page).toHaveURL(/\/app\/admin\/slack$/);
+  });
+
+  test("the workspace profile preview fits the screen", async ({ page }) => {
+    await openAdmin(page, "workspace");
+
+    const preview = page.getByRole("figure", { name: "Preview" });
+
+    await expect(preview).toBeVisible();
+    await expect(preview.locator(".profile-preview-lines")).toBeHidden();
+    expect((await preview.boundingBox())?.height).toBeLessThan(140);
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "admin-workspace-preview", "light");
+  });
 });

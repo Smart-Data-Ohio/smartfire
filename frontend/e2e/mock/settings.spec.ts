@@ -1,5 +1,14 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, openApp, shot, test } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  expectTouchTargets,
+  matrix,
+  openApp,
+  PHONE_TOUCH,
+  shot,
+  test,
+} from "./support.ts";
 
 /** Opens a settings section (`""` for the profile) with motion reduced. */
 async function openSettings(page: Page, section: string, theme: "light" | "dark" = "light") {
@@ -25,14 +34,19 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
-matrix("the settings sections", async ({ page, theme }) => {
-  await openSettings(page, "", theme);
+matrix("the settings sections", async ({ page, theme, phone }) => {
+  // On phones the root is the list of sections: the profile is pushed from it, at its own address.
+  await openSettings(page, phone ? "profile" : "", theme);
 
   await expect(page.getByRole("heading", { level: 1, name: "Profile" })).toBeVisible();
-  await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+
+  if (!phone) {
+    await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  }
+
   await settle(page);
   await shot(page, "settings-profile", theme);
 
@@ -46,6 +60,10 @@ matrix("the settings sections", async ({ page, theme }) => {
     ["Push devices", "Push devices", "settings-devices"],
     ["Integrations", "Integrations", "settings-integrations"],
   ] as const) {
+    if (phone) {
+      await page.getByRole("link", { name: "Back to Settings" }).click();
+    }
+
     await nav(page).getByRole("link", { name: link }).click();
     await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     await settle(page);
@@ -766,4 +784,60 @@ test("two devices' tests run on their own", async ({ page }) => {
   await expect(tests.nth(0)).toHaveAttribute("aria-busy", "true");
   release();
   await expect(tests.nth(0)).not.toHaveAttribute("aria-busy", "true");
+});
+
+test.describe("on a phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("settings are a list of sections, each pushed over it with a way back", async ({ page }) => {
+    await openApp(page, "settings");
+
+    const list = nav(page);
+
+    await expect(list.getByRole("link")).toHaveCount(10);
+    await expect(page.locator(".settings-content")).toBeHidden();
+    await expectTouchTargets(page, ".settings-nav");
+    await expectTouchTargets(page, ".settings-header");
+    await expectNoHorizontalOverflow(page);
+    await shot(page, "settings-list", "light");
+
+    await list.getByRole("link", { name: "Notifications" }).click();
+
+    const header = page.locator(".settings-header");
+
+    await expect(page).toHaveURL(/\/app\/settings\/notifications$/);
+    await expect(list).toBeHidden();
+    await expect(header.getByText("Notifications", { exact: true })).toBeVisible();
+    // The header names the page, so its own heading is left to screen readers.
+    await expect(page.getByRole("heading", { level: 1, name: "Notifications" })).toHaveAttribute(
+      "data-in-header",
+    );
+    await expectTouchTargets(page, ".settings-header");
+    await expectNoHorizontalOverflow(page);
+
+    await header.getByRole("link", { name: "Back to Settings" }).click();
+    await expect(page).toHaveURL(/\/app\/settings$/);
+    await expect(list).toBeVisible();
+    await expect(header.getByRole("link", { name: "Back to conversations" })).toBeVisible();
+  });
+
+  test("the profile is pushed at its own address", async ({ page }) => {
+    await openApp(page, "settings");
+
+    await nav(page).getByRole("link", { name: "Profile" }).click();
+
+    await expect(page).toHaveURL(/\/app\/settings\/profile$/);
+    await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("a page under a section goes back to that section", async ({ page }) => {
+    await openApp(page, "settings/slack");
+
+    const header = page.locator(".settings-header");
+
+    await expect(header.getByText("Integrations", { exact: true })).toBeVisible();
+    await header.getByRole("link", { name: "Back to Integrations" }).click();
+    await expect(page).toHaveURL(/\/app\/settings\/integrations$/);
+  });
 });

@@ -32,6 +32,7 @@ import { IntegrationsSection } from "./features/settings/integrations-section.ts
 import { NotificationsSection } from "./features/settings/notifications-section.tsx";
 import { ProfileSection } from "./features/settings/profile-section.tsx";
 import { RoomsSection } from "./features/settings/rooms-section.tsx";
+import { RootSection } from "./features/settings/sections-layout.tsx";
 import { SecuritySection } from "./features/settings/security-section.tsx";
 import { SessionsSection } from "./features/settings/sessions-section.tsx";
 import { SettingsView } from "./features/settings/settings-view.tsx";
@@ -261,9 +262,21 @@ const settingsRoute = createRoute({
   component: SettingsView,
 });
 
-/** The settings sections, each at `/app/settings/<path>` (the profile at `/app/settings`). */
+/**
+ * The settings sections, each at `/app/settings/<path>`. `/app/settings` shows the profile beside
+ * the nav; on phones it is the list of sections, and the profile is pushed at `…/profile`.
+ */
 const settingsSections = [
-  createRoute({ getParentRoute: () => settingsRoute, path: "/", component: ProfileSection }),
+  createRoute({
+    getParentRoute: () => settingsRoute,
+    path: "/",
+    component: () => (
+      <RootSection>
+        <ProfileSection />
+      </RootSection>
+    ),
+  }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "profile", component: ProfileSection }),
   createRoute({ getParentRoute: () => settingsRoute, path: "status", component: StatusSection }),
   createRoute({
     getParentRoute: () => settingsRoute,
@@ -312,9 +325,21 @@ const adminRoute = createRoute({
   component: AdminView,
 });
 
-/** The admin sections, each at `/app/admin/<path>` (the workspace at `/app/admin`). */
+/**
+ * The admin sections, each at `/app/admin/<path>`. `/app/admin` shows the workspace beside the
+ * nav; on phones it is the list of sections, and the workspace is pushed at `…/workspace`.
+ */
 const adminSections = [
-  createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
+  createRoute({
+    getParentRoute: () => adminRoute,
+    path: "/",
+    component: () => (
+      <RootSection>
+        <WorkspaceSection />
+      </RootSection>
+    ),
+  }),
+  createRoute({ getParentRoute: () => adminRoute, path: "workspace", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),

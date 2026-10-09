@@ -209,7 +209,7 @@ export function AuditLogSection() {
             <p className="text-muted">No audit entries match these filters.</p>
           ) : (
             <section className="admin-audit-wrap" aria-label="Audit log entries">
-              <table className="admin-audit-table">
+              <table className="admin-audit-table" data-cards>
                 <caption className="visually-hidden">Audit log entries, newest first</caption>
                 <thead>
                   <tr>
@@ -224,18 +224,20 @@ export function AuditLogSection() {
                 <tbody>
                   {load.page.entries.map((entry) => (
                     <tr key={entry.id}>
-                      <td>
+                      <td data-label="Time">
                         <time dateTime={entry.createdAt}>
                           {auditTime(entry.createdAt, load.page.timeZone)}
                         </time>
                       </td>
-                      <td>{entry.actor ?? "—"}</td>
-                      <td>
+                      <td data-label="Actor">{entry.actor ?? "—"}</td>
+                      <td data-title>
                         <code>{entry.action}</code>
                       </td>
-                      <td>{entry.target ?? "—"}</td>
-                      <td className="admin-audit-changes">{entry.changes}</td>
-                      <td>{entry.ipAddress ?? "—"}</td>
+                      <td data-label="Target">{entry.target ?? "—"}</td>
+                      <td data-label="Changes" className="admin-audit-changes">
+                        {entry.changes}
+                      </td>
+                      <td data-label="IP">{entry.ipAddress ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

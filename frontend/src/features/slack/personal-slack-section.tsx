@@ -159,7 +159,7 @@ export function PersonalSlackSection() {
               <p className="text-muted">No personal imports yet.</p>
             ) : (
               <section className="admin-audit-wrap" aria-label="Your imports">
-                <table className="admin-audit-table">
+                <table className="admin-audit-table" data-cards>
                   <thead>
                     <tr>
                       <th scope="col">Run</th>
@@ -171,14 +171,14 @@ export function PersonalSlackSection() {
                   <tbody>
                     {page.runs.map((run) => (
                       <tr key={run.id}>
-                        <td>
+                        <td data-title>
                           <Link to="/settings/slack/$runId" params={{ runId: `${run.id}` }}>
                             #{run.id}
                           </Link>
                         </td>
-                        <td>{modeLabel(run.mode)}</td>
-                        <td>{run.status}</td>
-                        <td>{auditTime(run.createdAt)}</td>
+                        <td data-label="Mode">{modeLabel(run.mode)}</td>
+                        <td data-label="Status">{run.status}</td>
+                        <td data-label="When">{auditTime(run.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>

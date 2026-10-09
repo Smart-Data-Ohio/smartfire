@@ -57,7 +57,7 @@ export function SlackRunsSection() {
       ) : null}
       {load.status === "ready" && load.list.runs.length > 0 ? (
         <section className="admin-audit-wrap" aria-label="Import runs">
-          <table className="admin-audit-table">
+          <table className="admin-audit-table" data-cards>
             <thead>
               <tr>
                 <th scope="col">Run</th>
@@ -71,16 +71,16 @@ export function SlackRunsSection() {
             <tbody>
               {load.list.runs.map((run) => (
                 <tr key={run.id}>
-                  <td>
+                  <td data-title>
                     <Link to="/admin/slack/runs/$runId" params={{ runId: `${run.id}` }}>
                       #{run.id}
                     </Link>
                   </td>
-                  <td>{run.kind}</td>
-                  <td>{modeLabel(run.mode)}</td>
-                  <td>{run.status}</td>
-                  <td>{run.startedBy}</td>
-                  <td>{auditTime(run.createdAt)}</td>
+                  <td data-label="Kind">{run.kind}</td>
+                  <td data-label="Mode">{modeLabel(run.mode)}</td>
+                  <td data-label="Status">{run.status}</td>
+                  <td data-label="Started by">{run.startedBy}</td>
+                  <td data-label="When">{auditTime(run.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
