@@ -212,6 +212,10 @@ async fn create_post(c: &mut Ctx) -> Result {
                 .attachment_signed_id
                 .as_ref()
                 .is_some_and(|id| !id.is_empty())
+            || message
+                .drive_file_ids
+                .as_ref()
+                .is_some_and(|ids| !ids.is_empty())
     });
     let client_id = message
         .as_ref()
@@ -275,7 +279,10 @@ async fn create_post(c: &mut Ctx) -> Result {
     {
         return Err(fail(
             c,
-            validation("message", "replyToMessageId isn't a message on this timeline"),
+            validation(
+                "message",
+                "replyToMessageId isn't a message on this timeline",
+            ),
         ));
     }
     let signed_id = message
@@ -293,6 +300,15 @@ async fn create_post(c: &mut Ctx) -> Result {
     let attachment = match signed_id {
         Some(id) => Assignment::Signed(id).stage(c.app()).await?,
         None => Assignment::Unchanged,
+    };
+    let message = if let Some(mut message) = message {
+        message.drive_file_ids = Some(crate::drive::require_drive_file_ids(
+            c,
+            message.drive_file_ids.as_deref().unwrap_or(&[]),
+        )?);
+        Some(message)
+    } else {
+        None
     };
     let outcome = c
         .app()
@@ -324,6 +340,7 @@ async fn create_post(c: &mut Ctx) -> Result {
                 attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                 reply_to_message_id: message.reply_to_message_id,
                 reply_notify_author: message.reply_notify_author,
+                drive_file_ids: message.drive_file_ids.unwrap_or_default(),
                 ..Default::default()
             });
             let (thread, opener) = ChannelThread::create_board_post_with_message(

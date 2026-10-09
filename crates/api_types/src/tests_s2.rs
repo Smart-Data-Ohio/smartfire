@@ -136,6 +136,7 @@ fn message_edits_and_sources_round_trip() {
     assert_wire(
         &UpdateMessage {
             markdown_source: "Hello **again**".into(),
+            remove_drive_file_ids: None,
         },
         json!({"markdownSource": "Hello **again**"}),
     );
@@ -181,6 +182,7 @@ fn uploads_round_trip() {
             reply_to_message_id: None,
             reply_notify_author: None,
             attachment_signed_id: Some("eyJfcmFpbHMiOnt9--abc".into()),
+            drive_file_ids: None,
         },
         json!({
             "clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
@@ -618,6 +620,7 @@ fn threads_round_trip() {
                 reply_to_message_id: None,
                 reply_notify_author: None,
                 attachment_signed_id: None,
+                drive_file_ids: None,
             },
         },
         json!({

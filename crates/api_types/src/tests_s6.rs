@@ -153,6 +153,7 @@ fn the_new_post_form_and_create_round_trip() {
                 reply_to_message_id: None,
                 reply_notify_author: None,
                 attachment_signed_id: None,
+                drive_file_ids: None,
             }),
         },
         json!({

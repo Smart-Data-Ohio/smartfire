@@ -27,6 +27,7 @@ mod cards;
 mod composer;
 mod conversation;
 mod direct;
+mod drive;
 mod error;
 mod events;
 mod fizzy;
@@ -115,6 +116,10 @@ pub use composer::{
 pub use conversation::ConversationName;
 pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
+};
+pub use drive::{
+    DriveFile, DriveFileList, DriveRecipient, DriveRecipientList, DriveShare, ShareDriveFile,
+    ValidateDriveRecipients,
 };
 pub use fizzy::{CreateFizzyCard, CreatedFizzyCard, FizzyBoard, FizzyMessageCardForm};
 pub use error::{ApiError, ApiErrorResponse};

@@ -474,6 +474,38 @@ impl Api {
         )
         .await
     }
+    /// Reader access for one person, with email notifications off. The classic share dialog
+    /// does this from the browser; the SPA asks the server to do it with the viewer's Drive grant.
+    pub async fn create_reader_permission(
+        &self,
+        db: &Database,
+        secrets: &Secrets,
+        user_id: i64,
+        file_id: &str,
+        email: &str,
+        now: Timestamp,
+    ) -> Result<Value> {
+        let path = format!("/drive/v3/files/{file_id}/permissions");
+        let q = query(&[
+            ("supportsAllDrives", "true".into()),
+            ("sendNotificationEmail", "false".into()),
+        ]);
+        let payload = json!({"role": "reader", "type": "user", "emailAddress": email});
+        self.request(
+            db,
+            secrets,
+            user_id,
+            ApiRequest {
+                method: Method::POST,
+                path: &path,
+                query: Some(&q),
+                payload: Some(&payload),
+                drive: true,
+            },
+            now,
+        )
+        .await
+    }
     pub async fn list_events(
         &self,
         db: &Database,

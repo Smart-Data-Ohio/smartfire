@@ -152,12 +152,17 @@ async fn update_message(c: &mut Ctx) -> Result {
             ),
         ));
     }
+    let remove = crate::drive::require_removed_drive_file_ids(
+        c,
+        input.remove_drive_file_ids.as_deref().unwrap_or(&[]),
+    )?;
     let thread_id = message.thread_id;
     let updated = match classic::update_markdown_source(
         c,
         thread_id,
         message,
         input.markdown_source,
+        &remove,
     )
     .await
     {
@@ -173,10 +178,11 @@ async fn update_message(c: &mut Ctx) -> Result {
         Err(error) => return Err(error),
     };
     // `messages#update` / `channel_thread_messages#update`'s edit frames.
+    let drive_given = !remove.is_empty();
     if thread_id.is_some() {
-        rendered::broadcast_thread_edit(c, &room, &updated, false).await?;
+        rendered::broadcast_thread_edit(c, &room, &updated, drive_given).await?;
     } else {
-        rendered::broadcast_edit(c, &room, &updated, false).await?;
+        rendered::broadcast_edit(c, &room, &updated, drive_given).await?;
     }
     let dto = render_message(c, updated).await?;
     c.json(StatusCode::OK, &dto)
