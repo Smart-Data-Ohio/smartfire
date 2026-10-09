@@ -193,6 +193,7 @@ describe("work sync and board room sessions", () => {
                   acquired.push(topic);
                 }),
               release: () => Effect.void,
+              forgetRejected: () => Effect.void,
               subscribed: Effect.succeed([]),
             }),
           ),
