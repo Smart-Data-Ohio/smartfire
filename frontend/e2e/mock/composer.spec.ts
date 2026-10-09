@@ -234,6 +234,103 @@ test("a second ordinary send from history posts before the latest page arrives",
   }
 });
 
+for (const sync of ["held", "live"]) {
+  test(`an ordinary send never leaves the view when its POST answers at once (sync ${sync})`, async ({
+    page,
+  }) => {
+    const releaseSync = await holdSync(page);
+
+    await openApp(page, `${GENERAL}/m/10005`);
+    await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+    if (sync === "live") {
+      await releaseSync();
+      await page.waitForLoadState("networkidle");
+    }
+
+    const latest = Promise.withResolvers<void>();
+    let fetching = false;
+
+    // Only the latest-page GET waits; the POST goes straight through.
+    await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+      if (route.request().method() === "GET") {
+        fetching = true;
+        await latest.promise;
+      }
+
+      return route.continue();
+    });
+
+    const text = `Never hidden, sync ${sync}`;
+
+    // Counts every DOM change after the row first shows that leaves no row with the text. The
+    // count sits on <html>, outside the observed <body>, so writing it doesn't wake the observer.
+    await page.evaluate((watched) => {
+      let seen = false;
+      let missing = 0;
+
+      document.documentElement.dataset.sendGaps = "0";
+
+      new MutationObserver(() => {
+        const shown = [...document.querySelectorAll("[data-pending], [data-message-id]")].some(
+          (row) => row.textContent?.includes(watched),
+        );
+
+        if (shown) {
+          seen = true;
+        } else if (seen) {
+          missing += 1;
+          document.documentElement.dataset.sendGaps = String(missing);
+        }
+      }).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+      });
+    }, text);
+
+    const gaps = () => page.evaluate(() => Number(document.documentElement.dataset.sendGaps));
+
+    try {
+      const input = composer(page);
+      const confirmed = page.locator("[data-message-id]").filter({ hasText: text });
+
+      await input.fill(text);
+      await input.press("Enter");
+      await expect.poll(() => fetching).toBe(true);
+
+      // The POST answered while the GET is still held: the confirmed row took the pending one's
+      // place.
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+      expect(await gaps()).toBe(0);
+
+      // The broadcast's echo may land before or after the page: either way, one row.
+      await releaseSync();
+
+      const landed = page.waitForResponse(
+        (response) =>
+          response.request().method() === "GET" &&
+          new URL(response.url()).pathname === `/api/v1/rooms/${ROOM_IDS.general}/messages` &&
+          new URL(response.url()).search === "",
+      );
+
+      latest.resolve();
+      await landed;
+      await expect(page.locator('[data-message-id="10005"]')).toHaveCount(0);
+      await page.waitForLoadState("networkidle");
+      await expect(confirmed).toBeVisible();
+      await expect(confirmed).toHaveCount(1);
+      expect(await gaps()).toBe(0);
+    } finally {
+      latest.resolve();
+      await releaseSync();
+    }
+  });
+}
+
 for (const first of ["POST response", "broadcast"]) {
   test(`an ordinary send stays visible when the ${first} arrives before the latest page`, async ({
     page,
