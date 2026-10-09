@@ -53,7 +53,8 @@ async function openOn(page: Page, messageId: number, theme: Theme = "light") {
 /**
  * Pages toward the present until the jump pill closes: the window reaches the present and the
  * reader is at its end. Scrolling is what fetches each newer page. The wheel is the reader, so a
- * permalink does not keep the place they just left.
+ * permalink does not keep the place they just left. It follows the jump: the listener settles the
+ * position it sees, and a wheel before the jump anchors the permalink.
  */
 async function scrollToPresent(page: Page) {
   const log = page.getByRole("log", { name: "Messages" });
@@ -61,10 +62,10 @@ async function scrollToPresent(page: Page) {
 
   await expect(async () => {
     await log.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
       element.dispatchEvent(
         new WheelEvent("wheel", { deltaY: 1, bubbles: true, cancelable: true }),
       );
-      element.scrollTop = element.scrollHeight;
     });
     await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
     await expect(jump).toHaveAttribute("data-open", "false");
