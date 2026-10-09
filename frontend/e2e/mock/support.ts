@@ -4,7 +4,8 @@ import { join } from "node:path";
 import {
   type APIRequestContext,
   test as base,
-  expect as expectBase,
+  expect,
+  type Locator,
   type Page,
 } from "@playwright/test";
 
@@ -29,6 +30,43 @@ export const TABLET = { width: 900, height: 1000 } as const;
 
 export type Theme = "light" | "dark";
 
+/** Wait for a native wheel gesture to move the list and finish scrolling. */
+export async function scrollByWheel(page: Page, list: Locator, delta: number): Promise<void> {
+  if (delta === 0) return;
+
+  await list.hover();
+  await list.evaluate((element) => {
+    const offset = element.scrollTop;
+
+    element.setAttribute("data-wheel-settled", "false");
+    element.addEventListener(
+      "wheel",
+      () => {
+        // Passive wheel listeners can run after the compositor has already scrolled.
+        let moved = element.scrollTop !== offset;
+
+        const scroll = () => {
+          moved ||= element.scrollTop !== offset;
+        };
+
+        const end = (event: Event) => {
+          if (event.target !== element || !moved) return;
+
+          element.setAttribute("data-wheel-settled", "true");
+          element.removeEventListener("scroll", scroll);
+          element.removeEventListener("scrollend", end);
+        };
+
+        element.addEventListener("scroll", scroll);
+        element.addEventListener("scrollend", end);
+      },
+      { capture: true, passive: true, once: true },
+    );
+  });
+  await page.mouse.wheel(0, delta);
+  await expect(list).toHaveAttribute("data-wheel-settled", "true");
+}
+
 /** Each test starts on a fresh seed: `/__mock/reset` (it also drops sync connections). */
 export const test = base.extend<{ resetMock: undefined }>({
   resetMock: [
@@ -42,7 +80,7 @@ export const test = base.extend<{ resetMock: undefined }>({
   ],
 });
 
-export { expect } from "@playwright/test";
+export { expect };
 
 interface HoldOptions {
   /**
@@ -93,6 +131,21 @@ export async function postMessage(request: APIRequestContext, body: MockPost): P
   const state = await (await request.get("/__mock/state")).json();
 
   await request.post("/__mock/post", { headers: { "X-CSRF-Token": state.csrfToken }, data: body });
+}
+
+/** Restores an ordinary thread for scenarios that need its full conversation viewport. */
+export async function stopTrackingThread(
+  request: APIRequestContext,
+  threadId: number,
+): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  const response = await request.patch(`/api/v1/threads/${threadId}/work`, {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { status: null, ownerId: null },
+  });
+
+  expect(response.ok()).toBe(true);
 }
 
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */
@@ -199,10 +252,18 @@ export function matrix(
   }
 }
 
-/** Asserts nothing scrolls the page sideways, naming the widest elements that stick out if so. */
-export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const overflow = await page.evaluate(() => {
+/**
+ * Asserts nothing scrolls sideways: not the page, and no box inside it (a pane body wider than the
+ * screen, say), naming the culprits if so. Code blocks and text fields may; pass `allowScroll` (a
+ * selector) for any other deliberate sideways scroller, such as a chip strip.
+ */
+export async function expectNoHorizontalOverflow(
+  page: Page,
+  { allowScroll }: { readonly allowScroll?: string | undefined } = {},
+): Promise<void> {
+  const overflow = await page.evaluate((allowed) => {
     const width = window.innerWidth;
+    const exempt = ["pre", "textarea", allowed].filter(Boolean).join(", ");
 
     const wide = [...document.querySelectorAll("body *")]
       .flatMap((element) => {
@@ -216,13 +277,29 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
       .slice(0, 5)
       .map(({ name }) => name);
 
-    return { scrollWidth: document.documentElement.scrollWidth, width, wide };
-  });
+    const scrollers = [...document.querySelectorAll<HTMLElement>("body *")].flatMap((element) => {
+      const { overflowX } = getComputedStyle(element);
 
-  expectBase(
+      const scrolls =
+        (overflowX === "auto" || overflowX === "scroll") &&
+        element.scrollWidth > element.clientWidth + 1 &&
+        element.closest(exempt) === null;
+
+      return scrolls
+        ? [
+            `${element.tagName.toLowerCase()}.${element.className} ${element.scrollWidth}/${element.clientWidth}`,
+          ]
+        : [];
+    });
+
+    return { scrollWidth: document.documentElement.scrollWidth, width, wide, scrollers };
+  }, allowScroll);
+
+  expect(
     overflow.scrollWidth,
     `scrollWidth ${overflow.scrollWidth} > ${overflow.width}: ${overflow.wide.join(", ")}`,
   ).toBeLessThanOrEqual(overflow.width);
+  expect(overflow.scrollers, "boxes that scroll sideways").toEqual([]);
 }
 
 const TAPPABLE = [
@@ -261,10 +338,13 @@ export async function expectTouchTargets(
         const box = target.getBoundingClientRect();
         const style = getComputedStyle(target);
 
+        // Visually hidden (the .visually-hidden clip) is skipped; a visible 1 px target is not.
         const skipped =
-          box.width < 2 ||
-          box.height < 2 ||
+          box.width === 0 ||
+          box.height === 0 ||
           style.visibility === "hidden" ||
+          target.closest(".visually-hidden") !== null ||
+          style.clipPath === "inset(50%)" ||
           (target.tagName === "A" && style.display === "inline") ||
           (ignore !== undefined && target.matches(ignore));
 
@@ -280,33 +360,52 @@ export async function expectTouchTargets(
     { tappable: TAPPABLE, min, ignore },
   );
 
-  expectBase(small, `tap targets under ${min}px`).toEqual([]);
+  expect(small, `tap targets under ${min}px`).toEqual([]);
 }
 
 /**
  * Raises an on-screen keyboard `height` px tall that overlays the page, as iOS Safari's does: the
- * visual viewport shrinks and the layout viewport holds. 0 lowers it. For a keyboard that resizes
- * the page instead (Android), shrink the viewport with `page.setViewportSize`.
+ * visual viewport shrinks and the layout viewport holds. `offsetTop` pans the visible area down
+ * the layout viewport, as iOS does to bring a field above the keyboard (`pageTop` follows). 0
+ * lowers it. The app reads it as a keyboard only while a text field has focus. Resolves once the
+ * page has had a frame to respond. For a keyboard that resizes the page instead (Android), shrink
+ * the viewport with `page.setViewportSize`.
  */
-export async function simulateKeyboard(page: Page, height: number): Promise<void> {
-  await page.evaluate((keyboard) => {
-    const viewport = window.visualViewport;
+export async function simulateKeyboard(
+  page: Page,
+  height: number,
+  { offsetTop = 0 }: { readonly offsetTop?: number } = {},
+): Promise<void> {
+  await page.evaluate(
+    async ({ keyboard, pan }) => {
+      const viewport = window.visualViewport;
 
-    if (viewport === null) {
-      throw new Error("this browser has no visualViewport");
-    }
+      if (viewport === null) {
+        throw new Error("this browser has no visualViewport");
+      }
 
-    if (keyboard === 0) {
-      Reflect.deleteProperty(viewport, "height");
-    } else {
-      Object.defineProperty(viewport, "height", {
-        configurable: true,
-        get: () => window.innerHeight - keyboard,
-      });
-    }
+      const readings = {
+        height: () => document.documentElement.clientHeight - keyboard,
+        offsetTop: () => pan,
+        pageTop: () => window.scrollY + pan,
+      };
 
-    viewport.dispatchEvent(new Event("resize"));
-  }, height);
+      for (const [name, read] of Object.entries(readings)) {
+        if (keyboard === 0) {
+          Reflect.deleteProperty(viewport, name);
+        } else {
+          Object.defineProperty(viewport, name, { configurable: true, get: read });
+        }
+      }
+
+      viewport.dispatchEvent(new Event("resize"));
+      viewport.dispatchEvent(new Event("scroll"));
+
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+    },
+    { keyboard: height, pan: offsetTop },
+  );
 }
 
 /**

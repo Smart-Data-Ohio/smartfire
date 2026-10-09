@@ -1,13 +1,26 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { REPLIES_FAILED, ThreadTimeline } from "./thread-timeline.tsx";
 
+beforeEach(() => {
+  // These failure states draw no list; jsdom still needs the anchor's observer API.
+  vi.stubGlobal(
+    "ResizeObserver",
+    class implements ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   store.setState(initialState, true);
 });
 

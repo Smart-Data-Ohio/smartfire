@@ -4,6 +4,7 @@
  * pane store. The URL wins, so a thread opened from the Threads pane sits on
  * top of it and closing the thread goes back to the list.
  */
+import type { RoomKind } from "../../gen/RoomKind.ts";
 import type { PaneKind, RoutePaneKind } from "./pane-store.ts";
 
 export type RightPaneView =
@@ -12,6 +13,7 @@ export type RightPaneView =
   | { readonly kind: "pane"; readonly pane: PaneKind };
 
 export interface PaneInputs {
+  readonly roomKind?: RoomKind | undefined;
   readonly newBoardPost?: boolean;
   /** `$threadId` from the URL, when a thread route matched. */
   readonly threadId: number | null;
@@ -24,6 +26,7 @@ export interface PaneInputs {
 
 /** The thread route, then the new-thread route, then the side pane, else nothing. */
 export function selectRightPaneView({
+  roomKind,
   threadId,
   newThreadParent,
   newBoardPost = false,
@@ -42,13 +45,15 @@ export function selectRightPaneView({
 
   const pane = routePane ?? openPane;
 
+  if (pane === "automations" && roomKind !== "board") return null;
+
   return pane === null ? null : { kind: "pane", pane };
 }
 
 /** The URL of a side pane's classic page mapping, or null for a local-only pane. */
 export function paneRoute(
   pane: PaneKind,
-): "/r/$roomId/threads" | "/r/$roomId/files" | "/r/$roomId/pins" | null {
+): "/r/$roomId/threads" | "/r/$roomId/files" | "/r/$roomId/pins" | "/r/$roomId/automations" | null {
   switch (pane) {
     case "threads":
       return "/r/$roomId/threads";
@@ -56,6 +61,8 @@ export function paneRoute(
       return "/r/$roomId/files";
     case "pins":
       return "/r/$roomId/pins";
+    case "automations":
+      return "/r/$roomId/automations";
     case "members":
     case "stage":
     case "details":
@@ -96,6 +103,7 @@ export function closeStep(view: RightPaneView | null): CloseStep {
 
 /** The label of the back button that uncovers the side pane under a thread. */
 export const PANE_TITLES = {
+  automations: "Automations",
   members: "Members",
   pins: "Pinned messages",
   files: "Files",

@@ -10,14 +10,26 @@
     overflow: hidden;
   }
 
-  /* The visible viewport: above an overlaid keyboard, clear of a landscape notch. Each column
-     pads itself under the status bar, so its own surface fills that strip. */
+  /* The visible viewport: the full dynamic viewport, or while an overlaid keyboard is up, the
+     visual viewport's own top and height, clear of a landscape notch. Each column pads itself
+     under the status bar, so its own surface fills that strip. */
   .app-shell {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
     display: grid;
     grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr);
-    height: calc(100dvh - var(--keyboard-inset));
+    height: var(--viewport-height);
     padding-inline: var(--safe-left) var(--safe-right);
     background: var(--bg-app);
+  }
+
+  /* On paper there is no viewport to follow: the shell flows, so a fixed frame doesn't repeat on
+     every page or cut the content off at one screen. */
+  @media print {
+    .app-shell {
+      position: static;
+      height: auto;
+    }
   }
 
   .app-main {

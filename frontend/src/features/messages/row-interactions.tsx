@@ -9,6 +9,7 @@ import {
   type RefObject,
   Suspense,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -66,24 +67,33 @@ const RELEASE_WAIT_MS = 1000;
  * down is light-dismissed by that very release (the press began outside it), so a right click
  * (which fires on press on macOS and Linux) and a long press open on release instead.
  */
-function afterRelease(pressed: boolean, open: () => void): void {
+function afterRelease(pressed: boolean, open: () => void): () => void {
   if (!pressed) {
     open();
 
-    return;
+    return () => undefined;
   }
+
+  let task = 0;
 
   const done = () => {
     window.removeEventListener("pointerup", done, true);
     window.removeEventListener("pointercancel", done, true);
     window.clearTimeout(fallback);
-    window.setTimeout(open, 0);
+    task = window.setTimeout(open, 0);
   };
 
   const fallback = window.setTimeout(done, RELEASE_WAIT_MS);
 
   window.addEventListener("pointerup", done, true);
   window.addEventListener("pointercancel", done, true);
+
+  return () => {
+    window.removeEventListener("pointerup", done, true);
+    window.removeEventListener("pointercancel", done, true);
+    window.clearTimeout(fallback);
+    window.clearTimeout(task);
+  };
 }
 
 type DialogKind = "forward" | "delete";
@@ -129,7 +139,11 @@ export interface RowInteractions {
  * right-click and long-press menu, the emoji picker and boost popovers, the row's keys, editing,
  * forwarding and the delete confirmation with its collapse.
  */
-export function useRowInteractions(message: MessageDTO, inThread: boolean): RowInteractions {
+export function useRowInteractions(
+  message: MessageDTO,
+  inThread: boolean,
+  onNavigate?: (allowEnd: boolean) => void,
+): RowInteractions {
   const navigate = useNavigate();
   const openFizzyCard = useOpenFizzyCard();
   const permissions = useMessagePermissions(message);
@@ -140,6 +154,7 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
   const pressTimer = useRef(0);
   const pressStart = useRef<{ x: number; y: number } | null>(null);
   const popupCount = useRef(0);
+  const popupRelease = useRef<(() => void) | null>(null);
   const returnTo = useRef<HTMLElement | null>(null);
   const [hovered, setHovered] = useState(false);
   const [keyboardFocus, setKeyboardFocus] = useState(false);
@@ -153,8 +168,14 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
     return () => {
       window.clearTimeout(hoverTimer.current);
       window.clearTimeout(pressTimer.current);
+      popupRelease.current?.();
     };
   }, []);
+
+  useLayoutEffect(() => {
+    // Retain the row until React commits the popup, regardless of task/frame ordering.
+    if (popup !== null) rowRef.current?.removeAttribute("data-popup-pending");
+  }, [popup]);
 
   const row = () => rowRef.current;
 
@@ -195,6 +216,13 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
     popupCount.current += 1;
     returnTo.current = from;
     setPopup({ id: popupCount.current, kind, origin, fromBar, keyboard: usingKeyboard() });
+  };
+
+  const openAfterRelease = (pressed: boolean, origin: PopupOrigin, element: HTMLElement) => {
+    popupRelease.current?.();
+
+    if (pressed) element.setAttribute("data-popup-pending", "");
+    popupRelease.current = afterRelease(pressed, () => openPopup("menu", origin, null));
   };
 
   const keyboardOrigin = (): PopupOrigin | null => {
@@ -383,6 +411,9 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
 
     event.preventDefault();
 
+    if (["up", "down", "first", "last"].includes(command))
+      onNavigate?.(command === "down" || command === "last");
+
     switch (command) {
       case "up":
         focusAdjacentRow(element, command);
@@ -448,7 +479,7 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
         ? originForKeyboard(element)
         : originFromPoint(event.clientX, event.clientY, element);
 
-    afterRelease(event.buttons !== 0, () => openPopup("menu", origin, null));
+    openAfterRelease(event.buttons !== 0, origin, element);
   };
 
   const cancelPress = () => {
@@ -474,7 +505,7 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
       if (element !== null) {
         const origin = originFromPoint(clientX, clientY, element);
 
-        afterRelease(true, () => openPopup("menu", origin, null));
+        openAfterRelease(true, origin, element);
       }
     }, LONG_PRESS_MS);
   };
