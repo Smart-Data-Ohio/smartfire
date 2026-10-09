@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { followSourceRow, useSourceFollower } from "./source-focus.ts";
 
 /** A conversation: a pane (a container, tabIndex -1) holding message rows (tabIndex -1). */
@@ -130,6 +130,44 @@ describe("following the source row", () => {
     await reload(pane);
 
     expect(document.activeElement).toBe(pane);
+  });
+
+  it("cancels the scheduled frame after a mutation, not a frame the mutation forgot", async () => {
+    const scheduled: number[] = [];
+    const cancelled: number[] = [];
+    let next = 1;
+
+    const request = vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => {
+      const id = next;
+
+      next += 1;
+      scheduled.push(id);
+
+      return id;
+    });
+
+    const cancel = vi.spyOn(window, "cancelAnimationFrame").mockImplementation((id) => {
+      cancelled.push(id);
+    });
+
+    try {
+      conversation();
+
+      const follower = followSourceRow(find(2));
+
+      following.push(follower.stop);
+      document.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      document.body.append(document.createElement("span"));
+      await Promise.resolve();
+      await Promise.resolve();
+      follower.stop();
+
+      expect(scheduled.length).toBeGreaterThan(0);
+      expect(cancelled).toEqual(scheduled);
+    } finally {
+      request.mockRestore();
+      cancel.mockRestore();
+    }
   });
 
   it("stops when the component that started it unmounts", async () => {

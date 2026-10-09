@@ -1,227 +1,323 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { userFixture } from "../../api/testing.ts";
-import type { ThreadDetail } from "../../gen/ThreadDetail.ts";
-import type { WorkHandoffReceiver } from "../../gen/WorkHandoffReceiver.ts";
-import { initialState } from "../../store/state.ts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mutations, store } from "../../store/store.ts";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
-import { boardDetail, boardThread } from "../../test/board-fixtures.ts";
-import { toastSnapshot } from "../../ui/toast-store.ts";
-import { HandoffDialog } from "./handoff-dialog.tsx";
+import { removeToast, toastSnapshot } from "../../ui/toast-store.ts";
+import { HandoffDialog, useHandoffRoute } from "./handoff-dialog.tsx";
+import {
+  factsFixture,
+  threadDetailFixture,
+  workDetailFixture,
+  workPermissionsFixture,
+} from "./test-fixtures.ts";
 
-const THREAD = 9004;
+const THREAD = 7;
 
-const EMBER = { agentId: 41, userId: 30 } as const satisfies WorkHandoffReceiver;
-
-const ORBIT = { agentId: 42, userId: 31 } as const satisfies WorkHandoffReceiver;
-
-function detail(
-  receivers: readonly WorkHandoffReceiver[],
-  change: { readonly manage?: boolean; readonly tracked?: boolean } = {},
-): ThreadDetail {
-  const base = boardDetail({ ...boardThread(THREAD), name: "Cursor pagination" });
-  const thread = change.tracked === false ? { ...base.thread, work: null } : base.thread;
-
-  return {
-    ...base,
-    thread,
-    permissions: { ...base.permissions, canManageWork: change.manage ?? true },
-    work:
-      change.tracked === false || base.work === null
-        ? null
-        : { ...base.work, handoffReceivers: [...receivers] },
-    users: [
-      ...base.users,
-      { ...userFixture(30, "Ember"), role: "bot" },
-      { ...userFixture(31, "Orbit"), role: "bot" },
-    ],
-  };
+function loadThread() {
+  mutations.loadThreadDetail(
+    threadDetailFixture(THREAD, factsFixture(), workDetailFixture(), workPermissionsFixture()),
+  );
 }
 
-function setup(
-  receivers: readonly WorkHandoffReceiver[] = [EMBER, ORBIT],
-  change: { readonly manage?: boolean; readonly tracked?: boolean } = {},
-) {
-  mutations.loadThreadDetail(detail(receivers, change), 0);
-  const onClose = vi.fn();
-  const user = userEvent.setup();
+async function mount(path: string) {
+  loadThread();
 
-  render(<HandoffDialog threadId={THREAD} open onClose={onClose} />);
+  const root = createRootRoute({ component: Outlet });
 
-  return { onClose, user };
+  const thread = createRoute({
+    getParentRoute: () => root,
+    path: "/r/$roomId/t/$threadId",
+    component: () => (
+      <>
+        <RouteHarness />
+        <Outlet />
+      </>
+    ),
+  });
+
+  const handoff = createRoute({
+    getParentRoute: () => thread,
+    path: "handoff",
+    component: () => null,
+  });
+
+  const earlier = createRoute({
+    getParentRoute: () => root,
+    path: "/earlier",
+    component: () => <p>Earlier page</p>,
+  });
+
+  const router = createRouter({
+    routeTree: root.addChildren([earlier, thread.addChildren([handoff])]),
+    history: createMemoryHistory({ initialEntries: ["/earlier", path] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+
+  return router;
 }
 
-function toasts(): string[] {
-  return toastSnapshot().map((each) => each.title);
+/** The work bar's wiring: the button pushes the dialog, and both closes use the same route. */
+function RouteHarness() {
+  const route = useHandoffRoute(THREAD);
+  const work = store.getState().work.details[THREAD];
+
+  return (
+    <>
+      <button type="button" onClick={route.openHandoff}>
+        Open handoff
+      </button>
+      {work === undefined ? null : (
+        <HandoffDialog
+          threadId={THREAD}
+          threadName="Cursor pagination"
+          work={work}
+          open={route.open}
+          onOpenChange={(next) => {
+            if (!next) {
+              route.closeHandoff();
+            }
+          }}
+        />
+      )}
+    </>
+  );
 }
+
+beforeEach(() => {
+  // jsdom has no matchMedia; the agent avatar asks it which theme is on screen.
+  window.matchMedia = (query: string) =>
+    Object.assign(new EventTarget(), {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+    });
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
-  store.setState(initialState, true);
+  mutations.reset();
+
+  for (const record of toastSnapshot()) {
+    removeToast(record.id);
+  }
 });
 
-describe("the handoff dialog", () => {
-  it("names the work and lists the agents it can go to", () => {
-    setup();
+describe("the handoff route", () => {
+  it("steps back to the prior entry when an in-app open is cancelled", async () => {
+    const router = await mount(`/r/4/t/${THREAD}`);
+    const user = userEvent.setup();
 
-    expect(screen.getByRole("heading", { name: "Hand off “Cursor pagination”" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Open handoff" }));
+    await screen.findByRole("dialog", { name: /Hand off/ });
+    expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}/handoff`);
 
-    const select = screen.getByLabelText("Receiving agent");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    expect([...select.querySelectorAll("option")].map((option) => option.textContent)).toEqual([
-      "Choose an agent",
-      "Ember",
-      "Orbit",
-    ]);
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+    await act(async () => router.history.back());
+    expect(router.history.location.pathname).toBe("/earlier");
   });
 
-  it("checks the receiver, summary, links and questions before sending", async () => {
-    const handoff = vi.spyOn(actions.work, "handoff");
-    const { user } = setup();
+  it("replaces a direct arrival with the thread when it closes", async () => {
+    const router = await mount(`/r/4/t/${THREAD}/handoff`);
+    const user = userEvent.setup();
 
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
+    await screen.findByRole("dialog", { name: /Hand off/ });
+    expect(router.history.length).toBe(2);
 
-    expect(screen.getByText("Choose the agent to hand this work to.")).toBeTruthy();
-    expect(screen.getByText("Summary can't be blank.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    await user.selectOptions(screen.getByLabelText("Receiving agent"), "Orbit");
-    await user.type(screen.getByLabelText("Summary"), "Ready for the endpoint");
-    await user.type(screen.getByLabelText("Links"), "ftp://example.com/spec");
-    await user.type(
-      screen.getByLabelText("Open questions"),
-      Array.from({ length: 11 }, (_, index) => `Question ${index}?`).join("\n"),
-    );
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
-
-    expect(screen.queryByText("Choose the agent to hand this work to.")).toBeNull();
-    expect(screen.getByText("Links must be http(s) URLs.")).toBeTruthy();
-    expect(screen.getByText("Open questions are limited to 10 per handoff.")).toBeTruthy();
-    expect(handoff).not.toHaveBeenCalled();
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+    expect(router.history.length).toBe(2);
   });
 
-  it("hands the work off with one entry per line, disabled while it goes, then says to whom", async () => {
-    const pending = Promise.withResolvers<void>();
-    const handoff = vi.spyOn(actions.work, "handoff").mockReturnValue(pending.promise);
-    const { onClose, user } = setup();
-
-    await user.selectOptions(screen.getByLabelText("Receiving agent"), "Ember");
-    await user.type(screen.getByLabelText("Summary"), "Cursor shape agreed");
-    await user.type(
-      screen.getByLabelText("Links"),
-      "https://example.com/spec\n\n https://example.com/spec \nhttps://example.com/pr/4",
+  it("steps back after a successful in-app handoff, the same way a cancel does", async () => {
+    vi.spyOn(actions.work, "handOff").mockResolvedValue(
+      threadDetailFixture(THREAD, factsFixture(), workDetailFixture()),
     );
-    await user.type(screen.getByLabelText("Open questions"), "Page size?");
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
 
-    expect(handoff).toHaveBeenCalledWith(THREAD, {
-      receiverAgentId: EMBER.agentId,
-      summary: "Cursor shape agreed",
-      links: ["https://example.com/spec", "https://example.com/pr/4"],
-      openQuestions: ["Page size?"],
+    const router = await mount(`/r/4/t/${THREAD}`);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Open handoff" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+    await act(async () => router.history.back());
+    expect(router.history.location.pathname).toBe("/earlier");
+  });
+
+  it("ignores a handoff that succeeds after cancel", async () => {
+    const pending = Promise.withResolvers<ReturnType<typeof threadDetailFixture>>();
+
+    const handOff = vi.spyOn(actions.work, "handOff").mockReturnValue(pending.promise);
+    const router = await mount(`/r/4/t/${THREAD}`);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Open handoff" }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+    expect(handOff).toHaveBeenCalledOnce();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`));
+
+    await act(async () => {
+      pending.resolve(threadDetailFixture(THREAD, factsFixture(), workDetailFixture()));
+      await pending.promise;
     });
 
-    for (const label of ["Receiving agent", "Summary", "Links", "Open questions"]) {
-      expect(screen.getByLabelText(label)).toHaveProperty("disabled", true);
-    }
-
-    expect(screen.getByRole("button", { name: /Hand off/ }).getAttribute("aria-busy")).toBe("true");
-
-    // A second submit while the first is out sends nothing more.
-    await user.keyboard("{Control>}{Enter}{/Control}");
-    expect(handoff).toHaveBeenCalledTimes(1);
-    expect(onClose).not.toHaveBeenCalled();
-
-    await act(async () => pending.resolve());
-
-    expect(toasts()).toContain("Work handed off to Ember.");
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(router.history.location.pathname).toBe(`/r/4/t/${THREAD}`);
+    expect(toastSnapshot()).toEqual([]);
+    await act(async () => router.history.back());
+    expect(router.history.location.pathname).toBe("/earlier");
   });
+});
 
-  it("shows the server's field errors under their fields and lets them try again", async () => {
-    vi.spyOn(actions.work, "handoff").mockRejectedValue(
+describe("the handoff form's server errors", () => {
+  it("shows a validation error on its field", async () => {
+    vi.spyOn(actions.work, "handOff").mockRejectedValue(
       new ActionError("Validation", "Summary is too long (maximum is 2000 characters)", {
         summary: ["is too long (maximum is 2000 characters)"],
         receiverAgentId: ["Receiver must hold the manage_threads capability in this room"],
       }),
     );
 
-    const { onClose, user } = setup();
+    loadThread();
 
-    await user.selectOptions(screen.getByLabelText("Receiving agent"), "Orbit");
-    await user.type(screen.getByLabelText("Summary"), "Over to you");
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
+    const work = store.getState().work.details[THREAD];
+
+    if (work === undefined) {
+      throw new Error("expected the work detail");
+    }
+
+    const user = userEvent.setup();
+
+    render(
+      <HandoffDialog
+        threadId={THREAD}
+        threadName="Cursor pagination"
+        work={work}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+
+    await user.click(within(dialog).getByRole("radio", { name: /Ember/ }));
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
 
     expect(
-      await screen.findByText("Summary is too long (maximum is 2000 characters)."),
+      await within(dialog).findByText("Summary is too long (maximum is 2000 characters)."),
     ).toBeTruthy();
     expect(
-      screen.getByText("Receiver must hold the manage_threads capability in this room."),
+      within(dialog).getByText("Receiver must hold the manage_threads capability in this room."),
     ).toBeTruthy();
-    expect(screen.getByLabelText("Summary")).toHaveProperty("disabled", false);
-    expect(onClose).not.toHaveBeenCalled();
+    expect(within(dialog).queryByRole("alert")).toBeNull();
 
-    // The first field in trouble takes focus.
-    await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByLabelText("Receiving agent")),
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "!");
+    expect(
+      within(dialog).queryByText("Summary is too long (maximum is 2000 characters)."),
+    ).toBeNull();
+  });
+
+  it("moves focus to the first field a server refusal names", async () => {
+    vi.spyOn(actions.work, "handOff").mockRejectedValue(
+      new ActionError("Validation", "Summary is too long (maximum is 2000 characters)", {
+        links: ["must be http(s) URLs"],
+        summary: ["is too long (maximum is 2000 characters)"],
+      }),
     );
 
-    // Editing the field clears its error.
-    await user.type(screen.getByLabelText("Summary"), "!");
-    expect(screen.queryByText("Summary is too long (maximum is 2000 characters).")).toBeNull();
-  });
+    loadThread();
 
-  it("shows a refusal that names no field as the form's alert, in the server's words", async () => {
-    vi.spyOn(actions.work, "handoff")
-      .mockRejectedValueOnce(
-        new ActionError("Validation", "This thread isn't tracked as work", {
-          base: ["This thread isn't tracked as work"],
-        }),
-      )
-      .mockRejectedValueOnce(new ActionError("Forbidden", "You cannot manage work in this thread"));
+    const work = store.getState().work.details[THREAD];
 
-    const { user } = setup();
+    if (work === undefined) {
+      throw new Error("expected the work detail");
+    }
 
-    await user.selectOptions(screen.getByLabelText("Receiving agent"), "Orbit");
-    await user.type(screen.getByLabelText("Summary"), "Over to you");
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "This thread isn't tracked as work",
+    const user = userEvent.setup();
+
+    render(
+      <HandoffDialog
+        threadId={THREAD}
+        threadName="Cursor pagination"
+        work={work}
+        open
+        onOpenChange={() => undefined}
+      />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Hand off" }));
-    expect((await screen.findByRole("alert")).textContent).toBe(
-      "You cannot manage work in this thread",
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
+    const summary = within(dialog).getByRole("textbox", { name: "Summary" });
+
+    await user.type(summary, "Over to you");
+    summary.blur();
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
+
+    expect(
+      await within(dialog).findByText("Summary is too long (maximum is 2000 characters)."),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+  });
+
+  it("moves focus to the form alert when a server refusal names no field", async () => {
+    vi.spyOn(actions.work, "handOff").mockRejectedValue(
+      new ActionError("Forbidden", "You cannot manage work in this thread"),
     );
-  });
 
-  it("chooses a lone receiver", () => {
-    setup([EMBER]);
+    loadThread();
 
-    expect(screen.getByLabelText("Receiving agent")).toHaveProperty("value", String(EMBER.agentId));
-  });
+    const work = store.getState().work.details[THREAD];
 
-  it("says when no agent in the room can take the work", () => {
-    setup([]);
+    if (work === undefined) {
+      throw new Error("expected the work detail");
+    }
 
-    expect(screen.getByText(/No agent here can take this work/)).toBeTruthy();
-    expect(screen.getByLabelText("Receiving agent")).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Hand off" })).toHaveProperty("disabled", true);
-  });
+    const user = userEvent.setup();
 
-  it("sends someone who can't manage the work back to the thread, saying why", () => {
-    const { onClose } = setup([EMBER], { manage: false });
+    render(
+      <HandoffDialog
+        threadId={THREAD}
+        threadName="Cursor pagination"
+        work={work}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
 
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(toasts()).toContain("You cannot manage work in this thread");
-  });
+    const dialog = await screen.findByRole("dialog", { name: /Hand off/ });
 
-  it("sends an untracked thread back too", () => {
-    const { onClose } = setup([], { tracked: false });
+    await user.type(within(dialog).getByRole("textbox", { name: "Summary" }), "Over to you");
+    await user.click(within(dialog).getByRole("button", { name: "Hand off" }));
 
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(toasts()).toContain("This thread isn't tracked as work");
+    const alert = await within(dialog).findByRole("alert");
+
+    expect(alert.textContent).toBe("You cannot manage work in this thread");
+    await waitFor(() => expect(document.activeElement).toBe(alert));
   });
 });

@@ -95,7 +95,15 @@ async fn reads_answer_in_the_contracts_shapes() {
         .find(|row| row.room.id == HQ)
         .expect("HQ in David's sidebar");
     assert_eq!(hq.display_name, "HQ");
+    assert!(hq.last_message.is_none());
     assert!(sidebar.can_create_rooms);
+    assert!(
+        sidebar.rows.iter().any(|row| row
+            .last_message
+            .as_ref()
+            .is_some_and(|last| !last.excerpt.is_empty())),
+        "a direct row previews its newest message"
+    );
     for row in sidebar
         .rows
         .iter()

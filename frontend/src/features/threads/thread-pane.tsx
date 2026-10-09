@@ -1,5 +1,5 @@
-import { useMatchRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -15,8 +15,10 @@ import { PostWork } from "../boards/post-work.tsx";
 import { Composer } from "../composer/composer.tsx";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
-import { LazyHandoffDialog } from "../work/lazy-handoff-dialog.tsx";
+import { HandoffArrival } from "../work/handoff-arrival.tsx";
+import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
+import { foreignThreadHref } from "./thread-target.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
 const DELETED = "This thread was deleted.";
@@ -125,7 +127,7 @@ interface ThreadMenuProps {
 
 /**
  * Copy link, then what the viewer's permissions allow: rename, close or reopen, lock or unlock,
- * and delete.
+ * delete, and track as work.
  */
 function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }: ThreadMenuProps) {
   const status = useStore((state) => state.threads[threadId]?.status ?? "active");
@@ -139,9 +141,16 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
   const canUnlock = permissions?.canUnlock === true && status === "locked";
 
   const canDelete = permissions?.canDelete === true;
+  const canConvert = permissions?.canConvertWork === true;
 
   const moderates =
-    permissions?.canRename === true || canClose || canReopen || canLock || canUnlock || canDelete;
+    permissions?.canRename === true ||
+    canClose ||
+    canReopen ||
+    canLock ||
+    canUnlock ||
+    canDelete ||
+    canConvert;
 
   return (
     <Menu
@@ -203,6 +212,7 @@ function ThreadMenu({ roomId, threadId, permissions, noun, onRename, onDelete }:
           Delete {noun}…
         </MenuItem>
       ) : null}
+      {canConvert ? <TrackAsWorkItem threadId={threadId} /> : null}
     </Menu>
   );
 }
@@ -221,6 +231,8 @@ function RenameDialog({
 }) {
   const current = useStore((state) => state.threads[threadId]?.name ?? "");
   const [name, setName] = useState(current);
+  // The name as this opening found it: someone renaming it meanwhile doesn't make the field dirty.
+  const [opening, setOpening] = useState(current);
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempts, setAttempts] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -231,6 +243,7 @@ function RenameDialog({
 
     if (open) {
       setName(current);
+      setOpening(current);
       setError(undefined);
     }
   }
@@ -265,6 +278,7 @@ function RenameDialog({
       onOpenChange={onOpenChange}
       title={`Rename ${noun}`}
       size="sm"
+      dirty={name !== opening}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
@@ -441,33 +455,35 @@ export function ThreadPane({
     parentId === null ? null : (state.messages[parentId] ?? null),
   );
 
+  const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
   const noun = useNoun(roomId);
   const status = pane?.status ?? "loading";
   // A reply's permalink: the pane opens around it and highlights it.
   const focusMessageId = useSearch({ strict: false }).m ?? null;
   const focusRef = useRef(focusMessageId);
-  const navigate = useNavigate();
-  const handingOff = useMatchRoute()({ to: "/r/$roomId/t/$threadId/handoff" }) !== false;
 
   focusRef.current = focusMessageId;
-
-  // The handoff dialog closes back to the thread, keeping the board's filters.
-  const closeHandoff = useCallback(() => {
-    void navigate({
-      to: "/r/$roomId/t/$threadId",
-      params: { roomId, threadId },
-      search: parseBoardSearch,
-      replace: true,
-    });
-  }, [navigate, roomId, threadId]);
 
   useEffect(() => {
     void actions.threads.open(threadId, focusRef.current).catch(() => undefined);
 
     return () => actions.threads.close(threadId);
   }, [threadId]);
+
+  // The thread API only checks membership in the thread's own room, so a link that names a
+  // different room would open this thread under that room. Send it to the room it belongs to.
+  const elsewhere = thread === undefined ? null : foreignThreadHref(roomId, thread, focusMessageId);
+
+  useEffect(() => {
+    if (elsewhere === null) {
+      return;
+    }
+
+    void navigate({ href: `/app${elsewhere}`, replace: true });
+  }, [elsewhere, navigate]);
 
   // Viewing it reads it: now, and whenever a reply makes it unread while it's on screen.
   useEffect(() => {
@@ -486,6 +502,10 @@ export function ThreadPane({
 
     return () => document.removeEventListener("visibilitychange", markIfVisible);
   }, [status, unread, threadId]);
+
+  if (elsewhere !== null) {
+    return null;
+  }
 
   if (status === "error") {
     const message = pane?.error ?? "This thread couldn't be loaded.";
@@ -527,6 +547,11 @@ export function ThreadPane({
           </>
         ) : null
       }
+      toolbar={
+        status === "ready" && tracked && noun !== "post" ? (
+          <WorkBar threadId={threadId} />
+        ) : undefined
+      }
       footer={<ThreadFooter roomId={roomId} threadId={threadId} noun={noun} />}
     >
       <ThreadTimeline
@@ -545,7 +570,8 @@ export function ThreadPane({
         open={deleting}
         onOpenChange={setDeleting}
       />
-      <LazyHandoffDialog threadId={threadId} open={handingOff} onClose={closeHandoff} />
+      <WorkLive threadId={threadId} />
+      <HandoffArrival threadId={threadId} />
     </PaneFrame>
   );
 }

@@ -125,3 +125,8 @@ class IgnoredTestCoverage(unittest.TestCase):
                 workflow_suites(runner + f"suite: [c]\n  shard: {shards}")
         with self.assertRaisesRegex(ValueError, "not invoked"):
             workflow_suites("suite: [a]")
+
+    def test_repository_workflow_shards_are_parsed_for_browsers_and_messaging(self):
+        jobs = workflow_suites((ROOT / ".github/workflows/rust.yml").read_text())
+        self.assertEqual(jobs["browsers"], [["1/3", "2/3", "3/3"]])
+        self.assertEqual(jobs["messaging"], [["1/4", "2/4", "3/4", "4/4"]])

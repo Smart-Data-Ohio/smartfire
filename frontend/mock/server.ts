@@ -33,7 +33,7 @@ import {
   respond,
   validation,
 } from "./http.ts";
-import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
+import { booleanField, field, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
 import { createAccount } from "./s2/account.ts";
@@ -75,15 +75,26 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { AGENT_IDS, createAgents, HIDDEN_ROOM, statusControl } from "./s4/agents.ts";
+import { createApprovals } from "./s4/approvals.ts";
+import { createLedger, UNKNOWN_LEDGER_TYPE } from "./s4/ledger.ts";
+import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS, seedWork } from "./s4/seed.ts";
+import { createWork } from "./s4/work.ts";
+import { WORK_STATUSES } from "./s4/work-model.ts";
 import { createHuddles } from "./s5/huddles.ts";
 import { createBoards } from "./s6/boards.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./s6/seed.ts";
 import { createWorkLinks } from "./s6/work-links.ts";
+import { createEvents, EVENT_IDS } from "./s8/events.ts";
 import { createFizzy } from "./s8/fizzy.ts";
+import { createRoomManagement } from "./s8/rooms.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
   CATEGORY_IDS,
+  JOINABLE_HISTORY_LENGTH,
+  JOINABLE_OLDEST_MESSAGE_ID,
+  JOINABLE_OPEN_ROOM,
   ROOM_IDS,
   type RoomRecord,
   seededUuid,
@@ -130,8 +141,17 @@ export const SEED_IDS = {
     messages: S3_MESSAGE_IDS,
     dueReminderDelayMs: DUE_REMINDER_DELAY_MS,
   },
+  s4: {
+    work: S4_WORK_IDS,
+    board: S4_BOARD,
+    boardPosts: S4_BOARD_POST_IDS,
+    agents: AGENT_IDS,
+    hiddenRoom: HIDDEN_ROOM,
+    unknownLedgerType: UNKNOWN_LEDGER_TYPE,
+  },
   cards: CARD_IDS,
   boards: { roomId: BOARD_ROOM_ID, posts: BOARD_POST_IDS },
+  events: EVENT_IDS,
 } as const;
 
 export interface MockServerOptions {
@@ -154,6 +174,11 @@ export interface MockServer {
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
   csrfToken(): string;
+  /**
+   * The boot JSON the Rust shell inlines in `<script type="application/json" id="boot">` (boot
+   * without its CSRF token, which the meta tag carries), escaped for a script element.
+   */
+  inlineBoot(): string;
   /** Stops the ambient simulation (the bot still answers). */
   pause(): void;
   resume(): void;
@@ -226,16 +251,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const scheduler = options.scheduler ?? realScheduler();
   const simulate = options.simulate ?? false;
 
-  let world: World = buildWorld(now(), seed);
+  let world: World = seedWork(buildWorld(now(), seed), now());
   let random = createRandom(seed * 7919 + 17);
   let csrf = token(random);
   let restarts = 0;
   let holding = false;
   let held: (() => void)[] = [];
+  let holdingJoins = false;
+  let heldJoins: (() => void)[] = [];
 
   const epochFor = () => `${now().toString(36)}-${seed.toString(36)}-${restarts}`;
 
-  const hub = createSyncHub({ scheduler, epoch: epochFor(), viewerId: VIEWER_ID });
+  const hub = createSyncHub({
+    scheduler,
+    epoch: epochFor(),
+    viewerId: VIEWER_ID,
+    memberOf: (roomId) => world.rooms.get(roomId)?.memberIds.includes(VIEWER_ID) ?? false,
+  });
 
   // --- reads over the world ---
 
@@ -250,7 +282,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const roomOr404 = (roomId: number): RoomRecord => {
     const record = world.rooms.get(roomId);
 
-    if (record === undefined || record.membership.involvement === "invisible") {
+    if (record === undefined || !record.memberIds.includes(VIEWER_ID)) {
       throw notFound("Room not found");
     }
 
@@ -310,18 +342,58 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return first === undefined ? null : { firstUnreadMessageId: first.id, count: unread.length };
   };
 
-  const sidebarRow = (record: RoomRecord): SidebarRow => ({
-    room: record.room,
-    membership: record.membership,
-    displayName: displayName(record),
-    directMemberIds: directMemberIds(record),
-    unreadCount: unreadMessages(record).length,
-    mentionCount: record.mentionCount,
-  });
+  /** A direct room's newest root message as its row previews it (`last_direct_message`). */
+  const lastMessage = (record: RoomRecord): SidebarRow["lastMessage"] => {
+    const last = record.messages.findLast(
+      (message) => message.threadId === null && !message.systemNote,
+    );
+
+    if (record.room.kind !== "direct" || last === undefined) return undefined;
+
+    const text = last.bodyHtml
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const plain = text === "" ? (last.attachment?.filename ?? "") : text;
+
+    return {
+      creatorId: last.creatorId,
+      excerpt: plain.length > 140 ? `${plain.slice(0, 139)}…` : plain,
+      createdAt: last.createdAt,
+    };
+  };
+
+  const sidebarRow = (record: RoomRecord): SidebarRow => {
+    const row: SidebarRow = {
+      room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
+      membership: record.membership,
+      displayName: displayName(record),
+      directMemberIds: directMemberIds(record),
+      unreadCount: unreadMessages(record).length,
+      mentionCount: record.mentionCount,
+    };
+
+    const last = lastMessage(record);
+
+    if (last !== undefined) {
+      row.lastMessage = last;
+    }
+
+    return row;
+  };
 
   const visibleRooms = (): RoomRecord[] =>
     [...world.rooms.values()]
-      .filter((record) => record.membership.involvement !== "invisible")
+      .filter(
+        (record) =>
+          record.memberIds.includes(VIEWER_ID) && record.membership.involvement !== "invisible",
+      )
       .sort((a, b) => {
         const left = (a.room.name ?? "").toLowerCase();
         const right = (b.room.name ?? "").toLowerCase();
@@ -336,9 +408,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     return {
       user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
-      account: { name: "Smart Data" },
-      theme: "system",
-      textSize: "default",
+      account: admin.branding(),
+      ...settings.appearance(),
       cableUrl: "/cable",
       serviceWorkerUrl: null,
       version: "mock",
@@ -351,8 +422,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     user: viewer(),
     emailAddress: "riel@smartdata.example",
     preferences: {
-      theme: "system",
-      textSize: "default",
+      ...settings.appearance(),
       timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
@@ -397,13 +467,126 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     };
   };
 
+  const materialiseJoinable = (): RoomRecord => {
+    const createdAt = timestamp(now() - 30 * 24 * 60 * 60 * 1000);
+
+    const messages = Array.from({ length: JOINABLE_HISTORY_LENGTH }, (_, index) => {
+      const postedAt = timestamp(now() - (JOINABLE_HISTORY_LENGTH - index) * 60_000);
+
+      const markdown =
+        index === 0
+          ? "campfire-oldest"
+          : index === JOINABLE_HISTORY_LENGTH - 1
+            ? "campfire-newest"
+            : `campfire note ${index}`;
+
+      return buildMessage(
+        JOINABLE_OLDEST_MESSAGE_ID + index,
+        JOINABLE_OPEN_ROOM.id,
+        null,
+        plainDraft(USER_IDS.maya, markdown, `campfire-${index}`),
+        postedAt,
+        mentionables(),
+      );
+    });
+
+    const record: RoomRecord = {
+      room: {
+        id: JOINABLE_OPEN_ROOM.id,
+        kind: "open",
+        name: JOINABLE_OPEN_ROOM.name,
+        iconName: null,
+        creatorId: USER_IDS.priya,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
+      membership: {
+        id: 9_000 + JOINABLE_OPEN_ROOM.id,
+        roomId: JOINABLE_OPEN_ROOM.id,
+        userId: VIEWER_ID,
+        involvement: "mentions",
+        unreadAt: null,
+        lastReadMessageId: null,
+        roomCategoryId: null,
+        favoritePosition: null,
+        stageRole: null,
+      },
+      messages,
+      mentionCount: 0,
+    };
+
+    world.rooms.set(record.room.id, record);
+
+    return record;
+  };
+
+  /** Alive open rooms only. The catalog room isn't in the world until someone joins it. */
+  const openPreview = (roomId: number): { id: number; name: string } | null => {
+    const record = world.rooms.get(roomId);
+
+    if (record !== undefined) {
+      if (record.room.kind !== "open") return null;
+
+      return { id: record.room.id, name: record.room.name ?? "" };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) return null;
+
+    return { id: JOINABLE_OPEN_ROOM.id, name: JOINABLE_OPEN_ROOM.name };
+  };
+
+  const publishJoined = (record: RoomRecord) => {
+    hub.publish([
+      {
+        topic: "user",
+        type: "sidebar.row.upserted",
+        data: { ...sidebarRow(record), refreshRoom: true },
+      },
+    ]);
+  };
+
+  const joinOpen = (roomId: number) => {
+    const existing = world.rooms.get(roomId);
+
+    if (existing !== undefined) {
+      if (existing.room.kind !== "open") throw notFound("Room not found");
+
+      if (!existing.memberIds.includes(VIEWER_ID)) {
+        existing.memberIds.push(VIEWER_ID);
+        existing.membership = {
+          id: 9_000 + existing.room.id,
+          roomId: existing.room.id,
+          userId: VIEWER_ID,
+          involvement: "mentions",
+          unreadAt: null,
+          lastReadMessageId: null,
+          roomCategoryId: null,
+          favoritePosition: null,
+          stageRole: null,
+        };
+        publishJoined(existing);
+      }
+
+      return { detail: roomDetail(roomId), row: sidebarRow(existing) };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) throw notFound("Room not found");
+
+    const record = materialiseJoinable();
+
+    publishJoined(record);
+
+    return { detail: roomDetail(roomId), row: sidebarRow(record) };
+  };
+
   const roomDetail = (roomId: number): RoomDetail => {
     const record = roomOr404(roomId);
     const direct = directMemberIds(record);
     const preview = record.memberIds.slice(0, 5);
 
     return {
-      room: record.room,
+      room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
       memberCount: record.memberIds.length,
@@ -693,11 +876,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const uploads = createUploads(ctx);
   const admin = createAdmin(ctx, uploads);
+  // Boot and `/me` (above) read the saved theme and text size from here, once requests arrive.
+  const settings = createSettings(ctx, uploads, admin.requireSudo);
   const threads = createThreads(ctx, uploads, whenReleased);
-  const boards = createBoards(ctx, threads, uploads);
   const activity = createActivity(ctx);
   const saved = createSaved(ctx, activity);
   const messageActions = createMessages(ctx, threads, saved.savedChanged);
+  const work = createWork(ctx, threads);
+  const boards = createBoards(ctx, threads, uploads, work);
 
   const composer = createComposer(
     ctx,
@@ -708,11 +894,33 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const agents = createAgents(ctx, createRandom(seed * 49_979_687 + 3), () => simulation.paused());
+
+  const approvals = createApprovals(
+    ctx,
+    agents,
+    activity,
+    createRandom(seed * 67_867_967 + 11),
+    () => simulation.paused(),
+  );
+
+  const ledger = createLedger(ctx, agents);
+
+  agents.seed();
+  approvals.seed();
+  ledger.seed();
+
   const huddles = createHuddles(ctx, simulate);
-  const cards = createCards(ctx);
+  const events = createEvents(ctx);
+  const cards = createCards(ctx, events);
   const fizzy = createFizzy(ctx, threads);
 
   const routes = [
+    ...agents.routes,
+    ...approvals.routes,
+    ...ledger.routes,
+    ...createRoomManagement(ctx, admin, huddles).routes,
+    ...events.routes,
     ...huddles.routes,
     ...cards.routes,
     ...fizzy.routes,
@@ -726,7 +934,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
-    ...createSettings(ctx, uploads, admin.requireSudo).routes,
+    ...work.routes,
+    ...settings.routes,
     ...createAccount(ctx).routes,
     ...admin.routes,
     ...createPeople(ctx, admin.requireSudo).routes,
@@ -793,7 +1002,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
   const inboxAmbient = createServerInboxAmbient(
     ctx,
-    activity,
+    // The inbox's approval requests are real requests (S4), so deciding one updates its item.
+    {
+      ...activity,
+      record: (draft) =>
+        draft.eventType === "agent_approval_request"
+          ? approvals.requestFromInbox(draft)
+          : activity.record(draft),
+    },
     () => simulation.paused(),
     createRandom(seed * 32_452_843 + 5),
   );
@@ -801,6 +1017,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   if (simulate) {
     ambient.start();
     inboxAmbient.start();
+    agents.start();
+    approvals.start();
   }
 
   /** Global search (S3), after the other modules' routes. */
@@ -817,6 +1035,32 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
       if (sent !== csrf) {
         throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
+      }
+    }
+
+    const joining = /^\/rooms\/(\d+)\/(preview|join)$/.exec(path);
+
+    if (joining !== null) {
+      const id = Number(joining[1]);
+
+      if (method === "GET" && joining[2] === "preview") {
+        const preview = openPreview(id);
+
+        if (preview === null) throw notFound("Room not found");
+
+        return { status: 200, json: preview };
+      }
+
+      if (method === "POST" && joining[2] === "join") {
+        // Membership (and its sidebar broadcast) exist before a held response is released, so a
+        // rename or a return can land while the client is still waiting on this body.
+        const created = joinOpen(id);
+
+        if (!holdingJoins) return { status: 200, json: created };
+
+        return new Promise<MockResponse>((resolve) => {
+          heldJoins.push(() => resolve({ status: 200, json: created }));
+        });
       }
     }
 
@@ -936,6 +1180,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         holdSends(flag("on", true));
 
         return ok;
+      case "hold-join":
+        holdingJoins = flag("on", true);
+
+        if (!holdingJoins) {
+          const waiting = heldJoins;
+
+          heldJoins = [];
+
+          for (const run of waiting) run();
+        }
+
+        return ok;
+      case "restart":
+        restarts += 1;
+        hub.restart(epochFor());
+
+        return ok;
       case "release-sends":
         release();
 
@@ -979,6 +1240,83 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       }
 
+      case "work-status": {
+        const status = text("status");
+
+        return {
+          status: 200,
+          json: work.setStatusAs(
+            int("threadId"),
+            WORK_STATUSES.find((candidate) => candidate === status) ?? null,
+            intField(body, "actorId") ?? USER_IDS.maya,
+          ),
+        };
+      }
+
+      case "agent-status":
+        return {
+          status: 200,
+          json: agents.setStatus(int("agentId"), {
+            ...statusControl(
+              query.get("status") ?? stringField(body, "status"),
+              booleanField(body, "suspended"),
+              stringField(body, "presence") ?? query.get("presence"),
+            ),
+            statusNote:
+              field(body, "statusNote") === undefined ? undefined : stringField(body, "statusNote"),
+          }),
+        };
+
+      case "agent-steps": {
+        const messageId =
+          intField(body, "messageId") ??
+          agents.latestBy(int("roomId"), intField(body, "userId") ?? BOT_ID)?.id ??
+          0;
+
+        return { status: 200, json: { steps: [...agents.setSteps(messageId, int("stage"))] } };
+      }
+
+      case "viewer-role": {
+        const role = text("role");
+        const viewer = world.users.get(VIEWER_ID);
+
+        if (role !== "member" && role !== "administrator") {
+          throw validation("role", "role must be member or administrator");
+        }
+
+        if (viewer !== undefined) world.users.set(VIEWER_ID, { ...viewer, role });
+
+        return ok;
+      }
+
+      case "approval-request":
+        return {
+          status: 201,
+          json: approvals.request(
+            intField(body, "agentId") ?? AGENT_IDS.ember,
+            stringField(body, "action") ?? "messages.post",
+            text("summary"),
+            intField(body, "roomId") ?? ROOM_IDS.engineering,
+          ),
+        };
+
+      case "approval-settle": {
+        const status = text("status");
+
+        const known = (["pending", "approved", "denied", "cancelled", "expired"] as const).find(
+          (candidate) => candidate === status,
+        );
+
+        if (known === undefined) {
+          throw validation("status", "status must be an approval status");
+        }
+
+        return {
+          status: 200,
+          json: approvals.settle(int("id"), known, intField(body, "deciderId") ?? USER_IDS.priya),
+        };
+      }
+
       case "fizzy":
         return { status: 200, json: fizzy.control(body) };
       case "cards":
@@ -1014,6 +1352,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     paused: simulation.paused(),
     holdingSends: holding,
     pendingSends: held.length,
+    pendingJoins: heldJoins.length,
+    presentRoomIds: [...hub.presentRooms()].sort((left, right) => left - right),
     pendingUploads: uploads.pending(),
     csrfToken: csrf,
     ids: SEED_IDS,
@@ -1038,6 +1378,11 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
+    inlineBoot: () => {
+      const { csrfToken: _meta, ...inline } = boot();
+
+      return JSON.stringify(inline).replaceAll("<", "\\u003c");
+    },
     pause: () => simulation.pause(),
     resume: () => simulation.resume(),
     typing,
@@ -1064,6 +1409,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     setPresence,
     reset() {
       release();
+      holdingJoins = false;
+
+      const waitingJoins = heldJoins;
+
+      heldJoins = [];
+
+      for (const run of waitingJoins) run();
+
       uploads.reset();
       admin.lapseSudo(false);
       composer.stop();
@@ -1071,7 +1424,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       simulation.stop();
       ambient.stop();
       inboxAmbient.stop();
-      world = buildWorld(now(), seed);
+      agents.stop();
+      approvals.stop();
+      world = seedWork(buildWorld(now(), seed), now());
+      agents.seed();
+      approvals.seed();
+      ledger.seed();
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
       restarts += 1;
@@ -1084,9 +1442,13 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         simulation.start();
         ambient.start();
         inboxAmbient.start();
+        agents.start();
+        approvals.start();
       }
     },
     dispose() {
+      agents.stop();
+      approvals.stop();
       release();
       uploads.reset();
       composer.stop();

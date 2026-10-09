@@ -1,0 +1,66 @@
+/* The AGENT badge and its status chip, beside every bot's name. */
+@layer app {
+  .agent-badges {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    align-self: center;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  /* The AGENT tag: the agent violet, which people never get. */
+  .agent-badge,
+  .agent-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.04em;
+    line-height: 16px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .agent-badge {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .agent-badge[data-tone="bot"] {
+    background: var(--bg-active);
+    color: var(--text-muted);
+  }
+
+  .agent-state {
+    background: var(--bg-active);
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .agent-state[data-tone="working"] {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  .agent-state[data-tone="waiting"] {
+    color: var(--warning-text);
+  }
+
+  .agent-state[data-tone="failed"],
+  .agent-state[data-tone="suspended"] {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  /* Phones: the 10 px tag grows to 11 px. */
+  @media (width < 720px) {
+    .agent-badge,
+    .agent-state {
+      font-size: 11px;
+    }
+  }
+}

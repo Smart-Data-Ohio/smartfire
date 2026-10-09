@@ -36,3 +36,15 @@ export function parseBoardSearch(search: RawBoardSearch): BoardSearch {
 
   return parsed;
 }
+
+export interface RoomSearch extends BoardSearch {
+  /** A phone's full-screen call view, open over the room (call-view-cover.ts). */
+  readonly call?: 1;
+}
+
+/** The room's search: the board's, plus `call=1` (which `parseBoardSearch` navigations drop). */
+export function parseRoomSearch(search: RawBoardSearch & { readonly call?: unknown }): RoomSearch {
+  const parsed = parseBoardSearch(search);
+
+  return search.call === 1 || search.call === "1" ? { ...parsed, call: 1 } : parsed;
+}

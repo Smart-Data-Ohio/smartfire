@@ -51,6 +51,11 @@ the seeds get the schema change the same way production databases do, and the ma
 rewritten. The `Rust seeds` job runs `check` and its unit tests (`parity/test_frozen_seeds.py`);
 every other job restores the seeds through the setup action's `parity: seeds`.
 
+The migration tool explicitly preserves pre-existing foreign-key violations: the default and
+agents_ui seeds deliberately include an unrenderable message whose creator is missing. It uses
+`db-migrate --preserve-existing-foreign-key-violations`; every new violation still rolls back the
+migration. Normal `db-migrate DATABASE` remains strict.
+
 Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.
 Locally it may return early with a clear skip message, so run `frozen-seeds restore` first.
 `first_run` is required by the account creation test, `agents_ui` by the navigation/inbox

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { COARSE_QUERY, PHONE_QUERY } from "../../../lib/breakpoints.ts";
+import { useLongPress } from "../../../lib/long-press.ts";
 import { shortcutKeys } from "../../../lib/shortcuts.ts";
 import { Button } from "../../../ui/button.tsx";
 import type { IconName } from "../../../ui/icons/icon.tsx";
@@ -26,11 +29,26 @@ interface SendButtonProps {
   } | null;
 }
 
+/** A touch phone, where the chevron folds into send and a long press opens the schedule menu. */
+function touchPhone(): boolean {
+  return window.matchMedia(`${PHONE_QUERY} and ${COARSE_QUERY}`).matches;
+}
+
 /**
  * The split send button: send on the left (it swaps to a spinner while it waits for uploads, the
  * text-states-swap recipe inside Button), and a chevron with the schedule presets on the right.
+ * On a touch phone the chevron folds away (schedule.css) and a long press on send opens the
+ * presets; the chevron stays in the tab order and shows itself when the keyboard reaches it.
  */
 export function SendButton({ canSend, waiting, onSend, schedule }: SendButtonProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const schedulable = schedule !== null && canSend && !waiting;
+
+  const longPress = useLongPress(
+    () => setMenuOpen(true),
+    () => schedulable && touchPhone(),
+  );
+
   const send = (
     <Tooltip content="Send" shortcut={shortcutKeys("send")} describe={false}>
       <Button
@@ -43,7 +61,12 @@ export function SendButton({ canSend, waiting, onSend, schedule }: SendButtonPro
         disabled={!canSend && !waiting}
         loading={waiting}
         onMouseDown={(event) => event.preventDefault()}
-        onClick={onSend}
+        {...longPress.handlers}
+        onClick={() => {
+          if (!longPress.endsLongPress()) {
+            onSend();
+          }
+        }}
       />
     </Tooltip>
   );
@@ -58,6 +81,8 @@ export function SendButton({ canSend, waiting, onSend, schedule }: SendButtonPro
     <div className="composer-send-group" data-split={canSend || waiting || undefined}>
       {send}
       <Menu
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
         placement="top-end"
         label="Schedule message"
         trigger={(props) => (
@@ -80,7 +105,7 @@ export function SendButton({ canSend, waiting, onSend, schedule }: SendButtonPro
           <MenuItem
             key={preset.id}
             icon={PRESET_ICONS[preset.id]}
-            shortcut={preset.id === "hour" ? [timeLabel(preset.at)] : []}
+            detail={preset.id === "hour" ? timeLabel(preset.at) : undefined}
             disabled={!schedule.enabled}
             onSelect={() => schedule.onPreset(preset)}
           >

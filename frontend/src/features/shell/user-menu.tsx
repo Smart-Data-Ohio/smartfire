@@ -1,7 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
+import type { Placement } from "../../lib/anchor.ts";
 import { postClassicForm } from "../../lib/classic-form.ts";
-import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
+import { Menu, MenuItem, MenuSeparator, type MenuTriggerProps } from "../../ui/menu.tsx";
 
 /**
  * Leaves the new UI: `POST /app/ui_preference` with `ui=classic`, as the classic profile's form
@@ -18,24 +19,22 @@ export function switchToClassic(
 }
 
 /**
- * The signed-in person's menu, opened from their panel at the foot of the sidebar (`children` is
- * the trigger's content): their profile and settings, the people directory, the workspace (its
- * people, and for administrators the rest of the classic account pages), and the way back to the
- * classic UI.
+ * The signed-in person's menu, opened from their panel at the foot of the sidebar or, on phones,
+ * the tab bar's You tab (`trigger` renders either): their profile and settings, the people
+ * directory, the workspace (its people, and for administrators the rest of the classic account
+ * pages), and the way back to the classic UI.
  */
-export function UserMenu({ children }: { readonly children: ReactNode }) {
+export function UserMenu({
+  trigger,
+  placement = "top-start",
+}: {
+  readonly trigger: (props: MenuTriggerProps) => ReactElement;
+  readonly placement?: Placement;
+}) {
   const navigate = useNavigate();
 
   return (
-    <Menu
-      label="Your account"
-      placement="top-start"
-      trigger={(props) => (
-        <button {...props} type="button" className="sidebar-you-button" aria-label="Your account">
-          {children}
-        </button>
-      )}
-    >
+    <Menu label="Your account" placement={placement} trigger={trigger}>
       <MenuItem icon="settings" onSelect={() => void navigate({ to: "/settings" })}>
         Profile and settings
       </MenuItem>

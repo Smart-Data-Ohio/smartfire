@@ -1,145 +1,188 @@
 /**
- * The handoff form's rules (`WorkHandoff#validate`, `work_threads#create_handoff`): what the form
- * checks before sending, and how the server's refusals read under their fields.
+ * The handoff form's rules, as the server checks them (`work_handoffs`): a summary of at most
+ * 2000 characters, up to 10 http(s) links and up to 10 open questions, each at most 500
+ * characters. The messages are the server's, so a refusal reads the same either way. A
+ * `Validation` reply's messages are shown on the field they name.
  */
 import type { CreateWorkHandoff } from "../../gen/CreateWorkHandoff.ts";
 import { ActionError } from "../../sync/run.ts";
 
-/** The summary's limit, as the classic form's `maxlength` and the model have it. */
-export const SUMMARY_MAX = 2000;
+export const SUMMARY_LIMIT = 2000;
 
-/** How many links or open questions a handoff carries. */
-export const PACKAGE_MAX = 10;
+/** At most this many links, and as many open questions. */
+export const HANDOFF_ITEM_LIMIT = 10;
 
-/** How long each link or open question may be. */
-export const ENTRY_MAX = 500;
+/** Each link or question is at most this long. */
+export const HANDOFF_ITEM_LENGTH = 500;
 
-/** The form's fields by wire name; `base` is the form as a whole. */
-export type HandoffField = "receiverAgentId" | "summary" | "links" | "openQuestions" | "base";
-
-export type HandoffProblems = Readonly<Partial<Record<HandoffField, string>>>;
-
+/** What the person typed. */
 export interface HandoffDraft {
-  /** The agent's id as the select holds it; "" for none chosen. */
-  readonly receiverAgentId: string;
+  readonly receiverAgentId: number | null;
   readonly summary: string;
-  /** One per line. */
+  /** One URL per line. */
   readonly links: string;
+  /** One question per line. */
   readonly openQuestions: string;
 }
 
-export const EMPTY_DRAFT: HandoffDraft = {
-  receiverAgentId: "",
+/** The fields that can fail. */
+export type HandoffField = "receiver" | "summary" | "links" | "openQuestions";
+
+/** A message per field that fails. */
+export type HandoffErrors = Readonly<Partial<Record<HandoffField, string>>>;
+
+export const EMPTY_HANDOFF: HandoffDraft = {
+  receiverAgentId: null,
   summary: "",
   links: "",
   openQuestions: "",
 };
 
-/** One entry per line, trimmed, blanks and repeats dropped, as the server stores them. */
-export function lines(text: string): string[] {
-  return [
-    ...new Set(
-      text
-        .split(/[\r\n]+/)
-        .map((line) => line.trim())
-        .filter((line) => line !== ""),
-    ),
-  ];
+/** The non-blank lines, trimmed, as the server splits a textarea. */
+export function handoffLines(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
-function isHttpUrl(value: string): boolean {
-  return /^https?:\/\//i.test(value);
+const HTTP_URL = /^https?:\/\/\S+$/i;
+
+function linksError(links: readonly string[]): string | undefined {
+  if (links.length > HANDOFF_ITEM_LIMIT) {
+    return `Links are limited to ${HANDOFF_ITEM_LIMIT} per handoff`;
+  }
+
+  if (links.some((link) => link.length > HANDOFF_ITEM_LENGTH)) {
+    return `Links must be at most ${HANDOFF_ITEM_LENGTH} characters each`;
+  }
+
+  return links.every((link) => HTTP_URL.test(link)) ? undefined : "Links must be http(s) URLs";
 }
 
-function charCount(value: string): number {
-  return [...value].length;
+function questionsError(questions: readonly string[]): string | undefined {
+  if (questions.length > HANDOFF_ITEM_LIMIT) {
+    return `Open questions are limited to ${HANDOFF_ITEM_LIMIT} per handoff`;
+  }
+
+  return questions.some((question) => question.length > HANDOFF_ITEM_LENGTH)
+    ? `Open questions must be at most ${HANDOFF_ITEM_LENGTH} characters each`
+    : undefined;
 }
 
-/** What the form can tell before asking the server, worded as the server words it. */
-export function localProblems(draft: HandoffDraft): HandoffProblems {
-  const found: Partial<Record<HandoffField, string>> = {};
-  const links = lines(draft.links);
-  const questions = lines(draft.openQuestions);
-
-  if (draft.receiverAgentId === "") {
-    found.receiverAgentId = "Choose the agent to hand this work to.";
+function summaryError(summary: string): string | undefined {
+  if (summary === "") {
+    return "Summary can't be blank";
   }
 
-  if (draft.summary.trim() === "") {
-    found.summary = "Summary can't be blank.";
-  } else if (charCount(draft.summary) > SUMMARY_MAX) {
-    found.summary = `Summary is too long (maximum is ${SUMMARY_MAX} characters).`;
-  }
-
-  if (links.length > PACKAGE_MAX) {
-    found.links = `Links are limited to ${PACKAGE_MAX} per handoff.`;
-  } else if (links.some((link) => charCount(link) > ENTRY_MAX)) {
-    found.links = `Links must be at most ${ENTRY_MAX} characters each.`;
-  } else if (links.some((link) => !isHttpUrl(link))) {
-    found.links = "Links must be http(s) URLs.";
-  }
-
-  if (questions.length > PACKAGE_MAX) {
-    found.openQuestions = `Open questions are limited to ${PACKAGE_MAX} per handoff.`;
-  } else if (questions.some((question) => charCount(question) > ENTRY_MAX)) {
-    found.openQuestions = `Open questions must be at most ${ENTRY_MAX} characters each.`;
-  }
-
-  return found;
+  return summary.length > SUMMARY_LIMIT
+    ? `Summary is too long (maximum is ${SUMMARY_LIMIT} characters)`
+    : undefined;
 }
 
-const FIELD_LABEL: Readonly<Record<Exclude<HandoffField, "base">, string>> = {
-  receiverAgentId: "Receiver",
+/**
+ * Checks the draft: the request to send, or what's wrong with it. A missing receiver reads as
+ * the server's "Receiver must be…" would, since the server answers the same for none.
+ */
+export function checkHandoff(
+  draft: HandoffDraft,
+): { readonly body: CreateWorkHandoff } | { readonly errors: HandoffErrors } {
+  const summary = draft.summary.trim();
+  const links = handoffLines(draft.links);
+  const openQuestions = handoffLines(draft.openQuestions);
+
+  const errors: Partial<Record<HandoffField, string>> = {};
+
+  const problems = {
+    summary: summaryError(summary),
+    links: linksError(links),
+    openQuestions: questionsError(openQuestions),
+  };
+
+  if (draft.receiverAgentId === null) {
+    errors.receiver = "Choose the agent to hand off to";
+  }
+
+  for (const field of ["summary", "links", "openQuestions"] as const) {
+    const problem = problems[field];
+
+    if (problem !== undefined) {
+      errors[field] = problem;
+    }
+  }
+
+  if (draft.receiverAgentId === null || Object.keys(errors).length > 0) {
+    return { errors };
+  }
+
+  return { body: { receiverAgentId: draft.receiverAgentId, summary, links, openQuestions } };
+}
+
+const FIELD_LABEL: Record<HandoffField, string> = {
+  receiver: "Receiver",
   summary: "Summary",
   links: "Links",
   openQuestions: "Open questions",
 };
 
-function isField(field: string): field is Exclude<HandoffField, "base"> {
-  return field in FIELD_LABEL;
+/** Wire fields the form can show under its own control. A receiver policy error names the id. */
+function formField(field: string): HandoffField | undefined {
+  switch (field) {
+    case "summary":
+    case "links":
+    case "openQuestions":
+      return field;
+    case "receiver":
+    case "receiverAgent":
+    case "receiverAgentId":
+      return "receiver";
+    default:
+      return undefined;
+  }
 }
 
-/** "can't be blank" under Summary reads "Summary can't be blank."; whole sentences stay. */
-function sentence(field: Exclude<HandoffField, "base">, message: string): string {
+/** "can't be blank" under Summary reads "Summary can't be blank."; a whole sentence stays. */
+function serverSentence(field: HandoffField, message: string): string {
   const text = /^[A-Z]/.test(message) ? message : `${FIELD_LABEL[field]} ${message}`;
 
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
+/** Field messages, plus a form-level alert when the refusal names no field. */
+export interface ServerHandoffProblems {
+  readonly errors: HandoffErrors;
+  readonly alert: string | null;
+}
+
 /**
- * A refused handoff as the form shows it: each `Validation` field's messages under that field
- * (the receiver's are whole sentences already), and anything else (an untracked thread's `base`,
- * a 403, a lost connection) as the form's alert, with the server's own words.
+ * A refused handoff as the form shows it: field messages on their fields, anything else as
+ * the alert.
  */
-export function serverProblems(error: Error): HandoffProblems {
-  const found: Partial<Record<HandoffField, string>> = {};
+export function serverHandoffErrors(error: Error): ServerHandoffProblems {
   const fields = error instanceof ActionError ? error.fields : {};
+  const errors: Partial<Record<HandoffField, string>> = {};
+  const extra: string[] = [];
 
   for (const [field, messages] of Object.entries(fields)) {
     if (messages.length === 0) {
       continue;
     }
 
-    if (isField(field)) {
-      found[field] = messages.map((message) => sentence(field, message)).join(" ");
+    const mapped = formField(field);
+
+    if (mapped === undefined) {
+      extra.push(...messages);
     } else {
-      found.base = [found.base, ...messages].filter((each) => each !== undefined).join(" ");
+      errors[mapped] = messages.map((message) => serverSentence(mapped, message)).join(" ");
     }
   }
 
-  if (Object.keys(found).length === 0) {
-    found.base = error.message === "" ? "The work couldn't be handed off." : error.message;
+  if (Object.keys(errors).length === 0 && extra.length === 0) {
+    return {
+      errors,
+      alert: error.message === "" ? "The work couldn't be handed off." : error.message,
+    };
   }
 
-  return found;
-}
-
-/** The request body from a draft that passed `localProblems`. */
-export function handoffBody(draft: HandoffDraft): CreateWorkHandoff {
-  return {
-    receiverAgentId: Number(draft.receiverAgentId),
-    summary: draft.summary,
-    links: lines(draft.links),
-    openQuestions: lines(draft.openQuestions),
-  };
+  return { errors, alert: extra.length === 0 ? null : extra.join(" ") };
 }

@@ -7,11 +7,11 @@ import type { TimeZoneChoice } from "./TimeZoneChoice";
  * Theme, text size and time zone (stored on the account, so every device shares them). Density
  * and reduced motion are per device and stay in the browser.
  */
-export type AppearanceSettings = { theme: Theme, textSize: TextSize, 
+export type AppearanceSettings = { theme: Theme, textSize: TextSize,
 /**
  * The chosen zone's identifier; `null` is "Not set (use system)".
  */
-timeZone: string | null, 
+timeZone: string | null,
 /**
  * The classic select's choices, in its order.
  */

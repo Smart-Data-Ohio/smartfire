@@ -1,7 +1,8 @@
 @layer ui {
   .toaster {
     position: fixed;
-    inset: auto auto var(--space-4) var(--space-4);
+    inset: auto auto calc(var(--space-4) + var(--viewport-bottom-inset))
+      calc(var(--space-4) + var(--safe-left));
     width: min(360px, calc(100vw - var(--space-8)));
     margin: 0;
     overflow: visible;

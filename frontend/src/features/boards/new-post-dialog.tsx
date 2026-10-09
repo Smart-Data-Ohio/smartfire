@@ -235,6 +235,13 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
   const set = (patch: Partial<Draft>) => setDraft((previous) => ({ ...previous, ...patch }));
   const tags = parseTags(draft.tags);
 
+  const dirty =
+    draft.name !== EMPTY.name ||
+    draft.brief !== EMPTY.brief ||
+    draft.status !== EMPTY.status ||
+    draft.ownerId !== EMPTY.ownerId ||
+    draft.tags !== EMPTY.tags;
+
   const fail = (next: Fields) => {
     setFields(next);
     setAttempt((count) => count + 1);
@@ -317,6 +324,7 @@ export function NewPostDialog({ roomId, open, onClose, onCreated }: NewPostDialo
       onOpenChange={close}
       title="New post"
       description={roomName === null ? undefined : `In ${roomName}`}
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={() => close(false)}>

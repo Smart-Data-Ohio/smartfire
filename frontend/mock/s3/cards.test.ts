@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventAttendance } from "../../src/gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../../src/gen/FizzyCardPreview.ts";
+import type { GithubPullRequestActions } from "../../src/gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../../src/gen/GithubPullRequestCard.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePage } from "../../src/gen/MessagePage.ts";
@@ -298,24 +299,43 @@ describe("previews", () => {
     expect(wrong.status).toBe(404);
   });
 
-  it("lists files for the thread started on the pull request's message", async () => {
+  it("lists files for the discussion Discuss started, not for an ordinary thread", async () => {
     const { server } = harness();
     const { pullRequests: pr, messages } = cards;
 
-    const created = await expectStatus<ThreadCreated>(
+    const ordinary = await expectStatus<ThreadCreated>(
       server,
       "POST",
       `/api/v1/rooms/${ROOM}/threads`,
-      { parentMessageId: messages.githubOpen, name: null, message: messageBody("t-1", "Discuss") },
+      { parentMessageId: messages.githubMerged, name: null, message: messageBody("t-1", "Talk") },
       201,
     );
 
-    const threadId = created.detail.thread.id;
+    const ordinaryId = ordinary.detail.thread.id;
+
+    const unmapped = await server.handle({
+      method: "GET",
+      path: `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.merged}/card?threadId=${ordinaryId}`,
+    });
+
+    expect(unmapped.status).toBe(404);
+    expect(await github(server, pr.open, `messageId=${messages.githubOpen}`)).toMatchObject({
+      discussionThreadId: null,
+    });
+
+    const discussed = await expectStatus<{ threadId: number }>(
+      server,
+      "POST",
+      `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/discussion`,
+      { messageId: messages.githubOpen },
+      201,
+    );
+
+    const threadId = discussed.threadId;
     const header = await github(server, pr.open, `threadId=${threadId}`);
 
     expect(header).toMatchObject({ state: "loaded", discussionThreadId: threadId });
     expect(header.state === "loaded" && header.files?.totalCount).toBe(4);
-
     expect(await github(server, pr.open, `messageId=${messages.githubOpen}`)).toMatchObject({
       discussionThreadId: threadId,
       files: null,
@@ -327,6 +347,30 @@ describe("previews", () => {
     });
 
     expect(other.status).toBe(404);
+  });
+
+  it("denies pull request writes until the room has a discussion", async () => {
+    const { server } = harness();
+    const { pullRequests: pr, messages } = cards;
+    const actions = `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/actions`;
+    const comment = `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/comments`;
+
+    expect((await server.handle({ method: "GET", path: actions })).status).toBe(404);
+    expect((await send(server, "POST", comment, { body: "Hi" })).status).toBe(404);
+
+    await expectStatus(
+      server,
+      "POST",
+      `/api/v1/rooms/${ROOM}/github/pull_requests/${pr.open}/discussion`,
+      { messageId: messages.githubOpen },
+      201,
+    );
+
+    expect(await get<GithubPullRequestActions>(server, actions)).toMatchObject({
+      canComment: true,
+      canReview: true,
+      canRequestReviewers: true,
+    });
   });
 
   it("serves every Fizzy state", async () => {

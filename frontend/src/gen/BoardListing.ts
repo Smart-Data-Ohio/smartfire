@@ -20,34 +20,34 @@ import type { User } from "./User";
  * matching posts; `hasMore` says whether more match. 404 unless the room is a board the viewer
  * belongs to.
  */
-export type BoardListing = { roomId: number, 
+export type BoardListing = { roomId: number,
 /**
  * The filters as the server read them.
  */
-status: BoardStatusFilter, 
+status: BoardStatusFilter,
 /**
  * `anyone`, `me`, `agents`, or a user id as a string.
  */
-owner: string, 
+owner: string,
 /**
  * `""` for any tag.
  */
-tag: string, page: number, 
+tag: string, page: number,
 /**
  * Each post (`thread.work` is never `null` on a board post, and `thread.parentMessageId`
  * always is) with the viewer's membership.
  */
-posts: Array<ThreadSummary>, hasMore: boolean, 
+posts: Array<ThreadSummary>, hasMore: boolean,
 /**
  * The board has any post at all: "No posts match these filters." when `true` and `posts` is
  * empty, "No posts yet." when `false`.
  */
-anyPosts: boolean, ownerOptions: Array<BoardOwnerOption>, tagCounts: Array<BoardTagCount>, digest: BoardDigest | null, 
+anyPosts: boolean, ownerOptions: Array<BoardOwnerOption>, tagCounts: Array<BoardTagCount>, digest: BoardDigest | null,
 /**
  * The viewer is the board's creator or an administrator: they may open the board's
  * automations and settings.
  */
-canAdminister: boolean, 
+canAdminister: boolean,
 /**
  * The posts' creators and the owner options' users, once each. (Owners are whole on
  * [`crate::WorkFacts::owner`].)

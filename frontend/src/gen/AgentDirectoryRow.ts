@@ -5,25 +5,36 @@ import type { AgentStatus } from "./AgentStatus";
 /**
  * One agent in the directory (`agent_profile::DirectoryRecord`, `views::agents::DirectoryAgent`).
  */
-export type AgentDirectoryRow = { agentId: number, 
+export type AgentDirectoryRow = { agentId: number,
 /**
  * The agent's bot user.
  */
-userId: number, kind: AgentKind, 
+userId: number, kind: AgentKind,
 /**
  * `null` when no owner is recorded ("no owner recorded"). The client words the kind as the
  * classic row does: "Personal agent of {owner}" or "Workspace agent, managed by {owner}".
  */
-ownerId: number | null, status: AgentStatus, 
+ownerId: number | null, status: AgentStatus,
 /**
  * Up to 200 characters; `null` for none.
  */
-statusNote: string | null, suspended: boolean, createdAt: string, 
+statusNote: string | null, suspended: boolean, createdAt: string,
 /**
  * "since …" beside the status; `null` until the status first changes.
  */
-statusChangedAt: string | null, 
+statusChangedAt: string | null,
 /**
  * "last seen …"; `null` reads "never".
  */
-lastSeenAt: string | null, };
+lastSeenAt: string | null,
+/**
+ * The server's revision of the agent's status facts (status, note, suspension and working
+ * presence): when they last changed on the server.
+ * UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+ * millisecond rows are padded with zeros.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

@@ -213,6 +213,10 @@ static ROUTES: LazyLock<Vec<Route>> = LazyLock::new(|| {
         .map(|spec| {
             let action = match spec.action {
                 ActionStatus::ActionNotFound => arc(action_not_found),
+                // Declared, with no classic controller. Redirects to the room's settings.
+                ActionStatus::MissingController if spec.endpoint == "rooms/settings#show" => {
+                    arc(rooms::settings::show)
+                }
                 ActionStatus::MissingController => arc(missing_controller),
                 ActionStatus::Defined | ActionStatus::Implicit => {
                     ported(spec.endpoint).unwrap_or_else(|| arc(not_yet_ported))
@@ -854,7 +858,9 @@ mod tests {
         serde_json::from_str(json).unwrap()
     }
 
-    /// Controllers the reference routes to but doesn't define (recognize_path raises for them).
+    /// Controllers the reference route set names but doesn't define, so `recognize_path` raises
+    /// and these vectors still have a null endpoint. `rooms/settings` is one of them: the
+    /// recorded routes keep `missing_controller`, while the runtime handles the GET.
     const MISSING_CONTROLLERS: &[&str] = &["rooms/settings"];
 
     #[test]
@@ -1353,3 +1359,6 @@ mod template_coverage_tests;
 
 #[cfg(test)]
 mod drive_browser_tests;
+
+#[cfg(test)]
+mod spa_smoke_tests;

@@ -1,32 +1,52 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
+import { workList } from "../api/board-endpoints.ts";
 import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { EventPrefill } from "../api/event-endpoints.ts";
 import type { FizzyMessageScope } from "../api/fizzy-endpoints.ts";
 import { readMessage } from "../api/message-endpoints.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AgentApproval } from "../gen/AgentApproval.ts";
+import type { ApprovalDecision } from "../gen/ApprovalDecision.ts";
 import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { BoardAutomations } from "../gen/BoardAutomations.ts";
 import type { BoardPostForm } from "../gen/BoardPostForm.ts";
+import type { CancelEvent } from "../gen/CancelEvent.ts";
 import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreatedFizzyCard } from "../gen/CreatedFizzyCard.ts";
+import type { CreateEvent } from "../gen/CreateEvent.ts";
 import type { CreateFizzyCard } from "../gen/CreateFizzyCard.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
+import type { CreateRoom } from "../gen/CreateRoom.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
 import type { CreateWorkLink } from "../gen/CreateWorkLink.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { EventAttendance } from "../gen/EventAttendance.ts";
+import type { EventDetail } from "../gen/EventDetail.ts";
+import type { EventForm } from "../gen/EventForm.ts";
+import type { EventList } from "../gen/EventList.ts";
 import type { FizzyMessageCardForm } from "../gen/FizzyMessageCardForm.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
+import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
+import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
 import type { Icon } from "../gen/Icon.ts";
 import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { MessageRead } from "../gen/MessageRead.ts";
 import type { PinList } from "../gen/PinList.ts";
 import type { RoomCategory } from "../gen/RoomCategory.ts";
+import type { RoomForm } from "../gen/RoomForm.ts";
+import type { RoomKind } from "../gen/RoomKind.ts";
+import type { RoomLeft } from "../gen/RoomLeft.ts";
+import type { RoomMutation } from "../gen/RoomMutation.ts";
+import type { RoomRemoved } from "../gen/RoomRemoved.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -35,37 +55,51 @@ import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadFilter } from "../gen/ThreadFilter.ts";
 import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
+import type { UpdateEvent } from "../gen/UpdateEvent.ts";
+import type { UpdateRoom } from "../gen/UpdateRoom.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkFilter } from "../gen/WorkFilter.ts";
 import type { WorkLinkForm } from "../gen/WorkLinkForm.ts";
 import type { WorkList } from "../gen/WorkList.ts";
+import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { ActivityAction } from "../store/activity.ts";
+import type { ApprovalFilter } from "../store/approvals.ts";
 import type { BoardQuery } from "../store/boards.ts";
+import type { LedgerFilter } from "../store/ledger.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
+import * as agentActions from "./agent-actions.ts";
+import * as approvalActions from "./approval-actions.ts";
 import * as boardActions from "./board-actions.ts";
 import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
+import * as eventActions from "./event-actions.ts";
 import * as fizzyActions from "./fizzy-actions.ts";
 import { SyncServices } from "./layers.ts";
+import * as ledgerActions from "./ledger-actions.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
 import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import * as roomActions from "./room-actions.ts";
 import { ActionError, type ActionFailure, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
+import { onResync, onSyncEvents } from "./signals.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
 import { prefetchMemberships } from "./thread-prefetch.ts";
 import { Typing } from "./typing.ts";
+import * as workActions from "./work-actions.ts";
+
+export type { EventPrefill, GithubCardScope };
 
 const API_BASE = "/api/v1";
 
@@ -154,6 +188,8 @@ const threads = {
   },
   /** The room a thread lives in (a bare thread link's resolver). */
   locate: (threadId: number): Promise<number> => runAction(threadActions.locate(threadId)),
+  /** The thread's detail, for a resolver that needs its work and permissions. */
+  read: (threadId: number): Promise<ThreadDetail> => runAction(threadActions.read(threadId)),
   loadOlder: (threadId: number): Promise<void> => runAction(threadActions.loadOlder(threadId)),
   loadNewer: (threadId: number): Promise<void> => runAction(threadActions.loadNewer(threadId)),
   create: (
@@ -235,10 +271,78 @@ const scheduled = {
   cancel: (id: number): Promise<void> => runAction(scheduledActions.cancel(id)),
 };
 
+/** The agent screens (S4). Loads land in the store (failures as its error) and never reject. */
+const agents = {
+  /** Loads (or reloads) the directory. */
+  loadDirectory: (): Promise<void> => runAction(agentActions.loadDirectory()),
+  /** Loads (or reloads) an agent's profile. */
+  loadProfile: (agentId: number): Promise<void> => runAction(agentActions.loadProfile(agentId)),
+};
+
+/**
+ * Agents' approval requests (S4). Loads never reject; a decision shows at once and rejects (put
+ * back) when the server refuses it.
+ */
+const approvals = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: ApprovalFilter): Promise<void> =>
+    runAction(approvalActions.loadMore(agentId, filter)),
+  /** Approves or denies, with an optional note; answers the server's copy. */
+  decide: (id: number, decision: ApprovalDecision, note: string | null): Promise<AgentApproval> =>
+    runAction(approvalActions.decide(id, decision, note)),
+};
+
+/** Agents' event ledgers (S4). Loads land in the store (a 403 too) and never reject. */
+const ledger = {
+  /** Loads (or reloads) an agent's first page in `filter`. */
+  load: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.load(agentId, filter)),
+  loadMore: (agentId: number, filter: LedgerFilter): Promise<void> =>
+    runAction(ledgerActions.loadMore(agentId, filter)),
+};
+
 /** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
 export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
 }
+
+/**
+ * Whether a work URL from the server (a link, the run) is safe in an `href`: `https://` or
+ * site-relative. The decoder drops the rest already; components check again.
+ */
+export { isSafeWorkHref } from "../api/schema/work.ts";
+
+/** Work tracking (S4). Loads and refreshes never reject; writes reject on failure. */
+const work = {
+  update: (threadId: number, body: UpdateWork): Promise<void> =>
+    runAction(boardActions.update(threadId, body)),
+  handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
+    runAction(boardActions.handoff(threadId, body)),
+  linkForm: (threadId: number): Promise<WorkLinkForm> => runAction(workActions.linkForm(threadId)),
+  addLink: (threadId: number, input: CreateWorkLink): Promise<ThreadDetail> =>
+    runAction(workActions.addLink(threadId, input)),
+  removeLink: (threadId: number, linkId: number): Promise<ThreadDetail> =>
+    runAction(workActions.removeLink(threadId, linkId)),
+  list: (state: WorkFilter): Promise<WorkList> => runAction(workList(state)),
+  /** Loads (or reloads) a filter of the work list. */
+  loadList: (filter: WorkFilter): Promise<void> => runAction(workActions.loadList(filter)),
+  /** Refetches a thread's detail after live work facts moved past the pane's. */
+  refresh: (threadId: number): Promise<void> => runAction(workActions.refresh(threadId)),
+  /** Moves, starts (on an untracked thread) or stops (`null`) tracking; optimistic. */
+  setStatus: (threadId: number, status: WorkStatus | null): Promise<ThreadDetail> =>
+    runAction(workActions.setStatus(threadId, status)),
+  /** Assigns (or, with `null`, unassigns) the owner; optimistic. */
+  assign: (threadId: number, ownerId: number | null): Promise<ThreadDetail> =>
+    runAction(workActions.assign(threadId, ownerId)),
+  /** Records the result, or clears it (`null`). */
+  saveResult: (threadId: number, markdown: string | null): Promise<ThreadDetail> =>
+    runAction(workActions.saveResult(threadId, markdown)),
+  /** Hands the work to an agent from `handoffReceivers`. */
+  handOff: (threadId: number, body: CreateWorkHandoff): Promise<ThreadDetail> =>
+    runAction(workActions.handOff(threadId, body)),
+};
 
 /**
  * Global search (S3). Loads land in the search store (errors too) and never reject; writes to
@@ -281,6 +385,17 @@ const organize = {
     runAction(organizeActions.setInvolvement(roomId, involvement)),
 };
 
+/** Room management plumbing; readable form facts and successful writes land before resolving. */
+const rooms = {
+  newForm: (type: RoomKind): Promise<RoomForm> => runAction(roomActions.newForm(type)),
+  editForm: (roomId: number): Promise<RoomForm> => runAction(roomActions.editForm(roomId)),
+  create: (body: CreateRoom): Promise<RoomMutation> => runAction(roomActions.create(body)),
+  update: (roomId: number, body: UpdateRoom): Promise<RoomMutation> =>
+    runAction(roomActions.update(roomId, body)),
+  remove: (roomId: number): Promise<RoomRemoved> => runAction(roomActions.remove(roomId)),
+  leaveDirect: (roomId: number): Promise<RoomLeft> => runAction(roomActions.leaveDirect(roomId)),
+};
+
 /** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
 const cards = {
   fizzyForm: (scope: FizzyMessageScope): Promise<FizzyMessageCardForm> =>
@@ -307,10 +422,105 @@ const cards = {
   ): Promise<void> => runAction(cardActions.respond(roomId, eventId, response, applyToFuture)),
   loadGithub: (roomId: number, pullRequestId: number, scope: GithubCardScope): Promise<void> =>
     runAction(cardActions.loadGithub(roomId, pullRequestId, scope)),
+  /** What this viewer can post. The card shows a control only when its flag is set. */
+  githubActions: (roomId: number, pullRequestId: number): Promise<GithubPullRequestActions> =>
+    runAction(cardActions.githubActions(roomId, pullRequestId)),
+  /**
+   * One shared `/actions` read for this room and pull request. `reason` names the completed
+   * preview load (and a retry); a read already in flight for that reason is joined.
+   */
+  loadGithubActions: (roomId: number, pullRequestId: number, reason: string): Promise<void> =>
+    runAction(cardActions.loadGithubActions(roomId, pullRequestId, reason)),
+  /** Classic Discuss: the mapping row, then the card reloads so `/actions` can answer. */
+  discussGithub: (
+    roomId: number,
+    pullRequestId: number,
+    messageId: number,
+  ): Promise<GithubDiscussion> =>
+    runAction(cardActions.discussGithub(roomId, pullRequestId, messageId)),
+  /** Posts an issue comment as the viewer; the card refetches when it lands. */
+  commentOnGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.commentOnGithub(roomId, pullRequestId, scope, body)),
+  /** Approves, requests changes, or leaves a review comment; the card refetches when it lands. */
+  reviewGithub: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    event: GithubReviewKind,
+    body: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.reviewGithub(roomId, pullRequestId, scope, event, body)),
+  /** Asks those GitHub usernames to review; the card refetches when it lands. */
+  requestGithubReviewers: (
+    roomId: number,
+    pullRequestId: number,
+    scope: GithubCardScope,
+    reviewers: string,
+  ): Promise<GithubWriteResult> =>
+    runAction(cardActions.requestGithubReviewers(roomId, pullRequestId, scope, reviewers)),
   loadFizzy: (roomId: number, fizzyCardId: number, messageId: number): Promise<void> =>
     runAction(cardActions.loadFizzy(roomId, fizzyCardId, messageId)),
   loadQuote: (roomId: number, referenceId: number): Promise<void> =>
     runAction(cardActions.loadQuote(roomId, referenceId)),
+};
+
+/** Calendar reads and writes return current facts; failures reject with field-aware ActionError. */
+const events = {
+  list: (roomId: number): Promise<EventList> => runAction(eventActions.list(roomId)),
+  /** The new-event form, with a prefilled link's values if any. */
+  newForm: (roomId: number, prefill: EventPrefill | null = null): Promise<EventForm> =>
+    runAction(eventActions.newForm(roomId, prefill)),
+  read: (roomId: number, eventId: number): Promise<EventDetail> =>
+    runAction(eventActions.read(roomId, eventId)),
+  editForm: (roomId: number, eventId: number): Promise<EventForm> =>
+    runAction(eventActions.editForm(roomId, eventId)),
+  create: (roomId: number, body: CreateEvent): Promise<EventDetail> =>
+    runAction(eventActions.create(roomId, body)),
+  update: (roomId: number, eventId: number, body: UpdateEvent): Promise<EventDetail> =>
+    runAction(eventActions.update(roomId, eventId, body)),
+  cancel: (roomId: number, eventId: number, body: CancelEvent): Promise<EventDetail> =>
+    runAction(eventActions.cancel(roomId, eventId, body)),
+  attendance: (roomId: number, eventId: number): Promise<EventAttendance> =>
+    runAction(eventActions.attendance(roomId, eventId)),
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture = false,
+  ): Promise<EventDetail> =>
+    runAction(eventActions.respond(roomId, eventId, response, applyToFuture)),
+  /**
+   * Calls `onChange` after each applied batch that changes an event in `roomId` (see
+   * `changesRoomEvents`), and whenever the room's topic is resynced (its events since the last
+   * one were lost, so any of them might have changed the calendar), holding the room's topic
+   * meanwhile, so an open calendar screen can read itself again. Returns the stop.
+   */
+  watch(roomId: number, onChange: () => void): () => void {
+    runtime.runFork(eventActions.holdRoom(roomId));
+
+    const stopEvents = onSyncEvents((applied) => {
+      if (applied.some((event) => eventActions.changesRoomEvents(event, roomId))) {
+        onChange();
+      }
+    });
+
+    const stopResyncs = onResync((topics) => {
+      if (eventActions.resyncsRoom(topics, roomId)) {
+        onChange();
+      }
+    });
+
+    return () => {
+      stopEvents();
+      stopResyncs();
+      runtime.runFork(eventActions.releaseRoom(roomId));
+    };
+  },
 };
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
@@ -331,27 +541,20 @@ export const actions = {
     createPost: (roomId: number, input: boardActions.BoardPostInput): Promise<ThreadDetail> =>
       runAction(boardActions.createPost(roomId, input)),
   },
-  work: {
-    linkForm: (threadId: number): Promise<WorkLinkForm> =>
-      runAction(boardActions.linkForm(threadId)),
-    addLink: (threadId: number, input: CreateWorkLink): Promise<ThreadDetail> =>
-      runAction(boardActions.addLink(threadId, input)),
-    removeLink: (threadId: number, linkId: number): Promise<ThreadDetail> =>
-      runAction(boardActions.removeLink(threadId, linkId)),
-    update: (threadId: number, body: UpdateWork): Promise<void> =>
-      runAction(boardActions.update(threadId, body)),
-    handoff: (threadId: number, body: CreateWorkHandoff): Promise<void> =>
-      runAction(boardActions.handoff(threadId, body)),
-    list: (state: WorkFilter): Promise<WorkList> => runAction(boardActions.list(state)),
-  },
   messages,
   threads,
   activity,
   saved,
   scheduled,
+  work,
+  agents,
+  approvals,
+  ledger,
   search,
   organize,
+  rooms,
   cards,
+  events,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 
@@ -381,6 +584,12 @@ export const actions = {
   /** Subscribes, says present, and loads the room's detail and first page. */
   openRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>
     runtime.runPromise(session.openRoom(roomId, focusMessageId)),
+
+  /**
+   * Joins an open room from its preview, then loads the visit on screen (around that visit's
+   * focus) and adds the sidebar row when the membership is visible.
+   */
+  joinOpenRoom: (roomId: number): Promise<void> => runtime.runPromise(session.joinOpenRoom(roomId)),
 
   /** Loads an open room again (its Try again); doesn't subscribe or say present a second time. */
   reloadRoom: (roomId: number, focusMessageId: number | null): Promise<void> =>

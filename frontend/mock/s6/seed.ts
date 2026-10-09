@@ -2,7 +2,15 @@ import type { WorkStatus } from "../../src/gen/WorkStatus.ts";
 import { renderMarkdown } from "../markdown.ts";
 import { createRandom } from "../random.ts";
 import { buildMessage, iso, plainDraft, type ThreadRecord } from "../s2/model.ts";
-import { BOT_ID, DEACTIVATED_ID, seededUuid, USER_IDS, VIEWER_ID, type World } from "../seed.ts";
+import {
+  BOT_ID,
+  DEACTIVATED_ID,
+  rowTimestamp,
+  seededUuid,
+  USER_IDS,
+  VIEWER_ID,
+  type World,
+} from "../seed.ts";
 import { emptyWorkDetail, newWorkFacts } from "./work.ts";
 
 export const BOARD_ROOM_ID = 900;
@@ -199,7 +207,8 @@ export function seedBoards(world: World, now: number, seed: number): void {
     const owner = post.owner === null ? null : (world.users.get(post.owner) ?? null);
 
     const facts = {
-      ...newWorkFacts(post.status),
+      ...newWorkFacts(post.status, rowTimestamp(Date.parse(lastActivityAt))),
+      ownerId: post.owner,
       owner,
       ownerActive: owner !== null && memberIds.includes(owner.id),
       tags: post.tags,
@@ -233,8 +242,6 @@ export function seedBoards(world: World, now: number, seed: number): void {
         ...facts,
         resultUpdatedAt: result === null ? null : lastActivityAt,
         runUrl: post.id === 9005 ? "https://ci.example.com/runs/42" : null,
-      },
-      workDetail: {
         ...emptyWorkDetail,
         resultMarkdown: result,
         resultHtml: result === null ? null : renderMarkdown(result, people),
@@ -298,43 +305,46 @@ export function seedBoards(world: World, now: number, seed: number): void {
     }
 
     if (post.id === 9005 && thread.work !== null && thread.work !== undefined) {
-      thread.work.links = [
-        {
-          id: 90001,
-          kind: "pull_request",
-          label: "smartfire/smartfire#42",
-          url: "https://github.com/smartfire/smartfire/pull/42",
-          pullRequestState: "open",
-          title: "Deduplicate sends",
-          eventStartsAt: null,
-          eventTimeZone: null,
-          eventCancelled: false,
-        },
-        {
-          id: 90002,
-          kind: "event",
-          label: "API review",
-          url: "/rooms/900/events/9104",
-          pullRequestState: null,
-          title: null,
-          eventStartsAt: iso(now + 86400000),
-          eventTimeZone: "America/New_York",
-          eventCancelled: false,
-        },
-        {
-          id: 90003,
-          kind: "drive_file",
-          label: "Retry design notes",
-          url: "https://docs.google.com/document/d/retry-notes/edit",
-          pullRequestState: null,
-          title: null,
-          eventStartsAt: null,
-          eventTimeZone: null,
-          eventCancelled: false,
-        },
-      ];
+      thread.work = {
+        ...thread.work,
+        links: [
+          {
+            id: 90001,
+            kind: "pull_request",
+            label: "smartfire/smartfire#42",
+            url: "https://github.com/smartfire/smartfire/pull/42",
+            pullRequestState: "open",
+            title: "Deduplicate sends",
+            eventStartsAt: null,
+            eventTimeZone: null,
+            eventCancelled: false,
+          },
+          {
+            id: 90002,
+            kind: "event",
+            label: "API review",
+            url: "/rooms/900/events/9104",
+            pullRequestState: null,
+            title: null,
+            eventStartsAt: iso(now + 86400000),
+            eventTimeZone: "America/New_York",
+            eventCancelled: false,
+          },
+          {
+            id: 90003,
+            kind: "drive_file",
+            label: "Retry design notes",
+            url: "https://docs.google.com/document/d/retry-notes/edit",
+            pullRequestState: null,
+            title: null,
+            eventStartsAt: null,
+            eventTimeZone: null,
+            eventCancelled: false,
+          },
+        ],
+      };
 
-      if (thread.workDetail != null) {
+      if (thread.work != null) {
         const step = (id: number, name: string, status: "done" | "running", position: number) => ({
           id,
           messageId: null,
@@ -349,8 +359,8 @@ export function seedBoards(world: World, now: number, seed: number): void {
           updatedAt: lastActivityAt,
         });
 
-        thread.workDetail = {
-          ...thread.workDetail,
+        thread.work = {
+          ...thread.work,
           steps: [
             step(90011, "Reproduce the duplicate", "done", 0),
             step(90012, "Write the fix", "running", 1),

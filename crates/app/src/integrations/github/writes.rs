@@ -11,6 +11,10 @@ pub enum Action {
     Comment,
     Review,
     ReviewRequest,
+    /// A pull-request review whose GitHub event is `COMMENT`. Classic forms don't offer it
+    /// (they reject a posted `COMMENT` as [`Action::Review`]); the SPA review dialog does.
+    /// The token, the GitHub call and the error mapping are the same as [`Action::Review`].
+    ReviewComment,
 }
 #[derive(Clone, Debug, Default)]
 pub struct Outcome {
@@ -62,6 +66,9 @@ pub async fn perform(
                 "Add a note describing the requested changes.",
             ));
         }
+        Action::ReviewComment if super::blank(body) => {
+            return Ok(Outcome::invalid("Add a note for the review comment."));
+        }
         Action::ReviewRequest => {
             logins = normalize_reviewers(&Value::String(reviewers.into()));
             if logins.as_ref().is_none_or(|v| v.is_empty()) {
@@ -91,6 +98,7 @@ pub async fn perform(
                     .create_review(key, event, (!super::blank(body)).then_some(body))
                     .await
             }
+            Action::ReviewComment => client.create_review(key, "COMMENT", Some(body)).await,
             Action::ReviewRequest => {
                 client
                     .request_reviewers(key, logins.as_ref().unwrap())
@@ -114,6 +122,12 @@ pub async fn perform(
                 }
                 Action::Review => {
                     format!("Requested changes on GitHub as @{}.", account.github_login)
+                }
+                Action::ReviewComment => {
+                    format!(
+                        "Left a review comment on GitHub as @{}.",
+                        account.github_login
+                    )
                 }
                 Action::ReviewRequest => format!(
                     "Requested review from {} on GitHub as @{}.",
@@ -143,7 +157,7 @@ pub async fn perform(
             let mut result = Outcome::invalid(&e.message);
             match action {
                 Action::Comment => result.comment_body = Some(body.into()),
-                Action::Review => result.review_body = Some(body.into()),
+                Action::Review | Action::ReviewComment => result.review_body = Some(body.into()),
                 Action::ReviewRequest => result.reviewers_body = Some(reviewers.into()),
             };
             Ok(result)

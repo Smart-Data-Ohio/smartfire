@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Placement } from "../../lib/anchor.ts";
 import { LazyEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
-import type { EmojiChoice } from "../../lib/emoji/recent.ts";
+import { type EmojiChoice, quickReactions, useRecentEmoji } from "../../lib/emoji/recent.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import type { MessageDTO } from "../../store/model.ts";
-import { Menu, type MenuTriggerProps } from "../../ui/menu.tsx";
+import { Icon } from "../../ui/icons/icon.tsx";
+import { Menu, MenuQuickItem, MenuQuickRow, type MenuTriggerProps } from "../../ui/menu.tsx";
 import { Popover, type PopoverTriggerProps } from "../../ui/popover.tsx";
 import { BoostForm } from "./boost-form.tsx";
 import { loadCustomIcons } from "./commands.ts";
@@ -147,6 +148,40 @@ function Ghost({ trigger, origin, keyboard, onClosed }: GhostProps) {
   );
 }
 
+interface QuickReactionsProps {
+  readonly onReact: (choice: EmojiChoice) => void;
+  readonly onMore: () => void;
+}
+
+/**
+ * The message sheet's header on a touch phone, as in Slack and Discord: six reactions (the recent
+ * picks, topped up with the server's defaults) and one that opens the full picker.
+ */
+function QuickReactions({ onReact, onMore }: QuickReactionsProps) {
+  const recent = useRecentEmoji();
+
+  return (
+    <MenuQuickRow label="Quick reactions">
+      {quickReactions(recent, 6).map((choice) => (
+        <MenuQuickItem
+          key={choice.content}
+          label={`React with ${choice.title}`}
+          onSelect={() => onReact(choice)}
+        >
+          {choice.imageUrl === null ? (
+            <span aria-hidden="true">{choice.content}</span>
+          ) : (
+            <img src={choice.imageUrl} alt="" width={24} height={24} />
+          )}
+        </MenuQuickItem>
+      ))}
+      <MenuQuickItem label="More reactions" onSelect={onMore}>
+        <Icon name="smile-plus" size={20} />
+      </MenuQuickItem>
+    </MenuQuickRow>
+  );
+}
+
 interface RowPopupProps {
   readonly request: PopupRequest;
   readonly message: MessageDTO;
@@ -178,6 +213,11 @@ export function RowPopup({
         <Menu
           label="Message actions"
           placement={origin.placement}
+          sheetHeader={
+            permissions.react ? (
+              <QuickReactions onReact={onReact} onMore={() => onCommand("react")} />
+            ) : undefined
+          }
           trigger={(trigger) => (
             <Ghost
               trigger={trigger}

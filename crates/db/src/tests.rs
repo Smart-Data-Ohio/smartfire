@@ -103,6 +103,7 @@ mod named_push_gating_test;
 mod status_settings_write_test;
 mod workspace_presence_lease_test;
 mod room_test;
+mod room_creation_key_test;
 mod room_delete_test;
 mod retention_test;
 mod rich_text_failure_test;
@@ -119,6 +120,7 @@ mod user_test;
 mod user_star_test;
 mod user_device_test;
 mod unicode_casing_parity_test;
+mod revision_write_test;
 
 use std::sync::Arc;
 

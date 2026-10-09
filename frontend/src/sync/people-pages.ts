@@ -3,6 +3,8 @@ import type { PeopleDirectory } from "../gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../gen/PersonProfile.ts";
 import type { Settings } from "../gen/Settings.ts";
 import type { User } from "../gen/User.ts";
+import { sameUserRow } from "../store/ordering.ts";
+import { landsOver } from "../store/revision.ts";
 import { mutations, store } from "../store/store.ts";
 
 /** The requests the people pages make, as promises (the runtime's in the app, fakes in tests). */
@@ -69,11 +71,14 @@ export function peoplePagesOver(requests: PeopleRequests) {
     mutations.setDndAllowance(userId, allowed);
   }
 
-  /** Whether the store holds a later copy of this user than `user`. */
+  /**
+   * Whether the store holds a later copy of this user than `user`: a later revision, or, at the
+   * same revision (a repeated server clock), a different row observed later.
+   */
   function overtaken(user: User): boolean {
     const held = store.getState().users[user.id];
 
-    return held !== undefined && held.updatedAt > user.updatedAt;
+    return !landsOver(held, user) || (held !== undefined && !sameUserRow(held, user));
   }
 
   const pages = {
@@ -100,7 +105,7 @@ export function peoplePagesOver(requests: PeopleRequests) {
         if (!overtaken(profile.user)) {
           landReadAllowance(userId, mark, profile.dndAllowed);
 
-          return profile;
+          return { ...profile, user: store.getState().users[userId] ?? profile.user };
         }
 
         if (signal?.aborted === true) throw new Error("The page was left");
@@ -126,7 +131,7 @@ export function peoplePagesOver(requests: PeopleRequests) {
 
       landReadAllowance(userId, mark, profile.dndAllowed);
 
-      return profile;
+      return { ...profile, user: store.getState().users[userId] ?? profile.user };
     },
 
     /**

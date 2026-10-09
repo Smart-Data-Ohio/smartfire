@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use super::api_tests::{Sync, app, get, json_body, parse, serve, tag};
 use crate::controllers::presenters::test_support::{
-    BENDER, Browser, DAVID, JASON, KEVIN, Reply, TestApp,
+    BENDER, Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp,
 };
 
 const BOARD: i64 = 699448332;
@@ -838,7 +838,11 @@ async fn spa_api_board_automations_sla_leaves_rows_the_client_left_out() {
     let nothing = david.write(json_body(Method::PUT, &path, &json!({}))).await;
     assert_eq!(nothing.status, StatusCode::OK, "{}", nothing.text());
     assert_eq!(sla_rows(&a).await.len(), 2);
-    assert_eq!(audit_details(&a).await.len(), 4, "an empty form changes nothing");
+    assert_eq!(
+        audit_details(&a).await.len(),
+        4,
+        "an empty form changes nothing"
+    );
 
     let invalid_planned = json!({"planned": timer(Some(30), Some(10))});
     let refused = david
@@ -905,16 +909,22 @@ async fn spa_api_board_automations_changes_signal_the_boards_other_clients() {
         client.until(changed, |_| false).await;
     }
 
-    let timers = david
-        .write(json_body(
-            Method::PUT,
-            &format!("/api/v1/rooms/{BOARD}/automations/sla_timers"),
-            &json!({"planned": timer(Some(10), Some(20))}),
-        ))
-        .await;
-    assert_eq!(timers.status, StatusCode::OK, "{}", timers.text());
-    for client in &mut clients {
-        client.until(changed, |_| false).await;
+    for values in [
+        timer(Some(10), Some(20)),
+        timer(Some(15), Some(30)),
+        timer(None, None),
+    ] {
+        let timers = david
+            .write(json_body(
+                Method::PUT,
+                &format!("/api/v1/rooms/{BOARD}/automations/sla_timers"),
+                &json!({"planned": values}),
+            ))
+            .await;
+        assert_eq!(timers.status, StatusCode::OK, "{}", timers.text());
+        for client in &mut clients {
+            client.until(changed, |_| false).await;
+        }
     }
 
     let rule_id = parse::<api::BoardAutomations>(&rule).tag_rules[0].id;
@@ -929,5 +939,64 @@ async fn spa_api_board_automations_changes_signal_the_boards_other_clients() {
     for client in &mut clients {
         client.until(changed, |_| false).await;
     }
+    server.abort();
+}
+
+#[tokio::test]
+async fn classic_board_automations_changes_signal_spa_clients() {
+    let a = app(true).await.expect("the frozen default seed");
+    reset(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let (addr, server) = serve(&a).await;
+    let topic = format!("room:{BOARD}");
+    let mut client =
+        Sync::connect(addr, &david.cookie_header(), std::slice::from_ref(&topic)).await;
+    client.welcome().await;
+    let changed = |event: &api::SyncEvent| {
+        event.topic == topic
+            && event.payload
+                == api::SyncPayload::BoardAutomationsChanged(api::BoardAutomationsChanged {
+                    room_id: BOARD,
+                })
+    };
+    let path = format!("/rooms/boards/{BOARD}/automations");
+
+    let created = david
+        .write(
+            Req::new(Method::POST, &format!("{path}/tag_assignments"))
+                .header("content-type", "application/json")
+                .body(json!({"tag": "bug", "assignee_id": DAVID}).to_string()),
+        )
+        .await;
+    assert_eq!(created.status, StatusCode::FOUND, "{}", created.text());
+    client.until(changed, |_| false).await;
+
+    for (nudge, escalate) in [("10", "20"), ("15", "30"), ("", "")] {
+        let saved = david
+            .write(
+                Req::new(Method::PATCH, &format!("{path}/sla_rules"))
+                    .header("content-type", "application/json")
+                    .body(
+                        json!({"sla_rules": {"planned": {
+                            "nudge_after_minutes": nudge,
+                            "escalate_after_minutes": escalate,
+                        }}})
+                        .to_string(),
+                    ),
+            )
+            .await;
+        assert_eq!(saved.status, StatusCode::FOUND, "{}", saved.text());
+        client.until(changed, |_| false).await;
+    }
+
+    let rule_id = settings(&mut david, BOARD).await.tag_rules[0].id;
+    let removed = david
+        .write(Req::new(
+            Method::DELETE,
+            &format!("{path}/tag_assignments/{rule_id}"),
+        ))
+        .await;
+    assert_eq!(removed.status, StatusCode::FOUND, "{}", removed.text());
+    client.until(changed, |_| false).await;
     server.abort();
 }

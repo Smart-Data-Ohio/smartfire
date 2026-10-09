@@ -1,6 +1,7 @@
 import { useMatchRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
+import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { useStore } from "../../store/store.ts";
 import {
   closeStep,
@@ -17,6 +18,7 @@ import {
   type RoutePaneKind,
   togglePane,
   useOpenPane,
+  useOpenPaneFrom,
   useRoutePaneReturn,
 } from "./pane-store.ts";
 
@@ -79,6 +81,8 @@ export interface PaneNavigation {
   readonly closeAll: () => void;
   /** A header button: shows its pane (leaving any thread) or, when it's showing, closes it. */
   readonly toggle: (pane: PaneKind) => void;
+  /** A row in a pane (the room's details): opens its pane over this one; Back returns here. */
+  readonly push: (pane: PaneKind) => void;
 }
 
 /** The persistent room owns URL pane memory; nested pane bodies only navigate. */
@@ -117,6 +121,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
   const view = useRightPaneView();
   const routePane = useRoutePane();
   const returnPane = useRoutePaneReturn(roomId);
+  const fromPane = useOpenPaneFrom();
 
   const leaveThread = () => {
     void navigate({ to: "/r/$roomId", params: { roomId }, search: parseBoardSearch });
@@ -150,7 +155,7 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
           }
         }
       } else if (step === "close-pane") {
-        openPane(null);
+        openPane(routePane === null ? fromPane : null);
 
         if (routePane !== null) {
           leaveThread();
@@ -215,10 +220,15 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
         togglePane(pane);
       }
     },
+    push: (pane) => {
+      openPane(pane, view?.kind === "pane" ? view.pane : null);
+
+      if (routePane !== null || (view !== null && view.kind !== "pane")) {
+        leaveThread();
+      }
+    },
   };
 }
-
-const PHONE_QUERY = "(width < 720px)";
 
 const OVERLAY_QUERY = "(width < 1100px)";
 

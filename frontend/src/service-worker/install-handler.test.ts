@@ -12,8 +12,8 @@ const origin = "https://smartfire.test";
 const build: WorkerBuild = {
   version: "a",
   page: "/app/assets/index-aaaaaaaa.js",
-  offline: "/app/offline.html",
-  precache: ["/app/assets/index-aaaaaaaa.js", "/app/offline.html"],
+  offline: "/offline.html",
+  precache: ["/app/assets/index-aaaaaaaa.js", "/offline.html"],
 };
 
 class InstallEvent extends Event {
@@ -60,10 +60,12 @@ async function worker(kind: "SPA" | "classic") {
     vi.stubGlobal("fetch", network);
     await import("./worker.ts");
   } else {
-    runInNewContext(
-      readFileSync(resolve("../crates/views/templates/pwa/service_worker.js"), "utf8"),
-      { self: scope, caches: storage, fetch: network, URL },
-    );
+    runInNewContext(readFileSync(resolve("../crates/spa/pwa/service_worker.js"), "utf8"), {
+      self: scope,
+      caches: storage,
+      fetch: network,
+      URL,
+    });
   }
 
   function install(addRoutes?: (route: NetworkRoute) => Promise<void>) {

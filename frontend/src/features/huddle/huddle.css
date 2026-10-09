@@ -14,24 +14,11 @@
     font-size: var(--text-meta);
   }
 
-  .huddle-dock[data-compact] {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    margin: 0;
-    border-radius: 0;
-    box-shadow: 0 1px 0 var(--border);
-  }
-
   .huddle-dock-head {
     display: flex;
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-  }
-
-  .huddle-dock[data-compact] .huddle-dock-head {
-    flex: 1 1 60%;
   }
 
   .huddle-dock-signal {
@@ -161,6 +148,75 @@
     gap: var(--space-2);
     padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border);
+  }
+
+  /* The phone call bar (only phones show it, over the conversation): one 48 px row, the
+     signal, the status and room, the controls and leave; a notice or a retry wraps below. */
+  .huddle-dock[data-compact] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-0-5);
+    min-height: 48px;
+    margin: 0;
+    padding: 2px var(--space-1) 2px var(--space-3);
+    border-radius: 0;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .huddle-dock[data-compact] .button {
+    --button-height: var(--control-md);
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-head {
+    display: contents;
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-signal {
+    margin-right: var(--space-1-5);
+  }
+
+  /* The room's name takes the whole text block as its hit area. */
+  .huddle-dock[data-compact] .huddle-dock-text {
+    position: relative;
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-room::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  /* A tap leaves :hover behind on touch screens; the name shouldn't stay underlined. */
+  @media (hover: none) {
+    .huddle-dock[data-compact] .huddle-dock-room:hover {
+      text-decoration: none;
+    }
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-controls {
+    order: 1;
+    gap: 0;
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-leave {
+    order: 2;
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-notice,
+  .huddle-dock[data-compact] .huddle-dock-resume,
+  .huddle-dock[data-compact] .huddle-dock-live,
+  .huddle-dock[data-compact] .huddle-dock-failed {
+    flex-basis: 100%;
+    order: 3;
+    margin-block: var(--space-1);
+  }
+
+  /* Phone browsers can't share a screen, and five 44 px controls are what a 360 px bar holds. */
+  @media (pointer: coarse) {
+    .huddle-dock[data-compact] .huddle-dock-share {
+      display: none;
+    }
   }
 
   /* The phone bar sits over the conversation; the sidebar's own dock covers wider screens. */
@@ -394,9 +450,24 @@
     gap: var(--space-2);
   }
 
+  /* Phones: the call is a full-screen view over the room, opened and closed from the call bar
+     above it (which also carries its controls, so the view needs no header of its own). */
   @media (width < 720px) {
+    .call-view {
+      position: absolute;
+      z-index: 5;
+      inset: 0;
+      max-height: none;
+      padding-bottom: calc(var(--space-3) + var(--safe-bottom));
+      box-shadow: none;
+    }
+
+    .call-view-head {
+      display: none;
+    }
+
     .call-grid {
-      grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     }
 
     .huddle-stack {

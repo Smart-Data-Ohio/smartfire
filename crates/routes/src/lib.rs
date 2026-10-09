@@ -216,5 +216,25 @@ pub fn fresh_account_logo(v: Option<&str>, size: Option<&str>) -> String {
     ACCOUNT_LOGO.path_with(&[], None, &[("v", v), ("size", size)])
 }
 
+/// The SPA's logo source or first-frame PNG, versioned by the attached blob.
+pub fn workspace_logo(blob_id: i64, still: bool) -> String {
+    ACCOUNT_LOGO.path_with(
+        &[],
+        None,
+        &[
+            ("v", Some(&blob_id.to_string())),
+            (if still { "still" } else { "animated" }, Some("1")),
+        ],
+    )
+}
+
+/// The workspace banner, versioned by the attached blob rather than the account timestamp.
+pub fn fresh_account_banner(blob_id: i64, still: bool) -> String {
+    format!(
+        "/account/banner?v={blob_id}{}",
+        if still { "&still=1" } else { "" }
+    )
+}
+
 #[cfg(test)]
 mod tests;

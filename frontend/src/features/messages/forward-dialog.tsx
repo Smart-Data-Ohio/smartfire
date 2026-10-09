@@ -183,6 +183,7 @@ export default function ForwardDialog({ message, open, onOpenChange }: ForwardDi
       open={open}
       onOpenChange={onOpenChange}
       title="Forward message"
+      dirty={selected.length > 0 || note.trim() !== ""}
       footer={
         <>
           <span className="forward-count" aria-live="polite">

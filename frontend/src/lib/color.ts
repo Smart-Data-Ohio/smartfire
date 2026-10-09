@@ -66,6 +66,38 @@ function gammaEncode(channel: number): number {
   return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
 }
 
+/** Whether an OKLCH colour lies inside sRGB (a hair of tolerance for float error). */
+export function inGamut(color: Oklch): boolean {
+  const linear = oklchToLinearSrgb(color);
+
+  return [linear.r, linear.g, linear.b].every((channel) => channel >= -1e-4 && channel <= 1 + 1e-4);
+}
+
+/**
+ * The colour with its chroma reduced (lightness and hue kept) until it fits sRGB, so a derived
+ * colour paints as computed rather than clipped channel by channel.
+ */
+export function fitGamut(color: Oklch): Oklch {
+  if (inGamut(color)) {
+    return color;
+  }
+
+  let low = 0;
+  let high = color.c;
+
+  for (let step = 0; step < 20; step += 1) {
+    const middle = (low + high) / 2;
+
+    if (inGamut({ ...color, c: middle })) {
+      low = middle;
+    } else {
+      high = middle;
+    }
+  }
+
+  return { ...color, c: low };
+}
+
 /** sRGB in 0..255, clipped to the gamut (what a browser paints on an sRGB display). */
 export function oklchToRgb(color: Oklch): Rgb {
   const linear = oklchToLinearSrgb(color);

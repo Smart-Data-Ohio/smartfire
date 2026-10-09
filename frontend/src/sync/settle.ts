@@ -9,6 +9,7 @@ import { thread } from "../api/thread-endpoints.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import { store } from "../store/store.ts";
 import { uncertainSince } from "../store/threads.ts";
+import { captureWorkRead, type WorkRead } from "../store/work.ts";
 
 /**
  * What a pane says when asking again found no thread: it may have been deleted, or the viewer's
@@ -45,17 +46,18 @@ export const settled = <A, E, R, E2, R2>(
   first: Effect.Effect<A, E, R>,
   again: (previous: A) => Effect.Effect<A | null, E2, R2>,
   threadIds: (answer: A) => readonly number[],
-  install: (answer: A, since: number) => void,
+  install: (answer: A, since: number, read: WorkRead) => void,
 ): Effect.Effect<Settled<A>, E | E2, R | R2> =>
   Effect.gen(function* () {
-    let since = store.getState().removalCount;
+    let read = captureWorkRead(store.getState());
+    let since = read.since;
     let answer: A = yield* first;
 
     for (let attempt = 1; ; attempt += 1) {
       const state = store.getState();
 
       if (!threadIds(answer).some((id) => uncertainSince(state, id, since))) {
-        install(answer, since);
+        install(answer, since, read);
 
         return { answer, outcome: "installed" };
       }
@@ -64,7 +66,8 @@ export const settled = <A, E, R, E2, R2>(
         return { answer, outcome: "unsettled" };
       }
 
-      since = store.getState().removalCount;
+      read = captureWorkRead(store.getState());
+      since = read.since;
       const next = yield* again(answer);
 
       if (next === null) {
@@ -87,7 +90,7 @@ export const refetchThread = (threadId: number) =>
 /** As `settled` for a reply that is the thread's detail (a write's, usually). */
 export const settledDetail = <E, R>(
   first: Effect.Effect<ThreadDetail, E, R>,
-  install: (detail: ThreadDetail, since: number) => void,
+  install: (detail: ThreadDetail, since: number, read: WorkRead) => void,
 ) =>
   settled(
     first,

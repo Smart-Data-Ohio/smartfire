@@ -1,4 +1,4 @@
-//! Active Record String casts and the pinned inherited direct-show callback failure.
+//! Active Record String casts, and the direct-namespace show alias.
 use axum::http::{Method,StatusCode};
 use campfire_db::{CachedStatements,Room};
 use crate::controllers::presenters::test_support::*;
@@ -34,16 +34,16 @@ async fn channel_updates_distinguish_null_names_from_unpermitted_collections() {
     }
 }
 #[tokio::test]
-async fn direct_namespace_show_keeps_auth_gates_and_rails_missing_room_failure() {
+async fn direct_namespace_show_keeps_auth_gates_and_redirects_to_the_room() {
     let app=TestApp::boot().await.expect("seed required");
     let mut david=app.david();
     for (id,expected) in oracle()["shows"].as_object().unwrap() {
         let path=format!("/rooms/directs/{id}");
         assert_eq!(app.anonymous().get(&path).await.location(),Some("http://campfire.test/session/new"));
         assert_eq!(app.anonymous().get(&format!("{path}?bot_key={BENDER_KEY}")).await.status,StatusCode::FORBIDDEN);
-        let reply=david.send(Req::new(Method::GET,&path).header("Accept","application/json")).await;
+        let reply=david.get(&path).await;
         assert_eq!(reply.status.as_u16() as u64,expected["status"].as_u64().unwrap(),"{id}");
-        assert_eq!(reply.json(),expected["json"]);
+        assert_eq!(reply.location(),expected["location"].as_str(),"{id}");
     }
     // The actual page route remains scoped and working.
     assert_eq!(david.get(&format!("/rooms/{DIRECT_DAVID_JASON}")).await.status,StatusCode::OK);

@@ -130,10 +130,25 @@ export function removeThread(state: State, threadId: number, roomId: number): St
   const list = state.roomThreads[roomId];
   const parentId = thread?.parentMessageId ?? null;
   const parent = parentId === null ? undefined : state.messages[parentId];
+  const { [threadId]: _detail, ...details } = state.work.details;
+  const { [threadId]: _facts, ...heldFacts } = state.work.heldFacts;
+  const { [threadId]: _overlay, ...overlays } = state.work.overlays;
 
   return {
     ...removeBoardPost(state, roomId, threadId),
     ...tombstone(state, threadId),
+    work: {
+      ...state.work,
+      details,
+      heldFacts,
+      overlays,
+      lists: Object.fromEntries(
+        Object.entries(state.work.lists).map(([filter, list]) => [
+          filter,
+          { ...list, rows: list.rows.filter(({ thread }) => thread.id !== threadId) },
+        ]),
+      ),
+    },
     threads,
     // Only a pane someone opened says so; others aren't kept for every removal.
     threadPanes:
@@ -246,7 +261,11 @@ export function setThreadPaneError(state: State, threadId: number, error: string
  * sent: a reply to a request sent after the thread's removal lifts it; an older one is dropped.
  * Agent steps merge with the ones held, by `updatedAt`, since `agent.steps` may be newer.
  */
-export function loadThreadDetail(state: State, detail: ThreadDetail, since: number): State {
+export function loadThreadDetail(
+  state: State,
+  detail: ThreadDetail,
+  since = state.removalCount,
+): State {
   const threadId = detail.thread.id;
 
   if (removedSince(state, threadId, since)) {

@@ -41,6 +41,9 @@ fn the_workspace_and_its_writes() {
         &Workspace {
             name: "Smart Data".into(),
             logo_url: "/account/logo?v=1700000000".into(),
+            logo_still_url: None,
+            banner_url: None,
+            banner_still_url: None,
             logo_attached: false,
             join_url: "https://chat.example/join/abc-123".into(),
             can_administer: true,
@@ -50,6 +53,9 @@ fn the_workspace_and_its_writes() {
         json!({
             "name": "Smart Data",
             "logoUrl": "/account/logo?v=1700000000",
+            "logoStillUrl": null,
+            "bannerUrl": null,
+            "bannerStillUrl": null,
             "logoAttached": false,
             "joinUrl": "https://chat.example/join/abc-123",
             "canAdminister": true,
@@ -69,6 +75,30 @@ fn the_workspace_and_its_writes() {
             signed_id: "blob-1".into(),
         },
         json!({ "signedId": "blob-1" }),
+    );
+    assert_wire(
+        &UpdateBanner {
+            signed_id: "blob-2".into(),
+        },
+        json!({ "signedId": "blob-2" }),
+    );
+}
+
+#[test]
+fn workspace_branding_sync_wire_shape() {
+    let branding = WorkspaceBranding {
+        name: "Smart Data".into(),
+        logo_url: Some("/account/logo?v=1&animated=1".into()),
+        logo_still_url: Some("/account/logo?v=1&still=1".into()),
+        banner_url: Some("/account/banner?v=2".into()),
+        banner_still_url: Some("/account/banner?v=2&still=1".into()),
+    };
+    assert_wire(
+        &SyncPayload::WorkspaceUpdated(branding),
+        json!({"type": "workspace.updated", "data": {
+            "name": "Smart Data", "logoUrl": "/account/logo?v=1&animated=1", "logoStillUrl": "/account/logo?v=1&still=1",
+            "bannerUrl": "/account/banner?v=2", "bannerStillUrl": "/account/banner?v=2&still=1"
+        }}),
     );
 }
 

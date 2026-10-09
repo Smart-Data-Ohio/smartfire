@@ -95,34 +95,13 @@ export const validation = (
     fields: { [field]: [message] },
   });
 
-/**
- * 422 `Validation` as the server answers a model's errors (`record_invalid`): each message under
- * its wire field as the model words it ("can't be blank"), and the message their full sentences
- * ("Summary can't be blank"), joined by commas.
- */
-export const recordInvalid = (
-  errors: readonly { readonly field: string; readonly label: string; readonly message: string }[],
-) => {
-  const fields: Record<string, string[]> = {};
-
-  for (const error of errors) {
-    fields[error.field] = [...(fields[error.field] ?? []), error.message];
-  }
-
-  return new HttpError(422, {
-    _tag: VALIDATION,
-    message: errors.map((error) => `${error.label} ${error.message}`).join(", "),
-    fields,
-  });
-};
-
-/** 422 `Validation` with one whole sentence, the message and its field's only entry. */
-export const sentence = (field: string, message: string) =>
-  new HttpError(422, { _tag: VALIDATION, message, fields: { [field]: [message] } });
-
 /** 422 `Validation` with no fields: a classic alert, word for word (`api::admin::refusal`). */
 export const refused = (message: string) =>
   new HttpError(422, { _tag: VALIDATION, message, fields: {} });
+
+/** 422 `Validation` whose message is that sentence, also attached to `field`. */
+export const refusal = (field: string, message: string) =>
+  new HttpError(422, { _tag: VALIDATION, message, fields: { [field]: [message] } });
 
 const RATE_LIMITED: ApiError["_tag"] = "RateLimited";
 

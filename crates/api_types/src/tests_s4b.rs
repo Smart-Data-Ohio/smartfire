@@ -172,6 +172,7 @@ fn work_facts() -> WorkFacts {
         links: vec![pull_request_link()],
         tags: vec![],
         message_count: 4,
+        updated_at: "2026-10-06T09:05:00.000000Z".into(),
     }
 }
 
@@ -195,6 +196,7 @@ fn work_facts_wire() -> serde_json::Value {
         }],
         "tags": [],
         "messageCount": 4,
+        "updatedAt": "2026-10-06T09:05:00.000000Z",
     })
 }
 
@@ -386,7 +388,7 @@ fn work_list_round_trips() {
             thread: work_thread(),
             room_name: "general".into(),
             board: false,
-            updated_at: "2026-10-06T10:00:00.000Z".into(),
+            updated_at: "2026-10-06T10:00:00.000000Z".into(),
         }],
         users: vec![user()],
     };
@@ -397,7 +399,7 @@ fn work_list_round_trips() {
                 "thread": serde_json::to_value(work_thread()).unwrap(),
                 "roomName": "general",
                 "board": false,
-                "updatedAt": "2026-10-06T10:00:00.000Z",
+                "updatedAt": "2026-10-06T10:00:00.000000Z",
             }],
             "users": [serde_json::to_value(user()).unwrap()],
         }),

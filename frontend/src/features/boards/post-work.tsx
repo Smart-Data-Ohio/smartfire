@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import type { AgentStep } from "../../gen/AgentStep.ts";
 import type { User } from "../../gen/User.ts";
@@ -6,7 +5,6 @@ import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import type { WorkHistoryEntry } from "../../gen/WorkHistoryEntry.ts";
 import type { WorkOwnerSnapshot } from "../../gen/WorkOwnerSnapshot.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
-import { parseBoardSearch } from "../../lib/board-search.ts";
 import { formatFull } from "../../lib/time.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -22,6 +20,8 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
+import { handoffRefusal } from "../work/handoff-access.ts";
+import { HandoffDialog, useHandoffRoute } from "../work/handoff-dialog.tsx";
 import {
   parseTags,
   safeHttpsUrl,
@@ -515,21 +515,43 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/** What a manager can do with the work beyond its facts: hand it off to an agent (a dialog). */
-function WorkActions({ roomId, threadId }: { readonly roomId: number; readonly threadId: number }) {
+/** What a manager can do beyond the facts: hand the work to an agent (the dialog's URL over this pane). */
+function PostWorkActions({
+  threadId,
+  detail,
+}: {
+  readonly threadId: number;
+  readonly detail: WorkDetail | null;
+}) {
+  const name = useStore((state) => state.threads[threadId]?.name ?? "Post");
+  const { open: handingOff, openHandoff, closeHandoff } = useHandoffRoute(threadId);
+
+  const offering =
+    detail !== null &&
+    handoffRefusal({
+      tracked: true,
+      canManage: true,
+      receiverCount: detail.handoffReceivers.length,
+    }) === null;
+
+  if (!offering || detail === null) {
+    return null;
+  }
+
   return (
-    <div className="post-actions">
-      <Link
-        to="/r/$roomId/t/$threadId/handoff"
-        params={{ roomId, threadId }}
-        search={parseBoardSearch}
-        className="button"
-        data-variant="secondary"
-        data-size="sm"
-      >
-        <Icon name="send" size={14} />
-        Hand off
-      </Link>
+    <div className="post-classic">
+      <Button variant="secondary" size="sm" icon="send" onClick={openHandoff}>
+        Hand off to an agent
+      </Button>
+      <HandoffDialog
+        threadId={threadId}
+        threadName={name}
+        work={detail}
+        open={handingOff}
+        onOpenChange={(open) => {
+          if (!open) closeHandoff();
+        }}
+      />
     </div>
   );
 }
@@ -537,7 +559,7 @@ function WorkActions({ roomId, threadId }: { readonly roomId: number; readonly t
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked (with its editor), the
- * pinned result with its editor, the agent's steps, the work history and the handoff.
+ * pinned result with its editor, the agent's steps, the work history and the handoff dialog.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
@@ -604,8 +626,8 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
       />
       <Steps steps={detail?.steps ?? []} />
       <History history={detail?.history ?? []} />
-      {permissions?.canManageWork === true && roomId !== null ? (
-        <WorkActions roomId={roomId} threadId={threadId} />
+      {permissions?.canManageWork === true ? (
+        <PostWorkActions threadId={threadId} detail={detail} />
       ) : null}
     </div>
   );

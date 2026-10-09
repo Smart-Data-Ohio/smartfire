@@ -71,13 +71,16 @@ describe("board selectors and reducers", () => {
     expect(boardPostIds(filter(state, "10"), BOARD)).toEqual([5]);
     const badgeAgent = boardThread(6, "planned", 11);
 
-    if (badgeAgent.work?.owner)
+    if (badgeAgent.work?.owner) {
+      badgeAgent.work.owner.role = "bot";
       badgeAgent.work.owner.agent = {
         agentId: 11,
         kind: "workspace",
         status: "idle",
         suspended: false,
       };
+    }
+
     expect(
       boardPostIds(filter(event(state, "thread.created", badgeAgent), "agents"), BOARD),
     ).toEqual([6, 3]);

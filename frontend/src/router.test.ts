@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { RawWorkSearch } from "./features/work/work-search.ts";
 import { parseBoardSearch } from "./lib/board-search.ts";
 import { SCREENS } from "./lib/screens.ts";
 import { router } from "./router.tsx";
@@ -39,11 +38,17 @@ describe("the screen map and the router", () => {
       SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
 
-    // These are SPA-only tools, without a classic page of their own.
-    // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
+    // These are SPA-only tools, without a classic page of their own. Classic has no agent
+    // profile page (only /agents/:id/approvals and /agents/:id/events), so the profile is one.
+    // The profile and the workspace also have a phone page each, pushed from the section list
+    // their root shows there; the root itself maps to the classic page.
     const internal = new Set([
       "/app/_kitchen-sink",
       "/app/r/:id/t/new",
+      "/app/agents/:id",
+      "/app/settings/profile",
+      "/app/admin/workspace",
+      // The room-scoped handoff dialog and link form are where the classic pages' resolvers land.
       "/app/r/:id/t/:id/handoff",
       "/app/r/:id/t/:id/links",
     ]);
@@ -98,20 +103,7 @@ describe("board route search", () => {
   });
 });
 
-describe("work routes", () => {
-  it("opens the Work page with a validated filter", () => {
-    const leaf = (search: RawWorkSearch) => router.matchRoutes("/work", search).at(-1);
-
-    expect(leaf({})?.routeId).toBe("/shell/work");
-    expect(leaf({})?.search).toEqual({});
-    expect(leaf({ state: "agents" })?.search).toEqual({ state: "agents" });
-    expect(leaf({ state: "boards" })?.search).toEqual({ state: "boards" });
-    // The default and anything unknown read as open, left out of the URL.
-    expect(leaf({ state: "open" })?.search).toEqual({});
-    expect(leaf({ state: "closed" })?.search).toEqual({});
-    expect(leaf({ state: ["done"] })?.search).toEqual({});
-  });
-
+describe("handoff routes", () => {
   it("opens the handoff dialog over the thread pane", () => {
     const matches = router.matchRoutes("/r/900/t/42/handoff", {});
 

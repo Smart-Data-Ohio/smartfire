@@ -4,7 +4,7 @@ import type { CreatedFizzyCard } from "../../gen/CreatedFizzyCard.ts";
 import type { FizzyMessageCardForm } from "../../gen/FizzyMessageCardForm.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -119,6 +119,14 @@ export default function FizzyCardDialog({
   const connectRef = useRef<HTMLAnchorElement | null>(null);
   const form = load.status === "ready" ? load.loaded.form : null;
   const editable = form !== null && draft !== null && stage.kind !== "disconnected";
+  const start = form === null ? null : initialDraft(form);
+
+  const dirty =
+    draft !== null &&
+    start !== null &&
+    (draft.boardId !== start.boardId ||
+      draft.title !== start.title ||
+      draft.description !== start.description);
 
   // The overlay mounts the dialog afresh for each opening, so this reads the form once per
   // opening; a retry (`tries`) reads it again.
@@ -168,7 +176,7 @@ export default function FizzyCardDialog({
     const inField = active instanceof Element && active.closest(".fz-form") !== null;
 
     if (!inField) {
-      select.focus();
+      focusOnOpen(select);
     }
   }, [fieldsShown]);
 
@@ -287,6 +295,7 @@ export default function FizzyCardDialog({
         )
       }
       size="md"
+      dirty={dirty}
       footer={footer}
       {...(returnFocus === undefined ? {} : { returnFocus })}
       returnFocusFirst={returnFocusFirst}

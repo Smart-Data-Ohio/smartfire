@@ -13,6 +13,7 @@ pub struct DirectoryRecord {
     pub status_note: Option<String>,
     pub suspended: bool,
     pub created_at: Timestamp,
+    pub updated_at: Timestamp,
     pub status_changed_at: Option<Timestamp>,
     pub last_seen_at: Option<Timestamp>,
 }
@@ -30,6 +31,7 @@ pub fn for_directory(conn: &Connection) -> Result<Vec<DirectoryRecord>> {
             status_note: agent.status_note,
             suspended: agent.suspended_at.is_some(),
             created_at: agent.created_at,
+            updated_at: agent.updated_at,
             status_changed_at: agent.status_changed_at,
             last_seen_at: agent.last_seen_at,
         })

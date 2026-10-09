@@ -10,6 +10,7 @@ import type { HuddleCredentials } from "../../gen/HuddleCredentials.ts";
 import type { StageRole } from "../../gen/StageRole.ts";
 import type { StageStream } from "../../gen/StageStream.ts";
 import type { StreamQuality } from "../../gen/StreamQuality.ts";
+import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
 import { store } from "../../store/store.ts";
 import { huddles } from "../../sync/huddles.ts";
@@ -97,6 +98,11 @@ export interface CallEnvironment {
   /** Keeps the room's sync topic subscribed for the call (stage roster, stream, notices). */
   holdRoom(roomId: number): void;
   releaseRoom(roomId: number): void;
+  /**
+   * Whether joining shows the call view straight away. A phone keeps the conversation and its
+   * call bar; the full-screen view opens from the bar.
+   */
+  opensCallView(): boolean;
 }
 
 function isMock(url: string): boolean {
@@ -143,6 +149,7 @@ export const browserEnvironment: CallEnvironment = {
   releaseRoom: (roomId) => {
     huddles.releaseRoom(roomId);
   },
+  opensCallView: () => !window.matchMedia(PHONE_QUERY).matches,
 };
 
 /** The tag an `ActionError` carries (`NotFound`, `Forbidden`…), or `null` for other errors. */
@@ -458,7 +465,7 @@ export class CallController {
       canPublish: true,
       deafened: false,
       expandedVideoId: null,
-      viewOpen: true,
+      viewOpen: this.#env.opensCallView(),
       // A retry in the same room keeps its timer, as a rejoin does.
       startedAt: state.roomId === roomId ? state.startedAt : null,
       localMutes: [],

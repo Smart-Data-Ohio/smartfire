@@ -119,7 +119,7 @@ async fn show_sidebar(c: &mut Ctx) -> Result {
     let sidebar = c
         .app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             // `Current.user.administrator? || !Current.account.settings.restrict_room_creation_to_administrators?`
             let restricted = Account::first(conn)?.is_some_and(|account| {
                 account

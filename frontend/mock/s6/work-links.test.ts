@@ -7,6 +7,7 @@ import { field } from "../json.ts";
 import { dispatch } from "../s2/context.ts";
 import { threadDto } from "../s2/model.ts";
 import { collect, errorOf, expectStatus, get, harness, NOW, send } from "../s2/testing.ts";
+import { S4_WORK_IDS } from "../s4/seed.ts";
 import { buildWorld } from "../s3/seed.ts";
 import { USER_IDS, VIEWER_ID } from "../seed.ts";
 import { BOARD_ROOM_ID } from "./seed.ts";
@@ -124,10 +125,15 @@ describe("mock work link routes", () => {
       404,
     );
 
-    const tracked = await send(server, "POST", "/api/v1/threads/1/work/links", {
-      kind: "event",
-      eventId: 9104,
-    });
+    const tracked = await send(
+      server,
+      "POST",
+      `/api/v1/threads/${S4_WORK_IDS.untracked}/work/links`,
+      {
+        kind: "event",
+        eventId: 9104,
+      },
+    );
 
     expect(tracked.status).toBe(422);
     expect(errorOf(tracked.json).message).toBe("This thread isn't tracked as work");

@@ -49,11 +49,8 @@ pub fn routes(enabled: bool, immutable_cache_control: &'static str) -> Router<Ki
     };
     Router::new()
         .route("/app/assets/{*path}", axum::routing::get(assets))
-        .route("/app/service-worker.js", axum::routing::get(assets))
-        .route("/app/offline.html", axum::routing::get(assets))
         .route("/app", axum::routing::get(campfire_kit::action(show)))
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
-        .route("/app/manifest.webmanifest", axum::routing::get(campfire_kit::action(super::pwa::spa_manifest)))
         .route("/app/{*path}", axum::routing::get(page))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
         .route("/app/ui_preference", axum::routing::post(campfire_kit::action(update_ui_preference)))
@@ -131,10 +128,7 @@ pub async fn boot(c: &mut Ctx) -> Result {
 async fn load_boot(c: &mut Ctx) -> Result<Boot> {
     let user = concerns::require_current_user(c)?.clone();
     let app = c.app();
-    let service_worker_url = match concerns::effective_ui(c).await? {
-        ui @ UiPreference::Next => Some(concerns::service_worker_url(ui)),
-        UiPreference::Classic => None,
-    };
+    let service_worker_url = Some("/service-worker.js".into());
     let avatar_url = presenters::avatar_path(&app.secrets, &user);
     let (version, revision) = (app.config.app_version.clone(), app.config.git_revision.clone());
     let user_id = user.id;
@@ -146,9 +140,19 @@ async fn load_boot(c: &mut Ctx) -> Result<Boot> {
         })
         .await
         .map_err(Error::internal)?;
+    let branding = match &account {
+        Some(account) => Some(presenters::workspace_branding::for_account(app, account).await?),
+        None => None,
+    };
     Ok(Boot {
         user: BootUser { id: user.id, name: user.name, avatar_url },
-        account: BootAccount { name: account.map(|account| account.name) },
+        account: BootAccount {
+            name: account.map(|account| account.name),
+            logo_url: branding.as_ref().and_then(|branding| branding.logo_url.clone()),
+            logo_still_url: branding.as_ref().and_then(|branding| branding.logo_still_url.clone()),
+            banner_url: branding.as_ref().and_then(|branding| branding.banner_url.clone()),
+            banner_still_url: branding.and_then(|branding| branding.banner_still_url),
+        },
         theme: campfire_spa::theme(settings.as_ref().map(|s| s.theme.as_str())),
         text_size: campfire_spa::text_size(settings.as_ref().map(|s| s.text_size.as_str())),
         cable_url: campfire_cable::protocol::DEFAULT_MOUNT_PATH.to_string(),

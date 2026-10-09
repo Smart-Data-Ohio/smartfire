@@ -370,10 +370,14 @@ export function PostLinks({
   const openingRef = useRef(0);
 
   useEffect(() => {
+    // `adding` and `threadId` name this opening: closing, reopening, or switching posts ends it.
+    const opening = `${threadId}:${adding ? "open" : "closed"}`;
+
     openingRef.current += 1;
 
     return () => {
       openingRef.current += 1;
+      void opening;
     };
   }, [adding, threadId]);
 

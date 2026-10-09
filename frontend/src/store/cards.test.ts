@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { messageFixture, pageFixture } from "../api/testing.ts";
+import type { AgentStep } from "../gen/AgentStep.ts";
 import type { MessageCard } from "../gen/MessageCard.ts";
 import type { Poll } from "../gen/Poll.ts";
 import {
@@ -9,6 +10,7 @@ import {
   PREVIEW_TTL_MS,
   pollClosed,
   pollView,
+  previewFailed,
   previewLoaded,
   previewLoading,
   reconcileMessage,
@@ -102,6 +104,40 @@ describe("reconcileMessage", () => {
   it("returns the held message itself when nothing changes", () => {
     expect(reconcileMessage(held, { ...held }, false)).toBe(held);
   });
+
+  it("merges agent steps from both copies while taking the newer poll", () => {
+    const step = (id: number, updated: number, status: AgentStep["status"]): AgentStep => ({
+      id,
+      messageId: held.id,
+      threadId: null,
+      name: `Step ${id}`,
+      status,
+      inputSummary: null,
+      outputSummary: null,
+      durationMs: null,
+      position: id,
+      createdAt: at(0),
+      updatedAt: at(updated),
+    });
+
+    const withSteps = { ...held, steps: [step(1, 20, "done"), step(2, 20, "running")] };
+
+    const newerBody = {
+      ...held,
+      updatedAt: at(50),
+      poll: poll(at(30), [2, 0]),
+      steps: [step(1, 5, "running")],
+    };
+
+    const merged = reconcileMessage(withSteps, newerBody, false);
+
+    expect(merged.updatedAt).toBe(at(50));
+    expect(merged.poll?.asOf).toBe(at(30));
+    expect(merged.steps.map((each) => [each.id, each.status])).toEqual([
+      [1, "done"],
+      [2, "running"],
+    ]);
+  });
 });
 
 describe("poll and card events", () => {
@@ -159,11 +195,19 @@ describe("poll and card events", () => {
     expect(events(state, [ballot(at(20), [])]).cards.ballots[40]?.myOptionIds).toEqual([]);
   });
 
-  it("replaces cards on message.cards unless older, and drops the previews they point at", () => {
+  it("replaces cards on message.cards unless older, and keeps a GitHub preview to refetch", () => {
     const withPr = seeded({ ...message, cards: [github(9)] });
     const key = githubKey(ROOM, 9, { messageId: 1 });
 
-    const cached = previewLoaded(withPr, "github", key, 9, { state: "hidden" }, Date.parse(at(11)));
+    const cached = previewLoaded(
+      withPr,
+      "github",
+      key,
+      9,
+      { state: "hidden" },
+      Date.parse(at(11)),
+      0,
+    );
 
     const cardsEvent = (asOf: string, cards: MessageCard[]): SyncEvent => ({
       type: "message.cards",
@@ -181,7 +225,65 @@ describe("poll and card events", () => {
 
     expect(tie.messages[1]?.cards).toHaveLength(2);
     expect(tie.messages[1]?.cardsAsOf).toBe(at(10));
-    expect(tie.cards.previews.github[key]).toBeUndefined();
+
+    const kept = tie.cards.previews.github[key];
+
+    expect(kept?.value).toEqual({ state: "hidden" });
+    expect(kept?.fetchedAt).toBe(0);
+    expect(kept?.generation).toBe(1);
+    expect(needsFetch(kept, Date.parse(at(59)))).toBe(true);
+  });
+
+  it("keeps a failed refresh on screen and fetches again once it is invalidated", () => {
+    const withPr = seeded({ ...message, cards: [github(9)] });
+    const key = githubKey(ROOM, 9, { messageId: 1 });
+    const now = Date.parse(at(11));
+    const loaded = previewLoaded(withPr, "github", key, 9, { state: "hidden" }, now, 0);
+    const generation = loaded.cards.previews.github[key]?.generation ?? 0;
+    const failed = previewFailed(loaded, "github", key, 9, "GitHub is down", generation);
+
+    expect(failed.cards.previews.github[key]).toMatchObject({
+      status: "error",
+      value: { state: "hidden" },
+      error: "GitHub is down",
+    });
+    expect(needsFetch(failed.cards.previews.github[key], now + PREVIEW_TTL_MS)).toBe(false);
+
+    const invalidated = events(failed, [
+      {
+        type: "message.cards",
+        seq: 1,
+        topic: `room:${ROOM}`,
+        data: {
+          messageId: 1,
+          roomId: ROOM,
+          threadId: null,
+          cards: [github(9)],
+          asOf: at(20),
+        },
+      },
+    ]);
+
+    const preview = invalidated.cards.previews.github[key];
+
+    expect(preview?.value).toEqual({ state: "hidden" });
+    expect(preview?.status).toBe("ready");
+    expect(needsFetch(preview, now + 1000)).toBe(true);
+
+    const replaced = previewLoaded(
+      invalidated,
+      "github",
+      key,
+      9,
+      { state: "failed", message: "gone" },
+      now + 1,
+      preview?.generation ?? 0,
+    );
+
+    expect(replaced.cards.previews.github[key]?.value).toEqual({
+      state: "failed",
+      message: "gone",
+    });
   });
 
   it("keeps a newer poll and cards when an older page or edit lands", () => {
@@ -283,7 +385,7 @@ describe("reading polls", () => {
 describe("previews", () => {
   it("keeps the shown value while loading again and fetches again when stale", () => {
     const now = Date.parse(at(0));
-    const loaded = previewLoaded(initialState, "quotes", "5:3", 3, { state: "hidden" }, now);
+    const loaded = previewLoaded(initialState, "quotes", "5:3", 3, { state: "hidden" }, now, 0);
     const reloading = previewLoading(loaded, "quotes", "5:3", 3);
 
     expect(reloading.cards.previews.quotes["5:3"]?.value).toEqual({ state: "hidden" });
@@ -294,6 +396,64 @@ describe("previews", () => {
     expect(needsFetch(loaded.cards.previews.quotes["5:3"], now + 1000)).toBe(false);
     expect(needsFetch(loaded.cards.previews.quotes["5:3"], now + PREVIEW_TTL_MS + 1)).toBe(true);
     expect(needsFetch(undefined, now)).toBe(true);
+  });
+
+  it("ignores a preview response from before the latest invalidation", () => {
+    const now = Date.parse(at(0));
+    const key = "1:9:m1";
+
+    const started = previewLoading(
+      previewLoaded(initialState, "github", key, 9, { state: "hidden" }, now, 0),
+      "github",
+      key,
+      9,
+    );
+
+    const generation = started.cards.previews.github[key]?.generation ?? 0;
+
+    const invalidated = previewLoaded(
+      {
+        ...started,
+        cards: {
+          ...started.cards,
+          previews: {
+            ...started.cards.previews,
+            github: {
+              ...started.cards.previews.github,
+              [key]: {
+                status: "ready" as const,
+                value: started.cards.previews.github[key]?.value ?? null,
+                error: null,
+                ref: 9,
+                fetchedAt: 0,
+                generation: generation + 1,
+              },
+            },
+          },
+        },
+      },
+      "github",
+      key,
+      9,
+      { state: "failed", message: "old" },
+      now,
+      generation,
+    );
+
+    expect(invalidated.cards.previews.github[key]?.generation).toBe(generation + 1);
+    expect(invalidated.cards.previews.github[key]?.value).toEqual({ state: "hidden" });
+
+    const fresh = previewLoaded(
+      invalidated,
+      "github",
+      key,
+      9,
+      { state: "failed", message: "fresh" },
+      now,
+      generation + 1,
+    );
+
+    expect(fresh.cards.previews.github[key]?.value).toEqual({ state: "failed", message: "fresh" });
   });
 
   it("moves the counts with the viewer's response", () => {

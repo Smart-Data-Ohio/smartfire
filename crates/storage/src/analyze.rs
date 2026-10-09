@@ -55,6 +55,10 @@ impl Analyzer {
 /// Files libvips can't read yield `{}`.
 fn image_metadata(path: &Path) -> Json {
     let Ok(image) = Image::open_sequential(path) else { return Json::object() };
+    image_dimensions(&image)
+}
+
+pub(crate) fn image_dimensions(image: &Image) -> Json {
     let rotated = image
         .get_string("exif-ifd0-Orientation")
         .is_some_and(|o| ["Right-top", "Left-bottom", "Top-right", "Bottom-left"].iter().any(|r| o.contains(r)));
@@ -72,7 +76,7 @@ fn probe(path: &Path) -> Result<Json> {
     let output = match output_within(&mut command, FFPROBE_TIMEOUT) {
         Ok(output) => output,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Json::object()),
-        Err(e) if e.kind() == std::io::ErrorKind::TimedOut => return Err(Error::Analyze(format!("ffprobe {e}"))),
+        Err(e) if e.kind() == std::io::ErrorKind::TimedOut => return Err(Error::Analyze(e.to_string())),
         Err(e) => return Err(e.into()),
     };
     Json::parse(&String::from_utf8_lossy(&output.stdout)).map_err(|e| Error::Analyze(format!("ffprobe output: {e}")))

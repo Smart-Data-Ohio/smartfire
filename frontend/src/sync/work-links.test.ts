@@ -65,7 +65,8 @@ describe("work link actions", () => {
     Effect.gen(function* () {
       const fake = yield* FakeApi;
       mutations.loadThreadDetail(boardDetail(), 0);
-      const newer = boardDetail(boardThread(1, "done"));
+      // A live copy with a newer work revision must survive the write's older reply.
+      const newer = boardDetail(boardThread(1, "done", null, [], 1));
       yield* fake.route("POST /threads/1/work/links", () =>
         Effect.sync(() => {
           mutations.applyEvents(

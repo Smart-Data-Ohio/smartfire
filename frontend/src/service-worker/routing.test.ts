@@ -10,8 +10,8 @@ const origin = "https://smartfire.test";
 const build: WorkerBuild = {
   version: "a",
   page: "/app/assets/index-aaaaaaaa.js",
-  offline: "/app/offline.html",
-  precache: ["/app/assets/index-aaaaaaaa.js", "/app/offline.html"],
+  offline: "/offline.html",
+  precache: ["/app/assets/index-aaaaaaaa.js", "/offline.html"],
 };
 
 function usesNetwork(route: NetworkRoute, request: Pick<Request, "url" | "method" | "mode">) {
@@ -55,7 +55,7 @@ describe("service worker static network route", () => {
     "/assets/application-01234567.css?version=a",
     "/app/assets/index-aaaaaaaa.js",
     "/app/assets/chunk-bbbbbbbb.js?version=b",
-    "/app/offline.html",
+    "/offline.html",
   ])("keeps the asset GET %s with the existing worker policy", (path) => {
     expect(usesNetwork(route, { url: `${origin}${path}`, method: "GET", mode: "cors" })).toBe(
       false,
@@ -63,7 +63,7 @@ describe("service worker static network route", () => {
   });
 
   it("keeps all GET navigations with the worker and passes writes and foreign assets through", () => {
-    for (const path of ["/app/r/1", "/assets/application-01234567.js", "/app/offline.html"]) {
+    for (const path of ["/app/r/1", "/assets/application-01234567.js", "/offline.html"]) {
       const url = `${origin}${path}`;
 
       expect(usesNetwork(route, { url, method: "GET", mode: "navigate" })).toBe(false);
@@ -85,10 +85,11 @@ describe("service worker static network route", () => {
   it("derives the SPA paths and protects additional precache entries without duplicating chunks", () => {
     const custom = networkRoute(origin, {
       ...build,
-      offline: "/next/offline.html",
+      offline: "/offline.html",
+      page: "/next/assets/index-aaaaaaaa.js",
       precache: [
         ...Array.from({ length: 300 }, (_, index) => `/next/assets/chunk-${index}.js`),
-        "/next/offline.html",
+        "/offline.html",
         "/shared/font-aaaaaaaa.woff2",
       ],
     });
@@ -97,7 +98,7 @@ describe("service worker static network route", () => {
 
     for (const path of [
       "/next/assets/chunk-1.js",
-      "/next/offline.html",
+      "/offline.html",
       "/shared/font-aaaaaaaa.woff2",
     ]) {
       expect(usesNetwork(custom, { url: `${origin}${path}`, method: "GET", mode: "cors" })).toBe(

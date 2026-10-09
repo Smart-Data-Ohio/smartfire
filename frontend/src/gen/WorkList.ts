@@ -8,7 +8,7 @@ import type { WorkListRow } from "./WorkListRow";
  * or missing `state` is `open`. Not paged, as in the classic app. No live updates either: the
  * list refetches when it's shown again.
  */
-export type WorkList = { threads: Array<WorkListRow>, 
+export type WorkList = { threads: Array<WorkListRow>,
 /**
  * The threads' creators, once each. (Owners are whole on [`WorkFacts::owner`].)
  */

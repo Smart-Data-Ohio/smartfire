@@ -1,5 +1,4 @@
 /// <reference lib="webworker" />
-import { classicToSpaUrl } from "../lib/screens.ts";
 import { pageBuildMessage, REQUEST_PAGE_BUILD } from "./messages.ts";
 import { installNetworkRoute } from "./routing.ts";
 import { type CacheCoordinator, type WorkerBuild, WorkerCache } from "./runtime.ts";
@@ -127,8 +126,8 @@ self.addEventListener("notificationclick", (event) => {
 
 /** Exported in the worker's IIFE for browser-context verification; there is no message hook. */
 export async function openNotification(path: string): Promise<WindowClient | null> {
-  const mapped = classicToSpaUrl(path, self.location.origin) ?? path;
-  const url = new URL(mapped, self.location.origin).href;
+  // The server's aliases select the person's UI, including an explicit classic preference.
+  const url = new URL(path, self.location.origin).href;
   const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
 
   const existing = clients.find((client) => {

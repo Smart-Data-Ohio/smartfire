@@ -94,6 +94,10 @@
     --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
     --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
     --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+    /* Behind an inline image: only its transparent pixels show it, so a dark logo on a
+       transparent ground still reads in the dark theme while a photo covers it entirely. */
+    --image-backdrop-a: light-dark(var(--neutral-0), var(--neutral-250));
+    --image-backdrop-b: light-dark(var(--neutral-100), var(--neutral-300));
 
     --text: light-dark(var(--neutral-900), var(--charcoal-100));
     --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
@@ -177,6 +181,31 @@
     --pane-header-height: 48px;
     --right-pane-width: 380px;
 
+    /* ── Phone: breakpoint, touch sizes, safe areas, keyboard ───────────────────── */
+
+    /* For reference only: a custom property can't sit in a media query, so phone rules spell it
+       `@media (width < 720px)` (src/lib/breakpoints.ts in script); tokens.test.ts holds them to it. */
+    --bp-phone: 720px;
+    /* The smallest box a finger hits reliably (Apple's 44 pt): the hit area of a tappable thing. */
+    --touch-target: 44px;
+    /* The control height on touch phones, which --control-md and --control-lg take there. */
+    --control-touch: 44px;
+    /* The notch, rounded corners and home indicator; 0 off phones (viewport-fit=cover in index.html). */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    /* The layout viewport's bottom strip an overlaid keyboard covers (iOS), set by
+       src/lib/keyboard-inset.ts. The shell already fits above it; only position: fixed adds it. */
+    --keyboard-inset: 0px;
+    /* The strip above the visible area while iOS pans the page up to a focused field (same hook). */
+    --viewport-top-inset: 0px;
+    /* The visible area's height: the full dynamic viewport, or the visual viewport's while an
+       overlaid keyboard is up (same hook). */
+    --viewport-height: 100dvh;
+    /* What a viewport-anchored (position: fixed) surface keeps clear at the bottom. */
+    --viewport-bottom-inset: max(var(--safe-bottom), var(--keyboard-inset));
+
     /* ── Density: comfortable (default) ─────────────────────────────────────────── */
 
     --message-avatar-size: 36px;
@@ -185,6 +214,10 @@
     --message-group-gap: var(--space-2);
     --sidebar-row-height: 28px;
     --sidebar-row-gap: 1px;
+
+    /* Brand icons (vendor/icons.yml) are one black glyph on transparency: inverted in the dark
+       theme, as the classic UI's --icon-filter does. A filter isn't a colour, so no light-dark(). */
+    --brand-icon-filter: none;
   }
 
   :root[data-theme="light"] {
@@ -193,6 +226,26 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
+    --brand-icon-filter: invert(1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --brand-icon-filter: invert(1);
+    }
+  }
+
+  /* Touch phones: finger-sized default and large controls. --control-sm stays compact. */
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --control-md: var(--control-touch);
+      --control-lg: var(--control-touch);
+    }
+  }
+
+  /* An open keyboard covers the home indicator, so nothing above it keeps clear of that. */
+  :root[data-keyboard="open"] {
+    --safe-bottom: 0px;
   }
 
   /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */

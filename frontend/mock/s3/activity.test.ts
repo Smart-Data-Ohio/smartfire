@@ -85,6 +85,11 @@ describe("the activity list", () => {
     expect(plain.items.every((item) => item.state === "unread")).toBe(true);
     expect(odd.items.map((item) => item.id)).toEqual(plain.items.map((item) => item.id));
     expect(plain.unreadCount).toBe(plain.items.length);
+    const unread = await get<ActivityUnreadCount>(server, "/api/v1/activity/unread_count");
+
+    expect({ unreadCount: plain.unreadCount, unreadRevision: plain.unreadRevision }).toEqual(
+      unread,
+    );
   });
 
   it("fills every tab, keeps each to its types and brings the creators", async () => {
@@ -140,7 +145,12 @@ describe("activity state changes", () => {
     const { server } = harness();
     const events = collect(server);
     const item = await firstUnread(server);
-    const { unreadCount } = await get<ActivityUnreadCount>(server, "/api/v1/activity/unread_count");
+
+    const { unreadCount, unreadRevision } = await get<ActivityUnreadCount>(
+      server,
+      "/api/v1/activity/unread_count",
+    );
+
     const path = `/api/v1/activity/${item.id}`;
 
     const read = await expectStatus<ActivityItemChanged>(
@@ -157,6 +167,7 @@ describe("activity state changes", () => {
       updatedAt: new Date(NOW).toISOString(),
     });
     expect(read.unreadCount).toBe(unreadCount - 1);
+    expect(read.unreadRevision).toBe(unreadRevision + 1);
     expect(events.at(-1)).toMatchObject({ type: "activity.item", data: read });
 
     const handled = await expectStatus<ActivityItemChanged>(
@@ -168,6 +179,7 @@ describe("activity state changes", () => {
     );
 
     expect(handled.item.state).toBe("handled");
+    expect(handled.unreadRevision).toBe(read.unreadRevision + 1);
     expect(handled.item.readAt).toBe(read.item.readAt);
 
     const stillHandled = await expectStatus<ActivityItemChanged>(
@@ -179,6 +191,7 @@ describe("activity state changes", () => {
     );
 
     expect(stillHandled.item).toEqual(handled.item);
+    expect(stillHandled.unreadRevision).toBe(handled.unreadRevision);
 
     const cleared = await expectStatus<ActivityItemChanged>(
       server,
@@ -204,6 +217,7 @@ describe("activity state changes", () => {
 
     expect(unread.item).toMatchObject({ state: "unread", readAt: null, handledAt: null });
     expect(unread.unreadCount).toBe(unreadCount);
+    expect(unread.unreadRevision).toBe(cleared.unreadRevision + 1);
   });
 
   it("opens an item by marking it read, never handled", async () => {
@@ -244,5 +258,18 @@ describe("activity state changes", () => {
 
     expect(arrived).toBeDefined();
     expect(after.unreadCount).toBe(before.unreadCount + 1);
+    expect(after.unreadRevision).toBe(before.unreadRevision + 1);
+  });
+
+  it("starts a new revision history when the world resets", async () => {
+    const { server } = harness();
+    const before = await get<ActivityUnreadCount>(server, "/api/v1/activity/unread_count");
+
+    await send(server, "POST", "/__mock/activity-arrival");
+    server.reset();
+
+    const after = await get<ActivityUnreadCount>(server, "/api/v1/activity/unread_count");
+
+    expect(after).toEqual(before);
   });
 });

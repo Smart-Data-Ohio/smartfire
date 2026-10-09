@@ -103,20 +103,31 @@ fn only_intentional_aliases_share_a_url() {
                     ("messages/boosts#new", "/messages/:message_id/boosts/new"),
                 ],
             ),
+            (
+                "/app/r/7/settings".to_string(),
+                vec![
+                    ("rooms#show", "/rooms/:id"),
+                    ("rooms/opens#edit", "/rooms/opens/:id/edit"),
+                    ("rooms/closeds#edit", "/rooms/closeds/:id/edit"),
+                    ("rooms/voices#edit", "/rooms/voices/:id/edit"),
+                    ("rooms/stages#edit", "/rooms/stages/:id/edit"),
+                ],
+            ),
         ]),
-        "only the message permalink aliases may share SPA URLs, with show first"
+        "only the message permalink and room settings aliases may share SPA URLs, \
+         with their fallback first"
     );
     assert!(SCREENS.iter().all(|screen| {
         std::ptr::eq(first_for_spa(screen), screen)
             || (screen.ported && first_for_spa(screen).ported)
     }));
-    // A classic page shared by several rows: only the profile page's sections and the account
-    // page's people list, all ported.
+    // A classic page shared by several rows: only the profile page's sections, the account
+    // page's people list and the room page as the settings screen's fallback, all ported.
     for screen in SCREENS {
         let first = first_for(screen);
         if !std::ptr::eq(first, screen) {
             assert!(
-                ["users/profiles#show", "accounts#edit"].contains(&screen.endpoint),
+                ["users/profiles#show", "accounts#edit", "rooms#show"].contains(&screen.endpoint),
                 "{screen:?}"
             );
             assert!(screen.ported && first.ported, "{screen:?}");
@@ -136,18 +147,6 @@ fn the_profile_sections_map_back_to_the_profile_page() {
     assert_eq!(
         spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
         Some("/app/settings")
-    );
-}
-
-#[test]
-fn work_links_map_to_the_thread_link_editor() {
-    assert_eq!(
-        spa_url("threads/work/links#index", "/threads/7/work/links", None).as_deref(),
-        Some("/app/t/7/links")
-    );
-    assert_eq!(
-        classic_url("/app/t/7/links", None).as_deref(),
-        Some("/threads/7/work/links")
     );
 }
 
@@ -229,6 +228,11 @@ fn board_pages_and_workspace_work_are_ported() {
             "/threads/9/work/handoff/new",
             "/app/t/9/handoff",
         ),
+        (
+            "threads/work/links#index",
+            "/threads/9/work/links",
+            "/app/t/9/links",
+        ),
     ] {
         assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
         assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
@@ -244,7 +248,11 @@ fn board_pages_and_workspace_work_are_ported() {
     );
     // Creating the handoff stays a classic form post; only its page moves.
     assert_eq!(
-        spa_url("threads/work/handoffs#create", "/threads/9/work/handoff", None),
+        spa_url(
+            "threads/work/handoffs#create",
+            "/threads/9/work/handoff",
+            None
+        ),
         None
     );
 }
@@ -337,6 +345,65 @@ fn message_aliases_and_room_tools_map_to_their_ported_screens() {
 }
 
 #[test]
+fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
+    for (endpoint, classic, spa) in [
+        ("rooms/opens#new", "/rooms/opens/new", "/app/rooms/new/open"),
+        (
+            "rooms/closeds#new",
+            "/rooms/closeds/new",
+            "/app/rooms/new/closed",
+        ),
+        (
+            "rooms/voices#new",
+            "/rooms/voices/new",
+            "/app/rooms/new/voice",
+        ),
+        (
+            "rooms/stages#new",
+            "/rooms/stages/new",
+            "/app/rooms/new/stage",
+        ),
+        (
+            "rooms/boards#new",
+            "/rooms/boards/new",
+            "/app/rooms/new/board",
+        ),
+    ] {
+        assert_eq!(spa_url(endpoint, classic, None).as_deref(), Some(spa));
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic));
+    }
+    for (endpoint, classic) in [
+        ("rooms/opens#edit", "/rooms/opens/12/edit"),
+        ("rooms/closeds#edit", "/rooms/closeds/12/edit"),
+        ("rooms/voices#edit", "/rooms/voices/12/edit"),
+        ("rooms/stages#edit", "/rooms/stages/12/edit"),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some("/app/r/12/settings")
+        );
+    }
+    // The room page still opens the room; its settings fall back to the room page, never to
+    // one kind's edit form.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", None).as_deref(),
+        Some("/app/r/12")
+    );
+    assert_eq!(
+        classic_url("/app/r/12/settings", None).as_deref(),
+        Some("/rooms/12")
+    );
+    assert_eq!(
+        spa_url("rooms/boards#edit", "/rooms/boards/12/edit", None),
+        None
+    );
+    assert_eq!(
+        spa_url("rooms/directs#edit", "/rooms/directs/12/edit", None),
+        None
+    );
+}
+
+#[test]
 fn only_record_ids_match_a_parameter() {
     // `GET /rooms/opens` is rooms#show with id "opens" in Rails; the SPA can't open it.
     for path in [
@@ -425,6 +492,171 @@ fn unported_screens_never_redirect() {
 }
 
 #[test]
+fn room_notification_queries_open_the_thread_or_message() {
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&message_id=4")).as_deref(),
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("x=1&thread=9&classic=1&y=2")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9?x=1&y=2")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&x=1")).as_deref(),
+        Some("/app/r/12?thread=nope&x=1")
+    );
+}
+
+#[test]
+fn room_notification_queries_decode_and_use_the_classic_duplicate() {
+    // `%39` is `9`. `thread` is the first value (the thread panel's `URLSearchParams.get`).
+    // A non-empty `thread` makes `message_id` the first value too. With no thread, `message_id`
+    // is the last value (the room controller's params). An effective value that isn't an id is
+    // not replaced by another duplicate.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=%34")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("th%72ead=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&thread=9")).as_deref(),
+        Some("/app/r/12?thread=nope&thread=9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4&message_id=5")).as_deref(),
+        Some("/app/r/12/m/5")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("message_id=4&message_id=nope")
+        )
+        .as_deref(),
+        Some("/app/r/12?message_id=4&message_id=nope")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&thread=8&message_id=4&message_id=5")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&message_id=nope&message_id=5")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins
+    // the translator when such a query is handed to it.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%ZZ&x=1")).as_deref(),
+        Some("/app/r/12?thread=%ZZ&x=1")
+    );
+    let refused = ConfirmedRoomQuery {
+        thread: None,
+        message: None,
+    };
+    assert_eq!(
+        spa_url_confirmed("rooms#show", "/rooms/12", Some("thread=9&x=1"), refused).as_deref(),
+        Some("/app/r/12?thread=9&x=1")
+    );
+    // Confirmation applies to the effective value only. Naming the other duplicate does not
+    // make it the one that opens.
+    let other_thread = ConfirmedRoomQuery {
+        thread: Some(8),
+        message: None,
+    };
+    assert_eq!(
+        spa_url_confirmed(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&thread=8"),
+            other_thread
+        )
+        .as_deref(),
+        Some("/app/r/12?thread=9&thread=8")
+    );
+    let other_message = ConfirmedRoomQuery {
+        thread: None,
+        message: Some(4),
+    };
+    assert_eq!(
+        spa_url_confirmed(
+            "rooms#show",
+            "/rooms/12",
+            Some("message_id=4&message_id=5"),
+            other_message
+        )
+        .as_deref(),
+        Some("/app/r/12?message_id=4&message_id=5")
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=%39&thread=8&message_id=4&message_id=5")),
+        RoomQueryIds {
+            thread: Some(9),
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("message_id=4&message_id=5")),
+        RoomQueryIds {
+            thread: None,
+            message: Some(5),
+        }
+    );
+    // `thread=nope` is still present, so the first `message_id` is the one that counts.
+    assert_eq!(
+        room_query_ids(Some("thread=nope&thread=9&message_id=4&message_id=nope")),
+        RoomQueryIds {
+            thread: None,
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=9&message_id=nope&message_id=4")),
+        RoomQueryIds {
+            thread: Some(9),
+            message: None,
+        }
+    );
+}
+
+#[test]
 fn the_query_carries_over_without_classic() {
     assert_eq!(
         spa_url("rooms#show", "/rooms/12", Some("a=1&classic=0&b=2")).as_deref(),
@@ -503,6 +735,46 @@ fn export_screens() {
     );
     let parsed: serde_json::Value = serde_json::from_str(&committed).unwrap();
     assert_eq!(parsed.as_array().map(Vec::len), Some(SCREENS.len()));
+}
+
+#[test]
+fn event_pages_open_in_the_spa_and_fall_back_to_classic() {
+    for (endpoint, classic, spa) in [
+        ("rooms/events#index", "/rooms/12/events", "/app/r/12/events"),
+        (
+            "rooms/events#new",
+            "/rooms/12/events/new",
+            "/app/r/12/events/new",
+        ),
+        (
+            "rooms/events#show",
+            "/rooms/12/events/34",
+            "/app/r/12/events/34",
+        ),
+        (
+            "rooms/events#edit",
+            "/rooms/12/events/34/edit",
+            "/app/r/12/events/34/edit",
+        ),
+        (
+            "rooms/events/attendances#show",
+            "/rooms/12/events/34/attendance",
+            "/app/r/12/events/34/attendance",
+        ),
+    ] {
+        assert_eq!(
+            spa_url(endpoint, classic, None).as_deref(),
+            Some(spa),
+            "{classic}"
+        );
+        assert_eq!(classic_url(spa, None).as_deref(), Some(classic), "{spa}");
+    }
+
+    // `new` is not an event id: the show row doesn't take it.
+    assert_eq!(
+        spa_url("rooms/events#show", "/rooms/12/events/new", None),
+        None
+    );
 }
 
 #[test]

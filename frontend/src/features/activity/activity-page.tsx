@@ -1,13 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
-import { type KeyboardEvent, type MouseEvent, useId, useState } from "react";
+import { useId, useState } from "react";
 import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
+import { spaUrlFor } from "../../lib/screens.ts";
 import { useActivityList, useActivityUnread } from "../../store/inbox-hooks.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
+import { Button } from "../../ui/button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
+import { Menu, MenuGroup, MenuRadioItem } from "../../ui/menu.tsx";
 import { Tabs, tabId } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useCelebrations } from "../destinations/celebrations.ts";
@@ -15,7 +18,12 @@ import { useListMotion } from "../destinations/list-motion.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList } from "../destinations/paged-list.tsx";
-import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/point-menu.tsx";
+import {
+  type MenuSource,
+  PointMenu,
+  type PointMenuRequest,
+  requestMenu,
+} from "../destinations/point-menu.tsx";
 import { PaneEmpty } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
 import {
@@ -37,6 +45,10 @@ const STATUS_ITEMS = [
 
 function isStatus(value: string): value is ActivityState {
   return STATUS_ITEMS.some((item) => item.value === value);
+}
+
+function statusLabel(status: ActivityState): string {
+  return STATUS_ITEMS.find((item) => item.value === status)?.label ?? "Unread";
 }
 
 /** An empty list's glyph: caught up, nothing handled, or nothing at all. */
@@ -105,10 +117,21 @@ function useFollowTarget(): (target: ActivityTarget) => void {
         void navigate({ to: "/saved" });
 
         return;
-      case "classic":
-        openClassic(target.href);
+      case "classic": {
+        // A classic page the SPA has since ported (an agent's approvals) opens in place.
+        const url = new URL(target.href, window.location.origin);
+        const spa = isSitePath(target.href) ? spaUrlFor(url.pathname, url.search) : null;
+
+        if (spa === null) {
+          openClassic(target.href);
+        } else {
+          // `href` is the public path: the router strips its `/app/` basepath itself.
+          void navigate({ href: spa });
+        }
 
         return;
+      }
+
       case "none":
         return;
     }
@@ -123,8 +146,9 @@ interface ActivityPageProps {
 
 /**
  * `/app/activity`: the inbox. Type tabs (the sliding tabs recipe) and an Unread / Read / Handled
- * switch; rows that open their source (marking them read), with read and handled toggles on hover,
- * in a context menu and on keys. Live items slide in at the top; one that stops matching the
+ * switch (on phones a button that opens it as a sheet); rows that open their source (marking them
+ * read), with read and handled toggles on hover, in a context menu (a long press on touch), on a
+ * swipe and on keys. Live items slide in at the top; one that stops matching the
  * filter (read or handled under Unread) folds away. The next page loads as the end nears.
  */
 export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps) {
@@ -182,13 +206,10 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
     });
   };
 
-  const openMenu = (
-    item: ActivityItem,
-    event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>,
-  ) => {
+  const openMenu = (item: ActivityItem, source: MenuSource) => {
     const id = (menu?.request.id ?? 0) + 1;
 
-    requestMenu(id, event, (request) => setMenu({ request, itemId: item.id }));
+    requestMenu(id, source, (request) => setMenu({ request, itemId: item.id }));
   };
 
   const copy = emptyCopy(tab, status);
@@ -206,20 +227,51 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
         ) : null
       }
       tools={
-        <div className="activity-status">
-          <Tabs
-            id={statusTabs}
-            panelId={panelId}
+        <>
+          <div className="activity-status">
+            <Tabs
+              id={statusTabs}
+              panelId={panelId}
+              label="Show"
+              items={STATUS_ITEMS}
+              value={status}
+              onValueChange={(value) => {
+                if (isStatus(value)) {
+                  onFilterChange(tab, value);
+                }
+              }}
+            />
+          </div>
+          {/* Phones: the same switch as a button that opens a sheet of the three. */}
+          <Menu
             label="Show"
-            items={STATUS_ITEMS}
-            value={status}
-            onValueChange={(value) => {
-              if (isStatus(value)) {
-                onFilterChange(tab, value);
-              }
-            }}
-          />
-        </div>
+            placement="bottom-end"
+            trigger={(props) => (
+              <Button
+                {...props}
+                variant="ghost"
+                trailingIcon="chevron-down"
+                className="activity-status-menu"
+                aria-label={`Show: ${statusLabel(status)}`}
+              >
+                {statusLabel(status)}
+              </Button>
+            )}
+          >
+            <MenuGroup label="Show">
+              {STATUS_ITEMS.map((item) => (
+                <MenuRadioItem
+                  key={item.value}
+                  checked={item.value === status}
+                  icon={EMPTY_ICON[item.value]}
+                  onSelect={() => onFilterChange(tab, item.value)}
+                >
+                  {item.label}
+                </MenuRadioItem>
+              ))}
+            </MenuGroup>
+          </Menu>
+        </>
       }
       toolbar={
         <Tabs

@@ -9,6 +9,7 @@ import {
   sidebarFixture,
   sidebarRowFixture,
 } from "../api/testing.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import type { RoomCategory, SidebarRow } from "../store/model.ts";
 import { favoriteRows, organizedSidebar } from "../store/organize.ts";
 import { mutations, store } from "../store/store.ts";
@@ -366,7 +367,7 @@ describe("organize actions", () => {
   it.effect("set the notification level on the row and the room header", () =>
     Effect.gen(function* () {
       seed();
-      mutations.setRoomDetail(roomDetailFixture(1));
+      mutations.setRoomDetail(roomDetailFixture(1), beginRoomRequest());
 
       const fake = yield* FakeApi;
       let during: string | undefined;

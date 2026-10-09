@@ -79,6 +79,7 @@ function harness(overrides: Partial<CallEnvironment> = {}): Harness {
     releaseRoom: (roomId) => {
       calls.push(`release ${roomId}`);
     },
+    opensCallView: () => true,
     ...overrides,
   };
 
@@ -134,6 +135,22 @@ describe("joining", () => {
     expect(state.snapshot.microphoneEnabled).toBe(true);
     expect(state.viewOpen).toBe(true);
     expect(calls).toEqual([`hold ${ROOM}`, `join ${ROOM}`]);
+
+    await controller.leave();
+  });
+
+  it("keeps the call view closed where joining shouldn't cover the conversation (a phone)", async () => {
+    const { controller } = harness({ opensCallView: () => false });
+
+    await controller.join(ROOM, "Lounge", null);
+
+    expect(callStore.getState().phase).toBe("connected");
+    expect(callStore.getState().viewOpen).toBe(false);
+
+    // Joining the call you're in shows it: the bar's way back to the call view.
+    await controller.join(ROOM, "Lounge", null);
+
+    expect(callStore.getState().viewOpen).toBe(true);
 
     await controller.leave();
   });

@@ -27,6 +27,70 @@ fn create_new_user(t: &TestDb) -> User {
 }
 
 #[test]
+fn user_revisions_keep_rails_stamps_for_same_clock_ban_unban_with_stale_snapshots() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let original = user(&t, "david");
+    let mut stale_unban = original.clone();
+    let mut first_ban = original.clone();
+    let banned = t.write(move |tx| {
+        first_ban.ban(tx)?;
+        Ok(first_ban)
+    });
+    assert_eq!(banned.status, Status::Banned);
+    assert_eq!(banned.updated_at, t.now());
+
+    let active = t.write(move |tx| {
+        stale_unban.unban(tx)?;
+        Ok(stale_unban)
+    });
+    assert_eq!(active.status, Status::Active);
+    assert_eq!(active.updated_at, banned.updated_at);
+    assert_eq!(active, user(&t, "david"));
+
+    let mut stale_ban = banned;
+    let banned_again = t.write(move |tx| {
+        stale_ban.ban(tx)?;
+        Ok(stale_ban)
+    });
+    assert_eq!(banned_again.status, Status::Banned);
+    assert_eq!(banned_again.updated_at, active.updated_at);
+    assert_eq!(banned_again, user(&t, "david"));
+}
+
+#[test]
+fn stale_user_updates_return_the_persisted_state_with_the_new_revision() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let mut first = user(&t, "david");
+    let mut stale = first.clone();
+    let renamed = t.write(move |tx| {
+        first.update(
+            tx,
+            UserChanges {
+                name: Some("Changed name".into()),
+                ..Default::default()
+            },
+        )?;
+        Ok(first)
+    });
+    let updated = t.write(move |tx| {
+        stale.update(
+            tx,
+            UserChanges {
+                bio: Some(Some("Changed bio".into())),
+                ..Default::default()
+            },
+        )?;
+        Ok(stale)
+    });
+    assert_eq!(updated.name, "Changed name");
+    assert_eq!(updated.bio.as_deref(), Some("Changed bio"));
+    assert_eq!(updated.updated_at, renamed.updated_at);
+    assert_eq!(updated, user(&t, "david"));
+}
+
+#[test]
 fn user_does_not_prevent_very_long_passwords() {
     let t = TestDb::new();
     let mut david = user(&t, "david");

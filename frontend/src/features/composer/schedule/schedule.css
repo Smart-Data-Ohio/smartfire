@@ -39,6 +39,12 @@
     font-weight: var(--weight-medium);
   }
 
+  /* As an action sheet (a touch phone): the head lines up with the sheet's rows. */
+  .action-sheet .schedule-menu-head {
+    padding: 0 var(--space-3) var(--space-2);
+    font-size: var(--text-ui);
+  }
+
   .composer-scheduled.button {
     --button-height: 28px;
 
@@ -177,5 +183,51 @@
     .scheduled-item-actions {
       opacity: 1;
     }
+  }
+
+  /* Touch phones: one round send button. The chevron folds into it (a long press on send opens
+     its menu) but keeps its place in the tab order: when the keyboard reaches it, or its menu is
+     open, it shows over send. */
+  @media (width < 720px) and (pointer: coarse) {
+    .composer-send-group {
+      position: relative;
+    }
+
+    .composer-send-group .composer-send.button,
+    .composer-send-group .composer-send-more.button {
+      width: var(--touch-target);
+      border-radius: var(--radius-pill);
+      box-shadow: none;
+    }
+
+    .composer-send-group .composer-send-more.button {
+      position: absolute;
+      inset: 0;
+      clip-path: inset(50%);
+      pointer-events: none;
+    }
+
+    .composer-send-group .composer-send-more.button:focus-visible,
+    .composer-send-group .composer-send-more.button[aria-expanded="true"] {
+      clip-path: none;
+      pointer-events: auto;
+    }
+
+    .composer-send-more .icon {
+      width: 16px;
+      height: 16px;
+      rotate: 180deg;
+    }
+  }
+
+  /* As an action sheet: the list takes the sheet's width and the screen's height, with 44 px actions. */
+  .action-sheet .scheduled-list {
+    width: auto;
+    max-height: none;
+    margin: 0 calc(var(--space-3) * -1);
+  }
+
+  .action-sheet .scheduled-item-actions .button {
+    --button-height: var(--touch-target);
   }
 }
