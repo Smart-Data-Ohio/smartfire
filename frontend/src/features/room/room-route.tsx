@@ -1,5 +1,6 @@
 import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import type { MessageDTO } from "../../gen/MessageDTO.ts";
 import { classicPageFor } from "../../lib/screens.ts";
 import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -74,9 +75,27 @@ export function RoomRoute() {
     } else {
       const focus = focusMessageId;
 
-      // After a preview joins, the message can be read. A reply leaves for its thread. A
-      // still-missing message drops the anchor. A root message of this room is already the
-      // visit's focus, so the join loads around it.
+      // A reply leaves for its thread. A root message of this room is the visit's focus, so
+      // opening keeps the permalink and the join loads around it.
+      const applyFound = (
+        message: Pick<MessageDTO, "id" | "roomId" | "threadId">,
+        openFound: boolean,
+      ) => {
+        const target = permalinkTarget(roomId, focus, "member", { status: "found", message });
+
+        if (target.kind === "redirect") {
+          router.history.replace(target.href);
+
+          return;
+        }
+
+        if (openFound) {
+          open(target.messageId);
+        }
+      };
+
+      // After the preview joins, read again. That read is issued as a member: a miss drops
+      // the anchor, and a root message is already the visit's focus.
       const followJoinedPermalink = () => {
         const stop = store.subscribe(() => {
           if (!live || store.getState().rooms[roomId]?.detail == null) {
@@ -84,27 +103,7 @@ export function RoomRoute() {
           }
 
           stop();
-          void actions.messages.read(focus).then(
-            ({ message }) => {
-              if (!live) {
-                return;
-              }
-
-              const target = permalinkTarget(roomId, focus, "member", {
-                status: "found",
-                message,
-              });
-
-              if (target.kind === "redirect") {
-                router.history.replace(target.href);
-              }
-            },
-            () => {
-              if (live) {
-                dropAnchor();
-              }
-            },
-          );
+          issueRead("member", false);
         });
 
         stopWatching = stop;
@@ -127,71 +126,83 @@ export function RoomRoute() {
         followJoinedPermalink();
       };
 
-      const settleMissing = () => {
+      // Access can still be loading when the read returns. Settle once, still using the
+      // access that sent the read.
+      const waitForAccess = (issued: RoomAccess | null) => {
+        let settled = false;
+
+        const finish = () => {
+          if (!live || settled || roomAccess(roomId) === null) {
+            return;
+          }
+
+          settled = true;
+          unsubscribe();
+          settleFailed(issued);
+        };
+
+        const unsubscribe = store.subscribe(finish);
+
+        stopWatching = () => {
+          settled = true;
+          unsubscribe();
+        };
+
+        finish();
+      };
+
+      // Judge the 404 by the access that issued it. A join that lands while the read is in
+      // flight used to look like a member miss and drop the permalink. Discard that result
+      // and read once more as a member. The retry is issued as a member, so its own 404
+      // drops the anchor and cannot start another read.
+      const settleFailed = (issued: RoomAccess | null) => {
         if (!live) {
           return;
         }
 
-        const access = roomAccess(roomId);
+        const current = roomAccess(roomId);
 
-        if (access !== null) {
-          holdMissing(access);
+        if (issued !== "member" && current === "member") {
+          issueRead("member", true);
 
           return;
         }
 
-        let settled = false;
+        if (issued === "member") {
+          holdMissing("member");
 
-        const stop = store.subscribe(() => {
-          const known = roomAccess(roomId);
-
-          if (known === null || settled) {
-            return;
-          }
-
-          settled = true;
-          stop();
-          holdMissing(known);
-        });
-
-        stopWatching = () => {
-          settled = true;
-          stop();
-        };
-
-        const known = roomAccess(roomId);
-
-        if (known !== null) {
-          settled = true;
-          stop();
-          holdMissing(known);
+          return;
         }
+
+        if (issued === "unjoined" || current === "unjoined") {
+          holdMissing("unjoined");
+
+          return;
+        }
+
+        waitForAccess(issued);
       };
+
+      function issueRead(issued: RoomAccess | null, openFound: boolean) {
+        void actions.messages.read(focus).then(
+          ({ message }) => {
+            if (!live) {
+              return;
+            }
+
+            applyFound(message, openFound);
+          },
+          () => {
+            settleFailed(issued);
+          },
+        );
+      }
 
       // The timeline API only returns a message that is on this room. A message from another
       // room (or a reply) would 404 the page; open it where it actually is, or drop the anchor.
       // A not-yet-joined preview 404s the same read, so that failure keeps the permalink until
-      // the join.
-      void actions.messages.read(focus).then(
-        ({ message }) => {
-          if (!live) {
-            return;
-          }
-
-          const target = permalinkTarget(roomId, focus, "member", { status: "found", message });
-
-          if (target.kind === "redirect") {
-            router.history.replace(target.href);
-
-            return;
-          }
-
-          open(target.messageId);
-        },
-        () => {
-          settleMissing();
-        },
-      );
+      // the join. A join that already landed is a member re-read, not a dropped anchor.
+      issueRead(roomAccess(roomId), true);
     }
 
     return () => {
