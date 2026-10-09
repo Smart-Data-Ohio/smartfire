@@ -40,7 +40,33 @@ afterEach(() => {
 });
 
 describe("sending from history", () => {
-  it.each(["First message  ", "/play bell"])(
+  it("posts an ordinary message immediately while the latest-page fetch is pending", async () => {
+    const latest = Promise.withResolvers<void>();
+    const jump = vi.spyOn(actions, "jumpToPresent").mockReturnValue(latest.promise);
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.change(input, { target: { value: "First message" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(jump).toHaveBeenCalledWith(ROOM);
+    expect(send).toHaveBeenCalledExactlyOnceWith(ROOM, "First message", {
+      threadId: null,
+      attachmentSignedId: null,
+      attachment: null,
+    });
+    expect(input).toHaveProperty("value", "");
+    fireEvent.change(input, { target: { value: "My next message" } });
+    expect(screen.getByRole("button", { name: "Send message" })).toHaveProperty("disabled", false);
+
+    await act(async () => latest.resolve());
+
+    expect(input).toHaveProperty("value", "My next message");
+    expect(readDraft(draftKey(ROOM, null))).toBe("My next message");
+  });
+
+  it.each(["/play bell"])(
     "preserves a new draft typed while %s awaits the latest page",
     async (submitted) => {
       const latest = Promise.withResolvers<void>();

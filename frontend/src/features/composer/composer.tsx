@@ -344,8 +344,15 @@ export function Composer({
     setRunning(true);
 
     try {
-      // Classic awaits the latest page before inserting the pending row and submitting.
-      await toPresent();
+      const latest = toPresent();
+
+      // Sound broadcasts need the latest page; ordinary sends proceed while it loads.
+      if (files.length === 0 && slashName(markdown.trim()) === "play") {
+        await latest;
+      } else {
+        void latest;
+      }
+
       const [first, ...rest] = files;
 
       actions.send(roomId, markdown, {

@@ -139,6 +139,56 @@ test("typing and attaching during a latest-page fetch keeps the next draft and i
   }
 });
 
+test("an ordinary send posts and shows its pending row before the latest page arrives", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+  const latest = Promise.withResolvers<void>();
+  const response = Promise.withResolvers<void>();
+  let fetching = false;
+  const posts: unknown[] = [];
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await latest.promise;
+    } else {
+      posts.push(route.request().postDataJSON());
+      await response.promise;
+    }
+
+    return route.continue();
+  });
+
+  try {
+    const input = composer(page);
+
+    await input.fill("Immediate message from history");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0]).toMatchObject({ markdownSource: "Immediate message from history" });
+    await expect(page.locator('[data-pending="sending"]')).toContainText(
+      "Immediate message from history",
+    );
+    await expect(page.locator('[data-pending="sending"]')).toBeVisible();
+    await expect(input).toHaveValue("");
+    await input.fill("The next draft");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+
+    latest.resolve();
+    response.resolve();
+    await expect(posted(page, "Immediate message from history")).toBeVisible();
+    await expect(page.locator('[data-pending="sending"]')).toHaveCount(0);
+    await expect(input).toHaveValue("The next draft");
+  } finally {
+    latest.resolve();
+    response.resolve();
+  }
+});
+
 matrix("autocomplete: people, emoji, commands and channels", async ({ page, theme }) => {
   await openApp(page, GENERAL, theme);
 

@@ -152,6 +152,10 @@ describe("timelineItems", () => {
       "day:Today",
       "1*",
     ]);
+
+    expect(
+      summary(layout([message(1, 7, local(6, 9, 0))], { after: 1, arrived: [] }, [pending])),
+    ).toEqual(["intro", "day:Today", "1*", "p"]);
   });
 
   it("keys a confirmed message like its pending row", () => {
