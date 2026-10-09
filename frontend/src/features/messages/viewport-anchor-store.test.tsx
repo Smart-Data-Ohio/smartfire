@@ -297,6 +297,20 @@ function animateScroll(element: HTMLElement) {
   };
 }
 
+/** A scroll that never starts, as Virtua leaves it when it gives up on the end rows' sizes. */
+function dropSmoothScroll(element: HTMLElement) {
+  return vi.fn((...args: [options?: ScrollToOptions | undefined] | [x: number, y: number]) => {
+    const options: ScrollToOptions =
+      args.length === 2 ? { left: args[0], top: args[1] } : (args[0] ?? {});
+
+    if (options.behavior === "smooth") return;
+
+    element.scrollTop = options.top ?? element.scrollTop;
+    fireEvent.scroll(element);
+    fireEvent(element, new Event("scrollend"));
+  });
+}
+
 /** jsdom geometry for the production component and its real rows. */
 async function measureTimeline() {
   const element = viewport();
@@ -520,19 +534,7 @@ describe("store-backed deletion with real Virtua", () => {
     try {
       const { view, element } = await placedTimeline();
 
-      // A smooth scroll that never starts: Virtua gave up waiting for the end rows' sizes.
-      const scrollTo = vi.fn(
-        (...args: [options?: ScrollToOptions | undefined] | [x: number, y: number]) => {
-          const options: ScrollToOptions =
-            args.length === 2 ? { left: args[0], top: args[1] } : (args[0] ?? {});
-
-          if (options.behavior === "smooth") return;
-
-          element.scrollTop = options.top ?? element.scrollTop;
-          fireEvent.scroll(element);
-          fireEvent(element, new Event("scrollend"));
-        },
-      );
+      const scrollTo = dropSmoothScroll(element);
 
       element.scrollTo = scrollTo;
       await act(async () => fireEvent.click(view.getByRole("button", { name: "Jump to present" })));
@@ -544,6 +546,64 @@ describe("store-backed deletion with real Virtua", () => {
 
       expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: "instant" });
       expect(element.scrollTop).toBe(700);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("production Jump to present drops its fallback once the reader scrolls within the window", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
+
+    try {
+      const { view, element } = await placedTimeline();
+
+      const scrollTo = dropSmoothScroll(element);
+
+      element.scrollTo = scrollTo;
+      await act(async () => fireEvent.click(view.getByRole("button", { name: "Jump to present" })));
+      expect(scrollTo).toHaveBeenLastCalledWith({ top: 700, behavior: "smooth" });
+      await act(async () => vi.advanceTimersToNextFrame());
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+
+      // The reader scrolls away well inside the 200 ms the fallback waits for the motion.
+      await act(async () => fireEvent.wheel(element, { deltaY: -48 }));
+
+      // Their scroll stands: nothing finishes the dropped smooth scroll for them.
+      for (let frame = 0; frame < 30; frame += 1) {
+        await act(async () => vi.advanceTimersToNextFrame());
+      }
+
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(element.scrollTop).toBe(100);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("production Jump to present leaves no fallback behind once the timeline unmounts", async () => {
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
+
+    try {
+      const { view, element } = await placedTimeline();
+
+      const scrollTo = dropSmoothScroll(element);
+
+      element.scrollTo = scrollTo;
+      await act(async () => fireEvent.click(view.getByRole("button", { name: "Jump to present" })));
+      await act(async () => vi.advanceTimersToNextFrame());
+
+      // Gone before the window the fallback waits out has passed.
+      view.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+
+      for (let frame = 0; frame < 30; frame += 1) {
+        await act(async () => vi.advanceTimersToNextFrame());
+      }
+
+      expect(element.isConnected).toBe(false);
+      expect(scrollTo).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
