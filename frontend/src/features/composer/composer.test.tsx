@@ -55,6 +55,8 @@ describe("sending from history", () => {
       threadId: null,
       attachmentSignedId: null,
       attachment: null,
+      reply: null,
+      clientMessageId: expect.any(String),
     });
     expect(input).toHaveProperty("value", "");
     fireEvent.change(input, { target: { value: "My next message" } });
@@ -88,6 +90,8 @@ describe("sending from history", () => {
         threadId: null,
         attachmentSignedId: null,
         attachment: null,
+        reply: null,
+        clientMessageId: expect.any(String),
       });
       expect(input).toHaveProperty("value", "My next message");
       expect(readDraft(draftKey(ROOM, null))).toBe("My next message");

@@ -14,6 +14,7 @@ describe("row keys", () => {
   it("maps the message shortcuts", () => {
     expect(rowCommand(press("e"))).toBe("edit");
     expect(rowCommand(press("R"))).toBe("react");
+    expect(rowCommand(press("q"))).toBe("reply");
     expect(rowCommand(press("t"))).toBe("thread");
     expect(rowCommand(press("p"))).toBe("pin");
     expect(rowCommand(press("s"))).toBe("save");
