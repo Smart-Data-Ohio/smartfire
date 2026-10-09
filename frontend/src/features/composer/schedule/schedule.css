@@ -39,6 +39,12 @@
     font-weight: var(--weight-medium);
   }
 
+  /* As an action sheet (a touch phone): the head lines up with the sheet's rows. */
+  .action-sheet .schedule-menu-head {
+    padding: 0 var(--space-3) var(--space-2);
+    font-size: var(--text-ui);
+  }
+
   .composer-scheduled.button {
     --button-height: 28px;
 
@@ -177,5 +183,16 @@
     .scheduled-item-actions {
       opacity: 1;
     }
+  }
+
+  /* As an action sheet: the list takes the sheet's width and the screen's height, with 44 px actions. */
+  .action-sheet .scheduled-list {
+    width: auto;
+    max-height: none;
+    margin: 0 calc(var(--space-3) * -1);
+  }
+
+  .action-sheet .scheduled-item-actions .button {
+    --button-height: var(--touch-target);
   }
 }
