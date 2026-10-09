@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
+import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import type { PendingMessage } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
 import { store, useMessagesIn, useStore } from "../../store/store.ts";
@@ -32,6 +33,13 @@ const PAGE_AHEAD = 800;
 
 /** A message that arrived less than this ago, after the room opened, rises in. */
 const LIVE_WINDOW_MS = 8000;
+
+/**
+ * Virtua measures the rows at the end before a smooth scroll starts, and drops the scroll when
+ * they aren't measured within 150 ms (a busy main thread). Unmoved this long, the jump finishes
+ * at once instead.
+ */
+const SMOOTH_START_MS = 200;
 
 /** Frames to wait for a permalink list to report a viewport before leaving newer paging held. */
 const FOCUS_ANCHOR_ATTEMPTS = 30;
@@ -129,6 +137,9 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const [, setWaitTick] = useState(0);
   const waitRef = useRef<{ key: string; at: number }>({ key: "", at: 0 });
   const claimReaderRef = useRef<() => void>(() => undefined);
+  // Watches a smooth jump to the present start; reader input ends the watch.
+  const jumpFrameRef = useRef(0);
+  const itemCountRef = useRef(0);
 
   const committedRef = useRef<
     CommittedEdges & { readonly last: string | null; readonly count: number }
@@ -154,6 +165,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   const now = Date.now();
   const items = timelineItems({ timeline, messages, pending, now });
+
+  itemCountRef.current = items.length;
 
   useListEdges(containerRef, listRef, items);
 
@@ -203,7 +216,10 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     placement,
     placed: ready && placed === placement,
     cardsLoaded,
-    onTakeControl: () => claimReaderRef.current(),
+    onTakeControl: () => {
+      cancelAnimationFrame(jumpFrameRef.current);
+      claimReaderRef.current();
+    },
   });
 
   /** Ends placement for `key`, so newer paging is allowed to follow the present. */
@@ -495,6 +511,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
   }, [editingId]);
 
+  useEffect(() => () => cancelAnimationFrame(jumpFrameRef.current), []);
+
   // "Mark unread" holds the room unread until it's left; let go when this timeline goes.
   useEffect(() => () => releaseUnread(roomId), [roomId]);
 
@@ -582,7 +600,50 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
 
     followEnd();
+    scrollToEnd();
+  };
+
+  /**
+   * Scrolls to the last row: smoothly, unless motion is reduced. A smooth scroll that hasn't
+   * started by `SMOOTH_START_MS` was dropped, and the list goes to the end at once.
+   */
+  const scrollToEnd = () => {
+    const list = listRef.current;
+
+    cancelAnimationFrame(jumpFrameRef.current);
+
+    if (list === null) {
+      return;
+    }
+
+    if (prefersReducedMotion()) {
+      scrollList(items.length - 1, { align: "end" });
+
+      return;
+    }
+
     scrollList(items.length - 1, { align: "end", smooth: true });
+
+    const from = list.scrollOffset;
+    const started = performance.now();
+
+    const check = () => {
+      const current = listRef.current;
+
+      if (current === null || current.scrollOffset !== from) {
+        return;
+      }
+
+      if (performance.now() - started < SMOOTH_START_MS) {
+        jumpFrameRef.current = requestAnimationFrame(check);
+
+        return;
+      }
+
+      current.scrollToIndex(itemCountRef.current - 1, { align: "end" });
+    };
+
+    jumpFrameRef.current = requestAnimationFrame(check);
   };
 
   const renderItem = (item: TimelineItem) => {

@@ -531,6 +531,7 @@ impl SyncSession for Session {
         {
             self.present.insert(room_id);
             campfire_app::cable::broadcasts::read_room(&app.cable, self.user.id, room_id);
+            app.broadcasts.sync_read_row(self.user.id, room_id);
         }
     }
 

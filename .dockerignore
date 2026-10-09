@@ -53,6 +53,8 @@
 /web/bin
 /web/script
 /web/.bundle
+# The huddle gateway has its own image (deploy/huddles/Dockerfile).
+/huddle-gateway
 /web/public/assets
 # frontend/: the sources the image's spa stage builds from, never a local build or test output
 # (node_modules is excluded above).

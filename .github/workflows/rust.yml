@@ -192,7 +192,8 @@ jobs:
           # auth/session/data/jobs and server wiring all affect it. Include whole crates and
           # harness trees rather than guessing which helper, fixture or seed a browser reads.
           PAGE_DIRS = (b"crates/", b"web/", b"reference-tools/", b"parity/", b"fixtures/",
-                       b"test-support/", b"vectors/", b"ci/", b".cargo/", b".config/")
+                       b"test-support/", b"vectors/", b"ci/", b".cargo/", b".config/",
+                       b"huddle-gateway/")
           PAGE_FILES = FILES + (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml",
                                 b"Dockerfile", b".dockerignore")
 

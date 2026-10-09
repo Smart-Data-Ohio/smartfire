@@ -332,16 +332,12 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if campfire_spa::screens::bypassed(query) {
         return Ok(());
     }
-    // `/users/:id/profile` for the viewer's own id is the same page as `/users/me/profile`.
-    let own_id = c.param_str("user_id").and_then(cast_integer);
-    let own_profile = endpoint == "users/profiles#show"
-        && own_id.is_some_and(|id| current_user(c).is_some_and(|user| user.id == id));
-    let screen_path = if own_profile { "/users/me/profile" } else { c.request.path() };
+    let screen_path = c.request.path();
     let location = if endpoint == "rooms#show" {
         let confirmed = confirmed_room_query(c, screen_path, query).await?;
         campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
     } else {
-        campfire_spa::screens::spa_url(endpoint, screen_path, query)
+        campfire_spa::screens::profile_url(endpoint, screen_path, query, require_current_user(c)?.id)
     };
     let Some(location) = location else {
         return Ok(());
@@ -366,13 +362,21 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
 /// asked for classic, and no flash is waiting. Peeking the flash marks it discarded, so a
 /// controller that then redirects at a classic page must `keep` the flash or the next hop loses it.
 pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
+    if authenticated_by(c) != AuthenticatedBy::Session || !coexistence_navigation(c)? {
+        return Ok(false);
+    }
+    next_ui(c, require_current_user(c)?).await
+}
+
+/// The navigation gates for coexistence, before checking a person's session and UI choice.
+pub fn coexistence_navigation(c: &mut Ctx) -> Result<bool> {
     use campfire_kit::format;
 
     let config = &c.app().config;
     if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
         return Ok(false);
     }
-    if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
+    if c.is_turbo_frame_request() || c.request.is_xhr() {
         return Ok(false);
     }
     let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
@@ -382,10 +386,7 @@ pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
     if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
         return Ok(false);
     }
-    if !c.peek_flash().is_empty() {
-        return Ok(false);
-    }
-    next_ui(c, require_current_user(c)?).await
+    Ok(c.peek_flash().is_empty())
 }
 
 /// `thread` and `message_id` the viewer can open in the room `path` names. Anything else (another

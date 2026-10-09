@@ -227,7 +227,12 @@ test("the thread menu offers what the viewer may do", async ({ page }) => {
 test("an older reply's permalink pages forward when scrolled to the bottom", async ({ page }) => {
   const oldest = seededReplyId(THREAD_IDS.generalActive, 0);
 
+  // The room page's own socket is welcomed first, so it can't connect late and answer the
+  // waiter below in place of the permalink page's socket.
+  const roomWelcomed = syncWelcomed(page);
+
   await open(page, `r/${GENERAL}`);
+  await roomWelcomed;
   // More replies than a permalink window plus the welcome's re-read around its middle, so the
   // tail stays past the loaded window until the reader scrolls down to it.
   await postReplies(page, THREAD_IDS.generalActive, 80);

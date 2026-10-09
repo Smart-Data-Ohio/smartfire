@@ -27,6 +27,7 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
+import { noRowTouches, type RowTouches } from "./row-touches.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
 import { emptyWork, type WorkSlice } from "./work.ts";
@@ -49,6 +50,8 @@ export interface State {
    */
   readonly dndAllowances: Readonly<Record<number, boolean>>;
   readonly sidebar: SidebarState;
+  /** When the sync path last changed each sidebar row, so an older HTTP reply leaves it be. */
+  readonly rowTouches: RowTouches;
   readonly rooms: Readonly<Record<number, RoomState>>;
   readonly messages: Readonly<Record<number, MessageDTO>>;
   readonly timelines: Readonly<Record<number, Timeline>>;
@@ -145,6 +148,7 @@ export const initialState: State = {
     canCreateRooms: false,
     overlay: emptyOverlay,
   },
+  rowTouches: noRowTouches,
   rooms: {},
   messages: {},
   timelines: {},

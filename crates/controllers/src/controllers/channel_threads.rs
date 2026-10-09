@@ -210,6 +210,8 @@ pub async fn leave(c: &mut Ctx) -> Result {
         tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?", (thread_id, user_id))?;
         Ok(())
     }).await.map_err(db_error)?;
+    // Single-page app only: its pings no longer count once the thread is left.
+    c.app().broadcasts.sync_read_row(user_id, room.id);
     c.expires_now();
     if c.format()? == Some(&format::HTML) {
         c.redirect_to(&c.url_for(&format!("/rooms/{}/threads/{}", room.id, thread.id)))

@@ -38,7 +38,7 @@ pub fn identify(label: &str) -> i64 {
 
 /// The app's static inputs: `web/`, laid out like the Rails app they came from
 /// (`app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`,
-/// `script/livekit-gateway`, ...).
+/// `script/livekit-client`, ...).
 pub fn reference_root() -> PathBuf {
     workspace_root().join("web")
 }
@@ -49,7 +49,7 @@ pub fn reference_dir() -> PathBuf {
 }
 
 /// A file named by its path in the Rails app (`public/500.html`,
-/// `test/fixtures/files/earth.png`, `script/livekit-gateway/package.json`), in the port's copy.
+/// `test/fixtures/files/earth.png`, `script/livekit-client/package.json`), in the port's copy.
 pub fn reference_path(path: &str) -> PathBuf {
     match path.strip_prefix("test/fixtures/") {
         Some(fixture) => reference_dir().join(fixture),

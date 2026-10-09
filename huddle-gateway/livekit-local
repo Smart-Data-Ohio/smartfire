@@ -7,19 +7,18 @@ LIVEKIT_ARCHIVE="livekit_${LIVEKIT_VERSION}_linux_amd64.tar.gz"
 LIVEKIT_SHA256="6634aeeb2fb1366b6723708ae4320b9d5408106a4c63457c5e845ae3979c90e2"
 LIVEKIT_DOWNLOAD_URL="https://github.com/livekit/livekit/releases/download/v${LIVEKIT_VERSION}/${LIVEKIT_ARCHIVE}"
 
-# web/: runtime state in .bundle/livekit, the gateway's code in script/livekit-gateway.
-ROOT_DIR=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)
-RUNTIME_DIR="$ROOT_DIR/.bundle/livekit"
+# This directory is the gateway package. Runtime state stays beside the script.
+GATEWAY_DIR=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
+RUNTIME_DIR="$GATEWAY_DIR/.bundle/livekit"
 BINARY="$RUNTIME_DIR/livekit-server"
 ARCHIVE_PATH="$RUNTIME_DIR/$LIVEKIT_ARCHIVE"
 ENV_FILE="$RUNTIME_DIR/env"
 CONFIG_FILE="$RUNTIME_DIR/config.yaml"
-GATEWAY_DIR="$ROOT_DIR/script/livekit-gateway"
 GATEWAY_SERVER="$GATEWAY_DIR/server.mjs"
 
 usage() {
   cat <<'USAGE'
-Usage: bin/livekit-local <command>
+Usage: huddle-gateway/livekit-local <command>
 
 Commands:
   setup   Install and configure the pinned project-local LiveKit server

@@ -206,7 +206,7 @@ function keptSearch(search: string): string {
  * The SPA URL of a classic `path` the SPA has ported (`/rooms/12` is `/app/r/12`), else `null`.
  * The search carries over, less `classic`.
  */
-export function spaUrlFor(path: string, search = ""): string | null {
+export function spaUrlFor(path: string, search = "", viewerId?: number): string | null {
   for (const screen of SCREENS) {
     if (!screen.ported) {
       continue;
@@ -216,6 +216,10 @@ export function spaUrlFor(path: string, search = ""): string | null {
 
     if (captured !== null) {
       const filled = fill(screen.spa, captured);
+
+      if (filled === `/app/people/${viewerId}`) {
+        return `/app/settings${keptSearch(search)}`;
+      }
 
       if (screen.classic === "/rooms/:id" && screen.spa === "/app/r/:id") {
         const translated = roomNotificationUrl(filled, search);

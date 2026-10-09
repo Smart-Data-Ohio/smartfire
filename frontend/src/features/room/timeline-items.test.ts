@@ -132,6 +132,8 @@ describe("timelineItems", () => {
       threadId: null,
       attachmentSignedId: null,
       attachment: null,
+      replyToMessageId: null,
+      replyNotifyAuthor: null,
       creatorId: 7,
       markdownSource: "hi",
       createdAt: local(6, 9, 2),

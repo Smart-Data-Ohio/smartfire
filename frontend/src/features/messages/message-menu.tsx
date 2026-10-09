@@ -6,6 +6,7 @@ import type { MessagePermissions } from "./permissions.ts";
 
 /** Everything the message menu (and the hover bar, and the row keys) can ask the row to do. */
 export type MenuCommand =
+  | "reply"
   | "thread"
   | "react"
   | "boost"
@@ -56,6 +57,10 @@ export function menuSections(context: MenuContext): readonly (readonly MenuEntry
   const share: MenuEntry[] = [];
   const keep: MenuEntry[] = [];
   const destroy: MenuEntry[] = [];
+
+  if (permissions.reply) {
+    respond.push(entry("reply", "Reply", "corner-up-left", shortcutKeys("message-reply")));
+  }
 
   if (permissions.thread && !inThread) {
     respond.push(entry("thread", "Reply in thread", "thread", shortcutKeys("message-thread")));

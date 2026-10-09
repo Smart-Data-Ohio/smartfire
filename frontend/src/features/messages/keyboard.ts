@@ -12,6 +12,7 @@ export type RowCommand =
   | "last"
   | "edit"
   | "react"
+  | "reply"
   | "thread"
   | "pin"
   | "save"
@@ -34,6 +35,7 @@ const LETTERS = new Map<string, RowCommand>([
   ["e", "edit"],
   ["r", "react"],
   ["+", "react"],
+  ["q", "reply"],
   ["t", "thread"],
   ["p", "pin"],
   ["s", "save"],

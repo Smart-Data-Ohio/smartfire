@@ -100,6 +100,9 @@ fn dump(conn: &Connection, table: &str) -> Vec<String> {
                     let key: Option<String> = row.get(*i).unwrap();
                     assert_eq!(key, None, "classic fixtures never set API creation keys");
                     false
+                } else if table == "thread_memberships" && name.as_str() == "last_read_message_id" {
+                    // Port-only read boundary for the sidebar's thread pings.
+                    false
                 } else {
                     true
                 }

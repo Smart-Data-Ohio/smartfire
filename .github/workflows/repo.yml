@@ -86,10 +86,10 @@ jobs:
           package-manager-cache: false
 
       - name: Install gateway dependencies
-        run: npm ci --ignore-scripts --prefix web/script/livekit-gateway
+        run: npm ci --ignore-scripts --prefix huddle-gateway
 
       - name: Test authorization and connection races
-        run: npm test --prefix web/script/livekit-gateway
+        run: npm test --prefix huddle-gateway
 
       - name: Test the media container runtime
         run: node --test deploy/huddles/runtime/*.test.mjs
@@ -161,7 +161,7 @@ jobs:
         run: cargo-audit audit --no-fetch --no-yanked --db "$ADVISORY_DB" --file Cargo.lock
 
       - name: Audit huddle gateway runtime dependencies
-        working-directory: web/script/livekit-gateway
+        working-directory: huddle-gateway
         run: |
           set -euo pipefail
           report="$RUNNER_TEMP/npm-audit.json"

@@ -38,7 +38,7 @@ updates:
   # bundle after an update), and the pinned Playwright the browser suites run in.
   - package-ecosystem: npm
     directories:
-      - "/web/script/livekit-gateway"
+      - "/huddle-gateway"
       - "/web/script/livekit-client"
       - "/web/script/code-highlighter"
       - "/parity"

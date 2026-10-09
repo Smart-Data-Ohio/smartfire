@@ -87,6 +87,21 @@ fn only_intentional_aliases_share_a_url() {
         aliases,
         BTreeMap::from([
             (
+                "/app/settings".to_string(),
+                vec![
+                    ("users/profiles#show", "/users/me/profile"),
+                    ("users/profiles#edit", "/users/me/profile/edit"),
+                ],
+            ),
+            (
+                "/app/people/7".to_string(),
+                vec![
+                    ("users#show", "/users/:id"),
+                    ("users/profiles#show", "/users/:user_id/profile"),
+                    ("users/profiles#edit", "/users/:user_id/profile/edit"),
+                ],
+            ),
+            (
                 "/app/r/7/m/8".to_string(),
                 vec![
                     ("rooms#show", "/rooms/:room_id/@:message_id"),
@@ -115,7 +130,7 @@ fn only_intentional_aliases_share_a_url() {
                 ],
             ),
         ]),
-        "only the message permalink and room settings aliases may share SPA URLs, \
+        "only the message, room settings and profile aliases may share SPA URLs, \
          with their fallback first"
     );
     assert!(SCREENS.iter().all(|screen| {
@@ -427,7 +442,7 @@ fn only_record_ids_match_a_parameter() {
 }
 
 #[test]
-fn a_person_s_own_pages_match_only_as_me() {
+fn profile_aliases_map_to_people_and_own_sections_match_as_me() {
     assert_eq!(
         spa_url("users/profiles#show", "/users/me/profile", None).as_deref(),
         Some("/app/settings")
@@ -454,10 +469,9 @@ fn a_person_s_own_pages_match_only_as_me() {
         spa_url("users/statuses#edit", "/users/me/status/edit", None).as_deref(),
         Some("/app/settings/status")
     );
-    // Someone else's id stays on the classic page.
     assert_eq!(
-        spa_url("users/profiles#show", "/users/7/profile", None),
-        None
+        spa_url("users/profiles#show", "/users/7/profile", None).as_deref(),
+        Some("/app/people/7")
     );
     assert_eq!(
         classic_url("/app/settings", None).as_deref(),
@@ -471,6 +485,30 @@ fn a_person_s_own_pages_match_only_as_me() {
     assert_eq!(
         classic_url("/app/settings/appearance", None).as_deref(),
         Some("/users/me/profile")
+    );
+}
+
+#[test]
+fn numeric_profile_aliases_resolve_for_the_viewer() {
+    for (endpoint, path) in [
+        ("users#show", "/users/7"),
+        ("users/profiles#show", "/users/7/profile"),
+        ("users/profiles#edit", "/users/7/profile/edit"),
+    ] {
+        assert_eq!(
+            profile_url(endpoint, path, Some("source=profile&classic=0"), 7).as_deref(),
+            Some("/app/settings?source=profile"),
+            "{path}"
+        );
+        assert_eq!(
+            profile_url(endpoint, path, None, 8).as_deref(),
+            Some("/app/people/7"),
+            "{path}"
+        );
+    }
+    assert_eq!(
+        profile_url("users/profiles#edit", "/users/me/profile/edit", None, 7).as_deref(),
+        Some("/app/settings")
     );
 }
 

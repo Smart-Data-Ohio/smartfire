@@ -122,6 +122,15 @@ matrix("in a call: the dock and the call view", async ({ page, theme, phone }) =
   }
 });
 
+/** Runs `/huddle` from the room's composer, as typed. */
+async function huddleCommand(page: Page): Promise<void> {
+  const composer = page.getByRole("textbox", { name: "Message #general" });
+
+  await composer.fill("/huddle");
+  await composer.press("Enter");
+  await expect(composer).toHaveValue("");
+}
+
 test("joining and leaving a huddle in a channel", async ({ page }) => {
   await open(page, GENERAL);
   await expect(launcher(page)).toHaveText("Join huddle");
@@ -145,6 +154,18 @@ test("joining and leaving a huddle in a channel", async ({ page }) => {
   await dock(page).getByRole("button", { name: "Leave call" }).click();
   await expect(dock(page)).toHaveCount(0);
   await expect(launcher(page)).toHaveText("Join huddle");
+});
+
+test("/huddle starts the room's call, as the call button does", async ({ page }) => {
+  await open(page, GENERAL);
+  await huddleCommand(page);
+  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
+  await expect(launcher(page)).toHaveText("In huddle");
+  await expect(page.getByText(/classic view/)).toHaveCount(0);
+
+  // Again while in the call: it stays up (the button never leaves a channel's call either).
+  await huddleCommand(page);
+  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
 });
 
 test("the first join checks devices", async ({ page }) => {
@@ -254,6 +275,13 @@ test("Smartfire's motion setting overrides the system one in a call", async ({ p
 
 test.describe("on a touch phone", () => {
   test.use(PHONE_TOUCH);
+
+  test("/huddle starts the room's call on a 360 px phone", async ({ page }) => {
+    await open(page, GENERAL);
+    await huddleCommand(page);
+    await expect(dock(page, true).getByRole("status")).toContainText("Huddle active");
+    await expect(page.getByText(/classic view/)).toHaveCount(0);
+  });
 
   test("a call keeps the conversation: one compact bar, the call a tap away", async ({ page }) => {
     await open(page, GENERAL);

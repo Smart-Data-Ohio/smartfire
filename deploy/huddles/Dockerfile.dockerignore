@@ -1,9 +1,9 @@
 # The media image builds from the repository root (compose.yaml's context: ../..) but needs only
 # the gateway and the runtime scripts it COPYs. Everything else stays out of the context.
 *
-!web/script/livekit-gateway/package.json
-!web/script/livekit-gateway/package-lock.json
-!web/script/livekit-gateway/gateway.mjs
-!web/script/livekit-gateway/server.mjs
+!huddle-gateway/package.json
+!huddle-gateway/package-lock.json
+!huddle-gateway/gateway.mjs
+!huddle-gateway/server.mjs
 !deploy/huddles/runtime/start.mjs
 !deploy/huddles/runtime/supervisor.mjs
