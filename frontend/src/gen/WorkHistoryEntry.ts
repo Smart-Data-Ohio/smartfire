@@ -7,24 +7,24 @@ import type { WorkStatus } from "./WorkStatus";
 /**
  * One line of the work history (`board_posts::history_records`).
  */
-export type WorkHistoryEntry = { id: number, kind: WorkHistoryKind, createdAt: string,
+export type WorkHistoryEntry = { id: number, kind: WorkHistoryKind, createdAt: string, 
 /**
  * `null`, or no `users` entry, reads "Former member".
  */
-actorId: number | null,
+actorId: number | null, 
 /**
  * `null` is an ordinary thread (not tracked): "Ordinary thread". Read tolerantly, as
  * [`WorkFacts::status`] is.
  */
-fromStatus: WorkStatus | null, toStatus: WorkStatus | null,
+fromStatus: WorkStatus | null, toStatus: WorkStatus | null, 
 /**
  * `null` reads "Unassigned".
  */
-fromOwner: WorkOwnerSnapshot | null, toOwner: WorkOwnerSnapshot | null,
+fromOwner: WorkOwnerSnapshot | null, toOwner: WorkOwnerSnapshot | null, 
 /**
  * The note an agent left with the change; `null` for none.
  */
-note: string | null,
+note: string | null, 
 /**
  * `handoff` entries only; `null` otherwise.
  */

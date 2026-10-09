@@ -116,7 +116,7 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
         {!busy && item.count > 0 ? (
           <Badge count={item.count} label={notificationLabel(item.count)} />
         ) : null}
-        {!busy && item.count === 0 && item.unread && !item.muted ? (
+        {!busy && item.count === 0 && item.unread ? (
           <span className="switcher-unread-dot" aria-label="Unread" role="img" />
         ) : null}
         <Kbd keys={["⏎"]} className="switcher-enter" />

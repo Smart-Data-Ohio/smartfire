@@ -5,7 +5,7 @@ import type { Poll } from "./Poll";
  * `GET /api/v1/rooms/:roomId/polls/:id` (`rooms/polls#show`), and the reply to
  * [`VotePoll`]: the poll with the viewer's own choice.
  */
-export type PollResults = { poll: Poll,
+export type PollResults = { poll: Poll, 
 /**
  * The options the viewer chose (`voted`); empty when they haven't voted.
  */

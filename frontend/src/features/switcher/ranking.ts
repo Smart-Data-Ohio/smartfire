@@ -37,12 +37,12 @@ export interface SwitcherItem {
 }
 
 /**
- * Whether an option draws bold, as an unread sidebar row does. A muted room reads as unread only
- * for a ping, so a muted option goes bold beside its red count and stays dimmed, as the
- * sidebar's muted row does; an unread muted room without one stays regular.
+ * Whether an option draws bold, exactly when its sidebar row does (`rowUnread`): an unread room,
+ * or one with a red count. A muted room goes unread only when a mention makes it so (classic's
+ * `unread muted` row), and then it reads as unread here too, still dimmed.
  */
 export function readsUnread(item: SwitcherItem): boolean {
-  return item.unread && (!item.muted || item.count > 0);
+  return item.unread;
 }
 
 /** The server's catalogue, as far as ranking needs it. */

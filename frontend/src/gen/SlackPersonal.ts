@@ -5,7 +5,7 @@ import type { SlackRunRow } from "./SlackRunRow";
 /**
  * `GET /api/v1/slack/imports` (`slack/imports#index`): a person's connection and their runs.
  */
-export type SlackPersonal = {
+export type SlackPersonal = { 
 /**
  * An administrator has set up the import (a connection named the Slack workspace).
  */

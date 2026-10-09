@@ -6,30 +6,30 @@ import type { WorkPullRequestState } from "./WorkPullRequestState";
  * One linked item, as the classic links box shows it (`board_posts::LinkSources::items`). The
  * same for every viewer: a private repository's pull request never shows its title.
  */
-export type WorkLink = { id: number, kind: WorkLinkKind,
+export type WorkLink = { id: number, kind: WorkLinkKind, 
 /**
  * `owner/repo#123` for a pull request, the event's title, or the Drive file's title (its
  * URL when the title is unknown).
  */
-label: string,
+label: string, 
 /**
  * The pull request on GitHub or the Drive file, always an `https://` URL, or the event's
  * classic page, a site-relative path (`/rooms/:roomId/events/:id`). The server leaves out a
  * link whose stored URL is neither; clients check again before putting it in an `href`.
  */
-url: string,
+url: string, 
 /**
  * Pull requests only; `null` otherwise.
  */
-pullRequestState: WorkPullRequestState | null,
+pullRequestState: WorkPullRequestState | null, 
 /**
  * A pull request's title, only when its repository is public; `null` otherwise.
  */
-title: string | null,
+title: string | null, 
 /**
  * Events only: when it starts, and the time zone it's shown in. `null` otherwise.
  */
-eventStartsAt: string | null, eventTimeZone: string | null,
+eventStartsAt: string | null, eventTimeZone: string | null, 
 /**
  * Events only: it was cancelled. `false` otherwise.
  */

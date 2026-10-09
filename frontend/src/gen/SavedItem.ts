@@ -5,17 +5,17 @@ import type { SavedStatus } from "./SavedStatus";
  * One of the viewer's saved items (`saved_items`, unique per person and message). The reply
  * to `POST /api/v1/saved`.
  */
-export type SavedItem = {
+export type SavedItem = { 
 /**
  * For `PATCH /api/v1/saved/:id` ([`crate::UpdateSavedItem`]) and `DELETE /api/v1/saved/:id`
  * (unsave: 204, no body; its reminder activity items go too).
  */
-id: number, messageId: number, status: SavedStatus,
+id: number, messageId: number, status: SavedStatus, 
 /**
  * When to remind the viewer; `null` for no reminder. Changing it re-arms the reminder
  * (`remindedAt` goes back to `null`).
  */
-remindAt: string | null,
+remindAt: string | null, 
 /**
  * When the reminder went out; `null` until it does.
  */

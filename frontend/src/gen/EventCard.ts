@@ -8,23 +8,23 @@
  *
  * Fill order: 6.
  */
-export type EventCard = { eventId: number, roomId: number, title: string, organizerId: number, startsAt: string,
+export type EventCard = { eventId: number, roomId: number, title: string, organizerId: number, startsAt: string, 
 /**
  * `null` for an open-ended event.
  */
-endsAt: string | null,
+endsAt: string | null, 
 /**
  * The organizer's IANA zone the times were set in, e.g. `America/New_York`.
  */
-timeZone: string,
+timeZone: string, 
 /**
  * One occurrence of a repeating series.
  */
-recurring: boolean, cancelled: boolean,
+recurring: boolean, cancelled: boolean, 
 /**
  * The voice or stage room it's held in; `null` for none or once that room is gone.
  */
-venueRoomId: number | null, venueName: string | null,
+venueRoomId: number | null, venueName: string | null, 
 /**
  * A Google Meet link, HTTPS only; `null` for none.
  */

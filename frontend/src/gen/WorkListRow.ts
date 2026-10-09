@@ -4,19 +4,19 @@ import type { Thread } from "./Thread";
 /**
  * One row of the work list (`work_threads/_thread.html`).
  */
-export type WorkListRow = {
+export type WorkListRow = { 
 /**
  * Its `work` is never `null` here. A board post has no `parentMessageId`.
  */
-thread: Thread,
+thread: Thread, 
 /**
  * The viewer-relative room name.
  */
-roomName: string,
+roomName: string, 
 /**
  * The room is a board, so this is a board post.
  */
-board: boolean,
+board: boolean, 
 /**
  * "Updated …": the thread's `updated_at`, which the list is ordered by.
  */

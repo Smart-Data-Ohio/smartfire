@@ -4,23 +4,23 @@ import type { PersonRole } from "./PersonRole";
 /**
  * One active person on the account page (bots are under bots).
  */
-export type Person = { id: number, name: string, avatarUrl: string, role: PersonRole,
+export type Person = { id: number, name: string, avatarUrl: string, role: PersonRole, 
 /**
  * Banned people stay listed, struck through.
  */
-banned: boolean,
+banned: boolean, 
 /**
  * The signed-in person (no role, removal or reset controls on their own row).
  */
-you: boolean,
+you: boolean, 
 /**
  * The fields below are for administrators: `false` or `null` for everyone else.
  */
-twoFactorEnabled: boolean, emailAddress: string | null,
+twoFactorEnabled: boolean, emailAddress: string | null, 
 /**
  * The Google account linked for sign-in; an administrator can unlink it.
  */
-googleIdentityEmail: string | null,
+googleIdentityEmail: string | null, 
 /**
  * The person chose their email themselves, so Google sign-in waits for an administrator to
  * allow it (`POST .../google_link`).

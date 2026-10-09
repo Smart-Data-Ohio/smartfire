@@ -3,27 +3,27 @@
 /**
  * `GET /api/v1/admin/workspace`, and the answer to every workspace write.
  */
-export type Workspace = { name: string,
+export type Workspace = { name: string, 
 /**
  * The logo image (the stock app icon when none is attached), with a cache version.
  */
-logoUrl: string, logoStillUrl: string | null, bannerUrl: string | null, bannerStillUrl: string | null,
+logoUrl: string, logoStillUrl: string | null, bannerUrl: string | null, bannerStillUrl: string | null, 
 /**
  * An uploaded logo is attached (it can be removed).
  */
-logoAttached: boolean,
+logoAttached: boolean, 
 /**
  * The full join link everyone may share (`/join/:join_code`).
  */
-joinUrl: string,
+joinUrl: string, 
 /**
  * The signed-in person is an administrator: they see the controls.
  */
-canAdminister: boolean,
+canAdminister: boolean, 
 /**
  * "Must be admin to create new rooms".
  */
-restrictRoomCreationToAdministrators: boolean,
+restrictRoomCreationToAdministrators: boolean, 
 /**
  * The footer's "Smartfire version" badge text.
  */

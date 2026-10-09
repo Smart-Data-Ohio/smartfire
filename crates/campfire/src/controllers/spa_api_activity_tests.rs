@@ -1492,28 +1492,34 @@ async fn the_red_count_follows_the_classic_policy_for_each_involvement() {
     let Some(a) = app(true).await else { return };
     let mut david = a.sign_in(DAVID).await;
     quiet_designers(&a, "everything").await;
-    // Three new root messages, pinged by a mention, nothing, and a keyword; a thread mention.
+    // Four new root messages, pinged by a mention, nothing, a keyword and a reply to David; a
+    // thread mention, and a keyword alert on another reply in that thread.
     let mentioned = designers_message(&a, None, false, 10).await;
     designers_message(&a, None, false, 20).await;
     let keyword = designers_message(&a, None, false, 30).await;
+    let replied = designers_message(&a, None, false, 40).await;
+    let thread_keyword = designers_message(&a, Some(THREAD), false, 50).await;
     item(&a, DAVID, ("Message", mentioned), "mention", 5).await;
     item(&a, DAVID, ("Message", keyword), "keyword_alert", 5).await;
+    item(&a, DAVID, ("Message", replied), "reply", 5).await;
     item(&a, DAVID, ("Message", JASONS_REPLY), "mention", 5).await;
+    item(&a, DAVID, ("Message", thread_keyword), "keyword_alert", 5).await;
     unread_from(&a, mentioned).await;
     thread_unread(&a, true).await;
 
-    // Every root message pushes in an `everything` room; the thread mention counts once more.
-    assert_eq!(counts(&designers_row(&mut david).await), (3, 4, 1));
-    // `mentions`: the pinged messages only.
+    // Every root message pushes in an `everything` room; the thread mention counts once more,
+    // and the thread's keyword alert doesn't (keywords alone never push).
+    assert_eq!(counts(&designers_row(&mut david).await), (4, 5, 1));
+    // `mentions`: the messages that mention or reply to David; the keyword alone doesn't push.
     designers_involvement(&a, "mentions").await;
-    assert_eq!(counts(&designers_row(&mut david).await), (3, 3, 1));
+    assert_eq!(counts(&designers_row(&mut david).await), (4, 3, 1));
     // `muted` still pushes mentions, and only mentions.
     designers_involvement(&a, "muted").await;
-    assert_eq!(counts(&designers_row(&mut david).await), (3, 2, 1));
-    // `nothing` never pushes.
+    assert_eq!(counts(&designers_row(&mut david).await), (4, 2, 1));
+    // `nothing` never pushes, though the inbox keeps its mentions.
     designers_involvement(&a, "nothing").await;
     let row = designers_row(&mut david).await;
-    assert_eq!((counts(&row), row.mention_count), ((3, 0, 0), 2));
+    assert_eq!((counts(&row), row.mention_count), ((4, 0, 0), 2));
 }
 
 #[tokio::test]

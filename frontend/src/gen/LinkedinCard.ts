@@ -7,7 +7,7 @@
  *
  * Fill order: 8.
  */
-export type LinkedinCard = { url: string, title: string | null, description: string | null, imageUrl: string | null,
+export type LinkedinCard = { url: string, title: string | null, description: string | null, imageUrl: string | null, 
 /**
  * LinkedIn's embeddable player for the post's URN, for "Show embedded post"; `null` when
  * the URL has none.

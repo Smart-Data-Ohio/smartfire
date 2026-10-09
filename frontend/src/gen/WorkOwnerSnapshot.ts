@@ -5,11 +5,11 @@
  * `to_owner_name`): the name is a snapshot, so it survives a rename or a deleted account. An
  * entry with neither is `null` on [`WorkHistoryEntry`].
  */
-export type WorkOwnerSnapshot = {
+export type WorkOwnerSnapshot = { 
 /**
  * `null` when only the name was recorded.
  */
-userId: number | null,
+userId: number | null, 
 /**
  * `null` when no name was recorded; it reads "Unassigned", as in the classic history.
  */

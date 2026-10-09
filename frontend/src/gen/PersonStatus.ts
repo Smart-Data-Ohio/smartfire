@@ -4,11 +4,11 @@ import type { Presence } from "./Presence";
 /**
  * The badge rendered by `users/statuses/_profile_status.html:2`.
  */
-export type PersonStatus = {
+export type PersonStatus = { 
 /**
  * The existing workspace presence.
  */
-presence: Presence,
+presence: Presence, 
 /**
  * The badge's status line, `None` when there's none.
  */

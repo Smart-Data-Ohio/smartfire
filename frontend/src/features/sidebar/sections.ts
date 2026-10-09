@@ -111,12 +111,13 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
 }
 
 /**
- * The number on a row's red pill: the unread messages that would have notified you under the
- * classic rules (`notificationCount`, the server's `Notifications::Policy` count). Every unread
- * root message in a room set to "everything" (a DM's default), the mentions, replies, thread
- * activity and keyword alerts in a "mentions" room, a muted room's mentions, nothing for
- * "nothing". Plain unread activity shows as a bold name and the left-edge nub instead. The
- * rail, the tab title and the switcher all count with this, so every surface agrees.
+ * The number on a row's red pill, on every surface (rows, folded categories, the rail, the tab
+ * title and the switcher): the unread messages classic would have pushed to you
+ * (`notificationCount`, the server's count under `Notifications::Policy#push`). Every unread root
+ * message in a room set to "everything" (a DM's default); the mentions and replies to you in a
+ * "mentions" room; a muted room's mentions; ping and reply items in threads you follow; nothing
+ * for keyword alerts alone, or for a "nothing" room. Plain unread activity shows as a bold name
+ * and the left-edge nub instead.
  */
 export function rowPillCount(row: SidebarRow): number {
   // The involvement may be a pending change the server hasn't counted for yet: muting leaves the

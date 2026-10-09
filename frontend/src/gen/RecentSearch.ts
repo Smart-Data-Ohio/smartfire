@@ -3,7 +3,7 @@
 /**
  * One `searches` row.
  */
-export type RecentSearch = { id: number, query: string,
+export type RecentSearch = { id: number, query: string, 
 /**
  * When it was last searched for (`updated_at`, touched on each repeat).
  */

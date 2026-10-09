@@ -57,15 +57,17 @@ pub struct SidebarRow {
     /// The viewer's unread `mention` activity items for messages in this room
     /// (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`).
     pub mention_count: i64,
-    /// The red pill: what would have notified the viewer under the classic rules
-    /// (`Notifications::Policy`) and is still unread. Root messages count once each while
-    /// they're in the room's unread range (every one but system notes and your own in an
-    /// `everything` room; those with a mention, reply, thread activity or keyword alert inbox
-    /// item in a `mentions` room; mentions in a `muted` room), so reading the room clears them.
-    /// In threads the unit is the unread inbox item while the thread is unread, since classic
-    /// reads a thread apart from its room: ordinary replies in a followed thread are grouped
-    /// into one item, so they count 1, and a mention or reply to you there counts on its own. A
-    /// ping also stops counting once its inbox item is read. None for `nothing`.
+    /// The red pill: the unread messages classic would have pushed to the viewer
+    /// (`Notifications::Policy#push`, leaving out quiet hours and do-not-disturb, which only hold
+    /// delivery back). Root messages count once each while they're in the room's unread range:
+    /// in an `everything` room every one but system notes and your own; in a `mentions` room
+    /// those that mention or reply to you; in a `muted` room those that mention you. Reading the
+    /// room clears them. In threads the unit is the unread inbox item while the thread is unread,
+    /// since classic reads a thread apart from its room: ordinary replies in a thread you follow
+    /// with `everything` are grouped into one item, so they count 1, and a mention or reply to
+    /// you there counts on its own (only a mention, in a `muted` room). A ping also stops
+    /// counting once its inbox item is read. Keyword alerts alone don't push, so they don't
+    /// count, and a `nothing` room never pushes, so it counts none.
     pub notification_count: i64,
     /// The part of `notification_count` in threads: what's left of it once the room is read.
     pub thread_notification_count: i64,

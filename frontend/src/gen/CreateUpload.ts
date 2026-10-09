@@ -9,15 +9,15 @@
  * match; 404 once the URL's 5 minutes are up), then post the message with
  * `attachmentSignedId`.
  */
-export type CreateUpload = { filename: string,
+export type CreateUpload = { filename: string, 
 /**
  * Exact length of the bytes to be `PUT`.
  */
-byteSize: number,
+byteSize: number, 
 /**
  * Base64 of the file's MD5 digest, checked on `PUT`.
  */
-checksum: string,
+checksum: string, 
 /**
  * The file's MIME type; the `PUT` must send the same `Content-Type`.
  */

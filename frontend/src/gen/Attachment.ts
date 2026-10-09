@@ -5,36 +5,36 @@ import type { AttachmentPreview } from "./AttachmentPreview";
  * A message's attached file, from its Active Storage blob (`AttachmentView`). URLs are
  * same-origin paths that need the session cookie.
  */
-export type Attachment = {
+export type Attachment = { 
 /**
  * `active_storage_blobs.filename`.
  */
-filename: string,
+filename: string, 
 /**
  * `active_storage_blobs.content_type`; `application/octet-stream` when unknown.
  */
-contentType: string,
+contentType: string, 
 /**
  * `active_storage_blobs.byte_size`.
  */
-byteSize: number,
+byteSize: number, 
 /**
  * Pixel size from the blob's analyzed metadata (videos' float sizes rounded); `null` until
  * analysis finishes, and for files that have none.
  */
-width: number | null, height: number | null,
+width: number | null, height: number | null, 
 /**
  * How the timeline shows it.
  */
-preview: AttachmentPreview,
+preview: AttachmentPreview, 
 /**
  * The blob itself, inline (`/rails/active_storage/blobs/redirect/:signed_id/:filename`).
  */
-url: string,
+url: string, 
 /**
  * The same with `?disposition=attachment`: downloads instead of opening.
  */
-downloadUrl: string,
+downloadUrl: string, 
 /**
  * A still to show: an image's `resize_to_limit [1200, 800]` representation, or a video's
  * webp poster of the same size; `null` for other files, and until it's generated.

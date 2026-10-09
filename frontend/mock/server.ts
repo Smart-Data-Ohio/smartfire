@@ -653,7 +653,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       markReadUpTo(record, message.id);
     } else if (!message.systemNote) {
       const mentioned = mentionsUser(message.bodyHtml, VIEWER_ID);
-      const quiet = ["muted", "nothing"].includes(record.membership.involvement) && !mentioned;
+      // `Room#unread_memberships`: a muted room goes unread only for a mention; every other
+      // visible one (a "nothing" room too) goes unread for any message.
+      const quiet = record.membership.involvement === "muted" && !mentioned;
       const viewing = hub.presentRooms().has(record.room.id);
 
       if (viewing && record.membership.unreadAt === null) {

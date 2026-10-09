@@ -9,15 +9,15 @@ import type { User } from "./User";
 /**
  * `GET /api/v1/me` and the boot JSON: the signed-in person, with the settings only they see.
  */
-export type Me = { user: User, emailAddress: string | null, preferences: Preferences, presenceSetting: PresenceSetting, doNotDisturb: DoNotDisturb,
+export type Me = { user: User, emailAddress: string | null, preferences: Preferences, presenceSetting: PresenceSetting, doNotDisturb: DoNotDisturb, 
 /**
  * `null` when quiet hours are off.
  */
-quietHours: QuietHours | null,
+quietHours: QuietHours | null, 
 /**
  * `null` when not out of office.
  */
-outOfOffice: OutOfOffice | null,
+outOfOffice: OutOfOffice | null, 
 /**
  * Where `/app/` opens: the room in the `last_room` cookie if the person is still a member
  * (`last_room_visited`), else their original room (`Room::original_for_user`); `null` when

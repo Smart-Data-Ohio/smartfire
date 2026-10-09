@@ -19,6 +19,25 @@ import {
 
 const sidebar = (page: Page) => page.getByRole("complementary", { name: "Conversations" });
 
+/** The modifier the app reads on this platform (the CI browsers aren't Apple). */
+const MOD = process.platform === "darwin" ? "Meta" : "Control";
+
+/** Sets the viewer's involvement in a room through the API, as the bell menu does. */
+async function setInvolvement(page: Page, roomId: number, involvement: string): Promise<void> {
+  await page.evaluate(
+    async ([id, value]) => {
+      const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+
+      await fetch(`/api/v1/rooms/${id}/involvement`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": token ?? "" },
+        body: JSON.stringify({ involvement: value }),
+      });
+    },
+    [roomId, involvement] as const,
+  );
+}
+
 /** A conversation's row link, by the name it shows. */
 function row(page: Page, name: string): Locator {
   return sidebar(page)
@@ -128,15 +147,7 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
     await expect(team).not.toHaveAttribute("data-unread");
 
     // Notify for mentions only, so the plain message is unread but no notification.
-    await page.evaluate(async (roomId) => {
-      const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
-
-      await fetch(`/api/v1/rooms/${roomId}/involvement`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": token ?? "" },
-        body: JSON.stringify({ involvement: "mentions" }),
-      });
-    }, ROOM_IDS.announcements);
+    await setInvolvement(page, ROOM_IDS.announcements, "mentions");
 
     await postMessage(request, {
       roomId: ROOM_IDS.announcements,
@@ -174,3 +185,62 @@ for (const theme of ["light", "dark"] as const satisfies readonly Theme[]) {
     await expect(launch.locator(".sidebar-section-trigger")).toHaveAccessibleDescription("");
   });
 }
+
+test("the switcher shows each room's sidebar state: muted mentions count, nothing never does", async ({
+  page,
+  request,
+}) => {
+  const welcomed = syncWelcomed(page);
+
+  await openApp(page, `r/${ROOM_IDS.quiet}`);
+  await welcomed;
+
+  // #announcements set to "nothing": a mention makes it unread, but classic never pushes it.
+  await setInvolvement(page, ROOM_IDS.announcements, "nothing");
+  await postMessage(request, {
+    roomId: ROOM_IDS.announcements,
+    userId: USER_IDS.maya,
+    markdown: "@[Riel St. Amand] the slides are up.",
+  });
+
+  const announcements = row(page, "announcements");
+
+  await expect(announcements).toHaveAttribute("data-state", "unread");
+  await expect(announcements).toHaveAccessibleName(/^announcements\s*,\s*unread$/);
+  await expect(announcements.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  // #random is muted and unread: bold (and dimmed) with the nub, no count.
+  const random = row(page, "random");
+
+  await expect(random).toHaveAttribute("data-state", "unread");
+  await expect(random).toHaveAttribute("data-muted", "true");
+  await expect(random.locator(".badge")).toHaveAttribute("data-open", "false");
+
+  // A mention there pushes even though it's muted: one red count.
+  await postMessage(request, {
+    roomId: ROOM_IDS.random,
+    userId: USER_IDS.jonah,
+    markdown: "@[Riel St. Amand] lunch?",
+  });
+  await expect(random.locator(".badge")).toHaveAttribute("data-open", "true");
+  await expect(random).toHaveAccessibleName(/^random\s*,\s*unread\s*,\s*1 notification$/);
+
+  await page.keyboard.press(`${MOD}+k`);
+
+  const dialog = page.getByRole("dialog", { name: "Jump to a conversation" });
+
+  const option = (name: string) =>
+    dialog.getByRole("option").filter({ has: page.locator(".switcher-label", { hasText: name }) });
+
+  await expect(dialog).toBeVisible();
+  await page.keyboard.type("random");
+  await expect(option("random")).toHaveAttribute("data-unread", "true");
+  await expect(option("random")).toHaveAttribute("data-muted", "true");
+  await expect(option("random").locator(".badge > .visually-hidden")).toHaveText("1 notification");
+
+  await page.keyboard.press(`${MOD}+a`);
+  await page.keyboard.type("announcements");
+  await expect(option("announcements")).toHaveAttribute("data-unread", "true");
+  await expect(option("announcements").locator(".badge")).toHaveCount(0);
+  await expect(option("announcements").getByRole("img", { name: "Unread" })).toBeVisible();
+});

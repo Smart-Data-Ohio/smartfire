@@ -5,15 +5,15 @@
  * `user_<id>_huddle_notices` frames. Someone joined or left a call in one of the viewer's rooms,
  * or the call ended. Shown as a toast when the viewer is in that call, a banner otherwise.
  */
-export type HuddleNotice = { "kind": "joined", roomId: number,
+export type HuddleNotice = { "kind": "joined", roomId: number, 
 /**
  * As the viewer sees it; a direct message names its other members.
  */
-roomName: string, userId: number, userName: string,
+roomName: string, userId: number, userName: string, 
 /**
  * The viewer is in this call.
  */
-inCall: boolean,
+inCall: boolean, 
 /**
  * They were in the call moments ago (a reconnect or a reissued grant): the client
  * cancels the pending "left" notice instead of showing "joined".

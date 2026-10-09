@@ -7,7 +7,7 @@ import type { SavedItem } from "./SavedItem";
  * reminder went out (`reminded_at` set by the 30-second dispatcher). New: the classic app has
  * no broadcast for saved items.
  */
-export type SavedChanged = { messageId: number,
+export type SavedChanged = { messageId: number, 
 /**
  * The saved item as it is now, or `null` when it was unsaved.
  */

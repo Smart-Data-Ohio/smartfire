@@ -15,11 +15,11 @@ import type { HuddleParticipant } from "./HuddleParticipant";
  * laptop): like the classic app, the client polls `GET /api/v1/huddles` every 15 s while the tab
  * is visible to catch those.
  */
-export type HuddlePresence = { roomId: number,
+export type HuddlePresence = { roomId: number, 
 /**
  * One entry per person, ordered by name (case-insensitively), as the avatar stacks show them.
  */
-participants: Array<HuddleParticipant>,
+participants: Array<HuddleParticipant>, 
 /**
  * Stage rooms: someone is streaming (the sidebar's live dot). Always `false` elsewhere.
  */

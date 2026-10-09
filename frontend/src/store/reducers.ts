@@ -906,9 +906,10 @@ function removeRow(state: State, roomId: number): State {
 }
 
 /**
- * Whether a new root message would notify under the classic policy, as the server's
+ * Whether a new root message would push under the classic policy, as the server's
  * `notificationCount` counts it: every one in an `everything` room, a mention in a `mentions` or
- * `muted` one. Replies and keyword alerts arrive with the row the server sends next.
+ * `muted` one, none in a `nothing` one. A reply to you arrives with the row the server sends
+ * next; a keyword alert alone never pushes, so it never counts.
  */
 function notifies(row: SidebarRow, mentioned: boolean): boolean {
   switch (row.membership.involvement) {

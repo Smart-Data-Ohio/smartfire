@@ -6,7 +6,7 @@ import type { User } from "./User";
  * `GET /api/v1/people` (`users#index`): everyone active but the viewer, as the classic directory
  * lists them (starred first, then by name, case-insensitively: `presentation::directory`'s order).
  */
-export type PeopleDirectory = { people: Array<DirectoryPerson>,
+export type PeopleDirectory = { people: Array<DirectoryPerson>, 
 /**
  * The `User` entry for every row (`dto::users`, as `directs/candidates` does).
  */

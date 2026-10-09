@@ -4,7 +4,7 @@
  * The `sidebar.row.removed` event: the room left the person's sidebar (they left, were
  * removed, set it invisible, or the room was deleted).
  */
-export type SidebarRowRemoved = { roomId: number,
+export type SidebarRowRemoved = { roomId: number, 
 /**
  * Reload a loaded room: management changed a hidden row, or room access was lost.
  */

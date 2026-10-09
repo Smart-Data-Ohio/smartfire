@@ -14,11 +14,11 @@ import type { ScheduledMessage } from "./ScheduledMessage";
  *   A cursor that doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the
  *   classic page lists everything at once.
  */
-export type ScheduledMessageList = { scheduledMessages: Array<ScheduledMessage>,
+export type ScheduledMessageList = { scheduledMessages: Array<ScheduledMessage>, 
 /**
  * The rooms and threads they're in.
  */
-conversations: Array<ConversationName>,
+conversations: Array<ConversationName>, 
 /**
  * Pass as `before` for the next page; `null` on the last (set only when another row
  * exists past this page).

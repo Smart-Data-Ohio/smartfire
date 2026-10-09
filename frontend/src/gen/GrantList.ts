@@ -6,15 +6,15 @@ import type { GrantRoom } from "./GrantRoom";
  * `GET /api/v1/admin/bots/:id/grants` (active first), and the answer to a new grant and a
  * revocation (`DELETE .../grants/:grant_id`).
  */
-export type GrantList = { botId: number, botName: string,
+export type GrantList = { botId: number, botName: string, 
 /**
  * Only administrators grant capabilities; owners may revoke them.
  */
-canGrant: boolean,
+canGrant: boolean, 
 /**
  * No grant was ever created: the agent can read and post in the rooms it belongs to.
  */
-legacy: boolean, grants: Array<Grant>,
+legacy: boolean, grants: Array<Grant>, 
 /**
  * The capabilities a grant can give, in the classic order.
  */

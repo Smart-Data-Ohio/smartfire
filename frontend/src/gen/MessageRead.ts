@@ -10,15 +10,15 @@ import type { User } from "./User";
  * pin links look messages up). Anything else is a 404. For a link to a message outside the
  * loaded window (a thread's root, a forward's source) without reloading the room around it.
  */
-export type MessageRead = { message: MessageDTO,
+export type MessageRead = { message: MessageDTO, 
 /**
  * Its creator, and the repliers its thread indicator names.
  */
-users: Array<User>,
+users: Array<User>, 
 /**
  * The room and thread it's in, named for the viewer.
  */
-conversation: ConversationName,
+conversation: ConversationName, 
 /**
  * Whether the viewer saved it (`saved_items`); `null` when they haven't.
  */

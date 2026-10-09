@@ -6,11 +6,11 @@
  * the viewer's vote from `poll.updated`; sent for every poll so the client has one rule.
  * New: the classic app re-renders the voter's card only in the tab that voted.
  */
-export type PollBallot = { pollId: number, messageId: number, roomId: number, threadId: number | null,
+export type PollBallot = { pollId: number, messageId: number, roomId: number, threadId: number | null, 
 /**
  * The options the viewer chose now; empty after taking their vote back.
  */
-myOptionIds: Array<number>,
+myOptionIds: Array<number>, 
 /**
  * When the server read the ballot; keep the latest per poll.
  */

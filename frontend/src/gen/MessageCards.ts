@@ -10,7 +10,7 @@ import type { MessageCard } from "./MessageCard";
  * `linkedin_cards`, `link_embed_cards`). Replaces the message's `cards` without touching its
  * `updatedAt`, when `asOf` is at least the stored `cardsAsOf` (see the module's **Ordering**).
  */
-export type MessageCards = { messageId: number, roomId: number, threadId: number | null, cards: Array<MessageCard>,
+export type MessageCards = { messageId: number, roomId: number, threadId: number | null, cards: Array<MessageCard>, 
 /**
  * When the server read these cards.
  */
