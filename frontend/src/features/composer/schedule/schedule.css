@@ -178,4 +178,39 @@
       opacity: 1;
     }
   }
+
+  /* Touch phones: one round send button. The chevron folds into it (a long press on send opens
+     its menu) but keeps its place in the tab order: when the keyboard reaches it, or its menu is
+     open, it shows over send. */
+  @media (width < 720px) and (pointer: coarse) {
+    .composer-send-group {
+      position: relative;
+    }
+
+    .composer-send-group .composer-send.button,
+    .composer-send-group .composer-send-more.button {
+      width: var(--touch-target);
+      border-radius: var(--radius-pill);
+      box-shadow: none;
+    }
+
+    .composer-send-group .composer-send-more.button {
+      position: absolute;
+      inset: 0;
+      clip-path: inset(50%);
+      pointer-events: none;
+    }
+
+    .composer-send-group .composer-send-more.button:focus-visible,
+    .composer-send-group .composer-send-more.button[aria-expanded="true"] {
+      clip-path: none;
+      pointer-events: auto;
+    }
+
+    .composer-send-more .icon {
+      width: 16px;
+      height: 16px;
+      rotate: 180deg;
+    }
+  }
 }

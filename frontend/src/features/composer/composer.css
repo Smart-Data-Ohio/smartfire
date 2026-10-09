@@ -258,4 +258,26 @@
       display: none;
     }
   }
+
+  /* Touch phones: each toolbar control is a 44 px target that paints a 36 px button inside it
+     (the content box), so the row grows by a few pixels, not by the full target. */
+  @media (width < 720px) and (pointer: coarse) {
+    .composer-toolbar {
+      gap: 0;
+      padding: 0 var(--space-0-5) var(--space-0-5);
+    }
+
+    .composer-toolbar .button,
+    .composer-toolbar .composer-scheduled.button {
+      --button-height: var(--touch-target);
+
+      min-width: var(--touch-target);
+      padding: var(--space-1);
+      background-clip: content-box;
+    }
+
+    .composer-toolbar .composer-scheduled.button {
+      margin-right: 0;
+    }
+  }
 }

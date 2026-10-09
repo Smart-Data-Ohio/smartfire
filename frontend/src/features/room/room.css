@@ -454,6 +454,56 @@
     gap: var(--space-1-5);
   }
 
+  /* Phones: "(edited)" runs on after the text's last word rather than taking a column beside a
+     wrapped message; the small labels read at 11-12 px; and while the day pill floats over the
+     timeline, the line under it fades out so the pill never sits on text. */
+  @media (width < 720px) {
+    .message-body-row:has(> .message-edited) {
+      display: block;
+    }
+
+    .message-body-row:has(> .message-edited) > .message-body,
+    .message-body-row:has(> .message-edited) > .message-body > p:last-child,
+    .message-body-row:has(> .message-edited) > .message-forward-note {
+      display: inline;
+    }
+
+    /* The inline last paragraph drops its top margin, so the block before it keeps the gap. */
+    .message-body-row:has(> .message-edited) > .message-body > :nth-last-child(2) {
+      margin-bottom: var(--space-1);
+    }
+
+    .message-edited {
+      font-size: var(--text-meta);
+    }
+
+    .message-body-row > .message-edited {
+      margin-left: var(--space-1);
+      white-space: nowrap;
+    }
+
+    .unread-divider-label {
+      font-size: 11px;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      z-index: 2;
+      height: calc(var(--space-2) * 2 + 24px);
+      background: linear-gradient(var(--bg-pane) 55%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--duration-small-exit) var(--ease-exit);
+    }
+
+    .timeline:has(> .timeline-day-float[data-open="true"]:not(:empty))::before {
+      opacity: 1;
+      transition: opacity var(--duration-small) var(--ease-enter);
+    }
+  }
+
   .message-streaming {
     flex-shrink: 0;
     padding-top: 1px;
