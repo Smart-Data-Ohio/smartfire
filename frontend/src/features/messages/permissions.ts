@@ -20,6 +20,8 @@ export interface MessagePermissions {
   readonly save: boolean;
   readonly react: boolean;
   readonly forward: boolean;
+  /** Quote it in the composer as an inline reply (classic's Reply), never a note or in a locked thread. */
+  readonly reply: boolean;
   /** Start or open a thread from it (root messages outside direct rooms). */
   readonly thread: boolean;
   /** Mark the room unread from it (root timeline only). */
@@ -52,6 +54,7 @@ export function messagePermissions(
     save: human,
     react: human,
     forward: human && !note,
+    reply: human && !note && !locked,
     thread: human && !note && (root || message.thread !== null) && context.roomKind !== "direct",
     markUnread: human && root,
     fizzy: human && !note,

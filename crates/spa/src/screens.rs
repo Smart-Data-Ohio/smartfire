@@ -19,8 +19,8 @@
 //! literal prefix and a `:param` (`@:message_id`). Every parameter is a record id, so it matches
 //! only a positive integer: `/rooms/new` and `/rooms/5.json` aren't `/rooms/:id`. The one
 //! exception is the route table's `:user_id` on a person's own pages, which the classic app links
-//! as `me` (`/users/me/profile`): a row spells it `me`, a literal, so other people's ids never
-//! match it.
+//! as `me` (`/users/me/profile`). Numeric profile aliases map to the person page; the authenticated
+//! viewer's id resolves to settings.
 
 /// One classic page and its SPA URL.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +294,12 @@ pub const SCREENS: &[Screen] = &[
         "/app/settings",
         true,
     ),
+    screen(
+        "users/profiles#edit",
+        "/users/me/profile/edit",
+        "/app/settings",
+        true,
+    ),
     // Sections of the classic profile page: they map back to it ("Switch to classic"), and its
     // redirect goes to the row above.
     screen(
@@ -353,6 +359,18 @@ pub const SCREENS: &[Screen] = &[
     // S7: the people directory and a person's page.
     screen("users#index", "/users", "/app/people", true),
     screen("users#show", "/users/:id", "/app/people/:id", true),
+    screen(
+        "users/profiles#show",
+        "/users/:user_id/profile",
+        "/app/people/:user_id",
+        true,
+    ),
+    screen(
+        "users/profiles#edit",
+        "/users/:user_id/profile/edit",
+        "/app/people/:user_id",
+        true,
+    ),
     // S7: the workspace's account pages. The people list is the account page's lower half: it
     // maps back to the page, whose redirect goes to the workspace row above it.
     screen("accounts#edit", "/account/edit", "/app/admin", true),
@@ -497,6 +515,20 @@ pub fn room_query_ids(query: Option<&str>) -> RoomQueryIds {
 /// or `/app/r/:id/m/:message` when there is no thread).
 pub fn spa_url(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
     spa_url_inner(endpoint, path, query, None)
+}
+
+/// Profile aliases for the authenticated viewer open their settings; other ids keep their page.
+pub fn profile_url(endpoint: &str, path: &str, query: Option<&str>, viewer_id: i64) -> Option<String> {
+    let pattern = match endpoint {
+        "users#show" => "/users/:id",
+        "users/profiles#show" => "/users/:id/profile",
+        "users/profiles#edit" => "/users/:id/profile/edit",
+        _ => return spa_url(endpoint, path, query),
+    };
+    if captures(pattern, path).is_some_and(|ids| ids[0].1 == viewer_id as u64) {
+        return Some(with_query("/app/settings".into(), query));
+    }
+    spa_url(endpoint, path, query)
 }
 
 /// [`spa_url`], translating a room's `thread` and `message_id` only when `confirmed` names them.

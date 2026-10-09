@@ -515,6 +515,8 @@ pub(crate) fn row() -> SidebarRow {
         direct_member_ids: vec![],
         unread_count: 4,
         mention_count: 1,
+        notification_count: 1,
+        thread_notification_count: 0,
         last_message: None,
         refresh_room: None,
     }
@@ -655,6 +657,8 @@ fn sidebar_round_trips() {
             "directMemberIds": [],
             "unreadCount": 4,
             "mentionCount": 1,
+            "notificationCount": 1,
+            "threadNotificationCount": 0,
         })
     );
     assert_eq!(

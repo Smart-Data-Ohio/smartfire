@@ -13,6 +13,7 @@ import {
   setMembership,
 } from "./organize.ts";
 import { applyEvents, loadSidebar, setRoomDetail } from "./reducers.ts";
+import { rowClock } from "./row-touches.ts";
 import { initialState, type State } from "./state.ts";
 
 const launch: RoomCategory = { id: 1, name: "Launch", collapsed: false, position: 1 };
@@ -24,15 +25,19 @@ function withMembership(row: SidebarRow, change: Partial<SidebarRow["membership"
 }
 
 function seeded(): State {
-  return loadSidebar(initialState, {
-    ...sidebarFixture([
-      sidebarRowFixture(1, "general"),
-      withMembership(sidebarRowFixture(2, "design"), { roomCategoryId: launch.id }),
-      withMembership(sidebarRowFixture(3, "engineering"), { favoritePosition: 4 }),
-      withMembership(sidebarRowFixture(4, "Ada", "direct"), { favoritePosition: 4 }),
-    ]),
-    categories: [team, launch],
-  });
+  return loadSidebar(
+    initialState,
+    {
+      ...sidebarFixture([
+        sidebarRowFixture(1, "general"),
+        withMembership(sidebarRowFixture(2, "design"), { roomCategoryId: launch.id }),
+        withMembership(sidebarRowFixture(3, "engineering"), { favoritePosition: 4 }),
+        withMembership(sidebarRowFixture(4, "Ada", "direct"), { favoritePosition: 4 }),
+      ]),
+      categories: [team, launch],
+    },
+    0,
+  );
 }
 
 const event = <T extends Parameters<typeof applyEvents>[1][number]["type"]>(
@@ -77,7 +82,11 @@ describe("sidebar organisation reducers", () => {
 
     expect(next.rooms[1]?.detail?.membership.involvement).toBe("muted");
 
-    const replied = setMembership(state, { ...row.membership, involvement: "nothing" });
+    const replied = setMembership(
+      state,
+      { ...row.membership, involvement: "nothing" },
+      rowClock(state),
+    );
 
     expect(replied.sidebar.rows[1]?.membership.involvement).toBe("nothing");
     expect(replied.rooms[1]?.detail?.membership.involvement).toBe("nothing");
@@ -86,7 +95,12 @@ describe("sidebar organisation reducers", () => {
   it("keeps the overlay across a sidebar reload", () => {
     const entry: SidebarOverlay = { memberships: { 1: { favoritePosition: 0 } }, categories: {} };
     const state = addOverlay(seeded(), entry);
-    const reloaded = loadSidebar(state, sidebarFixture([sidebarRowFixture(1, "general")]));
+
+    const reloaded = loadSidebar(
+      state,
+      sidebarFixture([sidebarRowFixture(1, "general")]),
+      rowClock(state),
+    );
 
     expect(organizedSidebar(reloaded.sidebar).rows[1]?.membership.favoritePosition).toBe(0);
   });

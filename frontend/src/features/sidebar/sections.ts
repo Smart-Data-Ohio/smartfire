@@ -111,17 +111,49 @@ export function sidebarSections(sidebar: SidebarState): readonly SidebarSection[
 }
 
 /**
- * The number on a row's pill: unread mentions, or for a direct message every unread message
- * (each one is addressed to you, as in Slack). A muted room counts its mentions only, while
- * they keep it unread: the server makes it unread for nothing else (`Room#unread_memberships`),
- * and muting marks it read.
+ * The number on a row's red pill, on every surface (rows, folded categories, the rail, the tab
+ * title and the switcher): the unread messages classic would have pushed to you
+ * (`notificationCount`, the server's count under `Notifications::Policy#push`). Every unread root
+ * message in a room set to "everything" (a DM's default); the mentions and replies to you in a
+ * "mentions" room; a muted room's mentions; ping and reply items in threads you follow; nothing
+ * for keyword alerts alone, or for a "nothing" room. Plain unread activity shows as a bold name
+ * and the left-edge nub instead.
  */
 export function rowPillCount(row: SidebarRow): number {
-  if (row.membership.involvement === "muted") {
-    return row.membership.unreadAt === null ? 0 : row.mentionCount;
+  // The involvement may be a pending change the server hasn't counted for yet: muting leaves the
+  // mentions (all a muted room notifies for), and "nothing" or hiding leaves none.
+  switch (row.membership.involvement) {
+    case "muted":
+      // Muted rooms notify for mentions only. When the server already counted it as muted, its
+      // count is those mentions; while the change is pending, the old count can't exceed it
+      // either way, so the smaller of the two is right or nearly so until the new row lands.
+      return Math.min(row.mentionCount, row.notificationCount);
+    case "nothing":
+    case "invisible":
+      return 0;
+    default:
+      return row.notificationCount;
   }
+}
 
-  return row.room.kind === "direct" ? row.unreadCount : row.mentionCount;
+/**
+ * Whether a row reads as unread: the membership is unread, or something here would have notified
+ * you (a red count). A thread ping leaves the room's root timeline read, but it still bolds the
+ * row, since a count beside a plain name would say two things at once.
+ */
+export function rowUnread(row: SidebarRow): boolean {
+  return row.membership.unreadAt !== null || rowPillCount(row) > 0;
+}
+
+/**
+ * The rows a folded section still shows below its heading: the open room, and every row that
+ * reads as unread, a ping-only one included.
+ */
+export function peekingRows(
+  rows: readonly SidebarRow[],
+  selectedRoomId: number | null,
+): readonly SidebarRow[] {
+  return rows.filter((row) => row.room.id === selectedRoomId || rowUnread(row));
 }
 
 /**
@@ -137,11 +169,46 @@ export function rowState(
     return "selected";
   }
 
-  if (row.membership.unreadAt !== null) {
+  if (rowUnread(row)) {
     return "unread";
   }
 
   return row.membership.involvement === "muted" ? "muted" : null;
+}
+
+/** What a screen reader hears for a red pill of `count`. */
+export function notificationLabel(count: number): string {
+  return count === 1 ? "1 notification" : `${count} notifications`;
+}
+
+/** A folded section's summary: whether any room in it is unread, and its notifications. */
+export interface SectionUnread {
+  readonly unread: boolean;
+  readonly count: number;
+}
+
+export function sectionUnread(rows: readonly SidebarRow[]): SectionUnread {
+  let unread = false;
+  let count = 0;
+
+  for (const row of rows) {
+    unread ||= rowUnread(row);
+    count += rowPillCount(row);
+  }
+
+  return { unread, count };
+}
+
+/**
+ * What a folded category's trigger says about the rows it hides: "Unread", "Unread, 2
+ * notifications", or nothing when every hidden row is read.
+ */
+export function sectionStatus({ unread, count }: SectionUnread): string | null {
+  if (count > 0) {
+    return unread ? `Unread, ${notificationLabel(count)}` : notificationLabel(count);
+  }
+
+  return unread ? "Unread" : null;
 }
 
 /** Unread rooms and unread mentions across the sidebar, for the rail and the tab title. */
@@ -167,7 +234,7 @@ export function sidebarTotals(sidebar: SidebarState): SidebarTotals {
       continue;
     }
 
-    if (row.membership.unreadAt !== null) {
+    if (rowUnread(row)) {
       unreadRooms += 1;
     }
 

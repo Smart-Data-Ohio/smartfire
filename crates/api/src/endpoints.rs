@@ -392,6 +392,7 @@ async fn create_read(c: &mut Ctx) -> Result {
         .map_err(db_error)?;
     let user_id = concerns::require_current_user(c)?.id;
     campfire_app::cable::broadcasts::read_room(&c.app().cable, user_id, room.id);
+    c.app().broadcasts.sync_read_row(user_id, room.id);
     c.json(
         StatusCode::OK,
         &api::ReadState {

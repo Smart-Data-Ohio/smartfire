@@ -9,6 +9,7 @@ import type { PeopleDirectory } from "../../src/gen/PeopleDirectory.ts";
 import type { PersonProfile } from "../../src/gen/PersonProfile.ts";
 import type { User } from "../../src/gen/User.ts";
 import { forbidden, notFound, ok } from "../http.ts";
+import { type Agents, viewerManages } from "../s4/agents.ts";
 import { rowTimestamp, VIEWER_ID } from "../seed.ts";
 import { MOCK_TRANSFER_QR_SVG } from "./account.ts";
 import { firstId, type Route, route, type S2Context } from "./context.ts";
@@ -29,7 +30,11 @@ function emailOf(user: User): string {
 }
 
 /** Creates the people module; `requireSudo` is the admin mock's password check. */
-export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleModule {
+export function createPeople(
+  ctx: S2Context,
+  requireSudo: () => void,
+  agents: Pick<Agents, "record">,
+): PeopleModule {
   const viewerIsAdmin = () => ctx.world().users.get(VIEWER_ID)?.role === "administrator";
 
   const byName = (a: User, b: User) => {
@@ -75,6 +80,7 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
     const other = userId !== VIEWER_ID;
     const presence = world.presence.get(userId);
     const transferUrl = admin && active ? mockPersonTransferUrl(userId) : null;
+    const agent = user.agent === null ? null : agents.record(user.agent.agentId);
 
     return {
       user,
@@ -89,6 +95,10 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
       transferUrl,
       transferQrSvg: transferUrl === null ? null : MOCK_TRANSFER_QR_SVG,
       canBan: admin && person && other,
+      canManageBot:
+        user.role === "bot" &&
+        user.status === "active" &&
+        (admin || (agent !== null && viewerManages(ctx, agent))),
     };
   };
 

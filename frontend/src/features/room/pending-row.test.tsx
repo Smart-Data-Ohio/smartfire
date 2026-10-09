@@ -10,6 +10,8 @@ function pending(markdownSource: string, attachment: PendingAttachment | null): 
     threadId: null,
     attachmentSignedId: attachment === null ? null : "signed-1",
     attachment,
+    replyToMessageId: null,
+    replyNotifyAuthor: null,
     creatorId: 7,
     markdownSource,
     createdAt: "2026-10-06T09:00:00.000Z",

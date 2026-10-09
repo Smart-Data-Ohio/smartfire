@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { sidebarFixture, userFixture } from "../api/testing.ts";
 import type { User } from "./model.ts";
-import { mutations, store } from "./store.ts";
+import { mutations, sidebarRowClock, store } from "./store.ts";
 
 const ADA = 7;
 
@@ -30,7 +30,10 @@ describe("a user lands only as its newest copy", () => {
 
   it("drops a held page load once a resync brought a later ban", () => {
     mutations.mergeUsers([ada(1)]);
-    mutations.loadSidebar({ ...sidebarFixture([]), users: [ada(3, { status: "banned" })] });
+    mutations.loadSidebar(
+      { ...sidebarFixture([]), users: [ada(3, { status: "banned" })] },
+      sidebarRowClock(),
+    );
 
     // The page load started before the ban and answers her as active.
     mutations.mergeUsers([ada(2)]);
@@ -45,7 +48,7 @@ describe("a user lands only as its newest copy", () => {
     // looks just like the one held, but it's later.
     const captured = ada(2, { status: "banned" });
 
-    mutations.loadSidebar({ ...sidebarFixture([]), users: [ada(3)] });
+    mutations.loadSidebar({ ...sidebarFixture([]), users: [ada(3)] }, sidebarRowClock());
     mutations.mergeUsers([captured]);
 
     expect(held()?.status).toBe("active");

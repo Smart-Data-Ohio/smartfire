@@ -28,6 +28,7 @@ function page(user: User, dndAllowed: boolean | null = false): PersonProfile {
     transferUrl: active ? "https://chat.example/session/transfers/t" : null,
     transferQrSvg: active ? "<svg/>" : null,
     canBan: true,
+    canManageBot: false,
   };
 }
 

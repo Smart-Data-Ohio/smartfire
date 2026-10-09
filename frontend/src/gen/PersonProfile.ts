@@ -35,4 +35,8 @@ transferQrSvg: string | null,
  * Administrator, not the viewer, a person, not deactivated (`users/show.html:45,62-65`).
  * The button bans or removes the ban according to `user.status` (`users/_ban_button.html:1-7`).
  */
-canBan: boolean, };
+canBan: boolean,
+/**
+ * Active bot and administrator or agent owner (`users/show.html:28`): the capability-grants link.
+ */
+canManageBot: boolean, };

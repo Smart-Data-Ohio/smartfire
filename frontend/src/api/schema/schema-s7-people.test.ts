@@ -47,6 +47,7 @@ describe("S7 people schemas", () => {
       transferUrl: "https://chat.example/session/transfers/token",
       transferQrSvg: "<svg/>",
       canBan: true,
+      canManageBot: false,
     });
     roundTrips(PersonProfile, {
       user,
@@ -56,6 +57,7 @@ describe("S7 people schemas", () => {
       transferUrl: null,
       transferQrSvg: null,
       canBan: false,
+      canManageBot: true,
     });
   });
 
@@ -68,6 +70,7 @@ describe("S7 people schemas", () => {
       transferUrl: null,
       transferQrSvg: null,
       canBan: false,
+      canManageBot: false,
     };
 
     expect(() =>
