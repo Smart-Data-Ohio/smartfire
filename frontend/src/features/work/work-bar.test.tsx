@@ -1,3 +1,11 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -28,14 +36,42 @@ async function load(threadId: number): Promise<ThreadDetail> {
   return detail;
 }
 
-function renderBar(threadId: number) {
-  return render(
-    <div className="pane-frame">
-      <button type="button" aria-label="Thread actions" />
-      <WorkBar threadId={threadId} />
-      <WorkLive threadId={threadId} />
-    </div>,
-  );
+/** The bar reads the handoff dialog off the thread's child route, so tests sit in that router. */
+async function renderBar(threadId: number, live = true) {
+  const roomId = store.getState().threads[threadId]?.roomId ?? 1;
+  const root = createRootRoute({ component: Outlet });
+
+  const thread = createRoute({
+    getParentRoute: () => root,
+    path: "/r/$roomId/t/$threadId",
+    component: () => (
+      <>
+        <div className="pane-frame">
+          <button type="button" aria-label="Thread actions" />
+          <WorkBar threadId={threadId} />
+          {live ? <WorkLive threadId={threadId} /> : null}
+        </div>
+        <Outlet />
+      </>
+    ),
+  });
+
+  const handoff = createRoute({
+    getParentRoute: () => thread,
+    path: "handoff",
+    component: () => null,
+  });
+
+  const router = createRouter({
+    routeTree: root.addChildren([thread.addChildren([handoff])]),
+    history: createMemoryHistory({ initialEntries: [`/r/${roomId}/t/${threadId}`] }),
+  });
+
+  const view = render(<RouterProvider router={router} />);
+
+  await act(() => router.load());
+
+  return view;
 }
 
 const factsOf = (threadId: number) => store.getState().threads[threadId]?.work ?? null;
@@ -89,7 +125,7 @@ describe("the thread pane's work section", () => {
     );
 
     act(() => mutations.loadThreadDetail({ ...detail, thread: { ...detail.thread, roomId: 41 } }));
-    render(<WorkBar threadId={901} />);
+    await renderBar(901, false);
 
     await userEvent.click(screen.getByRole("button", { name: /Change status/ }));
 
@@ -99,7 +135,7 @@ describe("the thread pane's work section", () => {
 
   it("shows the status, owner, links and run, and changes the status from its menu", async () => {
     await load(WORK.agentOwned);
-    renderBar(WORK.agentOwned);
+    await renderBar(WORK.agentOwned);
 
     const user = userEvent.setup();
     const links = screen.getByRole("list", { name: /^Links for/ });
@@ -117,7 +153,7 @@ describe("the thread pane's work section", () => {
 
   it("offers people and agents as owners, with an agent's provider and description", async () => {
     await load(WORK.agentOwned);
-    renderBar(WORK.agentOwned);
+    await renderBar(WORK.agentOwned);
 
     const user = userEvent.setup();
 
@@ -164,7 +200,7 @@ describe("the thread pane's work section", () => {
         },
       })),
     );
-    renderBar(WORK.agentOwned);
+    await renderBar(WORK.agentOwned);
 
     expect(screen.queryByRole("button", { name: /Change status/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Change owner/ })).toBeNull();
@@ -175,7 +211,7 @@ describe("the thread pane's work section", () => {
 
   it("records a result and says who updated it", async () => {
     await load(WORK.viewerOwned);
-    renderBar(WORK.viewerOwned);
+    await renderBar(WORK.viewerOwned);
 
     const user = userEvent.setup();
 
@@ -193,7 +229,7 @@ describe("the thread pane's work section", () => {
 
   it("checks a handoff as the server does, then hands the work to the agent", async () => {
     await load(WORK.done);
-    renderBar(WORK.done);
+    await renderBar(WORK.done);
 
     const user = userEvent.setup();
 
@@ -220,7 +256,7 @@ describe("the thread pane's work section", () => {
   it("stops tracking after a confirmation, and focus lands on the thread's actions", async () => {
     await load(WORK.unassigned);
 
-    const view = renderBar(WORK.unassigned);
+    const view = await renderBar(WORK.unassigned);
     const user = userEvent.setup();
 
     await user.click(screen.getByRole("button", { name: /Change status/ }));
@@ -240,14 +276,14 @@ describe("the thread pane's work section", () => {
 
   it("names a history entry with no actor a former member", async () => {
     await load(WORK.done);
-    renderBar(WORK.done);
+    await renderBar(WORK.done);
 
     expect(screen.getAllByText("Former member").length).toBeGreaterThan(0);
   });
 
   it("refetches the detail when someone else changes the work", async () => {
     await load(WORK.agentOwned);
-    renderBar(WORK.agentOwned);
+    await renderBar(WORK.agentOwned);
 
     const before = store.getState().work.details[WORK.agentOwned]?.history.length ?? 0;
     const detail: ThreadDetail = await (await fetch(`/api/v1/threads/${WORK.agentOwned}`)).json();

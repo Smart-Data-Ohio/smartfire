@@ -1,5 +1,7 @@
-import { useId, useState } from "react";
+import { useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
+import { parseBoardSearch } from "../../lib/board-search.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
@@ -13,9 +15,77 @@ import {
   HANDOFF_ITEM_LIMIT,
   type HandoffDraft,
   type HandoffErrors,
+  type HandoffField,
   SUMMARY_LIMIT,
+  serverHandoffErrors,
 } from "./handoff-form.ts";
 import { WorkTextArea } from "./work-textarea.tsx";
+
+declare module "@tanstack/react-router" {
+  interface HistoryState {
+    /** The work bar or a board post pushed the handoff dialog over the thread. */
+    readonly smartfireHandoffOver?: boolean;
+  }
+}
+
+/** The history state an in-app open carries, so closing can step back to the entry under it. */
+export function handoffOverState() {
+  return { smartfireHandoffOver: true };
+}
+
+/**
+ * The handoff dialog follows `/app/r/$roomId/t/$threadId/handoff` (a board's query stays put).
+ * An in-app open (the work bar, a board post) pushes that URL with {@link handoffOverState}, and
+ * closing steps back, so the thread entry underneath is the one that was already there. A direct
+ * arrival (the classic URL's redirect, a deep link) has no such flag, and closing replaces this
+ * entry with the thread. Cancel and a successful handoff both close this way.
+ */
+export function useHandoffRoute(threadId: number) {
+  const navigate = useNavigate();
+  const router = useRouter();
+  const matchRoute = useMatchRoute();
+  const over = useLocation({ select: (location) => location.state.smartfireHandoffOver === true });
+  const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
+  const open = matchRoute({ to: "/r/$roomId/t/$threadId/handoff", includeSearch: false }) !== false;
+
+  const replaceWithThread = () => {
+    if (roomId === null) {
+      return;
+    }
+
+    void navigate({
+      to: "/r/$roomId/t/$threadId",
+      params: { roomId, threadId },
+      search: parseBoardSearch,
+      replace: true,
+    });
+  };
+
+  return {
+    open,
+    openHandoff: () => {
+      if (roomId === null) {
+        return;
+      }
+
+      void navigate({
+        to: "/r/$roomId/t/$threadId/handoff",
+        params: { roomId, threadId },
+        search: parseBoardSearch,
+        state: handoffOverState(),
+      });
+    },
+    closeHandoff: () => {
+      if (over) {
+        router.history.back();
+
+        return;
+      }
+
+      replaceWithThread();
+    },
+  };
+}
 
 interface HandoffDialogProps {
   readonly threadId: number;
@@ -23,6 +93,22 @@ interface HandoffDialogProps {
   readonly work: WorkDetail;
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
+}
+
+/** The field order: after a server refusal, focus moves to the first of these that failed. */
+const HANDOFF_FIELDS = ["receiver", "summary", "links", "openQuestions"] as const;
+
+type HandoffFocus = HandoffField | "alert";
+
+/** The first named field, or the form alert when the refusal names none. */
+function handoffFocus(errors: HandoffErrors, alert: string | null): HandoffFocus | null {
+  const field = HANDOFF_FIELDS.find((name) => errors[name] !== undefined);
+
+  if (field !== undefined) {
+    return field;
+  }
+
+  return alert === null ? null : "alert";
 }
 
 /** One agent to choose: its face, name, and provider and description when the server gave them. */
@@ -65,8 +151,10 @@ function ReceiverOption({
 
 /**
  * "Hand off “{name}”": picks the receiving agent from `handoffReceivers`, with a summary, links
- * and open questions. Checks what the server checks before sending, and shows the server's
- * refusal in the form when it has the last word.
+ * and open questions. Checks what the server checks before sending. A refusal that names a field
+ * is shown on that field and takes focus there; one that doesn't (an untracked thread, a lost
+ * connection) is the form's alert, which takes focus instead. A reply that lands after the
+ * dialog was dismissed or unmounted is ignored, so it can't step back again or toast late.
  */
 export function HandoffDialog({
   threadId,
@@ -82,11 +170,48 @@ export function HandoffDialog({
   const [errors, setErrors] = useState<HandoffErrors>({});
   const [refusal, setRefusal] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [wasOpen, setWasOpen] = useState(open);
+  // False until an opening is applied, so a dialog that mounts already open (a direct arrival)
+  // still starts a fresh draft and chooses the only agent.
+  const [wasOpen, setWasOpen] = useState(false);
+  // Bumped when this opening ends (dismissed or unmounted). A reply from
+  // before that no longer matches, so it can't close the dialog again.
+  const attempt = useRef(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [focus, setFocus] = useState<HandoffFocus | null>(null);
+
+  useEffect(() => {
+    return () => {
+      attempt.current += 1;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (focus === null) {
+      return;
+    }
+
+    const form = formRef.current;
+
+    if (form !== null) {
+      const element =
+        focus === "alert"
+          ? form.querySelector<HTMLElement>('[role="alert"]')
+          : form.querySelector<HTMLElement>(`[name="${focus}"]`);
+
+      element?.focus();
+    }
+
+    setFocus(null);
+  }, [focus]);
 
   // Each opening starts afresh, with the only agent chosen when there's just one.
   if (open !== wasOpen) {
     setWasOpen(open);
+
+    if (!open) {
+      attempt.current += 1;
+      setFocus(null);
+    }
 
     if (open) {
       const only = work.handoffReceivers.length === 1 ? work.handoffReceivers[0] : undefined;
@@ -97,6 +222,7 @@ export function HandoffDialog({
       setStart(fresh);
       setErrors({});
       setRefusal(null);
+      setSending(false);
     }
   }
 
@@ -106,6 +232,11 @@ export function HandoffDialog({
   };
 
   const nameOf = (userId: number) => users[userId]?.name ?? UNKNOWN_NAME;
+
+  const requestClose = () => {
+    attempt.current += 1;
+    onOpenChange(false);
+  };
 
   const submit = () => {
     const checked = checkHandoff(draft);
@@ -124,15 +255,29 @@ export function HandoffDialog({
 
     setSending(true);
     setRefusal(null);
+    const mine = attempt.current;
+
     actions.work.handOff(threadId, checked.body).then(
       () => {
+        if (attempt.current !== mine) {
+          return;
+        }
+
         setSending(false);
         onOpenChange(false);
         toast({ title: `Handed off to ${name}`, tone: "success" });
       },
       (error: Error) => {
+        if (attempt.current !== mine) {
+          return;
+        }
+
+        const found = serverHandoffErrors(error);
+
+        setFocus(handoffFocus(found.errors, found.alert));
         setSending(false);
-        setRefusal(error.message);
+        setErrors(found.errors);
+        setRefusal(found.alert);
       },
     );
   };
@@ -148,14 +293,18 @@ export function HandoffDialog({
   return (
     <Dialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => {
+        if (!next) {
+          requestClose();
+        }
+      }}
       title={`Hand off “${threadName}”`}
       description="Ownership moves to the receiving agent, the handoff is recorded in Work history, and the agent gets the context package below through its event feed."
       size="md"
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button variant="secondary" onClick={requestClose}>
             Cancel
           </Button>
           <Button
@@ -172,6 +321,7 @@ export function HandoffDialog({
       }
     >
       <form
+        ref={formRef}
         id={formId}
         className="work-handoff"
         noValidate
@@ -181,7 +331,7 @@ export function HandoffDialog({
         }}
       >
         {refusal === null ? null : (
-          <p className="work-form-refusal" role="alert">
+          <p className="work-form-refusal" role="alert" tabIndex={-1}>
             {refusal}
           </p>
         )}
@@ -219,6 +369,7 @@ export function HandoffDialog({
         </fieldset>
         <WorkTextArea
           label="Summary"
+          name="summary"
           placeholder="Where the work stands and what is next…"
           maxLength={SUMMARY_LIMIT}
           rows={4}
@@ -228,6 +379,7 @@ export function HandoffDialog({
         />
         <WorkTextArea
           label={`Links (one URL per line, up to ${HANDOFF_ITEM_LIMIT})`}
+          name="links"
           placeholder="https://example.com/spec"
           rows={2}
           value={draft.links}
@@ -236,6 +388,7 @@ export function HandoffDialog({
         />
         <WorkTextArea
           label={`Open questions (one per line, up to ${HANDOFF_ITEM_LIMIT})`}
+          name="openQuestions"
           placeholder="Which approach did we agree on?"
           rows={2}
           value={draft.openQuestions}

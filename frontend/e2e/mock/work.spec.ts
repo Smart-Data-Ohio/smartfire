@@ -6,6 +6,7 @@ import {
   matrix,
   openApp,
   openHeaderTool,
+  PHONE,
   ROOM_IDS,
   shot,
   type Theme,
@@ -333,6 +334,39 @@ test("the sidebar's Work destination opens the page, and it reloads when shown a
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
   await page.getByRole("link", { name: "Work" }).click();
   await expect(rows(page).filter({ hasText: AGENT_OWNED })).toHaveCount(0);
+});
+
+test("Back after cancelling an in-app handoff leaves the thread", async ({ page }) => {
+  await open(page, `r/${GENERAL}/t/${S4_WORK_IDS.done}`);
+
+  const thread = new RegExp(`/app/r/${GENERAL}/t/${S4_WORK_IDS.done}$`);
+
+  await expect(page).toHaveURL(thread);
+
+  const work = workSection(page);
+
+  await work.getByRole("button", { name: "Result, steps and history" }).click();
+  await work.getByRole("button", { name: "Hand off to an agent" }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/t/${S4_WORK_IDS.done}/handoff$`));
+
+  const dialog = page.getByRole("dialog", { name: /^Hand off/ });
+
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(page).toHaveURL(thread);
+  await expect(dialog).toHaveCount(0);
+
+  // The open pushed one entry. Cancelling steps back to the thread, so the next Back leaves it
+  // instead of landing on a second copy of the same thread.
+  await page.goBack();
+  await expect(page).not.toHaveURL(thread);
+});
+
+test("the classic handoff URL opens the dialog on its thread", async ({ page }) => {
+  await page.setViewportSize(PHONE);
+  await open(page, `t/${S4_WORK_IDS.done}/handoff`, "dark");
+
+  await expect(page).toHaveURL(new RegExp(`/app/r/${GENERAL}/t/${S4_WORK_IDS.done}/handoff$`));
+  await expect(page.getByRole("dialog", { name: /^Hand off/ })).toBeVisible();
 });
 
 test("arrow keys move between work rows", async ({ page }) => {
