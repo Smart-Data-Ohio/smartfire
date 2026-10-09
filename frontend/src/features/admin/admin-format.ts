@@ -3,7 +3,7 @@ import type { AuditLogFilters } from "../../gen/AuditLogFilters.ts";
 import type { HealthIssue } from "../../gen/HealthIssue.ts";
 import type { IntegrationsHealth } from "../../gen/IntegrationsHealth.ts";
 import type { Person } from "../../gen/Person.ts";
-import type { IconName } from "../../ui/icons/icon.tsx";
+import type { Section } from "../settings/settings-format.ts";
 
 /**
  * The admin sections, in the order the nav lists them; `path` is below `/app`. Everyone sees the
@@ -11,33 +11,72 @@ import type { IconName } from "../../ui/icons/icon.tsx";
  * administrators (`admin`).
  */
 export const ADMIN_SECTIONS = [
-  { key: "workspace", label: "Workspace", icon: "home", path: "/admin", admin: false },
-  { key: "people", label: "People", icon: "users", path: "/admin/people", admin: false },
-  { key: "icons", label: "Workspace icons", icon: "smile", path: "/admin/icons", admin: true },
-  { key: "bots", label: "Chat bots", icon: "bot", path: "/admin/bots", admin: true },
+  {
+    key: "workspace",
+    label: "Workspace",
+    icon: "home",
+    path: "/admin",
+    page: "/admin/workspace",
+    admin: false,
+    group: "workspace",
+  },
+  {
+    key: "people",
+    label: "People",
+    icon: "users",
+    path: "/admin/people",
+    admin: false,
+    group: "workspace",
+  },
+  {
+    key: "icons",
+    label: "Workspace icons",
+    icon: "smile",
+    path: "/admin/icons",
+    admin: true,
+    group: "content",
+  },
+  {
+    key: "bots",
+    label: "Chat bots",
+    icon: "bot",
+    path: "/admin/bots",
+    admin: true,
+    group: "content",
+  },
   {
     key: "slack",
     label: "Slack import",
     icon: "cloud-upload",
     path: "/admin/slack",
     admin: true,
+    group: "content",
   },
-  { key: "styles", label: "Custom styles", icon: "code", path: "/admin/styles", admin: true },
-  { key: "audit", label: "Audit log", icon: "file-text", path: "/admin/audit-log", admin: true },
+  {
+    key: "styles",
+    label: "Custom styles",
+    icon: "code",
+    path: "/admin/styles",
+    admin: true,
+    group: "content",
+  },
+  {
+    key: "audit",
+    label: "Audit log",
+    icon: "file-text",
+    path: "/admin/audit-log",
+    admin: true,
+    group: "health",
+  },
   {
     key: "integrations",
     label: "Integration health",
     icon: "link",
     path: "/admin/integrations",
     admin: true,
+    group: "health",
   },
-] as const satisfies readonly {
-  readonly key: string;
-  readonly label: string;
-  readonly icon: IconName;
-  readonly path: string;
-  readonly admin: boolean;
-}[];
+] as const satisfies readonly (Section & { readonly admin: boolean })[];
 
 /** The sections someone sees: all of them for an administrator, the open ones otherwise. */
 export function visibleSections(canAdminister: boolean) {

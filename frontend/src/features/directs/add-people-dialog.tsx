@@ -98,6 +98,7 @@ export default function AddPeopleDialog({ roomId, open, onOpenChange }: AddPeopl
       open={open}
       onOpenChange={onOpenChange}
       title={`Add people to ${facts?.displayName ?? "this conversation"}`}
+      dirty={selected.length > 0}
       description={description}
       footer={
         <>

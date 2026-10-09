@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
+import { PageHeader, type PageHeaderBack } from "../../ui/page-header.tsx";
 import "./destinations.css";
 
 interface PageFrameProps {
@@ -10,18 +11,34 @@ interface PageFrameProps {
   readonly meta?: ReactNode;
   /** Header controls at the end (a filter toggle). */
   readonly tools?: ReactNode;
+  /** The header's ⋯ menu items: on phones, the controls that don't fit beside the title. */
+  readonly overflow?: ReactNode;
   /** Sits under the header and doesn't scroll (tabs). */
   readonly toolbar?: ReactNode;
   /**
-   * On phones, a back chevron to the conversation list: for a page pushed from the list (Saved,
-   * Scheduled), not for one the tab bar selects (Activity).
+   * On phones, a back chevron: `true` to the conversation list, for a page pushed from the list
+   * (Saved, Scheduled), not for one the tab bar selects (Activity); or somewhere else (an event
+   * back to its room's calendar).
    */
-  readonly back?: boolean;
+  readonly back?: boolean | PageHeaderBack;
   readonly children: ReactNode;
 }
 
+const TO_CONVERSATIONS: PageHeaderBack = {
+  label: "Back to conversations",
+  link: (props) => <Link to="/" {...props} />,
+};
+
+function backOf(back: boolean | PageHeaderBack): PageHeaderBack | undefined {
+  if (back === true) {
+    return TO_CONVERSATIONS;
+  }
+
+  return back === false ? undefined : back;
+}
+
 /**
- * A workspace destination's page (Activity, Saved, Scheduled) in the main pane: a 48 px header
+ * A workspace destination's page (Activity, Saved, Scheduled) in the main pane: a page header
  * that lines up with a conversation's (glyph, title, meta, tools), an optional fixed toolbar and
  * the body. On phones it is a full screen with the room header's back affordance.
  */
@@ -30,27 +47,27 @@ export function PageFrame({
   icon,
   meta,
   tools,
+  overflow,
   toolbar,
   back = false,
   children,
 }: PageFrameProps) {
   return (
     <section className="page" aria-labelledby="page-title">
-      <header className="page-header">
-        {back ? (
-          <Link to="/" className="page-back" aria-label="Back to conversations">
-            <Icon name="chevron-left" size={20} />
-          </Link>
-        ) : null}
-        <div className="page-heading">
-          <Icon name={icon} size={18} className="page-heading-icon" />
-          <h1 id="page-title" className="page-title">
-            {title}
-          </h1>
-          {meta}
-        </div>
-        {tools === undefined ? null : <div className="page-tools">{tools}</div>}
-      </header>
+      <PageHeader
+        back={backOf(back)}
+        title={
+          <>
+            <Icon name={icon} size={18} className="page-heading-icon" />
+            <h1 id="page-title" className="page-title">
+              {title}
+            </h1>
+            {meta}
+          </>
+        }
+        actions={tools}
+        overflow={overflow}
+      />
       {toolbar === undefined ? null : <div className="page-toolbar">{toolbar}</div>}
       <div className="page-body">{children}</div>
     </section>

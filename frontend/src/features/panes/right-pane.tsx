@@ -17,7 +17,7 @@ import { usePendingVisible } from "../shell/route-pending.tsx";
 import { type PaneChrome, PaneChromeContext, PaneFrame } from "./pane-frame.tsx";
 import { PANE_TITLES, type RightPaneView, viewKey } from "./pane-selection.ts";
 import { PaneListSkeleton } from "./pane-states.tsx";
-import { useOpenPane } from "./pane-store.ts";
+import { useOpenPane, useOpenPaneFrom } from "./pane-store.ts";
 import { usePaneNavigation, usePhoneLayout } from "./use-right-pane.ts";
 import "./panes.css";
 
@@ -105,6 +105,8 @@ const loadFilesPane = () => loadForUpdate(() => import("./files-pane.tsx"));
 
 const loadStagePane = () => loadForUpdate(() => import("../huddle/stage-pane.tsx"));
 
+const loadDetailsPane = () => loadForUpdate(() => import("./details-pane.tsx"));
+
 const loadBoardAutomationsPane = () =>
   loadForUpdate(() => import("../boards/automations-pane.tsx"));
 
@@ -150,6 +152,12 @@ const StagePane = lazy(async () => {
   return { default: module.StagePane };
 });
 
+const DetailsPane = lazy(async () => {
+  const module = await loadDetailsPane();
+
+  return { default: module.DetailsPane };
+});
+
 const BoardAutomationsPane = lazy(async () => {
   const module = await loadBoardAutomationsPane();
 
@@ -175,6 +183,7 @@ function preloadPanes(): void {
       loadPinsPane,
       loadFilesPane,
       loadStagePane,
+      loadDetailsPane,
       loadBoardAutomationsPane,
     ]) {
       void loader().catch(() => undefined);
@@ -224,6 +233,8 @@ function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: Ri
           return <ThreadsPane roomId={roomId} />;
         case "stage":
           return <StagePane roomId={roomId} />;
+        case "details":
+          return <DetailsPane roomId={roomId} />;
         case "automations":
           return <BoardAutomationsPane roomId={roomId} />;
       }
@@ -241,7 +252,7 @@ function focusInto(pane: HTMLElement, phone: boolean): void {
 
 /**
  * Beside the conversation: the open thread (from the URL) or the open side pane (members, pins,
- * files, threads). A 400 px column on wide screens (drag its edge to resize), a sheet over the
+ * files, threads, the room's details). A 400 px column on wide screens (drag its edge to resize), a sheet over the
  * conversation below 1100 px, and a full-screen page on phones. It reveals with the panel-reveal
  * recipe (a page slide on phones), stays mounted through its exit, closes on Esc, and hands focus
  * back to whatever opened it.
@@ -251,6 +262,7 @@ export function RightPane({ roomId }: { readonly roomId: number }) {
   const { view } = navigation;
   const phone = usePhoneLayout();
   const underPane = useOpenPane(roomId);
+  const fromPane = useOpenPaneFrom();
   const headingId = useId();
   const presence = usePresence<HTMLElement>(view !== null);
   const [shown, setShown] = useState<RightPaneView | null>(view);
@@ -363,13 +375,17 @@ export function RightPane({ roomId }: { readonly roomId: number }) {
   }
 
   const overThread = shown.kind !== "pane" && underPane !== null;
+  // A pane opened from another (Members from the room's details) goes back to it.
+  const overPane = shown.kind === "pane" ? fromPane : null;
+  const returnsTo = overThread ? underPane : overPane;
 
-  const backLabel = overThread
-    ? `Back to ${PANE_TITLES[underPane].toLowerCase()}`
-    : `Back to ${kind === "direct" ? roomName : `#${roomName}`}`;
+  const backLabel =
+    returnsTo === null
+      ? `Back to ${kind === "direct" ? roomName : `#${roomName}`}`
+      : `Back to ${PANE_TITLES[returnsTo].toLowerCase()}`;
 
   const chrome: PaneChrome = {
-    onBack: phone || overThread ? closeTop : null,
+    onBack: phone || returnsTo !== null ? closeTop : null,
     backLabel,
     onClose: navigation.closeAll,
     phone,

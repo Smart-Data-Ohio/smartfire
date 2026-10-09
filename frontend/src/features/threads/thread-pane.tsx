@@ -230,6 +230,8 @@ function RenameDialog({
 }) {
   const current = useStore((state) => state.threads[threadId]?.name ?? "");
   const [name, setName] = useState(current);
+  // The name as this opening found it: someone renaming it meanwhile doesn't make the field dirty.
+  const [opening, setOpening] = useState(current);
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempts, setAttempts] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -240,6 +242,7 @@ function RenameDialog({
 
     if (open) {
       setName(current);
+      setOpening(current);
       setError(undefined);
     }
   }
@@ -274,6 +277,7 @@ function RenameDialog({
       onOpenChange={onOpenChange}
       title={`Rename ${noun}`}
       size="sm"
+      dirty={name !== opening}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

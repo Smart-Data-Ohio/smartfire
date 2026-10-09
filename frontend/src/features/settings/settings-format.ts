@@ -1,4 +1,5 @@
 /** The settings screens' words and the small rules behind their forms. */
+import type { LinkProps } from "@tanstack/react-router";
 import type { Connection } from "../../gen/Connection.ts";
 import type { IntegrationChange } from "../../gen/IntegrationChange.ts";
 import type { OooPreset } from "../../gen/OooPreset.ts";
@@ -15,24 +16,101 @@ import type { VoiceMode } from "../../gen/VoiceMode.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 
-/** The settings sections, in the order the nav lists them; `path` is below `/app/settings`. */
-export const SECTIONS = [
-  { key: "profile", label: "Profile", icon: "at", path: "/settings" },
-  { key: "status", label: "Status", icon: "smile", path: "/settings/status" },
-  { key: "notifications", label: "Notifications", icon: "bell", path: "/settings/notifications" },
-  { key: "rooms", label: "Rooms", icon: "hash", path: "/settings/rooms" },
-  { key: "appearance", label: "Appearance", icon: "sun", path: "/settings/appearance" },
-  { key: "calls", label: "Calls", icon: "headphones", path: "/settings/calls" },
-  { key: "security", label: "Security", icon: "shield", path: "/settings/security" },
-  { key: "sessions", label: "Sessions", icon: "lock", path: "/settings/sessions" },
-  { key: "devices", label: "Push devices", icon: "monitor", path: "/settings/devices" },
-  { key: "integrations", label: "Integrations", icon: "link", path: "/settings/integrations" },
-] as const satisfies readonly {
+/** Where a section link can go: a route below `/app`. */
+export type SectionPath = NonNullable<LinkProps["to"]>;
+
+/** A settings or workspace section, as its nav (and on phones, its list) shows it. */
+export interface Section {
   readonly key: string;
   readonly label: string;
   readonly icon: IconName;
-  readonly path: string;
-}[];
+  /** Where the nav links, below `/app`. */
+  readonly path: SectionPath;
+  /**
+   * The section's own page, for the one whose `path` is the root (`/settings`): on phones the
+   * root is the list of sections, so the first section is pushed over it from here instead.
+   */
+  readonly page?: SectionPath;
+  /** Pages under it that live at another path (the personal Slack import, under integrations). */
+  readonly under?: SectionPath;
+  /** Neighbours that share a group share a block in the phone list. */
+  readonly group: string;
+}
+
+/** The settings sections, in the order the nav lists them; `path` is below `/app/settings`. */
+export const SECTIONS = [
+  {
+    key: "profile",
+    label: "Profile",
+    icon: "at",
+    path: "/settings",
+    page: "/settings/profile",
+    group: "you",
+  },
+  { key: "status", label: "Status", icon: "smile", path: "/settings/status", group: "you" },
+  {
+    key: "notifications",
+    label: "Notifications",
+    icon: "bell",
+    path: "/settings/notifications",
+    group: "alerts",
+  },
+  { key: "rooms", label: "Rooms", icon: "hash", path: "/settings/rooms", group: "alerts" },
+  {
+    key: "appearance",
+    label: "Appearance",
+    icon: "sun",
+    path: "/settings/appearance",
+    group: "app",
+  },
+  { key: "calls", label: "Calls", icon: "headphones", path: "/settings/calls", group: "app" },
+  {
+    key: "security",
+    label: "Security",
+    icon: "shield",
+    path: "/settings/security",
+    group: "account",
+  },
+  {
+    key: "sessions",
+    label: "Sessions",
+    icon: "lock",
+    path: "/settings/sessions",
+    group: "account",
+  },
+  {
+    key: "devices",
+    label: "Push devices",
+    icon: "monitor",
+    path: "/settings/devices",
+    group: "account",
+  },
+  {
+    key: "integrations",
+    label: "Integrations",
+    icon: "link",
+    path: "/settings/integrations",
+    under: "/settings/slack",
+    group: "integrations",
+  },
+] as const satisfies readonly Section[];
+
+/** Sections in runs of the same group, in order: the phone list's blocks. */
+export function groupSections<S extends Section>(sections: readonly S[]): S[][] {
+  const groups: S[][] = [];
+
+  for (const section of sections) {
+    const last = groups.at(-1);
+
+    if (last !== undefined && last[0]?.group === section.group) {
+      last.push(section);
+    } else {
+      groups.push([section]);
+    }
+  }
+
+  return groups;
+}
 
 export type SectionKey = (typeof SECTIONS)[number]["key"];
 

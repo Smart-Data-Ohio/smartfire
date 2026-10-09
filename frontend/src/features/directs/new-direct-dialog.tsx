@@ -80,6 +80,7 @@ export default function NewDirectDialog({ open, onOpenChange }: NewDirectDialogP
       open={open}
       onOpenChange={onOpenChange}
       title="New message"
+      dirty={selected.length > 0}
       footer={
         <>
           <span className="directs-hint" aria-hidden="true">

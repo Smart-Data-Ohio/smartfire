@@ -1,10 +1,10 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { admin } from "../../sync/admin.ts";
-import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
+import { SectionsLayout } from "../settings/sections-layout.tsx";
 import { visibleSections } from "./admin-format.ts";
 import { AdminContext } from "./admin-parts.tsx";
 import "../panes/panes.css";
@@ -34,7 +34,8 @@ function AdminSkeleton() {
 /**
  * `/app/admin`: the classic account pages as sections (the workspace, its people, and for
  * administrators the workspace icons, custom styles, audit log and integration health), laid out
- * as the settings are. The workspace loads once; it says whether the viewer may administer.
+ * as the settings are (a list, then the section, on phones). The workspace loads once; it says
+ * whether the viewer may administer.
  */
 export function AdminView() {
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -67,42 +68,20 @@ export function AdminView() {
   const sections = visibleSections(state?.workspace.canAdminister ?? false);
 
   return (
-    <div className="settings">
-      <header className="settings-header">
-        <Link to="/" className="settings-back" aria-label="Back to conversations">
-          <Icon name="chevron-left" size={20} />
-        </Link>
-        <Icon name="home" size={18} className="settings-header-icon" />
-        <span className="settings-header-title text-title">Workspace</span>
-      </header>
-      <div className="settings-body">
-        <nav className="settings-nav" aria-label="Workspace sections">
-          <ul>
-            {sections.map((section) => (
-              <li key={section.key}>
-                <Link
-                  to={section.path}
-                  className="settings-nav-link"
-                  activeOptions={{ exact: true }}
-                  activeProps={{ "aria-current": "page" }}
-                >
-                  <Icon name={section.icon} size={16} />
-                  <span>{section.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="settings-content">
-          {load.status === "loading" ? <AdminSkeleton /> : null}
-          {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
-          {state === null ? null : (
-            <AdminContext value={state}>
-              <Outlet />
-            </AdminContext>
-          )}
-        </div>
-      </div>
-    </div>
+    <SectionsLayout
+      root="/admin"
+      title="Workspace"
+      icon="home"
+      navLabel="Workspace sections"
+      sections={sections}
+    >
+      {load.status === "loading" ? <AdminSkeleton /> : null}
+      {load.status === "error" ? <PaneError message={load.message} onRetry={reload} /> : null}
+      {state === null ? null : (
+        <AdminContext value={state}>
+          <Outlet />
+        </AdminContext>
+      )}
+    </SectionsLayout>
   );
 }

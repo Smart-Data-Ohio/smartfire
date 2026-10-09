@@ -53,7 +53,7 @@ import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
-import { parseBoardSearch } from "./lib/board-search.ts";
+import { parseRoomSearch } from "./lib/board-search.ts";
 import { isModuleResourceLoadError, loadForUpdate } from "./service-worker/update-required.ts";
 
 export type { BoardSearch } from "./lib/board-search.ts";
@@ -118,7 +118,7 @@ const homeRoute = createRoute({
 const roomRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "r/$roomId",
-  validateSearch: parseBoardSearch,
+  validateSearch: parseRoomSearch,
   params: {
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
@@ -261,9 +261,14 @@ const settingsRoute = createRoute({
   component: SettingsView,
 });
 
-/** The settings sections, each at `/app/settings/<path>` (the profile at `/app/settings`). */
+/**
+ * The settings sections, each at `/app/settings/<path>`. `/app/settings` shows the profile beside
+ * the nav; on phones it is the list of sections (the profile kept under it, hidden), and the
+ * profile is pushed at `…/profile`.
+ */
 const settingsSections = [
   createRoute({ getParentRoute: () => settingsRoute, path: "/", component: ProfileSection }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "profile", component: ProfileSection }),
   createRoute({ getParentRoute: () => settingsRoute, path: "status", component: StatusSection }),
   createRoute({
     getParentRoute: () => settingsRoute,
@@ -312,9 +317,14 @@ const adminRoute = createRoute({
   component: AdminView,
 });
 
-/** The admin sections, each at `/app/admin/<path>` (the workspace at `/app/admin`). */
+/**
+ * The admin sections, each at `/app/admin/<path>`. `/app/admin` shows the workspace beside the
+ * nav; on phones it is the list of sections (the workspace kept under it, hidden), and the
+ * workspace is pushed at `…/workspace`.
+ */
 const adminSections = [
   createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "workspace", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),

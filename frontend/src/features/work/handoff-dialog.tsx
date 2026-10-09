@@ -78,6 +78,7 @@ export function HandoffDialog({
   const users = useStore((state) => state.users);
   const ids = useId();
   const [draft, setDraft] = useState<HandoffDraft>(EMPTY_HANDOFF);
+  const [start, setStart] = useState<HandoffDraft>(EMPTY_HANDOFF);
   const [errors, setErrors] = useState<HandoffErrors>({});
   const [refusal, setRefusal] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -90,7 +91,10 @@ export function HandoffDialog({
     if (open) {
       const only = work.handoffReceivers.length === 1 ? work.handoffReceivers[0] : undefined;
 
-      setDraft({ ...EMPTY_HANDOFF, receiverAgentId: only?.agentId ?? null });
+      const fresh = { ...EMPTY_HANDOFF, receiverAgentId: only?.agentId ?? null };
+
+      setDraft(fresh);
+      setStart(fresh);
       setErrors({});
       setRefusal(null);
     }
@@ -135,6 +139,12 @@ export function HandoffDialog({
 
   const formId = `${ids}-form`;
 
+  const dirty =
+    draft.receiverAgentId !== start.receiverAgentId ||
+    draft.summary !== start.summary ||
+    draft.links !== start.links ||
+    draft.openQuestions !== start.openQuestions;
+
   return (
     <Dialog
       open={open}
@@ -142,6 +152,7 @@ export function HandoffDialog({
       title={`Hand off “${threadName}”`}
       description="Ownership moves to the receiving agent, the handoff is recorded in Work history, and the agent gets the context package below through its event feed."
       size="md"
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
