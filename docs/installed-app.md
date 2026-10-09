@@ -136,12 +136,7 @@ behaviour.
 Unit tests cover root registration, legacy activation metadata, request policy, no-store responses and cache
 retention. Rust tests cover selection, manifests, embedding and response headers.
 The production-preview Playwright suite exercises offline navigation, worker
-click handling and successive worker updates. It runs in the `Frontend` CI job;
-the separate `Frontend e2e` jobs continue to run the mock suite.
-The `pwa` Rust correctness job serves the embedded production build from a frozen
-seed and drives the real registration code through sign-in and both UI
-switches. It checks a persistent Chromium profile's root registration identity
-and native push subscription. Locally, Chromium created a subscription and kept
-its endpoint and keys through the legacy-to-canonical update, sign-in and both UI switches. A browser that
-cannot reach its push service reports that limitation and still checks the root
-registration's identity and scope; it does not substitute a fake subscription.
+click handling and successive worker updates. It runs in the first Frontend e2e
+shard beside the mock suite. The separate Rust PWA browser suite has been removed.
+A healthy deployment checks the public auth pages and the enabled SPA's offline
+shell, including their JS and CSS responses, without a browser.

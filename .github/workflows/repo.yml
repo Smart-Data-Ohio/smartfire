@@ -1,9 +1,7 @@
 name: Repository checks
 
-# Checks for everything outside the Rust port's own gates (rust.yml): the workflows
-# themselves, the deploy and backup scripts, the huddle gateway and media image, and the
-# dependency advisories for what production ships. Every job is a required status check, so
-# none has a paths filter: each one runs, and reports, on every pull request. They are cheap.
+# Required jobs report on every PR and main push. Each job skips its costly steps when
+# its inputs did not change. Only Dependency audit runs on the weekly schedule.
 
 on:
   push:
@@ -12,7 +10,7 @@ on:
     branches: [ main ]
   # Advisories are published against code that hasn't changed; catch them between pushes.
   schedule:
-    - cron: "17 6 * * *"
+    - cron: "17 6 * * 1"
 
 permissions: {}
 
@@ -25,18 +23,30 @@ concurrency:
 jobs:
   lint-actions:
     name: GitHub Actions audit
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
+      - name: Decide whether these checks are needed
+        id: scope
+        env:
+          PATTERN: '^\.github/'
+        run: python3 .github/scripts/check-paths.py
+
       - name: Run actionlint
+        if: steps.scope.outputs.run == 'true'
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
 
       - name: Run zizmor
+        if: steps.scope.outputs.run == 'true'
         uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
         with:
           advanced-security: false
@@ -47,29 +57,41 @@ jobs:
   # Tests that need a locally built image skip unless one is named.
   ops-scripts:
     name: Ops scripts
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       # test_workflows.py compares deploy-gcp.yml with an older revision of itself, so it needs
       # the history; blobs are fetched only when read.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
           persist-credentials: false
 
+      - name: Decide whether these checks are needed
+        id: scope
+        env:
+          PATTERN: '^(ops/|deploy/|\.github/workflows/)|^\.github/scripts/check-paths\.py$|^\.github/workflows/repo\.yml$'
+        run: python3 .github/scripts/check-paths.py
+
       - name: Test the release contract and workflows (ops)
+        if: steps.scope.outputs.run == 'true'
         run: python3 -m unittest discover -s ops/tests -p 'test_*.py' -v
 
       - name: Test the GCP deployment configuration (deploy/gcp)
+        if: steps.scope.outputs.run == 'true'
         run: python3 -m unittest discover -s deploy/gcp -p 'test_*.py' -v
 
       - name: Test the backup contract (deploy/backups)
+        if: steps.scope.outputs.run == 'true'
         run: python3 -m unittest discover -s deploy/backups/tests -p 'test_*.py' -v
 
   test_gateway:
     name: Huddle authorization gateway
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -77,26 +99,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
+      - name: Decide whether these checks are needed
+        id: scope
+        env:
+          PATTERN: '^(huddle-gateway/|deploy/huddles/)|^\.github/scripts/check-paths\.py$|^\.github/workflows/repo\.yml$'
+        run: python3 .github/scripts/check-paths.py
+
       - name: Set up Node
+        if: steps.scope.outputs.run == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install gateway dependencies
+        if: steps.scope.outputs.run == 'true'
         run: npm ci --ignore-scripts --prefix huddle-gateway
 
       - name: Test authorization and connection races
+        if: steps.scope.outputs.run == 'true'
         run: npm test --prefix huddle-gateway
 
       - name: Test the media container runtime
+        if: steps.scope.outputs.run == 'true'
         run: node --test deploy/huddles/runtime/*.test.mjs
 
       # Builds the media image exactly as the host does (compose.yaml, repository-root context
       # filtered by deploy/huddles/Dockerfile.dockerignore) without pushing it anywhere.
       - name: Build the huddle media image
+        if: steps.scope.outputs.run == 'true'
         run: |
           export HUDDLES_ENV_FILE="$PWD/deploy/huddles/env.example"
           docker compose -f deploy/huddles/compose.yaml config --quiet
@@ -120,9 +155,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
+      - name: Decide whether these checks are needed
+        id: scope
+        env:
+          PATTERN: '(^|/)Cargo\.(toml|lock)$|^huddle-gateway/package[^/]*\.json$|^frontend/pnpm-lock\.yaml$|^\.cargo/audit\.toml$|^\.github/scripts/check-paths\.py$|^\.github/workflows/repo\.yml$'
+        run: python3 .github/scripts/check-paths.py
+
       - name: Install cargo-audit
+        if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           dir="$RUNNER_TEMP/cargo-audit"
@@ -139,6 +183,7 @@ jobs:
       # cargo-audit's own fetch has no retry; clone the advisory database here, with retries,
       # and audit against that copy offline.
       - name: Fetch the RustSec advisory database
+        if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           db="$RUNNER_TEMP/advisory-db"
@@ -158,9 +203,11 @@ jobs:
       # Yanked-crate lookups query the crates.io index per crate and are left out: they
       # aren't advisories, and a registry hiccup shouldn't fail the check.
       - name: Audit Rust crates (Cargo.lock)
+        if: steps.scope.outputs.run == 'true'
         run: cargo-audit audit --no-fetch --no-yanked --db "$ADVISORY_DB" --file Cargo.lock
 
       - name: Audit huddle gateway runtime dependencies
+        if: steps.scope.outputs.run == 'true'
         working-directory: huddle-gateway
         run: |
           set -euo pipefail

@@ -1,37 +1,48 @@
 name: Publish image
 
-# Builds the production image (Dockerfile) on native runners and publishes it:
-#
-# - Artifact Registry (private, what deploy-gcp.yml deploys): the linux/amd64 job builds and
-#   pushes `rust-git-<full sha>` on every push to main (or a manual run on main with dry_run
-#   off). It depends on nothing else in this workflow: not the arm64 build, not GHCR.
-#   Repository tags are immutable, so a revision that's already published keeps its digest.
-# - GHCR (public, for self-hosters): once both builds are done, a linux/amd64 + linux/arm64
-#   index made from that same amd64 manifest (copied from Artifact Registry by digest) and the
-#   arm64 build. Tagged `main` on main, `sha-<short sha>` for every published commit, and on
-#   `v*` tag pushes the semver tags plus `latest` (not for prereleases); keyless cosign
-#   signature. A `v*` tag reuses its commit's `rust-git-<sha>` image and never writes to
-#   Artifact Registry.
-#
-# A manual run with dry_run (the default) builds both architectures and pushes nothing.
+# Build only the amd64 image deployed from Artifact Registry. Deploy calls this for its
+# resolved revision when the immutable rust-git-<sha> tag is absent. Existing tags keep
+# their digest. Manual runs default to a build without publishing.
 
 on:
-  push:
-    branches: [ main ]
-    tags: [ 'v*' ]
+  workflow_call:
+    inputs:
+      git_sha:
+        description: Full source SHA to build
+        type: string
+        required: true
+      environment:
+        description: GitHub environment holding the publisher configuration
+        type: string
+        required: true
+      dry_run:
+        type: boolean
+        default: false
+    outputs:
+      digest:
+        description: Published immutable image digest
+        value: ${{ jobs.amd64.outputs.digest }}
+      reference:
+        description: Published image repository and digest
+        value: ${{ jobs.amd64.outputs.reference }}
   workflow_dispatch:
     inputs:
+      git_sha:
+        description: Full source SHA (defaults to the dispatched revision)
+        type: string
+        default: ''
+      environment:
+        description: GitHub environment holding the publisher configuration
+        type: environment
+        default: production
       dry_run:
-        description: Build both architectures without pushing anything (always so off main and v* tags)
+        description: Build amd64 without publishing
         type: boolean
         default: true
 
-# Publishing runs are keyed by commit and never cancelled: every main commit keeps its
-# rust-git-<sha> tag, and runs for the same commit (a main push and its v* tag) take turns
-# instead of racing for the immutable tag. Each dry run is its own group, so it can neither
-# cancel nor be cancelled by a publishing run.
+# Serialize writes of one immutable tag. Dry runs never share a publishing group.
 concurrency:
-  group: publish-image-${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))) && github.sha || format('dry-run-{0}', github.run_id) }}
+  group: publish-image-${{ !inputs.dry_run && (inputs.git_sha || github.sha) || format('dry-run-{0}', github.run_id) }}
   cancel-in-progress: false
 
 permissions: {}
@@ -39,15 +50,15 @@ permissions: {}
 env:
   IMAGE_DESCRIPTION: "Smartfire is a free, open source workspace where people and AI agents work together: rooms, threads, huddles with voice, video and screen sharing, work tracking, agent API, and rich GitHub and X cards. Single-tenant; production-ready image with web app, background jobs, caching, file serving, and SSL."
   SOURCE_URL: https://github.com/${{ github.repository }}
-  GHCR: ghcr.io
   AR_REGISTRY: us-central1-docker.pkg.dev
-  # Pushes publish; a manual run publishes only when dry_run is off, from main or a v* tag.
-  PUBLISH: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) }}
+  # The workflow definition must be reviewed on main before it can publish.
+  PUBLISH: ${{ !inputs.dry_run && github.ref == 'refs/heads/main' }}
 
 jobs:
   amd64:
     name: Build linux/amd64 and publish to Artifact Registry
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     permissions:
       contents: read
       id-token: write
@@ -60,6 +71,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.git_sha || github.sha }}
           persist-credentials: false
 
       - name: Plan tag and version
@@ -67,26 +79,21 @@ jobs:
         shell: bash
         env:
           IMAGE: ${{ vars.GCP_IMAGE }}
-          REF: ${{ github.ref }}
-          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          SHA="$(git rev-parse HEAD)"
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::source must resolve to a full SHA"; exit 1; }
           if [ "$PUBLISH" = true ]; then
             test -n "$IMAGE" || { echo "::error::repository variable GCP_IMAGE is not set"; exit 1; }
           else
             IMAGE="${IMAGE:-campfire-dry-run}"
           fi
-          if [[ "$REF" == refs/tags/v* ]]; then
-            version="${REF#refs/tags/v}"
-          else
-            version="${SHA::7}"
-          fi
+          version="${SHA::7}"
           {
             echo "image=${IMAGE}"
             echo "tag=rust-git-${SHA}"
             echo "version=${version}"
-            # Only main writes the deployable tag; a v* tag reuses its commit's image.
-            echo "writes=$([ "$PUBLISH" = true ] && [ "$REF" = refs/heads/main ] && echo true || echo false)"
+            echo "sha=${SHA}"
           } >> "$GITHUB_OUTPUT"
           echo "Source revision ${SHA} -> ${IMAGE}:rust-git-${SHA} (publish=${PUBLISH})"
 
@@ -113,7 +120,6 @@ jobs:
         env:
           IMAGE: ${{ steps.plan.outputs.image }}
           TAG: ${{ steps.plan.outputs.tag }}
-          WRITES: ${{ steps.plan.outputs.writes }}
         run: |
           set -euo pipefail
           status=0
@@ -129,10 +135,6 @@ jobs:
           # permission error must fail loudly rather than collide with the immutable tag.
           if grep -Eqi 'not found|does not exist|NOT_FOUND' err.log; then
             rm -f err.log
-            if [ "$WRITES" != true ]; then
-              echo "::error::${TAG} isn't published; a v* tag reuses the image its commit got on main, so publish that commit from main first"
-              exit 1
-            fi
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "Tag ${TAG} is not published yet."
             exit 0
@@ -166,6 +168,7 @@ jobs:
             latest=false
           labels: |
             org.opencontainers.image.source=${{ env.SOURCE_URL }}
+            org.opencontainers.image.revision=${{ steps.plan.outputs.sha }}
 
       # provenance and sbom stay off so the tag is a single image manifest, the shape Artifact
       # Registry has always held and the release script inspects.
@@ -181,7 +184,7 @@ jobs:
             OCI_SOURCE=${{ env.SOURCE_URL }}
             OCI_DESCRIPTION=${{ env.IMAGE_DESCRIPTION }}
             APP_VERSION=${{ steps.plan.outputs.version }}
-            GIT_REVISION=${{ github.sha }}
+            GIT_REVISION=${{ steps.plan.outputs.sha }}
           platforms: linux/amd64
           push: ${{ env.PUBLISH == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -232,7 +235,7 @@ jobs:
           DIGEST: ${{ steps.digest.outputs.digest }}
           REFERENCE: ${{ steps.digest.outputs.reference }}
           REUSED: ${{ steps.existing.outputs.exists }}
-          SHA: ${{ github.sha }}
+          SHA: ${{ steps.plan.outputs.sha }}
         run: |
           set -euo pipefail
           if [ "$REUSED" = "true" ]; then
@@ -259,207 +262,3 @@ jobs:
             echo
             echo "Deploy it with the **Deploy to GCP** workflow using \`git_sha=${SHA}\`."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  arm64:
-    name: Build linux/arm64
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    # A cold fat-LTO release build; cached builds take a few minutes.
-    timeout-minutes: 120
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Log in to GHCR
-        if: env.PUBLISH == 'true'
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ env.GHCR }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Plan image name and version
-        id: plan
-        shell: bash
-        env:
-          REPOSITORY: ${{ github.repository }}
-          REF: ${{ github.ref }}
-          SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [[ "$REF" == refs/tags/v* ]]; then
-            version="${REF#refs/tags/v}"
-          else
-            version="${SHA::7}"
-          fi
-          {
-            echo "canonical=${GHCR}/${REPOSITORY,,}"
-            echo "version=${version}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Extract Docker metadata (labels)
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ steps.plan.outputs.canonical }}
-          labels: |
-            org.opencontainers.image.source=${{ env.SOURCE_URL }}
-
-      # Pushed by digest only; the GHCR job tags the multi-arch index.
-      - name: Build (linux/arm64)
-        id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: Dockerfile
-          build-args: |
-            CARGO_BUILD_JOBS=4
-            OCI_SOURCE=${{ env.SOURCE_URL }}
-            OCI_DESCRIPTION=${{ env.IMAGE_DESCRIPTION }}
-            APP_VERSION=${{ steps.plan.outputs.version }}
-            GIT_REVISION=${{ github.sha }}
-          platforms: linux/arm64
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ steps.plan.outputs.canonical }},push-by-digest=true,name-canonical=true,push=${{ env.PUBLISH }}
-          cache-from: type=gha,scope=rust-image-arm64
-          cache-to: ${{ env.PUBLISH == 'true' && 'type=gha,scope=rust-image-arm64,mode=max' || '' }}
-          sbom: false
-          provenance: false
-
-      - name: Attest image provenance (arm64)
-        if: env.PUBLISH == 'true'
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ steps.plan.outputs.canonical }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: false
-
-  ghcr:
-    name: Publish multi-arch image to GHCR
-    needs: [ amd64, arm64 ]
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    timeout-minutes: 20
-    steps:
-      # Read-only use of the publisher identity: the amd64 manifest is copied from Artifact
-      # Registry by digest. Only docker login uses it, through the access token, so no
-      # credentials file is written.
-      - name: Authenticate to Google Cloud
-        id: auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
-        with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_IMAGE_PUBLISHER_SA }}
-          token_format: access_token
-          create_credentials_file: false
-
-      - name: Set up Docker Buildx (for imagetools)
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
-
-      - name: Log in to Artifact Registry
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ env.AR_REGISTRY }}
-          username: oauth2accesstoken
-          password: ${{ steps.auth.outputs.access_token }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ${{ env.GHCR }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute canonical image name (lowercase)
-        id: vars
-        shell: bash
-        env:
-          REPOSITORY: ${{ github.repository }}
-        run: echo "canonical=${GHCR}/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Compute tags
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ steps.vars.outputs.canonical }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,format=short,prefix=sha-
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
-          flavor: |
-            latest=false
-
-      - name: Create the multi-arch index
-        id: index
-        shell: bash
-        env:
-          CANONICAL: ${{ steps.vars.outputs.canonical }}
-          TAGS: ${{ steps.meta.outputs.tags }}
-          AMD64_REFERENCE: ${{ needs.amd64.outputs.reference }}
-          AMD64_DIGEST: ${{ needs.amd64.outputs.digest }}
-          ARM64_DIGEST: ${{ needs.arm64.outputs.digest }}
-        run: |
-          set -euo pipefail
-          for digest in "$AMD64_DIGEST" "$ARM64_DIGEST"; do
-            printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$' \
-              || { echo "::error::missing a build digest"; exit 1; }
-          done
-          [ "$AMD64_REFERENCE" = "${AMD64_REFERENCE%@*}@${AMD64_DIGEST}" ] \
-            || { echo "::error::unexpected amd64 reference ${AMD64_REFERENCE}"; exit 1; }
-          tags=()
-          while IFS= read -r tag; do
-            [ -n "$tag" ] && tags+=(--tag "$tag")
-          done <<< "$TAGS"
-          [ "${#tags[@]}" -gt 0 ] || { echo "::error::no tags to publish"; exit 1; }
-          printf 'Publishing %s\n' "$TAGS"
-          docker buildx imagetools create "${tags[@]}" \
-            --annotation "index:org.opencontainers.image.description=${IMAGE_DESCRIPTION}" \
-            "$AMD64_REFERENCE" "${CANONICAL}@${ARM64_DIGEST}"
-          first="$(head -n1 <<< "$TAGS")"
-          raw="$(docker buildx imagetools inspect "$first" --raw)"
-          digest="$(docker buildx imagetools inspect "$first" --format '{{json .Manifest}}' | jq -r .digest)"
-          printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$' \
-            || { echo "::error::could not resolve the index digest of $first"; exit 1; }
-          # The index must hold the very manifests that were built.
-          jq -e --arg a "$AMD64_DIGEST" --arg r "$ARM64_DIGEST" \
-            '[.manifests[].digest] | sort == ([$a, $r] | sort)' <<< "$raw" > /dev/null \
-            || { echo "::error::the published index doesn't reference the built manifests"; exit 1; }
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          docker buildx imagetools inspect "${CANONICAL}@${digest}"
-
-      - name: Attest image provenance (amd64 on GHCR)
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ steps.vars.outputs.canonical }}
-          subject-digest: ${{ needs.amd64.outputs.digest }}
-          push-to-registry: false
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-
-      # Every tag names the same index, so one signature by digest covers them all.
-      - name: Cosign sign the index (keyless OIDC)
-        shell: bash
-        env:
-          REFERENCE: ${{ steps.vars.outputs.canonical }}@${{ steps.index.outputs.digest }}
-        run: cosign sign --yes "$REFERENCE"

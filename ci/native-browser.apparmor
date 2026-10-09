@@ -1,7 +1,0 @@
-# Docker applies this profile only to the messaging job's CI container.
-# Ubuntu's unconfined fallback denies capabilities inside user namespaces.
-abi <abi/4.0>,
-include <tunables/global>
-profile campfire-ci-native flags=(unconfined) {
-  userns,
-}

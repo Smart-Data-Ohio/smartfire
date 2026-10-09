@@ -1,8 +1,7 @@
 # The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
 # plus the parts of web/ that crates/assets/build.rs embeds, frontend/'s sources (the SPA that
 # crates/spa embeds, built in the image), the ops/ hooks it installs and, for the CI toolchain
-# stage, rust-toolchain.toml. ci/Dockerfile (the CI correctness prerequisites)
-# builds from the same context and copies from ci/. Everything else stays out.
+# stage, rust-toolchain.toml. Everything else stays out.
 # deploy/huddles/Dockerfile has its own Dockerfile.dockerignore.
 
 /.git

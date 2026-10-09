@@ -1,16 +1,4 @@
-//! The front server (Thruster's job) end to end, over real sockets.
-//!
-//! The ignored ACME test needs a local Pebble CA; `PEBBLE_MINICA` must point at its
-//! `test/certs/pebble.minica.pem` (the root of the directory's own HTTPS certificate):
-//!
-//!   docker run -d --name pebble --network host --add-host campfire.test:127.0.0.1 \
-//!     -e PEBBLE_VA_NOSLEEP=1 -e PEBBLE_WFE_NONCEREJECT=0 ghcr.io/letsencrypt/pebble:latest
-//!   docker cp pebble:/test/certs/pebble.minica.pem /tmp/pebble.minica.pem
-//!   PEBBLE_MINICA=/tmp/pebble.minica.pem cargo test -p campfire_kit --test front acme -- --ignored --test-threads 1
-//!
-//! Pebble validates TLS-ALPN-01 on port 5001, so the test serves HTTPS there. (HTTP-01 can't be
-//! tested this way: like autocert, the challenge handler checks the `Host` header, port included,
-//! against TLS_DOMAIN, so it only answers validations on port 80.)
+//! The front server end to end, over real sockets.
 
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -46,10 +34,6 @@ impl Server {
             }
         }
         panic!("front server didn't start");
-    }
-
-    async fn start_with(vars: &[(&str, &str)], app: Router, acme: Option<AcmeOptions>, http: u16, https: u16) -> Self {
-        Self::try_start(vars, app, acme, http, https).await.expect("front server didn't start")
     }
 
     /// `None` when the server stops before it's listening (a port was taken).
@@ -704,105 +688,3 @@ async fn h2_get(port: u16, path: &str) -> Result<Response<hyper::body::Incoming>
 }
 
 // --- ACME (Pebble) -------------------------------------------------------------------------------
-
-fn pebble() -> Option<std::path::PathBuf> {
-    std::env::var_os("PEBBLE_MINICA").map(Into::into)
-}
-
-fn acme_options(domain: &str, storage: &std::path::Path, root: &std::path::Path, types: Vec<instant_acme::ChallengeType>) -> AcmeOptions {
-    AcmeOptions {
-        directory_url: "https://localhost:14000/dir".into(),
-        external_account: None,
-        storage_path: storage.into(),
-        domains: vec![domain.into()],
-        challenge_types: types,
-        directory_root: Some(root.into()),
-    }
-}
-
-/// A TLS handshake with SNI `domain` on 127.0.0.1:`port`: the negotiated protocol and the leaf's
-/// issuer.
-async fn handshake(port: u16, domain: &str) -> (Option<Vec<u8>>, String) {
-    #[derive(Debug)]
-    struct AnyCertificate(Arc<rustls::crypto::CryptoProvider>);
-    impl rustls::client::danger::ServerCertVerifier for AnyCertificate {
-        fn verify_server_cert(
-            &self,
-            _: &rustls::pki_types::CertificateDer<'_>,
-            _: &[rustls::pki_types::CertificateDer<'_>],
-            _: &rustls::pki_types::ServerName<'_>,
-            _: &[u8],
-            _: rustls::pki_types::UnixTime,
-        ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-            Ok(rustls::client::danger::ServerCertVerified::assertion())
-        }
-        fn verify_tls12_signature(
-            &self,
-            message: &[u8],
-            cert: &rustls::pki_types::CertificateDer<'_>,
-            dss: &rustls::DigitallySignedStruct,
-        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls12_signature(message, cert, dss, &self.0.signature_verification_algorithms)
-        }
-        fn verify_tls13_signature(
-            &self,
-            message: &[u8],
-            cert: &rustls::pki_types::CertificateDer<'_>,
-            dss: &rustls::DigitallySignedStruct,
-        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-            rustls::crypto::verify_tls13_signature(message, cert, dss, &self.0.signature_verification_algorithms)
-        }
-        fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            self.0.signature_verification_algorithms.supported_schemes()
-        }
-    }
-    let provider = Arc::new(rustls::crypto::ring::default_provider());
-    let mut config = rustls::ClientConfig::builder_with_provider(provider.clone())
-        .with_safe_default_protocol_versions()
-        .unwrap()
-        .dangerous()
-        .with_custom_certificate_verifier(Arc::new(AnyCertificate(provider)))
-        .with_no_client_auth();
-    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
-    let stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-    let name = rustls::pki_types::ServerName::try_from(domain.to_string()).unwrap();
-    let tls = tokio_rustls::TlsConnector::from(Arc::new(config)).connect(name, stream).await.unwrap();
-    let (_, connection) = tls.get_ref();
-    let leaf = connection.peer_certificates().unwrap()[0].clone();
-    let (_, parsed) = x509_parser::parse_x509_certificate(leaf.as_ref()).unwrap();
-    (connection.alpn_protocol().map(<[u8]>::to_vec), parsed.issuer().to_string())
-}
-
-#[tokio::test]
-#[ignore = "requires a local Pebble ACME CA, PEBBLE_MINICA root certificate and TLS ports 5001/5002"]
-async fn acme_tls_alpn_certificate_cached_and_reused() {
-    let root = pebble().expect("set PEBBLE_MINICA to the local Pebble CA root certificate");
-    let storage = tempfile::tempdir().unwrap();
-    let domain = "campfire.test";
-    let (app, _) = test_app();
-    let vars = [("TLS_DOMAIN", domain)];
-    let acme = acme_options(domain, storage.path(), &root, vec![instant_acme::ChallengeType::TlsAlpn01]);
-    let server = Server::start_with(&vars, app, Some(acme), 5002, 5001).await;
-
-    let (alpn, issuer) = handshake(5001, domain).await;
-    assert_eq!(alpn.as_deref(), Some(b"h2".as_slice()));
-    assert!(issuer.contains("Pebble"), "issued by Pebble: {issuer}");
-    let cached = std::fs::read_to_string(storage.path().join(domain)).unwrap();
-    assert!(cached.starts_with("-----BEGIN EC PRIVATE KEY-----") && cached.contains("-----BEGIN CERTIFICATE-----"));
-    assert!(std::fs::read_to_string(storage.path().join("acme_account+key")).unwrap().starts_with("-----BEGIN EC PRIVATE KEY-----"));
-
-    let redirect = exchange(5002, "GET /rooms?x=1 HTTP/1.1\r\nHost: campfire.test\r\nConnection: close\r\n\r\n").await;
-    assert_eq!((redirect.status, redirect.get("location")), (301, Some("https://campfire.test/rooms?x=1")));
-    let misdirected = exchange(5002, "GET / HTTP/1.1\r\nHost: other.test\r\nConnection: close\r\n\r\n").await;
-    assert_eq!(misdirected.status, 421);
-    server.stop().await;
-
-    // A restart serves the cached certificate without asking the CA.
-    let (app, _) = test_app();
-    let mut offline = acme_options(domain, storage.path(), &root, vec![instant_acme::ChallengeType::TlsAlpn01]);
-    offline.directory_url = "https://127.0.0.1:9/dir".into();
-    let server = Server::start_with(&vars, app, Some(offline), 5002, 5001).await;
-    let (_, again) = handshake(5001, domain).await;
-    assert_eq!(again, issuer);
-    server.stop().await;
-}

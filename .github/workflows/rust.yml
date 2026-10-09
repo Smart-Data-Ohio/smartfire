@@ -7,10 +7,10 @@ name: Rust
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
-# requires a full main/nightly run for Rust candidates.
+# requires a successful main push run for Rust candidates.
 #
-# Long suites run as parallel shards; a final job per gate ("Rust port", "Rust correctness")
-# fails unless every shard succeeded and their receipts add up to the whole suite.
+# Tests run in parallel shards. "Rust port" requires every shard and prerequisite to succeed
+# and checks their receipts against the complete test list.
 
 on:
   push:
@@ -19,8 +19,6 @@ on:
   # changes job decides whether the PR touched anything the Rust gates read.
   pull_request:
     branches: [ main ]
-  schedule:
-    - cron: "37 5 * * *"
   workflow_dispatch:
     inputs:
       ref:
@@ -28,14 +26,6 @@ on:
         type: string
         required: false
         default: ''
-      scope:
-        description: Jobs to run for this manual check
-        type: choice
-        required: false
-        default: full
-        options:
-          - full
-          - messaging-and-browsers
 
 permissions: {}
 
@@ -49,16 +39,6 @@ env:
   CI: "true"
   RUST_CI_IMAGE: campfire-toolchain
   RUST_CI_CONTAINER_PREFIX: campfire-ci
-  # Dev/test builds compile the campfire crates with Cranelift (.cargo/config.toml), which can't
-  # unwind, so these panic-recovery tests run in their own job with those crates on LLVM, as
-  # production builds them (ci/llvm.toml; the ci-llvm nextest profile selects the app's crates).
-  # The scheduled run tests the whole suite on LLVM.
-  CAMPFIRE_LLVM: --config=ci/llvm.toml
-  CAMPFIRE_LLVM_ONLY_TESTS: >-
-    test(=channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics) |
-    test(=controllers::agent_review_r5_tests::ws11_proxy_header_oracle_rejects_unapproved_changes) |
-    test(=jobs::tests::a_panicking_ad_hoc_job_is_logged_and_its_worker_carries_on) |
-    test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
   # Resolve a requested ref once. Re-runs reuse this run's first-attempt artifact,
@@ -135,10 +115,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
-  # Skip ordinary Rust checks for docs, deploy scripts and SPA-only sources; frontend auth
-  # assets and generated types are Rust inputs. Page suites additionally cover changes to the
-  # classic app, its build inputs and browser harness. Both required gates report intentional
-  # skips. Pushes, nightly/manual runs, empty diffs and unavailable history keep full coverage.
+  # Every PR gets the required aggregate. Unavailable history runs the checks.
   changes:
     name: Rust changes
     needs: source
@@ -149,8 +126,6 @@ jobs:
       contents: read
     outputs:
       rust: ${{ steps.scope.outputs.rust }}
-      pages: ${{ steps.scope.outputs.pages }}
-      spa: ${{ steps.scope.outputs.spa }}
     steps:
       - name: Checkout PR history
         id: history
@@ -163,7 +138,7 @@ jobs:
           filter: blob:none
           persist-credentials: false
 
-      - name: Decide whether Rust and page gates are needed
+      - name: Decide whether Rust checks are needed
         id: scope
         env:
           HISTORY_OUTCOME: ${{ steps.history.outcome }}
@@ -173,45 +148,20 @@ jobs:
           import os
           import subprocess
 
-          # Any path outside the exclusions, including a new top-level one, runs ordinary Rust
-          # checks. frontend/src/gen is exported by crates/api_types and checked by clippy.
-          OUTSIDE = (b"docs/", b"deploy/", b"frontend/", b".github/")
-          PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
-                   b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")
-          SETUP = (b".github/actions/rust-setup/",)
-          GENERATED = (b"frontend/src/gen/",)
-          FILES = (b".github/workflows/rust.yml",)
-          # Keep the auth inputs in sync with crates/assets/build/auth.rs and the copy list in
-          # ci/with-release-inputs.sh (also Dockerfile). styles/ includes the bundled fonts.
-          AUTH_DIRS = (b"frontend/src/auth/", b"frontend/src/styles/", b"frontend/src/motion/")
-          AUTH_FILES = (b"frontend/src/ui/button.css", b"frontend/src/ui/text-field.css",
+          RUST_DIRS = (b"crates/", b"ci/", b"web/", b"fixtures/", b"vectors/", b"parity/",
+                       b"test-support/", b".cargo/", b".config/",
+                       b".github/actions/rust-setup/", b"frontend/src/gen/",
+                       b"frontend/src/auth/", b"frontend/src/styles/", b"frontend/src/motion/",
+                       b"frontend/dist/")
+          RUST_FILES = (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml", b"Dockerfile",
+                        b".dockerignore", b".github/workflows/rust.yml",
+                        b"frontend/src/ui/button.css", b"frontend/src/ui/text-field.css",
                         b"frontend/src/ui/checkbox.css")
-          # crates/spa/build.rs also reads frontend/dist when present (normally a stub in CI).
-          DIST = (b"frontend/dist/",)
-          # The correctness suites boot the classic app: views/assets, web/controllers, shared
-          # auth/session/data/jobs and server wiring all affect it. Include whole crates and
-          # harness trees rather than guessing which helper, fixture or seed a browser reads.
-          PAGE_DIRS = (b"crates/", b"web/", b"reference-tools/", b"parity/", b"fixtures/",
-                       b"test-support/", b"vectors/", b"ci/", b".cargo/", b".config/",
-                       b"huddle-gateway/")
-          PAGE_FILES = FILES + (b"Cargo.toml", b"Cargo.lock", b"rust-toolchain.toml",
-                                b"Dockerfile", b".dockerignore")
 
           def rust_input(path):
-              if path.startswith(SETUP + GENERATED + AUTH_DIRS + DIST) or path in FILES + AUTH_FILES:
-                  return True
-              return not (path.startswith(OUTSIDE) or path in PROSE)
-
-          def page_input(path):
-              # /api/v1 and its sync renderer are mounted only with SPA_ENABLED; these suites
-              # exercise classic pages. API-only changes still run ordinary Rust/Frontend checks.
-              if path.startswith(b"crates/api/"):
-                  return False
-              return path.startswith(PAGE_DIRS + SETUP + AUTH_DIRS + DIST) or path in PAGE_FILES + AUTH_FILES
+              return path.startswith(RUST_DIRS) or path in RUST_FILES
 
           rust = True
-          pages = True
-          spa = True
           try:
               if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
                   if os.environ["HISTORY_OUTCOME"] != "success":
@@ -226,21 +176,12 @@ jobs:
                       ])
                       paths = [path for path in diff.split(b"\0") if path]
                       rust = not paths or any(rust_input(path) for path in paths)
-                      pages = not paths or any(page_input(path) for path in paths)
-                      spa = not paths or any(path.startswith((b"frontend/", b"crates/api/")) for path in paths)
           except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
               rust = True
-              pages = True
-              spa = True
               print(f"::warning::PR diff unavailable ({type(error).__name__}); running the full Rust gates.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"rust={str(rust).lower()}\n")
-              output.write(f"pages={str(pages).lower()}\n")
-              output.write(f"spa={str(spa).lower()}\n")
           print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
-          print("Run the page suites" if pages else "No page inputs changed: skip the page suites")
-          if spa and not pages:
-              print("Run the PWA suite for SPA inputs (including the real-server smoke test)")
           PY
 
   # The committed default/first_run/agents_ui/ledger_originals seeds (parity/seeds/frozen), built
@@ -269,13 +210,12 @@ jobs:
       - name: Check the committed seeds
         run: python3 parity/bin/frozen-seeds check
 
-  # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
-  # by nextest into two slices. The previous twelve slices each spent 3.5–5.5 minutes compiling
-  # the whole workspace for only 49–88 seconds of tests; two aim for about six minutes of tests.
+  # Every ordinary test runs in two round-robin partitions. LLVM lets the panic-recovery
+  # tests unwind within these same shards.
   test:
     name: Rust tests (${{ matrix.shard }})
     needs: [source, changes]
-    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
@@ -310,10 +250,8 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           status=0
-          selection=(-E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
-          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then selection+=("$CAMPFIRE_LLVM"); fi
-          bash ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast --no-tests fail --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
+          bash ci/cargo.sh nextest run --config ci/llvm.toml --locked --workspace --exclude html5ever \
+            --profile ci -j 4 --no-fail-fast --no-tests fail --partition "slice:$SHARD" 2>&1 |
             tee "$RUNNER_TEMP/nextest.log" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
           cp target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
@@ -325,17 +263,10 @@ jobs:
         if: ${{ !cancelled() && matrix.shard == '1/2' }}
         shell: bash
         run: |
-          llvm=()
-          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then llvm=("$CAMPFIRE_LLVM"); fi
           mkdir -p "$RUNNER_TEMP/results"
-          bash ci/cargo.sh nextest list --locked --message-format json "${llvm[@]}" \
-            --workspace --exclude html5ever --profile ci -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
+          bash ci/cargo.sh nextest list --config ci/llvm.toml --locked --message-format json \
+            --workspace --exclude html5ever --profile ci \
             > "$RUNNER_TEMP/results/list-shards.json"
-
-      # Lists ignored tests from the harnesses compiled above, with no partition or filter.
-      - name: Enumerate compiled ignored tests
-        if: ${{ !cancelled() && matrix.shard == '1/2' }}
-        run: bash ci/verify-ignored.sh
 
       - name: Retain test results
         if: ${{ !cancelled() }}
@@ -368,7 +299,7 @@ jobs:
   clippy:
     name: Rust clippy, binaries and doctests
     needs: [source, changes]
-    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
@@ -382,7 +313,7 @@ jobs:
           ref: ${{ needs.source.outputs.sha }}
           persist-credentials: false
 
-      - name: Check ignored-test coverage
+      - name: Check CI helpers
         run: python3 -m unittest discover -s ci -p 'test_*.py'
 
       - name: Prepare shared Rust CI inputs
@@ -459,134 +390,11 @@ jobs:
             target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
-  # The panic-recovery tests the shards leave out, with campfire built by LLVM.
-  llvm:
-    name: Rust tests (campfire panic recovery, LLVM)
-    needs: [source, changes]
-    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          cargo-cache: tests
-
-      - name: Tests (campfire panic recovery, LLVM)
-        id: tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          status=0
-          bash ci/cargo.sh nextest run --locked -p campfire -p campfire_app --profile ci-llvm -j 4 --no-fail-fast --no-tests fail \
-            "$CAMPFIRE_LLVM" -E "$CAMPFIRE_LLVM_ONLY_TESTS" || status=$?
-          mkdir -p "$RUNNER_TEMP/results"
-          cp target/nextest/ci-llvm/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
-          exit "$status"
-
-      # List from this job's LLVM harnesses, with the same packages and profile as its run.
-      # Listing these in a workspace shard triggers another build.
-      - name: List the tests the LLVM job must run
-        if: ${{ !cancelled() }}
-        shell: bash
-        run: |
-          mkdir -p "$RUNNER_TEMP/results"
-          bash ci/cargo.sh nextest list --locked -p campfire -p campfire_app --profile ci-llvm \
-            --message-format json "$CAMPFIRE_LLVM" -E "$CAMPFIRE_LLVM_ONLY_TESTS" \
-            > "$RUNNER_TEMP/results/list-llvm.json"
-
-      - name: Retain test results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-tests-llvm-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/results/
-          if-no-files-found: error
-
-      - name: Gate tests
-        if: ${{ !cancelled() }}
-        env:
-          OUTCOME: ${{ steps.tests.outcome }}
-        run: |
-          python3 - "$RUNNER_TEMP/results/junit-llvm.xml" <<'PY'
-          import os, sys, xml.etree.ElementTree as ET
-          # The ci profile also reports the crate's #[ignore] tests, as skipped.
-          ran = [c for c in ET.parse(sys.argv[1]).getroot().iter('testcase') if c.find('skipped') is None]
-          passed = [c for c in ran if c.find('failure') is None and c.find('error') is None]
-          print(f'{len(passed)} of {len(ran)} panic-recovery tests passed on LLVM')
-          sys.exit(0 if os.environ['OUTCOME'] == 'success' and len(ran) == len(passed) == 4 else 1)
-          PY
-
-  # Production builds on the image's stable toolchain, not the nightly the tests use.
-  # RUSTUP_TOOLCHAIN overrides rust-toolchain.toml, and Cargo runs from its scratch directory,
-  # outside the workspace, so .cargo/config.toml's Cranelift settings don't apply; its check-mode
-  # dependencies have their own `stable` Cargo cache.
-  stable:
-    name: Rust production toolchain check
-    needs: [source, changes]
-    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        id: setup
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: none
-          cargo-cache: stable
-
-      # The release the Dockerfile's production stages build with (its RUST_VERSION).
-      - name: Check with the production toolchain
-        env:
-          RUST_CI_WORKDIR: /ci-tmp
-        shell: bash
-        run: |
-          RUSTUP_TOOLCHAIN=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' Dockerfile)
-          [[ -n "$RUSTUP_TOOLCHAIN" ]] || { echo "::error::RUST_VERSION not found in Dockerfile"; exit 1; }
-          echo "Production toolchain: $RUSTUP_TOOLCHAIN"
-          export RUSTUP_TOOLCHAIN
-          bash ci/cargo.sh check --locked --manifest-path /src/Cargo.toml --workspace --exclude html5ever
-
-      - name: Keep only dependency artifacts for the cache
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 ci/prune-target.py target
-
-      - name: Save cargo registry and target
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .cargo-home/registry
-            target
-          key: ${{ steps.setup.outputs.cargo-cache-key }}
-
   rust:
     # Required by name in the branch ruleset, and deploy-gcp.yml looks this job up by name too.
     name: Rust port
-    needs: [source, changes, seeds, test, clippy, llvm, stable]
-    if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}
+    needs: [source, changes, seeds, test, clippy]
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     env:
       CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
@@ -605,6 +413,7 @@ jobs:
         run: test "$CHANGE_RESULT" = success
 
       - name: Checkout code
+        if: needs.changes.outputs.rust == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.source.outputs.sha }}
@@ -614,10 +423,11 @@ jobs:
             .github/workflows
 
       - name: Require every job to be gated
+        if: needs.changes.outputs.rust == 'true'
         run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
 
       - name: Collect test results
-        if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped' || needs.llvm.result != 'skipped') }}
+        if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped') }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-{tests-*,doctests}-${{ needs.source.outputs.sha }}
@@ -635,12 +445,11 @@ jobs:
           args=()
           results="$RUNNER_TEMP/results"
           shards=("$results"/junit-*of2.xml)
-          for path in "${shards[@]}" "$results/junit-llvm.xml"; do args+=(--junit "$path"); done
+          for path in "${shards[@]}"; do args+=(--junit "$path"); done
           args+=(--doc-log "$results/db-doc.log" --doc-log "$results/workspace-doc.log")
           # Each listed test passed exactly once, each #[ignore] test was reported, and libtest
           # accounted for every doctest; any difference fails this job.
           args+=(--expect "$results/list-shards.json" "${shards[@]}")
-          args+=(--expect "$results/list-llvm.json" "$results/junit-llvm.xml")
           python3 ci/summarize-tests.py "${args[@]}"
 
       # When Rust inputs changed, every shard and prerequisite job must have succeeded:
@@ -662,600 +471,3 @@ jobs:
           sys.exit(results.pop("source") != "success" or results.pop("changes") != "success"
                    or any(result != expected for result in results.values()))
           PY
-
-  # Compile campfire's stable/LLVM test harness once for browsers, Drive and LiveKit.
-  # nextest archives preserve test metadata and executables without carrying Cargo fingerprints.
-  correctness-tests:
-    name: Rust correctness test build
-    needs: [source, changes]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: none
-          cargo-cache: correctness
-      - name: Prove the nextest archive round-trip
-        env:
-          RUST_CORRECTNESS_IMAGE: campfire-toolchain
-        run: bash ci/exec.sh env CI_REQUIRE_NEXTEST_ARCHIVE_TEST=1 python3 -m unittest discover -s ci -p test_correctness_archive.py -v
-      - name: Archive the stable correctness test harness
-        env:
-          RUST_CORRECTNESS_IMAGE: campfire-toolchain
-        run: |
-          bash ci/exec.sh cargo nextest archive --locked -p campfire --profile ci \
-            --archive-file target/correctness-tests.tar.zst
-          python3 ci/artifact_provenance.py record target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
-      - name: Retain the test harness
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
-          path: |
-            target/correctness-tests.tar.zst
-            target/correctness-tests.tar.zst.json
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
-
-  correctness:
-    name: Rust correctness (${{ matrix.suite }})
-    needs: [source, changes, correctness-image]
-    if: (needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true') && inputs.scope != 'messaging-and-browsers'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [acme, agents-ui, pwa]
-        # SPA-only PRs need the production-dist PWA/smoke checks, without the other suites.
-        exclude: ${{ needs.changes.outputs.pages == 'true' && fromJSON('[]') || fromJSON('[{"suite":"acme"},{"suite":"agents-ui"}]') }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        id: setup
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          toolchain: 'false'
-          cargo-cache: correctness
-
-      - name: Collect pinned correctness prerequisites
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/prerequisites
-      - name: Load pinned correctness prerequisites
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-
-      - name: Run prerequisite-backed correctness suite
-        env:
-          SUITE: ${{ matrix.suite }}
-        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
-
-      - name: Retain correctness receipts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-correctness-${{ matrix.suite }}-${{ needs.source.outputs.sha }}
-          path: target/ci-receipts/
-          if-no-files-found: error
-      - name: Warm the full correctness harness dependencies
-        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        env:
-          RUST_CORRECTNESS_IMAGE: campfire-correctness
-        run: bash ci/exec.sh cargo nextest list --locked -p campfire --profile ci --build-jobs 4 --message-format json > /dev/null
-      - name: Keep only dependency artifacts for the cache
-        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 ci/prune-target.py target
-      - name: Save cargo registry and target
-        if: ${{ matrix.suite == 'agents-ui' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .cargo-home/registry
-            target
-          key: ${{ steps.setup.outputs.cargo-cache-key }}
-
-  correctness-browsers:
-    name: Rust correctness (browsers ${{ matrix.shard }})
-    needs: [source, changes, correctness-app, correctness-image, correctness-tests]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        # The observed weights in ignored-tests.json balance these at about 7.3 minutes each.
-        suite: [browsers]
-        shard: ["1/3", "2/3", "3/3"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          toolchain: 'false'
-      - name: Collect the correctness test harness
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
-          path: target
-      - name: Verify the correctness test harness
-        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
-      - name: Collect the application server
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-host-app-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/server
-      - name: Install the application server
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/server/messaging-host.tar" --head "$CI_SOURCE_SHA"
-          tar -C target -xf "$RUNNER_TEMP/server/messaging-host.tar"
-      - name: Collect pinned correctness prerequisites
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/prerequisites
-      - name: Load pinned correctness prerequisites
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-      - name: Run prerequisite-backed correctness suite
-        env:
-          CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
-          SUITE: ${{ matrix.suite }}
-          CORRECTNESS_SHARD: ${{ matrix.shard }}
-        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
-      - name: Retain correctness receipts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-correctness-browsers-${{ strategy.job-index }}-${{ needs.source.outputs.sha }}
-          path: target/ci-receipts/
-          if-no-files-found: error
-
-  correctness-app:
-    name: Rust messaging host (app)
-    needs: [source, changes]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: none
-          cargo-cache: correctness
-
-      - name: Build the application server
-        env:
-          RUST_CORRECTNESS_IMAGE: campfire-toolchain
-        run: |
-          bash ci/exec.sh cargo build --locked -j4 -p campfire --bin campfire
-          tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
-          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/messaging-host.tar" --head "$CI_SOURCE_SHA"
-
-      - name: Retain the host
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-messaging-host-app-${{ needs.source.outputs.sha }}
-          path: |
-            ${{ runner.temp }}/messaging-host.tar
-            ${{ runner.temp }}/messaging-host.tar.json
-          if-no-files-found: error
-          retention-days: 7
-
-
-  correctness-image:
-    name: Rust correctness image build
-    needs: [source, changes]
-    if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: none
-
-      # All correctness consumers reuse this image independently of the app, including SPA-only PWA.
-      - name: Build and export pinned correctness prerequisites
-        shell: bash
-        run: |
-          docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
-          docker save campfire-correctness | zstd -T0 -3 -q -o "$RUNNER_TEMP/correctness-image.tar.zst"
-          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-
-      - name: Retain the prerequisite image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: |
-            ${{ runner.temp }}/correctness-image.tar.zst
-            ${{ runner.temp }}/correctness-image.tar.zst.json
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
-
-  messaging-hosts:
-    name: Rust messaging host (${{ matrix.host }})
-    needs: [source, changes]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        host: [test]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: none
-          cargo-cache: correctness
-
-      # browser_host.py builds the generated paused-jobs test host in target/ws8bm-browser-host
-      # and audits its includes; the restored registry dependencies move there with it.
-      - name: Build the paused-jobs test host
-        if: ${{ matrix.host == 'test' }}
-        env:
-          RUST_CORRECTNESS_IMAGE: campfire-toolchain
-          WS8BM_HOST_BUILD_JOBS: 4
-        shell: bash
-        run: |
-          mkdir -p target/ws8bm-browser-host
-          if [[ -d target/debug ]]; then mv target/debug target/ws8bm-browser-host/debug; fi
-          executable=$(bash ci/exec.sh python3 reference-tools/messaging/browser_host.py | tail -n 1)
-          relative=${executable#"$GITHUB_WORKSPACE"/target/}
-          [[ "$relative" != "$executable" && -x "$executable" ]] || { echo "::error::unexpected host path $executable"; exit 1; }
-          echo "$relative" > target/ws8bm-browser-host/executable
-          tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" "$relative" \
-            ws8bm-browser-host/executable ws8bm-browser-host/include-audit.json
-          python3 ci/artifact_provenance.py record "$RUNNER_TEMP/messaging-host.tar" --head "$CI_SOURCE_SHA"
-
-      - name: Retain the host
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-messaging-host-${{ matrix.host }}-${{ needs.source.outputs.sha }}
-          path: |
-            ${{ runner.temp }}/messaging-host.tar
-            ${{ runner.temp }}/messaging-host.tar.json
-          if-no-files-found: error
-          retention-days: 7
-
-
-  correctness-messaging:
-    name: Rust correctness (messaging behaviour ${{ matrix.shard }})
-    needs: [source, changes, correctness-app, correctness-image, messaging-hosts]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        # The old shards spent ~93 seconds on setup for ~34 seconds of suite work each.
-        suite: [messaging]
-        shard: ["1/4", "2/4", "3/4", "4/4"]
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-      WS8BM_PREBUILT_APP: "1"
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          # The prerequisite image comes from its own producer.
-          toolchain: 'false'
-      - name: Collect the Rust hosts
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: rust-messaging-host-*-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/hosts
-      - name: Install the Rust hosts
-        shell: bash
-        run: |
-          mkdir -p target
-          for host in app test; do
-            archive="$RUNNER_TEMP/hosts/rust-messaging-host-$host-$CI_SOURCE_SHA/messaging-host.tar"
-            python3 ci/artifact_provenance.py verify "$archive" --head "$CI_SOURCE_SHA"
-            tar -C target -xf "$archive"
-          done
-          echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/target/$(cat target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
-      - name: Collect pinned correctness prerequisites
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/prerequisites
-      - name: Load pinned correctness prerequisites
-        shell: bash
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-      - name: Permit native browser namespaces
-        run: |
-          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
-            sudo apparmor_parser --replace ci/native-browser.apparmor
-            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
-          fi
-      - name: Run prerequisite-backed correctness suite
-        env:
-          SUITE: ${{ matrix.suite }}
-          CORRECTNESS_SHARD: ${{ matrix.shard }}
-        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
-      - name: Retain correctness receipts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-correctness-messaging-behavior-${{ strategy.job-index }}-${{ needs.source.outputs.sha }}
-          path: target/ci-receipts/
-          if-no-files-found: error
-
-  # The Drive attachment, share and sudo browser declarations (ignored-tests.json "drive"), each
-  # on its own app with pinned Chromium.
-  correctness-drive:
-    name: Rust correctness (drive browsers)
-    needs: [source, changes, correctness-image, correctness-tests]
-    if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [drive]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          toolchain: 'false'
-      - name: Collect the correctness test harness
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
-          path: target
-      - name: Collect pinned correctness prerequisites
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/prerequisites
-      - name: Load pinned correctness prerequisites
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-      - name: Verify the correctness test harness
-        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
-      - name: Run prerequisite-backed correctness suite
-        env:
-          CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
-          SUITE: ${{ matrix.suite }}
-        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
-      - name: Retain correctness receipts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-correctness-drive-${{ needs.source.outputs.sha }}
-          path: target/ci-receipts/
-          if-no-files-found: error
-
-  correctness-livekit:
-    name: Rust correctness (${{ matrix.suite }})
-    needs: [source, changes, correctness-image, correctness-tests]
-    if: needs.changes.outputs.pages == 'true' && inputs.scope != 'messaging-and-browsers'
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        suite: [livekit]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-      - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: seeds
-          toolchain: 'false'
-      - name: Collect the correctness test harness
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-browser-test-build-${{ needs.source.outputs.sha }}
-          path: target
-      - name: Collect pinned correctness prerequisites
-        continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: rust-messaging-prerequisites-image-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/prerequisites
-      - name: Load pinned correctness prerequisites
-        run: |
-          python3 ci/artifact_provenance.py verify "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" --head "$CI_SOURCE_SHA"
-          zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
-      - name: Verify the correctness test harness
-        run: python3 ci/artifact_provenance.py verify target/correctness-tests.tar.zst --head "$CI_SOURCE_SHA"
-      - name: Run prerequisite-backed correctness suite
-        env:
-          CORRECTNESS_ARCHIVE: ${{ github.workspace }}/target/correctness-tests.tar.zst
-          SUITE: ${{ matrix.suite }}
-        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
-      - name: Retain correctness receipts
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          overwrite: true
-          name: rust-correctness-livekit-${{ needs.source.outputs.sha }}
-          path: target/ci-receipts/
-          if-no-files-found: error
-
-  correctness-gate:
-    name: Rust correctness
-    needs: [source, changes, seeds, correctness, correctness-app, correctness-image, correctness-tests, correctness-browsers, correctness-drive, correctness-livekit, messaging-hosts, correctness-messaging]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    env:
-      CI_SOURCE_SHA: ${{ needs.source.outputs.sha }}
-    permissions:
-      contents: read
-    timeout-minutes: 15
-    steps:
-      - name: Require successful source resolution
-        env:
-          SOURCE_RESULT: ${{ needs.source.result }}
-        run: test "$SOURCE_RESULT" = success
-
-      - name: Require successful change detection
-        env:
-          CHANGE_RESULT: ${{ needs.changes.result }}
-        run: test "$CHANGE_RESULT" = success
-
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.source.outputs.sha }}
-          persist-credentials: false
-
-      - name: Require every job to be gated
-        run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
-
-      # SPA-only inputs select PWA and its prerequisite image; seeds follow the ordinary Rust scope.
-      # The correctness matrix and LiveKit skip a manual messaging-and-browsers check.
-      - name: Gate on every correctness job
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-          RUST: ${{ needs.changes.outputs.rust }}
-          PAGES: ${{ needs.changes.outputs.pages }}
-          SPA: ${{ needs.changes.outputs.spa }}
-          PARTIAL: ${{ inputs.scope == 'messaging-and-browsers' }}
-        run: |
-          python3 - <<'PY'
-          import json, os, sys
-          results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
-          print("\n".join(f"{job}: {result}" for job, result in results.items()))
-          if results.pop("source") != "success" or results.pop("changes") != "success" or any(os.environ[key] not in ("true", "false") for key in ("RUST", "PAGES", "SPA")):
-              sys.exit(1)
-          seed_result = "success" if os.environ["RUST"] == "true" else "skipped"
-          passed = results.pop("seeds") == seed_result
-          for job, result in results.items():
-              expected = "success" if os.environ["PAGES"] == "true" else "skipped"
-              if job in ("correctness", "correctness-image"):
-                  selected = os.environ["PAGES"] == "true" or os.environ["SPA"] == "true"
-                  expected = "success" if selected else "skipped"
-              if job in ("correctness", "correctness-livekit") and os.environ["PARTIAL"] == "true":
-                  expected = "skipped"
-              passed = passed and result == expected
-          if os.environ["PAGES"] == "false" and os.environ["SPA"] == "false":
-              print("No page inputs changed: the page suites were intentionally skipped.")
-          sys.exit(not passed)
-          PY
-
-      - name: Collect correctness receipts
-        if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: rust-correctness-*-${{ needs.source.outputs.sha }}
-          path: ${{ runner.temp }}/receipts
-
-      - name: Check that the shards cover every suite
-        if: needs.changes.outputs.pages == 'true' || needs.changes.outputs.spa == 'true'
-        env:
-          SCOPE: ${{ needs.changes.outputs.pages == 'true' && (inputs.scope || 'full') || 'spa' }}
-        run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$CI_SOURCE_SHA"

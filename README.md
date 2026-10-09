@@ -41,7 +41,7 @@ SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 \
 and open http://localhost:3000.
 
 - Developing and testing: [docs/development.md](docs/development.md) covers prerequisites,
-  tests (`cargo nextest`), the correctness suites, lint, migrations and CI.
+  tests (`cargo nextest`), lint, migrations and CI.
   [docs/rust-port.md](docs/rust-port.md) describes the port's status and verification.
 - Self-hosting the Docker image (`ghcr.io/smart-data-ohio/smartfire`, or
   `docker build -t smartfire .`): [docs/self-hosting.md](docs/self-hosting.md).
