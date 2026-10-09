@@ -493,6 +493,30 @@ async fn a_remote_disconnect_sends_nothing_published_after_it() {
 }
 
 #[tokio::test]
+async fn a_remote_disconnect_sends_what_came_before_it_and_nothing_after() {
+    let app = app(SyncConfig {
+        flush_interval: Duration::from_secs(60),
+        ..SyncConfig::default()
+    })
+    .await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    // All three land before the connection's task runs again (this runtime has one thread), so
+    // it sees the disconnect with the earlier event still unread in the ring.
+    let before = app.publish(Audience::User(1), json!("before"));
+    assert!(app.cable.server.disconnect("user-1", false) >= 1);
+    app.publish(Audience::User(1), json!("after"));
+    assert_eq!(
+        client.batch().await,
+        [(before, "user".into(), json!("before"))]
+    );
+    assert_eq!(
+        client.next().await,
+        json!({ "t": "bye", "reconnect": false, "reason": "remote" })
+    );
+    client.closed().await;
+}
+
+#[tokio::test]
 async fn a_heartbeat_after_the_session_ended_says_bye_and_closes() {
     let app = app(fast()).await;
     let (mut client, _) = app.hello(1, Value::Null, &[]).await;
