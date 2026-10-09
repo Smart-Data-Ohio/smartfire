@@ -127,6 +127,8 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const preset = useZustand(newRoomPreset, (state) => state.kind);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [wasOpen, setWasOpen] = useState(false);
+  // The kind this opening started from: a later preset doesn't make the form dirty.
+  const [opening, setOpening] = useState<typeof preset>(preset);
   const [channel, setChannel] = useState<Channel>("text");
   const [isPrivate, setPrivate] = useState(false);
   const [name, setName] = useState("");
@@ -150,6 +152,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
     setWasOpen(open);
 
     if (open) {
+      setOpening(preset);
       setChannel(channelOf(preset));
       setPrivate(preset === "closed");
       setName("");
@@ -179,8 +182,8 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
     iconName !== null ||
     members.length > 0 ||
     step !== "details" ||
-    channel !== channelOf(preset) ||
-    isPrivate !== (preset === "closed");
+    channel !== channelOf(opening) ||
+    isPrivate !== (opening === "closed");
 
   const needsMembers = hasMemberList(kind);
   // Nothing is created from a form that hasn't loaded: its default name is the server's.

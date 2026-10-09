@@ -74,6 +74,8 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const textId = useId();
   const [text, setText] = useState(item.markdownSource);
   const [when, setWhen] = useState(() => toLocalInput(new Date(item.sendAt)));
+  // The message as this opening found it: a refresh of it meanwhile doesn't make the form dirty.
+  const [start] = useState(() => ({ text: item.markdownSource, when }));
   const [error, setError] = useState<string | undefined>(undefined);
   const [timeError, setTimeError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
@@ -86,7 +88,7 @@ function EditForm({ item, onClose, onSave, onDirty }: EditFormProps) {
   const at = fromLocalInput(when);
   const timeChanged = when !== toLocalInput(new Date(item.sendAt));
   const textChanged = text !== item.markdownSource;
-  const dirty = textChanged || timeChanged;
+  const dirty = text !== start.text || when !== start.when;
 
   useEffect(() => onDirty(dirty), [dirty, onDirty]);
 

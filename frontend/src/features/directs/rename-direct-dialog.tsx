@@ -27,6 +27,8 @@ export default function RenameDirectDialog({
   const formId = useId();
   const facts = useDirectFacts(roomId);
   const [name, setName] = useState(facts?.name ?? "");
+  // The name as this opening found it: someone renaming it meanwhile doesn't make the field dirty.
+  const [opening, setOpening] = useState(facts?.name ?? "");
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -37,6 +39,7 @@ export default function RenameDirectDialog({
 
     if (open) {
       setName(facts?.name ?? "");
+      setOpening(facts?.name ?? "");
       setError(undefined);
       setBusy(false);
     }
@@ -81,7 +84,7 @@ export default function RenameDirectDialog({
       onOpenChange={onOpenChange}
       title="Rename conversation"
       size="sm"
-      dirty={!unchanged}
+      dirty={name.trim() !== opening}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>

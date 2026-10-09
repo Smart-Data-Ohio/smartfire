@@ -120,6 +120,7 @@ function CreatePollForm({
   onDirty,
 }: CreatePollFormProps) {
   const [sent, setSent] = useState<Sent | null>(null);
+  const [startQuestion] = useState(initialQuestion);
   const [question, setQuestion] = useState(initialQuestion);
   const [options, setOptions] = useState<readonly string[]>(["", ""]);
   const [multiple, setMultiple] = useState(false);
@@ -131,7 +132,7 @@ function CreatePollForm({
   const [busy, setBusy] = useState(false);
 
   const dirty =
-    question !== initialQuestion ||
+    question !== startQuestion ||
     options.length !== MIN_OPTIONS ||
     options.some((option) => option !== "") ||
     multiple ||

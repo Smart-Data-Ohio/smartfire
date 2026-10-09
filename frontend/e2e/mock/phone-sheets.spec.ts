@@ -1,5 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
-import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
+import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
 import {
   DESKTOP,
   expect,
@@ -359,6 +359,68 @@ test.describe("on a 360 px touch phone", () => {
     await sheet("Forward message").open(page, dialog);
     await search.fill("gen");
     await search.fill("");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a poll with a toggle flipped and flipped back swipes away", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "Create a poll" });
+    const anonymous = dialog.getByRole("switch", { name: "Anonymous" });
+
+    await sheet("Create a poll").open(page, dialog);
+    await anonymous.click();
+    await anonymous.click();
+    await expect(anonymous).toHaveAttribute("aria-checked", "false");
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a new message with a recipient tapped then removed swipes away", async ({ page }) => {
+    const dialog = page.getByRole("dialog", { name: "New message" });
+
+    await sheet("New message").open(page, dialog);
+    await dialog.getByRole("option").first().click();
+    await dialog.getByRole("button", { name: /^Remove / }).click();
+    await expect(dialog.locator(".picker-chip")).toHaveCount(0);
+    await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
+
+    await expect(dialog).toBeHidden();
+  });
+
+  test("a rename renamed elsewhere, with the field as it opened, swipes away", async ({
+    page,
+    context,
+  }) => {
+    const path = `r/${ROOM_IDS.general}/t/${THREAD_IDS.generalActive}`;
+    const dialog = page.getByRole("dialog", { name: "Rename thread" });
+    const field = dialog.getByRole("textbox", { name: "Name" });
+
+    await openApp(page, path);
+    await page.getByRole("button", { name: "Thread actions" }).click();
+    await page.getByRole("menuitem", { name: "Rename thread…" }).click();
+
+    const opened = await field.inputValue();
+
+    // Another tab renames the thread while this one has the dialog open.
+    const other = await context.newPage();
+
+    await openApp(other, path);
+    await other.getByRole("button", { name: "Thread actions" }).click();
+    await other.getByRole("menuitem", { name: "Rename thread…" }).click();
+
+    const elsewhere = other.getByRole("dialog", { name: "Rename thread" });
+
+    await elsewhere.getByRole("textbox", { name: "Name" }).fill("Renamed elsewhere");
+    await elsewhere.getByRole("button", { name: "Save" }).click();
+    await expect(elsewhere).toBeHidden();
+    await other.close();
+    await expect(page.getByText("Renamed elsewhere", { exact: true }).first()).toBeAttached();
+
+    // Typed, then put back as the dialog found it: nothing to lose.
+    await field.fill("Something else");
+    await field.fill(opened);
     await swipeDown(page, dialog.locator(".dialog-title"), 200, 60);
 
     await expect(dialog).toBeHidden();
