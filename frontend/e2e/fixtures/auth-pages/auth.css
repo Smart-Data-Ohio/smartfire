@@ -189,6 +189,31 @@
     --pane-header-height: 48px;
     --right-pane-width: 380px;
 
+    /* ── Phone: breakpoint, touch sizes, safe areas, keyboard ───────────────────── */
+
+    /* For reference only: a custom property can't sit in a media query, so phone rules spell it
+       `@media (width < 720px)` (src/lib/breakpoints.ts in script); tokens.test.ts holds them to it. */
+    --bp-phone: 720px;
+    /* The smallest box a finger hits reliably (Apple's 44 pt): the hit area of a tappable thing. */
+    --touch-target: 44px;
+    /* The control height on touch phones, which --control-md and --control-lg take there. */
+    --control-touch: 44px;
+    /* The notch, rounded corners and home indicator; 0 off phones (viewport-fit=cover in index.html). */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    /* The layout viewport's bottom strip an overlaid keyboard covers (iOS), set by
+       src/lib/keyboard-inset.ts. The shell already fits above it; only position: fixed adds it. */
+    --keyboard-inset: 0px;
+    /* The strip above the visible area while iOS pans the page up to a focused field (same hook). */
+    --viewport-top-inset: 0px;
+    /* The visible area's height: the full dynamic viewport, or the visual viewport's while an
+       overlaid keyboard is up (same hook). */
+    --viewport-height: 100dvh;
+    /* What a viewport-anchored (position: fixed) surface keeps clear at the bottom. */
+    --viewport-bottom-inset: max(var(--safe-bottom), var(--keyboard-inset));
+
     /* ── Density: comfortable (default) ─────────────────────────────────────────── */
 
     --message-avatar-size: 36px;
@@ -216,6 +241,19 @@
     :root:not([data-theme="light"]) {
       --brand-icon-filter: invert(1);
     }
+  }
+
+  /* Touch phones: finger-sized default and large controls. --control-sm stays compact. */
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --control-md: var(--control-touch);
+      --control-lg: var(--control-touch);
+    }
+  }
+
+  /* An open keyboard covers the home indicator, so nothing above it keeps clear of that. */
+  :root[data-keyboard="open"] {
+    --safe-bottom: 0px;
   }
 
   /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
@@ -372,6 +410,7 @@
     --leading-ui: 1.25rem;
     --text-body: 0.9375rem; /* 15/22: message body, as Slack */
     --leading-body: 1.375rem;
+    --text-input: var(--text-ui); /* 14: form fields; 16 on touch phones, so iOS never zooms */
     --text-composer: 1rem; /* 16: composer, so iOS never zooms */
     --leading-composer: 1.5rem;
     --text-title: 1.125rem; /* 18: pane header title */
@@ -430,11 +469,18 @@
 
   /*
    * iOS zooms into a focused field whose text is under 16 px, so on touch screens the fields that
-   * use the composer size never drop below it at the smaller text sizes.
+   * use the composer size never drop below it at the smaller text sizes, and on touch phones form
+   * fields grow to 16 px too (a desktop layout keeps its 14 px fields).
    */
   @media (pointer: coarse) {
     :root {
       --text-composer: max(1rem, 16px);
+    }
+  }
+
+  @media (width < 720px) and (pointer: coarse) {
+    :root {
+      --text-input: max(1rem, 16px);
     }
   }
 }
@@ -564,6 +610,28 @@
     font: inherit;
     letter-spacing: inherit;
     color: inherit;
+  }
+
+  /* Touch phones: iOS zooms into a focused field under 16 px and stays zoomed, so every text
+     field is --text-input (16 px there), whatever its component says; something laid over a
+     field's text (a placeholder mirror) sizes itself with --text-input too. */
+  @media (width < 720px) and (pointer: coarse) {
+    input:not(
+        [type="checkbox"],
+        [type="radio"],
+        [type="range"],
+        [type="color"],
+        [type="file"],
+        [type="button"],
+        [type="submit"],
+        [type="reset"],
+        [type="image"]
+      ),
+    textarea,
+    select {
+      /* biome-ignore lint/complexity/noImportantStyles: an important in the base layer outranks every later layer, and components' `font: inherit` must not undo this. */
+      font-size: var(--text-input) !important;
+    }
   }
 
   button {
@@ -2930,7 +2998,7 @@
     background: var(--bg-sunken);
     box-shadow: inset 0 0 0 1px var(--border);
     color: var(--text);
-    font-size: var(--text-ui);
+    font-size: var(--text-input);
   }
 
   .input::placeholder {
@@ -3092,7 +3160,7 @@
     animation: none;
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     body.auth {
       justify-content: flex-start;
       padding: var(--space-4) var(--space-3) var(--space-8);
@@ -3730,7 +3798,7 @@
     font-size: var(--text-meta);
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     .public-main {
       padding-block: var(--space-6);
     }

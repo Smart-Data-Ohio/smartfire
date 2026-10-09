@@ -620,7 +620,7 @@
     font-size: var(--text-meta);
   }
 
-  @media (max-width: 640px) {
+  @media (width < 720px) {
     .work-row {
       gap: 10px;
       padding-inline: var(--space-3) var(--space-2);

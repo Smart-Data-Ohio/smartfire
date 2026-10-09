@@ -10,11 +10,26 @@
     overflow: hidden;
   }
 
+  /* The visible viewport: the full dynamic viewport, or while an overlaid keyboard is up, the
+     visual viewport's own top and height, clear of a landscape notch. Each column pads itself
+     under the status bar, so its own surface fills that strip. */
   .app-shell {
+    position: fixed;
+    inset: var(--viewport-top-inset) 0 auto;
     display: grid;
     grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr);
-    height: 100dvh;
+    height: var(--viewport-height);
+    padding-inline: var(--safe-left) var(--safe-right);
     background: var(--bg-app);
+  }
+
+  /* On paper there is no viewport to follow: the shell flows, so a fixed frame doesn't repeat on
+     every page or cut the content off at one screen. */
+  @media print {
+    .app-shell {
+      position: static;
+      height: auto;
+    }
   }
 
   .app-main {
@@ -23,7 +38,12 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    padding-top: var(--safe-top);
     background: var(--bg-pane);
+  }
+
+  .app-shell > .sidebar {
+    padding-top: var(--safe-top);
   }
 
   /* ── Rail ──────────────────────────────────────────────────────────────── */
@@ -33,7 +53,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-3) 0;
+    padding: calc(var(--space-3) + var(--safe-top)) 0 var(--space-3);
   }
 
   /* Discord's server tile: a circle at rest that squares off under the pointer or focus. */
@@ -265,8 +285,10 @@
       grid-row: 1;
     }
 
+    /* A full screen reaches the bottom edge, so it keeps clear of the home indicator itself. */
     .app-shell[data-view="room"] .app-main {
       grid-row: 1 / -1;
+      padding-bottom: var(--safe-bottom);
     }
 
     .app-shell[data-view="tab"] .app-main {
@@ -278,7 +300,7 @@
       flex-direction: row;
       justify-content: space-around;
       gap: 0;
-      padding: var(--space-1) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom));
+      padding: var(--space-1) var(--space-4) max(var(--space-2), var(--safe-bottom));
       border-top: 1px solid var(--border);
       background: var(--bg-sidebar);
     }
