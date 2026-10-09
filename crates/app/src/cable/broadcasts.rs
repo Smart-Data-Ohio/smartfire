@@ -293,6 +293,19 @@ impl Broadcasts {
         sync::disconnect_after_leaves(&self.sync, user_id, reconnect)
     }
 
+    /// Runs `hook` on the writer once the next leave queue is created, before its drain is
+    /// scheduled.
+    #[cfg(feature = "test-support")]
+    pub fn after_next_sync_leave_queued(&self, hook: impl FnOnce() + Send + 'static) {
+        self.sync.after_next_leave_queued(hook);
+    }
+
+    /// Whether any of the person's leave steps is still queued.
+    #[cfg(feature = "test-support")]
+    pub fn sync_leaves_queued(&self, user_id: i64) -> bool {
+        self.sync.leaves_queued(user_id)
+    }
+
     // The primitives
 
     /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`

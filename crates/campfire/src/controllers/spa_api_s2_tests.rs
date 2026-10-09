@@ -1228,6 +1228,124 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
     server.abort();
 }
 
+/// The last sync socket closes after a leave queues its removal, before the drain is scheduled:
+/// the drain still runs, so the leave's disconnect (queued behind the removal) closes the
+/// person's classic socket as it did before sync, and the queue empties.
+#[tokio::test]
+async fn a_leave_disconnects_classic_sockets_when_the_last_sync_socket_closes_meanwhile() {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+
+    // Kevin's classic socket.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let cable_addr = listener.local_addr().unwrap();
+    let router = a.booted.app.cable.router::<()>("/cable");
+    let cable_server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut request = format!("ws://{cable_addr}/cable")
+        .into_client_request()
+        .unwrap();
+    let headers = request.headers_mut();
+    headers.insert("origin", format!("http://{cable_addr}").parse().unwrap());
+    headers.insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    headers.insert("cookie", kevin.cookie_header().parse().unwrap());
+    let mut classic = crate::channels::tests::support::Client {
+        socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
+    };
+    assert_eq!(classic.next_text().await, r#"{"type":"welcome"}"#);
+
+    // The only sync socket, Kevin's, before its hello: it closes without the writer, which the
+    // hook below holds (a socket past its hello writes on close).
+    let mut request = format!("ws://{addr}/api/v1/sync")
+        .into_client_request()
+        .unwrap();
+    let headers = request.headers_mut();
+    headers.insert("cookie", kevin.cookie_header().parse().unwrap());
+    headers.insert("host", "campfire.test".parse().unwrap());
+    headers.insert("origin", "http://campfire.test".parse().unwrap());
+    let (mut sync, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    let cable = a.booted.app.cable.clone();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !cable.sync_wanted() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("the sync socket is counted");
+
+    // Right after the leave queues its removal, the sync socket closes, and the hook returns
+    // only once no sync socket is wanted.
+    let (close, closing) = tokio::sync::oneshot::channel::<()>();
+    let closed_meanwhile = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let closed = closed_meanwhile.clone();
+    a.booted
+        .app
+        .broadcasts
+        .after_next_sync_leave_queued(move || {
+            let _ = close.send(());
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while cable.sync_wanted() && std::time::Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            closed.store(!cable.sync_wanted(), std::sync::atomic::Ordering::SeqCst);
+        });
+    let closer = tokio::spawn(async move {
+        closing.await.unwrap();
+        sync.close(None).await.unwrap();
+        sync
+    });
+
+    let reply = tokio::time::timeout(
+        Duration::from_secs(10),
+        kevin.write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/rooms/{room}/membership"),
+            &json!({}),
+        )),
+    )
+    .await
+    .expect("the leave answers");
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let _sync = tokio::time::timeout(Duration::from_secs(5), closer)
+        .await
+        .expect("the leave queued a removal")
+        .unwrap();
+    assert!(
+        closed_meanwhile.load(std::sync::atomic::Ordering::SeqCst),
+        "the last sync socket closed between the queueing and the drain"
+    );
+
+    let frames = tokio::time::timeout(Duration::from_secs(5), classic.until_closed())
+        .await
+        .expect("the leave's disconnect reaches the classic socket");
+    assert_eq!(
+        frames,
+        vec![r#"{"type":"disconnect","reason":"remote","reconnect":true}"#.to_string()]
+    );
+    a.booted.app.broadcasts.settle_sync().await;
+    assert!(
+        !a.booted.app.broadcasts.sync_leaves_queued(KEVIN),
+        "the leave queue empties"
+    );
+    cable_server.abort();
+    server.abort();
+}
+
 /// Waits until the room's name, as committed, is `name`.
 async fn room_named(a: &TestApp, room: i64, name: &'static str) {
     tokio::time::timeout(Duration::from_secs(5), async {

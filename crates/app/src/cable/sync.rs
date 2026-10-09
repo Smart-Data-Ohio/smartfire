@@ -135,6 +135,9 @@ struct RendererState {
     indicators: PublicationLocks,
     /// Each person's leave steps not yet published, in order: see [`leave_later`].
     leaves: Mutex<HashMap<i64, VecDeque<LeaveStep>>>,
+    /// Runs once, the next time a leave queue is created, before its drain is scheduled.
+    #[cfg(feature = "test-support")]
+    after_leave_queued: Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
 
 /// What a leave publishes for the person, in the order the writer committed it.
@@ -176,6 +179,27 @@ impl RendererSlot {
         if let Some(renderer) = self.0.renderer.get() {
             renderer.settle().await;
         }
+    }
+
+    /// Runs `hook` on the writer right after the next leave queue is created, before its drain
+    /// is scheduled.
+    #[cfg(feature = "test-support")]
+    pub fn after_next_leave_queued(&self, hook: impl FnOnce() + Send + 'static) {
+        *self
+            .0
+            .after_leave_queued
+            .lock()
+            .unwrap_or_else(|error| error.into_inner()) = Some(Box::new(hook));
+    }
+
+    /// Whether any leave step of the person's is still queued.
+    #[cfg(feature = "test-support")]
+    pub fn leaves_queued(&self, user_id: i64) -> bool {
+        self.0
+            .leaves
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .contains_key(&user_id)
     }
 
     fn get(&self, server: &Cable) -> Option<&Arc<dyn SyncRenderer>> {
@@ -1518,10 +1542,14 @@ fn queue_step(steps: &mut VecDeque<LeaveStep>, step: LeaveStep) {
 /// published, and a row read after it finds the membership gone; a disconnect queued behind it
 /// closes the sockets only once the removal is out. Nothing here waits on a lock or a reader,
 /// so the writer never does.
+///
+/// The renderer is looked up once, before the step is queued: once a queue exists, its drain is
+/// scheduled whether or not a sync socket is still open (the last one may close in between), as
+/// [`disconnect_after_leaves`] counts on it to close the person's classic sockets too.
 fn leave_later(server: &Cable, slot: &RendererSlot, user_id: i64, step: LeaveStep) {
-    if slot.get(server).is_none() {
+    let Some(renderer) = slot.get(server) else {
         return;
-    }
+    };
     {
         let mut leaves = slot
             .0
@@ -1534,7 +1562,42 @@ fn leave_later(server: &Cable, slot: &RendererSlot, user_id: i64, step: LeaveSte
         }
         leaves.insert(user_id, VecDeque::from([step]));
     }
-    defer_rows(server, slot, move |server, slot, reader| {
+    #[cfg(feature = "test-support")]
+    if let Some(hook) = slot
+        .0
+        .after_leave_queued
+        .lock()
+        .unwrap_or_else(|error| error.into_inner())
+        .take()
+    {
+        hook();
+    }
+    let drain = LeaveDrain {
+        server: server.downgrade(),
+        slot: slot.clone(),
+        user_id,
+        done: false,
+    };
+    renderer.defer_unread(Box::new(move |reader| drain.run(reader)));
+}
+
+/// The job draining one person's leave queue (see [`leave_later`]). However it ends without
+/// emptying the queue (a panic, the Cable gone, or never run because the runtime shut down), it
+/// takes the queue with it and still closes the person's connections for each queued disconnect,
+/// so a disconnect deferred behind a leave is never lost; a removal it drops records a gap.
+struct LeaveDrain {
+    server: campfire_cable::WeakServer<super::CableUser>,
+    slot: RendererSlot,
+    user_id: i64,
+    done: bool,
+}
+
+impl LeaveDrain {
+    fn run(mut self, reader: &dyn Reader) {
+        let Some(server) = self.server.upgrade() else {
+            return;
+        };
+        let (slot, user_id) = (&self.slot, self.user_id);
         loop {
             // The front step stays queued while it publishes, so later steps wait behind it.
             let step = {
@@ -1548,12 +1611,13 @@ fn leave_later(server: &Cable, slot: &RendererSlot, user_id: i64, step: LeaveSte
                     Some(LeaveStep::Disconnect { reconnect }) => LeaveStep::Disconnect {
                         reconnect: *reconnect,
                     },
-                    None => return,
+                    None => break,
                 }
             };
             match step {
+                // Publishes nothing once no sync socket is open (the ring records the gap).
                 LeaveStep::Removed(room_id) => room_rows(slot, reader, room_id, |rows, conn| {
-                    rows.publish(server, slot, conn, Viewers::Users(&[user_id]), None);
+                    rows.publish(&server, slot, conn, Viewers::Users(&[user_id]), None);
                 }),
                 LeaveStep::Disconnect { reconnect } => {
                     server.disconnect(&super::user_gid(user_id).to_string(), reconnect);
@@ -1564,15 +1628,48 @@ fn leave_later(server: &Cable, slot: &RendererSlot, user_id: i64, step: LeaveSte
                 .leaves
                 .lock()
                 .unwrap_or_else(|error| error.into_inner());
-            if let Some(steps) = leaves.get_mut(&user_id) {
-                steps.pop_front();
-                if steps.is_empty() {
-                    leaves.remove(&user_id);
-                    return;
-                }
+            let Some(steps) = leaves.get_mut(&user_id) else {
+                break;
+            };
+            steps.pop_front();
+            if steps.is_empty() {
+                leaves.remove(&user_id);
+                break;
             }
         }
-    });
+        self.done = true;
+    }
+}
+
+impl Drop for LeaveDrain {
+    fn drop(&mut self) {
+        if self.done {
+            return;
+        }
+        // Only this drain removes the person's queue, so what's there is still its own.
+        let steps = self
+            .slot
+            .0
+            .leaves
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .remove(&self.user_id)
+            .unwrap_or_default();
+        let Some(server) = self.server.upgrade() else {
+            return;
+        };
+        if steps
+            .iter()
+            .any(|step| matches!(step, LeaveStep::Removed(_)))
+        {
+            server.sync_skipped_for(self.user_id);
+        }
+        for step in steps {
+            if let LeaveStep::Disconnect { reconnect } = step {
+                server.disconnect(&super::user_gid(self.user_id).to_string(), reconnect);
+            }
+        }
+    }
 }
 
 /// The room is gone: `sidebar.row.removed` for everyone, and nobody follows it any more. Later,
