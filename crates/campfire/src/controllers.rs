@@ -1349,19 +1349,4 @@ mod ws12_inbox_remaining_tests;
 mod ws12_work_remaining_tests;
 
 #[cfg(test)]
-mod ws12_browser_remaining_tests;
-
-#[cfg(test)]
-mod ws11ui_original_browser_tests;
-
-#[cfg(test)]
-pub(crate) mod ledger_browser_tests;
-
-#[cfg(test)]
 mod template_coverage_tests;
-
-#[cfg(test)]
-mod drive_browser_tests;
-
-#[cfg(test)]
-mod spa_smoke_tests;

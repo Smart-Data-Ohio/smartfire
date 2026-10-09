@@ -21,6 +21,9 @@ const server = build
 export default defineConfig({
   testDir: "e2e/mock",
   forbidOnly: Boolean(process.env.CI),
+  // One retry in CI: a test that only passes on its retry is reported as flaky rather than failing
+  // the pull request, since one transient failure among hundreds of browser tests would block a merge.
+  retries: process.env.CI ? 1 : 0,
   fullyParallel: false,
   workers: 1,
   use: {

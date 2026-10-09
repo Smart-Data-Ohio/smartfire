@@ -9,7 +9,7 @@ Two GitHub workflows drive it:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | On a push to `main` (or a manual run on `main` with `dry_run` off), its amd64 job builds the Rust image for `linux/amd64` and pushes `rust-git-<full sha>` to Artifact Registry, then attests provenance. That job depends on nothing else in the workflow. A native arm64 build runs alongside, and once both finish, the GHCR job publishes a multi-arch image made from the same amd64 manifest. Publishing runs are never cancelled. |
+| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | reusable, manual (dry run by default) | Deploy calls it for the resolved SHA when its immutable tag is absent. It builds and publishes only amd64 to Artifact Registry, then attests provenance. Publishing runs are never cancelled. |
 | [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Production only from `main`. Requires a successful `rust.yml` push or scheduled run (with its `Rust port` job) for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
 
 Production runs the Rust port. The release script only moves one Rust image (label
@@ -435,8 +435,9 @@ snapshot stops being a complete checkpoint.
 
 ## Running a release
 
-1. Merge to `main`. `publish-image.yml` publishes `rust-git-<sha>` for every push;
-   deploy a sha that has that tag.
+1. Merge to `main` and wait for a successful `Rust port` push check. Deploy
+   publishes a missing `rust-git-<sha>` image before release. A dry run needs an
+   existing image; use the manual publisher first when rehearsing a new SHA.
 2. There is no staging host: the `validation` environment currently falls back to the
    production VM, so don't use it. Rehearse locally instead: `ops/tests` and, for
    a release that ships migrations, the migration from the deployed schema.

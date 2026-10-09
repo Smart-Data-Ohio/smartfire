@@ -7,13 +7,7 @@ use crate::accounts::HelpContact;
 use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
-/// `AllowBrowser::VERSIONS`, minus the browsers it blocks outright (`ie: false`).
-pub const ALLOW_BROWSER_VERSIONS: [(&str, &str); 4] = [
-    ("safari", "17.2"),
-    ("chrome", "120"),
-    ("firefox", "121"),
-    ("opera", "104"),
-];
+pub use campfire_view_kit::ALLOW_BROWSER_VERSIONS;
 
 /// `sessions/new.html.erb`.
 #[derive(Template)]
@@ -30,8 +24,16 @@ pub struct New<'a> {
 
 impl New<'_> {
     fn google_sign_in(&self) -> h::Html {
-        if self.google_sign_in_domains.is_empty() { h::empty() } else {
-            h::raw(GoogleSignIn {domains: self.google_sign_in_domains.clone()}.render().unwrap())
+        if self.google_sign_in_domains.is_empty() {
+            h::empty()
+        } else {
+            h::raw(
+                GoogleSignIn {
+                    domains: self.google_sign_in_domains.clone(),
+                }
+                .render()
+                .unwrap(),
+            )
         }
     }
 }
@@ -43,7 +45,14 @@ pub struct GoogleSignIn {
 }
 impl GoogleSignIn {
     fn domain_sentence(&self) -> String {
-        h::to_sentence(&self.domains.iter().map(|domain| format!("@{domain}")).collect::<Vec<_>>(), " and ")
+        h::to_sentence(
+            &self
+                .domains
+                .iter()
+                .map(|domain| format!("@{domain}"))
+                .collect::<Vec<_>>(),
+            " and ",
+        )
     }
 }
 

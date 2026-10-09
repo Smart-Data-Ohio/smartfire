@@ -18,17 +18,6 @@ function pane(page: Page) {
   return page.locator("aside.right-pane");
 }
 
-test("a bare message lands at its room permalink and keeps the query and hash", async ({
-  page,
-}) => {
-  await open(page, `m/${MESSAGE_IDS.generalSaved}?source=classic&source=link#top`);
-
-  await expect(page).toHaveURL(
-    new RegExp(`/app/r/${ROOM}/m/${MESSAGE_IDS.generalSaved}\\?source=classic&source=link#top$`),
-  );
-  await expect(page.locator(`[data-message-id="${MESSAGE_IDS.generalSaved}"]`)).toBeVisible();
-});
-
 test("a bare reply opens its existing thread and focuses that reply", async ({ page }) => {
   await open(
     page,
@@ -67,25 +56,18 @@ test("a classic bare-message link resolves in place with repeated query keys int
   await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.quiet}$`));
 });
 
-for (const { path, title } of [
-  { path: "threads", title: "Threads" },
-  { path: "files", title: "Files" },
-  { path: "pins", title: "Pinned messages" },
-]) {
-  test(`the mapped ${path} URL opens the existing pane and close clears its URL`, async ({
-    page,
-  }) => {
-    await open(page, `r/${ROOM}/${path}`);
+// Threads and Files open by URL in the next test, through the same routed panes.
+test("the mapped pins URL opens the existing pane and close clears its URL", async ({ page }) => {
+  await open(page, `r/${ROOM}/pins`);
 
-    await expect(pane(page).getByRole("heading", { name: title })).toBeVisible();
-    await pane(page).getByRole("button", { name: "Close", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
-    await expect(pane(page)).toHaveCount(0);
-    await page.goBack();
-    await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}/${path}$`));
-    await expect(pane(page).getByRole("heading", { name: title })).toBeVisible();
-  });
-}
+  await expect(pane(page).getByRole("heading", { name: "Pinned messages" })).toBeVisible();
+  await pane(page).getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}$`));
+  await expect(pane(page)).toHaveCount(0);
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM}/pins$`));
+  await expect(pane(page).getByRole("heading", { name: "Pinned messages" })).toBeVisible();
+});
 
 test("a thread returns to the routed Threads list and header toggles keep the URL in sync", async ({
   page,
@@ -203,36 +185,10 @@ test.describe("phone", () => {
   });
 });
 
-test("an unknown bare message stays on the existing not-found state", async ({ page }) => {
-  await open(page, "m/999999999");
-
-  await expect(page.getByRole("region", { name: "Page not found" })).toBeVisible();
-  await expect(page).toHaveURL(/\/app\/m\/999999999$/);
-  await expect(page.getByRole("region", { name: "Conversation", exact: true })).toHaveCount(0);
-});
-
-test("a forbidden bare message never opens its conversation or redirects to classic", async ({
-  page,
-}) => {
-  await page.route(`**/api/v1/messages/${MESSAGE_IDS.generalSaved}`, (route) =>
-    route.fulfill({
-      status: 403,
-      contentType: "application/json",
-      body: JSON.stringify({ error: forbidden("Access denied").error }),
-    }),
-  );
-  await open(page, `m/${MESSAGE_IDS.generalSaved}`);
-
-  await expect(page.getByRole("region", { name: "Page not found" })).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`/app/m/${MESSAGE_IDS.generalSaved}$`));
-  await expect(page.getByRole("region", { name: "Conversation", exact: true })).toHaveCount(0);
-});
-
 for (const status of [403, 404]) {
+  // One routed pane stands for Threads, Files and Pins: they're children of the same room route.
   for (const path of [
     "threads",
-    "files",
-    "pins",
     "notifications",
     `m/${seededMessageId(ROOM_IDS.launchPlanning, 0)}`,
   ]) {

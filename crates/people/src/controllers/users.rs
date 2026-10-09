@@ -25,7 +25,7 @@ use campfire_views::users;
 use super::presenters::attachments::{self, Assignment, Record};
 use super::presenters::{self, view_context};
 use crate::app::AppCtx;
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::{framed_page, retained_page};
 use crate::concerns::{self, Before, cast_integer};
 
 pub async fn index(c: &mut Ctx) -> Result {
@@ -44,7 +44,7 @@ pub async fn new(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let help_contact = c.app().db.read(presenters::accounts::help_contact).await.map_err(Error::internal)?;
     let join_code = account.join_code;
-    framed_page!(c, StatusCode::OK, |ctx| users::New { ctx, join_code: join_code.clone(), help_contact: help_contact.clone() }).await
+    retained_page!(c, StatusCode::OK, |ctx| campfire_retained::users::New { ctx, join_code: join_code.clone(), help_contact: help_contact.clone() }).await
 }
 
 pub async fn create(c: &mut Ctx) -> Result {

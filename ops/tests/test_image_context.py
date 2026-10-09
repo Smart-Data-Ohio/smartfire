@@ -12,10 +12,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Dockerfile -> its ignore file. All three build from the repository root.
+# Dockerfile -> its ignore file. Both build from the repository root.
 IMAGES = {
     "Dockerfile": ".dockerignore",
-    "ci/Dockerfile": ".dockerignore",
     "deploy/huddles/Dockerfile": "deploy/huddles/Dockerfile.dockerignore",
 }
 

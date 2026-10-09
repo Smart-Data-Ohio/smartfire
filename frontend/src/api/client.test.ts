@@ -18,6 +18,7 @@ import {
   Unauthorized,
 } from "./errors.ts";
 import { meFixture, roomDetailFixture } from "./testing.ts";
+import { completeTour } from "./tour-endpoints.ts";
 
 /** What the fake server saw. */
 interface Seen {
@@ -88,7 +89,8 @@ function harness(answer: (seen: Seen, index: number) => Reply) {
 
       return HttpClientResponse.fromWeb(
         request,
-        new Response(reply.body, {
+        // A 204 can't carry a body, not even an empty one.
+        new Response(reply.status === 204 ? null : reply.body, {
           status: reply.status,
           headers: { "content-type": "application/json" },
         }),
@@ -234,6 +236,28 @@ describe("ApiClient", () => {
       yield* markRead(12);
 
       expect(seen.at(-1)?.csrf).toBe("new-token");
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("sends a root request from the origin, retrying its bare stale-token 422", () => {
+    setCsrfMeta("old-token");
+
+    const { layer, seen } = harness((request, index) => {
+      if (request.url.pathname === "/api/v1/boot") {
+        return json(200, { ...bootJson, csrfToken: "new-token" });
+      }
+
+      return index === 0 ? { status: 422, body: "" } : { status: 204, body: "" };
+    });
+
+    return Effect.gen(function* () {
+      yield* completeTour();
+
+      expect(seen.map((request) => [request.method, request.url.pathname, request.csrf])).toEqual([
+        ["PATCH", "/users/me/tour", "old-token"],
+        ["GET", "/api/v1/boot", null],
+        ["PATCH", "/users/me/tour", "new-token"],
+      ]);
     }).pipe(Effect.provide(layer));
   });
 

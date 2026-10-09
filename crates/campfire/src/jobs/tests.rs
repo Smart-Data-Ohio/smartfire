@@ -905,57 +905,6 @@ async fn an_invalid_interval_disables_only_its_loop() {
 
 // --- Latency ------------------------------------------------------------------------------------------
 
-/// How long a push notification's job waits between the write that asks for it and its handler
-/// starting: the enqueue (a row in the write's transaction), the commit, the wake and the claim.
-/// `cargo test -p campfire --release push_latency -- --ignored --nocapture`
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "utility: a measurement, not a test"]
-async fn push_latency() {
-    let (booted, _dir) = app().await;
-    let app = booted.app.clone();
-    booted.jobs.shutdown(WAIT).await;
-
-    let (started, mut started_rx) = mpsc::unbounded_channel();
-    let mut registry = Registry::new();
-    registry.register(move |_: App, job: PushMessageJob, _: Execution| {
-        let started = started.clone();
-        async move {
-            let _ = started.send((job.message_id, std::time::Instant::now()));
-            Ok(Outcome::Done)
-        }
-    });
-    let config = runner_config(&app.config);
-    let (jobs, _) = Jobs::new(&registry, &config).unwrap();
-    let queue = jobs.queue.clone();
-    let runner = campfire_jobs::start(app.db.clone(), queue.clone(), registry, app.clone(), config);
-
-    let mut latencies = Vec::new();
-    for message_id in 0..500 {
-        let sink = jobs.clone();
-        let asked = std::time::Instant::now();
-        app.db
-            .write(move |tx| {
-                // As the app's sink does for `Event::PushMessage`.
-                let request = request_for(&Event::PushMessage { room_id: 1, message_id }).unwrap();
-                sink.persist(tx, &Event::Job(request.clone()))?;
-                tx.after_commit(move |_| {
-                    sink.emit(Event::Job(request));
-                    Ok(())
-                });
-                Ok(())
-            })
-            .await
-            .unwrap();
-        let (performed, at) = wait("push job handler to start", started_rx.recv()).await.unwrap();
-        assert_eq!(performed, message_id);
-        latencies.push(at - asked);
-    }
-    runner.shutdown(WAIT).await;
-    latencies.sort();
-    let percentile = |p: usize| latencies[(latencies.len() * p / 100).min(latencies.len() - 1)];
-    println!("push enqueue-to-start over {} jobs: p50 {:?} p95 {:?} p99 {:?} max {:?}", latencies.len(), percentile(50), percentile(95), percentile(99), latencies.last().unwrap());
-}
-
 #[test]
 fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     let golden: serde_json::Value =

@@ -4,43 +4,43 @@
 //! as sanitized HTML. Every template renders with the per-request [`ViewContext`] below.
 
 pub mod fragment_cache;
-pub mod flash;
-pub mod helpers;
-pub mod layouts;
-pub mod link_embeds;
-pub mod message_links;
-pub mod twitter;
-pub mod linkedin_cards;
-pub mod fizzy_cards;
-pub mod fizzy_message_cards;
-pub mod public_pages;
-pub mod shared;
-pub mod time;
-pub mod sessions;
-pub mod sudos;
-pub mod two_factor;
-pub mod first_runs;
-pub mod users;
+pub use campfire_view_kit::flash;
 pub mod accounts;
 pub mod activity;
 pub mod agents;
-pub mod welcome;
-pub mod pwa;
 pub mod autocompletable;
-pub mod rooms;
+pub mod channel_threads;
+pub mod events;
+pub mod first_runs;
+pub mod fizzy_cards;
+pub mod fizzy_message_cards;
+pub mod github;
+pub mod helpers;
 pub mod huddle;
 pub mod huddle_stage;
-pub mod messages;
-pub mod message_providers;
-pub mod channel_threads;
-pub mod github;
-pub mod slack;
 pub mod integration_health;
-pub mod searches;
+pub mod layouts;
+pub mod link_embeds;
+pub mod linkedin_cards;
+pub mod message_links;
+pub mod message_providers;
+pub mod messages;
 pub mod pins;
+pub mod public_pages;
+pub mod pwa;
+pub mod rooms;
 pub mod saved_items;
 pub mod scheduled_messages;
-pub mod events;
+pub mod searches;
+pub mod sessions;
+pub mod shared;
+pub mod slack;
+pub mod sudos;
+pub mod time;
+pub mod twitter;
+pub mod two_factor;
+pub mod users;
+pub mod welcome;
 
 /// Per-request state every page needs: what `ApplicationController`, the layout and the
 /// helpers read from `Current`, `request`, `flash` and the session.
@@ -108,7 +108,9 @@ impl ViewContext<'_> {
     }
 
     pub fn can_administer(&self) -> bool {
-        self.current_user.as_ref().is_some_and(|user| user.administrator)
+        self.current_user
+            .as_ref()
+            .is_some_and(|user| user.administrator)
     }
 
     pub fn current_user_id(&self) -> Option<i64> {
@@ -127,17 +129,21 @@ impl ViewContext<'_> {
 
     /// `Current.user&.google_account&.drive?`.
     pub fn google_drive_previews(&self) -> bool {
-        self.preferences().is_some_and(|preferences| preferences.google_drive)
+        self.preferences()
+            .is_some_and(|preferences| preferences.google_drive)
     }
 
     /// `Google::Picker.configured? && Current.user`.
     pub fn google_picker(&self) -> Option<&layouts::GooglePicker> {
-        self.current_user.as_ref().and(self.chrome.google_picker.as_ref())
+        self.current_user
+            .as_ref()
+            .and(self.chrome.google_picker.as_ref())
     }
 
     /// `Current.user.tour_completed_at.nil?`.
     pub fn tour_pending(&self) -> bool {
-        self.preferences().is_some_and(|preferences| !preferences.tour_completed)
+        self.preferences()
+            .is_some_and(|preferences| !preferences.tour_completed)
     }
 
     /// `Current.user && Huddle.configured?`.
@@ -151,46 +157,7 @@ impl ViewContext<'_> {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct CurrentUser {
-    pub id: i64,
-    pub name: String,
-    pub administrator: bool,
-    pub bot: bool,
-    /// `fresh_user_avatar_path(Current.user)`.
-    pub avatar_url: String,
-    /// The settings the layout reads off `Current.user`.
-    pub preferences: layouts::UserPreferences,
-}
-
-#[derive(Clone, Debug)]
-pub struct AccountSummary {
-    pub name: String,
-    /// `fresh_account_logo_path` (no size).
-    pub logo_url: String,
-    /// `Current.account.logo.attached?` (adds the `account-has-logo` body class).
-    pub has_logo: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct Platform {
-    pub ios: bool,
-    pub android: bool,
-    pub mac: bool,
-    pub windows: bool,
-    pub chrome: bool,
-    pub firefox: bool,
-    pub safari: bool,
-    pub edge: bool,
-    pub mobile: bool,
-    pub desktop: bool,
-    /// `ApplicationPlatform#apple_messages?`.
-    pub apple_messages: bool,
-    /// `user_agent.browser` from the useragent gem ("Chrome", "Safari", "Firefox", "Edge", ...).
-    pub browser: String,
-    /// `ApplicationPlatform#operating_system` ("macOS", "Windows", "iPhone", ...).
-    pub operating_system: String,
-}
+pub use campfire_view_kit::{AccountSummary, CurrentUser, Platform};
 
 pub mod room_files;
 pub mod work_threads;

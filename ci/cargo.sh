@@ -8,9 +8,8 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 # must only see their own scratch directory, never those channels or the parent directory.
 scratch="$RUNNER_TEMP/rust-scratch"
 mkdir -p -- "$scratch"
-# The repository is mounted at its host path, as exec.sh mounts it, so both wrappers share
-# one target directory, Cargo home and CI profile (cargo-config.toml) with identical
-# fingerprints. /src stays mounted for local overrides that use it.
+# The repository is mounted at its host path for consistent Cargo fingerprints.
+# /src stays mounted for local overrides that use it.
 cargo_home="${CARGO_HOME:-$repo/.cargo-home}"
 if [[ -z "${CARGO_HOME:-}" ]]; then
   mkdir -p -- "$cargo_home"

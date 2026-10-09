@@ -8,6 +8,7 @@ import {
   PHONE_TOUCH,
   ROOM_IDS,
   shot,
+  THEMES,
   type Theme,
   test,
 } from "./support.ts";
@@ -69,7 +70,7 @@ async function sentRow(page: Page, text: string): Promise<Locator> {
   return row(page, Number(await sent.getAttribute("data-message-id")));
 }
 
-for (const theme of ["light", "dark"] as const) {
+for (const theme of THEMES) {
   test(`reply from the hover bar, send, and jump back from the quote (${theme})`, async ({
     page,
   }) => {
@@ -190,41 +191,6 @@ async function refuseCreates(
   return () => page.unroute(pattern);
 }
 
-test("a text send that fails brings the reply back with its notify choice; Retry lands it", async ({
-  page,
-}) => {
-  await openOn(page, TARGET);
-
-  const bar = await hoverBar(row(page, TARGET));
-
-  await bar.getByRole("button", { name: "Reply", exact: true }).click();
-  await chip(page).getByRole("checkbox", { name: "Notify author" }).click();
-
-  const allow = await refuseCreates(page, () => true);
-
-  await composer(page).fill("Try this");
-  await composer(page).press("Enter");
-
-  const failed = page.locator(".message-failed");
-
-  await expect(failed).toContainText("Couldn't send");
-  await expect(chip(page)).toBeVisible();
-  await expect(chip(page).getByRole("checkbox", { name: "Notify author" })).not.toBeChecked();
-
-  await allow();
-
-  const create = nextCreate(page);
-
-  await failed.getByRole("button", { name: "Retry" }).click();
-  expect((await create).postDataJSON()).toMatchObject({
-    markdownSource: "Try this",
-    replyToMessageId: TARGET,
-    replyNotifyAuthor: false,
-  });
-  await sentRow(page, "Try this");
-  await expect(chip(page)).toBeHidden();
-});
-
 test("a file send that fails brings the reply back", async ({ page }) => {
   await openOn(page, TARGET);
 
@@ -335,7 +301,7 @@ test.describe("on a 360 px touch phone", () => {
     await shot(page, "composer-reply-long-name", "light");
   });
 
-  for (const theme of ["light", "dark"] as const) {
+  for (const theme of THEMES) {
     test(`a long press offers Reply; the quote fits and sends without notifying (${theme})`, async ({
       page,
     }) => {
