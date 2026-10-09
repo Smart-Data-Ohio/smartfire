@@ -1,4 +1,4 @@
-# syntax = docker/dockerfile:1
+# syntax = mirror.gcr.io/docker/dockerfile:1
 #
 # Production image for the Rust port. A drop-in for the reference image (the Rails app's Dockerfile):
 # same user (uid 1000), working directory, storage layout (/rails/storage/{db,files,backups}), env
@@ -40,7 +40,7 @@ ARG FFMPEG_DSC_SHA256=9ed2ed34cbe7f056eeebbe9045c5e2d15e41b5b053fe7c8ba6979a0b6f
 # Toolchain and Debian -dev packages for libvips, ffmpeg and the Rust build, with deb-src enabled so
 # `apt-get source` can fetch the exact Debian sources (the .dsc checksums pin them; dpkg-source
 # verifies the tarballs against the .dsc).
-FROM docker.io/library/rust:${RUST_VERSION}-${DEBIAN_RELEASE}@sha256:a8a5f0a1e5fe7dfe1d352591e4a1c7dd2c08fd70475cae872cf3458ba0df0546 AS media-base
+FROM mirror.gcr.io/library/rust:${RUST_VERSION}-${DEBIAN_RELEASE}@sha256:a8a5f0a1e5fe7dfe1d352591e4a1c7dd2c08fd70475cae872cf3458ba0df0546 AS media-base
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources && \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y \
@@ -98,7 +98,7 @@ RUN apt-get source -qq ffmpeg=${FFMPEG_VERSION} && \
 # ffmpeg as the image, so the storage vectors' byte comparisons run rather than skip.
 # The enabled service-worker receipt runs the pinned original Node harness on real HTTP bytes.
 # Keep this prerequisite in the test toolchain stage; production builds start from media-base.
-FROM docker.io/library/node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS test-node
+FROM mirror.gcr.io/library/node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS test-node
 
 FROM media-base AS toolchain
 COPY --from=test-node /usr/local/bin/node /usr/local/bin/node
@@ -137,7 +137,7 @@ RUN rustup component add clippy && \
 # every architecture, and crates/spa/build.rs embeds them into the binary, so the runtime image
 # has no Node. The manifest and lockfile come in first, so a source-only change reuses the
 # installed dependencies. pnpm is the version package.json's packageManager names.
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS spa
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/node:24-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS spa
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=campfire-pnpm-store,target=/pnpm-store \
@@ -202,7 +202,7 @@ COPY --from=ffmpeg /opt/ffmpeg/lib/libavcodec.so.61 /opt/ffmpeg/lib/libavfilter.
 COPY --from=ffmpeg /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe /usr/local/bin/
 
 
-FROM docker.io/library/debian:${DEBIAN_RELEASE}-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
+FROM mirror.gcr.io/library/debian:${DEBIAN_RELEASE}-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
 
 # ca-certificates: the system CA store, for webhooks, unfurling, Web Push and the ACME directory.
 # The rest are the Debian libraries libvips and ffmpeg were built against: glib and expat, the image
