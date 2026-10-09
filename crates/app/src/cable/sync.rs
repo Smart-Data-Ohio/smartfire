@@ -1129,11 +1129,32 @@ fn defer_rows(
     }));
 }
 
+/// Runs `read` in one read transaction (`BEGIN DEFERRED`; the pooled readers otherwise commit
+/// each statement on its own), so everything it reads comes from one SQLite snapshot, taken at
+/// its first read: no read in it can see a commit an earlier one predates. `None` (logged) when
+/// the transaction can't be opened; nothing is read then.
+fn in_snapshot<T>(conn: &Connection, read: impl FnOnce(&Connection) -> T) -> Option<T> {
+    match conn.unchecked_transaction() {
+        // Dropped once read, rolling back a transaction that wrote nothing.
+        Ok(snapshot) => Some(read(&snapshot)),
+        Err(error) => {
+            tracing::warn!(%error, "sync: sidebar snapshot not opened");
+            None
+        }
+    }
+}
+
 impl RoomRows {
-    /// The one way a sidebar row is published: the room, the memberships and the row are all
-    /// read now, under the lock. Each viewer gets their row (`sidebar.row.upserted`), a removal
-    /// that keeps them following when they hid the room, or a removal that stops it when they
-    /// no longer belong (no membership, or the room is gone or deleted).
+    /// The one way a sidebar row is published: the room, the memberships and each row are all
+    /// read now, under the lock, from one snapshot. Each viewer gets their row
+    /// (`sidebar.row.upserted`), a removal that keeps them following when they hid the room, or
+    /// a removal that stops it when they no longer belong (no membership, or the room is gone or
+    /// deleted).
+    ///
+    /// One snapshot, so a row only shows what its membership could see: a membership read
+    /// before a revocation renders the room as it was before it, never a message posted after
+    /// it. A row refused for a newer unread change (see [`Self::row`]) is read again from a
+    /// fresh snapshot, membership and all; nothing read in one snapshot is used in another.
     ///
     /// Only members with a sync socket open get a row: a row costs a few reads, and a big room
     /// has many members. For the others the ring records a gap on their `user` topic, so their
@@ -1147,30 +1168,76 @@ impl RoomRows {
         viewers: Viewers<'_>,
         refresh_room: Option<bool>,
     ) {
+        const TRIES: usize = 8;
         if !server.sync_wanted() {
             return;
         }
+        let renderer = slot.get(server);
         // Before anything is read: a row is published only if no change to its unread state was
         // published since (see `row`).
         let since = server.sync_head();
+        let Some(mut refused) = in_snapshot(conn, |conn| {
+            self.rows(server, renderer, conn, viewers, since, refresh_room)
+        }) else {
+            return;
+        };
+        for _ in 1..TRIES {
+            if refused.is_empty() {
+                return;
+            }
+            let since = server.sync_head();
+            let Some(again) = in_snapshot(conn, |conn| {
+                self.rows(
+                    server,
+                    renderer,
+                    conn,
+                    Viewers::Users(&refused),
+                    since,
+                    refresh_room,
+                )
+            }) else {
+                return;
+            };
+            refused = again;
+        }
+        // Their unread state keeps changing faster than a row renders: they refetch the sidebar.
+        for user_id in refused {
+            server.sync_skipped_for(user_id);
+        }
+    }
+
+    /// One pass of [`Self::publish`], inside one snapshot: returns who had their row refused.
+    fn rows(
+        &self,
+        server: &Cable,
+        renderer: Option<&Arc<dyn SyncRenderer>>,
+        conn: &Connection,
+        viewers: Viewers<'_>,
+        since: u64,
+        refresh_room: Option<bool>,
+    ) -> Vec<i64> {
         let room_id = self.room_id;
         let room = match Room::find_by_id(conn, room_id) {
             Ok(room) => room,
-            Err(error) => return tracing::warn!(%error, room_id, "sync: sidebar room not read"),
+            Err(error) => {
+                tracing::warn!(%error, room_id, "sync: sidebar room not read");
+                return Vec::new();
+            }
         };
         let memberships = match &room {
             Some(_) => match Membership::for_room(conn, room_id) {
                 Ok(memberships) => memberships,
                 Err(error) => {
-                    return tracing::warn!(%error, room_id, "sync: sidebar rows not read");
+                    tracing::warn!(%error, room_id, "sync: sidebar rows not read");
+                    return Vec::new();
                 }
             },
             None => Vec::new(),
         };
-        let renderer = slot.get(server);
-        let row = |membership: &Membership| match (&room, renderer) {
+        let mut refused = Vec::new();
+        let mut row = |membership: &Membership| match (&room, renderer) {
             (Some(room), Some(renderer)) => {
-                self.row(
+                let published = self.row(
                     server,
                     renderer.as_ref(),
                     conn,
@@ -1178,11 +1245,14 @@ impl RoomRows {
                     since,
                     refresh_room,
                 );
+                if !published {
+                    refused.push(membership.user_id);
+                }
             }
             _ => self.removed(server, membership.user_id),
         };
         match viewers {
-            Viewers::Members => memberships.iter().for_each(row),
+            Viewers::Members => memberships.iter().for_each(&mut row),
             Viewers::Users(user_ids) => {
                 for &user_id in user_ids {
                     match memberships.iter().find(|m| m.user_id == user_id) {
@@ -1192,67 +1262,56 @@ impl RoomRows {
                 }
             }
         }
+        refused
     }
 
-    /// The person's row, read from `membership` as it was at `since` (a
-    /// [`Cable::sync_head`](campfire_cable::Server::sync_head) read before it). A `room.read` or
-    /// `room.unread` of theirs published after that has already changed the row's unread state on
-    /// the client, and this row may predate it: the publication is refused, and the membership
-    /// and row are read again. Only a person whose unread state keeps changing faster than a row
-    /// renders runs out of tries; their `user` topic then gets a gap, so they refetch the sidebar.
+    /// The person's row, read from `membership` in the caller's snapshot, which started after
+    /// `since` (a [`Cable::sync_head`](campfire_cable::Server::sync_head)). A `room.read` or
+    /// `room.unread` of theirs published after that has already changed the row's unread state
+    /// on the client, and this row may predate it: the publication is refused, and `false` asks
+    /// the caller to read it again from a fresh snapshot. `true` otherwise (published, hidden,
+    /// skipped, or not rendered).
     fn row(
         &self,
         server: &Cable,
         renderer: &dyn SyncRenderer,
         conn: &Connection,
         (room, membership): (&Room, &Membership),
-        mut since: u64,
+        since: u64,
         refresh_room: Option<bool>,
-    ) {
-        const TRIES: usize = 8;
+    ) -> bool {
         let user_id = membership.user_id;
         if room.deleted() {
-            return self.removed(server, user_id);
+            self.removed(server, user_id);
+            return true;
         }
         if !server.sync_connected(user_id) {
             server.sync_skipped_for(user_id);
-            return;
+            return true;
         }
-        let fence = unread_fence(user_id, room.id);
-        let mut reread;
-        let mut membership = membership;
-        for _ in 0..TRIES {
-            let mut row = match renderer.sidebar_row(conn, room, membership) {
-                Ok(Some(row)) => row,
-                Ok(None) => return self.hidden(server, user_id, refresh_room),
-                Err(error) => {
-                    return tracing::warn!(
-                        %error,
-                        room_id = room.id,
-                        user_id,
-                        "sync: sidebar row not rendered"
-                    );
-                }
-            };
-            row.refresh_room = refresh_room;
-            let payload = serde_json::to_string(&SyncPayload::SidebarRowUpserted(row))
-                .expect("sync payloads serialize");
-            let publication = SyncPublication::new(Audience::User(user_id), payload);
-            if server
-                .sync_publish_fresh(publication, &fence, since)
-                .is_ok()
-            {
-                return;
+        let mut row = match renderer.sidebar_row(conn, room, membership) {
+            Ok(Some(row)) => row,
+            Ok(None) => {
+                self.hidden(server, user_id, refresh_room);
+                return true;
             }
-            since = server.sync_head();
-            reread = match Membership::find(conn, membership.id) {
-                Ok(membership) => membership,
-                // Gone: the leave publishes its removal.
-                Err(_) => return,
-            };
-            membership = &reread;
-        }
-        server.sync_skipped_for(user_id);
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    room_id = room.id,
+                    user_id,
+                    "sync: sidebar row not rendered"
+                );
+                return true;
+            }
+        };
+        row.refresh_room = refresh_room;
+        let payload = serde_json::to_string(&SyncPayload::SidebarRowUpserted(row))
+            .expect("sync payloads serialize");
+        let publication = SyncPublication::new(Audience::User(user_id), payload);
+        server
+            .sync_publish_fresh(publication, &unread_fence(user_id, room.id), since)
+            .is_ok()
     }
 
     /// The person no longer belongs: `sidebar.row.removed` on their `user` topic, and their

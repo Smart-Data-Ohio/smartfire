@@ -1455,6 +1455,107 @@ async fn a_revocation_disconnects_at_once_while_a_row_of_the_room_is_paused() {
     server.abort();
 }
 
+/// A row publication paused on an earlier member's row read the room's memberships before a
+/// later member was revoked. Once released, the revoked member (reconnected meanwhile) gets
+/// nothing newer than what their membership could see: never a message posted after the
+/// revocation, on any audience.
+#[tokio::test]
+async fn a_row_paused_before_a_revocation_never_shows_the_revoked_member_a_later_message() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    // The earlier member's row is the one paused; the last member is revoked.
+    let members = a
+        .db()
+        .read(move |conn| campfire_db::Membership::for_room(conn, room))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|membership| membership.user_id)
+        .collect::<Vec<_>>();
+    assert_eq!(members.len(), 3, "{members:?}");
+    let (earlier, revoked) = (members[0], members[2]);
+    let mut poster = a.sign_in(earlier).await;
+    let revoked_cookie = a.sign_in(revoked).await.cookie_header();
+    let mut sync = Sync::connect(addr, &poster.cookie_header(), &[]).await;
+    sync.welcome().await;
+    remaining_row_events(&a, &mut sync, room).await;
+
+    // A message's rows: only the earlier member has a socket, so theirs is the row rendered,
+    // and it pauses with the memberships (the revoked one's too) already read.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let post = |client: &str| {
+        json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": client, "markdownSource": client}),
+        )
+    };
+    let reply = poster.write(post("before-revocation")).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the earlier member's row was rendered")
+        .unwrap();
+
+    // The last member is revoked, a secret is posted, and the revoked member reconnects.
+    a.db()
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room)?.revoke_from(tx, &[revoked]))
+        .await
+        .unwrap();
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        poster.write(post("the-secret-after-revocation")),
+    )
+    .await
+    .expect("the post doesn't wait for the room's lock");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let mut outsider = Sync::connect(addr, &revoked_cookie, &[]).await;
+    outsider.welcome().await;
+
+    hold.release.send(()).unwrap();
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("the publications settled");
+    // Every frame until a quiet moment after the room's removal reaches them.
+    let mut frames = Vec::new();
+    let mut removed = false;
+    loop {
+        let wait = if removed { 300 } else { 5000 };
+        let Ok(frame) = tokio::time::timeout(Duration::from_millis(wait), outsider.next()).await
+        else {
+            break;
+        };
+        let Some(frame) = frame else { break };
+        if let api::ServerFrame::Batch { events } = &frame {
+            removed |= events.iter().any(|event| {
+                matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(gone) if gone.room_id == room)
+            });
+        }
+        frames.push(format!("{frame:?}"));
+    }
+    assert!(removed, "the room leaves their sidebar: {frames:?}");
+    assert!(
+        frames
+            .iter()
+            .all(|frame| !frame.contains("the-secret-after-revocation")),
+        "{frames:?}"
+    );
+    server.abort();
+}
+
 /// Waits until the room's name, as committed, is `name`.
 async fn room_named(a: &TestApp, room: i64, name: &'static str) {
     tokio::time::timeout(Duration::from_secs(5), async {
