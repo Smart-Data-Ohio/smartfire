@@ -352,13 +352,38 @@ test.describe("on a 360 px touch phone", () => {
 
       expect(box?.width ?? 0).toBeGreaterThanOrEqual(43.5);
       expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
-      await expectNoHorizontalOverflow(page);
+      // The category tabs keep their finger size and scroll sideways inside their own strip.
+      await expectTouchTargets(page, ".action-sheet .emoji-picker-tabs");
+      await expectNoHorizontalOverflow(page, { allowScroll: ".emoji-picker-tabs" });
       await shot(page, "phone-sheet-emoji", theme);
 
       if (theme === "dark") {
         return;
       }
 
+      // Scrolled to its end, the grid brings the current section's tab into the strip's view.
+      const strip = picker.locator(".emoji-picker-tabs");
+
+      await picker.locator(".emoji-picker-grid").evaluate((grid) => {
+        grid.scrollTop = grid.scrollHeight;
+      });
+      await expect
+        .poll(() =>
+          strip.evaluate((element) => {
+            const tab = element.querySelector("[data-active]")?.getBoundingClientRect();
+            const bounds = element.getBoundingClientRect();
+
+            return {
+              scrolled: element.scrollLeft > 0,
+              shown: tab !== undefined && tab.left >= bounds.left && tab.right <= bounds.right,
+            };
+          }),
+        )
+        .toEqual({ scrolled: true, shown: true });
+
+      await picker.locator(".emoji-picker-grid").evaluate((grid) => {
+        grid.scrollTop = 0;
+      });
       await cell.click();
       await expect(picker).toBeHidden();
       await expect(page.locator(".composer-input").first()).not.toHaveValue("");

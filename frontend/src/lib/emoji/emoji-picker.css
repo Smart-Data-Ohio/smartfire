@@ -231,8 +231,13 @@
     height: var(--touch-target);
   }
 
+  /* Ten finger-sized tabs outrun a phone's width: the strip scrolls sideways inside itself (as
+     Discord's does), its trailing edge fading out to show there is more. */
   .action-sheet .emoji-picker-tabs {
-    padding-inline: 0;
+    padding-inline: 0 var(--space-6);
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(to left, transparent, black var(--space-6));
   }
 
   .action-sheet .emoji-picker-tab {
@@ -240,6 +245,7 @@
 
     flex: 1 0 var(--touch-target);
     font-size: 20px;
+    scroll-snap-align: start;
   }
 
   .action-sheet .emoji-picker-grid {

@@ -201,6 +201,7 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
   const listRef = useRef<VListHandle | null>(null);
   const keyboardMove = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
   const sheet = useActionSheet();
   const columns = sheet ? SHEET_COLUMNS : PICKER_COLUMNS;
   const listHeight = sheet ? SHEET_LIST_HEIGHT : LIST_HEIGHT;
@@ -250,6 +251,30 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
 
     if (rowIndex >= 0) {
       listRef.current?.scrollToIndex(rowIndex, { align: "nearest" });
+    }
+  });
+
+  // In a sheet the tab strip scrolls sideways: keep the current section's tab on screen as the
+  // grid scrolls through the sections.
+  useLayoutEffect(() => {
+    const strip = tabsRef.current;
+    const tab = sheet ? strip?.querySelector("[data-active]") : null;
+
+    if (strip === null || tab === null || tab === undefined) {
+      return;
+    }
+
+    const box = tab.getBoundingClientRect();
+    const left = strip.getBoundingClientRect().left;
+
+    // The end padding sits under the fade: a tab only counts as shown clear of it.
+    const right =
+      left + strip.clientWidth - Number.parseFloat(getComputedStyle(strip).paddingRight);
+
+    if (box.left < left) {
+      strip.scrollLeft -= left - box.left;
+    } else if (box.right > right) {
+      strip.scrollLeft += box.right - right;
     }
   });
 
@@ -384,7 +409,12 @@ export default function EmojiPicker({ onPick, loadCustomIcons }: EmojiPickerProp
         />
       </div>
       {searching ? null : (
-        <div className="emoji-picker-tabs" role="toolbar" aria-label="Emoji categories">
+        <div
+          ref={tabsRef}
+          className="emoji-picker-tabs"
+          role="toolbar"
+          aria-label="Emoji categories"
+        >
           {visibleTabs.map((tab) => (
             <Tooltip key={tab.id} content={tab.label} describe={false} placement="bottom">
               <Button
