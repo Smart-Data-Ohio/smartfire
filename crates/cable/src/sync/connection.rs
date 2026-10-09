@@ -7,15 +7,17 @@ use std::sync::atomic::Ordering;
 
 use campfire_api_types::{ClientFrame, ServerFrame};
 use futures_util::StreamExt;
-use futures_util::stream::{BoxStream, SelectAll};
 use tokio::io::WriteHalf;
 use tokio::sync::mpsc;
 use tokio::time::{Instant, sleep_until};
 
 use super::{Engine, Entry, Read, USER_TOPIC};
 use crate::Server;
-use crate::connection::{Io, close_socket, process_internal_reconnect, spawn_reader};
-use crate::pubsub::{Delivery, Frame, RecvError};
+use crate::connection::{
+    InternalMessages, Io, close_socket, poll_remote_reconnect, process_internal_reconnect,
+    spawn_reader,
+};
+use crate::pubsub::Frame;
 use crate::server::{ConnectRequest, Identified, internal_channel};
 use crate::socket::{Incoming, Writer};
 
@@ -40,6 +42,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     let (reader, mut incoming) = spawn_reader(crate::socket::Reader::new(read, deflate));
     let config = engine.ring.config().clone();
     let close_timeout = server.config().close_timeout;
+    let internal_capacity = server.config().stream_capacity;
 
     let unauthorized = Bye {
         reconnect: false,
@@ -49,7 +52,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
         say_bye(&mut sink, &mut incoming, unauthorized, close_timeout).await;
         return reader.abort();
     };
-    let mut internal = SelectAll::<BoxStream<'static, Result<Delivery, RecvError>>>::new();
+    let mut internal = InternalMessages::new();
     let identifier = user.connection_identifier();
     if !identifier.is_empty() {
         internal.push(
@@ -152,13 +155,15 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
     loop {
         let ping_at = connection.last_sent + config.ping_after;
         let flush_at = connection.flush_at;
+        let mut disconnect = None;
+        let mut resync = None;
         tokio::select! {
             biased;
             Some(message) = internal.next() => {
                 if let Ok(message) = message
                     && let Some(reconnect) = process_internal_reconnect(message.frame.as_str())
                 {
-                    bye = Some(Bye { reconnect, reason: "remote" });
+                    disconnect = Some((message.sequence, reconnect));
                 }
             }
             Ok(()) = restarts.recv() => bye = Some(Bye { reconnect: true, reason: "server_restart" }),
@@ -189,15 +194,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
             Ok(()) = head.changed() => {
                 head.mark_unchanged();
-                if let Some(resync) = connection.catch_up(false) {
-                    // Write what came before the gap, then ask for the refetch.
-                    let frames = connection.take_batches();
-                    if connection.send(&mut sink, &frames).await.is_err()
-                        || connection.send(&mut sink, &[encode(&resync)]).await.is_err()
-                    {
-                        break;
-                    }
-                }
+                resync = connection.catch_up(false);
             }
             () = sleep_until(flush_at.unwrap_or_else(Instant::now)), if flush_at.is_some() => {}
             () = sleep_until(ping_at) => {
@@ -210,8 +207,28 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
         }
 
+        let gapped = resync.is_some();
+        if let Some(remote) =
+            connection.disconnect(disconnect, gapped, &mut internal, internal_capacity)
+        {
+            // Once the person is disconnected, a refetch is moot.
+            resync = None;
+            bye.get_or_insert(remote);
+        }
+        if let Some(resync) = resync {
+            // Write what came before the gap, then ask for the refetch.
+            let frames = connection.take_batches();
+            if connection.send(&mut sink, &frames).await.is_err()
+                || connection
+                    .send(&mut sink, &[encode(&resync)])
+                    .await
+                    .is_err()
+            {
+                break;
+            }
+        }
         let due = connection.flush_at.is_some_and(|at| at <= Instant::now());
-        if due || connection.pending.len() >= config.flush_max || bye.is_some() {
+        if due || connection.full() || bye.is_some() {
             let frames = connection.take_batches();
             if connection.send(&mut sink, &frames).await.is_err() {
                 break;
@@ -297,6 +314,9 @@ struct Connection<U> {
     /// The conversation topics followed, each with the ring's head when it was authorized: an
     /// unsubscribe published by then is older than the authorization, so it doesn't apply.
     topics: BTreeMap<String, u64>,
+    /// Every event read since the last write, in sequence order, including those a later one
+    /// coalesces away: that's settled at the write, after a disconnect's cutoff, so an event
+    /// from before the disconnect is never replaced by one that won't go out.
     pending: Vec<Arc<Entry>>,
     /// When the pending events must go out, once there are any.
     flush_at: Option<Instant>,
@@ -328,8 +348,15 @@ impl<U> Connection<U> {
     /// `replay`ing for a resumed client). Returns the `resync` to send if the ring dropped events
     /// this connection hadn't read.
     fn catch_up(&mut self, replay: bool) -> Option<ServerFrame> {
+        self.catch_up_before(u64::MAX, replay)
+    }
+
+    /// [`Connection::catch_up`], reading only events published before `before`.
+    fn catch_up_before(&mut self, before: u64, replay: bool) -> Option<ServerFrame> {
         match self.engine.ring.read(self.cursor) {
-            Read::Events(events, head) => {
+            Read::Events(mut events, head) => {
+                events.retain(|entry| entry.seq < before);
+                let head = head.min(before - 1).max(self.cursor);
                 // A gap marker for this person: events were skipped for them, as if lost.
                 let skipped = events
                     .iter()
@@ -373,14 +400,57 @@ impl<U> Connection<U> {
         {
             self.topics.remove(topic);
         }
-        if let Some(key) = &entry.coalesce {
-            self.pending
-                .retain(|pending| pending.coalesce.as_ref() != Some(key));
-        }
         self.pending.push(entry);
         if self.flush_at.is_none() {
             self.flush_at = Some(Instant::now() + self.engine.ring.config().flush_interval);
         }
+    }
+
+    /// The `bye` for a remote disconnect: the one `seen` this turn, else one published since.
+    /// Like the classic connection, this looks again before anything pending goes out: a
+    /// disconnect published after select chose the head's change can precede events
+    /// `catch_up` then read. Exactly the events published before the disconnect still go out
+    /// (the hub assigns ring and internal-channel sequences under one lock): those not yet
+    /// read are read now, and any read past it are dropped. If this turn's catch-up found a gap
+    /// (`gapped`), nothing more is read: the cursor stays at the gap and the client's resume
+    /// point before it, so a resume starts afresh.
+    fn disconnect(
+        &mut self,
+        seen: Option<(u64, bool)>,
+        gapped: bool,
+        internal: &mut InternalMessages,
+        capacity: usize,
+    ) -> Option<Bye> {
+        let (sequence, reconnect) = seen.or_else(|| poll_remote_reconnect(internal, capacity))?;
+        // A gap before the disconnect ends the reading there, without a `resync`: the person
+        // can't refetch once disconnected, and a resume from their cursor starts afresh.
+        if !gapped {
+            let _ = self.catch_up_before(sequence, false);
+        }
+        self.pending.retain(|entry| entry.seq < sequence);
+        Some(Bye {
+            reconnect,
+            reason: "remote",
+        })
+    }
+
+    /// The pending events that go out: of those with the same `coalesce` key, only the latest.
+    fn outgoing(&self) -> Vec<&Arc<Entry>> {
+        let mut keys = std::collections::HashSet::new();
+        let mut events: Vec<_> = self
+            .pending
+            .iter()
+            .rev()
+            .filter(|entry| entry.coalesce.as_ref().is_none_or(|key| keys.insert(key)))
+            .collect();
+        events.reverse();
+        events
+    }
+
+    /// Whether a full batch is waiting.
+    fn full(&self) -> bool {
+        let max = self.engine.ring.config().flush_max;
+        self.pending.len() >= max && self.outgoing().len() >= max
     }
 
     /// The pending events as `batch` frames of at most `flush_max` events each.
@@ -388,7 +458,7 @@ impl<U> Connection<U> {
         self.flush_at = None;
         let max = self.engine.ring.config().flush_max.max(1);
         let frames = self
-            .pending
+            .outgoing()
             .chunks(max)
             .map(|events| {
                 let mut frame = String::from(r#"{"t":"batch","events":["#);
@@ -711,6 +781,136 @@ mod tests {
         unsubscribe(&connection, 2);
         assert!(connection.catch_up(false).is_none());
         assert!(!connection.topics.contains_key("room:1"));
+    }
+
+    /// A hub whose internal channel for user 1 the connection follows, as [`run`] does.
+    fn internal_channel_for_user_1() -> (Arc<crate::pubsub::Hub>, InternalMessages) {
+        let hub = crate::pubsub::Hub::new(16);
+        let mut internal = InternalMessages::new();
+        internal.push(
+            hub.subscribe(&internal_channel("1"), None)
+                .ordered_deliveries(),
+        );
+        (hub, internal)
+    }
+
+    fn pending_seqs(connection: &Connection<()>) -> Vec<u64> {
+        connection.pending.iter().map(|entry| entry.seq).collect()
+    }
+
+    /// Seq 1 moves the head, a revocation's disconnect is seq 2 and a later post seq 3, both
+    /// committed before `catch_up` reads the ring.
+    fn head_change_then_disconnect_and_post(hub: &crate::pubsub::Hub, connection: &Connection<()>) {
+        hub.sequenced(|seq| publish(connection, seq, Audience::User(1)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":false}"#,
+        );
+        hub.sequenced(|seq| publish(connection, seq, Audience::User(1)));
+    }
+
+    #[tokio::test]
+    async fn a_post_after_a_disconnect_read_before_it_is_seen_never_goes_out() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        // The select chose the head's change while no disconnect was waiting.
+        head_change_then_disconnect_and_post(&hub, &connection);
+        assert!(connection.catch_up(false).is_none());
+        assert_eq!(pending_seqs(&connection), [1, 3]);
+        // Before anything pending is written, the disconnect is looked for again.
+        let bye = connection
+            .disconnect(None, false, &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        assert!(!bye.reconnect);
+        assert_eq!(bye.reason, "remote");
+        assert_eq!(
+            pending_seqs(&connection),
+            [1],
+            "what came before the disconnect still goes out; the later post never does"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_disconnect_seen_on_a_later_turn_drops_what_was_read_past_it() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        head_change_then_disconnect_and_post(&hub, &connection);
+        assert!(connection.catch_up(false).is_none());
+        // The next turn's select takes the disconnect itself.
+        let message = internal.next().await.unwrap().unwrap();
+        let reconnect = crate::connection::process_internal_reconnect(message.frame.as_str());
+        let seen = reconnect.map(|reconnect| (message.sequence, reconnect));
+        assert_eq!(seen, Some((2, false)));
+        let bye = connection
+            .disconnect(seen, false, &mut internal, 16)
+            .unwrap();
+        assert_eq!((bye.reconnect, bye.reason), (false, "remote"));
+        assert_eq!(pending_seqs(&connection), [1]);
+    }
+
+    #[tokio::test]
+    async fn a_gap_found_on_the_turn_a_disconnect_follows_is_not_read_past() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        // The head's change shows a gap through seq 2.
+        hub.sequenced(|seq| publish(&connection, seq, Audience::User(1)));
+        hub.sequenced(|seq| connection.engine.ring.push_gap(seq, 1));
+        let resync = connection.catch_up(false);
+        assert!(matches!(resync, Some(ServerFrame::Resync { .. })));
+        // Before the write, event 3 and the disconnect (seq 4) commit.
+        hub.sequenced(|seq| publish(&connection, seq, Audience::User(1)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":true}"#,
+        );
+        let bye = connection
+            .disconnect(None, resync.is_some(), &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        assert_eq!((bye.reconnect, bye.reason), (true, "remote"));
+        assert_eq!(pending_seqs(&connection), [0u64; 0], "nothing past the gap");
+        assert_eq!(connection.cursor, 2);
+        // The client's cursor stays at its welcome (seq 0), so its resume starts afresh.
+        let start = connection
+            .engine
+            .ring
+            .resume(Some((connection.engine.ring.epoch(), 0)));
+        assert!(matches!(
+            connection.welcome(start),
+            ServerFrame::Welcome { resumed: false, .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn an_update_before_a_disconnect_is_not_coalesced_into_one_after_it() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        let update = |seq| SyncPublication {
+            coalesce: Some("workspace".into()),
+            ..SyncPublication::new(
+                Audience::User(1),
+                format!(r#"{{"type":"workspace.updated","data":{{"n":{seq}}}}}"#),
+            )
+        };
+        // The select chose the head's change; then update 1, the disconnect (seq 2) and update
+        // 3, which replaces update 1 in a batch, all commit before `catch_up` reads the ring.
+        hub.sequenced(|seq| connection.engine.ring.push(seq, update(seq)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":false}"#,
+        );
+        hub.sequenced(|seq| connection.engine.ring.push(seq, update(seq)));
+        assert!(connection.catch_up(false).is_none());
+        connection
+            .disconnect(None, false, &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        let frames = connection.take_batches();
+        assert_eq!(
+            frames.iter().map(Frame::as_str).collect::<Vec<_>>(),
+            [
+                r#"{"t":"batch","events":[{"seq":1,"topic":"user","type":"workspace.updated","data":{"n":1}}]}"#
+            ],
+            "update 1 goes out before the bye, update 3 never does"
+        );
     }
 
     #[test]
