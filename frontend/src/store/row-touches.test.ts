@@ -204,6 +204,33 @@ describe("sidebar row touches", () => {
     expect(replied.timelines[1]?.unreadFromId).toBe(41);
   });
 
+  it("a mark-unread reply from before another tab read the room changes nothing", () => {
+    // Here: mark unread from 41 goes out. Another tab reads the room; its room.read lands first.
+    const state: State = {
+      ...loaded([general]),
+      timelines: { 1: { ...emptyTimeline, ids: [40, 41, 42], unreadFromId: null, unreadCount: 0 } },
+    };
+
+    const since = rowClock(state);
+
+    const readElsewhere: SyncEvent = {
+      seq: 1,
+      topic: "user:7",
+      type: "room.read",
+      data: { roomId: 1 },
+    };
+
+    const synced = applyEvents(state, [readElsewhere], 0);
+    const replied = markUnreadFrom(synced, 1, 41, 0, since);
+
+    expect(replied).toBe(synced);
+    expect(replied.timelines[1]?.unreadFromId).toBeNull();
+    expect(replied.sidebar.rows[1]?.unreadCount).toBe(0);
+
+    // A mark-unread sent after that read lands as usual.
+    expect(markUnreadFrom(synced, 1, 41, 0, rowClock(synced)).timelines[1]?.unreadFromId).toBe(41);
+  });
+
   it("a category reply older than sync's word on it changes nothing", () => {
     const team = { id: 2, name: "Team", collapsed: false, position: 1 };
 
@@ -358,8 +385,10 @@ describe("sidebar row tickets in the store", () => {
     const second = mutations.openRowTicket();
 
     mutations.applyEvents([upserted(design)], 0);
+    mutations.applyEvents([{ seq: 1, topic: "user:7", type: "room.read", data: { roomId: 2 } }], 0);
 
     expect(Object.keys(store.getState().rowTouches.at).sort()).toEqual(["1", "2"]);
+    expect(Object.keys(store.getState().rowTouches.reads)).toEqual(["2"]);
 
     // Only the second request is older than room 2's touch now.
     mutations.closeRowTicket(first);
@@ -369,6 +398,7 @@ describe("sidebar row tickets in the store", () => {
     mutations.closeRowTicket(second);
 
     expect(store.getState().rowTouches.at).toEqual({});
+    expect(store.getState().rowTouches.reads).toEqual({});
   });
 
   it("stays bounded while rooms come and go around short requests", () => {

@@ -33,6 +33,7 @@ import {
   dividerMovedSince,
   isStale,
   markResynced,
+  readSince,
   touchedSince,
   touchRows,
 } from "./row-touches.ts";
@@ -646,10 +647,11 @@ export function moveUnreadDivider(state: State, roomId: number, fromId: number):
 /**
  * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
  * what the divider counts (at least 1, when the message is outside the loaded window). `since` is
- * the request's ticket. A reply that started before a resync, or before a newer mark-unread
- * reply moved the divider, changes nothing, divider included. A row the sync path changed after
- * the request began is newer, so it stays (the divider still moves: sync never moves it, and the
- * viewer's own `room.unread` often lands first).
+ * the request's ticket. A reply that started before a resync, a newer mark-unread reply moving
+ * the divider, or a sync `room.read` (another tab read the room) changes nothing, divider
+ * included. Any other row change sync made after the request began is newer, so the row stays,
+ * but the divider still moves: sync never moves it, and the viewer's own `room.unread` echo
+ * often lands first.
  */
 export function markUnreadFrom(
   state: State,
@@ -658,7 +660,11 @@ export function markUnreadFrom(
   now: number,
   since: number,
 ): State {
-  if (isStale(state, since) || dividerMovedSince(state, roomId, since)) {
+  if (
+    isStale(state, since) ||
+    dividerMovedSince(state, roomId, since) ||
+    readSince(state, roomId, since)
+  ) {
     return state;
   }
 
@@ -1139,7 +1145,12 @@ export function applyEvents(
   }
 
   return source === "sync"
-    ? touchRows(next, syncTouchedRooms(state, next, events), syncTouchedCategories(events))
+    ? touchRows(
+        next,
+        syncTouchedRooms(state, next, events),
+        syncTouchedCategories(events),
+        syncReadRooms(events),
+      )
     : next;
 }
 
@@ -1179,6 +1190,11 @@ function syncTouchedCategories(events: readonly SyncEvent[]): readonly number[] 
       ? [event.data.id]
       : [],
   );
+}
+
+/** The rooms a sync batch says were read, so an older mark-unread reply leaves them be. */
+function syncReadRooms(events: readonly SyncEvent[]): readonly number[] {
+  return events.flatMap((event) => (event.type === "room.read" ? [event.data.roomId] : []));
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */
