@@ -67,6 +67,7 @@ export const SHORTCUTS = [
   { id: "message-down", group: "Messages", keys: ["↓"], label: "Next message" },
   { id: "message-edit", group: "Messages", keys: ["E"], label: "Edit your message" },
   { id: "message-react", group: "Messages", keys: ["R"], label: "Add a reaction" },
+  { id: "message-reply", group: "Messages", keys: ["Q"], label: "Reply" },
   { id: "message-thread", group: "Messages", keys: ["T"], label: "Reply in thread" },
   { id: "message-pin", group: "Messages", keys: ["P"], label: "Pin or unpin" },
   { id: "message-save", group: "Messages", keys: ["S"], label: "Save for later" },

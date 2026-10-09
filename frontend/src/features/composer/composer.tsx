@@ -37,6 +37,8 @@ import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
 import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
+import { ReplyChip } from "./reply-chip.tsx";
+import { cancelReply, replyTarget, setReplyNotify, useReplyTarget } from "./reply-store.ts";
 import { LazyCustomTimeDialog } from "./schedule/lazy-custom-time-dialog.tsx";
 import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
@@ -195,6 +197,34 @@ export function Composer({
   const hasText = text.trim() !== "";
   const hasFiles = attachments.files.length > 0;
   const canSend = (hasText || hasFiles) && !running;
+  // An inline reply (classic's Reply): a new thread's first message never carries one.
+  const reply = useReplyTarget(creating ? null : key);
+
+  const replyGone = useStore(
+    (state) => reply !== null && state.messages[reply.messageId] === undefined,
+  );
+
+  const replySeq = reply?.seq ?? null;
+  const seenReplySeq = useRef(replySeq);
+
+  // The quoted message was deleted: there's nothing left to reply to.
+  useEffect(() => {
+    if (replyGone) {
+      cancelReply(key);
+    }
+  }, [replyGone, key]);
+
+  // A Reply picked on a message hands this composer the focus (as classic's does), but coming
+  // back to a conversation with a reply already set doesn't.
+  useEffect(() => {
+    if (replySeq === null || replySeq === seenReplySeq.current) {
+      return;
+    }
+
+    seenReplySeq.current = replySeq;
+    textareaRef.current?.focus();
+    requestAnimationFrame(() => textareaRef.current?.focus({ preventScroll: true }));
+  }, [replySeq]);
 
   // Grow with the text; CSS caps it at half the viewport and scrolls beyond that.
   useLayoutEffect(() => {
@@ -326,16 +356,24 @@ export function Composer({
     }
   };
 
-  /** Posts the text with the first file, and each further file as its own message. */
+  /**
+   * Posts the text with the first file, and each further file as its own message. Each carries
+   * the reply, if there is one, as classic's text and uploads do; the reply ends with the send.
+   */
   const deliver = (markdown: string, files: readonly TrayFile[]) => {
     toPresent();
 
     const [first, ...rest] = files;
+    const target = creating ? null : replyTarget(key);
+
+    const replying =
+      target === null ? null : { messageId: target.messageId, notify: target.notify };
 
     actions.send(roomId, markdown, {
       threadId,
       attachmentSignedId: first?.snapshot.signedId ?? null,
       attachment: first === undefined ? null : pendingAttachment(first),
+      reply: replying,
     });
 
     for (const entry of rest) {
@@ -343,14 +381,21 @@ export function Composer({
         threadId,
         attachmentSignedId: entry.snapshot.signedId,
         attachment: pendingAttachment(entry),
+        reply: replying,
       });
     }
 
     attachments.clearSent();
+    cancelReply(key);
     clear();
   };
 
   const showResult = (result: SlashCommandResult, typed: string) => {
+    // A command that ran consumes the draft and, as in classic, the reply with it.
+    if (result.status !== "error") {
+      cancelReply(key);
+    }
+
     switch (result.status) {
       case "posted":
         // The server posted it with no pending row: go to it, as a send does.
@@ -510,10 +555,12 @@ export function Composer({
         markdownSource: markdown,
         sendAt: at.toISOString(),
         threadId,
-        replyToMessageId: null,
+        // Classic's schedule menu keeps the draft's reply target too.
+        replyToMessageId: replyTarget(key)?.messageId ?? null,
       })
       .then(() => {
         actions.setTyping(roomId, false, threadId);
+        cancelReply(key);
         clear();
         toast({
           title: `Scheduled for ${sendAtLabel(at, new Date()).replace(/^T/, "t")}`,
@@ -582,6 +629,14 @@ export function Composer({
       event.preventDefault();
       event.stopPropagation();
       setPreviewOpen(false);
+
+      return;
+    }
+
+    if (event.key === "Escape" && reply !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelReply(key);
 
       return;
     }
@@ -710,6 +765,16 @@ export function Composer({
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>
+          {reply === null ? null : (
+            <ReplyChip
+              target={reply}
+              onNotifyChange={(notify) => setReplyNotify(key, notify)}
+              onCancel={() => {
+                cancelReply(key);
+                focusInput();
+              }}
+            />
+          )}
           <LazyPreviewPanel
             open={previewOpen}
             roomId={roomId}

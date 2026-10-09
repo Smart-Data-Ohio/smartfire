@@ -12,7 +12,8 @@ import { plainText } from "./commands.ts";
 /** How much of a quoted message the reply line shows before it trails off. */
 const QUOTE_CHARS = 140;
 
-function snippet(message: MessageDTO): string {
+/** One line of a message for a quote: its text, flattened and trimmed, or its file's name. */
+export function snippet(message: MessageDTO): string {
   const text = plainText(message).replace(/\s+/g, " ");
 
   if (text === "") {
@@ -52,15 +53,52 @@ export function MessageFlags({
   );
 }
 
-/** The line above a reply: who it answers and the start of what they said. */
-export function ReplyQuote({ message }: { readonly message: MessageDTO }) {
+/** Where a quote jumps to: the original on its timeline, a thread reply in its thread pane. */
+function QuoteLink({
+  source,
+  children,
+}: {
+  readonly source: MessageDTO;
+  readonly children: ReactNode;
+}) {
+  if (source.threadId !== null) {
+    return (
+      <Link
+        to="/r/$roomId/t/$threadId"
+        params={{ roomId: source.roomId, threadId: source.threadId }}
+        search={{ m: source.id }}
+        className="message-reply-link"
+        preload={false}
+      >
+        {children}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to="/r/$roomId/m/$messageId"
+      params={{ roomId: source.roomId, messageId: source.id }}
+      className="message-reply-link"
+      preload={false}
+    >
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * The line above a reply (or one being sent): who it answers and the start of what they said,
+ * linking to the original.
+ */
+export function ReplyQuote({ replyToMessageId }: { readonly replyToMessageId: number | null }) {
   const source = useStore((state) =>
-    message.replyToMessageId === null ? undefined : state.messages[message.replyToMessageId],
+    replyToMessageId === null ? undefined : state.messages[replyToMessageId],
   );
 
   const author = useUser(source?.creatorId);
 
-  if (message.replyToMessageId === null) {
+  if (replyToMessageId === null) {
     return null;
   }
 
@@ -76,15 +114,10 @@ export function ReplyQuote({ message }: { readonly message: MessageDTO }) {
   return (
     <div className="message-reply">
       <Icon name="corner-up-left" size={12} className="message-reply-icon" />
-      <Link
-        to="/r/$roomId/m/$messageId"
-        params={{ roomId: source.roomId, messageId: source.id }}
-        className="message-reply-link"
-        preload={false}
-      >
+      <QuoteLink source={source}>
         <span className="message-reply-author">{author?.name ?? UNKNOWN_NAME}</span>
         <span className="message-reply-text">{snippet(source)}</span>
-      </Link>
+      </QuoteLink>
     </div>
   );
 }

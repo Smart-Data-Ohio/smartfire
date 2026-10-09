@@ -29,6 +29,8 @@ export interface SendOptions {
   readonly attachmentSignedId?: string | null;
   /** What the pending row shows for that file. */
   readonly attachment?: PendingAttachment | null;
+  /** An inline reply: the message it answers and whether that author is notified. */
+  readonly reply?: { readonly messageId: number; readonly notify: boolean } | null;
 }
 
 /**
@@ -68,8 +70,8 @@ export class Outbox extends Context.Service<
         const body = {
           clientMessageId: pending.clientMessageId,
           markdownSource: pending.markdownSource,
-          replyToMessageId: null,
-          replyNotifyAuthor: null,
+          replyToMessageId: pending.replyToMessageId,
+          replyNotifyAuthor: pending.replyNotifyAuthor,
           attachmentSignedId: pending.attachmentSignedId,
         };
 
@@ -122,6 +124,8 @@ export class Outbox extends Context.Service<
           threadId: options.threadId ?? null,
           attachmentSignedId: options.attachmentSignedId ?? null,
           attachment: options.attachment ?? null,
+          replyToMessageId: options.reply?.messageId ?? null,
+          replyNotifyAuthor: options.reply?.notify ?? null,
           creatorId: state.me?.user.id ?? state.boot?.user.id ?? 0,
           markdownSource: markdown,
           createdAt: new Date(now).toISOString(),

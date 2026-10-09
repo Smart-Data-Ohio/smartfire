@@ -19,6 +19,7 @@ import { readDurationMs } from "../../motion/durations.ts";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import type { MessageDTO } from "../../store/model.ts";
+import { startReply } from "../composer/reply-store.ts";
 import { useOpenFizzyCard } from "../fizzy/open-fizzy-card.ts";
 import {
   copyLink,
@@ -97,6 +98,20 @@ function afterRelease(pressed: boolean, open: () => void): () => void {
   };
 }
 
+/**
+ * A thread's parent sits on the room's timeline, whose composer isn't the pane's: an inline reply
+ * to it is left to the room's own row (or answered in the thread itself).
+ */
+function withinPane(
+  permissions: MessagePermissions,
+  message: MessageDTO,
+  inThread: boolean,
+): MessagePermissions {
+  return inThread && message.threadId === null && permissions.reply
+    ? { ...permissions, reply: false }
+    : permissions;
+}
+
 type DialogKind = "forward" | "delete";
 
 interface DialogState {
@@ -147,7 +162,7 @@ export function useRowInteractions(
 ): RowInteractions {
   const navigate = useNavigate();
   const openFizzyCard = useOpenFizzyCard();
-  const permissions = useMessagePermissions(message);
+  const permissions = withinPane(useMessagePermissions(message), message, inThread);
   const saved = useSavedItemId(message.id) !== null;
   const editing = useEditingId() === message.id;
   const rowRef = useRef<HTMLElement | null>(null);
@@ -282,6 +297,11 @@ export function useRowInteractions(
 
   const run = (command: MenuCommand) => {
     switch (command) {
+      case "reply":
+        // The conversation's composer shows the quote and takes focus for the answer.
+        if (permissions.reply) startReply(message);
+
+        return;
       case "thread":
         if (permissions.thread && !inThread) openThread();
 
@@ -453,6 +473,7 @@ export function useRowInteractions(
         copyLink(message);
 
         return;
+      case "reply":
       case "thread":
       case "pin":
       case "save":
