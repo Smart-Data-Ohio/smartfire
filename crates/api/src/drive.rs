@@ -12,10 +12,10 @@ use campfire_db::models::{
     drive_recipients, google_account::GoogleAccount, google_drive_link::valid_id,
 };
 use campfire_db::{Status, Timestamp};
-use campfire_kit::{halt, Ctx, Error, Result, StatusCode};
+use campfire_kit::{Ctx, Error, Result, StatusCode, halt};
 use campfire_web::concerns;
 use rails_compat::ar_encryption::ArEncryption;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::endpoints::{before_actions, body, set_room};
 use crate::error::{fail, validation};
@@ -79,6 +79,7 @@ fn kind_of(mime: Option<&str>) -> &'static str {
         Some("application/vnd.google-apps.presentation") => "presentation",
         Some("application/vnd.google-apps.form") => "form",
         Some("application/vnd.google-apps.folder") => "folder",
+        Some("application/vnd.google-apps.shortcut") => "shortcut",
         Some("application/pdf") => "pdf",
         _ => "file",
     }
@@ -114,7 +115,14 @@ fn query_term(c: &Ctx) -> String {
 }
 
 async fn search_files(c: &mut Ctx) -> Result {
-    before_actions(c).await?;
+    // Classic `index` allows a signed-out caller, then answers the same empty 404 as a viewer
+    // with no Drive grant. The other Drive routes stay on the API's JSON 401.
+    concerns::before_actions(
+        c,
+        concerns::Before::default().allow_unauthenticated_access(),
+    )
+    .await?;
+    let _ = concerns::restore_authentication(c).await?;
     if !c.app().google.api().config.configured() {
         return empty(c, StatusCode::NOT_FOUND);
     }
@@ -271,10 +279,10 @@ async fn list_recipients(c: &mut Ctx) -> Result {
     c.json(StatusCode::OK, &api::DriveRecipientList { recipients })
 }
 
-fn invalid_recipients(c: &mut Ctx, invalid: Option<Vec<u64>>) -> Error {
+fn invalid_recipients(c: &mut Ctx, field: &str, invalid: Option<Vec<u64>>) -> Error {
     let mut fields = std::collections::BTreeMap::new();
     fields.insert(
-        "userIds".into(),
+        field.into(),
         match &invalid {
             Some(ids) => ids.iter().map(ToString::to_string).collect(),
             None => vec!["invalid_recipients".into()],
@@ -301,7 +309,7 @@ async fn checked_recipients(
     raw_ids: &[String],
 ) -> Result<Vec<drive_recipients::Recipient>> {
     let Some(ids) = normalized_user_ids(raw_ids) else {
-        return Err(invalid_recipients(c, None));
+        return Err(invalid_recipients(c, "userIds", None));
     };
     if ids.len() > 100 {
         return Err(fail(c, validation("userIds", "too_many_recipients")));
@@ -318,7 +326,7 @@ async fn checked_recipients(
         })
         .collect::<Vec<_>>();
     if !invalid.is_empty() {
-        return Err(invalid_recipients(c, Some(invalid)));
+        return Err(invalid_recipients(c, "userIds", Some(invalid)));
     }
     Ok(ids
         .iter()
@@ -343,6 +351,110 @@ async fn validate_room_recipients(c: &mut Ctx) -> Result {
     )
 }
 
+const FOLDER_MIME: &str = "application/vnd.google-apps.folder";
+const SHORTCUT_MIME: &str = "application/vnd.google-apps.shortcut";
+
+struct Approved {
+    id: u64,
+    email: String,
+}
+
+/// Ids and the emails the viewer approved, in request order. A non-digit id is malformed.
+fn approved_rows(raw: &[api::DriveApprovedRecipient]) -> Option<Vec<Approved>> {
+    let mut rows = Vec::new();
+    for entry in raw {
+        let text = campfire_richtext::ruby::strip(&entry.id);
+        if text.is_empty() || !text.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        let id = text.parse().ok()?;
+        if rows.iter().any(|row: &Approved| row.id == id) {
+            continue;
+        }
+        rows.push(Approved {
+            id,
+            email: entry.email.clone(),
+        });
+    }
+    Some(rows)
+}
+
+fn share_result(
+    member: &drive_recipients::Recipient,
+    status: &str,
+    reason: Option<&str>,
+) -> api::DriveShareResult {
+    api::DriveShareResult {
+        recipient: recipient_of(member),
+        status: status.into(),
+        reason: reason.map(str::to_owned),
+    }
+}
+
+fn finished(
+    c: &mut Ctx,
+    file_id: String,
+    outcome: &str,
+    blocked: Option<&str>,
+    changed_ids: Vec<i64>,
+    recipients: Vec<api::DriveRecipient>,
+    results: Vec<api::DriveShareResult>,
+) -> Result {
+    c.json(
+        StatusCode::OK,
+        &api::DriveShare {
+            outcome: outcome.into(),
+            file_id,
+            blocked: blocked.map(str::to_owned),
+            changed_ids,
+            recipients,
+            results,
+        },
+    )
+}
+
+/// Why a share write failed, in the classic dialog's words.
+fn grant_reason(error: &GoogleError) -> &'static str {
+    match error {
+        GoogleError::Forbidden(_) | GoogleError::Rejected(_) | GoogleError::Conflict(_) => "denied",
+        GoogleError::RateLimited(_) => "rate_limited",
+        GoogleError::NotFound(_) => "not_found",
+        GoogleError::Unauthorized(_) => "unauthorized",
+        GoogleError::Unavailable(message) if message.contains("failed (5") => "unavailable",
+        GoogleError::Unavailable(_) | GoogleError::JsonParser(_) => "network",
+        GoogleError::Storage(_) => "unavailable",
+    }
+}
+
+/// Any direct, non-deleted user permission already covers this address.
+fn already_has_access(permissions: &[Value], email: &str) -> bool {
+    let wanted = email;
+    if wanted.is_empty() {
+        return false;
+    }
+    permissions.iter().any(|permission| {
+        permission["type"].as_str() == Some("user")
+            && permission["deleted"] != Value::Bool(true)
+            && permission["emailAddress"]
+                .as_str()
+                .is_some_and(|address| address.eq_ignore_ascii_case(wanted))
+    })
+}
+
+/// Files already pinned, and whether `file_id` is one of them. Blanks and duplicates don't count.
+fn attachment_room(file_id: &str, attached: &[String]) -> (bool, usize) {
+    let mut unique = Vec::new();
+    for raw in attached {
+        let id = raw.trim();
+        if id.is_empty() || unique.iter().any(|stored: &String| stored == id) {
+            continue;
+        }
+        unique.push(id.to_owned());
+    }
+    let pinned = unique.iter().any(|id| id == file_id);
+    (pinned, unique.len())
+}
+
 async fn share_file(c: &mut Ctx) -> Result {
     let room = room_for_share(c, "share").await?;
     let input: api::ShareDriveFile = body(c).await?;
@@ -352,11 +464,158 @@ async fn share_file(c: &mut Ctx) -> Result {
     let Some(account) = drive_account(c).await? else {
         return empty(c, StatusCode::NOT_FOUND);
     };
-    let selected = checked_recipients(c, room, &input.user_ids).await?;
-    if selected.is_empty() {
-        return Err(invalid_recipients(c, None));
+    let Some(approved) = approved_rows(&input.recipients) else {
+        return Err(invalid_recipients(c, "recipients", None));
+    };
+    if approved.is_empty() {
+        return Err(invalid_recipients(c, "recipients", None));
     }
+    if approved.len() > 100 {
+        return Err(fail(c, validation("recipients", "too_many_recipients")));
+    }
+    let viewer = concerns::require_current_user(c)?.id;
+    let members = eligible(c, room, viewer).await?;
+    let invalid = approved
+        .iter()
+        .map(|row| row.id)
+        .filter(|id| {
+            !members
+                .iter()
+                .any(|member| u64::try_from(member.id).ok() == Some(*id))
+        })
+        .collect::<Vec<_>>();
+    if !invalid.is_empty() {
+        return Err(invalid_recipients(c, "recipients", Some(invalid)));
+    }
+    let selected = approved
+        .iter()
+        .filter_map(|row| {
+            members
+                .iter()
+                .find(|member| u64::try_from(member.id).ok() == Some(row.id))
+                .cloned()
+        })
+        .collect::<Vec<_>>();
+    // Classic `#confirmIdentities`: a changed email is a fresh review, and nothing is granted.
+    let changed_ids = approved
+        .iter()
+        .zip(&selected)
+        .filter(|(row, member)| !member.email.eq_ignore_ascii_case(&row.email))
+        .map(|(_, member)| member.id)
+        .collect::<Vec<_>>();
+    if !changed_ids.is_empty() {
+        return finished(
+            c,
+            input.file_id,
+            "confirmation_required",
+            None,
+            changed_ids,
+            members.iter().map(recipient_of).collect(),
+            Vec::new(),
+        );
+    }
+    let (pinned, attached) = attachment_room(&input.file_id, &input.attached_file_ids);
+    if !pinned && attached >= campfire_db::message::DRIVE_ATTACHMENTS_PER_MESSAGE {
+        return finished(
+            c,
+            input.file_id,
+            "full",
+            None,
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        );
+    }
+    let file = match c
+        .app()
+        .google
+        .api()
+        .drive_share_file(
+            &c.app().db,
+            &c.app().secrets,
+            account.user_id,
+            &input.file_id,
+            now(c),
+        )
+        .await
+    {
+        Ok(file) => file,
+        Err(GoogleError::Storage(error)) => return Err(Error::internal(error)),
+        Err(_) => {
+            return finished(
+                c,
+                input.file_id,
+                "blocked",
+                Some("file"),
+                Vec::new(),
+                Vec::new(),
+                Vec::new(),
+            );
+        }
+    };
+    let mime = file["mimeType"].as_str().unwrap_or("");
+    let blocked = if mime == FOLDER_MIME {
+        Some("folder")
+    } else if mime == SHORTCUT_MIME {
+        Some("shortcut")
+    } else if file["capabilities"]["canShare"] != json!(true) {
+        Some("capability")
+    } else {
+        None
+    };
+    if let Some(reason) = blocked {
+        return finished(
+            c,
+            input.file_id,
+            "blocked",
+            Some(reason),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        );
+    }
+    let permissions = match c
+        .app()
+        .google
+        .api()
+        .list_drive_permissions(
+            &c.app().db,
+            &c.app().secrets,
+            account.user_id,
+            &input.file_id,
+            now(c),
+        )
+        .await
+    {
+        Ok(permissions) => permissions,
+        Err(GoogleError::Storage(error)) => return Err(Error::internal(error)),
+        Err(error) => {
+            let reason = grant_reason(&error);
+            return finished(
+                c,
+                input.file_id,
+                "shared",
+                None,
+                Vec::new(),
+                Vec::new(),
+                selected
+                    .iter()
+                    .map(|member| share_result(member, "failed", Some(reason)))
+                    .collect(),
+            );
+        }
+    };
+    let mut results = Vec::with_capacity(selected.len());
+    let mut stop = false;
     for member in &selected {
+        if stop {
+            results.push(share_result(member, "failed", Some("unauthorized")));
+            continue;
+        }
+        if already_has_access(&permissions, &member.email) {
+            results.push(share_result(member, "already", None));
+            continue;
+        }
         match c
             .app()
             .google
@@ -371,20 +630,23 @@ async fn share_file(c: &mut Ctx) -> Result {
             )
             .await
         {
-            Ok(_) => {}
-            Err(GoogleError::NotFound(_) | GoogleError::Unauthorized(_)) => {
-                return empty(c, StatusCode::NOT_FOUND);
-            }
+            Ok(_) => results.push(share_result(member, "granted", None)),
             Err(GoogleError::Storage(error)) => return Err(Error::internal(error)),
-            Err(_) => return drive_error(c, StatusCode::BAD_GATEWAY, "drive_unavailable"),
+            Err(error) => {
+                let reason = grant_reason(&error);
+                results.push(share_result(member, "failed", Some(reason)));
+                stop = reason == "unauthorized";
+            }
         }
     }
-    c.json(
-        StatusCode::OK,
-        &api::DriveShare {
-            file_id: input.file_id,
-            recipients: selected.iter().map(recipient_of).collect(),
-        },
+    finished(
+        c,
+        input.file_id,
+        "shared",
+        None,
+        Vec::new(),
+        Vec::new(),
+        results,
     )
 }
 

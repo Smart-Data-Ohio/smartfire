@@ -7,7 +7,9 @@ use ts_rs::TS;
 
 /// One file from `GET /api/v1/drive/files` or `GET /api/v1/drive/files/:id`. The same fields the
 /// classic `file_json` builds (`id`, `name`, `kind`, `modified_at`, `owner`, `url`), in camelCase.
-/// `kind` is `document`, `spreadsheet`, `presentation`, `form`, `folder`, `pdf`, or `file`.
+/// `kind` is `document`, `spreadsheet`, `presentation`, `form`, `folder`, `shortcut`, `pdf`,
+/// or `file`. A shortcut is its own kind so the composer can keep it attach-only, the way the
+/// classic share dialog refuses the shortcut MIME.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -56,22 +58,56 @@ pub struct ValidateDriveRecipients {
     pub user_ids: Vec<String>,
 }
 
-/// `POST /api/v1/rooms/:id/drive/shares`: grant the chosen members reader access to `fileId`,
-/// then the composer attaches it. Grants are reader-only and send no email, as the classic
-/// dialog does. Folders are not shared.
+/// One person the viewer approved in the review dialog, with the email they were shown.
+/// Classic compares this address with the member's current email at grant time.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DriveApprovedRecipient {
+    pub id: String,
+    pub email: String,
+}
+
+/// `POST /api/v1/rooms/:id/drive/shares`: grant the approved members reader access to `fileId`.
+/// Grants are reader-only and send no email. `attachedFileIds` is the message's current Drive
+/// set; a file that isn't already there is refused before any grant when the message is at the
+/// classic limit of 10. Folders, shortcuts, and files the viewer cannot share are not granted.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ShareDriveFile {
     pub file_id: String,
-    pub user_ids: Vec<String>,
+    pub recipients: Vec<DriveApprovedRecipient>,
+    /// Drive files already on this message. Omitted means none.
+    #[serde(default)]
+    pub attached_file_ids: Vec<String>,
 }
 
-/// The members who were granted reader access.
+/// One recipient's grant. `status` is `granted`, `already`, or `failed`. `reason`, when the
+/// grant failed, is `denied`, `rate_limited`, `not_found`, `unavailable`, `network`, or
+/// `unauthorized` — the same distinctions the classic dialog reports.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct DriveShareResult {
+    pub recipient: DriveRecipient,
+    pub status: String,
+    pub reason: Option<String>,
+}
+
+/// The share result. `outcome` is `shared` (see `results`, including partial failure),
+/// `confirmation_required` (an approved email no longer matches; nothing was granted;
+/// `recipients` is the refreshed list and `changedIds` stay unchecked), `blocked` (`blocked`
+/// is `folder`, `shortcut`, `capability`, or `file`), or `full` (the message is already at
+/// ten Drive files).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct DriveShare {
+    pub outcome: String,
     pub file_id: String,
+    pub blocked: Option<String>,
+    pub changed_ids: Vec<i64>,
     pub recipients: Vec<DriveRecipient>,
+    pub results: Vec<DriveShareResult>,
 }

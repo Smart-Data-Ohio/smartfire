@@ -343,6 +343,32 @@ impl Api {
         request: ApiRequest<'_>,
         now: Timestamp,
     ) -> Result<Value> {
+        self.exchange(credentials, db, secrets, request, now, false)
+            .await
+    }
+    /// A Drive share call. A 403 stays a refusal, and a 5xx stays a service failure; metadata
+    /// reads still collapse a 403 into not-found.
+    async fn share_request(
+        &self,
+        db: &Database,
+        secrets: &Secrets,
+        user_id: i64,
+        request: ApiRequest<'_>,
+        now: Timestamp,
+    ) -> Result<Value> {
+        let mut credentials = self.credentials(db, secrets, user_id).await?;
+        self.exchange(&mut credentials, db, secrets, request, now, true)
+            .await
+    }
+    async fn exchange(
+        &self,
+        credentials: &mut Credentials,
+        db: &Database,
+        secrets: &Secrets,
+        request: ApiRequest<'_>,
+        now: Timestamp,
+        share: bool,
+    ) -> Result<Value> {
         if credentials.tokens.access_token.as_deref().is_none_or(blank)
             || credentials
                 .tokens
@@ -356,7 +382,7 @@ impl Api {
             self.refresh(credentials, db, secrets, now).await?;
             (status, body) = self.send(credentials, &request).await?;
         }
-        classify(status, &body, request.drive)
+        classify_status(status, &body, request.drive, share)
     }
     async fn send(
         &self,
@@ -491,7 +517,7 @@ impl Api {
             ("sendNotificationEmail", "false".into()),
         ]);
         let payload = json!({"role": "reader", "type": "user", "emailAddress": email});
-        self.request(
+        self.share_request(
             db,
             secrets,
             user_id,
@@ -505,6 +531,89 @@ impl Api {
             now,
         )
         .await
+    }
+    /// Sharing metadata: MIME type and `capabilities.canShare`. Separate from [`Self::drive_file`],
+    /// whose field mask is the classic preview read.
+    pub async fn drive_share_file(
+        &self,
+        db: &Database,
+        secrets: &Secrets,
+        user_id: i64,
+        file_id: &str,
+        now: Timestamp,
+    ) -> Result<Value> {
+        let path = format!("/drive/v3/files/{file_id}");
+        let q = query(&[
+            ("fields", "id,name,mimeType,capabilities(canShare)".into()),
+            ("supportsAllDrives", "true".into()),
+        ]);
+        self.share_request(
+            db,
+            secrets,
+            user_id,
+            ApiRequest {
+                method: Method::GET,
+                path: &path,
+                query: Some(&q),
+                payload: None,
+                drive: true,
+            },
+            now,
+        )
+        .await
+    }
+    /// Every direct permission, across pages, so an existing grant is never duplicated.
+    pub async fn list_drive_permissions(
+        &self,
+        db: &Database,
+        secrets: &Secrets,
+        user_id: i64,
+        file_id: &str,
+        now: Timestamp,
+    ) -> Result<Vec<Value>> {
+        let mut permissions = Vec::new();
+        let mut page_token = None;
+        for _ in 0..20 {
+            let mut params = vec![
+                (
+                    "fields",
+                    "permissions(id,type,role,emailAddress,deleted),nextPageToken".into(),
+                ),
+                ("pageSize", "100".into()),
+                ("supportsAllDrives", "true".into()),
+            ];
+            if let Some(token) = page_token.clone() {
+                params.push(("pageToken", token));
+            }
+            let q = query(&params);
+            let path = format!("/drive/v3/files/{file_id}/permissions");
+            let response = self
+                .share_request(
+                    db,
+                    secrets,
+                    user_id,
+                    ApiRequest {
+                        method: Method::GET,
+                        path: &path,
+                        query: Some(&q),
+                        payload: None,
+                        drive: true,
+                    },
+                    now,
+                )
+                .await?;
+            if let Some(rows) = response["permissions"].as_array() {
+                permissions.extend(rows.iter().cloned());
+            }
+            page_token = response["nextPageToken"]
+                .as_str()
+                .filter(|token| !blank(token))
+                .map(str::to_owned);
+            if page_token.is_none() {
+                break;
+            }
+        }
+        Ok(permissions)
     }
     pub async fn list_events(
         &self,
@@ -605,13 +714,17 @@ fn parse(body: &[u8], service: &str) -> Result<Value> {
         ))
     })
 }
-fn classify(status: u16, body: &[u8], drive: bool) -> Result<Value> {
+fn classify_status(status: u16, body: &[u8], drive: bool, share: bool) -> Result<Value> {
     let service = if drive { "Drive" } else { "Calendar" };
     let missing = || Error::NotFound(format!("Google {} entry not found", service.to_lowercase()));
     Err(match status {
         200..=299 => return parse(body, service),
         401 => Error::Unauthorized("Google rejected the request (401)".into()),
         404 | 410 => missing(),
+        403 if share => Error::Forbidden(format!("Google {service} request forbidden (403)")),
+        500..=599 if share => {
+            Error::Unavailable(format!("Google {service} request failed ({status})"))
+        }
         403 if drive => missing(),
         403 => {
             let v = serde_json::from_slice::<Value>(body).unwrap_or(Value::Null);
