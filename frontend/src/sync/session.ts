@@ -314,6 +314,22 @@ retryRejectedLoad = Effect.fnUntraced(function* (roomId: number, token: number) 
   );
 });
 
+/**
+ * Rooms a resync gave the viewer a membership in (`mutations.resyncSidebar`'s answer): an open
+ * visit with no detail on screen (unavailable after a 404, a join preview, or a first read whose
+ * outcome the resync claimed) reads its room again. One re-read per visit at a time, started only
+ * here, so it can't loop.
+ */
+export const recoverResyncedRooms = Effect.fnUntraced(function* (roomIds: readonly number[]) {
+  for (const roomId of roomIds) {
+    const token = roomVisitToken(roomId);
+
+    if (token !== null && store.getState().rooms[roomId]?.detail == null) {
+      yield* retryRejectedLoad(roomId, token);
+    }
+  }
+});
+
 /** The sidebar row's facts win over a room read that raced a rename or a membership change. */
 function withSidebarRow(detail: RoomDetail, row: SidebarRow | undefined): RoomDetail {
   if (row === undefined) {

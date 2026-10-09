@@ -307,10 +307,28 @@ export const mutations = {
   },
   /**
    * A whole-sidebar snapshot the sync engine read (a resync), `since` its own ticket: it is
-   * authoritative, so every HTTP reply already on its way becomes stale.
+   * authoritative, so every HTTP reply already on its way becomes stale. A room whose membership
+   * it installed or changed claims its outcome, as a `sidebar.row.upserted` does, so a room read
+   * (a 404 above all) that started earlier can't land over it. Answers those rooms.
    */
-  resyncSidebar: (sidebar: Sidebar, since: number) =>
-    apply((state) => reduce.resyncSidebar(state, sidebar, since)),
+  resyncSidebar: (sidebar: Sidebar, since: number): readonly number[] => {
+    const before = store.getState().sidebar.rows;
+
+    apply((state) => reduce.resyncSidebar(state, sidebar, since));
+
+    const after = store.getState().sidebar.rows;
+    const changed: number[] = [];
+
+    for (const row of Object.values(after)) {
+      if (membershipChanged(before[row.room.id], row)) {
+        claimRoomOutcome(row.room.id, beginRoomRequest());
+        dirtyRoomReread(row.room.id);
+        changed.push(row.room.id);
+      }
+    }
+
+    return changed;
+  },
   /** Read here: newer than any HTTP reply already on its way, so that reply leaves the row be. */
   markRoomRead: (roomId: number) =>
     apply((state) => touchRows(reduce.markRoomRead(state, roomId), [roomId])),

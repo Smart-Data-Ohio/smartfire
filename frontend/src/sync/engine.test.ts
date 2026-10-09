@@ -1304,6 +1304,94 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("reads a room shown unavailable again once a user resync gives it back", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const gone = new NotFound({ message: "gone" });
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/12", () => Effect.fail(gone));
+        yield* api.route("GET /rooms/12/preview", () => Effect.fail(gone));
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, null);
+
+        expect(store.getState().rooms[12]?.status).toBe("error");
+
+        // The viewer is added back while the socket lags; only the user topic resyncs.
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* api.reply("GET /rooms/12", roomDetailFixture(12));
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().sidebar.rows[12]).toBeDefined();
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail).not.toBeNull();
+        expect(timelineIds(12)).toEqual([1]);
+
+        // Nothing more is read once it's back.
+        const before = (yield* api.requests).length;
+
+        yield* settle;
+        yield* TestClock.adjust("2 seconds");
+
+        expect((yield* api.requests).slice(before)).toEqual([]);
+      }),
+    ),
+  );
+
+  it.effect("drops a room's 404 that started before a user resync gave the room back", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+        const gone = new NotFound({ message: "gone" });
+        const release = yield* Deferred.make<void>();
+        let reads = 0;
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* api.reply("GET /sidebar", sidebarFixture([]));
+        yield* api.route("GET /rooms/12/preview", () => Effect.fail(gone));
+        // The first read finds no membership but is held; later ones find the room again.
+        yield* api.route("GET /rooms/12", () => {
+          reads += 1;
+
+          return reads === 1
+            ? Deferred.await(release).pipe(Effect.andThen(Effect.fail(gone)))
+            : Effect.succeed(roomDetailFixture(12));
+        });
+        yield* startEngine;
+        yield* welcome(5, false);
+
+        const opening = yield* Effect.forkChild(session.openRoom(12, null));
+
+        yield* settle;
+        yield* api.reply("GET /sidebar", sidebarFixture([sidebarRowFixture(12, "general")]));
+        yield* socket.push({ t: "resync", topics: ["user"], reason: "skipped" });
+        yield* settle;
+        yield* settle;
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+
+        // The old 404 arrives last: the resync's membership outranks it.
+        yield* Deferred.succeed(release, undefined);
+        yield* Fiber.join(opening);
+        yield* settle;
+
+        expect(store.getState().rooms[12]?.status).toBe("ready");
+        expect(store.getState().rooms[12]?.detail).not.toBeNull();
+        expect(store.getState().sidebar.rows[12]).toBeDefined();
+        expect(reads).toBe(2);
+      }),
+    ),
+  );
+
   it.effect("refetches a subscribed thread's header and replies", () =>
     withSync(
       Effect.gen(function* () {
