@@ -1,7 +1,7 @@
 //! The configured public-links criterion, through WS9's actual sign-in renderer.
 use crate::controllers::presenters::{self, test_support::*};
 use askama::Template;
-use campfire_views::sessions;
+use campfire_retained::sessions;
 use serde_json::Value;
 
 #[tokio::test]
@@ -40,8 +40,9 @@ async fn configured_sign_in_keeps_public_links_and_rails_form_contracts() {
                 ctx.account = presenters::view_context::account_summary(account.as_ref(), false);
             },
             |ctx| {
+                let ctx = crate::controllers::users::people_tests::retained(ctx);
                 sessions::New {
-                    ctx,
+                    ctx: &ctx,
                     email_address: None,
                     help_contact: help,
                     google_sign_in_domains: app.booted.app.config.sign_in_google_domains.clone(),

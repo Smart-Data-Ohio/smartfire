@@ -2,7 +2,7 @@
 
 use crate::app::AppCtx;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-use campfire_views::{
+use campfire_retained::{
     helpers as h,
     public_pages::{self, Page},
 };

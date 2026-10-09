@@ -1124,7 +1124,7 @@ pub async fn allow_browser(c: &mut Ctx) -> Result<()> {
 /// layout.
 async fn render_incompatible_browser(c: &mut Ctx) -> Result {
     use askama::Template;
-    use campfire_views::sessions::IncompatibleBrowser;
+    use campfire_retained::sessions::IncompatibleBrowser;
 
     let own_layout = c
         .current::<MatchedRoute>()
@@ -1133,25 +1133,26 @@ async fn render_incompatible_browser(c: &mut Ctx) -> Result {
                 || route.endpoint.starts_with("messages/by_bots#")
         });
     use crate::controllers::presenters::view_context::{
-        page_in_any_format, page_or_frame_in_any_format,
+        retained_document, retained_page_or_frame_in_any_format,
     };
 
     // An explicit `render template:`, so no format lookup: a blocked browser gets this page for
     // /webmanifest.json, /service-worker.js or `Accept: application/json` alike (verified against
-    // the reference), never a 406.
+    // the reference), never a 406. The document is the retained shell. Message controllers still
+    // force that full document when the request asks for a frame.
     let response = if own_layout {
-        page_in_any_format(c, StatusCode::OK, |ctx| {
+        retained_document(c, StatusCode::OK, |ctx| {
             IncompatibleBrowser { ctx }.render()
         })
         .await?
     } else {
-        page_or_frame_in_any_format(
+        retained_page_or_frame_in_any_format(
             c,
             StatusCode::OK,
             |ctx| IncompatibleBrowser { ctx }.render(),
             |ctx| {
                 let page = IncompatibleBrowser { ctx };
-                campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+                campfire_retained::layouts::frame(ctx, page.as_head(), page.as_content())
             },
         )
         .await?

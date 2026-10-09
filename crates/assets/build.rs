@@ -2,7 +2,7 @@
 //! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
 //! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `web/`.
 
-#[path = "build/auth.rs"]
+#[path = "../retained_pages/auth_build.rs"]
 mod auth;
 #[path = "build/importmap.rs"]
 mod importmap;
@@ -45,6 +45,7 @@ fn main() {
         crate_dir.join("overrides").display()
     );
     println!("cargo:rerun-if-changed=build");
+    println!("cargo:rerun-if-changed=../retained_pages/auth_build.rs");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
 
     let mut paths = load_path_dirs(&crate_dir, &rails_root);

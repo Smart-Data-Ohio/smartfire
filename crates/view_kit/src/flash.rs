@@ -3,7 +3,8 @@ use std::cell::Cell;
 thread_local! {
     static READS: Cell<u64> = const { Cell::new(0) };
 }
-pub(crate) fn read() {
+/// A template touched `flash[:notice]` or `flash[:alert]`. Retained pages call this too.
+pub fn read() {
     READS.with(|reads| reads.set(reads.get().wrapping_add(1)));
 }
 /// Nested renders contribute to the enclosing render; no flash/session data is retained.

@@ -4,13 +4,13 @@ pub mod transfers;
 
 use campfire_db::PushSubscription;
 use campfire_kit::{Ctx, Error, RateLimit, Result, StatusCode, format, halt};
-use campfire_views::sessions;
+use campfire_retained::sessions;
 use jiff::SignedDuration;
 
 use super::presenters;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, current_user};
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::retained_page;
 
 /// `rate_limit to: 10, within: 3.minutes, only: :create`
 const RATE_LIMIT_TO: u64 = 10;
@@ -125,7 +125,7 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
     } else {
         Vec::new()
     };
-    framed_page!(c, status, |ctx| sessions::New {
+    retained_page!(c, status, |ctx| sessions::New {
         ctx,
         email_address: email_address.clone(),
         help_contact: help_contact.clone(),

@@ -7,7 +7,7 @@
 //! them (renders for broadcasts, and the views' own tests) there are none, and the tags are left
 //! out, as with forgery protection and the policy off.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use super::html::{Html, Safe, escape};
@@ -36,6 +36,32 @@ pub struct RequestSecrets {
 
 thread_local! {
     static CURRENT: RefCell<Option<Rc<RequestSecrets>>> = const { RefCell::new(None) };
+    /// How many fragments for the cache are being rendered, one inside another.
+    /// `campfire_views::fragment_cache` raises this while it stores a fragment.
+    static FRAGMENT_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Ends a fragment render when dropped. Holding it is what leaves token slots in the stored HTML.
+#[must_use = "the fragment render ends when this guard drops"]
+pub struct FragmentRender {
+    _private: (),
+}
+
+impl Drop for FragmentRender {
+    fn drop(&mut self) {
+        FRAGMENT_DEPTH.with(|depth| depth.set(depth.get() - 1));
+    }
+}
+
+/// A fragment rendered for the cache leaves token slots instead of this render's token.
+pub fn enter_fragment_render() -> FragmentRender {
+    FRAGMENT_DEPTH.with(|depth| depth.set(depth.get() + 1));
+    FragmentRender { _private: () }
+}
+
+/// Whether a fragment for the cache is being rendered on this thread.
+pub fn rendering_fragment() -> bool {
+    FRAGMENT_DEPTH.with(|depth| depth.get() > 0)
 }
 
 /// Runs `render` with `secrets` available to the templates it renders.
@@ -69,11 +95,17 @@ pub fn token_tag(action: &str, method: &str) -> Html {
     if current().is_some_and(|secrets| !secrets.tokens.enabled()) {
         return Safe(String::new());
     }
-    if crate::fragment_cache::rendering_fragment() {
+    if rendering_fragment() {
         return Safe(format!("{}{method} {action}{SLOT_END}", slot_start()));
     }
     match current() {
-        Some(secrets) => legacy_tag("input", attrs().type_("hidden").name(PARAM).value(secrets.tokens.for_form(action, method))),
+        Some(secrets) => legacy_tag(
+            "input",
+            attrs()
+                .type_("hidden")
+                .name(PARAM)
+                .value(secrets.tokens.for_form(action, method)),
+        ),
         None => Safe(String::new()),
     }
 }
@@ -85,7 +117,9 @@ const SLOT_END: char = '\u{FDD1}';
 fn slot_start() -> &'static str {
     static START: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         use std::hash::{BuildHasher, Hasher};
-        let key = std::collections::hash_map::RandomState::new().build_hasher().finish();
+        let key = std::collections::hash_map::RandomState::new()
+            .build_hasher()
+            .finish();
         format!("\u{FDD0}csrf-{key:016x} ")
     });
     &START
@@ -101,7 +135,7 @@ pub fn has_token_slots(html: &str) -> bool {
 /// one is being rendered for the cache.
 pub fn fill_token_slots(html: &str) -> std::borrow::Cow<'_, str> {
     let start = slot_start();
-    if crate::fragment_cache::rendering_fragment() || !html.contains(start) {
+    if rendering_fragment() || !html.contains(start) {
         return std::borrow::Cow::Borrowed(html);
     }
     let mut out = String::with_capacity(html.len() + 64);
@@ -109,8 +143,12 @@ pub fn fill_token_slots(html: &str) -> std::borrow::Cow<'_, str> {
     while let Some(at) = rest.find(start) {
         out.push_str(&rest[..at]);
         let slot = &rest[at + start.len()..];
-        let Some(end) = slot.find(SLOT_END) else { break };
-        let (method, action) = slot[..end].split_once(' ').unwrap_or(("post", &slot[..end]));
+        let Some(end) = slot.find(SLOT_END) else {
+            break;
+        };
+        let (method, action) = slot[..end]
+            .split_once(' ')
+            .unwrap_or(("post", &slot[..end]));
         out.push_str(&token_tag(action, method).0);
         rest = &slot[end + SLOT_END.len_utf8()..];
     }
@@ -124,7 +162,13 @@ pub fn csrf_meta_tags() -> Html {
         Some(secrets) if secrets.tokens.enabled() => Safe(format!(
             "{}\n{}",
             legacy_tag("meta", attrs().name("csrf-param").attr("content", PARAM)).0,
-            legacy_tag("meta", attrs().name("csrf-token").attr("content", secrets.tokens.global())).0
+            legacy_tag(
+                "meta",
+                attrs()
+                    .name("csrf-token")
+                    .attr("content", secrets.tokens.global())
+            )
+            .0
         )),
         _ => Safe(String::new()),
     }
@@ -146,16 +190,24 @@ pub fn csp_meta_tag() -> Html {
 /// `javascript_importmap_tags` with this request's nonce on the import map, each
 /// `modulepreload` link and the module script, as importmap-rails adds it.
 pub fn javascript_importmap_tags(tags: &str) -> Html {
-    let Some(nonce) = csp_nonce() else { return Safe(tags.to_string()) };
+    let Some(nonce) = csp_nonce() else {
+        return Safe(tags.to_string());
+    };
     let attribute = format!(" nonce=\"{}\">", escape(&nonce));
     let mut out = String::with_capacity(tags.len() + 64 * attribute.len());
     let mut rest = tags;
-    while let Some(start) = ["<script type=\"importmap\"", "<link rel=\"modulepreload\"", "<script type=\"module\""]
-        .iter()
-        .filter_map(|open| rest.find(open))
-        .min()
+    while let Some(start) = [
+        "<script type=\"importmap\"",
+        "<link rel=\"modulepreload\"",
+        "<script type=\"module\"",
+    ]
+    .iter()
+    .filter_map(|open| rest.find(open))
+    .min()
     {
-        let Some(end) = rest[start..].find('>').map(|end| start + end) else { break };
+        let Some(end) = rest[start..].find('>').map(|end| start + end) else {
+            break;
+        };
         out.push_str(&rest[..end]);
         out.push_str(&attribute);
         rest = &rest[end + 1..];
@@ -181,20 +233,39 @@ mod tests {
     }
 
     fn secrets(nonce: Option<&str>) -> RequestSecrets {
-        RequestSecrets { tokens: Box::new(Fixed), csp_nonce: nonce.map(str::to_string) }
+        RequestSecrets {
+            tokens: Box::new(Fixed),
+            csp_nonce: nonce.map(str::to_string),
+        }
     }
 
     #[test]
     fn disabled_forgery_omits_tokens_and_preserves_the_real_csp_nonce() {
         struct Disabled;
         impl AuthenticityTokens for Disabled {
-            fn enabled(&self) -> bool { false }
-            fn global(&self) -> String { panic!("disabled token must not be requested") }
-            fn for_form(&self, _: &str, _: &str) -> String { panic!("disabled form token must not be requested") }
+            fn enabled(&self) -> bool {
+                false
+            }
+            fn global(&self) -> String {
+                panic!("disabled token must not be requested")
+            }
+            fn for_form(&self, _: &str, _: &str) -> String {
+                panic!("disabled form token must not be requested")
+            }
         }
-        let (meta, field, nonce) = rendering_with(RequestSecrets {
-            tokens: Box::new(Disabled), csp_nonce: Some("real-nonce".into()),
-        }, || (csrf_meta_tags().0, token_tag("/session", "post").0, csp_meta_tag().0));
+        let (meta, field, nonce) = rendering_with(
+            RequestSecrets {
+                tokens: Box::new(Disabled),
+                csp_nonce: Some("real-nonce".into()),
+            },
+            || {
+                (
+                    csrf_meta_tags().0,
+                    token_tag("/session", "post").0,
+                    csp_meta_tag().0,
+                )
+            },
+        );
         assert_eq!(meta, "");
         assert_eq!(field, "");
         assert_eq!(nonce, "<meta name=\"csp-nonce\" content=\"real-nonce\" />");
@@ -205,9 +276,21 @@ mod tests {
         assert_eq!(csrf_meta_tags().0, "");
         assert_eq!(token_tag("/session", "post").0, "");
         assert_eq!(csp_meta_tag().0, "");
-        let (meta, field, nonce) = rendering_with(secrets(Some("n+/=")), || (csrf_meta_tags().0, token_tag("/session", "post").0, csp_meta_tag().0));
-        assert_eq!(meta, "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"GLOBAL\" />");
-        assert_eq!(field, "<input type=\"hidden\" name=\"authenticity_token\" value=\"post:/session\" />");
+        let (meta, field, nonce) = rendering_with(secrets(Some("n+/=")), || {
+            (
+                csrf_meta_tags().0,
+                token_tag("/session", "post").0,
+                csp_meta_tag().0,
+            )
+        });
+        assert_eq!(
+            meta,
+            "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"GLOBAL\" />"
+        );
+        assert_eq!(
+            field,
+            "<input type=\"hidden\" name=\"authenticity_token\" value=\"post:/session\" />"
+        );
         assert_eq!(nonce, "<meta name=\"csp-nonce\" content=\"n+/=\" />");
         assert_eq!(csrf_meta_tags().0, "", "restored after the render");
     }
@@ -222,8 +305,8 @@ mod tests {
 
     #[test]
     fn forms_carry_their_per_form_token() {
-        use super::super::forms::{button_to, form_with};
-        use super::super::tag::attrs;
+        use crate::helpers::forms::{button_to, form_with};
+        use crate::helpers::tag::attrs;
 
         let (post, patch, get, delete_button, post_button) = rendering_with(secrets(None), || {
             (
@@ -234,18 +317,27 @@ mod tests {
                 button_to("/rooms/1/ban", attrs(), "Ban").0,
             )
         });
-        assert_eq!(post, "<form action=\"/rooms\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms\" />");
+        assert_eq!(
+            post,
+            "<form action=\"/rooms\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms\" />"
+        );
         assert_eq!(
             patch,
             "<form action=\"/rooms/1\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/1\" />"
         );
-        assert_eq!(get, "<form action=\"/searches\" accept-charset=\"UTF-8\" method=\"get\">");
+        assert_eq!(
+            get,
+            "<form action=\"/searches\" accept-charset=\"UTF-8\" method=\"get\">"
+        );
         assert_eq!(
             delete_button,
             "<form class=\"button_to\" method=\"post\" action=\"/rooms/1\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button type=\"submit\">X</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/rooms/1\" /></form>"
         );
         assert!(post_button.ends_with("<button type=\"submit\">Ban</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/1/ban\" /></form>"), "{post_button}");
-        assert!(!form_with("/rooms").open().0.contains("authenticity_token"), "none outside a render");
+        assert!(
+            !form_with("/rooms").open().0.contains("authenticity_token"),
+            "none outside a render"
+        );
     }
 
     #[test]
@@ -273,30 +365,22 @@ mod tests {
     }
 
     fn as_viewer<R>(name: &'static str, render: impl FnOnce() -> R) -> R {
-        rendering_with(RequestSecrets { tokens: Box::new(Viewer(name)), csp_nonce: None }, render)
-    }
-
-    #[test]
-    fn a_cached_fragment_has_each_renders_own_tokens() {
-        let cache = crate::fragment_cache::FragmentCache::new(1 << 20);
-        let boost = || format!("<form>{}</form>", token_tag("/messages/1/boosts", "post").0);
-        let message = || cache.fetch("message", || format!("<div>{}</div>", cache.fetch("boost", boost)));
-        let field = |value: &str| format!("<div><form><input type=\"hidden\" name=\"authenticity_token\" value=\"{value}\" /></form></div>");
-        assert_eq!(as_viewer("david", message), field("david:post:/messages/1/boosts"), "cold");
-        assert_eq!(as_viewer("jason", message), field("jason:post:/messages/1/boosts"), "warm, for someone else");
-        assert_eq!(message(), "<div><form></form></div>", "a broadcast's render has none");
-        for key in ["message", "boost"] {
-            let stored: crate::fragment_cache::Fragment = cache.get(key).unwrap();
-            assert!(has_token_slots(&stored) && !stored.contains("david"), "{key}: {stored}");
-        }
-        let stored: crate::fragment_cache::Fragment = cache.get("message").unwrap();
-        assert_eq!(as_viewer("kevin", || fill_token_slots(&stored).into_owned()), field("kevin:post:/messages/1/boosts"), "read up front");
+        rendering_with(
+            RequestSecrets {
+                tokens: Box::new(Viewer(name)),
+                csp_nonce: None,
+            },
+            render,
+        )
     }
 
     #[test]
     fn content_cant_forge_a_token_slot() {
         let forged = "\u{FDD0}csrf-0000000000000000 post /session\u{FDD1}";
         assert!(!has_token_slots(forged));
-        assert_eq!(as_viewer("david", || fill_token_slots(forged).into_owned()), forged);
+        assert_eq!(
+            as_viewer("david", || fill_token_slots(forged).into_owned()),
+            forged
+        );
     }
 }

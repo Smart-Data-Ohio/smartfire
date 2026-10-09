@@ -24,7 +24,8 @@ async fn signup_body_matches_rails_and_is_available_until_account_exists() {
             ctx.current_user = None;
         },
         |ctx| {
-            campfire_views::first_runs::Show { ctx }
+            let ctx = crate::controllers::users::people_tests::retained(ctx);
+            campfire_retained::first_runs::Show { ctx: &ctx }
                 .as_content()
                 .render()
                 .unwrap()

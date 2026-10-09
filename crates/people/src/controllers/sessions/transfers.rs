@@ -3,12 +3,12 @@
 
 use campfire_db::User;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
-use campfire_views::sessions;
+use campfire_retained::sessions;
 
 use crate::app::AppCtx;
 use crate::concerns::{self, Before};
 use crate::controllers::presenters;
-use crate::controllers::presenters::page::framed_page;
+use crate::controllers::presenters::page::retained_page;
 
 /// `allow_unauthenticated_access`: an auto-submitting form that PUTs back to this URL.
 pub async fn show(c: &mut Ctx) -> Result {
@@ -16,7 +16,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     // `url_for({})`: this request's own path.
     let action = c.request.path().to_string();
-    framed_page!(c, StatusCode::OK, |ctx| sessions::TransferShow {
+    retained_page!(c, StatusCode::OK, |ctx| sessions::TransferShow {
         ctx,
         action: action.clone()
     })

@@ -4,25 +4,20 @@
 //! print unescaped; everything else is escaped by [`ErbEscaper`] exactly like ERB. Block helpers
 //! (`link_to ... do`) live in [`filters`] and are used as askama filter blocks.
 //!
-//! Templates reach these as `h::name(...)` after `use crate::helpers as h;` in the view module.
+//! The pieces the retained pages also need live in `campfire_view_kit` and are re-exported here,
+//! so classic templates keep `h::name(...)` after `use crate::helpers as h;`.
 
 pub mod application;
 pub mod assets;
 pub mod emoji;
 pub mod filters;
-pub mod forms;
-pub mod html;
 pub mod icons;
-pub mod links;
-pub mod request_forgery;
 pub mod rooms;
-pub mod tag;
-pub mod text;
 pub mod translations;
-mod translations_table;
 pub mod turbo;
-pub mod url;
 pub mod users;
+
+pub use campfire_view_kit::helpers::{forms, html, links, request_forgery, tag, text, url};
 
 pub use application::*;
 pub use assets::*;
@@ -42,3 +37,4 @@ pub use users::*;
 pub use crate::time::{distance_of_time_in_words, local_datetime_tag, time_ago_in_words};
 /// Path helpers, re-exported so templates can write `h::routes::user_profile()`.
 pub use campfire_routes as routes;
+pub use campfire_view_kit::helpers::page_title_tag;

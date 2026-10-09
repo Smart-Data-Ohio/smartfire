@@ -10,19 +10,56 @@ use super::html::{Html, Safe, escape, push_escaped};
 
 /// `TagHelper::BOOLEAN_ATTRIBUTES`: rendered as `name="name"` when true, omitted when false.
 const BOOLEAN_ATTRIBUTES: &[&str] = &[
-    "allowfullscreen", "allowpaymentrequest", "async", "autofocus", "autoplay", "checked",
-    "compact", "controls", "declare", "default", "defaultchecked", "defaultmuted",
-    "defaultselected", "defer", "disabled", "enabled", "formnovalidate", "hidden",
-    "indeterminate", "inert", "ismap", "itemscope", "loop", "multiple", "muted", "nohref",
-    "nomodule", "noresize", "noshade", "novalidate", "nowrap", "open", "pauseonexit",
-    "playsinline", "readonly", "required", "reversed", "scoped", "seamless", "selected",
-    "sortable", "truespeed", "typemustmatch", "visible",
+    "allowfullscreen",
+    "allowpaymentrequest",
+    "async",
+    "autofocus",
+    "autoplay",
+    "checked",
+    "compact",
+    "controls",
+    "declare",
+    "default",
+    "defaultchecked",
+    "defaultmuted",
+    "defaultselected",
+    "defer",
+    "disabled",
+    "enabled",
+    "formnovalidate",
+    "hidden",
+    "indeterminate",
+    "inert",
+    "ismap",
+    "itemscope",
+    "loop",
+    "multiple",
+    "muted",
+    "nohref",
+    "nomodule",
+    "noresize",
+    "noshade",
+    "novalidate",
+    "nowrap",
+    "open",
+    "pauseonexit",
+    "playsinline",
+    "readonly",
+    "required",
+    "reversed",
+    "scoped",
+    "seamless",
+    "selected",
+    "sortable",
+    "truespeed",
+    "typemustmatch",
+    "visible",
 ];
 
 /// HTML void elements, which the `tag.*` builder renders without a closing tag.
 const VOID_ELEMENTS: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta",
-    "source", "track", "wbr",
+    "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "source",
+    "track", "wbr",
 ];
 
 #[derive(Clone, Debug, PartialEq)]
@@ -36,16 +73,24 @@ pub enum Value {
 
 /// Any borrowed displayable value (`&str`, `&String`, `&i64`, askama's `a ~ b`) is plain text.
 impl<T: std::fmt::Display + ?Sized> From<&T> for Value {
-    fn from(value: &T) -> Self { Value::Text(value.to_string()) }
+    fn from(value: &T) -> Self {
+        Value::Text(value.to_string())
+    }
 }
 impl From<String> for Value {
-    fn from(value: String) -> Self { Value::Text(value) }
+    fn from(value: String) -> Self {
+        Value::Text(value)
+    }
 }
 impl From<bool> for Value {
-    fn from(value: bool) -> Self { Value::Bool(value) }
+    fn from(value: bool) -> Self {
+        Value::Bool(value)
+    }
 }
 impl From<Html> for Value {
-    fn from(value: Html) -> Self { Value::Safe(value.0) }
+    fn from(value: Html) -> Self {
+        Value::Safe(value.0)
+    }
 }
 macro_rules! value_from_number {
     ($($t:ty),*) => { $(
@@ -93,33 +138,83 @@ impl Attrs {
         self.aria("hidden", "true")
     }
 
-    pub fn class(self, value: impl Into<Value>) -> Self { self.attr("class", value) }
-    pub fn id(self, value: impl Into<Value>) -> Self { self.attr("id", value) }
-    pub fn style(self, value: impl Into<Value>) -> Self { self.attr("style", value) }
-    pub fn title(self, value: impl Into<Value>) -> Self { self.attr("title", value) }
-    pub fn alt(self, value: impl Into<Value>) -> Self { self.attr("alt", value) }
-    pub fn role(self, value: impl Into<Value>) -> Self { self.attr("role", value) }
-    pub fn name(self, value: impl Into<Value>) -> Self { self.attr("name", value) }
-    pub fn type_(self, value: impl Into<Value>) -> Self { self.attr("type", value) }
-    pub fn value(self, value: impl Into<Value>) -> Self { self.attr("value", value) }
-    pub fn target(self, value: impl Into<Value>) -> Self { self.attr("target", value) }
-    pub fn placeholder(self, value: impl Into<Value>) -> Self { self.attr("placeholder", value) }
-    pub fn autocomplete(self, value: impl Into<Value>) -> Self { self.attr("autocomplete", value) }
-    pub fn accept(self, value: impl Into<Value>) -> Self { self.attr("accept", value) }
-    pub fn loading(self, value: impl Into<Value>) -> Self { self.attr("loading", value) }
-    pub fn tabindex(self, value: impl Into<Value>) -> Self { self.attr("tabindex", value) }
-    pub fn maxlength(self, value: impl Into<Value>) -> Self { self.attr("maxlength", value) }
-    pub fn rows(self, value: impl Into<Value>) -> Self { self.attr("rows", value) }
+    pub fn class(self, value: impl Into<Value>) -> Self {
+        self.attr("class", value)
+    }
+    pub fn id(self, value: impl Into<Value>) -> Self {
+        self.attr("id", value)
+    }
+    pub fn style(self, value: impl Into<Value>) -> Self {
+        self.attr("style", value)
+    }
+    pub fn title(self, value: impl Into<Value>) -> Self {
+        self.attr("title", value)
+    }
+    pub fn alt(self, value: impl Into<Value>) -> Self {
+        self.attr("alt", value)
+    }
+    pub fn role(self, value: impl Into<Value>) -> Self {
+        self.attr("role", value)
+    }
+    pub fn name(self, value: impl Into<Value>) -> Self {
+        self.attr("name", value)
+    }
+    pub fn type_(self, value: impl Into<Value>) -> Self {
+        self.attr("type", value)
+    }
+    pub fn value(self, value: impl Into<Value>) -> Self {
+        self.attr("value", value)
+    }
+    pub fn target(self, value: impl Into<Value>) -> Self {
+        self.attr("target", value)
+    }
+    pub fn placeholder(self, value: impl Into<Value>) -> Self {
+        self.attr("placeholder", value)
+    }
+    pub fn autocomplete(self, value: impl Into<Value>) -> Self {
+        self.attr("autocomplete", value)
+    }
+    pub fn accept(self, value: impl Into<Value>) -> Self {
+        self.attr("accept", value)
+    }
+    pub fn loading(self, value: impl Into<Value>) -> Self {
+        self.attr("loading", value)
+    }
+    pub fn tabindex(self, value: impl Into<Value>) -> Self {
+        self.attr("tabindex", value)
+    }
+    pub fn maxlength(self, value: impl Into<Value>) -> Self {
+        self.attr("maxlength", value)
+    }
+    pub fn rows(self, value: impl Into<Value>) -> Self {
+        self.attr("rows", value)
+    }
     /// `image_tag`'s `size:` option, expanded into width and height by [`super::image_tag`].
-    pub fn size(self, value: impl Into<Value>) -> Self { self.attr("size", value) }
-    pub fn method(self, value: impl Into<Value>) -> Self { self.attr("method", value) }
+    pub fn size(self, value: impl Into<Value>) -> Self {
+        self.attr("size", value)
+    }
+    pub fn method(self, value: impl Into<Value>) -> Self {
+        self.attr("method", value)
+    }
 
-    pub fn hidden(self) -> Self { self.attr("hidden", true) }
-    pub fn required(self, value: bool) -> Self { self.attr("required", value) }
-    pub fn autofocus(self) -> Self { self.attr("autofocus", true) }
-    pub fn readonly(self) -> Self { self.attr("readonly", true) }
-    pub fn disabled(self, value: bool) -> Self { self.attr("disabled", value) }
-    pub fn checked(self, value: bool) -> Self { self.attr("checked", value) }
+    pub fn hidden(self) -> Self {
+        self.attr("hidden", true)
+    }
+    pub fn required(self, value: bool) -> Self {
+        self.attr("required", value)
+    }
+    pub fn autofocus(self) -> Self {
+        self.attr("autofocus", true)
+    }
+    pub fn readonly(self) -> Self {
+        self.attr("readonly", true)
+    }
+    pub fn disabled(self, value: bool) -> Self {
+        self.attr("disabled", value)
+    }
+    pub fn checked(self, value: bool) -> Self {
+        self.attr("checked", value)
+    }
 
     pub fn set(&mut self, name: &str, value: Option<Value>) {
         match self.0.iter_mut().find(|(key, _)| key == name) {
@@ -147,7 +242,10 @@ impl Attrs {
     }
 
     pub fn get(&self, name: &str) -> Option<&Value> {
-        self.0.iter().find(|(key, _)| key == name).and_then(|(_, value)| value.as_ref())
+        self.0
+            .iter()
+            .find(|(key, _)| key == name)
+            .and_then(|(_, value)| value.as_ref())
     }
 
     pub fn get_str(&self, name: &str) -> Option<String> {
@@ -175,14 +273,22 @@ impl Attrs {
     /// data attributes go where the caller's first `data-*` attribute is (or at the end), ahead of
     /// the caller's own data attributes, which override them.
     pub fn with_default_data(self, defaults: Attrs) -> Self {
-        let position = self.0.iter().position(|(key, _)| key.starts_with("data-")).unwrap_or(self.0.len());
+        let position = self
+            .0
+            .iter()
+            .position(|(key, _)| key.starts_with("data-"))
+            .unwrap_or(self.0.len());
         let mut entries = self.0;
         let tail = entries.split_off(position);
         let mut before = Attrs(entries);
         let mut data = defaults;
         let mut after = attrs();
         for (key, value) in tail {
-            if key.starts_with("data-") { data.set(&key, value) } else { after.set(&key, value) }
+            if key.starts_with("data-") {
+                data.set(&key, value)
+            } else {
+                after.set(&key, value)
+            }
         }
         for (key, value) in data.0.into_iter().chain(after.0) {
             before.set(&key, value);
@@ -216,7 +322,7 @@ impl Attrs {
     }
 }
 
-pub(super) fn value_to_string(value: &Value) -> String {
+pub fn value_to_string(value: &Value) -> String {
     match value {
         Value::Text(text) | Value::Safe(text) => text.clone(),
         Value::Bool(flag) => flag.to_string(),
@@ -231,7 +337,10 @@ pub fn dasherize(key: &str) -> String {
 /// `content_tag(name, content, options)` with already-safe content.
 pub fn content_tag(name: &str, attrs: impl Borrow<Attrs>, content: &str) -> Html {
     let pre = if name == "textarea" { "\n" } else { "" };
-    Safe(format!("<{name}{}>{pre}{content}</{name}>", attrs.borrow().render()))
+    Safe(format!(
+        "<{name}{}>{pre}{content}</{name}>",
+        attrs.borrow().render()
+    ))
 }
 
 /// `content_tag` with plain-text content, escaped.
