@@ -625,20 +625,25 @@ export const mutations = {
     apply((state) => organize.addOverlay(state, entry)),
   dropSidebarOverlay: (entry: organize.SidebarOverlay) =>
     apply((state) => organize.dropOverlay(state, entry)),
-  upsertCategory: (category: RoomCategory) =>
-    apply((state) => organize.upsertCategory(state, category)),
+  /** A rename or fold reply; `since` is its request's ticket. */
+  landCategory: (category: RoomCategory, since: number) =>
+    apply((state) => organize.landCategory(state, category, since)),
   /** An organising reply's rows the sidebar has; `since` is the request's ticket. */
   mergeOrganization: (rows: readonly SidebarRow[], since: number) =>
     apply((state) => organize.mergeOrganization(state, rows, since)),
+  /** A create reply; `since` is its request's ticket. */
   landCreatedCategory: (
     category: RoomCategory,
     draft: organize.SidebarOverlay,
     settled: organize.SidebarOverlay,
-  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled)),
-  setCategories: (categories: readonly RoomCategory[]) =>
-    apply((state) => organize.setCategories(state, categories)),
-  removeCategory: (categoryId: number) =>
-    apply((state) => organize.removeCategory(state, categoryId)),
+    since: number,
+  ) => apply((state) => organize.landCreatedCategory(state, category, draft, settled, since)),
+  /** A reorder reply's list; `since` is its request's ticket. */
+  landCategories: (categories: readonly RoomCategory[], since: number) =>
+    apply((state) => organize.landCategories(state, categories, since)),
+  /** A delete reply; `since` is its request's ticket. */
+  landCategoryRemoval: (categoryId: number, since: number) =>
+    apply((state) => organize.landCategoryRemoval(state, categoryId, since)),
   /** A membership reply; `since` is its request's ticket. */
   setMembership: (membership: Membership, since: number) =>
     apply((state) => organize.setMembership(state, membership, since)),

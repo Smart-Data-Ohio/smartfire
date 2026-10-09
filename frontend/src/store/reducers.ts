@@ -26,8 +26,16 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
-import { removeCategory, upsertCategory } from "./organize.ts";
-import { changedRowIds, isStale, markResynced, touchedSince, touchRows } from "./row-touches.ts";
+import { removeCategory, replyCategories, upsertCategory } from "./organize.ts";
+import {
+  changedRowIds,
+  claimDivider,
+  dividerMovedSince,
+  isStale,
+  markResynced,
+  touchedSince,
+  touchRows,
+} from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -90,7 +98,7 @@ export function resyncSidebar(state: State, sidebar: Sidebar, since: number): St
 /**
  * Installs a whole-sidebar snapshot. `since` is its request's ticket: a room the sync path
  * changed after that keeps the store's row, or stays gone if sync removed it, and a row sync
- * added that the snapshot predates stays too.
+ * added that the snapshot predates stays too. Categories are guarded the same way.
  */
 function installSidebar(state: State, sidebar: Sidebar, since: number): State {
   const rows: Record<number, SidebarRow> = {};
@@ -119,7 +127,7 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
       // A row sync added that the snapshot predates takes its sorted place, as an upsert would.
       order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
       rows,
-      categories: sidebar.categories,
+      categories: replyCategories(state, sidebar.categories, since),
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
       overlay: state.sidebar.overlay,
@@ -637,9 +645,11 @@ export function moveUnreadDivider(state: State, roomId: number, fromId: number):
 
 /**
  * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
- * what the divider counts (at least 1, when the message is outside the loaded window). A row the
- * sync path changed after the request began (`since`, its ticket) is newer, so it stays, and
- * after a resync the whole reply is stale.
+ * what the divider counts (at least 1, when the message is outside the loaded window). `since` is
+ * the request's ticket. A reply that started before a resync, or before a newer mark-unread
+ * reply moved the divider, changes nothing, divider included. A row the sync path changed after
+ * the request began is newer, so it stays (the divider still moves: sync never moves it, and the
+ * viewer's own `room.unread` often lands first).
  */
 export function markUnreadFrom(
   state: State,
@@ -648,11 +658,15 @@ export function markUnreadFrom(
   now: number,
   since: number,
 ): State {
-  const moved = moveUnreadDivider(state, roomId, fromId);
+  if (isStale(state, since) || dividerMovedSince(state, roomId, since)) {
+    return state;
+  }
+
+  const moved = claimDivider(moveUnreadDivider(state, roomId, fromId), roomId);
   const timeline = moved.timelines[roomId];
   const count = timeline?.unreadFromId === fromId ? timeline.unreadCount : 0;
 
-  if (isStale(moved, since) || touchedSince(moved, roomId, since)) {
+  if (touchedSince(moved, roomId, since)) {
     return moved;
   }
 
@@ -1124,7 +1138,9 @@ export function applyEvents(
     }
   }
 
-  return source === "sync" ? touchRows(next, syncTouchedRooms(state, next, events)) : next;
+  return source === "sync"
+    ? touchRows(next, syncTouchedRooms(state, next, events), syncTouchedCategories(events))
+    : next;
 }
 
 /**
@@ -1154,6 +1170,15 @@ function syncTouchedRooms(
   }
 
   return [...ids];
+}
+
+/** The categories a sync batch names, so an older category reply leaves them be. */
+function syncTouchedCategories(events: readonly SyncEvent[]): readonly number[] {
+  return events.flatMap((event) =>
+    event.type === "sidebar.category.upserted" || event.type === "sidebar.category.removed"
+      ? [event.data.id]
+      : [],
+  );
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */

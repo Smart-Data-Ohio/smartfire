@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import { beginRoomRequest } from "./join-state.ts";
 import type { SidebarRow, SyncEvent } from "./model.ts";
-import { mergeOrganization, setMembership } from "./organize.ts";
+import {
+  landCategories,
+  landCategory,
+  landCategoryRemoval,
+  mergeOrganization,
+  setMembership,
+} from "./organize.ts";
 import {
   applyEvents,
   loadSidebar,
@@ -17,7 +23,7 @@ import {
   touchRows,
   untouchedReplyEvents,
 } from "./row-touches.ts";
-import { initialState, type State } from "./state.ts";
+import { emptyTimeline, initialState, type State } from "./state.ts";
 import { mutations, store } from "./store.ts";
 
 const general = sidebarRowFixture(1, "general");
@@ -145,6 +151,83 @@ describe("sidebar row touches", () => {
       setMembership(resynced, membership, rowClock(resynced)).sidebar.rows[1]?.membership
         .involvement,
     ).toBe("mentions");
+  });
+
+  it("an old mark-unread reply after a resync leaves the divider be", () => {
+    const withTimeline = (state: State, unreadFromId: number | null): State => ({
+      ...state,
+      timelines: {
+        ...state.timelines,
+        1: { ...emptyTimeline, ids: [40, 41, 42], unreadFromId, unreadCount: 0 },
+      },
+    });
+
+    // The old mark-unread (from 40) goes out; a resync lands; a newer one marks from 42.
+    const before = withTimeline(loaded([general]), null);
+    const old = rowClock(before);
+    const resynced = resyncSidebar(before, sidebarFixture([general]), rowClock(before));
+    const newer = markUnreadFrom(resynced, 1, 42, 0, rowClock(resynced));
+
+    expect(newer.timelines[1]?.unreadFromId).toBe(42);
+    expect(markUnreadFrom(newer, 1, 40, 0, old)).toBe(newer);
+  });
+
+  it("an old mark-unread reply after a newer one leaves the divider be", () => {
+    const state: State = {
+      ...loaded([general]),
+      timelines: { 1: { ...emptyTimeline, ids: [40, 41, 42], unreadFromId: null, unreadCount: 0 } },
+    };
+
+    const old = rowClock(state);
+    const newer = markUnreadFrom(state, 1, 42, 0, rowClock(state));
+
+    expect(markUnreadFrom(newer, 1, 40, 0, old)).toBe(newer);
+  });
+
+  it("the viewer's own room.unread landing first still lets the divider move", () => {
+    const state: State = {
+      ...loaded([general]),
+      timelines: { 1: { ...emptyTimeline, ids: [40, 41, 42], unreadFromId: null, unreadCount: 0 } },
+    };
+
+    const since = rowClock(state);
+
+    const own: SyncEvent = {
+      seq: 1,
+      topic: "user:7",
+      type: "room.unread",
+      data: { roomId: 1, messageId: null, mentioned: false },
+    };
+
+    const replied = markUnreadFrom(applyEvents(state, [own], 0), 1, 41, 0, since);
+
+    expect(replied.timelines[1]?.unreadFromId).toBe(41);
+  });
+
+  it("a category reply older than sync's word on it changes nothing", () => {
+    const team = { id: 2, name: "Team", collapsed: false, position: 1 };
+
+    const before: State = {
+      ...loaded([general]),
+      sidebar: { ...loaded([general]).sidebar, categories: [team] },
+    };
+
+    const since = rowClock(before);
+
+    const gone = applyEvents(
+      before,
+      [{ seq: 1, topic: "user:7", type: "sidebar.category.removed", data: { id: 2 } }],
+      0,
+    );
+
+    expect(landCategory(gone, { ...team, name: "People" }, since)).toBe(gone);
+    expect(landCategories(gone, [team], since).sidebar.categories).toEqual([]);
+
+    const resynced = resyncSidebar(before, sidebarFixture([general]), rowClock(before));
+
+    expect(landCategory(resynced, { ...team, name: "People" }, since)).toBe(resynced);
+    expect(landCategories(resynced, [team], since)).toBe(resynced);
+    expect(landCategoryRemoval(before, 2, since).sidebar.categories).toEqual([]);
   });
 
   it("forgets the touches no request in flight is older than", () => {

@@ -271,6 +271,78 @@ describe("organize actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("drop a rename reply from before a resync that removed the category", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /room_categories/2", () => {
+        // While the rename is on its way, another tab deletes the category, and a resync
+        // (no event left to say so again) installs the sidebar without it.
+        mutations.resyncSidebar(
+          { ...sidebarFixture([general, design, engineering, ada]), categories: [launch] },
+          sidebarRowClock(),
+        );
+
+        return Effect.succeed({ ...team, name: "People" });
+      });
+
+      yield* organize.renameCategory(2, "People");
+
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([1]);
+      expect(store.getState().rowTouches.categories).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("drop a fold reply from before sync removed the category", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /room_categories/2", () => {
+        mutations.applyEvents(
+          [{ seq: 0, topic: "user:7", type: "sidebar.category.removed", data: { id: 2 } }],
+          0,
+        );
+
+        return Effect.succeed({ ...team, collapsed: true });
+      });
+
+      yield* organize.setCollapsed(2, true);
+
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([1]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a category sync renamed over an older reorder reply", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const renamed = { ...team, name: "People", position: 1 };
+
+      yield* fake.route("PUT /room_categories/order", () => {
+        mutations.applyEvents(
+          [{ seq: 0, topic: "user:7", type: "sidebar.category.upserted", data: renamed }],
+          0,
+        );
+
+        return Effect.succeed({
+          categories: [
+            { ...team, position: 1 },
+            { ...launch, position: 2 },
+          ],
+        });
+      });
+
+      yield* organize.reorderCategories([2, 1]);
+
+      expect(store.getState().sidebar.categories).toEqual([renamed, { ...launch, position: 2 }]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("delete a category, its rooms going back to Channels", () =>
     Effect.gen(function* () {
       seed();
@@ -439,7 +511,10 @@ describe("organize actions", () => {
 
         return Effect.succeed({
           ...sidebarFixture([general, design, engineering]),
-          categories: [team, launch],
+          categories: [
+            { ...team, position: 1 },
+            { ...launch, position: 2 },
+          ],
         });
       });
 
@@ -447,7 +522,7 @@ describe("organize actions", () => {
 
       expect(reads).toBe(2);
       expect(store.getState().sidebar.rows[3]).toEqual(engineering);
-      expect(store.getState().sidebar.categories).toEqual([team, launch]);
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([2, 1]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

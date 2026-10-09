@@ -245,19 +245,28 @@ export const createCategory = Effect.fn("organize.createCategory")(function* (
   return yield* pending(
     entry,
     Effect.gen(function* () {
-      const category = yield* api.createCategory({ name: draft.name });
-      const slot: RoomSlot = { kind: "category", categoryId: category.id };
+      const slot = (category: RoomCategory): RoomSlot => ({
+        kind: "category",
+        categoryId: category.id,
+      });
 
       // The real category replaces the draft at once; the room shows in it while it moves.
-      const settled = memberships(
-        row === undefined ? {} : placementPatches(view(), row.room.id, slot),
+      const settledFor = (category: RoomCategory) =>
+        memberships(row === undefined ? {} : placementPatches(view(), row.room.id, slot(category)));
+
+      const [category, settled] = yield* withRowTicket((since) =>
+        Effect.map(api.createCategory({ name: draft.name }), (created) => {
+          const placed = settledFor(created);
+
+          createdIds.set(temporaryId, created.id);
+          mutations.landCreatedCategory(created, entry, placed, since);
+
+          return [created, placed] as const;
+        }),
       );
 
-      createdIds.set(temporaryId, category.id);
-      mutations.landCreatedCategory(category, entry, settled);
-
       if (row !== undefined) {
-        yield* placeOnServer(row.room.id, slot).pipe(
+        yield* placeOnServer(row.room.id, slot(category)).pipe(
           Effect.ensuring(Effect.sync(() => mutations.dropSidebarOverlay(settled))),
         );
       }
@@ -288,11 +297,11 @@ export const renameCategory = Effect.fn("organize.renameCategory")(function* (
 
   yield* pending(
     categories({ [categoryId]: next }),
-    Effect.gen(function* () {
-      mutations.upsertCategory(
-        yield* api.updateCategory(serverCategoryId(categoryId), { name: trimmed }),
-      );
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateCategory(serverCategoryId(categoryId), { name: trimmed }), (category) =>
+        mutations.landCategory(category, since),
+      ),
+    ),
   );
 });
 
@@ -309,11 +318,11 @@ export const setCollapsed = Effect.fn("organize.setCollapsed")(function* (
 
   yield* pending(
     categories({ [categoryId]: next }),
-    Effect.gen(function* () {
-      mutations.upsertCategory(
-        yield* api.updateCategory(serverCategoryId(categoryId), { collapsed }),
-      );
-    }),
+    withRowTicket((since) =>
+      Effect.map(api.updateCategory(serverCategoryId(categoryId), { collapsed }), (category) =>
+        mutations.landCategory(category, since),
+      ),
+    ),
   );
 });
 
@@ -330,12 +339,15 @@ export const deleteCategory = Effect.fn("organize.deleteCategory")(function* (ca
 
   yield* pending(
     entry,
-    Effect.gen(function* () {
-      const serverId = serverCategoryId(categoryId);
+    withRowTicket((since) =>
+      Effect.suspend(() => {
+        const serverId = serverCategoryId(categoryId);
 
-      yield* api.deleteCategory(serverId);
-      mutations.removeCategory(serverId);
-    }),
+        return Effect.map(api.deleteCategory(serverId), () =>
+          mutations.landCategoryRemoval(serverId, since),
+        );
+      }),
+    ),
   );
 });
 
@@ -363,8 +375,11 @@ export const reorderCategories = Effect.fn("organize.reorderCategories")(functio
   // id by then.
   yield* pending(
     entry,
-    Effect.suspend(() => api.reorderCategories(categoryIds.map(serverCategoryId))).pipe(
-      Effect.tap((list) => Effect.sync(() => mutations.setCategories(list.categories))),
+    withRowTicket((since) =>
+      Effect.suspend(() => api.reorderCategories(categoryIds.map(serverCategoryId))).pipe(
+        Effect.tap((list) => Effect.sync(() => mutations.landCategories(list.categories, since))),
+      ),
+    ).pipe(
       Effect.catchTag("Conflict", (conflict) =>
         refetchSidebar.pipe(Effect.andThen(Effect.fail(conflict))),
       ),

@@ -19,6 +19,8 @@
 import type { SidebarRow, SyncEvent } from "./model.ts";
 import type { State } from "./state.ts";
 
+type Touches = Readonly<Record<number, number>>;
+
 export interface RowTouches {
   readonly clock: number;
   /** The clock when the latest sync resync landed: a ticket from before it is stale. */
@@ -27,10 +29,23 @@ export interface RowTouches {
    * The clock at each room's latest touch, kept after its row leaves, only while a request
    * older than the touch is in flight (`pruneTouches`).
    */
-  readonly at: Readonly<Record<number, number>>;
+  readonly at: Touches;
+  /** The same for sidebar categories, by category id. */
+  readonly categories: Touches;
+  /**
+   * The clock when a mark-unread reply last moved each room's divider: an older one still on its
+   * way doesn't move it back. Pruned as the touches are.
+   */
+  readonly dividers: Touches;
 }
 
-export const noRowTouches: RowTouches = { clock: 0, resyncEpoch: 0, at: {} };
+export const noRowTouches: RowTouches = {
+  clock: 0,
+  resyncEpoch: 0,
+  at: {},
+  categories: {},
+  dividers: {},
+};
 
 /** The clock now: the ticket of a request beginning now. */
 export function rowClock(state: State): number {
@@ -54,18 +69,64 @@ export function touchedSince(state: State, roomId: number, since: number): boole
   return (state.rowTouches.at[roomId] ?? 0) > since;
 }
 
-/** Records that the sync path (or a read made here) just changed these rooms' rows. */
-export function touchRows(state: State, roomIds: Iterable<number>): State {
-  const clock = state.rowTouches.clock + 1;
-  const at = { ...state.rowTouches.at };
-  let touched = false;
+/** Whether the sync path changed (or removed) category `categoryId` after `since`. */
+export function categoryTouchedSince(state: State, categoryId: number, since: number): boolean {
+  return (state.rowTouches.categories[categoryId] ?? 0) > since;
+}
 
-  for (const roomId of roomIds) {
-    at[roomId] = clock;
-    touched = true;
+/** Whether a newer mark-unread reply moved `roomId`'s divider after `since`. */
+export function dividerMovedSince(state: State, roomId: number, since: number): boolean {
+  return (state.rowTouches.dividers[roomId] ?? 0) > since;
+}
+
+function stamped(touches: Touches, ids: Iterable<number>, clock: number): Touches {
+  let next: Record<number, number> | null = null;
+
+  for (const id of ids) {
+    next ??= { ...touches };
+    next[id] = clock;
   }
 
-  return touched ? { ...state, rowTouches: { ...state.rowTouches, clock, at } } : state;
+  return next ?? touches;
+}
+
+/**
+ * Records that the sync path (or a read made here) just changed these rooms' rows and these
+ * categories.
+ */
+export function touchRows(
+  state: State,
+  roomIds: Iterable<number>,
+  categoryIds: Iterable<number> = [],
+): State {
+  const touches = state.rowTouches;
+  const clock = touches.clock + 1;
+  const at = stamped(touches.at, roomIds, clock);
+  const categories = stamped(touches.categories, categoryIds, clock);
+
+  if (at === touches.at && categories === touches.categories) {
+    return state;
+  }
+
+  return { ...state, rowTouches: { ...touches, clock, at, categories } };
+}
+
+/** A mark-unread reply just moved `roomId`'s divider. */
+export function claimDivider(state: State, roomId: number): State {
+  const touches = state.rowTouches;
+  const clock = touches.clock + 1;
+
+  return {
+    ...state,
+    rowTouches: { ...touches, clock, dividers: stamped(touches.dividers, [roomId], clock) },
+  };
+}
+
+function pruned(touches: Touches, oldest: number | undefined): Touches {
+  const entries = Object.entries(touches);
+  const kept = entries.filter(([, clock]) => oldest !== undefined && clock > oldest);
+
+  return kept.length === entries.length ? touches : Object.fromEntries(kept);
 }
 
 /**
@@ -74,14 +135,16 @@ export function touchRows(state: State, roomIds: Iterable<number>): State {
  * goes.
  */
 export function pruneTouches(state: State, oldest: number | undefined): State {
-  const entries = Object.entries(state.rowTouches.at);
-  const kept = entries.filter(([, clock]) => oldest !== undefined && clock > oldest);
+  const touches = state.rowTouches;
+  const at = pruned(touches.at, oldest);
+  const categories = pruned(touches.categories, oldest);
+  const dividers = pruned(touches.dividers, oldest);
 
-  if (kept.length === entries.length) {
+  if (at === touches.at && categories === touches.categories && dividers === touches.dividers) {
     return state;
   }
 
-  return { ...state, rowTouches: { ...state.rowTouches, at: Object.fromEntries(kept) } };
+  return { ...state, rowTouches: { ...touches, at, categories, dividers } };
 }
 
 /**
