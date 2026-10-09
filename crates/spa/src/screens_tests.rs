@@ -111,6 +111,7 @@ fn only_intentional_aliases_share_a_url() {
                     ("rooms/closeds#edit", "/rooms/closeds/:id/edit"),
                     ("rooms/voices#edit", "/rooms/voices/:id/edit"),
                     ("rooms/stages#edit", "/rooms/stages/:id/edit"),
+                    ("rooms/boards#edit", "/rooms/boards/:id/edit"),
                 ],
             ),
         ]),
@@ -372,6 +373,7 @@ fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
         ("rooms/closeds#edit", "/rooms/closeds/12/edit"),
         ("rooms/voices#edit", "/rooms/voices/12/edit"),
         ("rooms/stages#edit", "/rooms/stages/12/edit"),
+        ("rooms/boards#edit", "/rooms/boards/12/edit"),
     ] {
         assert_eq!(
             spa_url(endpoint, classic, None).as_deref(),
@@ -387,10 +389,6 @@ fn room_new_and_edit_pages_open_the_create_dialog_and_the_settings() {
     assert_eq!(
         classic_url("/app/r/12/settings", None).as_deref(),
         Some("/rooms/12")
-    );
-    assert_eq!(
-        spa_url("rooms/boards#edit", "/rooms/boards/12/edit", None),
-        None
     );
     assert_eq!(
         spa_url("rooms/directs#edit", "/rooms/directs/12/edit", None),

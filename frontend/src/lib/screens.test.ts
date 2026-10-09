@@ -24,6 +24,8 @@ describe("the screen map", () => {
   it("maps ported classic pages to their SPA URLs", () => {
     expect(spaUrlFor("/")).toBe("/app/");
     expect(spaUrlFor("/rooms/12")).toBe("/app/r/12");
+    expect(spaUrlFor("/rooms/boards/12/edit")).toBe("/app/r/12/settings");
+    expect(spaUrlFor("/rooms/boards/12/automations")).toBe("/app/r/12/automations");
     expect(spaUrlFor("/rooms/12/@345")).toBe("/app/r/12/m/345");
     expect(spaUrlFor("/rooms/12/threads/9")).toBe("/app/r/12/t/9");
     expect(spaUrlFor("//rooms/12/")).toBe("/app/r/12");

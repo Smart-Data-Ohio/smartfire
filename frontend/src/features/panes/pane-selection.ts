@@ -45,7 +45,10 @@ export function selectRightPaneView({
 
   const pane = routePane ?? openPane;
 
-  if (pane === "automations" && roomKind !== "board") return null;
+  // A remembered automations pane belongs to a board. The automations URL still opens the pane
+  // on any room, so a nonmember or a room that isn't a board gets an explanation instead of a
+  // blank column.
+  if (pane === "automations" && roomKind !== "board" && routePane !== "automations") return null;
 
   return pane === null ? null : { kind: "pane", pane };
 }

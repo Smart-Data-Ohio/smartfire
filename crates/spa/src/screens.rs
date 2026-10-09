@@ -166,7 +166,7 @@ pub const SCREENS: &[Screen] = &[
     ),
     // S8: a room's settings. The classic edit pages are one per kind, and a kind's form saved on
     // another kind's room would convert it, so the shared settings screen falls back to the room
-    // itself. Boards keep their classic edit page until boards are ported.
+    // itself. Direct messages keep their classic edit page.
     screen("rooms#show", "/rooms/:id", "/app/r/:id/settings", true),
     screen(
         "rooms/opens#edit",
@@ -192,11 +192,16 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:id/settings",
         true,
     ),
-    // `/rooms/:id/settings` is not a row here. Open, closed, voice and stage settings are this
-    // screen; a board or a direct message is not (the room page bounces a board to classic, and a
-    // direct's settings URL collapses to the conversation). The controller resolves the type and
-    // sends the others to that type's edit form. The rooms#show row above stays the classic
-    // fallback for `/app/r/:id/settings`.
+    screen(
+        "rooms/boards#edit",
+        "/rooms/boards/:id/edit",
+        "/app/r/:id/settings",
+        true,
+    ),
+    // `/rooms/:id/settings` is not a row here. Open, closed, voice, stage and board settings are
+    // this screen; a direct message is not (its settings URL collapses to the conversation). The
+    // controller resolves the type and sends a direct to its edit form. The rooms#show row above
+    // stays the classic fallback for `/app/r/:id/settings`.
     // S8: a room's calendar, an event's page, its form and the viewer's response.
     screen(
         "rooms/events#index",

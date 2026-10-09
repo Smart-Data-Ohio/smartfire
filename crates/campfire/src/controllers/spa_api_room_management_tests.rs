@@ -1108,3 +1108,119 @@ async fn spa_api_rooms_management_changes_publish_refreshes_to_the_real_sync_soc
     }
     server.abort();
 }
+
+/// Classic board edit: a nonmember cannot see the room, a member who cannot administer can read
+/// the form and cannot write, and an unknown icon or a type change leaves the board as it was.
+#[tokio::test]
+async fn spa_api_board_settings_authorization_and_validation() {
+    let a = app().await.expect("frozen seeds required");
+    let room = a
+        .db()
+        .write(|tx| {
+            Room::create_for(
+                tx,
+                RoomType::Board,
+                Some("Release board"),
+                DAVID,
+                &[DAVID, KEVIN],
+            )
+        })
+        .await
+        .unwrap();
+    let id = room.id;
+    let edit = format!("/api/v1/rooms/{id}/edit");
+    let path = format!("/api/v1/rooms/{id}");
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut jason = a.sign_in(JASON).await;
+
+    let form: api::RoomForm = parse(&kevin.send(get(&edit)).await);
+    assert_eq!(form.kind, api::RoomKind::Board);
+    assert!(!form.can_submit && !form.can_delete);
+    assert!(form.user_ids.contains(&DAVID) && form.user_ids.contains(&KEVIN));
+    let denied = write(
+        &mut kevin,
+        Method::PATCH,
+        &path,
+        json!({"type":"board","name":"Taken","userIds":[DAVID,KEVIN]}),
+    )
+    .await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+    assert_eq!(error(&denied)["_tag"], "Forbidden");
+    let denied = write(&mut kevin, Method::DELETE, &path, json!({})).await;
+    assert_eq!(denied.status, StatusCode::FORBIDDEN);
+
+    assert_eq!(jason.send(get(&edit)).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        write(
+            &mut jason,
+            Method::PATCH,
+            &path,
+            json!({"type":"board","name":"Taken","userIds":[JASON]}),
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        write(&mut jason, Method::DELETE, &path, json!({}))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+
+    let before = a
+        .db()
+        .read(move |conn| Ok(Room::find(conn, id)?.name))
+        .await
+        .unwrap();
+    let invalid = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"type":"board","name":"Attempted","iconName":"not_an_icon_s8","userIds":[DAVID,KEVIN]}),
+    )
+    .await;
+    assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error(&invalid)["_tag"], "Validation");
+    assert!(error(&invalid)["fields"]["iconName"].is_array());
+    let converted = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"type":"open","name":"Wrong"}),
+    )
+    .await;
+    assert_eq!(converted.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        error(&converted)["fields"]["type"],
+        json!(["cannot convert this room to that type"])
+    );
+    assert_eq!(
+        a.db()
+            .read(move |conn| Ok(Room::find(conn, id)?.name))
+            .await
+            .unwrap(),
+        before
+    );
+
+    let saved = write(
+        &mut david,
+        Method::PATCH,
+        &path,
+        json!({"type":"board","name":"Shipped","iconName":"smile","userIds":[DAVID]}),
+    )
+    .await;
+    assert_eq!(saved.status, StatusCode::OK, "{}", saved.text());
+    let saved: api::RoomMutation = parse(&saved);
+    assert_eq!(saved.room.kind, api::RoomKind::Board);
+    assert_eq!(saved.room.name.as_deref(), Some("Shipped"));
+    let form: api::RoomForm = parse(&david.send(get(&edit)).await);
+    assert_eq!(form.name.as_deref(), Some("Shipped"));
+    assert_eq!(form.user_ids, vec![DAVID]);
+    assert_eq!(
+        kevin.send(get(&edit)).await.status,
+        StatusCode::NOT_FOUND,
+        "leaving the board removes it from a member"
+    );
+}
