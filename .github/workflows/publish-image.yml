@@ -145,6 +145,8 @@ jobs:
       - name: Set up Docker Buildx
         if: steps.existing.outputs.exists != 'true'
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       - name: Log in to Artifact Registry
         if: env.PUBLISH == 'true' && steps.existing.outputs.exists != 'true'
@@ -280,6 +282,8 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       - name: Log in to GHCR
         if: env.PUBLISH == 'true'
@@ -371,6 +375,8 @@ jobs:
 
       - name: Set up Docker Buildx (for imagetools)
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        with:
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
 
       - name: Log in to Artifact Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
