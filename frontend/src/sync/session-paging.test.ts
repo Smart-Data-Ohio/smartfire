@@ -25,6 +25,45 @@ const navigation = Layer.mergeAll(Topics.layer, Typing.layer, Presence.layer).pi
 describe("room timeline paging", () => {
   afterEach(() => mutations.reset());
 
+  it.effect("doesn't page newer while the jump to the present loads", () =>
+    Effect.gen(function* () {
+      const fake = yield* FakeApi;
+      const latestStarted = yield* Deferred.make<void>();
+      const releaseLatest = yield* Deferred.make<void>();
+      let newerPages = 0;
+
+      mutations.applyPage(ROOM, pageFixture([note(5)], 4, 5), "replace");
+
+      yield* fake.route(`GET /rooms/${ROOM}/messages`, (request) => {
+        if (request.query?.after !== undefined) {
+          newerPages += 1;
+
+          return Effect.succeed(pageFixture([note(6)], 5, 6));
+        }
+
+        return Deferred.succeed(latestStarted, undefined).pipe(
+          Effect.andThen(Deferred.await(releaseLatest)),
+          Effect.as(pageFixture([note(9)], 8, null)),
+        );
+      });
+
+      const jump = yield* Effect.forkChild(session.jumpToPresent(ROOM));
+
+      yield* Deferred.await(latestStarted);
+      yield* session.loadNewer(ROOM);
+
+      expect(newerPages).toBe(0);
+      expect(timeline()?.ids).toEqual([5]);
+      expect(timeline()?.loadingNewer).toBe(false);
+
+      yield* Deferred.succeed(releaseLatest, undefined);
+      yield* Fiber.join(jump);
+
+      expect(timeline()?.ids).toEqual([9]);
+      expect(timeline()?.after).toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("a failure in one direction leaves the other request running", () =>
     Effect.gen(function* () {
       const fake = yield* FakeApi;
