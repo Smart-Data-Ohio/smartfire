@@ -234,13 +234,16 @@
 
   /* Phones: the section folds to one line: the status, the owner, the links as a strip that
      scrolls sideways, and the details toggle (its name kept for assistive tech). Opened, the
-     details drop below the line. While the keyboard is up the section gives way to the replies. */
+     details drop below the line. While the keyboard is up for a reply the section gives way to
+     the replies (editing the result, it stays: the editor is in it). */
   @media (width < 720px) {
     .pane-toolbar:has(> .work-bar) {
       padding: var(--space-1) var(--space-3) 0;
     }
 
-    :root[data-keyboard="open"] .pane-toolbar:has(> .work-bar) {
+    :root[data-keyboard="open"]
+      .pane-frame:has(> .pane-footer .composer:focus-within)
+      > .pane-toolbar:has(> .work-bar) {
       display: none;
     }
 

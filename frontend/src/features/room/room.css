@@ -18,6 +18,12 @@
     isolation: isolate;
   }
 
+  /* The parts around the call view, grouped only so a phone's covering call view can make them
+     inert: they lay out as the room's own children. */
+  .room-part {
+    display: contents;
+  }
+
   .room-error-actions {
     display: flex;
     flex-wrap: wrap;

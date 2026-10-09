@@ -396,6 +396,56 @@ test.describe("on a touch phone", () => {
     await expect(page.getByRole("button", { name: "2 scheduled messages" })).toBeVisible();
   });
 
+  /** A finger resting on `target` past the long press, then `end`ing it some other way. */
+  async function heldThen(
+    target: ReturnType<Page["getByRole"]>,
+    end: "cancel" | "drift",
+  ): Promise<void> {
+    const box = await target.boundingBox();
+
+    if (box === null) {
+      throw new Error("the long-press target has no box");
+    }
+
+    const point = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
+    const touch = { ...point, pointerType: "touch", pointerId: 7, isPrimary: true, bubbles: true };
+
+    await target.dispatchEvent("pointerdown", { ...touch, buttons: 1 });
+    await target.page().waitForTimeout(650);
+
+    if (end === "cancel") {
+      // The browser took the touch for a scroll: no pointerup, no click.
+      await target.dispatchEvent("pointercancel", { ...touch, buttons: 0 });
+    } else {
+      await target.dispatchEvent("pointermove", {
+        ...touch,
+        clientY: point.clientY - 40,
+        buttons: 1,
+      });
+      await target.dispatchEvent("pointerup", {
+        ...touch,
+        clientY: point.clientY - 40,
+        buttons: 0,
+      });
+      await target.dispatchEvent("click", point);
+    }
+
+    // Long enough for a menu that opens after the release to have shown.
+    await target.page().waitForTimeout(400);
+  }
+
+  for (const end of ["cancel", "drift"] as const) {
+    test(`a held press that ends in a ${end === "cancel" ? "pointercancel" : "drift"} neither opens the menu nor sends`, async ({
+      page,
+    }) => {
+      await openApp(page, GENERAL);
+      await typeInto(page, "Standup notes are in the doc");
+      await heldThen(page.getByRole("button", { name: "Send message" }), end);
+      await expect(page.getByRole("menuitem", { name: /Tomorrow at 9:00/ })).toHaveCount(0);
+      await expect(composer(page)).toHaveValue("Standup notes are in the doc");
+    });
+  }
+
   test("a tap on send still sends", async ({ page }) => {
     await openApp(page, GENERAL);
     await typeInto(page, "Sent with a tap");

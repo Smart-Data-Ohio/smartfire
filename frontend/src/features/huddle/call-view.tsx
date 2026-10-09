@@ -14,6 +14,12 @@ import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { callController } from "./call-controller.ts";
 import { streamVideoIdOf, useCall, userIdForIdentity } from "./call-store.ts";
+import {
+  callViewShown,
+  useCallViewCovers,
+  useCallViewFocus,
+  useCallViewHistory,
+} from "./call-view-cover.ts";
 import { loadStreamQuality } from "./engine/preferences.ts";
 import type { CallParticipant, ViewerQuality } from "./engine/transport.ts";
 import { ParticipantMenu } from "./participant-menu.tsx";
@@ -289,9 +295,8 @@ function loudest(participants: readonly CallParticipant[]): ReadonlySet<string> 
 
 /** The call, in its own room's conversation (the dock covers every other room). */
 export function CallView({ roomId }: { readonly roomId: number }) {
-  const here = useCall((state) => state.roomId === roomId);
+  const shown = useCall((state) => callViewShown(state, roomId));
   const phase = useCall((state) => state.phase);
-  const viewOpen = useCall((state) => state.viewOpen);
   const roomName = useCall((state) => state.roomName);
   const participants = useCall((state) => state.snapshot.participants);
   const expandedVideoId = useCall((state) => state.expandedVideoId);
@@ -299,11 +304,13 @@ export function CallView({ roomId }: { readonly roomId: number }) {
   const streamingHere = useCall((state) => state.streaming?.roomId === roomId);
   const presenter = useStore((state) => state.stages[roomId]?.live?.identity ?? null);
 
-  if (
-    !here ||
-    !viewOpen ||
-    !(phase === "connecting" || phase === "connected" || phase === "reconnecting")
-  ) {
+  const covers = useCallViewCovers(roomId);
+  const view = useRef<HTMLElement>(null);
+
+  useCallViewHistory(covers);
+  useCallViewFocus(view, covers);
+
+  if (!shown) {
     return null;
   }
 
@@ -314,9 +321,22 @@ export function CallView({ roomId }: { readonly roomId: number }) {
 
   return (
     <section
+      ref={view}
       className="call-view"
       data-theater={expanded === undefined ? undefined : true}
       aria-label="Call"
+      // Covering the room (a phone), it is a page of its own: focus lands on it, Escape closes it.
+      tabIndex={covers ? -1 : undefined}
+      onKeyDown={
+        covers
+          ? (event) => {
+              if (event.key === "Escape" && !event.defaultPrevented) {
+                event.preventDefault();
+                callController.setViewOpen(false);
+              }
+            }
+          : undefined
+      }
     >
       <header className="call-view-head">
         <Icon name="audio-lines" size={16} />

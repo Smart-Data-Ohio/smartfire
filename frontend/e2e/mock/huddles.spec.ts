@@ -288,4 +288,43 @@ test.describe("on a touch phone", () => {
     await bar.getByRole("button", { name: "Hide call" }).click();
     await expect(view).toHaveCount(0);
   });
+
+  test("the full-screen call is a page: it takes focus, Escape and Back close it", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const url = page.url();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeFocused();
+
+    // The covered conversation is out of reach: Tab never lands in the composer.
+    await expect(page.locator(".room-part").first()).toHaveAttribute("inert", "");
+
+    for (let step = 0; step < 12; step += 1) {
+      await page.keyboard.press("Tab");
+
+      const inRoom = await page.evaluate(() =>
+        Boolean(document.activeElement?.closest(".room-part")),
+      );
+
+      expect(inRoom, `Tab ${step + 1} stays out of the covered room`).toBe(false);
+    }
+
+    await view.focus();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+    await expect(bar.getByRole("button", { name: "Show call" })).toBeFocused();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    expect(page.url(), "Back closes the call, not the room").toBe(url);
+    await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
+  });
 });

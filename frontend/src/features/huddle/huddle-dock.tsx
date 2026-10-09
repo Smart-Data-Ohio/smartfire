@@ -355,6 +355,8 @@ export function HuddleDock({ compact = false }: HuddleDockProps) {
                 label={shown ? "Hide call" : "Show call"}
                 size="sm"
                 aria-pressed={shown}
+                // Where the phone's covering call view hands focus back (call-view-cover.ts).
+                data-call-view-toggle={compact || undefined}
                 onClick={() => {
                   // The call shows in its own room: from anywhere else, go there.
                   if (!inRoom) {

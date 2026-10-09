@@ -307,4 +307,20 @@ test.describe("on a touch phone", () => {
       visible * 0.5,
     );
   });
+
+  test("editing the work result keeps the editor in view while typing", async ({ page }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+    const work = pane(page).getByRole("region", { name: "Work" });
+
+    await work.getByRole("button", { name: "Result, steps and history" }).click();
+    await work.getByRole("button", { name: /^(Add|Edit) result$/ }).click();
+
+    const editor = work.getByRole("textbox", { name: "Result" });
+
+    await editor.click();
+    await simulateKeyboard(page, 320);
+    await expect(editor).toBeVisible();
+    await expect(editor).toBeFocused();
+  });
 });
