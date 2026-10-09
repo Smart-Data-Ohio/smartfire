@@ -1,11 +1,11 @@
 import { Suspense, useEffect, useState } from "react";
-import { COARSE_QUERY, PHONE_QUERY } from "../../../lib/breakpoints.ts";
 import { useReducedMotion } from "../../../motion/reduced-motion.ts";
 import { lazyForUpdate as lazy } from "../../../service-worker/lazy.ts";
 import {
   ignoreModuleResourceLoadError,
   loadForUpdate,
 } from "../../../service-worker/update-required.ts";
+import { useActionSheet } from "../../../ui/action-sheet.tsx";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import type { IconName } from "../../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../../ui/menu.tsx";
@@ -44,14 +44,6 @@ function lowPower(): boolean {
     memory < 2 ||
     window.matchMedia("(prefers-reduced-data: reduce)").matches
   );
-}
-
-/**
- * Touch phones get the plain menu too: its + button takes the finger-sized hit area the liquid
- * one, drawn around a 28 px seed, can't.
- */
-function touchPhone(): boolean {
-  return window.matchMedia(`${PHONE_QUERY} and ${COARSE_QUERY}`).matches;
 }
 
 /** Runs `work` when the main thread is idle (a short timeout where idle callbacks don't exist). */
@@ -108,21 +100,24 @@ export function PlainPlusMenu({ actions }: PlusMenuProps) {
 /**
  * The composer's + button. It opens a menu that splits out of the button as liquid
  * (Jakub Antalik's liquid-gooey, lazy-loaded, one instance per composer); under reduced motion,
- * on low-power devices, on touch phones and until the chunk arrives, it is the plain dropdown.
+ * on low-power devices and until the chunk arrives, it is the plain dropdown. On a touch phone
+ * it is the plain menu too, which opens there as an action sheet.
  */
 export function PlusMenu({ actions }: PlusMenuProps) {
   const reduced = useReducedMotion();
-  const [plain] = useState(() => lowPower() || touchPhone());
+  const sheet = useActionSheet();
+  const [lowPowered] = useState(lowPower);
+  const plain = reduced || lowPowered || sheet;
 
   useEffect(() => {
-    if (reduced || plain) {
+    if (plain) {
       return;
     }
 
     return whenIdle(() => void loadGooey().catch(ignoreModuleResourceLoadError));
-  }, [reduced, plain]);
+  }, [plain]);
 
-  if (reduced || plain) {
+  if (plain) {
     return <PlainPlusMenu actions={actions} />;
   }
 

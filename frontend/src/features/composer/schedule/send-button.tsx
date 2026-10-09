@@ -105,7 +105,7 @@ export function SendButton({ canSend, waiting, onSend, schedule }: SendButtonPro
           <MenuItem
             key={preset.id}
             icon={PRESET_ICONS[preset.id]}
-            shortcut={preset.id === "hour" ? [timeLabel(preset.at)] : []}
+            detail={preset.id === "hour" ? timeLabel(preset.at) : undefined}
             disabled={!schedule.enabled}
             onSelect={() => schedule.onPreset(preset)}
           >
