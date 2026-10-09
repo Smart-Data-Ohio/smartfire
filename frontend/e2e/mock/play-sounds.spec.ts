@@ -86,7 +86,7 @@ test("the composer posts a classic sound with a working playback control, and re
 }) => {
   await page.route("**/assets/bell.mp3", (route) =>
     route.fulfill({
-      path: fileURLToPath(new URL("../../../web/app/assets/sounds/bell.mp3", import.meta.url)),
+      path: fileURLToPath(new URL("../fixtures/sounds/bell.mp3", import.meta.url)),
       contentType: "audio/mpeg",
     }),
   );
@@ -132,15 +132,13 @@ test("the composer posts a classic sound with a working playback control, and re
 test("the sound message renders the classic image and dimensions", async ({ page }) => {
   await page.route("**/assets/56k.mp3", (route) =>
     route.fulfill({
-      path: fileURLToPath(new URL("../../../web/app/assets/sounds/56k.mp3", import.meta.url)),
+      path: fileURLToPath(new URL("../fixtures/sounds/56k.mp3", import.meta.url)),
       contentType: "audio/mpeg",
     }),
   );
   await page.route("**/assets/sounds/56k.webp", (route) =>
     route.fulfill({
-      path: fileURLToPath(
-        new URL("../../../web/app/assets/images/sounds/56k.webp", import.meta.url),
-      ),
+      path: fileURLToPath(new URL("../fixtures/sounds/56k.webp", import.meta.url)),
       contentType: "image/webp",
     }),
   );
