@@ -1252,7 +1252,7 @@
 
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
-  @media (max-width: 720px) {
+  @media (width < 720px) {
     .automation-form-row {
       grid-template-columns: minmax(0, 1fr);
     }

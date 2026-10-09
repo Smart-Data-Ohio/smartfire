@@ -1,6 +1,7 @@
 import { useMatchRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { parseBoardSearch } from "../../lib/board-search.ts";
+import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { useStore } from "../../store/store.ts";
 import {
   closeStep,
@@ -217,8 +218,6 @@ export function usePaneNavigation(roomId: number): PaneNavigation {
     },
   };
 }
-
-const PHONE_QUERY = "(width < 720px)";
 
 const OVERLAY_QUERY = "(width < 1100px)";
 

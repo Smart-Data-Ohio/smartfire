@@ -1,5 +1,6 @@
 import { Outlet, useMatches, useMatchRoute, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useKeyboardInset } from "../../lib/keyboard-inset.ts";
 import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import { useAppUpdateRequired } from "../../service-worker/update-required.ts";
 import { useStore } from "../../store/store.ts";
@@ -107,6 +108,7 @@ export function AppShell() {
   useDocumentTitle(roomId, page);
   useClassicLinks();
   useBootFlash();
+  useKeyboardInset();
 
   const view = usePhoneView(roomId);
 

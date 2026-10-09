@@ -636,7 +636,7 @@
     outline-offset: 1px;
   }
 
-  @media (max-width: 640px) {
+  @media (width < 720px) {
     .ev-scroll {
       padding-inline: var(--space-4);
     }

@@ -56,7 +56,7 @@
     animation: none;
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     body.auth {
       justify-content: flex-start;
       padding: var(--space-4) var(--space-3) var(--space-8);
@@ -694,7 +694,7 @@
     font-size: var(--text-meta);
   }
 
-  @media (width < 520px) {
+  @media (width < 720px) {
     .public-main {
       padding-block: var(--space-6);
     }
