@@ -23,13 +23,13 @@ pub async fn show(c: &mut Ctx) -> Result {
     redirect_to_room(c, room.id)
 }
 
-/// The subclass callback scopes exclude destroy, so inherited RoomsController#destroy
-/// reaches `@room.name` with nil (`app/controllers/rooms_controller.rb:29`).
+/// Same deletion as `RoomsController#destroy`: membership scope, the administer gate, then
+/// the room's threads, posts and work rows go with the destroy job.
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    Err(Error::internal(anyhow::anyhow!(
-        "undefined method 'name' for nil"
-    )))
+    let room = set_room(c, Scope::Boards).await?;
+    super::ensure_can_delete(c, &room).await?;
+    super::destroy_room(c, room).await
 }
 
 pub async fn new(c: &mut Ctx) -> Result {

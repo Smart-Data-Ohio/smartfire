@@ -192,6 +192,13 @@ impl Broadcasts {
         self.sync.settle().await;
     }
 
+    /// `sidebar.row.upserted` after an open-room join. The joiner's row is new. Every other
+    /// member's row carries `refreshRoom`, so a room they have open reloads its member count and
+    /// members pane. The classic page only prepends HTML on the joiner's sidebar.
+    pub fn joined_open_room(&self, conn: &Connection, membership_id: i64) {
+        sync::joined_open_room(&self.server, &self.sync, conn, membership_id);
+    }
+
     /// `message.created` (or `message.updated`) for a message a broadcast point outside this
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {

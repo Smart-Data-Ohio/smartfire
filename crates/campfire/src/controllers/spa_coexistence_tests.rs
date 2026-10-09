@@ -4,10 +4,10 @@
 
 use axum::http::{Method, StatusCode};
 use campfire_db::models::user::ui_preference::{self, UiPreference};
-use campfire_db::{Message, NewMessage, Room};
+use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage, Room};
 
 use crate::controllers::presenters::test_support::{
-    Browser, DAVID, JASON, Reply, Req, TestApp, seed_clock,
+    Browser, DAVID, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
 };
 
 const ORIGIN: &str = "http://campfire.test";
@@ -141,6 +141,7 @@ async fn post_ui(b: &mut Browser<'_>, pairs: &[(&str, &str)]) -> Reply {
 async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
     let Some(a) = enabled().await else { return };
     let room = room(&a).await;
+    let posted = message(&a, room, DAVID, "anchor").await;
     choose(&a, DAVID, UiPreference::Next).await;
     let mut david = a.sign_in(DAVID).await;
     for (classic, spa) in [
@@ -155,8 +156,8 @@ async fn ported_pages_send_people_who_use_the_new_ui_to_the_spa() {
             format!("/app/r/{room}/t/77"),
         ),
         (
-            format!("/rooms/{room}?message_id=9"),
-            format!("/app/r/{room}?message_id=9"),
+            format!("/rooms/{room}?message_id={}", posted.id),
+            format!("/app/r/{room}/m/{}", posted.id),
         ),
         (
             format!("/rooms/{room}/events"),
@@ -825,6 +826,283 @@ async fn the_shell_loads_in_full_from_a_turbo_visit() {
     assert!(
         shell.contains(r#"<meta name="turbo-visit-control" content="reload" />"#),
         "{shell}"
+    );
+}
+
+const WATERCOOLER: i64 = 486777696;
+const DESIGNERS_ROOM: i64 = 654632876;
+const LAUNCH_THREAD: i64 = 1;
+const BOARD_THREAD: i64 = 4;
+/// The release board. Thread 4 lives here. Kevin is not a member; David is.
+const RELEASE_BOARD: i64 = 699448332;
+const SPA_BOOT: &str = "<script type=\"application/json\" id=\"boot\"";
+const CLASSIC_SHELL: &str = "data-controller=\"local-time lightbox";
+/// The profile save's notice (`"✓"`), as the application layout renders the flash.
+const PROFILE_NOTICE: &str = "role=\"alert\" aria-atomic=\"true\">✓</span>";
+
+/// Follow redirects on `start` until a page, and return that page's path and body.
+async fn follow(b: &mut Browser<'_>, start: &str) -> (String, Reply) {
+    let mut path = start.to_string();
+    for _ in 0..6 {
+        let reply = b.get(&path).await;
+        if !reply.status.is_redirection() {
+            return (path, reply);
+        }
+        path = reply
+            .location()
+            .unwrap_or("")
+            .trim_start_matches(ORIGIN)
+            .to_string();
+    }
+    panic!("redirects from {start} did not settle");
+}
+
+fn assert_page(path: &str, reply: &Reply, classic: bool) {
+    assert_eq!(
+        reply.status,
+        StatusCode::OK,
+        "{path}: {:?}",
+        reply.location()
+    );
+    let body = reply.text();
+    if classic {
+        assert!(body.contains(CLASSIC_SHELL), "{path} stayed classic");
+        assert!(!body.contains(SPA_BOOT), "{path} bounced into the SPA");
+    } else {
+        assert!(body.contains(SPA_BOOT), "{path} opened the SPA");
+    }
+}
+
+/// A thread or message that isn't in the room, or that the viewer can't see, or that's gone,
+/// stays on the plain room route.
+#[tokio::test]
+async fn room_notification_links_refuse_foreign_inaccessible_and_deleted_ids() {
+    let Some(a) = enabled().await else { return };
+    choose(&a, DAVID, UiPreference::Next).await;
+    choose(&a, KEVIN, UiPreference::Next).await;
+    let mut david = a.sign_in(DAVID).await;
+    let owned = david
+        .get(&format!("/rooms/{DESIGNERS_ROOM}?thread={LAUNCH_THREAD}"))
+        .await;
+    assert_eq!(
+        owned.location(),
+        Some(to(&format!("/app/r/{DESIGNERS_ROOM}/t/{LAUNCH_THREAD}")).as_str())
+    );
+    let cross_thread = david
+        .get(&format!("/rooms/{WATERCOOLER}?thread={LAUNCH_THREAD}"))
+        .await;
+    assert_eq!(
+        cross_thread.location(),
+        Some(to(&format!("/app/r/{WATERCOOLER}?thread={LAUNCH_THREAD}")).as_str())
+    );
+    let designers_message = 935961888i64;
+    let cross_message = david
+        .get(&format!(
+            "/rooms/{WATERCOOLER}?message_id={designers_message}"
+        ))
+        .await;
+    assert_eq!(
+        cross_message.location(),
+        Some(
+            to(&format!(
+                "/app/r/{WATERCOOLER}?message_id={designers_message}"
+            ))
+            .as_str()
+        )
+    );
+    let mut kevin = a.sign_in(KEVIN).await;
+    let inaccessible = kevin
+        .get(&format!("/rooms/{DESIGNERS_ROOM}?thread={BOARD_THREAD}"))
+        .await;
+    assert_eq!(
+        inaccessible.location(),
+        Some(to(&format!("/app/r/{DESIGNERS_ROOM}?thread={BOARD_THREAD}")).as_str())
+    );
+    // The thread belongs to this room. David can open it. Kevin cannot, because he
+    // isn't a member: dropping the membership check would send him to the thread.
+    let member = david
+        .get(&format!("/rooms/{RELEASE_BOARD}?thread={BOARD_THREAD}"))
+        .await;
+    assert_eq!(
+        member.location(),
+        Some(to(&format!("/app/r/{RELEASE_BOARD}/t/{BOARD_THREAD}")).as_str())
+    );
+    let non_member = kevin
+        .get(&format!("/rooms/{RELEASE_BOARD}?thread={BOARD_THREAD}"))
+        .await;
+    assert_eq!(
+        non_member.location(),
+        Some(to(&format!("/app/r/{RELEASE_BOARD}?thread={BOARD_THREAD}")).as_str())
+    );
+    let (thread_id, message_id) = a
+        .db()
+        .write(|tx| {
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: WATERCOOLER,
+                    creator_id: DAVID,
+                    name: Some("Gone".into()),
+                    ..Default::default()
+                },
+            )?;
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: WATERCOOLER,
+                    creator_id: DAVID,
+                    markdown_source: Some("Gone".into()),
+                    ..Default::default()
+                },
+            )?;
+            let (thread_id, message_id) = (thread.id, message.id);
+            tx.conn()
+                .execute("DELETE FROM channel_threads WHERE id=?", [thread_id])?;
+            tx.conn()
+                .execute("DELETE FROM messages WHERE id=?", [message_id])?;
+            Ok((thread_id, message_id))
+        })
+        .await
+        .unwrap();
+    let deleted_thread = david
+        .get(&format!("/rooms/{WATERCOOLER}?thread={thread_id}"))
+        .await;
+    assert_eq!(
+        deleted_thread.location(),
+        Some(to(&format!("/app/r/{WATERCOOLER}?thread={thread_id}")).as_str())
+    );
+    let deleted_message = david
+        .get(&format!("/rooms/{WATERCOOLER}?message_id={message_id}"))
+        .await;
+    assert_eq!(
+        deleted_message.location(),
+        Some(to(&format!("/app/r/{WATERCOOLER}?message_id={message_id}")).as_str())
+    );
+}
+
+/// Settings and another person's profile alias, followed to the page each UI actually opens.
+#[tokio::test]
+async fn settings_and_profile_aliases_follow_through_for_each_ui() {
+    let Some(a) = enabled().await else { return };
+    let closed = WATERCOOLER;
+    let board = 699448332i64;
+    let direct = 186869642i64;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut next = a.sign_in(DAVID).await;
+    let (path, page) = follow(&mut next, &format!("/rooms/{closed}/settings")).await;
+    assert_eq!(path, format!("/app/r/{closed}/settings"));
+    assert_page(&path, &page, false);
+    let (path, page) = follow(&mut next, &format!("/rooms/{board}/settings")).await;
+    assert_eq!(path, format!("/rooms/boards/{board}/edit?classic=1"));
+    assert_page(&path, &page, true);
+    let (path, page) = follow(&mut next, &format!("/rooms/{direct}/settings")).await;
+    assert_eq!(path, format!("/rooms/directs/{direct}/edit?classic=1"));
+    assert_page(&path, &page, true);
+    let (path, page) = follow(&mut next, &format!("/rooms/{closed}/settings?classic=1")).await;
+    assert_eq!(path, format!("/rooms/closeds/{closed}/edit?classic=1"));
+    assert_page(&path, &page, true);
+    let (path, page) = follow(&mut next, &format!("/users/{JASON}/profile")).await;
+    assert_eq!(path, format!("/app/people/{JASON}"));
+    assert_page(&path, &page, false);
+    let (path, page) = follow(&mut next, &format!("/users/{JASON}/profile?classic=1")).await;
+    assert_eq!(path, format!("/users/{JASON}?classic=1"));
+    assert_page(&path, &page, true);
+
+    choose(&a, DAVID, UiPreference::Classic).await;
+    let mut classic = a.sign_in(DAVID).await;
+    let (path, page) = follow(&mut classic, &format!("/rooms/{closed}/settings")).await;
+    assert_eq!(path, format!("/rooms/closeds/{closed}/edit"));
+    assert_page(&path, &page, true);
+    let (path, page) = follow(&mut classic, &format!("/users/{JASON}/profile")).await;
+    assert_eq!(path, format!("/users/{JASON}"));
+    assert_page(&path, &page, true);
+    assert!(
+        page.text().contains("Jason"),
+        "the person page, not the viewer's profile"
+    );
+}
+
+/// A pending flash, an XHR, or a Turbo frame keeps the settings and own-profile aliases
+/// classic. The same URLs go to the SPA on an ordinary navigation once nothing is waiting.
+#[tokio::test]
+async fn settings_and_profile_aliases_stay_classic_for_flash_xhr_and_turbo_frames() {
+    let Some(a) = enabled().await else { return };
+    let closed = WATERCOOLER;
+    choose(&a, DAVID, UiPreference::Next).await;
+    let mut b = a.sign_in(DAVID).await;
+    let settings = format!("/rooms/{closed}/settings");
+    let edit = format!("/rooms/closeds/{closed}/edit?classic=1");
+    let profile = format!("/users/{DAVID}/profile");
+    let guards = [
+        ("xhr", "x-requested-with", "XMLHttpRequest"),
+        ("turbo", "turbo-frame", "alias"),
+    ];
+    for (label, name, value) in guards {
+        let settings_reply = b
+            .send(Req::new(Method::GET, &settings).header(name, value))
+            .await;
+        assert_eq!(
+            settings_reply.location(),
+            Some(to(&edit).as_str()),
+            "{label}"
+        );
+        let profile_reply = b
+            .send(Req::new(Method::GET, &profile).header(name, value))
+            .await;
+        assert_eq!(
+            profile_reply.status,
+            StatusCode::OK,
+            "{label}: {:?}",
+            profile_reply.location()
+        );
+        assert!(!redirected_to_spa(&profile_reply), "{label}");
+        let body = profile_reply.text();
+        assert!(!body.contains(SPA_BOOT), "{label} opened the SPA");
+        // A Turbo frame renders the frame layout, not the application shell.
+        if label == "turbo" {
+            assert!(body.contains("<turbo-frame"), "{label}: {body}");
+        } else {
+            assert!(
+                body.contains(CLASSIC_SHELL),
+                "{label} rendered the classic profile"
+            );
+        }
+    }
+
+    let saved = b
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    let flashed = b.get(&settings).await;
+    assert_eq!(flashed.location(), Some(to(&edit).as_str()));
+    let shown = b.get(&edit).await;
+    assert_eq!(shown.status, StatusCode::OK, "{:?}", shown.location());
+    assert!(shown.text().contains(CLASSIC_SHELL));
+    assert!(
+        shown.text().contains(PROFILE_NOTICE),
+        "the profile notice should survive the settings hop"
+    );
+    assert!(redirected_to_spa(&b.get(&settings).await));
+
+    let saved = b
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(saved.status, StatusCode::FOUND);
+    let flashed_profile = b.get(&profile).await;
+    assert_eq!(
+        flashed_profile.status,
+        StatusCode::OK,
+        "{:?}",
+        flashed_profile.location()
+    );
+    assert!(flashed_profile.text().contains(CLASSIC_SHELL));
+    assert!(
+        flashed_profile.text().contains(PROFILE_NOTICE),
+        "the profile notice should render on the numeric profile"
+    );
+    assert_eq!(
+        b.get(&profile).await.location(),
+        Some(to("/app/settings").as_str())
     );
 }
 

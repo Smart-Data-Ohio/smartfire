@@ -73,10 +73,15 @@ export interface SyncHubOptions {
   readonly scheduler: Scheduler;
   readonly epoch: string;
   readonly viewerId: number;
+  /**
+   * Whether the viewer belongs to a room. Room topics and presence for other rooms are refused,
+   * as the real server does until a membership exists. Omitted, every room is allowed.
+   */
+  readonly memberOf?: (roomId: number) => boolean;
 }
 
 export function createSyncHub(options: SyncHubOptions): SyncHub {
-  const { scheduler, viewerId } = options;
+  const { scheduler, viewerId, memberOf } = options;
   const connections = new Set<Connection>();
   let epoch = options.epoch;
   let seq = 0;
@@ -128,11 +133,29 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
     }
   };
 
+  const roomIdOf = (topic: string): number | null => {
+    const match = /^room:(\d+)$/.exec(topic);
+
+    return match === null ? null : Number(match[1]);
+  };
+
+  /** Room topics the viewer isn't a member of are dropped; everything else is followed. */
+  const admit = (topic: string): boolean => {
+    const roomId = roomIdOf(topic);
+
+    return roomId === null || memberOf === undefined || memberOf(roomId);
+  };
+
+  const follow = (connection: Connection, topics: readonly string[]) => {
+    for (const topic of topics) {
+      if (admit(topic)) connection.topics.add(topic);
+    }
+  };
+
   const hello = (connection: Connection, frame: Extract<ClientFrame, { t: "hello" }>) => {
     connection.topics.clear();
     connection.topics.add("user");
-
-    for (const topic of frame.topics) connection.topics.add(topic);
+    follow(connection, frame.topics);
 
     const resume = frame.resume;
     const oldest = ring[0]?.seq ?? seq + 1;
@@ -174,7 +197,7 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
         hello(connection, frame);
         break;
       case "sub":
-        for (const topic of frame.topics) connection.topics.add(topic);
+        follow(connection, frame.topics);
         break;
       case "unsub":
         for (const topic of frame.topics) {
@@ -189,7 +212,7 @@ export function createSyncHub(options: SyncHubOptions): SyncHub {
         );
         break;
       case "present":
-        connection.present.add(frame.room);
+        if (memberOf === undefined || memberOf(frame.room)) connection.present.add(frame.room);
         break;
       case "absent":
         connection.present.delete(frame.room);

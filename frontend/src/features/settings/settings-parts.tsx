@@ -3,6 +3,7 @@ import type { Settings } from "../../gen/Settings.ts";
 import { ActionError } from "../../sync/run.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { useTitleInHeader } from "./sections-layout.tsx";
 import type { Choice } from "./settings-format.ts";
 
 /** The loaded settings page and the way a section hands back the server's answer to a write. */
@@ -71,7 +72,10 @@ export function toastFailure(title: string, error: Error): void {
   toast({ title, description: error.message, tone: "danger" });
 }
 
-/** A section's page: its title, one line on what lives here, and its groups. */
+/**
+ * A section's page: its title, one line on what lives here, and its groups. On a phone, where the
+ * header above already names the section, the title stays for screen readers only.
+ */
 export function SettingsPage({
   title,
   description,
@@ -81,10 +85,12 @@ export function SettingsPage({
   readonly description?: ReactNode;
   readonly children: ReactNode;
 }) {
+  const inHeader = useTitleInHeader(title);
+
   return (
     <section className="settings-page enter-fade" aria-labelledby="settings-page-title">
       <header className="settings-page-header">
-        <h1 id="settings-page-title" className="text-page">
+        <h1 id="settings-page-title" className="text-page" data-in-header={inHeader || undefined}>
           {title}
         </h1>
         {description === undefined ? null : (

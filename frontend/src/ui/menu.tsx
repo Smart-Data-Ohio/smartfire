@@ -15,6 +15,7 @@ import {
 } from "react";
 import type { Placement } from "../lib/anchor.ts";
 import { showPopover, supportsPopover } from "../lib/popover.ts";
+import { duringAppFocus } from "../lib/reader-focus.ts";
 import { readDurationMs } from "../motion/durations.ts";
 import { usePresence } from "../motion/presence.ts";
 import { SheetHandle, useActionSheet, useSheetScrim } from "./action-sheet.tsx";
@@ -126,7 +127,9 @@ export function Menu({
     setOpen(false);
 
     if (restoreFocus) {
-      triggerRef.current?.focus({ preventScroll: true });
+      duringAppFocus(() => {
+        triggerRef.current?.focus({ preventScroll: true });
+      });
     }
   };
 
@@ -231,9 +234,9 @@ function MenuSurface({
   });
 
   // A sheet sits on the bottom edge, not beside its anchor. Its submenus sit inside it, so the
-  // scrim is the root's alone.
+  // scrim is the root's alone. A closing sheet is already dismissed: the next tap goes through.
   useFloating(id, anchorRef, surfaceRef, placement, !sheet);
-  useSheetScrim(sheet && !submenu, surfaceRef, () => onClose("sheet"));
+  useSheetScrim(sheet && !submenu && state === "open", surfaceRef, () => onClose("sheet"));
 
   // Show in the top layer and move focus in, once, when the surface mounts: where focus lands
   // depends on how the menu was opened, not on later renders.

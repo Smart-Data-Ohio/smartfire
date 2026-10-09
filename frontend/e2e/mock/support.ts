@@ -7,6 +7,7 @@ import {
   expect,
   type Locator,
   type Page,
+  type WebSocket,
 } from "@playwright/test";
 
 /** The seeded ids (mock/seed.ts). */
@@ -200,19 +201,32 @@ export async function openHeaderTool(page: Page, name: RegExp | string): Promise
 }
 
 /**
- * Resolves once the page's sync socket is welcomed. Call it before the page opens; await it
- * before a step that publishes an event the page must receive live. Until the welcome, a change
- * made elsewhere arrives only through the catch-up reload, not as an event.
+ * Resolves once a sync socket opened after this call is welcomed. Call it before the page
+ * opens; await it before a step that publishes an event the page must receive live. Until the
+ * welcome, a change made elsewhere arrives only through the catch-up reload, not as an event.
+ *
+ * Every sync socket opened from here on counts. The first one can be the page being left: under
+ * load it connects after this is armed, then the next navigation closes it before the welcome
+ * frame, and the socket that replaces it is the one that is welcomed.
  */
 export function syncWelcomed(page: Page): Promise<void> {
-  return page
-    .waitForEvent("websocket", (socket) => socket.url().includes("/api/v1/sync"))
-    .then((socket) =>
-      socket.waitForEvent("framereceived", (frame) =>
-        String(frame.payload).includes('"t":"welcome"'),
-      ),
-    )
-    .then(() => undefined);
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const onSocket = (socket: WebSocket) => {
+      if (settled || !socket.url().includes("/api/v1/sync")) return;
+
+      socket.on("framereceived", (frame) => {
+        if (settled || !String(frame.payload).includes('"t":"welcome"')) return;
+
+        settled = true;
+        page.off("websocket", onSocket);
+        resolve();
+      });
+    };
+
+    page.on("websocket", onSocket);
+  });
 }
 
 const SHOTS = process.env.SMARTFIRE_SHOTS === "1";

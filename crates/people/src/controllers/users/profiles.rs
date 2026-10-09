@@ -12,10 +12,52 @@ use crate::controllers::presenters::page::framed_page;
 use crate::controllers::presenters::{self, accounts::string_attribute};
 
 /// `set_user` (`Current.user`); memberships partitioned into direct and shared rooms.
+/// `/users/me/profile` and `/users/:own_id/profile` are that page. Another person's id goes to
+/// their page (`/users/:id`, or the SPA people screen when they use the new UI).
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    let user = concerns::require_current_user(c)?.clone();
-    render_show(c, StatusCode::OK, user, None, None, None).await
+    let viewer = concerns::require_current_user(c)?.clone();
+    if let Some(id) = other_person(c, viewer.id).await? {
+        return redirect_to_person(c, &viewer, id).await;
+    }
+    render_show(c, StatusCode::OK, viewer, None, None, None).await
+}
+
+/// `Some(id)` when `:user_id` names a different person. `me` and the viewer's own id are `None`.
+async fn other_person(c: &Ctx, viewer_id: i64) -> Result<Option<i64>> {
+    let Some(param) = c.param_str("user_id") else {
+        return Ok(None);
+    };
+    if param == "me" {
+        return Ok(None);
+    }
+    let id = concerns::cast_integer(param).ok_or(Error::NotFound)?;
+    if id == viewer_id {
+        return Ok(None);
+    }
+    let found = c
+        .app()
+        .db
+        .read(move |conn| campfire_db::User::find_by_id(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    if found.is_none() {
+        return Err(Error::NotFound);
+    }
+    Ok(Some(id))
+}
+
+/// Another person's profile alias. The hop is their page, query included (`classic=1` and the
+/// rest). That page's coexistence redirect applies the navigation and pending-flash guards; this
+/// action doesn't choose the UI itself.
+async fn redirect_to_person(c: &mut Ctx, _viewer: &campfire_db::User, id: i64) -> Result {
+    let mut path = format!("/users/{id}");
+    let query = c.request.query_string();
+    if !query.is_empty() {
+        path.push('?');
+        path.push_str(query);
+    }
+    c.redirect_to(&c.url_for(&path))
 }
 
 /// The appearance panel's "Try the new Smartfire" switch, while the SPA is served.

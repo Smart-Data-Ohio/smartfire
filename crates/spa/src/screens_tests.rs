@@ -465,6 +465,171 @@ fn unported_screens_never_redirect() {
 }
 
 #[test]
+fn room_notification_queries_open_the_thread_or_message() {
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&message_id=4")).as_deref(),
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("x=1&thread=9&classic=1&y=2")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9?x=1&y=2")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&x=1")).as_deref(),
+        Some("/app/r/12?thread=nope&x=1")
+    );
+}
+
+#[test]
+fn room_notification_queries_decode_and_use_the_classic_duplicate() {
+    // `%39` is `9`. `thread` is the first value (the thread panel's `URLSearchParams.get`).
+    // A non-empty `thread` makes `message_id` the first value too. With no thread, `message_id`
+    // is the last value (the room controller's params). An effective value that isn't an id is
+    // not replaced by another duplicate.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=%34")).as_deref(),
+        Some("/app/r/12/m/4")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("th%72ead=%39")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=9&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%39&thread=8")).as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=nope&thread=9")).as_deref(),
+        Some("/app/r/12?thread=nope&thread=9")
+    );
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("message_id=4&message_id=5")).as_deref(),
+        Some("/app/r/12/m/5")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("message_id=4&message_id=nope")
+        )
+        .as_deref(),
+        Some("/app/r/12?message_id=4&message_id=nope")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&thread=8&message_id=4&message_id=5")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9?m=4")
+    );
+    assert_eq!(
+        spa_url(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&message_id=nope&message_id=5")
+        )
+        .as_deref(),
+        Some("/app/r/12/t/9")
+    );
+    // `%ZZ` is not an id. HTTP rejects that escape with 400 before routing; this only pins
+    // the translator when such a query is handed to it.
+    assert_eq!(
+        spa_url("rooms#show", "/rooms/12", Some("thread=%ZZ&x=1")).as_deref(),
+        Some("/app/r/12?thread=%ZZ&x=1")
+    );
+    let refused = ConfirmedRoomQuery {
+        thread: None,
+        message: None,
+    };
+    assert_eq!(
+        spa_url_confirmed("rooms#show", "/rooms/12", Some("thread=9&x=1"), refused).as_deref(),
+        Some("/app/r/12?thread=9&x=1")
+    );
+    // Confirmation applies to the effective value only. Naming the other duplicate does not
+    // make it the one that opens.
+    let other_thread = ConfirmedRoomQuery {
+        thread: Some(8),
+        message: None,
+    };
+    assert_eq!(
+        spa_url_confirmed(
+            "rooms#show",
+            "/rooms/12",
+            Some("thread=9&thread=8"),
+            other_thread
+        )
+        .as_deref(),
+        Some("/app/r/12?thread=9&thread=8")
+    );
+    let other_message = ConfirmedRoomQuery {
+        thread: None,
+        message: Some(4),
+    };
+    assert_eq!(
+        spa_url_confirmed(
+            "rooms#show",
+            "/rooms/12",
+            Some("message_id=4&message_id=5"),
+            other_message
+        )
+        .as_deref(),
+        Some("/app/r/12?message_id=4&message_id=5")
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=%39&thread=8&message_id=4&message_id=5")),
+        RoomQueryIds {
+            thread: Some(9),
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("message_id=4&message_id=5")),
+        RoomQueryIds {
+            thread: None,
+            message: Some(5),
+        }
+    );
+    // `thread=nope` is still present, so the first `message_id` is the one that counts.
+    assert_eq!(
+        room_query_ids(Some("thread=nope&thread=9&message_id=4&message_id=nope")),
+        RoomQueryIds {
+            thread: None,
+            message: Some(4),
+        }
+    );
+    assert_eq!(
+        room_query_ids(Some("thread=9&message_id=nope&message_id=4")),
+        RoomQueryIds {
+            thread: Some(9),
+            message: None,
+        }
+    );
+}
+
+#[test]
 fn the_query_carries_over_without_classic() {
     assert_eq!(
         spa_url("rooms#show", "/rooms/12", Some("a=1&classic=0&b=2")).as_deref(),

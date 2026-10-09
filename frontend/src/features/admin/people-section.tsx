@@ -6,8 +6,11 @@ import { admin } from "../../sync/admin.ts";
 import { Avatar } from "../../ui/avatar.tsx";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
+import { IconButton } from "../../ui/icon-button.tsx";
+import { Menu, MenuItem } from "../../ui/menu.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
+import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import {
   googleLinkConfirmation,
@@ -51,20 +54,88 @@ function confirmation(pending: Pending): string {
   }
 }
 
-/** One person: their avatar and name, and for an administrator the classic row's buttons. */
-function PersonRow({
-  person,
-  canAdminister,
-  busy,
-  onRole,
-  onAsk,
-}: {
+interface PersonActions {
   readonly person: Person;
   readonly canAdminister: boolean;
   readonly busy: boolean;
   readonly onRole: (person: Person) => void;
   readonly onAsk: (pending: Pending) => void;
+}
+
+/**
+ * A phone row's trailing part: "My settings" as a label on your own row, and the role and the
+ * changes in a ⋯ menu (an action sheet on touch phones) rather than a row of small buttons.
+ */
+function PhonePersonActions({ person, canAdminister, busy, onRole, onAsk }: PersonActions) {
+  const administrator = person.role === "administrator";
+  const google = person.googleIdentityEmail !== null || person.offerGoogleEmailLink;
+  // Your own role and membership aren't yours to change: your row's menu holds Google sign-in only.
+  const menu = canAdminister && !person.banned && (!person.you || google);
+
+  return (
+    <span className="admin-person-actions">
+      {person.you ? (
+        <Link to="/settings" className="admin-person-settings">
+          My settings
+        </Link>
+      ) : null}
+      {menu ? (
+        <Menu
+          placement="bottom-end"
+          label={`${person.name}: role and access`}
+          trigger={(props) => (
+            <IconButton
+              {...props}
+              icon="more"
+              label={`Role and access for ${person.name}`}
+              tooltipPlacement="bottom-end"
+              className="admin-person-more"
+              data-row-control="actions"
+              disabled={busy}
+            />
+          )}
+        >
+          {person.you ? null : (
+            <MenuItem icon={administrator ? "user" : "shield"} onSelect={() => onRole(person)}>
+              {administrator ? "Make a member" : "Make an administrator"}
+            </MenuItem>
+          )}
+          {!person.you && person.twoFactorEnabled ? (
+            <MenuItem icon="lock-open" onSelect={() => onAsk({ person, kind: "reset" })}>
+              Reset two-step sign-in
+            </MenuItem>
+          ) : null}
+          {person.googleIdentityEmail !== null ? (
+            <MenuItem icon="link" onSelect={() => onAsk({ person, kind: "unlink" })}>
+              Unlink Google sign-in
+            </MenuItem>
+          ) : person.offerGoogleEmailLink ? (
+            <MenuItem icon="link" onSelect={() => onAsk({ person, kind: "link" })}>
+              Allow Google sign-in
+            </MenuItem>
+          ) : null}
+          {person.you ? null : (
+            <MenuItem icon="trash" tone="danger" onSelect={() => onAsk({ person, kind: "remove" })}>
+              Remove from workspace
+            </MenuItem>
+          )}
+        </Menu>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * One person: their avatar and name, and for an administrator the classic row's buttons. On
+ * phones it stacks, the name over the email, the buttons in a trailing ⋯ menu.
+ */
+function PersonRow({
+  phone,
+  ...actions
+}: PersonActions & {
+  readonly phone: boolean;
 }) {
+  const { person, canAdminister, busy, onRole, onAsk } = actions;
   const administrator = person.role === "administrator";
 
   return (
@@ -76,89 +147,97 @@ function PersonRow({
     >
       <Avatar name={person.name} userId={person.id} src={person.avatarUrl} size={32} />
       <span className="settings-list-main">
-        <strong>
-          {person.name}
-          {administrator ? <span className="settings-badge">Administrator</span> : null}
+        <strong className="admin-person-name">
+          <span className="admin-person-name-text">{person.name}</span>
+          {administrator ? (
+            <span className="settings-badge" data-role-badge>
+              Administrator
+            </span>
+          ) : null}
           {person.banned ? <span className="settings-badge">Banned</span> : null}
         </strong>
         {person.emailAddress === null ? null : (
-          <span className="text-faint">{person.emailAddress}</span>
+          <span className="admin-person-email text-faint">{person.emailAddress}</span>
         )}
       </span>
-      <span className="admin-person-actions">
-        {person.you ? (
-          <Link to="/settings" className="button" data-variant="secondary" data-size="sm">
-            My settings
-          </Link>
-        ) : null}
-        {canAdminister && !person.banned ? (
-          <>
-            {!person.you && person.twoFactorEnabled ? (
+      {phone ? (
+        <PhonePersonActions {...actions} />
+      ) : (
+        <span className="admin-person-actions">
+          {person.you ? (
+            <Link to="/settings" className="button" data-variant="secondary" data-size="sm">
+              My settings
+            </Link>
+          ) : null}
+          {canAdminister && !person.banned ? (
+            <>
+              {!person.you && person.twoFactorEnabled ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="lock-open"
+                  disabled={busy}
+                  title="Reset two-step sign-in"
+                  onClick={() => onAsk({ person, kind: "reset" })}
+                >
+                  <span className="visually-hidden">Reset two-step sign-in for {person.name}</span>
+                </Button>
+              ) : null}
               <Button
                 variant="ghost"
                 size="sm"
-                icon="lock-open"
-                disabled={busy}
-                title="Reset two-step sign-in"
-                onClick={() => onAsk({ person, kind: "reset" })}
+                role="switch"
+                data-row-control="role"
+                aria-checked={administrator}
+                disabled={busy || person.you}
+                title={`Role: ${administrator ? "Administrator" : "Member"}`}
+                onClick={() => onRole(person)}
               >
-                <span className="visually-hidden">Reset two-step sign-in for {person.name}</span>
+                {administrator ? "Administrator" : "Member"}
+                <span className="visually-hidden">
+                  {" "}
+                  (make {person.name} {administrator ? "a member" : "an administrator"})
+                </span>
               </Button>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              role="switch"
-              data-row-control="role"
-              aria-checked={administrator}
-              disabled={busy || person.you}
-              title={`Role: ${administrator ? "Administrator" : "Member"}`}
-              onClick={() => onRole(person)}
-            >
-              {administrator ? "Administrator" : "Member"}
-              <span className="visually-hidden">
-                {" "}
-                (make {person.name} {administrator ? "a member" : "an administrator"})
-              </span>
-            </Button>
-            {person.googleIdentityEmail !== null ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon="link"
-                disabled={busy}
-                title={googleUnlinkTitle(person.googleIdentityEmail)}
-                onClick={() => onAsk({ person, kind: "unlink" })}
-              >
-                <span className="visually-hidden">Unlink Google sign-in from {person.name}</span>
-              </Button>
-            ) : person.offerGoogleEmailLink ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                icon="link"
-                disabled={busy}
-                title={googleLinkTitle(person)}
-                onClick={() => onAsk({ person, kind: "link" })}
-              >
-                <span className="visually-hidden">Allow Google sign-in for {person.name}</span>
-              </Button>
-            ) : null}
-            {person.you ? null : (
-              <Button
-                variant="danger"
-                size="sm"
-                icon="trash"
-                data-row-control="remove"
-                disabled={busy}
-                onClick={() => onAsk({ person, kind: "remove" })}
-              >
-                <span className="visually-hidden">Remove {person.name}</span>
-              </Button>
-            )}
-          </>
-        ) : null}
-      </span>
+              {person.googleIdentityEmail !== null ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon="link"
+                  disabled={busy}
+                  title={googleUnlinkTitle(person.googleIdentityEmail)}
+                  onClick={() => onAsk({ person, kind: "unlink" })}
+                >
+                  <span className="visually-hidden">Unlink Google sign-in from {person.name}</span>
+                </Button>
+              ) : person.offerGoogleEmailLink ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="link"
+                  disabled={busy}
+                  title={googleLinkTitle(person)}
+                  onClick={() => onAsk({ person, kind: "link" })}
+                >
+                  <span className="visually-hidden">Allow Google sign-in for {person.name}</span>
+                </Button>
+              ) : null}
+              {person.you ? null : (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon="trash"
+                  data-row-control="remove"
+                  disabled={busy}
+                  onClick={() => onAsk({ person, kind: "remove" })}
+                >
+                  <span className="visually-hidden">Remove {person.name}</span>
+                </Button>
+              )}
+            </>
+          ) : null}
+        </span>
+      )}
     </li>
   );
 }
@@ -176,6 +255,7 @@ export function PeopleSection() {
   const [more, setMore] = useState(false);
   const { busy, track } = useBusy();
   const container = useRowFocus();
+  const phone = usePhoneLayout();
 
   const fetchPeople = useCallback(() => {
     admin.people().then(
@@ -302,6 +382,7 @@ export function PeopleSection() {
     people.map((person) => (
       <PersonRow
         key={person.id}
+        phone={phone}
         person={person}
         canAdminister={workspace.canAdminister}
         busy={busy(`person-${person.id}`)}

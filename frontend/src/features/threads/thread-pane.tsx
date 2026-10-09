@@ -17,6 +17,7 @@ import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { TrackAsWorkItem, WorkBar, WorkLive } from "../work/work-bar.tsx";
 import { THREAD_STATUS_LABEL, threadTitle } from "./thread-format.ts";
+import { foreignThreadHref } from "./thread-target.ts";
 import { ThreadTimeline } from "./thread-timeline.tsx";
 
 const DELETED = "This thread was deleted.";
@@ -229,6 +230,8 @@ function RenameDialog({
 }) {
   const current = useStore((state) => state.threads[threadId]?.name ?? "");
   const [name, setName] = useState(current);
+  // The name as this opening found it: someone renaming it meanwhile doesn't make the field dirty.
+  const [opening, setOpening] = useState(current);
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempts, setAttempts] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -239,6 +242,7 @@ function RenameDialog({
 
     if (open) {
       setName(current);
+      setOpening(current);
       setError(undefined);
     }
   }
@@ -273,6 +277,7 @@ function RenameDialog({
       onOpenChange={onOpenChange}
       title={`Rename ${noun}`}
       size="sm"
+      dirty={name !== opening}
       footer={
         <>
           <Button variant="secondary" onClick={() => onOpenChange(false)}>
@@ -452,6 +457,7 @@ export function ThreadPane({
   const tracked = useStore((state) => (state.threads[threadId]?.work ?? null) !== null);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
   const noun = useNoun(roomId);
   const status = pane?.status ?? "loading";
   // A reply's permalink: the pane opens around it and highlights it.
@@ -465,6 +471,18 @@ export function ThreadPane({
 
     return () => actions.threads.close(threadId);
   }, [threadId]);
+
+  // The thread API only checks membership in the thread's own room, so a link that names a
+  // different room would open this thread under that room. Send it to the room it belongs to.
+  const elsewhere = thread === undefined ? null : foreignThreadHref(roomId, thread, focusMessageId);
+
+  useEffect(() => {
+    if (elsewhere === null) {
+      return;
+    }
+
+    void navigate({ href: `/app${elsewhere}`, replace: true });
+  }, [elsewhere, navigate]);
 
   // Viewing it reads it: now, and whenever a reply makes it unread while it's on screen.
   useEffect(() => {
@@ -483,6 +501,10 @@ export function ThreadPane({
 
     return () => document.removeEventListener("visibilitychange", markIfVisible);
   }, [status, unread, threadId]);
+
+  if (elsewhere !== null) {
+    return null;
+  }
 
   if (status === "error") {
     const message = pane?.error ?? "This thread couldn't be loaded.";

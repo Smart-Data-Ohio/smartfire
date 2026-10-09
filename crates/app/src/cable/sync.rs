@@ -245,6 +245,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
         "Broadcasts::involvement_change",
         &["sidebar.row.upserted", "sidebar.row.removed"],
     ),
+    // The joiner's new row, and every other member's row with `refreshRoom`.
+    ("Broadcasts::joined_open_room", &["sidebar.row.upserted"]),
     ("broadcasts::read_room", &["room.read"]),
     // No classic frame: the sink publishes these for the single-page app only.
     (
@@ -1412,6 +1414,26 @@ fn sidebar_rows_later_with_refresh(
             rows.publish(server, slot, conn, viewers, refresh_room);
         });
     });
+}
+
+/// `sidebar.row.upserted` for every member of the room `membership_id` just joined, each with
+/// `refreshRoom`. The joiner's row is the new sidebar entry (`store.ts` `membershipChanged`);
+/// the others are unchanged rows whose flag reloads an open room. Read afresh later, under the
+/// room's lock, as every row is ([`RoomRows::publish`]).
+pub fn joined_open_room(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    membership_id: i64,
+) {
+    if slot.get(server).is_none() {
+        return;
+    }
+    match Membership::find(conn, membership_id) {
+        Ok(membership) => management_sidebar_rows_later(server, slot, membership.room_id, None),
+        Err(campfire_db::Error::RecordNotFound(_)) => {}
+        Err(error) => tracing::warn!(%error, membership_id, "sync: joined room not read"),
+    }
 }
 
 /// `sidebar.row.upserted` for one membership's own row, when its person's sidebar shows it (or

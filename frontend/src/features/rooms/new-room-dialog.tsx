@@ -7,7 +7,7 @@ import { useStore } from "../../store/store.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
-import { Dialog } from "../../ui/dialog.tsx";
+import { Dialog, focusOnOpen } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Toggle } from "../../ui/toggle.tsx";
@@ -127,6 +127,8 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const preset = useZustand(newRoomPreset, (state) => state.kind);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? 0);
   const [wasOpen, setWasOpen] = useState(false);
+  // The kind this opening started from: a later preset doesn't make the form dirty.
+  const [opening, setOpening] = useState<typeof preset>(preset);
   const [channel, setChannel] = useState<Channel>("text");
   const [isPrivate, setPrivate] = useState(false);
   const [name, setName] = useState("");
@@ -150,6 +152,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
     setWasOpen(open);
 
     if (open) {
+      setOpening(preset);
       setChannel(channelOf(preset));
       setPrivate(preset === "closed");
       setName("");
@@ -173,6 +176,15 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
   const effectivePrivate = privacy === "both" ? isPrivate : privacy === "closed";
   const kind = kindOf(channel, effectivePrivate);
   const { form } = choice;
+
+  const dirty =
+    name !== "" ||
+    iconName !== null ||
+    members.length > 0 ||
+    step !== "details" ||
+    channel !== channelOf(opening) ||
+    isPrivate !== (opening === "closed");
+
   const needsMembers = hasMemberList(kind);
   // Nothing is created from a form that hasn't loaded: its default name is the server's.
   const ready = form !== null;
@@ -181,8 +193,10 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
 
   // A step that comes in takes focus at its first field, as the dialog does when it opens.
   useLayoutEffect(() => {
-    if (step === "members") {
-      stepRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
+    const field = stepRef.current?.querySelector<HTMLElement>("[data-autofocus]");
+
+    if (step === "members" && field !== null && field !== undefined) {
+      focusOnOpen(field);
     }
   }, [step]);
 
@@ -296,6 +310,7 @@ export default function NewRoomDialog({ open, onOpenChange }: NewRoomDialogProps
       open={open}
       onOpenChange={onOpenChange}
       title={step === "details" ? TITLE[channel] : "Add people"}
+      dirty={dirty}
       description={
         step === "members" && kind !== "open" ? (
           <span className="room-form-description">

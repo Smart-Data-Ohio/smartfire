@@ -91,6 +91,9 @@ import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
   CATEGORY_IDS,
+  JOINABLE_HISTORY_LENGTH,
+  JOINABLE_OLDEST_MESSAGE_ID,
+  JOINABLE_OPEN_ROOM,
   ROOM_IDS,
   type RoomRecord,
   seededUuid,
@@ -253,10 +256,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   let restarts = 0;
   let holding = false;
   let held: (() => void)[] = [];
+  let holdingJoins = false;
+  let heldJoins: (() => void)[] = [];
 
   const epochFor = () => `${now().toString(36)}-${seed.toString(36)}-${restarts}`;
 
-  const hub = createSyncHub({ scheduler, epoch: epochFor(), viewerId: VIEWER_ID });
+  const hub = createSyncHub({
+    scheduler,
+    epoch: epochFor(),
+    viewerId: VIEWER_ID,
+    memberOf: (roomId) => world.rooms.get(roomId)?.memberIds.includes(VIEWER_ID) ?? false,
+  });
 
   // --- reads over the world ---
 
@@ -454,6 +464,119 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       directPlaceholderUserIds: placeholders,
       canCreateRooms: true,
     };
+  };
+
+  const materialiseJoinable = (): RoomRecord => {
+    const createdAt = timestamp(now() - 30 * 24 * 60 * 60 * 1000);
+
+    const messages = Array.from({ length: JOINABLE_HISTORY_LENGTH }, (_, index) => {
+      const postedAt = timestamp(now() - (JOINABLE_HISTORY_LENGTH - index) * 60_000);
+
+      const markdown =
+        index === 0
+          ? "campfire-oldest"
+          : index === JOINABLE_HISTORY_LENGTH - 1
+            ? "campfire-newest"
+            : `campfire note ${index}`;
+
+      return buildMessage(
+        JOINABLE_OLDEST_MESSAGE_ID + index,
+        JOINABLE_OPEN_ROOM.id,
+        null,
+        plainDraft(USER_IDS.maya, markdown, `campfire-${index}`),
+        postedAt,
+        mentionables(),
+      );
+    });
+
+    const record: RoomRecord = {
+      room: {
+        id: JOINABLE_OPEN_ROOM.id,
+        kind: "open",
+        name: JOINABLE_OPEN_ROOM.name,
+        iconName: null,
+        creatorId: USER_IDS.priya,
+        createdAt,
+        updatedAt: createdAt,
+      },
+      memberIds: [...JOINABLE_OPEN_ROOM.memberIds, VIEWER_ID],
+      membership: {
+        id: 9_000 + JOINABLE_OPEN_ROOM.id,
+        roomId: JOINABLE_OPEN_ROOM.id,
+        userId: VIEWER_ID,
+        involvement: "mentions",
+        unreadAt: null,
+        lastReadMessageId: null,
+        roomCategoryId: null,
+        favoritePosition: null,
+        stageRole: null,
+      },
+      messages,
+      mentionCount: 0,
+    };
+
+    world.rooms.set(record.room.id, record);
+
+    return record;
+  };
+
+  /** Alive open rooms only. The catalog room isn't in the world until someone joins it. */
+  const openPreview = (roomId: number): { id: number; name: string } | null => {
+    const record = world.rooms.get(roomId);
+
+    if (record !== undefined) {
+      if (record.room.kind !== "open") return null;
+
+      return { id: record.room.id, name: record.room.name ?? "" };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) return null;
+
+    return { id: JOINABLE_OPEN_ROOM.id, name: JOINABLE_OPEN_ROOM.name };
+  };
+
+  const publishJoined = (record: RoomRecord) => {
+    hub.publish([
+      {
+        topic: "user",
+        type: "sidebar.row.upserted",
+        data: { ...sidebarRow(record), refreshRoom: true },
+      },
+    ]);
+  };
+
+  const joinOpen = (roomId: number) => {
+    const existing = world.rooms.get(roomId);
+
+    if (existing !== undefined) {
+      if (existing.room.kind !== "open") throw notFound("Room not found");
+
+      if (!existing.memberIds.includes(VIEWER_ID)) {
+        existing.memberIds.push(VIEWER_ID);
+        existing.membership = {
+          id: 9_000 + existing.room.id,
+          roomId: existing.room.id,
+          userId: VIEWER_ID,
+          involvement: "mentions",
+          unreadAt: null,
+          lastReadMessageId: null,
+          roomCategoryId: null,
+          favoritePosition: null,
+          stageRole: null,
+        };
+        publishJoined(existing);
+      }
+
+      return { detail: roomDetail(roomId), row: sidebarRow(existing) };
+    }
+
+    if (roomId !== JOINABLE_OPEN_ROOM.id) throw notFound("Room not found");
+
+    const record = materialiseJoinable();
+
+    publishJoined(record);
+
+    return { detail: roomDetail(roomId), row: sidebarRow(record) };
   };
 
   const roomDetail = (roomId: number): RoomDetail => {
@@ -913,6 +1036,32 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       }
     }
 
+    const joining = /^\/rooms\/(\d+)\/(preview|join)$/.exec(path);
+
+    if (joining !== null) {
+      const id = Number(joining[1]);
+
+      if (method === "GET" && joining[2] === "preview") {
+        const preview = openPreview(id);
+
+        if (preview === null) throw notFound("Room not found");
+
+        return { status: 200, json: preview };
+      }
+
+      if (method === "POST" && joining[2] === "join") {
+        // Membership (and its sidebar broadcast) exist before a held response is released, so a
+        // rename or a return can land while the client is still waiting on this body.
+        const created = joinOpen(id);
+
+        if (!holdingJoins) return { status: 200, json: created };
+
+        return new Promise<MockResponse>((resolve) => {
+          heldJoins.push(() => resolve({ status: 200, json: created }));
+        });
+      }
+    }
+
     const room = /^\/rooms\/(\d+)(\/messages|\/read)?$/.exec(path);
     const route = `${method} ${room === null ? path : `/rooms/:id${room[2] ?? ""}`}`;
     const roomId = Number(room?.[1]);
@@ -1027,6 +1176,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return ok;
       case "hold-sends":
         holdSends(flag("on", true));
+
+        return ok;
+      case "hold-join":
+        holdingJoins = flag("on", true);
+
+        if (!holdingJoins) {
+          const waiting = heldJoins;
+
+          heldJoins = [];
+
+          for (const run of waiting) run();
+        }
+
+        return ok;
+      case "restart":
+        restarts += 1;
+        hub.restart(epochFor());
 
         return ok;
       case "release-sends":
@@ -1184,6 +1350,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     paused: simulation.paused(),
     holdingSends: holding,
     pendingSends: held.length,
+    pendingJoins: heldJoins.length,
+    presentRoomIds: [...hub.presentRooms()].sort((left, right) => left - right),
     pendingUploads: uploads.pending(),
     csrfToken: csrf,
     ids: SEED_IDS,
@@ -1239,6 +1407,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     setPresence,
     reset() {
       release();
+      holdingJoins = false;
+
+      const waitingJoins = heldJoins;
+
+      heldJoins = [];
+
+      for (const run of waitingJoins) run();
+
       uploads.reset();
       admin.lapseSudo(false);
       composer.stop();

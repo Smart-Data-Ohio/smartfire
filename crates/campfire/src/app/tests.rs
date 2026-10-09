@@ -153,14 +153,16 @@ async fn public_files_are_served_before_routing() {
 }
 
 #[tokio::test]
-async fn unknown_and_unported_routes() {
+async fn unknown_routes_and_room_settings_alias() {
     let Some(test) = boot_seeded().await else { return };
     let missing = send(&test.booted.router, get("/nope")).await;
     assert_eq!(missing.status, StatusCode::NOT_FOUND);
     assert!(!missing.body.is_empty(), "renders public/404.html");
 
+    // The settings alias redirects by room type now (#365), not the 500 of the missing controller.
     let settings = send(&test.booted.router, get("/rooms/1/settings")).await;
-    assert_eq!(settings.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(settings.status, StatusCode::FOUND);
+    assert_eq!(settings.header("location"), Some("http://campfire.test/session/new"));
 }
 
 /// An action behind `ApplicationController`'s chain that answers with `Current.user`.

@@ -1,138 +1,153 @@
-import { type PointerEvent, useEffect, useLayoutEffect, useRef } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef } from "react";
 
-/** How long a finger rests on a row before its menu opens (touch has no right click). */
+/** How long a finger rests on a control before its long press fires. */
 export const LONG_PRESS_MS = 500;
 
-/** How far a resting finger may drift: further is a scroll or a swipe, not a long press. */
-export const LONG_PRESS_SLOP = 8;
+/** How far a resting finger may drift before it's a scroll, not a press. */
+const LONG_PRESS_SLOP = 10;
 
-/** How long a press may wait for its release before the menu opens anyway. */
-export const RELEASE_WAIT_MS = 1000;
-
-/**
- * Runs `open` once the pressed button or finger comes up: a menu opened mid-press is in the top
- * layer when the release lands outside it, and the browser would light-dismiss it at once.
- */
-export function afterRelease(pressed: boolean, open: () => void): void {
-  if (!pressed) {
-    open();
-
-    return;
-  }
-
-  const done = () => {
-    window.removeEventListener("pointerup", done, true);
-    window.removeEventListener("pointercancel", done, true);
-    window.clearTimeout(fallback);
-    window.setTimeout(open, 0);
-  };
-
-  const fallback = window.setTimeout(done, RELEASE_WAIT_MS);
-
-  window.addEventListener("pointerup", done, true);
-  window.addEventListener("pointercancel", done, true);
-}
+/** How long after the finger lifts the click it ends in may still arrive (and be swallowed). */
+const CLICK_WINDOW_MS = 350;
 
 interface Press {
+  readonly pointerId: number;
   readonly x: number;
   readonly y: number;
-  timer: number;
-  /** The finger is still down and resting. */
-  live: boolean;
-  fired: boolean;
+  readonly timer: number;
+  readonly unlisten: () => void;
 }
 
 export interface LongPress {
-  /** A pointer went down: a finger starts the timer; a mouse or pen forgets the last press. */
-  readonly start: (event: PointerEvent<HTMLElement>) => void;
-  /** A finger that drifts past the slop is scrolling: no long press. */
-  readonly move: (event: PointerEvent<HTMLElement>) => void;
-  readonly cancel: () => void;
-  /** Whether the gesture that just ended opened the menu (its click shouldn't act). */
-  readonly fired: () => boolean;
-  /**
-   * The browser's own long-press `contextmenu` (Android's) for a finger still resting: fires the
-   * long press now, once, rather than opening a second menu. `false` when no finger is down, for
-   * a right click to take its own path.
-   */
-  readonly claim: () => boolean;
+  /** Spread onto the control. */
+  readonly handlers: {
+    readonly onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+    readonly onContextMenu: (event: { preventDefault: () => void }) => void;
+  };
+  /** In the control's click handler: whether this click ends a long press, so it does nothing. */
+  readonly endsLongPress: () => boolean;
 }
 
 /**
- * A long press on touch screens: a finger that rests `LONG_PRESS_MS` without drifting calls
- * `onLongPress` with where it rests, once it lifts (see `afterRelease`). Mouse and pen presses
- * are left to right click.
+ * A long press with a finger. `onLongPress` runs only when that finger lifts after resting
+ * `LONG_PRESS_MS` (a popover opened while it is still down would be light-dismissed by that very
+ * release); drifting past the slop or a `pointercancel` (the browser took the touch for a scroll)
+ * drops the press at any point before then, fired or not. The click the gesture ends in is the
+ * caller's to swallow (`endsLongPress`). Mouse and pen presses, and presses while `enabled()` is
+ * false, are ordinary clicks.
  */
-export function useLongPress(onLongPress: (x: number, y: number) => void): LongPress {
+export function useLongPress(onLongPress: () => void, enabled: () => boolean): LongPress {
   const press = useRef<Press | null>(null);
+  const firedAt = useRef<number | null>(null);
+  const endedAt = useRef(Number.NEGATIVE_INFINITY);
   const callback = useRef(onLongPress);
+  const allowed = useRef(enabled);
 
-  useLayoutEffect(() => {
-    callback.current = onLongPress;
-  });
+  callback.current = onLongPress;
+  allowed.current = enabled;
 
-  useEffect(() => () => window.clearTimeout(press.current?.timer), []);
-
-  const fire = (current: Press) => {
-    window.clearTimeout(current.timer);
-    current.fired = true;
-    afterRelease(true, () => callback.current(current.x, current.y));
-  };
-
-  const cancel = () => {
+  /** Drops the press in flight; `open` lifts it into the long press, if that has fired. */
+  const end = (open: boolean) => {
     const current = press.current;
 
-    if (current !== null) {
-      window.clearTimeout(current.timer);
-      current.live = false;
+    if (current === null) {
+      return;
+    }
+
+    window.clearTimeout(current.timer);
+    current.unlisten();
+    press.current = null;
+
+    if (firedAt.current === null) {
+      return;
+    }
+
+    endedAt.current = performance.now();
+
+    if (open) {
+      // After the release's own events, so they can't light-dismiss what opens.
+      window.setTimeout(() => {
+        if (allowed.current()) {
+          callback.current();
+        }
+      }, 0);
     }
   };
 
+  const endRef = useRef(end);
+
+  endRef.current = end;
+
+  useEffect(() => () => endRef.current(false), []);
+
+  const start = (event: ReactPointerEvent<HTMLElement>) => {
+    const { pointerId, clientX: x, clientY: y } = event;
+
+    const ours = (pointer: PointerEvent) => pointer.pointerId === pointerId;
+
+    const onMove = (pointer: PointerEvent) => {
+      if (ours(pointer) && Math.hypot(pointer.clientX - x, pointer.clientY - y) > LONG_PRESS_SLOP) {
+        endRef.current(false);
+      }
+    };
+
+    const onUp = (pointer: PointerEvent) => {
+      if (ours(pointer)) {
+        endRef.current(true);
+      }
+    };
+
+    const onCancel = (pointer: PointerEvent) => {
+      if (ours(pointer)) {
+        endRef.current(false);
+      }
+    };
+
+    window.addEventListener("pointermove", onMove, true);
+    window.addEventListener("pointerup", onUp, true);
+    window.addEventListener("pointercancel", onCancel, true);
+
+    press.current = {
+      pointerId,
+      x,
+      y,
+      timer: window.setTimeout(() => {
+        firedAt.current = performance.now();
+      }, LONG_PRESS_MS),
+      unlisten: () => {
+        window.removeEventListener("pointermove", onMove, true);
+        window.removeEventListener("pointerup", onUp, true);
+        window.removeEventListener("pointercancel", onCancel, true);
+      },
+    };
+  };
+
   return {
-    start: (event) => {
-      cancel();
+    handlers: {
+      onPointerDown: (event) => {
+        end(false);
+        firedAt.current = null;
 
-      if (event.pointerType !== "touch") {
-        press.current = null;
-
-        return;
-      }
-
-      const current: Press = {
-        x: event.clientX,
-        y: event.clientY,
-        timer: 0,
-        live: true,
-        fired: false,
-      };
-
-      current.timer = window.setTimeout(() => fire(current), LONG_PRESS_MS);
-      press.current = current;
+        if (event.pointerType === "touch" && enabled()) {
+          start(event);
+        }
+      },
+      // Android raises the context menu for a long press: the press is ours.
+      onContextMenu: (event) => {
+        if (press.current !== null || firedAt.current !== null) {
+          event.preventDefault();
+        }
+      },
     },
-    move: (event) => {
-      const current = press.current;
+    endsLongPress: () => {
+      const fired = firedAt.current;
 
-      if (
-        current !== null &&
-        Math.hypot(event.clientX - current.x, event.clientY - current.y) > LONG_PRESS_SLOP
-      ) {
-        cancel();
-      }
-    },
-    cancel,
-    fired: () => press.current?.fired ?? false,
-    claim: () => {
-      const current = press.current;
+      firedAt.current = null;
 
-      if (current === null || !current.live) {
-        return false;
-      }
-
-      if (!current.fired) {
-        fire(current);
-      }
-
-      return true;
+      // Still held, or lifted (or dropped) a moment ago.
+      return (
+        fired !== null &&
+        (press.current !== null || performance.now() - endedAt.current < CLICK_WINDOW_MS)
+      );
     },
   };
 }

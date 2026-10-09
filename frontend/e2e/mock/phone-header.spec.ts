@@ -88,14 +88,15 @@ async function control(
 }
 
 /**
- * Opens the header's ⋯ menu. A menu ignores a click on its trigger just after it closed (the
- * press that light-dismissed it), so a test that comes straight back to it tries again.
+ * Opens the header's ⋯ menu with a tap, as an action sheet on these touch phones. A menu ignores
+ * a press on its trigger just after it closed (the press that light-dismissed it), so a test that
+ * comes straight back to it tries again. Every press in this file is a tap, as a phone's is.
  */
 async function openOverflow(page: Page) {
   const menu = page.getByRole("menu", { name: "More" });
 
   await expect(async () => {
-    await header(page).getByRole("button", { name: "More" }).click();
+    await header(page).getByRole("button", { name: "More" }).tap();
     await expect(menu).toBeVisible({ timeout: 1000 });
   }).toPass();
 
@@ -145,7 +146,7 @@ for (const viewport of [PHONE_SMALL, PHONE]) {
 
       test(`${room.label}: the name opens the room's details`, async ({ page }) => {
         await openRoom(page, room.id);
-        await header(page).locator(".room-title-button").click();
+        await header(page).locator(".room-title-button").tap();
 
         await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
         await expect(pane(page).locator(".details-name")).toHaveText(room.name);
@@ -157,7 +158,7 @@ for (const viewport of [PHONE_SMALL, PHONE]) {
 
         await pane(page)
           .getByRole("button", { name: /^Back to/ })
-          .click();
+          .tap();
         await expect(pane(page)).toHaveCount(0);
         await expect(header(page).locator(".room-title-name")).toBeInViewport();
       });
@@ -195,11 +196,11 @@ test.describe("on a 360 px touch phone", () => {
       for (const [item, heading] of panes) {
         const menu = await openOverflow(page);
 
-        await menu.getByRole("menuitem", { name: new RegExp(`^${item}`) }).click();
+        await menu.getByRole("menuitem", { name: new RegExp(`^${item}`) }).tap();
         await expect(pane(page).getByRole("heading", { name: heading, exact: true })).toBeVisible();
         await pane(page)
           .getByRole("button", { name: /^Back to/ })
-          .click();
+          .tap();
         await expect(pane(page)).toHaveCount(0);
       }
     });
@@ -210,18 +211,18 @@ test.describe("on a 360 px touch phone", () => {
 
     let menu = await openOverflow(page);
 
-    await menu.getByRole("menuitem", { name: "Notifications" }).click();
+    await menu.getByRole("menuitem", { name: "Notifications" }).tap();
     await expect(page.getByRole("menuitemradio", { name: /^Mentions/ })).toBeVisible();
-    await page.getByRole("menuitemradio", { name: /^Mentions/ }).click();
+    await page.getByRole("menuitemradio", { name: /^Mentions/ }).tap();
     await expect(menu).toBeHidden();
 
     menu = await openOverflow(page);
-    await menu.getByRole("menuitem", { name: "Events" }).click();
+    await menu.getByRole("menuitem", { name: "Events" }).tap();
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}/events$`));
 
     await openRoom(page, ROOM_IDS.general);
     menu = await openOverflow(page);
-    await menu.getByRole("menuitem", { name: "Search" }).click();
+    await menu.getByRole("menuitem", { name: "Search" }).tap();
     await expect(page).toHaveURL(/\/search$/);
   });
 
@@ -230,7 +231,7 @@ test.describe("on a 360 px touch phone", () => {
 
     const menu = await openOverflow(page);
 
-    await menu.getByRole("menuitem", { name: "Add people" }).click();
+    await menu.getByRole("menuitem", { name: "Add people" }).tap();
     await expect(page.getByRole("dialog", { name: /Add people/ })).toBeVisible();
   });
 
@@ -288,15 +289,15 @@ test.describe("on a 360 px touch phone", () => {
       menu.getByRole("menuitem", { name: "Stage 1 raised hand", exact: true }),
     ).toBeVisible();
     await shot(page, "phone-header-hands-overflow", "light");
-    await menu.getByRole("menuitem", { name: /^Stage/ }).click();
+    await menu.getByRole("menuitem", { name: /^Stage/ }).tap();
     await expect(pane(page).getByRole("region", { name: "Listeners" })).toContainText(
       "Hand raised",
     );
     await pane(page)
       .getByRole("button", { name: /^Back to/ })
-      .click();
+      .tap();
 
-    await header(page).locator(".room-title-button").click();
+    await header(page).locator(".room-title-button").tap();
     await expect(
       pane(page).getByRole("button", { name: "Stage 1 raised hand", exact: true }),
     ).toBeVisible();
@@ -317,20 +318,20 @@ test.describe("on a 360 px touch phone", () => {
 
   test("a DM's details lead to the agent's or the person's profile", async ({ page }) => {
     await openRoom(page, ROOM_IDS.dmEmber);
-    await header(page).locator(".room-title-button").click();
-    await pane(page).getByRole("link", { name: "Agent profile" }).click();
+    await header(page).locator(".room-title-button").tap();
+    await pane(page).getByRole("link", { name: "Agent profile" }).tap();
     await expect(page).toHaveURL(new RegExp(`/app/agents/${USER_IDS.ember}$`));
     await expect(page.getByRole("heading", { level: 2, name: "Ember" })).toBeVisible();
 
     await openRoom(page, ROOM_IDS.dmMaya);
-    await header(page).locator(".room-title-button").click();
-    await pane(page).getByRole("link", { name: "Profile", exact: true }).click();
+    await header(page).locator(".room-title-button").tap();
+    await pane(page).getByRole("link", { name: "Profile", exact: true }).tap();
     await expect(page).toHaveURL(new RegExp(`/app/people/${USER_IDS.maya}$`));
   });
 
   test("the details lead to each pane and back to the details", async ({ page }) => {
     await openRoom(page, ROOM_IDS.general);
-    await header(page).locator(".room-title-button").click();
+    await header(page).locator(".room-title-button").tap();
 
     for (const [row, heading] of [
       ["Members", "Members"],
@@ -340,19 +341,19 @@ test.describe("on a 360 px touch phone", () => {
     ] as const) {
       await pane(page)
         .getByRole("button", { name: new RegExp(`^${row}`) })
-        .click();
+        .tap();
       await expect(pane(page).getByRole("heading", { name: heading, exact: true })).toBeVisible();
-      await pane(page).getByRole("button", { name: "Back to details" }).click();
+      await pane(page).getByRole("button", { name: "Back to details" }).tap();
       await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
     }
 
     await pane(page)
       .getByRole("button", { name: /^Notifications/ })
-      .click();
+      .tap();
     await expect(page.getByRole("menuitemradio", { name: /^Mentions/ })).toBeVisible();
     await page.keyboard.press("Escape");
 
-    await pane(page).getByRole("link", { name: "Channel settings" }).click();
+    await pane(page).getByRole("link", { name: "Channel settings" }).tap();
     await expect(page.getByRole("dialog", { name: /settings/i })).toBeVisible();
   });
 
@@ -369,11 +370,11 @@ test.describe("on a 360 px touch phone", () => {
     await expectNoHorizontalOverflow(page);
 
     // Edit and Cancel event are in the ⋯ menu, not squeezed beside the title.
-    await page.locator(".page-header").getByRole("button", { name: "More" }).click();
+    await page.locator(".page-header").getByRole("button", { name: "More" }).tap();
     await expect(page.getByRole("menuitem")).toHaveText(["Edit", "Cancel event"]);
     await page.keyboard.press("Escape");
 
-    await back.click();
+    await back.tap();
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}/events$`));
 
     const toRoom = page.locator(".page-header").getByRole("link", { name: "Back to general" });
@@ -383,7 +384,7 @@ test.describe("on a 360 px touch phone", () => {
       page.locator(".page-header").getByRole("link", { name: "New event" }),
     ).toBeVisible();
     await expectTouchTargets(page, ".page-header");
-    await toRoom.click();
+    await toRoom.tap();
     await expect(page).toHaveURL(new RegExp(`/r/${ROOM_IDS.general}$`));
   });
 
@@ -391,10 +392,14 @@ test.describe("on a 360 px touch phone", () => {
     test(`screenshots (${theme})`, async ({ page }) => {
       await openRoom(page, ROOM_IDS.general, theme);
       await shot(page, "phone-header-room", theme);
-      await openOverflow(page);
+      const menu = await openOverflow(page);
+
       await shot(page, "phone-header-overflow", theme);
-      await page.keyboard.press("Escape");
-      await header(page).locator(".room-title-button").click();
+
+      // A tap on the scrim only dismisses the sheet; the next tap goes through to the header.
+      await page.touchscreen.tap(180, 200);
+      await header(page).locator(".room-title-button").tap();
+      await expect(menu).toBeHidden();
       await expect(pane(page).locator(".details-name")).toHaveText("general");
       await shot(page, "phone-header-details", theme);
 

@@ -6,7 +6,8 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
-import { LONG_PRESS_MS, LONG_PRESS_SLOP, RELEASE_WAIT_MS } from "../../lib/long-press.ts";
+import { LONG_PRESS_MS } from "../../lib/long-press.ts";
+import { LONG_PRESS_SLOP, RELEASE_WAIT_MS } from "../../lib/menu-long-press.ts";
 import { readDurationMs } from "../../motion/durations.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 

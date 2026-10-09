@@ -27,6 +27,6 @@ async fn qr_http_matches_rails_bytes_cache_and_capacity_errors() {
         }
     }
     for bad in ["a", "ab=c", "aB==", "a*bc"] {
-        assert_eq!(app.anonymous().get(&format!("/qr_code/{bad}")).await.status.as_u16(), 500);
+        assert_eq!(app.anonymous().get(&format!("/qr_code/{bad}")).await.status.as_u16(), 404);
     }
 }

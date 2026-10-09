@@ -5,7 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   use,
 } from "react";
-import { afterRelease, useLongPress } from "../../lib/long-press.ts";
+import { afterRelease, useLongPress } from "../../lib/menu-long-press.ts";
 import { formatFull, formatListTime } from "../../lib/time.ts";
 import type { SidebarRow as Row } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";

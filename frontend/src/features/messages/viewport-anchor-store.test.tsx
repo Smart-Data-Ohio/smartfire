@@ -357,13 +357,25 @@ function remove(message: MessageDTO): void {
 }
 
 describe("store-backed deletion with real Virtua", () => {
+  let previousScrollTo: PropertyDescriptor | undefined;
+
   beforeEach(() => {
     store.setState(initialState, true);
     MeasuringObserver.instances = [];
     vi.stubGlobal("ResizeObserver", MeasuringObserver);
+    // jsdom elements have no scrollTo. Virtua's scrollToIndex calls it while the production
+    // Timeline places, before this file's smooth-scroll mock is installed.
+    previousScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollTo");
+    HTMLElement.prototype.scrollTo = () => undefined;
   });
 
   afterEach(() => {
+    if (previousScrollTo === undefined) {
+      Reflect.deleteProperty(HTMLElement.prototype, "scrollTo");
+    } else {
+      Object.defineProperty(HTMLElement.prototype, "scrollTo", previousScrollTo);
+    }
+
     cleanup();
     vi.unstubAllGlobals();
     store.setState(initialState, true);

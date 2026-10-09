@@ -8,6 +8,7 @@ import {
   connectionSummary,
   deviceName,
   fieldError,
+  groupSections,
   keywordLines,
   oooSummary,
   reauthLabel,
@@ -38,6 +39,24 @@ describe("settings words", () => {
   it("lists every section once, the profile at the root", () => {
     expect(new Set(SECTIONS.map((section) => section.path)).size).toBe(SECTIONS.length);
     expect(SECTIONS[0]?.path).toBe("/settings");
+  });
+
+  it("gives the root section a page of its own, for phones, where the root is the list", () => {
+    expect(SECTIONS[0]?.page).toBe("/settings/profile");
+    expect(SECTIONS.filter((section) => "page" in section)).toHaveLength(1);
+  });
+
+  it("groups the phone list in runs of neighbours, keeping the order", () => {
+    const groups = groupSections(SECTIONS);
+
+    expect(groups.map((group) => group.map((section) => section.key))).toEqual([
+      ["profile", "status"],
+      ["notifications", "rooms"],
+      ["appearance", "calls"],
+      ["security", "sessions", "devices"],
+      ["integrations"],
+    ]);
+    expect(groupSections([])).toEqual([]);
   });
 
   it("reads keyword alerts one per line, trimmed, blanks dropped", () => {

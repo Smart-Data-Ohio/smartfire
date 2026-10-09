@@ -31,6 +31,7 @@ mod error;
 mod events;
 mod fizzy;
 mod huddle;
+mod join;
 mod me;
 mod message;
 mod organize;
@@ -126,6 +127,7 @@ pub use huddle::{
     HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
     HuddleRoleChanged, ModerateHuddle,
 };
+pub use join::{OpenRoomPreview, RoomJoin};
 pub use me::{
     DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
     VoiceMode,

@@ -1,5 +1,16 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test, USER_IDS } from "./support.ts";
+import { seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
+import {
+  expect,
+  expectTouchTargets,
+  matrix,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /**
  * Huddles against the mock backend and the fake LiveKit transport (`mock://` credentials): the
@@ -78,6 +89,11 @@ matrix("a voice room lists who's in its call", async ({ page, theme, phone }) =>
 matrix("in a call: the dock and the call view", async ({ page, theme, phone }) => {
   await open(page, LOUNGE, theme);
   await join(page, phone);
+
+  // A phone keeps the conversation on joining; the call bar opens the call view.
+  if (phone) {
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+  }
 
   const view = page.getByRole("region", { name: "Call" }).last();
 
@@ -234,4 +250,298 @@ test("Smartfire's motion setting overrides the system one in a call", async ({ p
     document.documentElement.dataset.motion = "reduce";
   });
   await expect.poll(transition).toBe("none");
+});
+
+test.describe("on a touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("a call keeps the conversation: one compact bar, the call a tap away", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const height = PHONE_TOUCH.viewport.height;
+
+    await expect(page.locator(".call-view")).toHaveCount(0);
+    expect((await bar.boundingBox())?.height ?? 999, "a 48 px bar").toBeLessThanOrEqual(48.5);
+
+    const timeline = await page.locator(".app-main .timeline").boundingBox();
+
+    expect(timeline?.height ?? 0, "the timeline keeps most of the screen").toBeGreaterThanOrEqual(
+      height * 0.6,
+    );
+    // The room's name stretches its hit area over the bar's text, so its own box is exempt.
+    await expectTouchTargets(page, ".app-main-dock .huddle-dock", { ignore: ".huddle-dock-room" });
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+
+    const view = page.locator(".call-view");
+
+    await expect(view.locator(".call-tile")).toHaveCount(1);
+
+    const viewBox = await view.boundingBox();
+    const room = await page.locator(".room").boundingBox();
+
+    expect(viewBox?.height ?? 0, "the call fills the room").toBeGreaterThanOrEqual(
+      (room?.height ?? 999) - 1,
+    );
+
+    await bar.getByRole("button", { name: "Hide call" }).click();
+    await expect(view).toHaveCount(0);
+  });
+
+  test("the full-screen call is a page: it takes focus, Escape and Back close it", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const url = page.url();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeFocused();
+
+    // The covered conversation is out of reach: Tab never lands in the composer.
+    await expect(page.locator(".room-part").first()).toHaveAttribute("inert", "");
+
+    for (let step = 0; step < 12; step += 1) {
+      await page.keyboard.press("Tab");
+
+      const inRoom = await page.evaluate(() =>
+        Boolean(document.activeElement?.closest(".room-part")),
+      );
+
+      expect(inRoom, `Tab ${step + 1} stays out of the covered room`).toBe(false);
+    }
+
+    await view.focus();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+    await expect(bar.getByRole("button", { name: "Show call" })).toBeFocused();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    expect(page.url(), "Back closes the call, not the room").toBe(url);
+    await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
+  });
+
+  test("Escape on the call bar closes the full-screen call", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await bar.getByRole("button", { name: "Mute microphone" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+  });
+
+  test("the full-screen call is in the URL: Back closes it, Forward reopens it", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}\\?call=1$`));
+
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
+
+    await page.goForward();
+    await expect(view).toBeVisible();
+  });
+
+  test("switching rooms with the call open keeps Back and Forward ordinary", async ({ page }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+    const covered = new RegExp(`/r/${GENERAL}\\?call=1$`);
+    const general = new RegExp(`/r/${GENERAL}$`);
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(page).not.toHaveURL(covered);
+
+    const next = page.url();
+
+    // Back returns to each page as it was: the call over the room, then the room alone ...
+    await page.goBack();
+    await expect(page).toHaveURL(covered);
+    await expect(view).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await expect(view).toHaveCount(0);
+
+    // ... and Forward retraces them to the next room.
+    await page.goForward();
+    await expect(view).toBeVisible();
+    await page.goForward();
+    await expect(page).toHaveURL(next);
+    await expect(view).toHaveCount(0);
+  });
+
+  test("closing the call steps back to the room page it opened over", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+    const length = await page.evaluate(() => window.history.length);
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
+
+    // Stepped back, not replaced: the call is still the next page, one entry past the room.
+    expect(await page.evaluate(() => window.history.length)).toBe(length + 1);
+    await page.goForward();
+    await expect(view).toBeVisible();
+  });
+
+  test("a call that ends after Back leaves Forward on the plain room", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const general = new RegExp(`/r/${GENERAL}$`);
+    const index = () => page.evaluate(() => Number(window.history.state?.__TSR_index));
+    const roomIndex = await index();
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.goBack();
+    await expect(view).toHaveCount(0);
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(bar).toHaveCount(0);
+
+    // Forward reaches the call's old entry, now just the room: call=1 replaced off, no bounce.
+    await page.goForward();
+    await expect(page).toHaveURL(general);
+    await expect.poll(index).toBe(roomIndex + 1);
+    await page.waitForTimeout(500);
+    expect(await index(), "Forward stays put").toBe(roomIndex + 1);
+    await expect(view).toHaveCount(0);
+  });
+
+  test("a call that ends under its open view takes call=1 off in place", async ({ page }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+    const general = new RegExp(`/r/${GENERAL}$`);
+    const index = () => page.evaluate(() => Number(window.history.state?.__TSR_index));
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+
+    const callIndex = await index();
+
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(view).toHaveCount(0);
+    await expect(page).toHaveURL(general);
+    expect(await index(), "replaced, not stepped back").toBe(callIndex);
+
+    // Back is ordinary: the room page the call opened over, then the room before it.
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+  });
+
+  test("a call ended elsewhere leaves its old call=1 entry to Back and Forward", async ({
+    page,
+  }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const general = new RegExp(`/r/${GENERAL}$`);
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(page.locator("section.call-view")).toBeVisible();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(page).not.toHaveURL(/call=1/);
+
+    const next = page.url();
+
+    await bar.getByRole("button", { name: "Leave call" }).click();
+    await expect(bar).toHaveCount(0);
+
+    // Back finds the call gone: the parameter comes off in place, not by stepping back again ...
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await expect(page.locator("section.call-view")).toHaveCount(0);
+
+    // ... so Forward still reaches the room after it.
+    await page.goForward();
+    await expect(page).toHaveURL(next);
+  });
+
+  test("taking call=1 off a reply's permalink keeps the thread and the reply", async ({ page }) => {
+    const permalink = `/r/${GENERAL}/t/${THREAD_IDS.generalActive}?m=${seededReplyId(THREAD_IDS.generalActive, 0)}`;
+    const kept = new RegExp(`${permalink.replace("?", "\\?")}$`);
+
+    // Arriving with no call on: the stale parameter is replaced off.
+    await open(page, GENERAL);
+    await page.goto(`/app${permalink}&call=1`);
+    await expect(page).toHaveURL(kept);
+
+    // In a call, closing the view there (Escape on the bar) takes only `call` away.
+    await open(page, GENERAL);
+    await join(page, true);
+    await page.evaluate((url) => {
+      const index = Number(window.history.state?.__TSR_index ?? 0) + 1;
+
+      window.history.pushState(
+        { __TSR_index: index, __TSR_key: "permalink", key: "permalink" },
+        "",
+        url,
+      );
+      window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    }, `/app${permalink}&call=1`);
+    await expect(page).toHaveURL(/call=1/);
+
+    await dock(page, true).getByRole("button", { name: "Mute microphone" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(page).toHaveURL(kept);
+  });
+
+  test("a rapid double Back from the open call leaves the room, with no extra stop", async ({
+    page,
+  }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(page.locator("section.call-view")).toBeVisible();
+
+    await page.evaluate(() => {
+      window.history.back();
+      window.history.back();
+    });
+
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+    // Nothing steps on afterwards.
+    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+  });
 });

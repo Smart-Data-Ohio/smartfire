@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { duringAppFocus } from "../../lib/reader-focus.ts";
 import { usePresence } from "../../motion/presence.ts";
 import { lazyForUpdate as lazy } from "../../service-worker/lazy.ts";
 import { loadForUpdate } from "../../service-worker/update-required.ts";
@@ -339,7 +340,10 @@ export function RightPane({ roomId }: { readonly roomId: number }) {
       presence.ref.current?.contains(document.activeElement) === true;
 
     if (opener instanceof HTMLElement && opener.isConnected && focusLost) {
-      opener.focus({ preventScroll: true });
+      // Restoring the opener is the pane's, even when Tab was a moment before the click.
+      duringAppFocus(() => {
+        opener.focus({ preventScroll: true });
+      });
     }
   }, [open, presence.ref]);
 
