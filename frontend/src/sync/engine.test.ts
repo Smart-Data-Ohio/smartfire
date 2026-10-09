@@ -2987,6 +2987,43 @@ describe("decoding", () => {
 });
 
 describe("boards and open work panes", () => {
+  it.effect(
+    "has an open board's automations refetched when its room resyncs or the server restarts",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+          const detail = roomDetailFixture(BOARD);
+          detail.room.kind = "board";
+          yield* api.reply(
+            "GET /sidebar",
+            sidebarFixture([sidebarRowFixture(BOARD, "Roadmap", "board")]),
+          );
+          yield* api.reply(`GET /rooms/${BOARD}`, detail);
+          yield* api.reply(`GET /rooms/${BOARD}/board`, boardListing());
+          yield* session.openRoom(BOARD, null);
+          yield* boardActions.open(BOARD, { status: "all", owner: "anyone", tag: "" });
+          yield* startEngine;
+          yield* welcome(0, true);
+
+          const signal = () => store.getState().boardAutomationsChanged[BOARD] ?? 0;
+          const before = signal();
+
+          // Replay expired: the events it names are gone, a settings change among them.
+          yield* socket.push({ t: "resync", topics: [`room:${BOARD}`], reason: "missed" });
+          yield* settle;
+          expect(signal()).toBe(before + 1);
+
+          // The server restarted and can't resume.
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+          yield* welcome(1, false, "e2");
+          expect(signal()).toBe(before + 2);
+        }),
+      ),
+  );
+
   it.effect("resyncs board metadata, access and work without fetching a board timeline", () =>
     withSync(
       Effect.gen(function* () {

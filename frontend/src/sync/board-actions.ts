@@ -1,6 +1,8 @@
 import { Effect } from "effect";
 import * as api from "../api/board-endpoints.ts";
+import type { CreateBoardTagRule } from "../gen/CreateBoardTagRule.ts";
 import type { CreateWorkHandoff } from "../gen/CreateWorkHandoff.ts";
+import type { UpdateBoardSlaTimers } from "../gen/UpdateBoardSlaTimers.ts";
 import type { UpdateWork } from "../gen/UpdateWork.ts";
 import type { WorkStatus } from "../gen/WorkStatus.ts";
 import type { BoardQuery } from "../store/boards.ts";
@@ -8,6 +10,43 @@ import { mutations, store } from "../store/store.ts";
 import { captureWorkRead } from "../store/work.ts";
 import { settledDetail } from "./settle.ts";
 import * as workActions from "./work-actions.ts";
+
+export const automations = Effect.fn("boards.automations")(function* (roomId: number) {
+  const settings = yield* api.boardAutomations(roomId);
+  mutations.mergeUsers(settings.users);
+
+  return settings;
+});
+
+export const addTagRule = Effect.fn("boards.addTagRule")(function* (
+  roomId: number,
+  input: CreateBoardTagRule,
+) {
+  const settings = yield* api.createBoardTagRule(roomId, input);
+  mutations.mergeUsers(settings.users);
+
+  return settings;
+});
+
+export const removeTagRule = Effect.fn("boards.removeTagRule")(function* (
+  roomId: number,
+  ruleId: number,
+) {
+  const settings = yield* api.deleteBoardTagRule(roomId, ruleId);
+  mutations.mergeUsers(settings.users);
+
+  return settings;
+});
+
+export const saveSlaTimers = Effect.fn("boards.saveSlaTimers")(function* (
+  roomId: number,
+  input: UpdateBoardSlaTimers,
+) {
+  const settings = yield* api.updateBoardSlaTimers(roomId, input);
+  mutations.mergeUsers(settings.users);
+
+  return settings;
+});
 
 /** Room sessions own room:<id>; changing board filters does not acquire another holder. */
 export const open = Effect.fn("boards.open")(function* (roomId: number, query: BoardQuery) {

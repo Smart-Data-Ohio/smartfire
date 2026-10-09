@@ -33,6 +33,10 @@ interface BoardToolbarProps {
   readonly tagCounts: readonly BoardTagCount[];
   readonly onChange: (next: Partial<BoardQuery>) => void;
   readonly onNewPost: () => void;
+  /** The board's creator or an administrator: they get the Automations button. */
+  readonly canAdminister: boolean;
+  readonly automationsOpen: boolean;
+  readonly onAutomations: () => void;
 }
 
 /** One removable chip per filter that differs from the default. */
@@ -63,8 +67,8 @@ function FilterChip({
 
 /**
  * The board's toolbar, under the room header: List or Board on the left, the active filters as
- * chips, then Filter (status in the list, owner, tag, each a submenu of choices) and the "+" that
- * starts a new post, on the right.
+ * chips, then Filter (status in the list, owner, tag, each a submenu of choices), the "+" that
+ * starts a new post and, for the board's creator and administrators, Automations, on the right.
  */
 export function BoardToolbar({
   query,
@@ -72,6 +76,9 @@ export function BoardToolbar({
   tagCounts,
   onChange,
   onNewPost,
+  canAdminister,
+  automationsOpen,
+  onAutomations,
 }: BoardToolbarProps) {
   const users = useStore((state) => state.users);
   const active = activeFilterCount(query);
@@ -214,6 +221,16 @@ export function BoardToolbar({
           tooltipPlacement="bottom"
           onClick={onNewPost}
         />
+        {canAdminister ? (
+          <IconButton
+            icon="settings"
+            label="Automations"
+            className="board-automations"
+            tooltipPlacement="bottom"
+            aria-pressed={automationsOpen}
+            onClick={onAutomations}
+          />
+        ) : null}
       </div>
     </div>
   );

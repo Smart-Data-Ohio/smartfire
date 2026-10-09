@@ -142,6 +142,7 @@ pub async fn update_sla_rules(c: &mut Ctx) -> Result {
                 serde_json::json!({"sla_rule":"created","status":status,"nudge_after_minutes":nudge,"escalate_after_minutes":escalate})
             }
         };
+        c.app().broadcasts.board_automations_changed(room.id);
         super::super::audit_room(c, &room, "board.automation.change", changes).await?;
     }
     redirect(c, &room, Some("SLA timers saved."), None)

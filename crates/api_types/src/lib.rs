@@ -21,6 +21,7 @@ mod admin;
 mod agents;
 mod attachment;
 mod board;
+mod board_automations;
 mod bots;
 mod cards;
 mod composer;
@@ -81,6 +82,10 @@ pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use board::{
     BoardDigest, BoardListing, BoardOwnerOption, BoardPostForm, BoardStatusFilter, BoardTagCount,
     CreateBoardPost,
+};
+pub use board_automations::{
+    BoardAutomations, BoardAutomationsChanged, BoardSlaTimer, BoardSlaTimerInput, BoardTagRule, CreateBoardTagRule,
+    UpdateBoardSlaTimers,
 };
 pub use bots::{
     Bot, BotAgent, BotChange, BotGithub, BotIcon, BotKey, BotList, BotRemoved, BotRoom,
