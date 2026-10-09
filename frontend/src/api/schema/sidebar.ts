@@ -21,7 +21,7 @@ export type SidebarLastMessagePin = Assert<
   Pinned<typeof SidebarLastMessage, GeneratedSidebarLastMessage>
 >;
 
-/** A room as it appears in one person's sidebar, with its unread and mention counts. */
+/** A room as it appears in one person's sidebar, with its unread, mention and notification counts. */
 export const SidebarRow = Schema.Struct({
   room: Room,
   membership: Membership,
@@ -29,6 +29,8 @@ export const SidebarRow = Schema.Struct({
   directMemberIds: Schema.Array(UserId),
   unreadCount: Schema.Int,
   mentionCount: Schema.Int,
+  notificationCount: Schema.Int,
+  threadNotificationCount: Schema.Int,
   lastMessage: Schema.optionalKey(SidebarLastMessage),
   refreshRoom: Schema.optionalKey(Schema.Boolean),
 });

@@ -343,6 +343,23 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     return first === undefined ? null : { firstUnreadMessageId: first.id, count: unread.length };
   };
 
+  /**
+   * The server's `notificationCount` (crates/api/src/dto.rs `notification_count`), from what the
+   * mock tracks: every unread root message in an `everything` room, the mentions in a `mentions`
+   * or `muted` one, none in a `nothing` one.
+   */
+  const notificationCount = (record: RoomRecord, unreadCount: number): number => {
+    switch (record.membership.involvement) {
+      case "everything":
+        return unreadCount;
+      case "mentions":
+      case "muted":
+        return record.mentionCount;
+      default:
+        return 0;
+    }
+  };
+
   /** A direct room's newest root message as its row previews it (`last_direct_message`). */
   const lastMessage = (record: RoomRecord): SidebarRow["lastMessage"] => {
     const last = record.messages.findLast(
@@ -371,13 +388,17 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   const sidebarRow = (record: RoomRecord): SidebarRow => {
+    const unreadCount = unreadMessages(record).length;
+
     const row: SidebarRow = {
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),
       directMemberIds: directMemberIds(record),
-      unreadCount: unreadMessages(record).length,
+      unreadCount,
       mentionCount: record.mentionCount,
+      notificationCount: notificationCount(record, unreadCount),
+      threadNotificationCount: 0,
     };
 
     const last = lastMessage(record);
@@ -634,7 +655,9 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       markReadUpTo(record, message.id);
     } else if (!message.systemNote) {
       const mentioned = mentionsUser(message.bodyHtml, VIEWER_ID);
-      const quiet = ["muted", "nothing"].includes(record.membership.involvement) && !mentioned;
+      // `Room#unread_memberships`: a muted room goes unread only for a mention; every other
+      // visible one (a "nothing" room too) goes unread for any message.
+      const quiet = record.membership.involvement === "muted" && !mentioned;
       const viewing = hub.presentRooms().has(record.room.id);
 
       if (viewing && record.membership.unreadAt === null) {

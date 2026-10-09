@@ -286,16 +286,22 @@ describe("sidebar counts", () => {
     directMemberIds: [],
     unreadCount: 0,
     mentionCount: 0,
+    notificationCount: 0,
+    threadNotificationCount: 0,
   };
 
   it("counts room.unread events and clears on read", () => {
-    const loaded = loadSidebar(initialState, {
-      rows: [row],
-      categories: [],
-      users: [],
-      directPlaceholderUserIds: [],
-      canCreateRooms: true,
-    });
+    const loaded = loadSidebar(
+      initialState,
+      {
+        rows: [row],
+        categories: [],
+        users: [],
+        directPlaceholderUserIds: [],
+        canCreateRooms: true,
+      },
+      0,
+    );
 
     const unread = applyEvents(
       loaded,
@@ -314,13 +320,50 @@ describe("sidebar counts", () => {
       0,
     );
 
-    expect(unread.sidebar.rows[ROOM]).toMatchObject({ unreadCount: 2, mentionCount: 1 });
+    expect(unread.sidebar.rows[ROOM]).toMatchObject({
+      unreadCount: 2,
+      mentionCount: 1,
+      notificationCount: 1,
+    });
     expect(unread.sidebar.rows[ROOM]?.membership.unreadAt).not.toBeNull();
 
     const read = markRoomRead(unread, ROOM);
 
-    expect(read.sidebar.rows[ROOM]).toMatchObject({ unreadCount: 0, mentionCount: 0 });
+    // The red count clears with the read, as the server's row will; the inbox keeps its mention.
+    expect(read.sidebar.rows[ROOM]).toMatchObject({
+      unreadCount: 0,
+      mentionCount: 1,
+      notificationCount: 0,
+    });
     expect(read.sidebar.rows[ROOM]?.membership.unreadAt).toBeNull();
+  });
+
+  it("leaves thread pings on a room read: only reading the thread clears them", () => {
+    const pinged = {
+      ...row,
+      unreadCount: 2,
+      notificationCount: 3,
+      threadNotificationCount: 1,
+      membership: { ...row.membership, unreadAt: "2026-10-05T00:00:00.000Z" },
+    };
+
+    const loaded = loadSidebar(
+      initialState,
+      {
+        rows: [pinged],
+        categories: [],
+        users: [],
+        directPlaceholderUserIds: [],
+        canCreateRooms: true,
+      },
+      0,
+    );
+
+    expect(markRoomRead(loaded, ROOM).sidebar.rows[ROOM]).toMatchObject({
+      unreadCount: 0,
+      notificationCount: 1,
+      threadNotificationCount: 1,
+    });
   });
 
   it("seeds the timeline's unread divider from the room detail", () => {

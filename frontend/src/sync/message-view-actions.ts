@@ -7,6 +7,7 @@ import { Clock, Effect } from "effect";
 import { icons } from "../api/composer-endpoints.ts";
 import { markUnread, users } from "../api/endpoints.ts";
 import { mutations, store } from "../store/store.ts";
+import { withRowTicket } from "./row-ticket.ts";
 
 /** The most people one `GET /users` names. */
 const USERS_PER_REQUEST = 100;
@@ -32,15 +33,20 @@ export const markUnreadFrom = Effect.fn("messages.markUnreadFrom")(function* (
   roomId: number,
   messageId: number,
 ) {
-  const reply = yield* markUnread(roomId, messageId);
+  return yield* withRowTicket((since) =>
+    Effect.gen(function* () {
+      const reply = yield* markUnread(roomId, messageId);
 
-  mutations.markUnreadFrom(
-    roomId,
-    reply.firstUnreadMessageId ?? messageId,
-    yield* Clock.currentTimeMillis,
+      mutations.markUnreadFrom(
+        roomId,
+        reply.firstUnreadMessageId ?? messageId,
+        yield* Clock.currentTimeMillis,
+        since,
+      );
+
+      return reply.firstUnreadMessageId;
+    }),
   );
-
-  return reply.firstUnreadMessageId;
 });
 
 /** Every brand and workspace icon, for the picker's Custom tab. */

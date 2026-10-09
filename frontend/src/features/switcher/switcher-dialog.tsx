@@ -12,12 +12,14 @@ import { AgentBadge } from "../people/agent-badge.tsx";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
 import { GroupAvatars } from "../sidebar/group-avatars.tsx";
+import { notificationLabel } from "../sidebar/sections.ts";
 import { matchRange, normalizeQuery } from "./match.ts";
 import {
   flattenSections,
   localItems,
   mergeItems,
   rankItems,
+  readsUnread,
   remoteItems,
   type SwitcherItem,
 } from "./ranking.ts";
@@ -96,7 +98,7 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       aria-selected={active}
       className="switcher-option"
       data-active={active || undefined}
-      data-unread={(item.unread && !item.muted) || undefined}
+      data-unread={readsUnread(item) || undefined}
       data-muted={item.muted || undefined}
       onPointerMove={active ? undefined : onHover}
       onClick={onChoose}
@@ -112,9 +114,9 @@ function Option({ item, id, active, busy, query, onHover, onChoose }: OptionProp
       <span className="switcher-meta">
         {busy ? <Spinner label="Opening" /> : null}
         {!busy && item.count > 0 ? (
-          <Badge count={item.count} label={`${item.count} unread`} />
+          <Badge count={item.count} label={notificationLabel(item.count)} />
         ) : null}
-        {!busy && item.count === 0 && item.unread && !item.muted ? (
+        {!busy && item.count === 0 && item.unread ? (
           <span className="switcher-unread-dot" aria-label="Unread" role="img" />
         ) : null}
         <Kbd keys={["⏎"]} className="switcher-enter" />

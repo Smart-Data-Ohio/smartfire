@@ -12,7 +12,7 @@ import {
 import { beginRoomRequest } from "../store/join-state.ts";
 import type { RoomCategory, SidebarRow } from "../store/model.ts";
 import { favoriteRows, organizedSidebar } from "../store/organize.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import * as organize from "./organize-actions.ts";
 
 const launch: RoomCategory = { id: 1, name: "Launch", collapsed: false, position: 1 };
@@ -34,10 +34,13 @@ const ada = sidebarRowFixture(4, "Ada", "direct", [5]);
 function seed(): void {
   mutations.reset();
   mutations.setMe(meFixture);
-  mutations.loadSidebar({
-    ...sidebarFixture([general, design, engineering, ada]),
-    categories: [launch, team],
-  });
+  mutations.loadSidebar(
+    {
+      ...sidebarFixture([general, design, engineering, ada]),
+      categories: [launch, team],
+    },
+    sidebarRowClock(),
+  );
 }
 
 /** The sidebar as the viewer sees it, pending changes included. */
@@ -268,6 +271,78 @@ describe("organize actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("drop a rename reply from before a resync that removed the category", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /room_categories/2", () => {
+        // While the rename is on its way, another tab deletes the category, and a resync
+        // (no event left to say so again) installs the sidebar without it.
+        mutations.resyncSidebar(
+          { ...sidebarFixture([general, design, engineering, ada]), categories: [launch] },
+          sidebarRowClock(),
+        );
+
+        return Effect.succeed({ ...team, name: "People" });
+      });
+
+      yield* organize.renameCategory(2, "People");
+
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([1]);
+      expect(store.getState().rowTouches.categories).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("drop a fold reply from before sync removed the category", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PATCH /room_categories/2", () => {
+        mutations.applyEvents(
+          [{ seq: 0, topic: "user:7", type: "sidebar.category.removed", data: { id: 2 } }],
+          0,
+        );
+
+        return Effect.succeed({ ...team, collapsed: true });
+      });
+
+      yield* organize.setCollapsed(2, true);
+
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([1]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a category sync renamed over an older reorder reply", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const renamed = { ...team, name: "People", position: 1 };
+
+      yield* fake.route("PUT /room_categories/order", () => {
+        mutations.applyEvents(
+          [{ seq: 0, topic: "user:7", type: "sidebar.category.upserted", data: renamed }],
+          0,
+        );
+
+        return Effect.succeed({
+          categories: [
+            { ...team, position: 1 },
+            { ...launch, position: 2 },
+          ],
+        });
+      });
+
+      yield* organize.reorderCategories([2, 1]);
+
+      expect(store.getState().sidebar.categories).toEqual([renamed, { ...launch, position: 2 }]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("delete a category, its rooms going back to Channels", () =>
     Effect.gen(function* () {
       seed();
@@ -322,6 +397,132 @@ describe("organize actions", () => {
       expect((yield* fake.requests).at(-1)?.path).toBe("/sidebar");
       expect(view().categories.map((category) => category.id)).toEqual([2, 1, 5]);
       expect(overlayIsEmpty()).toBe(true);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("keep a newer synced row over the sidebar a 409 refetched from before it", () =>
+    Effect.gen(function* () {
+      const pinged = { ...general, unreadCount: 3, notificationCount: 1 };
+
+      seed();
+      mutations.applyEvents(
+        [{ seq: 0, topic: "user:7", type: "sidebar.row.upserted", data: pinged }],
+        0,
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PUT /room_categories/order", () =>
+        Effect.fail(new Conflict({ message: "Stale" })),
+      );
+      yield* fake.route("GET /sidebar", () => {
+        // The snapshot is read with the ping still counted; the read's row lands over sync
+        // before the reply does.
+        mutations.applyEvents(
+          [
+            {
+              seq: 0,
+              topic: "user:7",
+              type: "sidebar.row.upserted",
+              data: { ...general, unreadCount: 0, notificationCount: 0 },
+            },
+          ],
+          0,
+        );
+
+        return Effect.succeed({
+          ...sidebarFixture([pinged, design, engineering, ada]),
+          categories: [launch, team],
+        });
+      });
+
+      yield* Effect.exit(organize.reorderCategories([2, 1]));
+
+      expect((yield* fake.requests).at(-1)?.path).toBe("/sidebar");
+      expect(store.getState().sidebar.rows[1]?.notificationCount).toBe(0);
+      expect(store.getState().sidebar.rows[1]?.unreadCount).toBe(0);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("read a 409 refetch again after a resync outdates it, then give up", () =>
+    Effect.gen(function* () {
+      const pinged = { ...general, unreadCount: 3, notificationCount: 1 };
+
+      seed();
+      mutations.applyEvents(
+        [{ seq: 0, topic: "user:7", type: "sidebar.row.upserted", data: pinged }],
+        0,
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PUT /room_categories/order", () =>
+        Effect.fail(new Conflict({ message: "Stale" })),
+      );
+      yield* fake.route("GET /sidebar", () => {
+        // While each read is on its way, a sync resync installs the read row (and no later
+        // event says so again); then the read, older than the resync, arrives.
+        mutations.resyncSidebar(
+          {
+            ...sidebarFixture([{ ...general, unreadCount: 0, notificationCount: 0 }, design]),
+            categories: [launch, team],
+          },
+          sidebarRowClock(),
+        );
+
+        return Effect.succeed({
+          ...sidebarFixture([pinged, design, engineering, ada]),
+          categories: [launch, team],
+        });
+      });
+
+      yield* Effect.exit(organize.reorderCategories([2, 1]));
+
+      const reads = (yield* fake.requests).filter((request) => request.path === "/sidebar");
+
+      expect(reads).toHaveLength(3);
+      expect(store.getState().sidebar.rows[1]?.notificationCount).toBe(0);
+      // The resync dropped these rooms; the older reads can't bring them back.
+      expect(store.getState().sidebar.rows[3]).toBeUndefined();
+      expect(store.getState().sidebar.rows[4]).toBeUndefined();
+      expect(store.getState().rowTouches.at).toEqual({});
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("land a 409 refetch read again after a resync outdated the first", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      let reads = 0;
+
+      yield* fake.route("PUT /room_categories/order", () =>
+        Effect.fail(new Conflict({ message: "Stale" })),
+      );
+      yield* fake.route("GET /sidebar", () => {
+        reads += 1;
+
+        if (reads === 1) {
+          mutations.resyncSidebar(
+            { ...sidebarFixture([general, design]), categories: [launch, team] },
+            sidebarRowClock(),
+          );
+        }
+
+        return Effect.succeed({
+          ...sidebarFixture([general, design, engineering]),
+          categories: [
+            { ...team, position: 1 },
+            { ...launch, position: 2 },
+          ],
+        });
+      });
+
+      yield* Effect.exit(organize.reorderCategories([2, 1]));
+
+      expect(reads).toBe(2);
+      expect(store.getState().sidebar.rows[3]).toEqual(engineering);
+      expect(store.getState().sidebar.categories.map((category) => category.id)).toEqual([2, 1]);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
