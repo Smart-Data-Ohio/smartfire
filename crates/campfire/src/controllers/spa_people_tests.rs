@@ -674,6 +674,7 @@ async fn check_profile(
         }
     );
     assert_eq!(profile.can_ban, person && administrator && viewer != id);
+    assert_eq!(profile.can_manage_bot, user.is_bot() && user.is_active() && administrator);
     assert_eq!(
         profile.transfer_qr_svg,
         profile
@@ -682,6 +683,33 @@ async fn check_profile(
             .and_then(qr_code::transfer_svg)
     );
     profile
+}
+
+#[tokio::test]
+async fn legacy_bot_profiles_keep_classic_actions_and_admin_visibility() {
+    let Some(a) = app().await else { return };
+    let id = a.db().write(|tx| {
+        let bot = User::create_bot(tx, "Legacy Bot", None)?;
+        assert!(campfire_db::Agent::for_user(tx.conn(), bot.id)?.is_none());
+        Ok(bot.id)
+    }).await.unwrap();
+    let member = a.db().read(|conn| {
+        Ok(conn.query_row("SELECT id FROM users WHERE name='JZ'", [], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    for viewer in [DAVID, member] {
+        let mut browser = a.sign_in(viewer).await;
+        let profile = check_profile(&a, &mut browser, viewer, id).await;
+        assert_eq!(profile.user.role, api::UserRole::Bot);
+        assert!(profile.user.agent.is_none());
+        assert!(profile.status.is_none());
+        assert!(profile.dnd_allowed.is_none());
+        assert!(profile.email_address.is_none());
+        assert!(profile.transfer_url.is_none());
+        assert!(!profile.can_ban);
+        assert_eq!(profile.can_manage_bot, viewer == DAVID);
+        let classic = browser.get(&format!("/users/{id}?classic=1")).await.text();
+        assert_eq!(classic.contains("Manage capability grants"), viewer == DAVID);
+    }
 }
 
 #[tokio::test]

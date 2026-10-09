@@ -42,7 +42,6 @@ describe("links to classic pages", () => {
   it("leave everything else to the browser", () => {
     for (const anchor of [
       link("/rooms/boards/12/edit?classic=1"),
-      link("/users/7/profile"),
       link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),
       link("https://example.com/rooms/12"),
@@ -51,5 +50,16 @@ describe("links to classic pages", () => {
     ]) {
       expect(inPlaceTarget(anchor, origin), anchor.outerHTML).toBeNull();
     }
+  });
+
+  it("opens numeric profile aliases in place and sends the viewer to settings", () => {
+    for (const path of ["/users/7", "/users/7/profile", "/users/7/profile/edit"]) {
+      expect(inPlaceTarget(link(`${path}?source=mention#profile`), origin, 7)).toBe(
+        "/app/settings?source=mention#profile",
+      );
+      expect(inPlaceTarget(link(path), origin, 8)).toBe("/app/people/7");
+    }
+
+    expect(inPlaceTarget(link("/users/me/profile/edit"), origin, 7)).toBe("/app/settings");
   });
 });

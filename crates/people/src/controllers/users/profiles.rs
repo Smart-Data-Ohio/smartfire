@@ -23,6 +23,12 @@ pub async fn show(c: &mut Ctx) -> Result {
     render_show(c, StatusCode::OK, viewer, None, None, None).await
 }
 
+/// The SPA's profile edit alias. Classic has no edit action and keeps its 404.
+pub async fn edit(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    Err(Error::NotFound)
+}
+
 /// `Some(id)` when `:user_id` names a different person. `me` and the viewer's own id are `None`.
 async fn other_person(c: &Ctx, viewer_id: i64) -> Result<Option<i64>> {
     let Some(param) = c.param_str("user_id") else {

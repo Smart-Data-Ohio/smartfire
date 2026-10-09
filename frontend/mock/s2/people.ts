@@ -89,6 +89,7 @@ export function createPeople(ctx: S2Context, requireSudo: () => void): PeopleMod
       transferUrl,
       transferQrSvg: transferUrl === null ? null : MOCK_TRANSFER_QR_SVG,
       canBan: admin && person && other,
+      canManageBot: user.role === "bot" && user.status === "active" && admin,
     };
   };
 

@@ -525,7 +525,7 @@ const peopleRoute = createRoute({
   ),
 });
 
-/** `/app/people/$userId`: someone's page (a bot's opens its agent or classic page). */
+/** `/app/people/$userId`: someone's page, or settings for the viewer's own id. */
 const personRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "people/$userId",

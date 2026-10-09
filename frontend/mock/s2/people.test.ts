@@ -61,8 +61,23 @@ describe("the mock's people pages", () => {
 
     expect(bot.status).toBeNull();
     expect(bot.canBan).toBe(false);
+    expect(bot.canManageBot).toBe(true);
     expect(gone.status).toBeNull();
     expect(gone.emailAddress).toBeNull();
+  });
+
+  it("shows legacy bots and gives only administrators their grants link", async () => {
+    const { server } = harness();
+
+    await get(server, "/api/v1/admin/bots");
+    const bot = await get<PersonProfile>(server, "/api/v1/people/900");
+
+    Schema.decodeUnknownSync(PersonProfileSchema)(bot);
+    expect(bot.user.name).toBe("Deploy Bot");
+    expect(bot.user.agent).toBeNull();
+    expect(bot.canManageBot).toBe(true);
+    await send(server, "POST", "/__mock/viewer-role", { role: "member" });
+    expect((await get<PersonProfile>(server, "/api/v1/people/900")).canManageBot).toBe(false);
   });
 
   it("bans and removes the ban, asking for the password once it has lapsed", async () => {
