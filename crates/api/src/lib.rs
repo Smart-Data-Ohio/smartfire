@@ -37,6 +37,7 @@ pub mod huddles;
 pub mod join;
 pub mod message_actions;
 pub mod organize;
+pub mod room_integrations;
 pub mod room_management;
 pub mod people;
 pub mod search;
@@ -96,6 +97,21 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route("/api/v1/rooms", post(unparsed_action(room_management::create)))
         .route("/api/v1/rooms/new", get(action(room_management::new)))
         .route("/api/v1/rooms/{room_id}/edit", get(action(room_management::edit)))
+        .route(
+            "/api/v1/rooms/{room_id}/github_subscriptions",
+            get(action(room_integrations::github_subscriptions))
+                .post(unparsed_action(room_integrations::subscribe_repository)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/github_subscriptions/{id}",
+            patch(unparsed_action(room_integrations::update_github_subscription))
+                .delete(action(room_integrations::unsubscribe_repository)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/inbound_email",
+            get(action(room_integrations::inbound_email))
+                .post(action(room_integrations::rotate_inbound_email)),
+        )
         .route("/api/v1/rooms/{room_id}/membership", delete(action(room_management::leave)))
         .route("/api/v1/rooms/{room_id}/preview", get(action(join::preview)))
         .route("/api/v1/rooms/{room_id}/join", post(action(join::join)))
