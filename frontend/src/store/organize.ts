@@ -5,6 +5,7 @@
  */
 import type { Involvement } from "../gen/Involvement.ts";
 import type { Membership, RoomCategory, SidebarRow } from "./model.ts";
+import { touchedSince } from "./row-touches.ts";
 import type { SidebarState, State } from "./state.ts";
 
 /** The organisation fields a pending change can set on a membership. */
@@ -221,7 +222,7 @@ export function removeCategory(state: State, categoryId: number): State {
  * Lands an organising reply's rows the sidebar already has, taking only what organising changes:
  * the category, the favourite position and the involvement (the room header's copy follows). The
  * reply may be older than a sync event that has since brought newer read state or counts, which
- * stay.
+ * stay. The fields it takes are the ones the viewer's own change set, so the reply owns them.
  */
 export function mergeOrganization(state: State, replies: readonly SidebarRow[]): State {
   const rows = { ...state.sidebar.rows };
@@ -267,10 +268,18 @@ export function setDetailMembership(state: State, membership: Membership): State
 
 /**
  * The viewer's membership changed (an involvement reply): the sidebar row, when the room has
- * one, and the room header take it.
+ * one, and the room header take it. The reply owns the involvement it set; the rest of the
+ * membership (read state above all) is taken only if the sync path hasn't changed the row since
+ * the request began (`since`, a `rowClock`), as a newer row's copy is newer than the reply's.
  */
-export function setMembership(state: State, membership: Membership): State {
-  const row = state.sidebar.rows[membership.roomId];
+export function setMembership(state: State, reply: Membership, since: number): State {
+  const row = state.sidebar.rows[reply.roomId];
+  const current = row?.membership ?? state.rooms[reply.roomId]?.detail?.membership;
+
+  const membership =
+    current !== undefined && touchedSince(state, reply.roomId, since)
+      ? { ...current, involvement: reply.involvement }
+      : reply;
 
   const next =
     row === undefined

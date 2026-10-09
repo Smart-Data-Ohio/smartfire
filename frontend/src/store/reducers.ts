@@ -27,6 +27,7 @@ import type {
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { removeCategory, upsertCategory } from "./organize.ts";
+import { changedRowIds, touchedSince, touchRows } from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -69,19 +70,37 @@ function sortSidebarOrder(rows: Readonly<Record<number, SidebarRow>>): readonly 
     .map((row) => row.room.id);
 }
 
-export function loadSidebar(state: State, sidebar: Sidebar): State {
+/**
+ * Installs a whole-sidebar snapshot. `since` is the `rowClock` taken before its request: a room
+ * the sync path changed after that keeps the store's row, or stays gone if sync removed it, and
+ * a row sync added that the snapshot predates stays too.
+ */
+export function loadSidebar(state: State, sidebar: Sidebar, since: number): State {
   const rows: Record<number, SidebarRow> = {};
+  const installed: SidebarRow[] = [];
 
   for (const row of sidebar.rows) {
-    rows[row.room.id] = row;
+    if (!touchedSince(state, row.room.id, since)) {
+      rows[row.room.id] = row;
+      installed.push(row);
+    }
   }
+
+  for (const row of Object.values(state.sidebar.rows)) {
+    if (touchedSince(state, row.room.id, since)) {
+      rows[row.room.id] = row;
+    }
+  }
+
+  const listed = sidebar.rows.map((row) => row.room.id).filter((id) => rows[id] !== undefined);
 
   let next: State = {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
       status: "ready",
-      order: sidebar.rows.map((row) => row.room.id),
+      // A row sync added that the snapshot predates takes its sorted place, as an upsert would.
+      order: listed.length === Object.keys(rows).length ? listed : sortSidebarOrder(rows),
       rows,
       categories: sidebar.categories,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
@@ -90,7 +109,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
     },
   };
 
-  for (const row of sidebar.rows) {
+  for (const row of installed) {
     next = setDetailRow(next, row);
   }
 
@@ -601,12 +620,23 @@ export function moveUnreadDivider(state: State, roomId: number, fromId: number):
 
 /**
  * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
- * what the divider counts (at least 1, when the message is outside the loaded window).
+ * what the divider counts (at least 1, when the message is outside the loaded window). A row the
+ * sync path changed after the request began (`since`, a `rowClock`) is newer, so it stays.
  */
-export function markUnreadFrom(state: State, roomId: number, fromId: number, now: number): State {
+export function markUnreadFrom(
+  state: State,
+  roomId: number,
+  fromId: number,
+  now: number,
+  since: number,
+): State {
   const moved = moveUnreadDivider(state, roomId, fromId);
   const timeline = moved.timelines[roomId];
   const count = timeline?.unreadFromId === fromId ? timeline.unreadCount : 0;
+
+  if (touchedSince(moved, roomId, since)) {
+    return moved;
+  }
 
   return updateRow(moved, roomId, (row) => ({
     ...row,
@@ -943,8 +973,18 @@ function roomUnread(
   }));
 }
 
-/** Applies one batch of sync events, in order, as a single state change. */
-export function applyEvents(state: State, events: readonly SyncEvent[], now: number): State {
+/**
+ * Applies one batch of sync events, in order, as a single state change. Rows the batch changes
+ * are touched, so an HTTP reply older than them leaves them be. A `reply` batch is an HTTP
+ * reply's rows put through the same reducers (already filtered by `untouchedReplyEvents`), so it
+ * touches nothing.
+ */
+export function applyEvents(
+  state: State,
+  events: readonly SyncEvent[],
+  now: number,
+  source: "sync" | "reply" = "sync",
+): State {
   const meId = state.me?.user.id ?? state.boot?.user.id ?? null;
   let next = state;
 
@@ -1066,7 +1106,9 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
     }
   }
 
-  return next;
+  return source === "sync"
+    ? touchRows(next, changedRowIds(state.sidebar.rows, next.sidebar.rows))
+    : next;
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */

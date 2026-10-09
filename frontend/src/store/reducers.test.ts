@@ -289,13 +289,17 @@ describe("sidebar counts", () => {
   };
 
   it("counts room.unread events and clears on read", () => {
-    const loaded = loadSidebar(initialState, {
-      rows: [row],
-      categories: [],
-      users: [],
-      directPlaceholderUserIds: [],
-      canCreateRooms: true,
-    });
+    const loaded = loadSidebar(
+      initialState,
+      {
+        rows: [row],
+        categories: [],
+        users: [],
+        directPlaceholderUserIds: [],
+        canCreateRooms: true,
+      },
+      0,
+    );
 
     const unread = applyEvents(
       loaded,
@@ -341,13 +345,17 @@ describe("sidebar counts", () => {
       membership: { ...row.membership, unreadAt: "2026-10-05T00:00:00.000Z" },
     };
 
-    const loaded = loadSidebar(initialState, {
-      rows: [pinged],
-      categories: [],
-      users: [],
-      directPlaceholderUserIds: [],
-      canCreateRooms: true,
-    });
+    const loaded = loadSidebar(
+      initialState,
+      {
+        rows: [pinged],
+        categories: [],
+        users: [],
+        directPlaceholderUserIds: [],
+        canCreateRooms: true,
+      },
+      0,
+    );
 
     expect(markRoomRead(loaded, ROOM).sidebar.rows[ROOM]).toMatchObject({
       unreadCount: 0,

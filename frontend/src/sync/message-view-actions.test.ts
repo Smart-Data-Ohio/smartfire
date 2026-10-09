@@ -9,7 +9,7 @@ import {
   sidebarRowFixture,
   userFixture,
 } from "../api/testing.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { customIcons, ensureUsers, markUnreadFrom } from "./message-view-actions.ts";
 
 const ROOM = 12;
@@ -42,7 +42,10 @@ describe("message view actions", () => {
     Effect.gen(function* () {
       mutations.reset();
       mutations.setMe(meFixture);
-      mutations.loadSidebar(sidebarFixture([sidebarRowFixture(ROOM, "general")]));
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
 
       const fake = yield* FakeApi;
 
@@ -66,7 +69,10 @@ describe("message view actions", () => {
     Effect.gen(function* () {
       mutations.reset();
       mutations.setMe(meFixture);
-      mutations.loadSidebar(sidebarFixture([sidebarRowFixture(ROOM, "general")]));
+      mutations.loadSidebar(
+        sidebarFixture([sidebarRowFixture(ROOM, "general")]),
+        sidebarRowClock(),
+      );
       mutations.applyPage(
         ROOM,
         pageFixture([39, 40, 41, 42].map((id) => messageFixture(id, ROOM))),

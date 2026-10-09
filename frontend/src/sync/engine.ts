@@ -23,7 +23,7 @@ import { beginRoomRequest } from "../store/join-state.ts";
 import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import type { SidebarState } from "../store/state.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { captureWorkRead, workDetailStale } from "../store/work.ts";
 import { ACTIVITY_REQUEST_TIMEOUT, loadUnreadCount } from "./activity-actions.ts";
 import { Cursor } from "./cursor.ts";
@@ -484,10 +484,12 @@ export class Engine extends Context.Service<
           const threadId = threadIdOf(topic);
 
           if (topic === "user") {
+            const since = sidebarRowClock();
+
             yield* sidebar().pipe(
               Effect.tap((data) =>
                 Effect.sync(() => {
-                  mutations.loadSidebar(data);
+                  mutations.loadSidebar(data, since);
                   // The snapshot is newer than any room write still on its way.
                   markSidebarSnapshot();
                 }),

@@ -21,7 +21,7 @@ import type { SidebarRow } from "../gen/SidebarRow.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { activityListOf } from "../store/activity.ts";
 import { beginRoomRequest } from "../store/join-state.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { MAX_REMOVED_THREADS } from "../store/threads.ts";
 import { BOARD, boardDetail, boardListing, boardThread } from "../test/board-fixtures.ts";
 import * as activity from "./activity-actions.ts";
@@ -761,7 +761,7 @@ describe("resuming", () => {
 
           // The page loaded the sidebar with 41 and 42 already counted.
           yield* serve([]);
-          mutations.loadSidebar(counted(2));
+          mutations.loadSidebar(counted(2), sidebarRowClock());
           // By the time the socket says welcome, 43 has happened too.
           yield* api.reply("GET /sidebar", counted(3));
           yield* startEngine;
@@ -1121,7 +1121,10 @@ describe("resuming", () => {
           const socket = yield* MemorySocket;
 
           yield* serve([]);
-          mutations.loadSidebar(sidebarFixture([sidebarRowFixture(12, "general")]));
+          mutations.loadSidebar(
+            sidebarFixture([sidebarRowFixture(12, "general")]),
+            sidebarRowClock(),
+          );
           yield* startEngine;
           yield* welcome(40, true);
           yield* socket.drop;
@@ -4148,7 +4151,7 @@ describe("joining an open room", () => {
         expect(store.getState().rooms[12]?.detail?.membership.userId).toBe(7);
 
         yield* session.closeRoom(12);
-        mutations.loadSidebar(sidebarFixture([]));
+        mutations.loadSidebar(sidebarFixture([]), sidebarRowClock());
         markSidebarSnapshot();
 
         expect(store.getState().rooms[12]?.detail).not.toBeNull();

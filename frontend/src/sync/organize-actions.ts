@@ -22,7 +22,7 @@ import {
   type RoomSlot,
   type SidebarOverlay,
 } from "../store/organize.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 
 /** One server change at a time, in order. */
 const lock = Semaphore.makeUnsafe(1);
@@ -74,9 +74,13 @@ const pending = <A, E, R>(entry: SidebarOverlay, change: Effect.Effect<A, E, R>)
 /**
  * Lands an organising reply's rows: for a row the sidebar has, only the organisation fields (the
  * reply may be older than a sync event with newer counts); a row it lacks lands whole, through
- * the reducer the `sidebar.row.upserted` event uses.
+ * the reducer the `sidebar.row.upserted` event uses, unless the sync path changed (or removed) it
+ * after `since`, the `sidebarRowClock()` taken before the request.
  */
-const landRows = Effect.fn("organize.landRows")(function* (rows: readonly SidebarRow[]) {
+const landRows = Effect.fn("organize.landRows")(function* (
+  rows: readonly SidebarRow[],
+  since: number,
+) {
   const state = store.getState();
   const viewerId = state.me?.user.id ?? state.boot?.user.id ?? 0;
 
@@ -90,16 +94,24 @@ const landRows = Effect.fn("organize.landRows")(function* (rows: readonly Sideba
   mutations.mergeOrganization(rows);
 
   if (fresh.length > 0) {
-    mutations.applyEvents(fresh, yield* Clock.currentTimeMillis);
+    mutations.landReplyRows(fresh, yield* Clock.currentTimeMillis, since);
   }
 });
 
 /** The server's copy of a row, without pending changes: what the next call starts from. */
 const serverRow = (roomId: number) => store.getState().sidebar.rows[roomId];
 
-/** Loads the sidebar again (after a 409, the list the client sent was stale). */
-const refetchSidebar = fetchSidebar().pipe(
-  Effect.tap((sidebar) => Effect.sync(() => mutations.loadSidebar(sidebar))),
+/**
+ * Loads the sidebar again (after a 409, the list the client sent was stale). Rows the sync path
+ * changed while it was on its way are newer than it, so they stay.
+ */
+const refetchSidebar = Effect.suspend(() => {
+  const since = sidebarRowClock();
+
+  return fetchSidebar().pipe(
+    Effect.tap((sidebar) => Effect.sync(() => mutations.loadSidebar(sidebar, since))),
+  );
+}).pipe(
   Effect.catch((error) => Effect.logWarning("organize: sidebar refetch failed", error.message)),
 );
 
@@ -141,7 +153,9 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
   if (slot.kind === "favorite") {
     if (!favorite) {
-      yield* landRows([yield* api.favorite(roomId)]);
+      const since = sidebarRowClock();
+
+      yield* landRows([yield* api.favorite(roomId)], since);
     }
 
     const others = favoriteRows(store.getState().sidebar).filter(
@@ -150,20 +164,26 @@ const placeOnServer = Effect.fn("organize.placeOnServer")(function* (
 
     // A new favourite lands at the end, which may already be where it was dropped.
     if (favorite || slot.index < others.length) {
-      yield* landRows((yield* api.moveFavorite(roomId, slot.index)).rows);
+      const since = sidebarRowClock();
+
+      yield* landRows((yield* api.moveFavorite(roomId, slot.index)).rows, since);
     }
 
     return;
   }
 
   if (favorite) {
-    yield* landRows([yield* api.unfavorite(roomId)]);
+    const since = sidebarRowClock();
+
+    yield* landRows([yield* api.unfavorite(roomId)], since);
   }
 
   const categoryId = categoryAfter(slot, row.membership.roomCategoryId);
 
   if (canCategorize(row) && categoryId !== row.membership.roomCategoryId) {
-    yield* landRows([yield* api.assignCategory(roomId, categoryId)]);
+    const since = sidebarRowClock();
+
+    yield* landRows([yield* api.assignCategory(roomId, categoryId)], since);
   }
 });
 
@@ -363,7 +383,9 @@ export const setInvolvement = Effect.fn("organize.setInvolvement")(function* (
   yield* pending(
     memberships({ [roomId]: patch }),
     Effect.gen(function* () {
-      mutations.setMembership(yield* api.updateInvolvement(roomId, involvement));
+      const since = sidebarRowClock();
+
+      mutations.setMembership(yield* api.updateInvolvement(roomId, involvement), since);
     }),
   );
 });

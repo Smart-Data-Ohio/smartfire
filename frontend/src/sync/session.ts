@@ -27,7 +27,7 @@ import {
   resetJoinState,
   resetRoomRereads,
 } from "../store/join-state.ts";
-import { mutations, store } from "../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import {
@@ -110,6 +110,8 @@ export const start = Effect.fn("session.start")(function* () {
   mutations.setMe(yield* me());
   mutations.setSidebarLoading();
 
+  const since = sidebarRowClock();
+
   const loaded = yield* sidebar().pipe(
     Effect.tapError(() => Effect.sync(() => mutations.setSidebarFailed())),
     Effect.option,
@@ -119,7 +121,7 @@ export const start = Effect.fn("session.start")(function* () {
     return;
   }
 
-  mutations.loadSidebar(loaded.value);
+  mutations.loadSidebar(loaded.value, since);
 
   const ids = presenceIds(loaded.value);
 
@@ -334,6 +336,7 @@ const installJoined = Effect.fnUntraced(function* (
   detail: RoomDetail,
   row: SidebarRow | null,
   started: number,
+  rowsSince: number,
 ) {
   if (!mutations.setRoomDetail(detail, started)) {
     return;
@@ -342,9 +345,10 @@ const installJoined = Effect.fnUntraced(function* (
   if (row !== null) {
     const viewerId = store.getState().me?.user.id ?? store.getState().boot?.user.id ?? 0;
 
-    mutations.applyEvents(
+    mutations.landReplyRows(
       [{ seq: 0, topic: `user:${viewerId}`, type: "sidebar.row.upserted", data: row }],
       yield* Clock.currentTimeMillis,
+      rowsSince,
     );
   }
 
@@ -398,7 +402,13 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
     if (Result.isSuccess(fetched) && !superseded) {
       const row = store.getState().sidebar.rows[roomId];
 
-      yield* installJoined(roomId, withSidebarRow(fetched.success, row), null, started);
+      yield* installJoined(
+        roomId,
+        withSidebarRow(fetched.success, row),
+        null,
+        started,
+        sidebarRowClock(),
+      );
 
       return;
     }
@@ -429,6 +439,7 @@ const recoverJoin = Effect.fnUntraced(function* (roomId: number) {
  */
 export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId: number) {
   const since = managementEpoch();
+  const rowsSince = sidebarRowClock();
   const token = visits.get(roomId)?.token ?? null;
   const joined = yield* postJoin(roomId);
   const topics = yield* Topics;
@@ -441,7 +452,7 @@ export const joinOpenRoom = Effect.fn("session.joinOpenRoom")(function* (roomId:
     return;
   }
 
-  yield* installJoined(roomId, joined.detail, joined.row, beginRoomRequest());
+  yield* installJoined(roomId, joined.detail, joined.row, beginRoomRequest(), rowsSince);
 });
 
 /**

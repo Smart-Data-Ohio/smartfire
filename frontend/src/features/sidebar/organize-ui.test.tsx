@@ -5,7 +5,7 @@ import { SEED_IDS } from "../../../mock/server.ts";
 import type { Sidebar } from "../../gen/Sidebar.ts";
 import type { RoomCategory, RoomKind, SidebarRow } from "../../store/model.ts";
 import { favoriteRows, organizedSidebar } from "../../store/organize.ts";
-import { mutations, store } from "../../store/store.ts";
+import { mutations, sidebarRowClock, store } from "../../store/store.ts";
 import { installMockNetwork, type MockNetwork } from "../../test/mock-network.ts";
 import { Button } from "../../ui/button.tsx";
 import { Menu } from "../../ui/menu.tsx";
@@ -35,7 +35,7 @@ beforeEach(async () => {
   const sidebar: Sidebar = await (await fetch("/api/v1/sidebar")).json();
 
   mutations.reset();
-  mutations.loadSidebar(sidebar);
+  mutations.loadSidebar(sidebar, sidebarRowClock());
 });
 
 /** The viewer's row for a room as the sidebar draws it, pending changes included. */
