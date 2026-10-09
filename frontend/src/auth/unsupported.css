@@ -50,6 +50,7 @@ body.auth.auth--unsupported {
 
   margin: 0;
   min-height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: browsers without dvh keep the vh line. */
   min-height: 100dvh;
   padding: 40px 16px;
   background: #f7f8f9;
@@ -388,10 +389,12 @@ body.auth.auth--unsupported .language-list-menu {
   margin-left: var(--inline-space);
   margin-right: var(--inline-space);
   inline-size: max-content;
+  /* biome-ignore lint/suspicious/noShorthandPropertyOverrides: the physical longhands are the fallback for browsers without inset. */
   inset: auto;
   margin-inline: var(--inline-space);
   max-inline-size: min(var(--max-width), 40ch);
   overflow: hidden;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: browsers without clip keep hidden. */
   overflow: clip;
   position: absolute;
   z-index: 3;
