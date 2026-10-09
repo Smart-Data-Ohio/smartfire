@@ -13,6 +13,7 @@ import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
+import { holdCardsChunk } from "../cards/card-slot.tsx";
 import { Timeline } from "./timeline.tsx";
 import { timelineItems } from "./timeline-items.ts";
 
@@ -26,20 +27,8 @@ const ANCHOR_ATTEMPTS = 30;
 /** How long a permalink may stay hidden on a window or cards that never arrive. */
 const PLACEMENT_WAIT_MS = 2000;
 
-const cardsGate = vi.hoisted(() => ({ settled: true }));
-
-vi.mock("../cards/card-slot.tsx", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../cards/card-slot.tsx")>();
-
-  return {
-    ...actual,
-    useCardsChunkSettled: () => {
-      const settled = actual.useCardsChunkSettled();
-
-      return cardsGate.settled && settled;
-    },
-  };
-});
+/** Releases a cards-chunk hold started by the test that stalls settlement. */
+let releaseCards: (() => void) | null = null;
 
 const frames = new Map<number, FrameRequestCallback>();
 
@@ -209,7 +198,8 @@ describe("permalink placement", () => {
 
   beforeEach(() => {
     store.setState(initialState, true);
-    cardsGate.settled = true;
+    releaseCards?.();
+    releaseCards = null;
     emitScroll = false;
     scrolls.length = 0;
     frames.clear();
@@ -250,6 +240,8 @@ describe("permalink placement", () => {
   });
 
   afterEach(() => {
+    releaseCards?.();
+    releaseCards = null;
     restoreMeasure?.();
     restoreMeasure = null;
 
@@ -454,7 +446,7 @@ describe("permalink placement", () => {
     let now = 0;
 
     vi.spyOn(performance, "now").mockImplementation(() => now);
-    cardsGate.settled = false;
+    releaseCards = holdCardsChunk();
     // Short rows, so the released list is within a page of the newer edge.
     restoreMeasure = measureList(24, 24);
     install([1, 2, FOCUS, 4], { after: 4 });
