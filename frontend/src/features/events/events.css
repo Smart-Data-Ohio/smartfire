@@ -641,6 +641,11 @@
       padding-inline: var(--space-4);
     }
 
+    /* The header's back button leads back instead. */
+    .ev-crumb {
+      display: none;
+    }
+
     .ev-form-times,
     .ev-form-repeat {
       grid-template-columns: minmax(0, 1fr);

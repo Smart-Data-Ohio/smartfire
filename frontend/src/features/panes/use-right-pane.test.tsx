@@ -53,6 +53,12 @@ function Probe() {
       <button type="button" onClick={() => navigation.openThread(7)}>
         Thread
       </button>
+      <button type="button" onClick={() => navigation.toggle("details")}>
+        Details
+      </button>
+      <button type="button" onClick={() => navigation.push("files")}>
+        Push files
+      </button>
       {navigation.view?.kind === "pane" && navigation.view.pane === "threads" ? (
         <ThreadListProbe roomId={roomId ?? 0} />
       ) : null}
@@ -248,5 +254,28 @@ describe("URL pane navigation", () => {
     await act(async () => router.history.back());
     await waitFor(() => expect(router.state.location.pathname).toBe("/r/4/notifications"));
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("null"));
+  });
+
+  it("pushes a pane over the details, and Back returns to them before closing", async () => {
+    const router = await mount("/r/4");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.click(screen.getByRole("button", { name: "Push files" }));
+    expect(router.state.location.pathname).toBe("/r/4");
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"files"}');
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"details"}');
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("status").textContent).toBe("null");
+  });
+
+  it("pushes a pane from a routed list without keeping the list to return to", async () => {
+    const router = await mount("/r/4/pins");
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Push files" }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/r/4"));
+    expect(screen.getByRole("status").textContent).toBe('{"kind":"pane","pane":"files"}');
   });
 });

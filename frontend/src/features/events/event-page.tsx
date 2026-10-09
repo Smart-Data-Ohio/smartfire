@@ -9,10 +9,12 @@ import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Icon, type IconName } from "../../ui/icons/icon.tsx";
+import { MenuItem } from "../../ui/menu.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PaneEmpty, PaneError } from "../panes/pane-states.tsx";
+import { usePhoneLayout } from "../panes/use-right-pane.ts";
 import { EventFormDialog } from "./event-form-dialog.tsx";
 import { EventTileMark, EventWhen } from "./event-format.tsx";
 import { overPageState, useCloseOverlay } from "./overlay-history.ts";
@@ -430,6 +432,7 @@ export function EventRoute() {
   const editing = matchRoute({ to: "/r/$roomId/events/$eventId/edit" }) !== false;
   const answering = matchRoute({ to: "/r/$roomId/events/$eventId/attendance" }) !== false;
   const [cancelling, setCancelling] = useState(false);
+  const phone = usePhoneLayout();
   const read = () => actions.events.read(roomId, eventId);
   const { state, reload, refresh, begin } = useLoad(`${roomId}/${eventId}`, read);
   const detail = state.status === "ready" ? state.value : null;
@@ -463,25 +466,47 @@ export function EventRoute() {
     }
   };
 
-  const manage =
-    detail?.manageable === true && !detail.event.cancelled ? (
-      <>
-        <Link
-          to="/r/$roomId/events/$eventId/edit"
-          params={{ roomId, eventId }}
-          state={overPageState()}
-          className="button"
-          data-variant="secondary"
-          data-size="sm"
-        >
-          <Icon name="pencil" size={14} />
-          Edit
-        </Link>
-        <Button variant="ghost" size="sm" icon="ban" onClick={() => setCancelling(true)}>
-          Cancel event
-        </Button>
-      </>
-    ) : null;
+  const manageable = detail?.manageable === true && !detail.event.cancelled;
+
+  const manage = manageable ? (
+    <>
+      <Link
+        to="/r/$roomId/events/$eventId/edit"
+        params={{ roomId, eventId }}
+        state={overPageState()}
+        className="button"
+        data-variant="secondary"
+        data-size="sm"
+      >
+        <Icon name="pencil" size={14} />
+        Edit
+      </Link>
+      <Button variant="ghost" size="sm" icon="ban" onClick={() => setCancelling(true)}>
+        Cancel event
+      </Button>
+    </>
+  ) : null;
+
+  // A phone's header has no room for two text buttons beside the title: they go in its ⋯ menu.
+  const manageItems = manageable ? (
+    <>
+      <MenuItem
+        icon="pencil"
+        onSelect={() =>
+          void navigate({
+            to: "/r/$roomId/events/$eventId/edit",
+            params: { roomId, eventId },
+            state: overPageState(),
+          })
+        }
+      >
+        Edit
+      </MenuItem>
+      <MenuItem icon="ban" tone="danger" onSelect={() => setCancelling(true)}>
+        Cancel event
+      </MenuItem>
+    </>
+  ) : undefined;
 
   return (
     <PageFrame
@@ -494,7 +519,12 @@ export function EventRoute() {
           </span>
         ) : null
       }
-      tools={manage ?? undefined}
+      back={{
+        label: detail === null ? "All events" : `All events in ${detail.roomName}`,
+        link: (props) => <Link to="/r/$roomId/events" params={{ roomId }} {...props} />,
+      }}
+      tools={phone ? undefined : (manage ?? undefined)}
+      overflow={phone ? manageItems : undefined}
     >
       <div className="ev-scroll">
         <Link to="/r/$roomId/events" params={{ roomId }} className="ev-crumb">

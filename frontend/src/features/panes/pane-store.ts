@@ -2,13 +2,25 @@ import { useStore as useZustand } from "zustand";
 import { createStore } from "zustand/vanilla";
 
 /** The right pane's non-thread views. An open thread is in the URL (`/r/$roomId/t/$threadId`). */
-export type PaneKind = "members" | "pins" | "files" | "threads" | "stage" | "automations";
+export type PaneKind =
+  | "members"
+  | "pins"
+  | "files"
+  | "threads"
+  | "stage"
+  | "details"
+  | "automations";
 
 /** The existing side panes that also have classic page mappings. */
 export type RoutePaneKind = Extract<PaneKind, "threads" | "files" | "pins" | "automations">;
 
 type OpenPane =
-  | { readonly kind: "local"; readonly pane: PaneKind }
+  | {
+      readonly kind: "local";
+      readonly pane: PaneKind;
+      /** The pane it was opened from (a room's details), which its back button returns to. */
+      readonly from: PaneKind | null;
+    }
   | { readonly kind: "route"; readonly pane: RoutePaneKind; readonly roomId: number };
 
 interface PaneState {
@@ -26,8 +38,13 @@ export function useOpenPane(roomId: number): PaneKind | null {
   });
 }
 
-export function openPane(open: PaneKind | null): void {
-  paneStore.setState({ open: open === null ? null : { kind: "local", pane: open } });
+export function openPane(open: PaneKind | null, from: PaneKind | null = null): void {
+  paneStore.setState({ open: open === null ? null : { kind: "local", pane: open, from } });
+}
+
+/** The pane the open local pane was opened from, or null. */
+export function useOpenPaneFrom(): PaneKind | null {
+  return useZustand(paneStore, (state) => (state.open?.kind === "local" ? state.open.from : null));
 }
 
 /** Remembers the URL list under a thread, so Back returns to the list's URL too. */
@@ -53,6 +70,6 @@ export function clearRoutePane(roomId?: number): void {
 /** Header buttons toggle their pane. */
 export function togglePane(kind: PaneKind): void {
   paneStore.setState((state) => ({
-    open: state.open?.pane === kind ? null : { kind: "local", pane: kind },
+    open: state.open?.pane === kind ? null : { kind: "local", pane: kind, from: null },
   }));
 }

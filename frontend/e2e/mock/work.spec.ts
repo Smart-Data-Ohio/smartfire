@@ -1,7 +1,16 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
 import { S4_BOARD, S4_BOARD_POST_IDS, S4_WORK_IDS } from "../../mock/s4/seed.ts";
-import { expect, matrix, openApp, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import {
+  expect,
+  matrix,
+  openApp,
+  openHeaderTool,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+} from "./support.ts";
 
 const GENERAL = ROOM_IDS.general;
 
@@ -204,7 +213,7 @@ test("tracking a thread as work, then stopping", async ({ page }) => {
 
 matrix("work on the Threads pane's rows", async ({ page, theme }) => {
   await open(page, `r/${GENERAL}`, theme);
-  await page.locator(".room-header").getByRole("button", { name: "Threads" }).click();
+  await openHeaderTool(page, "Threads");
 
   const row = pane(page).getByRole("button", { name: new RegExp(AGENT_OWNED) });
 

@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { AGENT_IDS } from "../../mock/s4/agents.ts";
-import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import { expect, matrix, openApp, openHeaderTool, ROOM_IDS, shot, test } from "./support.ts";
 
 const { ember: EMBER, scout: SCOUT, quill: QUILL } = AGENT_IDS;
 
@@ -180,11 +180,7 @@ test("clicking an agent's name in a message opens its profile", async ({ page })
 
 matrix("the agent badge in the members pane", async ({ page, theme }) => {
   await openRoom(page, ROOM_IDS.general, theme);
-  await page
-    .locator(".room-header")
-    .getByRole("button", { name: /^Members/ })
-    .first()
-    .click();
+  await openHeaderTool(page, /^Members/);
 
   const pane = page.locator("aside.right-pane");
   const ember = pane.locator("li").filter({ hasText: "Ember" }).first();

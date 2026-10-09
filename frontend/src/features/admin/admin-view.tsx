@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { admin } from "../../sync/admin.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { PageHeader } from "../../ui/page-header.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { visibleSections } from "./admin-format.ts";
@@ -68,13 +69,19 @@ export function AdminView() {
 
   return (
     <div className="settings">
-      <header className="settings-header">
-        <Link to="/" className="settings-back" aria-label="Back to conversations">
-          <Icon name="chevron-left" size={20} />
-        </Link>
-        <Icon name="home" size={18} className="settings-header-icon" />
-        <span className="settings-header-title text-title">Workspace</span>
-      </header>
+      <PageHeader
+        className="settings-header"
+        back={{
+          label: "Back to conversations",
+          link: (props) => <Link to="/" {...props} />,
+        }}
+        title={
+          <>
+            <Icon name="home" size={18} className="settings-header-icon" />
+            <span className="settings-header-title text-title">Workspace</span>
+          </>
+        }
+      />
       <div className="settings-body">
         <nav className="settings-nav" aria-label="Workspace sections">
           <ul>

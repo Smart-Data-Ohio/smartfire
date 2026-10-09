@@ -41,19 +41,11 @@
     flex-direction: column;
   }
 
-  /* ── Header ────────────────────────────────────────────────────────────── */
+  /* ── Header ──────────────────────────────────────────────────────────── */
 
-  .room-header {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-2);
-    height: var(--pane-header-height);
-    padding: 0 var(--space-3) 0 var(--space-5);
-    box-shadow: 0 1px 0 var(--border);
-    z-index: 2;
-  }
+  /* The header is a PageHeader (src/ui/page-header.css); these are its title's parts. */
 
+  /* The search page's back chevron, which looks like the header's. */
   .room-back {
     display: none;
     place-items: center;
@@ -123,13 +115,6 @@
 
   .room-header-agent[data-tone="failed"] {
     color: var(--danger-text);
-  }
-
-  .room-header-tools {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    gap: var(--space-1);
   }
 
   /* ── Timeline ──────────────────────────────────────────────────────────── */
@@ -619,18 +604,58 @@
   /* ── Phones ────────────────────────────────────────────────────────────── */
 
   @media (width < 720px) {
-    .room-header {
-      padding: 0 var(--space-2);
-    }
-
     .room-back {
       display: grid;
     }
 
-    /* Nine tools at the touch size would push the back button and title off a 360 px screen, so
-       they keep the desktop size until the header folds them into an overflow menu. */
-    .room-header-tools {
-      --control-md: 32px;
+    /* The title: one button holding the name over its member count or the person's status,
+       taking all the width the back button, the call and the ⋯ menu leave. */
+    h1.room-title {
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+    }
+
+    .room-title .room-title-button {
+      flex: 1;
+      min-height: var(--touch-target);
+      margin-inline: 0;
+      padding: 0 var(--space-1-5);
+      text-align: start;
+    }
+
+    .room-title-text {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .room-title .room-title-text .room-title-name {
+      max-width: none;
+      font-weight: var(--weight-semibold);
+      line-height: 20px;
+    }
+
+    .room-title-text .room-header-topic {
+      padding-left: 0;
+      margin-left: 0;
+      border-left: 0;
+      font-size: var(--text-meta);
+      line-height: 16px;
+    }
+
+    /* The call button at the touch size, its glyph alone; who's in the call shows in the call
+       strip under the header. */
+    .room-header .huddle-launcher {
+      --button-height: var(--touch-target);
+
+      width: var(--touch-target);
+      padding-inline: 0;
+    }
+
+    .room-header .huddle-stack {
+      display: none;
     }
 
     .message,

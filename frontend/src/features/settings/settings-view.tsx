@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Settings } from "../../gen/Settings.ts";
 import { settings as settingsActions } from "../../sync/settings.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { PageHeader } from "../../ui/page-header.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { PaneError } from "../panes/pane-states.tsx";
 import { SECTIONS } from "./settings-format.ts";
@@ -72,13 +73,19 @@ export function SettingsView() {
 
   return (
     <div className="settings">
-      <header className="settings-header">
-        <Link to="/" className="settings-back" aria-label="Back to conversations">
-          <Icon name="chevron-left" size={20} />
-        </Link>
-        <Icon name="settings" size={18} className="settings-header-icon" />
-        <span className="settings-header-title text-title">Settings</span>
-      </header>
+      <PageHeader
+        className="settings-header"
+        back={{
+          label: "Back to conversations",
+          link: (props) => <Link to="/" {...props} />,
+        }}
+        title={
+          <>
+            <Icon name="settings" size={18} className="settings-header-icon" />
+            <span className="settings-header-title text-title">Settings</span>
+          </>
+        }
+      />
       <div className="settings-body">
         <nav className="settings-nav" aria-label="Settings sections">
           <ul>

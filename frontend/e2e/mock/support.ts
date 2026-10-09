@@ -178,6 +178,28 @@ export async function openApp(page: Page, path: string, theme: Theme = "light"):
 }
 
 /**
+ * Opens a room tool from the room header: its button, or on phones (under 720 px) its item in the
+ * ⋯ menu. A menu ignores a click on its trigger just after it closed, so the phone path tries again.
+ */
+export async function openHeaderTool(page: Page, name: RegExp | string): Promise<void> {
+  const header = page.locator(".room-header");
+
+  if ((page.viewportSize()?.width ?? 0) >= 720) {
+    await header.getByRole("button", { name }).first().click();
+
+    return;
+  }
+
+  const menu = page.getByRole("menu", { name: "More" });
+
+  await expect(async () => {
+    await header.getByRole("button", { name: "More" }).click();
+    await expect(menu).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await menu.getByRole("menuitem", { name }).click();
+}
+
+/**
  * Resolves once the page's sync socket is welcomed. Call it before the page opens; await it
  * before a step that publishes an event the page must receive live. Until the welcome, a change
  * made elsewhere arrives only through the catch-up reload, not as an event.
