@@ -172,9 +172,18 @@ pub const TWINS: &[(&str, &[&str])] = &[
         &["room.unread", "sidebar.row.upserted"],
     ),
     ("Broadcasts::mark_room_unread", &["room.unread"]),
-    ("Broadcasts::message_remove", &["message.removed"]),
-    ("Broadcasts::message_replace", &["message.updated"]),
-    ("Broadcasts::message_part_replace", &["message.updated"]),
+    (
+        "Broadcasts::message_remove",
+        &["message.removed", "sidebar.row.upserted"],
+    ),
+    (
+        "Broadcasts::message_replace",
+        &["message.updated", "sidebar.row.upserted"],
+    ),
+    (
+        "Broadcasts::message_part_replace",
+        &["message.updated", "sidebar.row.upserted"],
+    ),
     (
         "Broadcasts::message_thread_part_replace",
         &["message.updated"],

@@ -845,26 +845,39 @@ fn mention_counts(
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
 
-/// A direct room's newest root message that isn't a system note, its excerpt read from the
-/// search index (the plain text `create_in_index` stores) with whitespace collapsed.
-fn last_direct_message(conn: &Connection, room_id: i64) -> Result<Option<api::SidebarLastMessage>> {
-    use rusqlite::OptionalExtension as _;
-    let mut statement = conn.prepare_cached(
-        r#"SELECT "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."room_id" = ? AND "messages"."thread_id" IS NULL AND NOT "messages"."system_note" ORDER BY "messages"."created_at" DESC, "messages"."id" DESC LIMIT 1"#,
+/// Each direct room's newest root message that isn't a system note, by room: one statement,
+/// whose per-room subquery walks `index_messages_on_room_thread_created` back from the newest
+/// (SQLite's lateral join). The excerpt is the search index's body (the plain text
+/// `create_in_index` stores) with whitespace collapsed.
+fn last_direct_messages(
+    conn: &Connection,
+    room_ids: &[i64],
+) -> Result<HashMap<i64, api::SidebarLastMessage>> {
+    let rows = ids_query(
+        conn,
+        r#"SELECT "messages"."room_id", "messages"."creator_id", COALESCE("message_search_index"."body", ''), "messages"."created_at" FROM "messages" LEFT JOIN "message_search_index" ON "message_search_index"."rowid" = "messages"."id" WHERE "messages"."id" IN (SELECT (SELECT "newest"."id" FROM "messages" AS "newest" WHERE "newest"."room_id" = "rooms"."id" AND "newest"."thread_id" IS NULL AND NOT "newest"."system_note" ORDER BY "newest"."created_at" DESC, "newest"."id" DESC LIMIT 1) FROM "rooms" WHERE "rooms"."id" IN ({}))"#,
+        room_ids,
+        |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Timestamp>(3)?,
+            ))
+        },
     )?;
-    let last = statement
-        .query_row([room_id], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, Timestamp>(2)?))
+    Ok(rows
+        .into_iter()
+        .map(|(room_id, creator_id, body, created_at)| {
+            let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
+            let last = api::SidebarLastMessage {
+                creator_id,
+                excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
+                created_at: time(created_at),
+            };
+            (room_id, last)
         })
-        .optional()?;
-    Ok(last.map(|(creator_id, body, created_at)| {
-        let text = body.split_whitespace().collect::<Vec<_>>().join(" ");
-        api::SidebarLastMessage {
-            creator_id,
-            excerpt: campfire_views::helpers::truncate(&text, 140, "…"),
-            created_at: time(created_at),
-        }
-    }))
+        .collect())
 }
 
 /// Whether the membership has a sidebar row (`memberships.visible`, of an alive room).
@@ -882,6 +895,7 @@ fn sidebar_row_with(
     viewer_name: &str,
     members: Option<&[(i64, String)]>,
     mention_count: i64,
+    last_message: Option<api::SidebarLastMessage>,
 ) -> Result<api::SidebarRow> {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -895,10 +909,6 @@ fn sidebar_row_with(
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
     let unread_count = room_shell::first_unread(conn, membership)?.map_or(0, |(_, count)| count);
-    let last_message = match members {
-        Some(_) => last_direct_message(conn, room.id)?,
-        None => None,
-    };
     Ok(api::SidebarRow {
         room: self::room(room),
         membership: self::membership(membership),
@@ -940,6 +950,11 @@ pub fn membership_row(
         .get(&room.id)
         .copied()
         .unwrap_or(0);
+    let last_message = if room.direct() {
+        last_direct_messages(conn, &[room.id])?.remove(&room.id)
+    } else {
+        None
+    };
     sidebar_row_with(
         conn,
         room,
@@ -947,6 +962,7 @@ pub fn membership_row(
         &viewer.name,
         members.as_deref(),
         mentions,
+        last_message,
     )
 }
 
@@ -959,6 +975,12 @@ pub fn sidebar(
 ) -> Result<api::Sidebar> {
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
     let mentions = mention_counts(conn, viewer.id, None)?;
+    let direct_ids: Vec<i64> = all
+        .iter()
+        .filter(|(_, room)| room.direct())
+        .map(|(_, room)| room.id)
+        .collect();
+    let mut last_messages = last_direct_messages(conn, &direct_ids)?;
     let mut user_ids = BTreeSet::new();
     let mut rows = Vec::with_capacity(all.len());
     for (membership, room) in &all {
@@ -974,6 +996,7 @@ pub fn sidebar(
             &viewer.name,
             members.as_deref(),
             mentions.get(&room.id).copied().unwrap_or(0),
+            last_messages.remove(&room.id),
         )?;
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);

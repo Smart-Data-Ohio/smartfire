@@ -870,3 +870,93 @@ async fn the_action_frames_are_the_same_with_the_sync_engine_on() {
         assert_eq!(same(off), same(on), "frame {index}");
     }
 }
+
+/// A sidebar row event for `room_id` whose preview is `excerpt` (`None`: no preview).
+fn previewing(room_id: i64, excerpt: Option<&'static str>) -> impl Fn(&api::SyncEvent) -> bool {
+    move |event| {
+        matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row)
+            if row.room.id == room_id
+                && row.last_message.as_ref().map(|last| last.excerpt.as_str()) == excerpt)
+    }
+}
+
+#[tokio::test]
+async fn editing_and_deleting_a_direct_message_refreshes_the_preview() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply);
+    assert!(room.last_message.is_none());
+    let room = room.room.id;
+
+    let mut ids = Vec::new();
+    for (client, source) in [("first", "First   one"), ("second", "Second **one**")] {
+        let body = json!({"clientMessageId": client, "markdownSource": source});
+        let reply = david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{room}/messages"),
+                &body,
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        ids.push(parse::<api::MessageDTO>(&reply).id);
+    }
+    sync.until(previewing(room, Some("Second one")), |_| false)
+        .await;
+
+    // Editing the newest updates the preview on Kevin's other device.
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", ids[1]),
+            &json!({"markdownSource": "Second, edited"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let event = sync
+        .until(previewing(room, Some("Second, edited")), |_| false)
+        .await;
+    assert_eq!(event.topic, "user");
+
+    // Deleting the newest falls back to the one before, then to none.
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/messages/{}", ids[1]))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    sync.until(previewing(room, Some("First one")), |_| false)
+        .await;
+    let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
+    assert_eq!(
+        row.last_message.as_ref().map(|last| last.excerpt.as_str()),
+        Some("First one")
+    );
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/messages/{}", ids[0]))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    sync.until(previewing(room, None), |_| false).await;
+    let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
+    assert!(row.last_message.is_none());
+    server.abort();
+}

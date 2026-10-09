@@ -448,8 +448,11 @@ impl Broadcasts {
                 );
             }
             // A direct row previews its newest message, so every member's row changes.
-            let rows_for = if room.direct() { None } else { Some(user_ids) };
-            sync::sidebar_rows_later(&self.server, &self.sync, room.id, rows_for);
+            if room.direct() {
+                self.direct_preview_later(room, message);
+            } else {
+                sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
+            }
         }
         Ok(())
     }
@@ -462,6 +465,20 @@ impl Broadcasts {
             &message_dom_id(message, None),
         );
         sync::message_removed(&self.server, message);
+        self.direct_preview_later(room, message);
+    }
+
+    /// A direct row previews its newest root message (`SidebarRow.lastMessage`): after one is
+    /// created, edited or removed, every member's row is read afresh, so the preview follows (or
+    /// falls back to the message before).
+    fn direct_preview_later(&self, room: &Room, message: &Message) {
+        if room.direct()
+            && message.thread_id.is_none()
+            && !message.system_note
+            && self.server.sync_wanted()
+        {
+            sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
+        }
     }
 
     /// MessagesController#update: replace `[message, :presentation]` on `[@room, :messages]` (the
@@ -486,6 +503,7 @@ impl Broadcasts {
         // Every edit replaces the presentation; its other parts don't change the DTO.
         if part == "presentation" {
             sync::message_updated_later(&self.server, &self.sync, message.id);
+            self.direct_preview_later(room, message);
         }
     }
 
@@ -515,6 +533,7 @@ impl Broadcasts {
         );
         if part == "presentation" {
             sync::message_updated_later(&self.server, &self.sync, message.id);
+            self.direct_preview_later(room, message);
         }
     }
 

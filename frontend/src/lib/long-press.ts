@@ -7,7 +7,7 @@ export const LONG_PRESS_MS = 500;
 export const LONG_PRESS_SLOP = 8;
 
 /** How long a press may wait for its release before the menu opens anyway. */
-const RELEASE_WAIT_MS = 1000;
+export const RELEASE_WAIT_MS = 1000;
 
 /**
  * Runs `open` once the pressed button or finger comes up: a menu opened mid-press is in the top
