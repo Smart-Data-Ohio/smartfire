@@ -327,4 +327,44 @@ test.describe("on a touch phone", () => {
     expect(page.url(), "Back closes the call, not the room").toBe(url);
     await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
   });
+
+  test("Escape on the call bar closes the full-screen call", async ({ page }) => {
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const bar = dock(page, true);
+    const view = page.locator("section.call-view");
+
+    await bar.getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await bar.getByRole("button", { name: "Mute microphone" }).focus();
+    await page.keyboard.press("Escape");
+    await expect(view).toHaveCount(0);
+  });
+
+  test("leaving the room with the call open leaves no second Back stop", async ({ page }) => {
+    await open(page, LOUNGE);
+    await open(page, GENERAL);
+    await join(page, true);
+
+    const view = page.locator("section.call-view");
+    const general = new RegExp(`/r/${GENERAL}$`);
+    const marked = () => page.evaluate(() => window.history.state?.smartfireCallView !== undefined);
+
+    await dock(page, true).getByRole("button", { name: "Show call" }).click();
+    await expect(view).toBeVisible();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(page).not.toHaveURL(general);
+
+    // Back lands on the room, the call bar's, without the view over it ...
+    await page.goBack();
+    await expect(page).toHaveURL(general);
+    await expect.poll(marked, { message: "past the view's old entry" }).toBe(false);
+    await expect(view).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: /^Message/ })).toBeVisible();
+
+    // ... and the next Back leaves it.
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`/r/${LOUNGE}$`));
+  });
 });

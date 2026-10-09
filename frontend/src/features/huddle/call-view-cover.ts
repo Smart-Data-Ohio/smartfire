@@ -12,8 +12,8 @@ import { type CallState, useCall } from "./call-store.ts";
 
 declare module "@tanstack/react-router" {
   interface HistoryState {
-    /** The entry the phone's call view pushed over the room: Back closes the view. */
-    readonly smartfireCallView?: boolean;
+    /** The room whose phone call view pushed this entry over it: Back closes the view. */
+    readonly smartfireCallView?: number;
   }
 }
 
@@ -37,15 +37,38 @@ export function useCallViewCovers(roomId: number): boolean {
 /**
  * The covering view's history entry, which lets Back close it: pushed when it opens, stepped
  * back over when it closes some other way (Hide call, Escape, leaving the call), and closing the
- * view when Back pops it. One per room: the call view keeps it.
+ * view when Back pops it. Leaving the room with the view open closes it too, so the entry it
+ * leaves behind is one Back steps straight over (it isn't covering when that lands there), not
+ * a second stop. One per room: the call view keeps it.
  */
-export function useCallViewHistory(covers: boolean): void {
+export function useCallViewHistory(roomId: number, covers: boolean): void {
   const router = useRouter();
-  const marked = useLocation({ select: (location) => location.state.smartfireCallView === true });
-  // Our entry is on top (`marked` has been seen while covering), or is being pushed.
-  const entry = useRef<"none" | "pushing" | "top">("none");
+
+  // Only this room's entry: another room's call view, on its way out, mustn't act on it.
+  const marked = useLocation({
+    select: (location) => location.state.smartfireCallView === roomId,
+  });
+
+  // Our entry is on top (`marked` has been seen while covering), being pushed, or being left.
+  const entry = useRef<"none" | "pushing" | "top" | "leaving">("none");
+
+  // The room the view covered as of the last commit, for the cleanup below.
+  const covering = useRef<number | null>(null);
+
+  // Another room (or none) is showing: a view left open would cover it again on the way Back.
+  useEffect(
+    () => () => {
+      if (covering.current === roomId) {
+        covering.current = null;
+        callController.setViewOpen(false);
+      }
+    },
+    [roomId],
+  );
 
   useEffect(() => {
+    covering.current = covers ? roomId : null;
+
     if (covers) {
       if (marked) {
         entry.current = "top";
@@ -53,20 +76,51 @@ export function useCallViewHistory(covers: boolean): void {
         // Back (or a navigation) took the entry away: the view goes with it.
         entry.current = "none";
         callController.setViewOpen(false);
-      } else if (entry.current === "none") {
+      } else if (entry.current !== "pushing") {
         entry.current = "pushing";
-        router.history.push(router.history.location.href, { smartfireCallView: true });
+        router.history.push(router.history.location.href, { smartfireCallView: roomId });
       }
 
       return;
     }
 
-    entry.current = "none";
-
-    if (marked) {
+    if (!marked) {
+      entry.current = "none";
+    } else if (entry.current !== "leaving") {
+      // Closed some other way, or Back landed on an entry the view left behind: step over it
+      // (once, though a remount's effect runs again before the step lands).
+      entry.current = "leaving";
       router.history.back();
     }
-  }, [covers, marked, router]);
+  }, [covers, marked, router, roomId]);
+}
+
+/**
+ * Escape anywhere in the covering view or on the call bar over it closes the view, unless
+ * something in there (a menu, a popover) took the key first.
+ */
+export function useCallViewEscape(covers: boolean): void {
+  useEffect(() => {
+    if (!covers) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        event.target instanceof Element &&
+        event.target.closest(".call-view, .app-main-dock") !== null
+      ) {
+        event.preventDefault();
+        callController.setViewOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [covers]);
 }
 
 /**

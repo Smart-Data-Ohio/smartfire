@@ -17,6 +17,7 @@ import { streamVideoIdOf, useCall, userIdForIdentity } from "./call-store.ts";
 import {
   callViewShown,
   useCallViewCovers,
+  useCallViewEscape,
   useCallViewFocus,
   useCallViewHistory,
 } from "./call-view-cover.ts";
@@ -307,7 +308,8 @@ export function CallView({ roomId }: { readonly roomId: number }) {
   const covers = useCallViewCovers(roomId);
   const view = useRef<HTMLElement>(null);
 
-  useCallViewHistory(covers);
+  useCallViewHistory(roomId, covers);
+  useCallViewEscape(covers);
   useCallViewFocus(view, covers);
 
   if (!shown) {
@@ -325,18 +327,8 @@ export function CallView({ roomId }: { readonly roomId: number }) {
       className="call-view"
       data-theater={expanded === undefined ? undefined : true}
       aria-label="Call"
-      // Covering the room (a phone), it is a page of its own: focus lands on it, Escape closes it.
+      // Covering the room (a phone), it is a page of its own: focus lands on it.
       tabIndex={covers ? -1 : undefined}
-      onKeyDown={
-        covers
-          ? (event) => {
-              if (event.key === "Escape" && !event.defaultPrevented) {
-                event.preventDefault();
-                callController.setViewOpen(false);
-              }
-            }
-          : undefined
-      }
     >
       <header className="call-view-head">
         <Icon name="audio-lines" size={16} />
