@@ -2,13 +2,17 @@ import { describe, expect, it } from "vitest";
 import { planEdit } from "../messages/message-editor.tsx";
 import {
   attachDriveFile,
+  DRIVE_FILES_PER_MESSAGE,
   DRIVE_SEARCH_DEBOUNCE_MS,
   driveDisconnected,
   driveSearchStatus,
+  grantCapacity,
   grantEnabled,
   moveActive,
   pickerKeyAction,
   searchDelay,
+  shareResultLabel,
+  shareSummary,
 } from "./drive-picker.ts";
 
 const file = (id: string, kind = "document") => ({
@@ -52,10 +56,30 @@ describe("drive picker state", () => {
     expect(attachDriveFile(ten, file("more")).status).toBe("full");
   });
 
-  it("grants only when someone is checked and the file is not a folder", () => {
+  it("grants only when someone is checked and the file is not a folder or shortcut", () => {
     expect(grantEnabled(0, "document")).toBe(false);
     expect(grantEnabled(1, "document")).toBe(true);
     expect(grantEnabled(2, "folder")).toBe(false);
+    expect(grantEnabled(1, "shortcut")).toBe(false);
+  });
+
+  it("refuses an eleventh file before granting, and still grants one already pinned", () => {
+    const ten = Array.from({ length: DRIVE_FILES_PER_MESSAGE }, (_, index) => String(index));
+
+    expect(grantCapacity(ten, "more")).toBe(false);
+    expect(grantCapacity(ten, "0")).toBe(true);
+    expect(grantCapacity([], "a")).toBe(true);
+  });
+
+  it("keeps partial grant lines and the classic failure reasons", () => {
+    expect(shareResultLabel("granted", null)).toBe("granted view access");
+    expect(shareResultLabel("already", null)).toBe("already had access");
+    expect(shareResultLabel("failed", "denied")).toBe("not granted (refused by Google)");
+    expect(shareResultLabel("failed", "network")).toBe("not granted (connection failed)");
+    expect(shareSummary([{ status: "granted" }, { status: "failed" }])).toBe(
+      "1 of 2 recipients have access.",
+    );
+    expect(shareSummary([{ status: "failed" }])).toBe("No access was granted.");
   });
 
   it("treats a 404 as not connected and keeps the classic status lines", () => {

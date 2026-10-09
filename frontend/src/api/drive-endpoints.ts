@@ -38,13 +38,18 @@ export const driveRecipients = Effect.fn("api.driveRecipients")(function* (roomI
 export const shareDriveFile = Effect.fn("api.shareDriveFile")(function* (
   roomId: number,
   fileId: string,
-  userIds: readonly string[],
+  recipients: readonly { readonly id: string; readonly email: string }[],
+  attachedFileIds: readonly string[],
 ) {
   return yield* call(
     {
       method: "POST",
       path: `/rooms/${roomId}/drive/shares`,
-      body: { fileId, userIds: [...userIds] },
+      body: {
+        fileId,
+        recipients: recipients.map((member) => ({ id: member.id, email: member.email })),
+        attachedFileIds: [...attachedFileIds],
+      },
     },
     wire<DriveShare>(DriveShareSchema),
   );

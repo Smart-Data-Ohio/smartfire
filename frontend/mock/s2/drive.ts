@@ -8,7 +8,7 @@ import type { DriveRecipient } from "../../src/gen/DriveRecipient.ts";
 import type { DriveRecipientList } from "../../src/gen/DriveRecipientList.ts";
 import type { DriveShare } from "../../src/gen/DriveShare.ts";
 import { ok, validation } from "../http.ts";
-import { stringArrayField, stringField } from "../json.ts";
+import { field, isRecord, isString, stringArrayField, stringField } from "../json.ts";
 import { USER_IDS } from "../seed.ts";
 import { route } from "./context.ts";
 
@@ -67,13 +67,33 @@ export function createDrive() {
       }),
       route("POST", /^\/rooms\/(\d+)\/drive\/shares$/, (request) => {
         const fileId = stringField(request.body, "fileId");
-        const ids = stringArrayField(request.body, "userIds") ?? [];
+        const approved = field(request.body, "recipients");
 
         if (fileId === null || fileId === "")
           throw validation("fileId", "includes an invalid file id");
 
+        if (!Array.isArray(approved)) throw validation("recipients", "invalid_recipients");
+
+        const ids: string[] = [];
+
+        for (const entry of approved) {
+          if (!isRecord(entry) || !isString(entry.id) || !isString(entry.email)) {
+            throw validation("recipients", "invalid_recipients");
+          }
+
+          ids.push(entry.id);
+        }
+
         const selected = RECIPIENTS.filter((member) => ids.includes(String(member.id)));
-        const body: DriveShare = { fileId, recipients: selected };
+
+        const body: DriveShare = {
+          outcome: "shared",
+          fileId,
+          blocked: null,
+          changedIds: [],
+          recipients: [],
+          results: selected.map((recipient) => ({ recipient, status: "granted", reason: null })),
+        };
 
         return ok(body);
       }),

@@ -576,8 +576,13 @@ export const actions = {
   drive: {
     search: (query: string): Promise<DriveFileList> => runAction(searchDriveFiles(query)),
     recipients: (roomId: number): Promise<DriveRecipientList> => runAction(driveRecipients(roomId)),
-    share: (roomId: number, fileId: string, userIds: readonly string[]): Promise<DriveShare> =>
-      runAction(shareDriveFile(roomId, fileId, userIds)),
+    share: (
+      roomId: number,
+      fileId: string,
+      recipients: readonly { readonly id: string; readonly email: string }[],
+      attachedFileIds: readonly string[],
+    ): Promise<DriveShare> =>
+      runAction(shareDriveFile(roomId, fileId, recipients, attachedFileIds)),
   },
   threads,
   activity,

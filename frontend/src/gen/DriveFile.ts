@@ -3,6 +3,8 @@
 /**
  * One file from `GET /api/v1/drive/files` or `GET /api/v1/drive/files/:id`. The same fields the
  * classic `file_json` builds (`id`, `name`, `kind`, `modified_at`, `owner`, `url`), in camelCase.
- * `kind` is `document`, `spreadsheet`, `presentation`, `form`, `folder`, `pdf`, or `file`.
+ * `kind` is `document`, `spreadsheet`, `presentation`, `form`, `folder`, `shortcut`, `pdf`,
+ * or `file`. A shortcut is its own kind so the composer can keep it attach-only, the way the
+ * classic share dialog refuses the shortcut MIME.
  */
 export type DriveFile = { id: string | null, name: string | null, kind: string, modifiedAt: string | null, owner: string | null, url: string | null, };

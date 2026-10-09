@@ -289,8 +289,15 @@
     border-bottom: 1px solid var(--border-subtle);
   }
 
+  .drive-picker-bar {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+  }
+
   .drive-picker-search {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: 36px;
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--border-subtle);
@@ -346,13 +353,18 @@
   }
 
   .drive-picker-disconnected,
-  .drive-recipients {
+  .drive-recipients,
+  .drive-share-results {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  .drive-picker-dismiss {
+    display: none;
   }
 
   .composer-drive-files {
@@ -366,8 +378,22 @@
     .drive-picker-search,
     .drive-option,
     .drive-remove,
-    .drive-picker-disconnected .button {
+    .drive-picker-disconnected .button,
+    .drive-picker-dismiss {
       min-height: var(--touch-target);
+    }
+
+    .drive-picker-dismiss {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: var(--touch-target);
+      padding: 0 var(--space-3);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: inherit;
+      font: inherit;
     }
 
     .drive-remove {

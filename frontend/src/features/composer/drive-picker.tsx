@@ -1,6 +1,7 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { DriveFile } from "../../gen/DriveFile.ts";
 import type { DriveRecipient } from "../../gen/DriveRecipient.ts";
+import type { DriveShare } from "../../gen/DriveShare.ts";
 import { postClassicForm } from "../../lib/classic-form.ts";
 import type { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -9,17 +10,24 @@ import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { BrandMark } from "../cards/brand-marks.tsx";
 import {
+  CONFIRMATION_MESSAGE,
   type DrivePick,
   driveDisconnected,
   driveSearchStatus,
+  grantCapacity,
   grantEnabled,
   moveActive,
   pickerKeyAction,
   searchDelay,
+  shareBlockedMessage,
+  shareResultLabel,
+  shareSummary,
 } from "./drive-picker.ts";
 
 interface DrivePickerProps {
   readonly roomId: number;
+  /** Drive files already on this message, so a full message is refused before any grant. */
+  readonly attachedFileIds: readonly string[];
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onAttach: (file: DrivePick) => void;
@@ -37,7 +45,13 @@ function pickOf(file: DriveFile): DrivePick | null {
  * Search Drive from the composer, then attach the file or grant the room view access first.
  * Not connected uses the same `POST /google/connect` link as settings ("Enable Drive previews").
  */
-export function DrivePicker({ roomId, open, onOpenChange, onAttach }: DrivePickerProps) {
+export function DrivePicker({
+  roomId,
+  attachedFileIds,
+  open,
+  onOpenChange,
+  onAttach,
+}: DrivePickerProps) {
   const listId = useId();
   const [query, setQuery] = useState("");
   const [files, setFiles] = useState<readonly DrivePick[]>([]);
@@ -48,6 +62,8 @@ export function DrivePicker({ roomId, open, onOpenChange, onAttach }: DrivePicke
   const [recipients, setRecipients] = useState<readonly DriveRecipient[]>([]);
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [granting, setGranting] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [report, setReport] = useState<DriveShare["results"] | null>(null);
   const subsequent = useRef(false);
   const request = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -111,10 +127,18 @@ export function DrivePicker({ roomId, open, onOpenChange, onAttach }: DrivePicke
 
   const close = () => onOpenChange(false);
 
+  useLayoutEffect(() => {
+    if (active < 0) return;
+
+    document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: "nearest" });
+  }, [active, listId]);
+
   const choose = (file: DrivePick) => {
     setReview(file);
     setChosen(new Set());
     setRecipients([]);
+    setNotice(null);
+    setReport(null);
     void actions.drive.recipients(roomId).then(
       (list) => setRecipients(list.recipients),
       () => setRecipients([]),
@@ -148,29 +172,40 @@ export function DrivePicker({ roomId, open, onOpenChange, onAttach }: DrivePicke
 
   const disconnected = error !== null && driveDisconnected(error);
   const status = searching ? "Searching Drive…" : driveSearchStatus(error, files.length);
-  const folder = review?.kind === "folder";
+  const attachOnlyKind = review?.kind === "folder" || review?.kind === "shortcut";
+  const kindNotice = attachOnlyKind ? shareBlockedMessage(review.kind) : null;
 
   return (
     <>
       {open ? (
         <div className="drive-picker" role="dialog" aria-label="Find a Drive file">
-          <input
-            className="drive-picker-search"
-            placeholder="Search Drive files"
-            aria-label="Search Drive files"
-            role="combobox"
-            aria-expanded={files.length > 0}
-            aria-autocomplete="list"
-            aria-controls={listId}
-            aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-            ref={searchRef}
-            autoComplete="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={onKeyDown}
-          />
+          <div className="drive-picker-bar">
+            <input
+              className="drive-picker-search"
+              placeholder="Search Drive files"
+              aria-label="Search Drive files"
+              role="combobox"
+              aria-expanded={files.length > 0}
+              aria-autocomplete="list"
+              aria-controls={listId}
+              aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
+              ref={searchRef}
+              autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            <button
+              type="button"
+              className="drive-picker-dismiss"
+              aria-label="Close Drive search"
+              onClick={close}
+            >
+              Close
+            </button>
+          </div>
           {disconnected ? (
             <div className="drive-picker-disconnected">
               <p>Google Drive isn't connected.</p>
@@ -238,38 +273,113 @@ export function DrivePicker({ roomId, open, onOpenChange, onAttach }: DrivePicke
             >
               Attach only
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={!grantEnabled(chosen.size, review?.kind ?? "file") || granting}
-              loading={granting}
-              loadingLabel="Granting"
-              onClick={() => {
-                if (review === null) {
-                  return;
-                }
+            {report === null ? (
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!grantEnabled(chosen.size, review?.kind ?? "file") || granting}
+                loading={granting}
+                loadingLabel="Granting"
+                onClick={() => {
+                  if (review === null) return;
 
-                setGranting(true);
-                void actions.drive.share(roomId, review.id, [...chosen]).then(
-                  () => {
-                    setGranting(false);
-                    attach(review);
-                  },
-                  () => setGranting(false),
-                );
-              }}
-            >
-              Grant view access and attach
-            </Button>
+                  if (!grantCapacity(attachedFileIds, review.id)) {
+                    setNotice(shareBlockedMessage("full"));
+
+                    return;
+                  }
+
+                  const approved = recipients
+                    .filter((member) => chosen.has(String(member.id)))
+                    .map((member) => ({ id: String(member.id), email: member.email }));
+
+                  setGranting(true);
+                  setReport(null);
+                  void actions.drive.share(roomId, review.id, approved, attachedFileIds).then(
+                    (share) => {
+                      setGranting(false);
+
+                      if (share.outcome === "confirmation_required") {
+                        const changed = new Set(share.changedIds.map(String));
+                        const live = new Set(share.recipients.map((member) => String(member.id)));
+
+                        setRecipients(share.recipients);
+                        setChosen(
+                          (current) =>
+                            new Set([...current].filter((id) => live.has(id) && !changed.has(id))),
+                        );
+                        setNotice(CONFIRMATION_MESSAGE);
+
+                        return;
+                      }
+
+                      if (share.outcome === "blocked") {
+                        setNotice(shareBlockedMessage(share.blocked ?? "file"));
+
+                        return;
+                      }
+
+                      if (share.outcome === "full") {
+                        setNotice(shareBlockedMessage("full"));
+
+                        return;
+                      }
+
+                      const failed = share.results.some((result) => result.status === "failed");
+
+                      onAttach(review);
+
+                      if (failed) {
+                        setReport(share.results);
+                        setNotice(shareSummary(share.results));
+
+                        return;
+                      }
+
+                      setReview(null);
+                      close();
+                    },
+                    (failure: ActionError) => {
+                      setGranting(false);
+                      setNotice(failure.message);
+                    },
+                  );
+                }}
+              >
+                Grant view access and attach
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => {
+                  setReview(null);
+                  close();
+                }}
+              >
+                Done
+              </Button>
+            )}
           </>
         }
       >
-        {folder ? (
-          <p className="drive-picker-notice">
-            Folders and shortcuts cannot be shared from here. You can still attach the link; members
-            open it with whatever access they already have.
+        {notice !== null || kindNotice !== null ? (
+          <p className="drive-picker-notice" role="status">
+            {notice ?? kindNotice}
           </p>
         ) : null}
+        {report === null ? null : (
+          <ul className="drive-share-results">
+            {report.map((result) => (
+              <li key={result.recipient.id}>
+                {result.recipient.name}{" "}
+                <span className="drive-recipient-email">
+                  {result.recipient.email} · {shareResultLabel(result.status, result.reason)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
         <ul className="drive-recipients">
           {recipients.map((member) => (
             <li key={member.id}>

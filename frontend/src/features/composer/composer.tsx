@@ -754,6 +754,7 @@ export function Composer({
           />
           <DrivePicker
             roomId={roomId}
+            attachedFileIds={driveFiles.map((file) => file.id)}
             open={driveOpen}
             onOpenChange={setDriveOpen}
             onAttach={(file) => {

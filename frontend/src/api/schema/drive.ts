@@ -58,18 +58,38 @@ export type ValidateDriveRecipientsPin = Assert<
   Pinned<typeof ValidateDriveRecipients, GeneratedValidateDriveRecipients>
 >;
 
+export const DriveApprovedRecipient = Schema.Struct({
+  id: Schema.String,
+  email: Schema.String,
+});
+
+export type DriveApprovedRecipient = typeof DriveApprovedRecipient.Type;
+
 export const ShareDriveFile = Schema.Struct({
   fileId: Schema.String,
-  userIds: Schema.Array(Schema.String),
+  recipients: Schema.Array(DriveApprovedRecipient),
+  attachedFileIds: Schema.Array(Schema.String),
 });
 
 export type ShareDriveFile = typeof ShareDriveFile.Type;
 
 export type ShareDriveFilePin = Assert<Pinned<typeof ShareDriveFile, GeneratedShareDriveFile>>;
 
+export const DriveShareResult = Schema.Struct({
+  recipient: DriveRecipient,
+  status: Schema.String,
+  reason: nullable,
+});
+
+export type DriveShareResult = typeof DriveShareResult.Type;
+
 export const DriveShare = Schema.Struct({
+  outcome: Schema.String,
   fileId: Schema.String,
+  blocked: nullable,
+  changedIds: Schema.Array(UserId),
   recipients: Schema.Array(DriveRecipient),
+  results: Schema.Array(DriveShareResult),
 });
 
 export type DriveShare = typeof DriveShare.Type;
