@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { sidebarFixture, sidebarRowFixture } from "../api/testing.ts";
 import type { SidebarRow, SyncEvent } from "./model.ts";
 import { setMembership } from "./organize.ts";
-import { applyEvents, loadSidebar, markRoomRead, markUnreadFrom } from "./reducers.ts";
+import {
+  applyEvents,
+  loadSidebar,
+  markRoomRead,
+  markUnreadFrom,
+  resyncSidebar,
+} from "./reducers.ts";
 import { rowClock, touchedSince, touchRows, untouchedReplyEvents } from "./row-touches.ts";
 import { initialState, type State } from "./state.ts";
 
@@ -73,6 +79,45 @@ describe("sidebar row touches", () => {
     expect(replied.sidebar.rows[2]).toBeUndefined();
     expect(replied.sidebar.rows[3]).toBe(third);
     expect(replied.sidebar.order).toEqual([3, 1]);
+  });
+
+  it("a room sync added and removed in one batch stays gone under an older snapshot", () => {
+    const before = loaded([general]);
+    const since = rowClock(before);
+    const synced = applyEvents(before, [upserted(design), removed(2)], 0);
+    const replied = loadSidebar(synced, sidebarFixture([general, design]), since);
+
+    expect(replied.sidebar.rows[2]).toBeUndefined();
+    expect(replied.sidebar.order).toEqual([1]);
+  });
+
+  it("a removal of a row already gone still outranks an older snapshot listing it", () => {
+    const before = loaded([general]);
+    const since = rowClock(before);
+    const synced = applyEvents(before, [removed(2)], 0);
+    const replied = loadSidebar(synced, sidebarFixture([general, design]), since);
+
+    expect(replied.sidebar.rows[2]).toBeUndefined();
+  });
+
+  it("a gap's resync outranks a refetch that started before it", () => {
+    // A refetch goes out; the sync engine's resync lands the read row; the refetch arrives.
+    const before = loaded([pinged(general), design]);
+    const since = rowClock(before);
+    const resynced = resyncSidebar(before, sidebarFixture([read(general)]), rowClock(before));
+    const replied = loadSidebar(resynced, sidebarFixture([pinged(general), design]), since);
+
+    expect(replied.sidebar.rows[1]?.notificationCount).toBe(0);
+    expect(replied.sidebar.rows[2]).toBeUndefined();
+  });
+
+  it("a gap's resync still keeps rows sync changed while it was on its way", () => {
+    const before = loaded([pinged(general)]);
+    const since = rowClock(before);
+    const synced = applyEvents(before, [upserted(read(general))], 0);
+    const resynced = resyncSidebar(synced, sidebarFixture([pinged(general)]), since);
+
+    expect(resynced.sidebar.rows[1]?.notificationCount).toBe(0);
   });
 
   it("a snapshot taken after the synced row lands in full", () => {

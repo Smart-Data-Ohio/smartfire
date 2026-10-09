@@ -372,6 +372,48 @@ describe("organize actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("keep a gap resync's rows over a 409 refetch that started before it", () =>
+    Effect.gen(function* () {
+      const pinged = { ...general, unreadCount: 3, notificationCount: 1 };
+
+      seed();
+      mutations.applyEvents(
+        [{ seq: 0, topic: "user:7", type: "sidebar.row.upserted", data: pinged }],
+        0,
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("PUT /room_categories/order", () =>
+        Effect.fail(new Conflict({ message: "Stale" })),
+      );
+      yield* fake.route("GET /sidebar", () => {
+        // While the refetch is on its way, a sync gap's resync installs the read row (and no
+        // later event says so again); then the refetch, read before, arrives.
+        mutations.resyncSidebar(
+          {
+            ...sidebarFixture([{ ...general, unreadCount: 0, notificationCount: 0 }, design]),
+            categories: [launch, team],
+          },
+          sidebarRowClock(),
+        );
+
+        return Effect.succeed({
+          ...sidebarFixture([pinged, design, engineering, ada]),
+          categories: [launch, team],
+        });
+      });
+
+      yield* Effect.exit(organize.reorderCategories([2, 1]));
+
+      expect((yield* fake.requests).at(-1)?.path).toBe("/sidebar");
+      expect(store.getState().sidebar.rows[1]?.notificationCount).toBe(0);
+      // The resync dropped these rooms; the older refetch can't bring them back.
+      expect(store.getState().sidebar.rows[3]).toBeUndefined();
+      expect(store.getState().sidebar.rows[4]).toBeUndefined();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("reorder with a new category's real id when its create is still in flight", () =>
     Effect.gen(function* () {
       seed();

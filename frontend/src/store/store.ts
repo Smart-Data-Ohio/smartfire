@@ -260,6 +260,12 @@ export const mutations = {
   /** A whole-sidebar reply; `since` is the `sidebarRowClock()` taken before its request. */
   loadSidebar: (sidebar: Sidebar, since: number) =>
     apply((state) => reduce.loadSidebar(state, sidebar, since)),
+  /**
+   * A whole-sidebar snapshot the sync engine read (a gap's resync), `since` taken before its
+   * request: it outranks any HTTP reply already on its way, as a sync event would.
+   */
+  resyncSidebar: (sidebar: Sidebar, since: number) =>
+    apply((state) => reduce.resyncSidebar(state, sidebar, since)),
   /** Read here: newer than any HTTP reply already on its way, so that reply leaves the row be. */
   markRoomRead: (roomId: number) =>
     apply((state) => touchRows(reduce.markRoomRead(state, roomId), [roomId])),
@@ -270,11 +276,12 @@ export const mutations = {
     landRoom(roomId, started, (state) => reduce.setRoomPreview(state, roomId, preview)),
   setRoomDetail: (detail: RoomDetail, started: number) =>
     landRoom(detail.room.id, started, (state) => reduce.setRoomDetail(state, detail)),
+  /** Access is gone: the row leaves, and an older reply listing it can't bring it back. */
   setRoomUnavailable: (roomId: number, started: number) =>
     landRoom(roomId, started, (state) => {
       clearRoomJoin(roomId);
 
-      return reduce.setRoomUnavailable(state, roomId);
+      return touchRows(reduce.setRoomUnavailable(state, roomId), [roomId]);
     }),
   applyPage: (roomId: number, page: MessagePage, mode: reduce.PageMode, request?: number) =>
     apply((state) => reduce.applyPage(state, roomId, page, mode, request)),

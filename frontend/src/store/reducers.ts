@@ -1106,9 +1106,51 @@ export function applyEvents(
     }
   }
 
-  return source === "sync"
-    ? touchRows(next, changedRowIds(state.sidebar.rows, next.sidebar.rows))
-    : next;
+  return source === "sync" ? touchRows(next, syncTouchedRooms(state, next, events)) : next;
+}
+
+/**
+ * The rooms a sync batch touched: every room a `sidebar.row.*`, `room.read` or `room.unread`
+ * event names, whether or not it changed anything (a row added and removed in one batch, or a
+ * removal of a row already gone, still outranks an older reply that lists it), and every row
+ * the batch's other events changed (a new message's count).
+ */
+function syncTouchedRooms(
+  before: State,
+  after: State,
+  events: readonly SyncEvent[],
+): readonly number[] {
+  const ids = new Set(changedRowIds(before.sidebar.rows, after.sidebar.rows));
+
+  for (const event of events) {
+    switch (event.type) {
+      case "sidebar.row.upserted":
+        ids.add(event.data.room.id);
+        break;
+      case "sidebar.row.removed":
+      case "room.read":
+      case "room.unread":
+        ids.add(event.data.roomId);
+        break;
+    }
+  }
+
+  return [...ids];
+}
+
+/**
+ * A whole-sidebar snapshot the sync engine read (a gap's resync): installed as `loadSidebar`
+ * does, then every room it lists or drops is touched, so an HTTP reply that started before it
+ * (a refetch still on its way) can't land older rows over it or bring a dropped room back.
+ */
+export function resyncSidebar(state: State, sidebar: Sidebar, since: number): State {
+  const ids = new Set(Object.keys(state.sidebar.rows).map(Number));
+
+  for (const row of sidebar.rows) {
+    ids.add(row.room.id);
+  }
+
+  return touchRows(loadSidebar(state, sidebar, since), ids);
 }
 
 /** A typist who posted stops typing at once (their message is the end of it). */

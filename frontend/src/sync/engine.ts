@@ -489,7 +489,7 @@ export class Engine extends Context.Service<
             yield* sidebar().pipe(
               Effect.tap((data) =>
                 Effect.sync(() => {
-                  mutations.loadSidebar(data, since);
+                  mutations.resyncSidebar(data, since);
                   // The snapshot is newer than any room write still on its way.
                   markSidebarSnapshot();
                 }),
