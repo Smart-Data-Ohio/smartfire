@@ -355,7 +355,7 @@ impl<U: Send + Sync + 'static> Server<U> {
         let Some(engine) = self.inner.sync.get() else {
             return;
         };
-        if !engine.people.lock().unwrap().gapped.insert(user_id) {
+        if !engine.gap_needed_for(user_id) {
             return;
         }
         self.inner.hub.sequenced(|seq| engine.ring.push_gap(seq, user_id));

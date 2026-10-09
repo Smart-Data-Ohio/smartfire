@@ -422,6 +422,20 @@ impl Fences {
     }
 }
 
+impl<U> Engine<U> {
+    /// A skip for `user_id`: whether it needs a gap marker of its own, which it does unless one
+    /// is already pending (pushed, and not yet acted on by a refetch). Marks one pending.
+    pub fn gap_needed_for(&self, user_id: i64) -> bool {
+        self.people.lock().unwrap().gapped.insert(user_id)
+    }
+
+    /// The person's client was told to refetch everything up to its cursor (a `resync`, or a
+    /// `welcome` that doesn't resume): any pending marker is acted on.
+    pub fn refetched(&self, user_id: i64) {
+        self.people.lock().unwrap().gapped.remove(&user_id);
+    }
+}
+
 /// [`Engine::people`].
 #[derive(Default)]
 pub(crate) struct People {

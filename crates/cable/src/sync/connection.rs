@@ -330,6 +330,9 @@ impl<U> Connection<U> {
         let resumed = resumed && self.catch_up(true).is_none();
         if resumed {
             self.flush_at = self.flush_at.map(|_| Instant::now());
+        } else {
+            // A fresh start refetches everything, as a `resync` does.
+            self.refetched();
         }
         let seq = if resumed { cursor } else { self.cursor };
         ServerFrame::Welcome {
@@ -350,14 +353,6 @@ impl<U> Connection<U> {
                     .iter()
                     .any(|entry| entry.gap && entry.delivered_to(self.user_id, |_| false));
                 if skipped {
-                    // Acted on: the resync refetches everything skipped so far, so a skip from
-                    // here on needs a marker of its own (one before now is collapsed into this).
-                    self.engine
-                        .people
-                        .lock()
-                        .unwrap()
-                        .gapped
-                        .remove(&self.user_id);
                     return Some(self.lost(head, "skipped"));
                 }
                 self.cursor = head;
@@ -373,8 +368,11 @@ impl<U> Connection<U> {
     }
 
     /// The cursor moves to `head` past events this connection didn't get: the `resync` for it.
+    /// The only place a `resync` is made, whatever was lost (a gap marker, the ring rolling
+    /// over, or either while a resumed `welcome` replays).
     fn lost(&mut self, head: u64, reason: &str) -> ServerFrame {
         self.cursor = head;
+        self.refetched();
         let topics = std::iter::once(USER_TOPIC.to_string())
             .chain(self.topics.keys().cloned())
             .collect();
@@ -382,6 +380,14 @@ impl<U> Connection<U> {
             topics,
             reason: reason.into(),
         }
+    }
+
+    /// The client is told to refetch everything up to the cursor (a `resync`, or a `welcome`
+    /// that doesn't resume), which covers every skip so far: the person's gap marker is acted on,
+    /// and a skip from here on needs one of its own. A marker past the cursor is still read and
+    /// resyncs again. Called by every frame that makes the client refetch, and only by them.
+    fn refetched(&self) {
+        self.engine.refetched(self.user_id);
     }
 
     fn add(&mut self, entry: Arc<Entry>) {
@@ -590,6 +596,70 @@ mod tests {
                 .collect::<Vec<_>>(),
             [1, 5]
         );
+    }
+
+    /// A skip as [`crate::Server::sync_skipped_for`] records it: a marker unless one is pending.
+    fn skip(connection: &Connection<()>, seq: u64) -> bool {
+        let needed = connection.engine.gap_needed_for(1);
+        if needed {
+            connection.engine.ring.push_gap(seq, 1);
+        }
+        needed
+    }
+
+    #[test]
+    fn a_rollover_resync_acts_on_a_pending_gap_marker() {
+        let mut connection = connection(SyncConfig {
+            ring_capacity: 2,
+            ..SyncConfig::default()
+        });
+        assert!(skip(&connection, 1));
+        assert!(
+            !skip(&connection, 2),
+            "pending: the marker stands for this skip too"
+        );
+        for seq in 3..=5 {
+            publish(&connection, seq, Audience::Topic("room:1".into()));
+        }
+        // The ring rolled past the marker before this connection read it.
+        assert_eq!(
+            connection.catch_up(false),
+            Some(ServerFrame::Resync {
+                topics: vec!["user".into(), "room:1".into()],
+                reason: "ring_rolled_over".into()
+            }),
+        );
+        // That resync refetched everything: the next skip (a row out of tries, say) is a resync
+        // of its own on the same connection.
+        assert!(
+            skip(&connection, 6),
+            "a skip after the resync gets a marker"
+        );
+        assert_eq!(
+            connection.catch_up(false),
+            Some(ServerFrame::Resync {
+                topics: vec!["user".into(), "room:1".into()],
+                reason: "skipped".into()
+            }),
+        );
+        assert!(skip(&connection, 7));
+    }
+
+    #[test]
+    fn a_fresh_welcome_acts_on_a_pending_gap_marker() {
+        let mut connection = connection(SyncConfig::default());
+        assert!(skip(&connection, 1));
+        // A resume point the ring doesn't cover: the welcome starts afresh, past the marker.
+        let start = connection.engine.ring.resume(Some(("another epoch", 0)));
+        assert!(matches!(
+            connection.welcome(start),
+            ServerFrame::Welcome { resumed: false, .. }
+        ));
+        assert!(
+            skip(&connection, 2),
+            "a skip after the fresh start gets a marker"
+        );
+        assert!(connection.catch_up(false).is_some());
     }
 
     #[test]
