@@ -87,6 +87,16 @@ export const ROOM_IDS = {
   townHall: 12,
 } as const;
 
+/**
+ * #campfire: an open room the viewer has not joined. It is not in the seeded world, so nothing
+ * else lists it; the preview and join handlers materialise it.
+ */
+export const JOINABLE_OPEN_ROOM = {
+  id: 90,
+  name: "campfire",
+  memberIds: [USER_IDS.maya, USER_IDS.jonah, USER_IDS.priya],
+} as const;
+
 /** The viewer's sidebar categories: "Launch" (#design, #launch-planning) and "Team" (#announcements). */
 export const CATEGORY_IDS = { launch: 1, team: 2 } as const;
 
@@ -95,6 +105,12 @@ export const CATEGORY_IDS = { launch: 1, team: 2 } as const;
  * `roomId * MESSAGE_ID_BLOCK + index` (oldest first), so the newest of #general's 400 is 10399.
  */
 export const MESSAGE_ID_BLOCK = 10_000;
+
+/** How many messages `#campfire` has once someone joins it, oldest first. */
+export const JOINABLE_HISTORY_LENGTH = 100;
+
+/** The oldest message in that history (`around` this one, the newest page doesn't hold it). */
+export const JOINABLE_OLDEST_MESSAGE_ID = JOINABLE_OPEN_ROOM.id * MESSAGE_ID_BLOCK;
 
 /** Messages created at run time count up from here, above every seeded id. */
 export const FIRST_LIVE_MESSAGE_ID = 1_000_000;
