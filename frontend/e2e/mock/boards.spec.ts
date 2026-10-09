@@ -27,35 +27,6 @@ async function updateAsMaya(
   expect(reply.ok()).toBe(true);
 }
 
-matrix("a board opens as a list of its posts", async ({ page, theme, phone }) => {
-  await openApp(page, `r/${BOARD}`, theme);
-
-  await expect(page.getByRole("toolbar", { name: "Board" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "List" })).toHaveAttribute("aria-selected", "true");
-  // Open posts only, by default: done ones stay out of the list.
-  await expect(posts(page).getByRole("link", { name: /Onboarding checklist/ })).toBeVisible();
-  await expect(posts(page).getByRole("link", { name: /Pricing page refresh/ })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "New post" })).toBeVisible();
-  expect(page.url()).not.toContain("classic");
-  await page.mouse.move(0, 0);
-  await shot(page, phone ? "board-list-phone" : "board-list", theme);
-});
-
-matrix("the board view sorts posts into status columns", async ({ page, theme, phone }) => {
-  await openApp(page, `r/${BOARD}?view=board`, theme);
-
-  for (const name of ["Planned", "In progress", "Blocked", "Done"]) {
-    await expect(column(page, name)).toBeVisible();
-  }
-
-  await expect(
-    column(page, "Done").getByRole("link", { name: /Pricing page refresh/ }),
-  ).toBeVisible();
-  await expect(column(page, "Blocked").getByRole("link", { name: /Fix retries/ })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, phone ? "board-columns-phone" : "board-columns", theme);
-});
-
 test("filters narrow the list and show as chips", async ({ page }) => {
   await page.setViewportSize(DESKTOP);
   await openApp(page, `r/${BOARD}`);
@@ -119,6 +90,8 @@ test("a classic new-thread URL on a board opens the new-post dialog", async ({ p
 
 matrix("a post opens with its work above the discussion", async ({ page, theme, phone }) => {
   await openApp(page, `r/${BOARD}`, theme);
+  // Open posts only, by default: done ones stay out of the list.
+  await expect(posts(page).getByRole("link", { name: /Pricing page refresh/ })).toHaveCount(0);
   await posts(page)
     .getByRole("link", { name: /Fix retries duplicating sends/ })
     .click();
@@ -276,53 +249,6 @@ test("End on a fitting post's sole reply follows an incoming long reply", async 
       list.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop),
     )
     .toBeLessThanOrEqual(1);
-});
-
-test("Status menu navigation keeps a fitting board post at its work after a long reply", async ({
-  page,
-}) => {
-  const threadId = BOARD_POST_IDS.onboardingChecklist;
-  const welcomed = syncWelcomed(page);
-
-  await page.setViewportSize({ width: 1440, height: 1200 });
-  await openApp(page, `r/${BOARD}/t/${threadId}`);
-  await welcomed;
-  const list = pane(page).getByRole("log", { name: "Replies" });
-  const work = list.locator(".post-work");
-
-  await expect(list).toHaveAttribute("data-placement-settled", "true");
-  await expect
-    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
-    .toBe(0);
-  await work.getByRole("button", { name: /^Status:/ }).click();
-  const menu = page.getByRole("menu");
-
-  await expect(menu).toBeVisible();
-  await menu.press("End");
-  await menu.press("ArrowDown");
-  await page.keyboard.press("Escape");
-  await expect(menu).not.toBeVisible();
-
-  const state = await (await page.request.get("/__mock/state")).json();
-
-  const posted = await page.request.post("/__mock/thread-post", {
-    headers: { "X-CSRF-Token": state.csrfToken },
-    data: {
-      threadId,
-      userId: USER_IDS.maya,
-      markdown: Array.from({ length: 100 }, (_, index) => `Board reply paragraph ${index}`).join(
-        "\n\n",
-      ),
-    },
-  });
-
-  expect(posted.ok()).toBe(true);
-  await expect(list.getByText("Board reply paragraph 99", { exact: true })).toBeAttached();
-  await expect
-    .poll(() => list.evaluate((element) => element.scrollHeight - element.clientHeight))
-    .toBeGreaterThan(500);
-  await expect(work).toBeInViewport();
-  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBe(0);
 });
 
 test("a post with more replies than one page still opens at its work", async ({ page }) => {

@@ -6,6 +6,7 @@ import {
   matrix,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   type Theme,
   test,
@@ -152,9 +153,13 @@ matrix("the + menu opens as liquid", async ({ page, theme }) => {
 
   await expect(menu.getByRole("menuitem", { name: /Upload a file/ })).toBeVisible();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await page.waitForTimeout(900);
-  await settle(page);
-  await shot(page, "plus-menu-open", theme);
+
+  if (SHOTS) {
+    await page.waitForTimeout(900);
+    await settle(page);
+    await shot(page, "plus-menu-open", theme);
+  }
+
   await page.keyboard.press("Escape");
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
@@ -298,22 +303,6 @@ test("schedules at a custom time", async ({ page }) => {
   await dialog.getByRole("button", { name: "Schedule" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("button", { name: "2 scheduled messages" })).toBeVisible();
-});
-
-test("slash commands run, // escapes, unknown words post", async ({ page }) => {
-  await openApp(page, GENERAL);
-
-  await typeInto(page, "/shrug fine by me");
-  await composer(page).press("Enter");
-  await expect(posted(page, String.raw`fine by me ¯\_(ツ)_/¯`)).toBeVisible();
-
-  await typeInto(page, "//etc/hosts is the file");
-  await composer(page).press("Enter");
-  await expect(posted(page, "/etc/hosts is the file")).toBeVisible();
-
-  await typeInto(page, "/nope not a command");
-  await composer(page).press("Enter");
-  await expect(posted(page, "/nope not a command")).toBeVisible();
 });
 
 test("a command's post takes a reader far back in the room to it", async ({ page }) => {

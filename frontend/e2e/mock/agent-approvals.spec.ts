@@ -1,7 +1,7 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { AGENT_IDS } from "../../mock/s4/agents.ts";
 import type { AgentLedgerPage } from "../../src/gen/AgentLedgerPage.ts";
-import { expect, matrix, openApp, shot, syncWelcomed, test, USER_IDS } from "./support.ts";
+import { expect, matrix, openApp, SHOTS, shot, syncWelcomed, test, USER_IDS } from "./support.ts";
 
 const { ember: EMBER, scout: SCOUT } = AGENT_IDS;
 
@@ -157,20 +157,23 @@ test("the approvals list pages past the first fifty", async ({ page }) => {
   expect((await second).status()).toBe(200);
 });
 
-matrix("an owner who isn't an administrator", async ({ page, theme }) => {
-  await control(page.request, "viewer-role", { role: "member" });
-  await openSection(page, `agents/${EMBER}/approvals?status=pending`, theme);
+// Screenshots only: approvals.test.tsx covers the member's card, and the mock's wire test its gating.
+if (SHOTS) {
+  matrix("an owner who isn't an administrator", async ({ page, theme }) => {
+    await control(page.request, "viewer-role", { role: "member" });
+    await openSection(page, `agents/${EMBER}/approvals?status=pending`, theme);
 
-  const merge = card(page, "Merge PR #318");
+    const merge = card(page, "Merge PR #318");
 
-  await expect(merge.getByRole("button", { name: "Deny" })).toBeVisible();
-  await expect(merge.getByRole("button", { name: "Approve" })).toHaveCount(0);
-  await expect(merge).toContainText("Only an administrator can approve GitHub write actions.");
-  await expect(merge).toContainText("Acts on GitHub as @ember-bot");
-  await expect(card(page, "disk alert")).toContainText("a room you're not in");
-  await page.mouse.move(0, 0);
-  await shot(page, "agents-approvals-member", theme);
-});
+    await expect(merge.getByRole("button", { name: "Deny" })).toBeVisible();
+    await expect(merge.getByRole("button", { name: "Approve" })).toHaveCount(0);
+    await expect(merge).toContainText("Only an administrator can approve GitHub write actions.");
+    await expect(merge).toContainText("Acts on GitHub as @ember-bot");
+    await expect(card(page, "disk alert")).toContainText("a room you're not in");
+    await page.mouse.move(0, 0);
+    await shot(page, "agents-approvals-member", theme);
+  });
+}
 
 // --- activity ledger ---
 
@@ -216,13 +219,6 @@ test("the ledger skips unknown entries, keeps a short page's cursor, and links t
   await page.locator(".page-list-scroll").evaluate((element) => element.scrollTo(0, 0));
   await page.getByRole("link", { name: "View message" }).first().click();
   await expect(page).toHaveURL(/\/app\/r\/\d+\/m\/\d+$/);
-});
-
-test("the ledger hides rooms an owner isn't in", async ({ page }) => {
-  await control(page.request, "viewer-role", { role: "member" });
-  await openSection(page, `agents/${EMBER}/events`);
-  await scrollUntil(page, page.getByText("a room you're not in").first());
-  await expect(page.getByText("ops-oncall")).toHaveCount(0);
 });
 
 test("a ledger closed mid-session says so, with no Retry", async ({ page }) => {

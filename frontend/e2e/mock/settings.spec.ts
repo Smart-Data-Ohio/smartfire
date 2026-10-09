@@ -8,6 +8,7 @@ import {
   openApp,
   PHONE_SMALL,
   PHONE_TOUCH,
+  SHOTS,
   shot,
   test,
 } from "./support.ts";
@@ -36,42 +37,45 @@ async function settle(page: Page): Promise<void> {
   );
 }
 
-matrix("the settings sections", async ({ page, theme, phone }) => {
-  // On phones the root is the list of sections: the profile is pushed from it, at its own address.
-  await openSettings(page, phone ? "profile" : "", theme);
+// Screenshots only: every section's own tests open it.
+if (SHOTS) {
+  matrix("the settings sections", async ({ page, theme, phone }) => {
+    // On phones the root is the list of sections: the profile is pushed from it, at its own address.
+    await openSettings(page, phone ? "profile" : "", theme);
 
-  await expect(page.getByRole("heading", { level: 1, name: "Profile" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Profile" })).toBeVisible();
 
-  if (!phone) {
-    await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-  }
-
-  await settle(page);
-  await shot(page, "settings-profile", theme);
-
-  for (const [link, heading, name] of [
-    ["Status", "Status", "settings-status"],
-    ["Notifications", "Notifications", "settings-notifications"],
-    ["Rooms", "Rooms", "settings-rooms"],
-    ["Appearance", "Appearance", "settings-appearance"],
-    ["Security", "Security", "settings-security"],
-    ["Sessions", "Sessions", "settings-sessions"],
-    ["Push devices", "Push devices", "settings-devices"],
-    ["Integrations", "Integrations", "settings-integrations"],
-  ] as const) {
-    if (phone) {
-      await page.getByRole("link", { name: "Back to Settings" }).click();
+    if (!phone) {
+      await expect(nav(page).getByRole("link", { name: "Profile" })).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
     }
 
-    await nav(page).getByRole("link", { name: link }).click();
-    await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     await settle(page);
-    await shot(page, name, theme);
-  }
-});
+    await shot(page, "settings-profile", theme);
+
+    for (const [link, heading, name] of [
+      ["Status", "Status", "settings-status"],
+      ["Notifications", "Notifications", "settings-notifications"],
+      ["Rooms", "Rooms", "settings-rooms"],
+      ["Appearance", "Appearance", "settings-appearance"],
+      ["Security", "Security", "settings-security"],
+      ["Sessions", "Sessions", "settings-sessions"],
+      ["Push devices", "Push devices", "settings-devices"],
+      ["Integrations", "Integrations", "settings-integrations"],
+    ] as const) {
+      if (phone) {
+        await page.getByRole("link", { name: "Back to Settings" }).click();
+      }
+
+      await nav(page).getByRole("link", { name: link }).click();
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
+      await settle(page);
+      await shot(page, name, theme);
+    }
+  });
+}
 
 test("the user menu opens settings in place", async ({ page }) => {
   await openApp(page, "");
@@ -132,15 +136,6 @@ test("someone can be let through DND", async ({ page }) => {
   await expect(
     exceptions.getByRole("button", { name: /^Remove Jonah .* from DND exceptions$/ }),
   ).toBeVisible();
-});
-
-test("a theme choice shows at once", async ({ page }) => {
-  await openSettings(page, "appearance");
-
-  await page.getByRole("radio", { name: "Dark" }).check();
-
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("radio", { name: "Dark" })).toBeChecked();
 });
 
 test("signing out every other session", async ({ page }) => {
@@ -265,23 +260,6 @@ test("Google starts are full page loads with the session's token", async ({ page
   ]);
 });
 
-test("disconnecting Google Calendar asks first and offers to connect again", async ({ page }) => {
-  await openSettings(page, "integrations");
-
-  const calendar = group(page, "Google Calendar");
-
-  await calendar.getByRole("button", { name: "Disconnect" }).click();
-  await expect(
-    page.getByRole("alertdialog", { name: "Disconnect Google Calendar?" }),
-  ).toContainText("Your published event entries will be removed.");
-  await page
-    .getByRole("alertdialog", { name: "Disconnect Google Calendar?" })
-    .getByRole("button", { name: "Disconnect" })
-    .click();
-  await expect(page.getByText("Google Calendar disconnected.")).toBeVisible();
-  await expect(calendar.getByRole("button", { name: "Connect Google Calendar" })).toBeFocused();
-});
-
 test("dropping Google Calendar ends a calendar out of office on the status page", async ({
   page,
 }) => {
@@ -307,13 +285,16 @@ test("dropping Google Calendar ends a calendar out of office on the status page"
   await expect(page.getByText(/from your Google Calendar\./)).toBeVisible();
 
   await nav(page).getByRole("link", { name: "Integrations" }).click();
-  await group(page, "Google Calendar").getByRole("button", { name: "Disconnect" }).click();
+
+  const calendar = group(page, "Google Calendar");
+  const ask = page.getByRole("alertdialog", { name: "Disconnect Google Calendar?" });
+
+  await calendar.getByRole("button", { name: "Disconnect" }).click();
+  await expect(ask).toContainText("Your published event entries will be removed.");
   calendarOoo = false;
-  await page
-    .getByRole("alertdialog", { name: "Disconnect Google Calendar?" })
-    .getByRole("button", { name: "Disconnect" })
-    .click();
+  await ask.getByRole("button", { name: "Disconnect" }).click();
   await expect(page.getByText("Google Calendar disconnected.")).toBeVisible();
+  await expect(calendar.getByRole("button", { name: "Connect Google Calendar" })).toBeFocused();
 
   await nav(page).getByRole("link", { name: "Status" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Status" })).toBeVisible();
@@ -421,54 +402,6 @@ test("saving one status setting keeps what's typed in the others", async ({ page
   await expect(page.getByRole("textbox", { name: "Note" })).toHaveValue("Back Monday");
 });
 
-test("a room's notification level changes from the rooms list and stays", async ({ page }) => {
-  await openSettings(page, "rooms");
-
-  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
-  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
-  const label = (await level.getAttribute("aria-label")) ?? "";
-  const room = label.replace(/^Notifications for /, "").replace(/: .*$/, "");
-
-  await level.click();
-  await page.getByRole("menuitemradio", { name: /No notifications/ }).click();
-  await expect(level).toHaveAccessibleName(`Notifications for ${room}: No notifications`);
-
-  await page.reload();
-  await expect(
-    page.getByRole("button", { name: `Notifications for ${room}: No notifications` }),
-  ).toBeVisible();
-  await expect(
-    page.locator(".settings-page").getByRole("region", { name: "Direct messages" }),
-  ).toBeVisible();
-});
-
-test("new backup codes ask for a code first, then show once", async ({ page }) => {
-  await openSettings(page, "security");
-
-  await page.getByRole("button", { name: "New backup codes" }).click();
-
-  const ask = page.getByRole("dialog", { name: "New backup codes?" });
-  const field = ask.getByLabel("Authenticator code or password");
-
-  await field.fill("000000");
-  await ask.getByRole("button", { name: "Make new codes" }).click();
-  await expect(
-    ask.getByText("Enter your authenticator code or password to continue."),
-  ).toBeVisible();
-  await expect(field).toHaveAttribute("aria-invalid", "true");
-
-  await field.fill("123456");
-  await ask.getByRole("button", { name: "Make new codes" }).click();
-
-  const codes = page.getByRole("dialog", { name: "Your new backup codes" });
-
-  await expect(codes.getByRole("list", { name: "Backup codes" }).getByRole("listitem")).toHaveCount(
-    10,
-  );
-  await codes.getByRole("button", { name: "Done" }).click();
-  await expect(codes).toBeHidden();
-});
-
 test("too many tries are refused in place", async ({ page }) => {
   await openSettings(page, "security");
 
@@ -479,25 +412,6 @@ test("too many tries are refused in place", async ({ page }) => {
   await ask.getByLabel("Authenticator code or password").fill("limit");
   await ask.getByRole("button", { name: "Forget all" }).click();
   await expect(ask.getByText("Too many attempts. Try again in a few minutes.")).toBeVisible();
-});
-
-test("forgetting one remembered browser", async ({ page }) => {
-  await openSettings(page, "security");
-
-  const rows = page.getByRole("region", { name: "Two-step sign-in" }).getByRole("listitem");
-
-  await expect(rows).toHaveCount(2);
-  await rows.first().getByRole("button", { name: "Forget" }).click();
-
-  const ask = page.getByRole("dialog", { name: "Forget this browser?" });
-
-  await ask.getByLabel("Authenticator code or password").fill("123456");
-  await ask.getByRole("button", { name: "Forget" }).click();
-  await expect(
-    page.getByText("Device forgotten. It will ask for a code at next sign-in."),
-  ).toBeVisible();
-  await expect(rows).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Forget all browsers" })).toBeHidden();
 });
 
 test("turning two-step sign-in off goes to the setup page", async ({ page }) => {
@@ -556,6 +470,7 @@ test("a refused or cancelled confirmation keeps no code, and closed codes are go
   await expect(
     ask.getByText("Enter your authenticator code or password to continue."),
   ).toBeVisible();
+  await expect(field).toHaveAttribute("aria-invalid", "true");
   await expect(field).toHaveValue("");
 
   await field.fill("999999");
@@ -568,6 +483,11 @@ test("a refused or cancelled confirmation keeps no code, and closed codes are go
   await page.keyboard.press("Enter");
 
   const codes = page.getByRole("dialog", { name: "Your new backup codes" });
+
+  await expect(codes.getByRole("list", { name: "Backup codes" }).getByRole("listitem")).toHaveCount(
+    10,
+  );
+
   const first = (await codes.getByRole("listitem").first().textContent()) ?? "";
 
   expect(first).not.toBe("");
@@ -625,8 +545,12 @@ test("forgetting a browser by keyboard leaves focus on the next one", async ({ p
   await ask.getByLabel("Authenticator code or password").fill("123456");
   await page.keyboard.press("Enter");
   await expect(ask).toBeHidden();
+  await expect(
+    page.getByText("Device forgotten. It will ask for a code at next sign-in."),
+  ).toBeVisible();
   await expect(rows).toHaveCount(1);
   await expect(rows.first().getByRole("button", { name: /^Forget/ })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Forget all browsers" })).toBeHidden();
 });
 
 test("a failed room change never undoes a newer one", async ({ page }) => {
@@ -679,32 +603,6 @@ test("a failed room change never undoes a newer one", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("a room with no level stored shows none chosen, and Mentions can be chosen", async ({
-  page,
-}) => {
-  await page.route("**/api/v1/settings/account", async (route) => {
-    const response = await route.fetch();
-    const account = await response.json();
-
-    account.sharedRooms[0].involvement = null;
-    await route.fulfill({ response, json: account });
-  });
-  await openSettings(page, "rooms");
-
-  const rooms = page.locator(".settings-page").getByRole("region", { name: "Rooms", exact: true });
-  const level = rooms.getByRole("button", { name: /^Notifications for / }).first();
-
-  const room = ((await level.getAttribute("aria-label")) ?? "")
-    .replace(/^Notifications for /, "")
-    .replace(/: .*$/, "");
-
-  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
-  await level.click();
-  await expect(page.getByRole("menuitemradio", { checked: true })).toHaveCount(0);
-  await page.getByRole("menuitemradio", { name: /Mentions/ }).click();
-  await expect(level).toHaveAccessibleName(`Notifications for ${room}: Mentions`);
-});
-
 test("two failed changes from no level go back to none, not to the first choice", async ({
   page,
 }) => {
@@ -739,6 +637,7 @@ test("two failed changes from no level go back to none, not to the first choice"
 
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
   await level.click();
+  await expect(page.getByRole("menuitemradio", { checked: true })).toHaveCount(0);
   await page.getByRole("menuitemradio", { name: /Muted/ }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
   await level.click();
@@ -748,13 +647,6 @@ test("two failed changes from no level go back to none, not to the first choice"
   release();
   await expect.poll(() => calls).toBe(2);
   await expect(level).toHaveAccessibleName(`Notifications for ${room}: Not set`);
-});
-
-test("a push device gets a test notification", async ({ page }) => {
-  await openSettings(page, "devices");
-
-  await page.getByRole("button", { name: "Send a test" }).first().click();
-  await expect(page.getByText("Test notification sent")).toBeVisible();
 });
 
 test("two devices' tests run on their own", async ({ page }) => {

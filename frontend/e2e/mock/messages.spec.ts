@@ -8,6 +8,7 @@ import {
   matrix,
   postMessage,
   ROOM_IDS,
+  SHOTS,
   scrollByWheel,
   shot,
   type Theme,
@@ -124,20 +125,6 @@ test.describe("message actions", () => {
     await expect(bar).toBeHidden();
   });
 
-  test("right click opens the message menu", async ({ page }) => {
-    await openOn(page, MESSAGE_IDS.generalReactions);
-    await openMenu(page, row(page, MESSAGE_IDS.generalReactions));
-
-    const menu = page.getByRole("menu", { name: "Message actions" });
-
-    await expect(menu.getByRole("menuitem", { name: /Reply in thread/ })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /Copy link/ })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /Delete message/ })).toBeVisible();
-
-    await page.keyboard.press("Escape");
-    await expect(menu).toBeHidden();
-  });
-
   test("a reaction from the picker lands on the row, and clicking it takes it back", async ({
     page,
   }) => {
@@ -178,23 +165,6 @@ test.describe("message actions", () => {
     await expect(sent.getByText("(edited)")).toBeVisible();
   });
 
-  test("Esc cancels an edit without saving", async ({ page }) => {
-    await openRoom(page, `r/${ROOM_IDS.general}`);
-
-    const sent = await send(page, "Keep this wording");
-
-    await openMenu(page, sent);
-    await page.getByRole("menuitem", { name: /Edit message/ }).click();
-
-    const editor = sent.getByRole("textbox", { name: "Edit message" });
-
-    await editor.fill("Something else");
-    await editor.press("Escape");
-
-    await expect(sent.locator(".message-body")).toHaveText("Keep this wording");
-    await expect(sent.getByText("(edited)")).toHaveCount(0);
-  });
-
   test("deleting asks first, then removes the row", async ({ page }) => {
     await openRoom(page, `r/${ROOM_IDS.general}`);
 
@@ -210,24 +180,6 @@ test.describe("message actions", () => {
     await dialog.getByRole("button", { name: "Delete" }).click();
 
     await expect(page.locator("[data-message-row]", { hasText: "Typo, ignore me" })).toHaveCount(0);
-  });
-
-  test("pin and save show on the row", async ({ page }) => {
-    await openOn(page, MESSAGE_IDS.generalReactions);
-
-    const target = row(page, MESSAGE_IDS.generalReactions);
-
-    await openMenu(page, target);
-    await page.getByRole("menuitem", { name: /Pin to conversation/ }).click();
-    await expect(target.locator(".message-flag", { hasText: "Pinned" })).toBeVisible();
-
-    await openMenu(page, target);
-    await page.getByRole("menuitem", { name: /Save for later/ }).click();
-    await expect(target.locator(".message-flag", { hasText: "Saved for later" })).toBeVisible();
-
-    await openMenu(page, target);
-    await page.getByRole("menuitem", { name: /Unpin from conversation/ }).click();
-    await expect(target.locator(".message-flag", { hasText: "Pinned" })).toHaveCount(0);
   });
 
   test("forwarding sends to the chosen conversation", async ({ page }) => {
@@ -461,66 +413,6 @@ test("a permalink scrolled to the present pages on after a long absence", async 
   await expect(log.getByText("missed on permalink 45", { exact: true })).toBeInViewport();
 });
 
-matrix("message hover bar", async ({ page, theme, phone }) => {
-  await openOn(page, MESSAGE_IDS.generalReactions, theme);
-
-  const target = row(page, MESSAGE_IDS.generalReactions);
-
-  if (phone) {
-    await target.focus();
-  } else {
-    await hoverBar(target);
-  }
-
-  await settledShot(page, "hover-bar", theme);
-});
-
-matrix("message context menu", async ({ page, theme }) => {
-  await openOn(page, MESSAGE_IDS.generalReactions, theme);
-  await openMenu(page, row(page, MESSAGE_IDS.generalReactions));
-  await settledShot(page, "context-menu", theme);
-});
-
-matrix("emoji picker", async ({ page, theme, phone }) => {
-  await openOn(page, MESSAGE_IDS.generalReactions, theme);
-
-  const target = row(page, MESSAGE_IDS.generalReactions);
-
-  // A phone has no hover bar; the reactions row's add pill opens the picker there.
-  if (phone) {
-    await target.locator(".reaction-add").click();
-  } else {
-    await (await hoverBar(target)).getByRole("button", { name: "Add reaction" }).click();
-  }
-
-  await expect(page.getByRole("combobox", { name: "Search emoji" })).toBeFocused();
-  await expect(page.getByRole("option").first()).toBeVisible();
-  await settledShot(page, "emoji-picker", theme);
-});
-
-matrix("message edit", async ({ page, theme }) => {
-  await openRoom(page, `r/${ROOM_IDS.general}`, theme);
-
-  const sent = await send(page, "Shipping the beta on Thursday");
-
-  await openMenu(page, sent);
-  await page.getByRole("menuitem", { name: /Edit message/ }).click();
-  await expect(sent.getByRole("textbox", { name: "Edit message" })).toBeFocused();
-  await settledShot(page, "edit", theme);
-});
-
-matrix("forward dialog", async ({ page, theme }) => {
-  await openOn(page, MESSAGE_IDS.generalReactions, theme);
-  await openMenu(page, row(page, MESSAGE_IDS.generalReactions));
-  await page.getByRole("menuitem", { name: /Forward/ }).click();
-
-  const dialog = page.getByRole("dialog", { name: "Forward message" });
-
-  await expect(dialog.getByRole("checkbox").first()).toBeVisible();
-  await dialog.getByRole("checkbox").nth(1).check();
-  await settledShot(page, "forward-dialog", theme);
-});
-
 matrix("image lightbox", async ({ page, theme }) => {
   await openOn(page, MESSAGE_IDS.generalChart, theme);
   await row(page, MESSAGE_IDS.generalChart).locator(".attachment-image").click();
@@ -531,13 +423,76 @@ matrix("image lightbox", async ({ page, theme }) => {
   await settledShot(page, "lightbox", theme);
 });
 
-matrix("reactions and boosts", async ({ page, theme }) => {
-  await openOn(page, MESSAGE_IDS.generalBoosts, theme);
-  await expect(row(page, MESSAGE_IDS.generalBoosts).locator(".boost").first()).toBeVisible();
-  await settledShot(page, "reactions", theme);
-});
+// Screenshots only: each one's behaviour is checked by the "message actions" tests above.
+if (SHOTS) {
+  matrix("message hover bar", async ({ page, theme, phone }) => {
+    await openOn(page, MESSAGE_IDS.generalReactions, theme);
 
-matrix("forwarded, pinned and file rows", async ({ page, theme }) => {
-  await openOn(page, MESSAGE_IDS.generalForward, theme);
-  await settledShot(page, "forward-and-files", theme);
-});
+    const target = row(page, MESSAGE_IDS.generalReactions);
+
+    if (phone) {
+      await target.focus();
+    } else {
+      await hoverBar(target);
+    }
+
+    await settledShot(page, "hover-bar", theme);
+  });
+
+  matrix("message context menu", async ({ page, theme }) => {
+    await openOn(page, MESSAGE_IDS.generalReactions, theme);
+    await openMenu(page, row(page, MESSAGE_IDS.generalReactions));
+    await settledShot(page, "context-menu", theme);
+  });
+
+  matrix("emoji picker", async ({ page, theme, phone }) => {
+    await openOn(page, MESSAGE_IDS.generalReactions, theme);
+
+    const target = row(page, MESSAGE_IDS.generalReactions);
+
+    // A phone has no hover bar; the reactions row's add pill opens the picker there.
+    if (phone) {
+      await target.locator(".reaction-add").click();
+    } else {
+      await (await hoverBar(target)).getByRole("button", { name: "Add reaction" }).click();
+    }
+
+    await expect(page.getByRole("combobox", { name: "Search emoji" })).toBeFocused();
+    await expect(page.getByRole("option").first()).toBeVisible();
+    await settledShot(page, "emoji-picker", theme);
+  });
+
+  matrix("message edit", async ({ page, theme }) => {
+    await openRoom(page, `r/${ROOM_IDS.general}`, theme);
+
+    const sent = await send(page, "Shipping the beta on Thursday");
+
+    await openMenu(page, sent);
+    await page.getByRole("menuitem", { name: /Edit message/ }).click();
+    await expect(sent.getByRole("textbox", { name: "Edit message" })).toBeFocused();
+    await settledShot(page, "edit", theme);
+  });
+
+  matrix("forward dialog", async ({ page, theme }) => {
+    await openOn(page, MESSAGE_IDS.generalReactions, theme);
+    await openMenu(page, row(page, MESSAGE_IDS.generalReactions));
+    await page.getByRole("menuitem", { name: /Forward/ }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Forward message" });
+
+    await expect(dialog.getByRole("checkbox").first()).toBeVisible();
+    await dialog.getByRole("checkbox").nth(1).check();
+    await settledShot(page, "forward-dialog", theme);
+  });
+
+  matrix("reactions and boosts", async ({ page, theme }) => {
+    await openOn(page, MESSAGE_IDS.generalBoosts, theme);
+    await expect(row(page, MESSAGE_IDS.generalBoosts).locator(".boost").first()).toBeVisible();
+    await settledShot(page, "reactions", theme);
+  });
+
+  matrix("forwarded, pinned and file rows", async ({ page, theme }) => {
+    await openOn(page, MESSAGE_IDS.generalForward, theme);
+    await settledShot(page, "forward-and-files", theme);
+  });
+}

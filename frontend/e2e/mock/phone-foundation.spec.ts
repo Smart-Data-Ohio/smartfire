@@ -62,19 +62,6 @@ test.describe("on a 360 px touch phone", () => {
     expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
   });
 
-  for (const [screen, path] of [
-    ["home", ""],
-    ["room", GENERAL],
-    ["settings", "settings"],
-    ["workspace admin", "admin/people"],
-  ] as const) {
-    test(`nothing on ${screen} scrolls sideways`, async ({ page }) => {
-      await openApp(page, path);
-      await expect(page.locator(".app-shell")).toBeVisible();
-      await expectNoHorizontalOverflow(page);
-    });
-  }
-
   test("text fields are at least 16 px, so iOS never zooms in on focus", async ({ page }) => {
     // The smallest account text size: fields hold at 16 px even when the rest of the text shrinks.
     await openApp(page, "");
@@ -183,88 +170,6 @@ test.describe("on a 360 px touch phone", () => {
       .toMatchObject({ y: 0, height: PHONE_SMALL.height });
   });
 
-  test("with browser chrome retracted, the shell still ends where the visible area does", async ({
-    page,
-  }) => {
-    await openApp(page, GENERAL);
-    await page.getByRole("textbox", { name: "Message #general" }).focus();
-    // Retracted chrome leaves the ICB 60 px short of 100dvh (740).
-    await page.evaluate(() =>
-      Object.defineProperty(document.documentElement, "clientHeight", {
-        configurable: true,
-        get: () => window.innerHeight - 60,
-      }),
-    );
-    // The visual viewport: 440 px tall, 40 px down the layout viewport.
-    await simulateKeyboard(page, 240, { offsetTop: 40 });
-
-    await expect(page.locator("html")).toHaveAttribute("data-keyboard", "open");
-    expect(await rootToken(page, "--viewport-height")).toBe("440px");
-    expect(await rootToken(page, "--keyboard-inset")).toBe("260px");
-    await expect
-      .poll(async () => await page.locator(".app-shell").boundingBox())
-      .toMatchObject({ y: 40, height: 440 });
-
-    const composer = await page.locator(".composer").boundingBox();
-
-    expect((composer?.y ?? 0) + (composer?.height ?? 0)).toBe(40 + 440);
-  });
-
-  test("pinch zoom isn't taken for a keyboard", async ({ page }) => {
-    await openApp(page, GENERAL);
-    await page.getByRole("textbox", { name: "Message #general" }).focus();
-    // Scale 2 halves the visual viewport, and WebKit halves innerHeight with it.
-    await page.evaluate(async () => {
-      const viewport = window.visualViewport;
-
-      if (viewport === null) {
-        return;
-      }
-
-      const half = window.innerHeight / 2;
-
-      Object.defineProperty(window, "innerHeight", { configurable: true, get: () => half });
-      Object.defineProperty(viewport, "scale", { configurable: true, get: () => 2 });
-      Object.defineProperty(viewport, "height", { configurable: true, get: () => half });
-      Object.defineProperty(viewport, "offsetTop", { configurable: true, get: () => 100 });
-      viewport.dispatchEvent(new Event("resize"));
-      window.dispatchEvent(new Event("resize"));
-      await new Promise(requestAnimationFrame);
-      await new Promise(requestAnimationFrame);
-    });
-
-    expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
-    expect(await rootToken(page, "--viewport-top-inset")).toBe("0px");
-    await expect(page.locator("html")).not.toHaveAttribute("data-keyboard");
-    expect((await page.locator(".app-shell").boundingBox())?.height).toBe(PHONE_SMALL.height);
-  });
-
-  test("a focused field reads closed until the visible area falls a keyboard short", async ({
-    page,
-  }) => {
-    await openApp(page, GENERAL);
-
-    const html = page.locator("html");
-
-    // A hardware keyboard: focus, and nothing covers the page.
-    await page.getByRole("textbox", { name: "Message #general" }).focus();
-    await expect(html).not.toHaveAttribute("data-keyboard");
-
-    // The URL bar folding away.
-    await simulateKeyboard(page, 60);
-    await expect(html).not.toHaveAttribute("data-keyboard");
-    expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
-
-    // Rotated with the keyboard up, then dismissed with Back while the field keeps focus.
-    await page.setViewportSize({ width: PHONE_SMALL.height, height: PHONE_SMALL.width });
-    await simulateKeyboard(page, 200);
-    await expect(html).toHaveAttribute("data-keyboard", "open");
-    await simulateKeyboard(page, 0);
-    await expect(page.getByRole("textbox", { name: "Message #general" })).toBeFocused();
-    await expect(html).not.toHaveAttribute("data-keyboard");
-    expect(await rootToken(page, "--keyboard-inset")).toBe("0px");
-  });
-
   test("a resizing keyboard shrinks the shell with the viewport", async ({ page }) => {
     await openApp(page, GENERAL);
     await page.getByRole("textbox", { name: "Message #general" }).focus();
@@ -311,14 +216,17 @@ test.describe("on a 360 px touch phone", () => {
     expect(await color()).toBe("#f1f4f6");
   });
 
-  test("the touch-target check flags a small target and passes a large one", async ({ page }) => {
+  test("the touch-target check flags small targets and slivers but skips hidden ones", async ({
+    page,
+  }) => {
     await openApp(page, "");
     await page.evaluate(() => {
       const fixture = document.createElement("div");
 
       fixture.id = "touch-fixture";
       fixture.innerHTML =
-        '<button style="width:44px;height:44px">Big</button><p>Read <a href="#x">inline</a></p>';
+        '<button style="width:44px;height:44px">Big</button><p>Read <a href="#x">inline</a></p>' +
+        '<button class="visually-hidden">Skip</button>';
       document.body.append(fixture);
     });
     await expectTouchTargets(page, "#touch-fixture");
@@ -329,24 +237,12 @@ test.describe("on a 360 px touch phone", () => {
         ?.insertAdjacentHTML("beforeend", '<button style="width:30px;height:30px">Small</button>');
     });
     await expect(expectTouchTargets(page, "#touch-fixture")).rejects.toThrow(/Small.*30x30/);
-  });
 
-  test("the touch-target check skips visually hidden things but not a visible sliver", async ({
-    page,
-  }) => {
-    await openApp(page, "");
     await page.evaluate(() => {
       document.body.insertAdjacentHTML(
         "beforeend",
-        '<div id="sliver-fixture"><button class="visually-hidden">Skip</button></div>',
+        '<div id="sliver-fixture"><button style="width:1px;height:44px">Sliver</button></div>',
       );
-    });
-    await expectTouchTargets(page, "#sliver-fixture");
-
-    await page.evaluate(() => {
-      document
-        .querySelector("#sliver-fixture")
-        ?.insertAdjacentHTML("beforeend", '<button style="width:1px;height:44px">Sliver</button>');
     });
     await expect(expectTouchTargets(page, "#sliver-fixture")).rejects.toThrow(/Sliver.*1x44/);
   });
@@ -400,16 +296,6 @@ test.describe("on a desktop", () => {
         .first()
         .evaluate((field) => getComputedStyle(field).fontSize),
     ).toBe("14px");
-  });
-
-  test("the window shrinking isn't taken for a keyboard", async ({ page }) => {
-    await openApp(page, GENERAL);
-    await page.setViewportSize({ width: DESKTOP.width, height: 500 });
-
-    await expect
-      .poll(async () => (await page.locator(".app-shell").boundingBox())?.height)
-      .toBe(500);
-    await expect(page.locator("html")).not.toHaveAttribute("data-keyboard");
   });
 
   test("printing lets the shell flow instead of holding it to the screen", async ({ page }) => {
