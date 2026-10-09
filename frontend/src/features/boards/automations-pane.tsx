@@ -13,7 +13,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { PaneFrame, RoomName } from "../panes/pane-frame.tsx";
-import { PaneError } from "../panes/pane-states.tsx";
+import { PaneEmpty, PaneError } from "../panes/pane-states.tsx";
 import { isAgent } from "../people/people.ts";
 import { MAX_SLA_MINUTES, MAX_TAG_LENGTH, minutesLabel } from "./board-format.ts";
 import { StatusChip, UserFace } from "./board-parts.tsx";
@@ -24,8 +24,24 @@ const NO_FIELDS: Fields = {};
 
 type Load =
   | { readonly status: "loading" }
-  | { readonly status: "error"; readonly message: string }
+  | {
+      readonly status: "error";
+      readonly message: string;
+      /** A membership or administrator refusal, which retrying will not change. */
+      readonly refusal: "forbidden" | "unavailable" | null;
+    }
   | { readonly status: "ready"; readonly settings: BoardAutomations };
+
+/** Classic answers a non-admin member with 403 and a nonmember with a redirect home. */
+function refusalOf(error: Error): "forbidden" | "unavailable" | null {
+  if (!(error instanceof ActionError)) return null;
+
+  if (error.tag === "Forbidden") return "forbidden";
+
+  if (error.tag === "NotFound") return "unavailable";
+
+  return null;
+}
 
 /** The statuses that take a timer, as the classic form lists them. Done posts never breach. */
 const TIMED = [
@@ -685,7 +701,7 @@ export function BoardAutomationsPane({ roomId }: { readonly roomId: number }) {
       },
       (error: Error) => {
         if (current && ticket > shown.current) {
-          setLoad({ status: "error", message: error.message });
+          setLoad({ status: "error", message: error.message, refusal: refusalOf(error) });
         }
       },
     );
@@ -735,10 +751,24 @@ export function BoardAutomationsPane({ roomId }: { readonly roomId: number }) {
   return (
     <PaneFrame title="Automations" subtitle={<RoomName roomId={roomId} />}>
       {load.status === "error" ? (
-        <PaneError
-          message={`The board's automations couldn't be loaded. ${load.message}`}
-          onRetry={() => setGeneration((count) => count + 1)}
-        />
+        load.refusal === "forbidden" ? (
+          <PaneEmpty
+            icon="lock"
+            title="Automations are limited"
+            text="Only the person who made this board and administrators can open them."
+          />
+        ) : load.refusal === "unavailable" ? (
+          <PaneEmpty
+            icon="ban"
+            title="This board isn't available"
+            text="You aren't in it, or it isn't a board."
+          />
+        ) : (
+          <PaneError
+            message={`The board's automations couldn't be loaded. ${load.message}`}
+            onRetry={() => setGeneration((count) => count + 1)}
+          />
+        )
       ) : (
         <SkeletonReveal loading={load.status === "loading"} skeleton={<AutomationsSkeleton />}>
           {load.status === "ready" ? (

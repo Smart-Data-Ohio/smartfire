@@ -1,8 +1,7 @@
 //! `GET /rooms/:room_id/settings`. The route is declared and the classic controller is not.
-//! Open, closed, voice and stage settings are the SPA screen for someone using it. A board or a
-//! direct message is not: the room page sends a board back to classic and drops the edit form,
-//! and a direct's settings URL opens the conversation. Those go to that type's edit form, with
-//! `classic=1` so the hop isn't bounced into the SPA.
+//! Open, closed, voice, stage and board settings are the SPA screen for someone using it. A
+//! direct message is not: its settings URL opens the conversation. Those go to that type's edit
+//! form, with `classic=1` so the hop isn't bounced into the SPA.
 
 use campfire_db::{Room, RoomType};
 use campfire_kit::{Ctx, Result};
@@ -32,11 +31,11 @@ pub async fn show(c: &mut Ctx) -> Result {
     c.redirect_to(&c.url_for(&path))
 }
 
-/// Room types whose settings the SPA edits. Boards and direct messages stay on the classic form.
+/// Room types whose settings the SPA edits. Direct messages stay on the classic form.
 fn spa_settings(room_type: RoomType) -> bool {
     matches!(
         room_type,
-        RoomType::Open | RoomType::Closed | RoomType::Voice | RoomType::Stage
+        RoomType::Open | RoomType::Closed | RoomType::Voice | RoomType::Stage | RoomType::Board
     )
 }
 

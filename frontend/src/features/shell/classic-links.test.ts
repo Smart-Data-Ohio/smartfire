@@ -33,11 +33,15 @@ describe("links to classic pages", () => {
     expect(inPlaceTarget(link("/rooms/12/threads/5/messages/34/fizzy_cards/new"), origin)).toBe(
       "/app/r/12/t/5/m/34/fizzy/new",
     );
+    expect(inPlaceTarget(link("/rooms/boards/12/edit"), origin)).toBe("/app/r/12/settings");
+    expect(inPlaceTarget(link("/rooms/boards/12/automations"), origin)).toBe(
+      "/app/r/12/automations",
+    );
   });
 
   it("leave everything else to the browser", () => {
     for (const anchor of [
-      link("/rooms/boards/12/edit"),
+      link("/rooms/boards/12/edit?classic=1"),
       link("/users/7/profile"),
       link("/users/me/profile?classic=1#fizzy-connection-title"),
       link("/rooms/12?classic=1"),
