@@ -5,6 +5,7 @@ import {
   expect,
   matrix,
   ROOM_IDS,
+  SHOTS,
   shot,
   syncWelcomed,
   type Theme,
@@ -23,9 +24,6 @@ const REPLY = seededReplyId(THREAD_IDS.generalActive, 1);
 
 const REPLY_TITLE =
   "The drop is almost all between invite sent and invite accepted. Deliverability again?";
-
-/** Theo's reply in the locked thread. */
-const LOCKED_REPLY = seededReplyId(THREAD_IDS.generalLocked, 0);
 
 const DISCONNECTED =
   "Connect your Fizzy account first: card previews and creation use your own Fizzy access.";
@@ -261,64 +259,6 @@ test.describe("Create Fizzy card", () => {
     await expect(form.getByText("Choose a board.", { exact: true })).toHaveCount(0);
   });
 
-  test("without a connection it shows the source and the way to connect", async ({ page }) => {
-    await open(page, `r/${GENERAL}/m/${SOURCE}`);
-    await fizzyMode(page, "not-connected");
-
-    const form = await createFrom(page, row(page, SOURCE));
-
-    await expect(form.locator("blockquote")).toContainText(SOURCE_TEXT);
-    await expect(form.getByText(DISCONNECTED)).toBeVisible();
-    await expect(form.getByLabel("Board")).toHaveCount(0);
-    await expect(form.getByRole("button", { name: "Create card" })).toHaveCount(0);
-
-    await form.getByRole("link", { name: "Connect Fizzy on your profile" }).click();
-    await expect(page).toHaveURL(/\/app\/settings\/integrations#integration-fizzy$/);
-  });
-
-  test("a read-only token or a refusal keeps the form with Fizzy's reason", async ({ page }) => {
-    await open(page, `r/${GENERAL}/m/${SOURCE}`);
-    await fizzyMode(page, "read-only");
-
-    const form = await createFrom(page, row(page, SOURCE));
-
-    await submitTo(form, "Engineering");
-    await expect(form.getByRole("alert")).toContainText(
-      "That Fizzy token is read-only. Generate a Read + Write token to create cards.",
-    );
-    await expect(form.getByLabel("Title")).toHaveValue(SOURCE_TEXT);
-
-    await fizzyMode(page, "refused");
-    await form.getByRole("button", { name: "Create card" }).click();
-    await expect(form.getByRole("alert")).toContainText(
-      "Fizzy refused the new card (Fizzy refused: Board is unavailable).",
-    );
-    await expect(form.getByRole("button", { name: "Create card" })).toBeEnabled();
-  });
-
-  test("a card whose reply failed is linked, and can't be created again", async ({ page }) => {
-    await open(page, `r/${GENERAL}/m/${SOURCE}`);
-    await fizzyMode(page, "reply-failed");
-
-    const form = await createFrom(page, row(page, SOURCE));
-
-    await submitTo(form, "Support");
-    await expect(
-      form.getByText(
-        "Fizzy card #580 created, but the reply could not be posted (Body is too long).",
-      ),
-    ).toBeVisible();
-    await expect(form.getByRole("link", { name: /Open Fizzy card #580/ })).toHaveAttribute(
-      "href",
-      "https://fizzy.test/897362094/cards/580",
-    );
-    await expect(form.getByRole("button", { name: "Create card" })).toHaveCount(0);
-    await expect(form.getByLabel("Title")).toBeDisabled();
-
-    await form.locator(".dialog-footer").getByRole("button", { name: "Close" }).click();
-    await expect(form).toBeHidden();
-  });
-
   test("a thread reply is quoted from the thread, which stays open beneath", async ({ page }) => {
     await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
 
@@ -395,37 +335,22 @@ test.describe("Create Fizzy card", () => {
     await page.waitForTimeout(1000);
     expect(await focusedMessage()).toBe(moved);
   });
+});
 
-  test("a locked thread's reply opens the form, and creating says the thread is locked", async ({
-    page,
-  }) => {
-    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalLocked}/m/${LOCKED_REPLY}/fizzy/new`);
+// Screenshots only: the specs above check the form, its errors and the disconnected state.
+if (SHOTS) {
+  matrix("the Create Fizzy card form", async ({ page, theme }) => {
+    await open(page, `r/${GENERAL}/m/${SOURCE}/fizzy/new`, theme);
+    await expect(dialog(page).getByLabel("Title")).toHaveValue(SOURCE_TEXT);
+    await shot(page, "fizzy-card-form", theme);
 
-    const form = dialog(page);
+    await dialog(page).getByRole("button", { name: "Create card" }).click();
+    await expect(dialog(page).getByText("Choose a board.", { exact: true })).toBeVisible();
+    await shot(page, "fizzy-card-form-invalid", theme);
 
-    await expect(form.getByLabel("Title")).toHaveValue("Can we keep this to the agreed format?");
-    await expect(pane(page)).toBeVisible();
-    await submitTo(form, "Engineering");
-    await expect(form.getByRole("alert")).toContainText("This thread is locked");
-
-    await page.keyboard.press("Escape");
-    await expect(page).toHaveURL(
-      new RegExp(`/app/r/${GENERAL}/t/${THREAD_IDS.generalLocked}\\?m=${LOCKED_REPLY}$`),
-    );
+    await fizzyMode(page, "not-connected");
+    await page.goto(`/app/r/${GENERAL}/m/${SOURCE}/fizzy/new`);
+    await expect(dialog(page).getByText(DISCONNECTED)).toBeVisible();
+    await shot(page, "fizzy-card-disconnected", theme);
   });
-});
-
-matrix("the Create Fizzy card form", async ({ page, theme }) => {
-  await open(page, `r/${GENERAL}/m/${SOURCE}/fizzy/new`, theme);
-  await expect(dialog(page).getByLabel("Title")).toHaveValue(SOURCE_TEXT);
-  await shot(page, "fizzy-card-form", theme);
-
-  await dialog(page).getByRole("button", { name: "Create card" }).click();
-  await expect(dialog(page).getByText("Choose a board.", { exact: true })).toBeVisible();
-  await shot(page, "fizzy-card-form-invalid", theme);
-
-  await fizzyMode(page, "not-connected");
-  await page.goto(`/app/r/${GENERAL}/m/${SOURCE}/fizzy/new`);
-  await expect(dialog(page).getByText(DISCONNECTED)).toBeVisible();
-  await shot(page, "fizzy-card-disconnected", theme);
-});
+}

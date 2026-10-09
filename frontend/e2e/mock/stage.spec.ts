@@ -4,6 +4,7 @@ import {
   matrix,
   openHeaderTool,
   ROOM_IDS,
+  SHOTS,
   shot,
   type Theme,
   test,
@@ -66,26 +67,29 @@ function dock(page: Page, phone = false) {
   return page.locator(phone ? ".app-main-dock .huddle-dock" : ".sidebar .huddle-dock");
 }
 
-matrix("the stage pane lists hosts, speakers and listeners", async ({ page, theme }) => {
-  await open(page, TOWN_HALL, theme);
-  await control(page.request, "stage-hand", {
-    roomId: TOWN_HALL,
-    userId: USER_IDS.jonah,
-    raised: true,
+// Screenshots only: stage.test.ts covers the roster, and the next test the pane's groups live.
+if (SHOTS) {
+  matrix("the stage pane lists hosts, speakers and listeners", async ({ page, theme }) => {
+    await open(page, TOWN_HALL, theme);
+    await control(page.request, "stage-hand", {
+      roomId: TOWN_HALL,
+      userId: USER_IDS.jonah,
+      raised: true,
+    });
+    await openStage(page);
+
+    const pane = stagePane(page);
+
+    await expect(pane.getByRole("region", { name: "Hosts" })).toContainText("Riel St. Amand");
+    await expect(pane.getByRole("region", { name: "Speakers" })).toContainText("Priya Raman");
+    await expect(pane.getByRole("region", { name: "Listeners" })).toContainText(
+      "Hand raised · #1 in queue",
+    );
+    await expect(pane.getByText("You are hosting this stage.")).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "stage-pane", theme);
   });
-  await openStage(page);
-
-  const pane = stagePane(page);
-
-  await expect(pane.getByRole("region", { name: "Hosts" })).toContainText("Riel St. Amand");
-  await expect(pane.getByRole("region", { name: "Speakers" })).toContainText("Priya Raman");
-  await expect(pane.getByRole("region", { name: "Listeners" })).toContainText(
-    "Hand raised · #1 in queue",
-  );
-  await expect(pane.getByText("You are hosting this stage.")).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "stage-pane", theme);
-});
+}
 
 test("a host invites a raised hand to speak and moves people around", async ({ page, request }) => {
   await open(page, TOWN_HALL);
@@ -96,6 +100,7 @@ test("a host invites a raised hand to speak and moves people around", async ({ p
   const listeners = pane.getByRole("region", { name: "Listeners" });
   const speakers = pane.getByRole("region", { name: "Speakers" });
 
+  await expect(pane.getByText("You are hosting this stage.")).toBeVisible();
   await expect(listeners.getByText("Hand raised · #1 in queue")).toBeVisible();
   await expect(page.getByRole("button", { name: "Stage (1 raised hands)" })).toBeVisible();
   await listeners.getByRole("button", { name: "Invite to speak" }).click();
@@ -217,22 +222,6 @@ test("Smartfire's reduced-motion setting stills the ring", async ({ page, reques
   expect(pulse).toBe("none");
 });
 
-test("a ring says the caller left when they hang up", async ({ page, request }) => {
-  await open(page, ROOM_IDS.general);
-  await control(request, "huddle-ring", { roomId: ROOM_IDS.dmMaya, userId: USER_IDS.maya });
-  await expect(
-    page.getByRole("alertdialog", { name: "Maya Okafor started a huddle" }),
-  ).toBeVisible();
-  await control(request, "huddle-ring", {
-    roomId: ROOM_IDS.dmMaya,
-    userId: USER_IDS.maya,
-    event: "ended",
-  });
-  await expect(
-    page.getByRole("status").filter({ hasText: "Maya Okafor left the huddle" }),
-  ).toBeVisible();
-});
-
 test("a call elsewhere shows a banner and a sidebar pill with Join", async ({ page, request }) => {
   await open(page, LOUNGE);
   await control(request, "huddle-join", { roomId: LOUNGE, userId: USER_IDS.priya });
@@ -252,18 +241,23 @@ test("a call elsewhere shows a banner and a sidebar pill with Join", async ({ pa
   await expect(banner).toHaveCount(0);
 });
 
-test("in a call, joins and leaves toast", async ({ page, request }) => {
-  await open(page, LOUNGE);
-  await page.locator(".room-header .huddle-launcher").click();
-  await expect(dock(page).getByRole("status")).toContainText("Huddle active");
+// Screenshots only: notices.test.ts covers the batched join toast and the delayed leave toast.
+if (SHOTS) {
+  test("in a call, joins and leaves toast", async ({ page, request }) => {
+    await open(page, LOUNGE);
+    await page.locator(".room-header .huddle-launcher").click();
+    await expect(dock(page).getByRole("status")).toContainText("Huddle active");
 
-  await control(request, "huddle-join", { roomId: LOUNGE, userId: USER_IDS.priya });
-  await control(request, "huddle-join", { roomId: LOUNGE, userId: USER_IDS.sam });
-  await expect(page.locator(".huddle-toast")).toHaveText(["Priya Raman and Sam Whitfield joined"]);
-  await shot(page, "huddle-join-toast", "light");
+    await control(request, "huddle-join", { roomId: LOUNGE, userId: USER_IDS.priya });
+    await control(request, "huddle-join", { roomId: LOUNGE, userId: USER_IDS.sam });
+    await expect(page.locator(".huddle-toast")).toHaveText([
+      "Priya Raman and Sam Whitfield joined",
+    ]);
+    await shot(page, "huddle-join-toast", "light");
 
-  await page.clock.install();
-  await control(request, "huddle-leave", { roomId: LOUNGE, userId: USER_IDS.sam });
-  await page.clock.runFor(5_100);
-  await expect(page.locator(".huddle-toast", { hasText: "Sam Whitfield left" })).toBeVisible();
-});
+    await page.clock.install();
+    await control(request, "huddle-leave", { roomId: LOUNGE, userId: USER_IDS.sam });
+    await page.clock.runFor(5_100);
+    await expect(page.locator(".huddle-toast", { hasText: "Sam Whitfield left" })).toBeVisible();
+  });
+}

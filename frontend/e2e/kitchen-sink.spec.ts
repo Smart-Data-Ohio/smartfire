@@ -10,12 +10,23 @@ interface Look {
 
 const LIGHT: Look = { name: "light", theme: "light", density: "comfortable", motion: "reduce" };
 
-const LOOKS: readonly Look[] = [
-  LIGHT,
-  { name: "dark", theme: "dark", density: "comfortable", motion: "reduce" },
-  { name: "compact", theme: "dark", density: "compact", motion: "reduce" },
-  { name: "dark-full-motion", theme: "dark", density: "comfortable", motion: "full" },
-];
+const DARK_FULL_MOTION: Look = {
+  name: "dark-full-motion",
+  theme: "dark",
+  density: "comfortable",
+  motion: "full",
+};
+
+// Light and dark with the live effects cover the error check; the others only add screenshots.
+const LOOKS: readonly Look[] =
+  process.env.SHOTS_DIR === undefined
+    ? [LIGHT, DARK_FULL_MOTION]
+    : [
+        LIGHT,
+        { name: "dark", theme: "dark", density: "comfortable", motion: "reduce" },
+        { name: "compact", theme: "dark", density: "compact", motion: "reduce" },
+        DARK_FULL_MOTION,
+      ];
 
 async function openKitchenSink(page: Page, look: Look, errors: string[]) {
   page.on("pageerror", (error) => errors.push(error.message));
