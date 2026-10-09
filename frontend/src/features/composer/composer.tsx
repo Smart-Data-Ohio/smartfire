@@ -170,6 +170,7 @@ export function Composer({
   const key = draftKey ?? conversationDraftKey(roomId, threadId);
   const creating = onSubmit !== undefined;
   const [text, setText] = useState(() => readDraft(key));
+  const textRef = useRef(text);
   const [caret, setCaret] = useState(() => ({ start: text.length, end: text.length }));
   const [restore, setRestore] = useState<{ start: number; end: number } | null>(null);
   const [focused, setFocused] = useState(false);
@@ -250,6 +251,7 @@ export function Composer({
   };
 
   const update = (next: string) => {
+    textRef.current = next;
     setText(next);
     writeDraft(key, next);
     actions.noteActivity();
@@ -290,10 +292,17 @@ export function Composer({
   };
 
   const clear = () => {
+    textRef.current = "";
     setText("");
     writeDraft(key, "");
     setPreviewOpen(false);
     focusInput();
+  };
+
+  const clearSubmitted = (submitted: string) => {
+    if (textRef.current === submitted) {
+      clear();
+    }
   };
 
   const openPicker = () => fileInputRef.current?.click();
@@ -353,8 +362,8 @@ export function Composer({
         });
       }
 
-      attachments.clearSent();
-      clear();
+      attachments.clearSent(files);
+      clearSubmitted(text);
     } finally {
       submitting.current = false;
       setRunning(false);
@@ -476,8 +485,8 @@ export function Composer({
       void onSubmit({ markdown, attachmentSignedId: files[0]?.snapshot.signedId ?? null })
         .then(
           () => {
-            attachments.clearSent();
-            clear();
+            attachments.clearSent(files);
+            clearSubmitted(text);
           },
           () => undefined,
         )

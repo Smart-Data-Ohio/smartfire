@@ -685,11 +685,11 @@ export class Engine extends Context.Service<
 
           // The stored cursor predates the page reload. Refetch after every replayed event
           // happened, then skip sidebar and activity events the fresh snapshots cover.
-          if (afterReload && frame.seq > point.seq) {
-            yield* Ref.set(snapshotThrough, frame.seq);
-            yield* resync(["user"], frame.seq);
+          if (afterReload && frame.replayThrough > point.seq) {
+            yield* Ref.set(snapshotThrough, frame.replayThrough);
+            yield* resync(["user"], frame.replayThrough);
           } else {
-            yield* Effect.forkChild(refreshUnreadCount(frame.seq));
+            yield* Effect.forkChild(refreshUnreadCount(frame.replayThrough));
           }
 
           return;

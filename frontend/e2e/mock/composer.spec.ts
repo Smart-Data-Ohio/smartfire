@@ -79,6 +79,66 @@ async function throttleUploads(page: Page, bytesPerSecond: number | null): Promi
   });
 }
 
+test("typing and attaching during a latest-page fetch keeps the next draft and its file", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+  const input = composer(page);
+  const files = page.locator('.composer input[type="file"]');
+
+  await files.setInputFiles({
+    name: "first.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("First file"),
+  });
+  await expect(page.getByRole("button", { name: "Remove first.txt" })).toBeVisible();
+
+  let releasePage: () => void = () => undefined;
+
+  const gate = new Promise<void>((resolve) => {
+    releasePage = resolve;
+  });
+
+  let fetching = false;
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await gate;
+    }
+
+    return route.continue();
+  });
+
+  try {
+    await input.fill("First captured message");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await input.fill("My next message");
+    await files.setInputFiles({
+      name: "next.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Next file"),
+    });
+    await expect(page.getByRole("button", { name: "Remove next.txt" })).toBeVisible();
+    releasePage();
+    await expect(posted(page, "First captured message")).toBeVisible();
+    await expect(input).toHaveValue("My next message");
+    await expect(page.getByRole("button", { name: "Remove first.txt" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Remove next.txt" })).toBeVisible();
+
+    await input.press("Enter");
+    await expect(posted(page, "My next message")).toBeVisible();
+    await expect(
+      page.getByRole("log", { name: "Messages" }).getByText("next.txt", { exact: true }),
+    ).toBeVisible();
+    await expect(input).toHaveValue("");
+  } finally {
+    releasePage();
+  }
+});
+
 matrix("autocomplete: people, emoji, commands and channels", async ({ page, theme }) => {
   await openApp(page, GENERAL, theme);
 
