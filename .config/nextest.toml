@@ -1,6 +1,12 @@
 [profile.ci]
 fail-fast = false
 retries = 0
+# Test builds use the Cranelift backend (.cargo/config.toml), which cannot unwind: a panic inside
+# a worker thread, such as a db().read closure, kills that thread silently and the test waits on it
+# forever. One test hung this way for over 3000 seconds until the job timed out, and nextest only
+# printed SLOW each minute. Killing a test that stays slow past this limit reports it as a TIMEOUT
+# failure, so a hung test fails the run early instead of consuming the whole 60-minute job.
+slow-timeout = { period = "60s", terminate-after = 5 }
 
 [profile.ci.junit]
 path = "junit.xml"
@@ -8,7 +14,8 @@ path = "junit.xml"
 report-skipped = "ignored"
 
 # The panic-recovery job (rust.yml's CAMPFIRE_LLVM_ONLY_TESTS): the app's crates, which are the
-# packages built on campfire_app.
+# packages built on campfire_app. It inherits the ci profile's hang guard, and its four
+# panic-recovery tests are short.
 [profile.ci-llvm]
 inherits = "ci"
 default-filter = "rdeps(campfire_app)"
@@ -45,3 +52,12 @@ threads-required = 4
 # nextest could run them alongside the large corpus suites and exceed their unchanged bounds.
 filter = 'package(campfire_richtext) & binary(hardening) & (test(deeply_nested_content_attachments_render_quickly) | test(many_bare_domains_autolink_in_linear_time))'
 threads-required = "num-cpus"
+
+[[profile.ci.overrides]]
+# The #[ignore]d browser suites that ci/correctness.sh runs with this profile boot their own app
+# server and drive real Chromium, so they outlive the base limit above: ci/ignored-tests.json
+# records the slowest of them (the original ledger assertions) at 312 seconds. They get ten minutes
+# each, still far inside those jobs' 60- and 90-minute timeouts, instead of raising every other
+# test's limit. The same suites are matched by the browser test group and the wrapper overrides.
+filter = 'rdeps(campfire_app) & (test(ws12_browser_) | test(huddle_system_cases_in_real_browser) | test(livekit_stage_system_cases_in_real_browser) | test(huddle_gateway_own_node_suite_against_rust_endpoints) | test(ws11ui_original_browser_tests) | test(ledger_browser_tests) | test(drive_browser_) | test(pwa_browser_) | test(real_server_spa_smoke_))'
+slow-timeout = { period = "60s", terminate-after = 10 }
