@@ -1120,6 +1120,30 @@ async fn a_google_link_allows_and_unlinks_as_the_classic_page_does() {
 // --- Custom styles and icons -------------------------------------------------------------------
 
 #[tokio::test]
+async fn workspace_styles_live_updates_reach_other_users_from_both_uis() {
+    use super::api_tests::{Sync, serve};
+
+    let Some(a) = app().await else { return };
+    let (addr, server) = serve(&a).await;
+    let observer = a.sign_in(JASON).await;
+    let mut sync = Sync::connect(addr, &observer.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let mut b = a.sign_in(DAVID).await;
+    b.grant_sudo().await;
+    let css = ":root { --accent: red; }";
+    let saved: api::CustomStyles = spa(&mut b, Method::PATCH, "/api/v1/admin/custom_styles", json!({"css": css})).await;
+    assert_eq!(saved.css.as_deref(), Some(css));
+    let event = sync.until(|event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)), |_| false).await;
+    assert_eq!(event.topic, "user");
+    assert_eq!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(saved));
+    classic(&mut b, Method::PATCH, "/account/custom_styles", &[("account[custom_styles]", "")]).await;
+    let event = sync.until(|event| matches!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(_)), |_| false).await;
+    assert_eq!(event.topic, "user");
+    assert_eq!(event.payload, api::SyncPayload::WorkspaceStylesUpdated(api::CustomStyles { css: Some(String::new()) }));
+    server.abort();
+}
+
+#[tokio::test]
 async fn custom_styles_save_as_the_classic_form_does() {
     let css = ".message { color: rebeccapurple }";
     let Some(spa_side) = assert_parity(

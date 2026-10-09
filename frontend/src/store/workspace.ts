@@ -15,6 +15,12 @@ export function brandingOf(workspace: Workspace): WorkspaceBranding {
 
 const FIELDS = ["name", "logoUrl", "logoStillUrl", "bannerUrl", "bannerStillUrl"] as const;
 
+export function setWorkspaceStyles(state: State, css: string | null): State {
+  if (state.boot === null || state.boot.customStyles === css) return state;
+
+  return { ...state, boot: { ...state.boot, customStyles: css } };
+}
+
 /**
  * The workspace's name, logo and banner as `workspace.updated` (or an admin's own save) gives
  * them. Before boot there's nothing to brand; an unchanged branding keeps the state.

@@ -198,6 +198,7 @@ const VIEWER: Boot = {
   },
   theme: "system",
   textSize: "default",
+  customStyles: null,
   cableUrl: "/cable",
   serviceWorkerUrl: null,
   version: "test",

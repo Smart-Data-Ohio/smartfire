@@ -71,7 +71,7 @@ import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 import * as work from "./work.ts";
-import { setWorkspaceBranding } from "./workspace.ts";
+import { setWorkspaceBranding, setWorkspaceStyles } from "./workspace.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -204,6 +204,7 @@ export const mutations = {
     }));
   },
   setBoot: (boot: Boot) => apply((state) => ({ ...state, boot })),
+  setWorkspaceStyles: (css: string | null) => apply((state) => setWorkspaceStyles(state, css)),
   setWorkspaceBranding: (branding: WorkspaceBranding) =>
     apply((state) => setWorkspaceBranding(state, branding)),
   setMe: (me: Me) => apply((state) => reduce.setMe(state, me)),

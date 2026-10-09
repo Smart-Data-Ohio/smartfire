@@ -103,6 +103,16 @@ fn workspace_branding_sync_wire_shape() {
 }
 
 #[test]
+fn workspace_styles_sync_wire_shape() {
+    for css in [None, Some(":root { --accent: red; }".into())] {
+        assert_wire(
+            &SyncPayload::WorkspaceStylesUpdated(CustomStyles { css: css.clone() }),
+            json!({"type": "workspace.styles.updated", "data": {"css": css}}),
+        );
+    }
+}
+
+#[test]
 fn people_and_the_changes_to_them() {
     assert_wire(
         &PeoplePage {

@@ -63,6 +63,26 @@ async fn unenroll(a: &TestApp, user_id: i64) {
 }
 
 #[tokio::test]
+async fn workspace_styles_reach_the_shell_and_boot_with_the_classic_policy() {
+    let Some(a) = app(true).await else { return };
+    let css = ":root { --accent: red; } body::after { content: \"</style>&\"; }";
+    a.db().write(move |tx| Account::first(tx.conn())?.unwrap().update(tx, None, Some(Some(css)), None)).await.unwrap();
+    let mut b = a.sign_in(DAVID).await;
+    let classic = b.get("/users/me/profile?classic=1").await;
+    assert_eq!(classic.status, StatusCode::OK);
+    assert!(classic.text().contains(&format!("<style data-turbo-track=\"reload\">{css}</style>")));
+    let page = b.get("/app/").await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert!(page.text().contains("<style data-turbo-track=\"reload\">:root { --accent: red; } body::after { content: \"\\3c /style>&\"; }</style>"));
+    assert_eq!(boot_json(&page.text())["customStyles"], css);
+    let policy = page.header("content-security-policy").unwrap();
+    assert!(policy.contains("style-src 'self' 'unsafe-inline'"));
+    assert_eq!(without_nonce(policy), without_nonce(classic.header("content-security-policy").unwrap()));
+    let boot = b.send(json_request("/api/v1/boot")).await;
+    assert_eq!(serde_json::from_slice::<Value>(&boot.body).unwrap()["customStyles"], css);
+}
+
+#[tokio::test]
 async fn app_paths_stay_unknown_unless_spa_enabled() {
     let Some(a) = app(false).await else { return };
     let mut b = a.sign_in(DAVID).await;
@@ -142,6 +162,7 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
         serde_json::json!({
             "user": {"id": DAVID, "name": user.name, "avatarUrl": crate::controllers::presenters::avatar_path(&a.booted.app.secrets, &user)},
             "account": {"name": account.name, "logoUrl": null, "logoStillUrl": null, "bannerUrl": null, "bannerStillUrl": null},
+            "customStyles": account.custom_styles,
             "theme": campfire_spa::theme(Some(&settings.theme)),
             "textSize": campfire_spa::text_size(Some(&settings.text_size)),
             "cableUrl": "/cable",

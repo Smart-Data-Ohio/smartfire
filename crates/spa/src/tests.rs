@@ -14,6 +14,7 @@ use crate::*;
 fn boot() -> Boot {
     Boot {
         user: BootUser { id: 7, name: "David".into(), avatar_url: "/users/abc/avatar?v=1".into() },
+        custom_styles: None,
         account: BootAccount { name: Some("Smart Data".into()), logo_url: None, logo_still_url: None, banner_url: None, banner_still_url: None },
         theme: theme(Some("dark")),
         text_size: text_size(None),
@@ -268,6 +269,28 @@ fn built_dist_ships_each_fonts_licence() {
 // --- The shell -----------------------------------------------------------------------------------
 
 #[test]
+fn workspace_styles_follow_the_base_sheets_without_html_breakout() {
+    let mut boot = boot();
+    boot.custom_styles = Some(":root { --accent: red; } .label::after { content: \"</style><script>&\\\"\"; }".into());
+    let page = render("<head><!--boot--><link rel=\"stylesheet\" href=\"base.css\"></head>", &boot, "token", Some("nonce"));
+    let expected = "<style data-turbo-track=\"reload\">:root { --accent: red; } .label::after { content: \"\\3c /style>\\3c script>&\\\"\"; }</style>";
+    assert!(page.contains(expected), "{page}");
+    assert!(page.find("base.css").unwrap() < page.find(expected).unwrap());
+    assert_eq!(page.matches("</style>").count(), 1);
+    assert!(!page.contains("<script>&"));
+    assert_eq!(boot_json(&page)["customStyles"], boot.custom_styles.unwrap());
+}
+
+#[test]
+fn empty_workspace_styles_emit_no_element() {
+    for css in [None, Some(String::new())] {
+        let mut boot = boot();
+        boot.custom_styles = css;
+        assert!(!render("<head><!--boot--></head>", &boot, "token", None).contains("<style"));
+    }
+}
+
+#[test]
 fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
     let template = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixture/index.html")).unwrap();
     let page = render(&template, &boot(), "masked+token/=", Some("n0nce+/="));
@@ -290,6 +313,7 @@ fn the_shell_carries_the_csrf_meta_tags_the_nonce_and_the_boot_json() {
             "user": {"id": 7, "name": "David", "avatarUrl": "/users/abc/avatar?v=1"},
             "account": {"name": "Smart Data", "logoUrl": null, "logoStillUrl": null, "bannerUrl": null, "bannerStillUrl": null},
             "theme": "dark",
+            "customStyles": null,
             "textSize": "default",
             "cableUrl": "/cable",
             "serviceWorkerUrl": "/service-worker.js",

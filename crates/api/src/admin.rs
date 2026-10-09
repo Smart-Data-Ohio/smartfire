@@ -840,6 +840,7 @@ async fn save_custom_styles(c: &mut Ctx) -> Result {
         .write(move |tx| account_security::styles_changed(tx, &before, &account, &audit))
         .await
         .map_err(Error::internal)?;
+    campfire_app::cable::sync::workspace_styles_updated(&c.app().cable, css.clone());
     c.json(StatusCode::OK, &api::CustomStyles { css })
 }
 

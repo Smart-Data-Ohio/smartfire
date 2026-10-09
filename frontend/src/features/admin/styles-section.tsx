@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { previewWorkspaceStyles } from "../../lib/workspace-styles.ts";
 import { admin } from "../../sync/admin.ts";
 import { Button } from "../../ui/button.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -36,6 +37,7 @@ export function StylesSection() {
   const { workspace } = useAdmin();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [css, setCss] = useState("");
+  const [preview, setPreview] = useState(false);
   const { busy, track } = useBusy();
   // The kept edit, taken from storage by the first load to land (`undefined` until then), so
   // every later load (a retry, a second mount's) shows it too.
@@ -62,6 +64,14 @@ export function StylesSection() {
   useEffect(() => {
     if (workspace.canAdminister) fetchStyles();
   }, [fetchStyles, workspace.canAdminister]);
+
+  useEffect(() => {
+    if (preview && load.status === "ready" && workspace.canAdminister) {
+      return previewWorkspaceStyles(css);
+    }
+
+    return undefined;
+  }, [css, load.status, preview, workspace.canAdminister]);
 
   if (!workspace.canAdminister) {
     return <AdministratorsOnly />;
@@ -128,6 +138,14 @@ export function StylesSection() {
             onKeyDown={shortcut}
           />
           <div className="settings-actions">
+            <label>
+              <input
+                type="checkbox"
+                checked={preview}
+                onChange={(event) => setPreview(event.target.checked)}
+              />
+              Preview on this page
+            </label>
             <Button type="submit" variant="primary" loading={busy("save")} disabled={busy("save")}>
               Save changes
             </Button>

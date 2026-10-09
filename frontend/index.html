@@ -54,6 +54,7 @@
         const boot = read(document.getElementById("boot")?.textContent);
         const pin = device.themeOverride;
         const theme = pin === "light" || pin === "dark" || pin === "system" ? pin : boot.theme;
+        root.style.setProperty("color-scheme", theme === "light" || theme === "dark" ? theme : "light dark");
 
         if (theme === "light" || theme === "dark") {
           root.dataset.theme = theme;
@@ -67,7 +68,11 @@
         if (device.density === "compact") root.dataset.density = "compact";
         if (device.motion === "reduce" || device.motion === "full") root.dataset.motion = device.motion;
         // Exactly src/lib/appearance.ts's FONTS; anything else in storage is ignored there too.
-        if (["system", "atkinson", "serif", "mono"].includes(device.font)) root.dataset.font = device.font;
+        if (["system", "atkinson", "serif", "mono"].includes(device.font)) {
+          root.dataset.font = device.font;
+          root.style.setProperty("--font-sans", `var(--font-preset-${device.font})`);
+          root.style.setProperty("--font-features", "normal");
+        }
 
         // A colour palette, by name: its tokens are built in here from src/lib/palette.ts
         // (vite.config.ts), the values the SPA sets when it starts. Nothing stored is applied.

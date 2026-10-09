@@ -5,6 +5,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { restoreAppearance } from "./lib/appearance.ts";
+import { followWorkspaceStyles } from "./lib/workspace-styles.ts";
 import { router } from "./router.tsx";
 import { watchWorkerRegistration } from "./service-worker/register.ts";
 import { followAccountAppearance } from "./sync/settings.ts";
@@ -14,6 +15,8 @@ import { followAccountAppearance } from "./sync/settings.ts";
 restoreAppearance();
 
 followAccountAppearance();
+
+followWorkspaceStyles();
 
 watchWorkerRegistration();
 

@@ -5,7 +5,7 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, AgentStatusChanged, AgentStepsChanged,
-    ApprovalUpdated, BoardAutomationsChanged, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
+    ApprovalUpdated, BoardAutomationsChanged, CustomStyles, EventsChanged, HuddleNotice, HuddlePresence, HuddleRing, HuddleRoleChanged,
     MessageCards, MessageDTO, MessageReactions, MessageRemoved, PinState, PollBallot, PollUpdated,
     RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread, SavedChanged, ScheduledMessage,
     ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, StageState, StageStreamStopped, Thread,
@@ -109,6 +109,9 @@ pub enum SyncPayload {
     /// On everyone's `user` topic: the workspace name or images changed.
     #[serde(rename = "workspace.updated")]
     WorkspaceUpdated(WorkspaceBranding),
+    /// On everyone's `user` topic: workspace CSS was saved or cleared.
+    #[serde(rename = "workspace.styles.updated")]
+    WorkspaceStylesUpdated(CustomStyles),
     /// On `room:<id>` (or `thread:<id>` for a reply): a message was posted. Carries the same
     /// [`MessageDTO`] the `POST` returns, so `clientMessageId` reconciles a pending send.
     #[serde(rename = "message.created")]

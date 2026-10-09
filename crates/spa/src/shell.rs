@@ -30,12 +30,25 @@ pub(crate) fn render(template: &str, boot: &Boot, csrf_token: &str, csp_nonce: O
     tags.push_str(&format!("<script type=\"application/json\" id=\"boot\"{nonce}>{}</script>", script_json(boot)));
 
     let page = with_nonce(template, &nonce);
-    match page.split_once(PLACEHOLDER) {
+    let page = match page.split_once(PLACEHOLDER) {
         Some((before, after)) => format!("{before}{tags}{after}"),
         None => match page.split_once("</head>") {
             Some((before, after)) => format!("{before}{tags}\n</head>{after}"),
             None => format!("{tags}\n{page}"),
         },
+    };
+    match boot.custom_styles.as_deref().filter(|styles| !styles.is_empty()) {
+        Some(styles) => {
+            // Classic puts workspace CSS after its sheets, unlayered. CSS escapes preserve
+            // its text while preventing an HTML end tag; style-src allows inline CSS, no nonce.
+            let styles = styles.replace('<', "\\3c ");
+            let tag = format!("<style data-turbo-track=\"reload\">{styles}</style>");
+            match page.split_once("</head>") {
+                Some((before, after)) => format!("{before}{tag}</head>{after}"),
+                None => format!("{page}{tag}"),
+            }
+        }
+        None => page,
     }
 }
 
