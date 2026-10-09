@@ -1,6 +1,5 @@
 import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import type { MessageDTO } from "../../gen/MessageDTO.ts";
 import { classicPageFor } from "../../lib/screens.ts";
 import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -15,7 +14,8 @@ import { usePhoneLayout, useRightPaneView, useRoomPaneLifecycle } from "../panes
 import { RoomSettingsHost } from "../rooms/room-settings-host.tsx";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
 import { JoinRoom } from "./join-preview.tsx";
-import { permalinkTarget, type RoomAccess } from "./message-destination.ts";
+import type { RoomAccess } from "./message-destination.ts";
+import { followPermalink } from "./permalink-follow.ts";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
 import "./room.css";
@@ -57,157 +57,45 @@ export function RoomRoute() {
   useRoomPaneLifecycle(roomId);
 
   useEffect(() => {
-    let live = true;
     let opened = false;
-    let stopWatching = () => {};
 
     const open = (focus: number | null) => {
       opened = true;
       void actions.openRoom(roomId, focus);
     };
 
-    const dropAnchor = () => {
-      void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
-    };
-
     if (focusMessageId === null) {
       open(null);
-    } else {
-      const focus = focusMessageId;
 
-      // A reply leaves for its thread. A root message of this room is the visit's focus, so
-      // opening keeps the permalink and the join loads around it.
-      const applyFound = (
-        message: Pick<MessageDTO, "id" | "roomId" | "threadId">,
-        openFound: boolean,
-      ) => {
-        const target = permalinkTarget(roomId, focus, "member", { status: "found", message });
-
-        if (target.kind === "redirect") {
-          router.history.replace(target.href);
-
-          return;
-        }
-
-        if (openFound) {
-          open(target.messageId);
+      return () => {
+        if (opened) {
+          actions.closeRoom(roomId);
         }
       };
-
-      // After the preview joins, read again. That read is issued as a member: a miss drops
-      // the anchor, and a root message is already the visit's focus.
-      const followJoinedPermalink = () => {
-        const stop = store.subscribe(() => {
-          if (!live || store.getState().rooms[roomId]?.detail == null) {
-            return;
-          }
-
-          stop();
-          issueRead("member", false);
-        });
-
-        stopWatching = stop;
-      };
-
-      const holdMissing = (access: RoomAccess) => {
-        if (!live) {
-          return;
-        }
-
-        const target = permalinkTarget(roomId, focus, access, { status: "missing" });
-
-        if (target.kind === "focus" && target.messageId === null) {
-          dropAnchor();
-
-          return;
-        }
-
-        open(focus);
-        followJoinedPermalink();
-      };
-
-      // Access can still be loading when the read returns. Settle once, still using the
-      // access that sent the read.
-      const waitForAccess = (issued: RoomAccess | null) => {
-        let settled = false;
-
-        const finish = () => {
-          if (!live || settled || roomAccess(roomId) === null) {
-            return;
-          }
-
-          settled = true;
-          unsubscribe();
-          settleFailed(issued);
-        };
-
-        const unsubscribe = store.subscribe(finish);
-
-        stopWatching = () => {
-          settled = true;
-          unsubscribe();
-        };
-
-        finish();
-      };
-
-      // Judge the 404 by the access that issued it. A join that lands while the read is in
-      // flight used to look like a member miss and drop the permalink. Discard that result
-      // and read once more as a member. The retry is issued as a member, so its own 404
-      // drops the anchor and cannot start another read.
-      const settleFailed = (issued: RoomAccess | null) => {
-        if (!live) {
-          return;
-        }
-
-        const current = roomAccess(roomId);
-
-        if (issued !== "member" && current === "member") {
-          issueRead("member", true);
-
-          return;
-        }
-
-        if (issued === "member") {
-          holdMissing("member");
-
-          return;
-        }
-
-        if (issued === "unjoined" || current === "unjoined") {
-          holdMissing("unjoined");
-
-          return;
-        }
-
-        waitForAccess(issued);
-      };
-
-      function issueRead(issued: RoomAccess | null, openFound: boolean) {
-        void actions.messages.read(focus).then(
-          ({ message }) => {
-            if (!live) {
-              return;
-            }
-
-            applyFound(message, openFound);
-          },
-          () => {
-            settleFailed(issued);
-          },
-        );
-      }
-
-      // The timeline API only returns a message that is on this room. A message from another
-      // room (or a reply) would 404 the page; open it where it actually is, or drop the anchor.
-      // A not-yet-joined preview 404s the same read, so that failure keeps the permalink until
-      // the join. A join that already landed is a member re-read, not a dropped anchor.
-      issueRead(roomAccess(roomId), true);
     }
 
+    const messageId = focusMessageId;
+
+    const cancel = followPermalink({
+      roomId,
+      messageId,
+      read: (id) => actions.messages.read(id),
+      access: () => roomAccess(roomId),
+      joined: () => store.getState().rooms[roomId]?.detail != null,
+      subscribe: (onChange) => store.subscribe(onChange),
+      onFocus: (focus) => {
+        open(focus);
+      },
+      onRedirect: (href) => {
+        router.history.replace(href);
+      },
+      onDrop: () => {
+        void navigate({ to: "/r/$roomId", params: { roomId }, replace: true });
+      },
+    });
+
     return () => {
-      live = false;
-      stopWatching();
+      cancel();
 
       if (opened) {
         actions.closeRoom(roomId);
