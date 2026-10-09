@@ -1,9 +1,0 @@
-{
-  "origin": "selenium-webdriver 4.35.0",
-  "license": "Apache-2.0",
-  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
-  "image": "review236-reference:78b9b1546",
-  "path": "/usr/local/bundle/ruby/3.4.0/gems/selenium-webdriver-4.35.0/lib/selenium/webdriver/atoms/isDisplayed.js",
-  "sha256": "ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c",
-  "reference_use": "Capybara 3.40.0 Selenium::Extensions::Find#build_hints_js and Selenium WebDriver Remote::Bridge#element_displayed? both execute this literal atom. Geometry assertions still use their original DOM predicates."
-}

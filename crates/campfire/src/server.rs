@@ -301,32 +301,9 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
-    #[cfg(test)]
-    let routes = if app.config.environment == "test" && std::env::var("WS11UI_LEDGER_HOST").as_deref() == Ok("1") {
-        routes.route("/test_session", axum::routing::get(campfire_kit::action(
-            controllers::ledger_browser_tests::original_test_session,
-        )))
-    } else {
-        routes
-    };
     // config.ru: `use Rack::Deflater` around the whole app.
     campfire_kit::app(routes, kit)
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
-}
-
-/// Rebuild the unchanged real HTTP stack for the original helper's late
-/// configuration input, without booting another DB, Cable server or job runner.
-#[cfg(test)]
-pub(crate) fn fixture_router(app: &App, original: &Kit) -> (Kit, Router) {
-    let mut kit_config = KitConfig::production(app.config.disable_ssl);
-    kit_config.error_pages = error_pages();
-    kit_config.default_headers = crate::security::default_headers();
-    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(
-        app.config.livekit_url.clone(),
-    )));
-    let kit = original.fixture_rebind(kit_config, app.clone());
-    let router = router(app, kit.clone());
-    (kit, router)
 }
 
 /// The Rails route table, with the app's fragment cache current while the action runs.

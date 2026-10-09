@@ -54,6 +54,23 @@ macro_rules! framed_page {
 }
 pub use crate::framed_page;
 
+/// Same shape as [`framed_page`], rendering through the retained shell.
+#[macro_export]
+macro_rules! retained_page {
+    ($c:expr, $status:expr, |$ctx:ident| $page:expr) => {
+        $crate::controllers::presenters::view_context::retained_page_or_frame(
+            $c,
+            $status,
+            |$ctx| askama::Template::render(&$page),
+            |$ctx| {
+                let page = $page;
+                campfire_retained::layouts::frame($ctx, page.as_head(), page.as_content())
+            },
+        )
+    };
+}
+pub use crate::retained_page;
+
 /// A content-only template: Rails wraps it in the application layout, or in turbo-rails'
 /// `layouts/turbo_rails/frame` when the request carries a `Turbo-Frame` header.
 pub async fn content(c: &mut Ctx, status: StatusCode, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result {

@@ -31,6 +31,7 @@ import {
   updateProfile,
   updateStatus,
 } from "../api/settings-endpoints.ts";
+import { completeTour as stampTour } from "../api/tour-endpoints.ts";
 import type { AccountSettings } from "../gen/AccountSettings.ts";
 import type { BackupCodes } from "../gen/BackupCodes.ts";
 import type { CreatePushSubscription } from "../gen/CreatePushSubscription.ts";
@@ -197,6 +198,21 @@ export const settings = {
   forgetDevices: (deviceId: number | null, reauth: string): Promise<TwoFactorChange> =>
     runAction(forgetDevices(deviceId, reauth)),
 };
+
+/**
+ * Records the product tour as done, skipped or finished: `/me` says so at once, so it won't start
+ * by itself again, and classic's stamp goes out. Best effort, as classic's is: if the stamp fails,
+ * the next page load offers the tour again.
+ */
+export function completeTour(): void {
+  const me = store.getState().me;
+
+  if (me !== null && !me.preferences.tourCompleted) {
+    mutations.setMe({ ...me, preferences: { ...me.preferences, tourCompleted: true } });
+  }
+
+  runAction(stampTour()).catch(() => undefined);
+}
 
 /** The account's theme and size as the store knows them: `/me` once loaded, else boot. */
 function accountOf(state: State) {

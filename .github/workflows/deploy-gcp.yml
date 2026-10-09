@@ -74,19 +74,21 @@ on:
 
 permissions: {}
 
+# Hold the environment lease through planning, optional publishing and cutover.
+concurrency:
+  group: deploy-gcp-${{ inputs.environment }}
+  cancel-in-progress: false
+
 jobs:
-  deploy:
-    name: Release ${{ inputs.git_sha }} to ${{ inputs.environment }}
+  prepare:
+    name: Prepare release ${{ inputs.git_sha }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    concurrency:
-      group: deploy-gcp-${{ inputs.environment }}
-      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
       actions: read
-    timeout-minutes: 120
+    timeout-minutes: 30
     env:
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
       GCP_ZONE: ${{ vars.GCP_ZONE }}
@@ -94,6 +96,12 @@ jobs:
       GCP_APP_HOST: ${{ vars.GCP_APP_HOST }}
       GCP_IMAGE: ${{ vars.GCP_IMAGE }}
       GCP_IMAGE_PULLER_SA: ${{ vars.GCP_IMAGE_PULLER_SA }}
+    outputs:
+      plan: ${{ toJSON(steps.plan.outputs) }}
+      sha: ${{ steps.plan.outputs.sha }}
+      dry_run: ${{ steps.plan.outputs.dry_run }}
+      ci_url: ${{ steps.ci.outputs.run_url }}
+      exists: ${{ steps.existing.outputs.exists }}
     steps:
       - name: Checkout full history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -231,12 +239,9 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
-          # rust.yml runs in full on every push to main and nightly. PR runs
-          # omit correctness jobs, and a dispatch can check out an input ref
-          # that differs from the run's head_sha, so only push/schedule runs
-          # prove this SHA.
-          # The run must also contain a successful "Rust port" job: the
-          # aggregate over the sharded test, clippy, llvm, stable and seeds jobs.
+          # Main push runs prove this SHA; a dispatch can test an input ref that
+          # differs from its head_sha. Historical scheduled successes still qualify.
+          # Require the successful Rust port aggregate over tests, clippy and seeds.
           url=""
           for run_id in $(gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
             -f head_sha="$SHA" -f status=completed \
@@ -296,6 +301,120 @@ jobs:
           fi
           echo "Obtained an access token as ${GCP_DEPLOYER_SA}."
 
+      - name: Check whether the release image exists
+        id: existing
+        timeout-minutes: 5
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          test -n "$GCP_IMAGE" || { echo "::error::GCP_IMAGE is not set"; exit 1; }
+          err="$(mktemp)"
+          trap 'rm -f "$err"' EXIT
+          status=0
+          digest="$(gcloud artifacts docker images describe "${GCP_IMAGE}:${TAG}" \
+                      --format='value(image_summary.digest)' 2>"$err")" || status=$?
+          if [ "$status" -eq 0 ] && [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          elif [ "$status" -ne 0 ] && grep -Eqi 'not found|does not exist|NOT_FOUND|404' "$err"; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            cat "$err"
+            echo "::error::could not determine whether ${GCP_IMAGE}:${TAG} exists"
+            exit 1
+          fi
+
+  publish:
+    name: Publish the release image if absent
+    needs: prepare
+    if: needs.prepare.outputs.exists == 'false' && needs.prepare.outputs.dry_run != 'true'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/publish-image.yml # zizmor: ignore[self-repository] -- actionlint 1.7.12 requires this syntax; the caller pins the local workflow
+    with:
+      git_sha: ${{ needs.prepare.outputs.sha }}
+      environment: ${{ inputs.environment }}
+      dry_run: false
+
+  deploy:
+    name: Release ${{ inputs.git_sha }} to ${{ inputs.environment }}
+    needs: [prepare, publish]
+    if: ${{ always() && needs.prepare.result == 'success' && (needs.publish.result == 'success' || needs.publish.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+    timeout-minutes: 120
+    env:
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_ZONE: ${{ vars.GCP_ZONE }}
+      GCP_INSTANCE: ${{ vars.GCP_INSTANCE }}
+      GCP_APP_HOST: ${{ vars.GCP_APP_HOST }}
+      GCP_IMAGE: ${{ vars.GCP_IMAGE }}
+      GCP_IMAGE_PULLER_SA: ${{ vars.GCP_IMAGE_PULLER_SA }}
+    steps:
+      - name: Checkout release scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use the resolved release plan
+        id: plan
+        env:
+          PLAN: ${{ needs.prepare.outputs.plan }}
+        run: |
+          python3 - <<'PYCODE'
+          import json, os
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for key, value in json.loads(os.environ["PLAN"]).items():
+                  output.write(f"{key}={value}\n")
+          PYCODE
+
+      - name: Use the verified Rust check
+        id: ci
+        env:
+          RUN_URL: ${{ needs.prepare.outputs.ci_url }}
+        run: echo "run_url=$RUN_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        timeout-minutes: 5
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        timeout-minutes: 10
+
+      - name: Verify the deployer identity
+        timeout-minutes: 2
+        shell: bash
+        env:
+          GCP_DEPLOYER_SA: ${{ vars.GCP_DEPLOYER_SA }}
+        run: |
+          set -euo pipefail
+          # `google-github-actions/auth` without `token_format` only writes a
+          # credential file; it never contacts Google. This is therefore the
+          # first proof that the Workload Identity binding for this environment
+          # really can impersonate the deployer, and a cheap one. Without it the
+          # failure surfaces later, wearing whatever mask the next gcloud call
+          # happens to put on it.
+          err="$(mktemp)"
+          trap 'rm -f "$err"' EXIT
+          # Only stderr is kept; the token goes to /dev/null and is never printed.
+          if ! gcloud auth print-access-token >/dev/null 2>"$err"; then
+            cat "$err"
+            echo "::error::could not obtain an access token as ${GCP_DEPLOYER_SA}; check the Workload Identity binding for this environment"
+            exit 1
+          fi
+          echo "Obtained an access token as ${GCP_DEPLOYER_SA}."
+
       - name: Resolve the image digest
         id: image
         timeout-minutes: 5
@@ -317,7 +436,7 @@ jobs:
             # missing image sends the operator off to publish one that is
             # already there, which is exactly the wrong half of the system.
             if grep -Eqi 'not found|does not exist|NOT_FOUND|404' "$err"; then
-              echo "::error::no image published for tag ${TAG}; run the Publish image workflow (publish-image.yml) on main with dry_run off first"
+              echo "::error::no image published for tag ${TAG}; publishing did not supply it, or this is a read-only dry run"
             else
               echo "::error::could not resolve ${GCP_IMAGE}:${TAG} (registry or auth error)"
               cat "$err"
@@ -325,7 +444,7 @@ jobs:
             exit 1
           fi
           if [ -z "$digest" ]; then
-            echo "::error::no image published for tag ${TAG}; run the Publish image workflow (publish-image.yml) on main with dry_run off first"
+            echo "::error::no image published for tag ${TAG}; publishing did not supply it, or this is a read-only dry run"
             exit 1
           fi
           # Never interpolate an unvalidated registry response into a remote command.
@@ -355,7 +474,7 @@ jobs:
             --zone "$GCP_ZONE" --tunnel-through-iap \
             deploy/gcp "${GCP_INSTANCE}:${REMOTE_DIR}"
           gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
-            --command "set -eu; sudo install -d -o root -g root -m 0755 /opt/campfire-deploy; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/campfire-release.sh\" /opt/campfire-deploy/campfire-release.sh; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-google.py\" /opt/campfire-deploy/configure-google.py; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-spa.py\" /opt/campfire-deploy/configure-spa.py; sudo install -o root -g root -m 0644 \"\$HOME/${REMOTE_DIR}/once_configuration.py\" /opt/campfire-deploy/once_configuration.py; sudo test -x /opt/campfire-deploy/campfire-release.sh"
+            --command "set -eu; sudo install -d -o root -g root -m 0755 /opt/campfire-deploy; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/campfire-release.sh\" /opt/campfire-deploy/campfire-release.sh; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-google.py\" /opt/campfire-deploy/configure-google.py; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/configure-spa.py\" /opt/campfire-deploy/configure-spa.py; sudo install -o root -g root -m 0644 \"\$HOME/${REMOTE_DIR}/once_configuration.py\" /opt/campfire-deploy/once_configuration.py; sudo install -o root -g root -m 0755 \"\$HOME/${REMOTE_DIR}/check-frontend.py\" /opt/campfire-deploy/check-frontend.py; sudo test -x /opt/campfire-deploy/campfire-release.sh"
 
       - name: Validate optional Google configuration
         if: inputs.configure_google
@@ -616,6 +735,17 @@ jobs:
           python3 deploy/gcp/spa-configuration.py \
             | gcloud compute ssh "$GCP_INSTANCE" --zone "$GCP_ZONE" --tunnel-through-iap --quiet \
                 --command 'sudo python3 /opt/campfire-deploy/configure-spa.py'
+
+      # The release script checks the built SPA shell only when the SPA was already on, and the
+      # mode above is applied after it, so turning the SPA on is checked here once it is applied.
+      # Read-only: the application stays as deployed whatever this finds.
+      - name: Check the SPA shell the new mode serves
+        if: (inputs.spa_mode == 'opt-in' || inputs.spa_mode == 'default-next') && steps.plan.outputs.dry_run != 'true' && steps.spa_configuration.conclusion == 'success'
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 deploy/gcp/check-frontend.py "https://${GCP_APP_HOST}" --spa
 
       # Runs on failure, cancellation and timeout alike: anything that leaves the
       # write freeze without a successful cutover needs the host dealt with.

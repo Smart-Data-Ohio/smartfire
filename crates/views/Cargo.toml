@@ -7,6 +7,7 @@ edition.workspace = true
 bnum.workspace = true
 rails_compat.workspace = true
 askama = { workspace = true, features = ["blocks"] }
+campfire_view_kit.workspace = true
 campfire_routes.workspace = true
 campfire_assets.workspace = true
 campfire_richtext.workspace = true

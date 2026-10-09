@@ -48,8 +48,13 @@ export class Navigation extends Context.Service<
 /** One `/api/v1` request. Bodies and replies are JSON. */
 export interface ApiRequest {
   readonly method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
-  /** Below the API base, e.g. `/rooms/12/messages`. */
+  /** Below the API base, e.g. `/rooms/12/messages`; from the origin's root with `root`. */
   readonly path: string;
+  /**
+   * `path` is from the origin's root, not the API base: for the few classic endpoints the SPA
+   * still calls (the product tour's stamp), with the same token, retry and sign-in handling.
+   */
+  readonly root?: true;
   readonly query?: Readonly<Record<string, string>>;
   readonly body?: Schema.Json;
 }
@@ -172,9 +177,9 @@ function toHttpRequest(
   request: ApiRequest,
   csrf: string | null,
 ): HttpClientRequest.HttpClientRequest {
-  let built = HttpClientRequest.make(request.method)(`${baseUrl}${request.path}`).pipe(
-    HttpClientRequest.acceptJson,
-  );
+  const url = request.root === true ? request.path : `${baseUrl}${request.path}`;
+
+  let built = HttpClientRequest.make(request.method)(url).pipe(HttpClientRequest.acceptJson);
 
   if (request.query !== undefined) {
     built = HttpClientRequest.setUrlParams(built, request.query);

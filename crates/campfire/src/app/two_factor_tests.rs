@@ -200,6 +200,7 @@ async fn enrollment_requires_authentication_and_real_csrf() {
 
 #[tokio::test]
 async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
+    use crate::controllers::users::people_tests::retained;
     use askama::Template;
     use campfire_views::{helpers as h, two_factor};
     struct Tokens;
@@ -237,15 +238,24 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                     account.as_ref(),
                     "http://campfire.test",
                     |ctx| match name {
-                        "setup" => two_factor::Setup {
-                            ctx,
-                            key: goldens["key"].as_str().unwrap().into(),
-                            qr: qr.clone(),
+                        "setup" => {
+                            let ctx = retained(ctx);
+                            campfire_retained::two_factor::Setup {
+                                ctx: &ctx,
+                                key: goldens["key"].as_str().unwrap().into(),
+                                qr: qr.clone(),
+                            }
+                            .as_content()
+                            .render()
+                            .unwrap()
                         }
-                        .as_content()
-                        .render()
-                        .unwrap(),
-                        "challenge" => two_factor::Challenge { ctx }.as_content().render().unwrap(),
+                        "challenge" => {
+                            let ctx = retained(ctx);
+                            campfire_retained::two_factor::Challenge { ctx: &ctx }
+                                .as_content()
+                                .render()
+                                .unwrap()
+                        }
                         "profile" | "profile_devices" | "profile_disabled" => two_factor::Profile {
                             ctx,
                             now: "2026-03-02T16:00:00Z".parse().unwrap(),
@@ -278,25 +288,28 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                         }
                         .render()
                         .unwrap(),
-                        _ => two_factor::BackupCodes {
-                            ctx,
-                            codes: goldens["codes"]
-                                .as_array()
-                                .unwrap()
-                                .iter()
-                                .map(|v| v.as_str().unwrap().into())
-                                .collect(),
-                            signed_out: usize::from(name == "backups_signed_out") * 2,
-                            continue_url: if name == "backups" {
-                                "http://campfire.test/users/me/profile"
-                            } else {
-                                "http://campfire.test/rooms/486777696"
+                        _ => {
+                            let ctx = retained(ctx);
+                            campfire_retained::two_factor::BackupCodes {
+                                ctx: &ctx,
+                                codes: goldens["codes"]
+                                    .as_array()
+                                    .unwrap()
+                                    .iter()
+                                    .map(|v| v.as_str().unwrap().into())
+                                    .collect(),
+                                signed_out: usize::from(name == "backups_signed_out") * 2,
+                                continue_url: if name == "backups" {
+                                    "http://campfire.test/users/me/profile"
+                                } else {
+                                    "http://campfire.test/rooms/486777696"
+                                }
+                                .into(),
                             }
-                            .into(),
+                            .as_content()
+                            .render()
+                            .unwrap()
                         }
-                        .as_content()
-                        .render()
-                        .unwrap(),
                     },
                 )
             },
@@ -308,7 +321,10 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                 crate::form_contracts::text(goldens[name].as_str().unwrap()),
                 "{name}: security status and device descriptions",
             );
-            assert_eq!(crate::form_contracts::links(&actual), crate::form_contracts::links(goldens[name].as_str().unwrap()));
+            assert_eq!(
+                crate::form_contracts::links(&actual),
+                crate::form_contracts::links(goldens[name].as_str().unwrap())
+            );
         } else {
             if name == "setup" {
                 crate::form_contracts::assert_text(&actual, goldens["key"].as_str().unwrap());
@@ -322,7 +338,10 @@ async fn two_factor_views_preserve_rails_forms_codes_and_inline_qr() {
                 if name == "backups_signed_out" {
                     crate::form_contracts::assert_text(&actual, "Signed out your other devices");
                 }
-                assert_eq!(crate::form_contracts::links(&actual), crate::form_contracts::links(goldens[name].as_str().unwrap()));
+                assert_eq!(
+                    crate::form_contracts::links(&actual),
+                    crate::form_contracts::links(goldens[name].as_str().unwrap())
+                );
             }
         }
     }

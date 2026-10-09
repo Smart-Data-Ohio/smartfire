@@ -9,11 +9,6 @@ use super::links::link_to;
 use super::tag::{attrs, builder_tag, content_tag, content_tag_text, legacy_tag};
 use crate::ViewContext;
 
-/// `page_title_tag`: `@page_title || "Smartfire"`.
-pub fn page_title_tag(page_title: Option<&str>) -> Html {
-    content_tag_text("title", attrs(), page_title.unwrap_or("Smartfire"))
-}
-
 /// `Users::PresenceHelper#user_theme`: the user's theme if it's one of `THEMES`, else "system".
 pub fn user_theme<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
     let theme = ctx
@@ -224,28 +219,6 @@ pub fn truncate(text: &str, length: usize, omission: &str) -> String {
     out
 }
 
-/// `String#capitalize`: first character upcased, the rest downcased.
-pub fn capitalize(text: &str) -> String {
-    let mut chars = text.chars();
-    match chars.next() {
-        Some(first) => first
-            .to_uppercase()
-            .chain(chars.flat_map(char::to_lowercase))
-            .collect(),
-        None => String::new(),
-    }
-}
-
-/// `Array#to_sentence` with the default English connectors, or a custom `two_words_connector`.
-pub fn to_sentence(items: &[String], two_words_connector: &str) -> String {
-    match items {
-        [] => String::new(),
-        [one] => one.clone(),
-        [one, two] => format!("{one}{two_words_connector}{two}"),
-        [rest @ .., last] => format!("{}, and {last}", rest.join(", ")),
-    }
-}
-
 pub(crate) mod base64_url {
     /// `Base64.urlsafe_encode64` (padded).
     pub fn urlsafe_encode64(input: &str) -> String {
@@ -285,15 +258,6 @@ mod tests {
     fn truncates_like_rails() {
         assert_eq!(truncate("abcdef", 4, "…"), "abc…");
         assert_eq!(truncate("abcd", 4, "…"), "abcd");
-    }
-
-    #[test]
-    fn builds_sentences() {
-        let names = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        assert_eq!(to_sentence(&names(&["A", "B"]), "+"), "A+B");
-        assert_eq!(to_sentence(&names(&["A", "B", "C"]), "+"), "A, B, and C");
-        assert_eq!(to_sentence(&names(&["A"]), " and "), "A");
-        assert_eq!(to_sentence(&names(&["A", "B"]), " and "), "A and B");
     }
 
     #[test]

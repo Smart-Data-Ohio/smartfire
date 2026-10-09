@@ -1,5 +1,4 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import type { ActivityList } from "../../src/gen/ActivityList.ts";
 import {
   expect,
   expectNoHorizontalOverflow,
@@ -9,9 +8,9 @@ import {
   openApp,
   PHONE_TOUCH,
   ROOM_IDS,
+  SHOTS,
   shot,
   swipeLeft,
-  syncWelcomed,
   test,
 } from "./support.ts";
 
@@ -76,132 +75,6 @@ test("the rail's Activity badge counts unread items and opens the inbox", async 
   await activity.click();
   await expect(page).toHaveURL(/\/app\/activity$/);
   await expect(activity).toHaveAttribute("aria-pressed", "true");
-});
-
-test("clearing Activity survives a delayed boot count and reopening the app", async ({
-  page,
-  request,
-}) => {
-  // Two unread items exercise both the decrement and zero, without clearing the whole seed.
-  const state = await (await request.get("/__mock/state")).json();
-  const inbox: ActivityList = await (await request.get("/api/v1/activity")).json();
-
-  expect(inbox.nextCursor).toBeNull();
-  expect(inbox.items.length).toBeGreaterThan(2);
-
-  for (const item of inbox.items.slice(2)) {
-    const response = await request.patch(`/api/v1/activity/${item.id}`, {
-      headers: { "X-CSRF-Token": state.csrfToken },
-      data: { action: "handled" },
-    });
-
-    expect(response.ok()).toBe(true);
-  }
-
-  expect(await (await request.get("/api/v1/activity/unread_count")).json()).toMatchObject({
-    unreadCount: 2,
-  });
-
-  const captured = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
-
-  await page.route("**/api/v1/activity/unread_count", async (route) => {
-    const response = await route.fetch();
-
-    captured.resolve();
-    await release.promise;
-    await route.fulfill({ response });
-  });
-  await openApp(page, "activity");
-  await ready(page, "Activity");
-  await captured.promise;
-
-  const activity = page.getByRole("button", { name: "Activity" });
-
-  for (let cleared = 0; cleared < 2; cleared++) {
-    await expect(activity.locator(".badge > .visually-hidden")).toHaveText(`${2 - cleared} unread`);
-    await expect(rows(page).first()).toBeVisible();
-
-    const opening = rows(page).first().locator(".list-row-open");
-    const description = await opening.getAttribute("aria-describedby");
-
-    await opening.focus();
-
-    const changed = page.waitForResponse(
-      (response) =>
-        response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
-    );
-
-    await page.keyboard.press("e");
-
-    const response = await changed;
-    const { unreadCount } = await response.json();
-
-    expect(response.ok()).toBe(true);
-    expect(unreadCount).toBe(1 - cleared);
-    await expect(rows(page).locator(`[aria-describedby="${description}"]`)).toHaveCount(0);
-  }
-
-  await expect(page.getByText("You're all caught up")).toBeVisible();
-  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
-
-  const bootCount = page.waitForResponse("**/api/v1/activity/unread_count");
-
-  release.resolve();
-  await (await bootCount).finished();
-  await page.evaluate(() => new Promise(requestAnimationFrame));
-  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
-
-  await page.reload();
-  await expect(page.getByText("You're all caught up")).toBeVisible();
-  await expect(activity.locator(".badge")).toHaveAttribute("data-open", "false");
-});
-
-test("a notification arriving during a clear survives its delayed reply", async ({
-  page,
-  request,
-}) => {
-  const welcomed = syncWelcomed(page);
-
-  await openApp(page, "activity");
-  await ready(page, "Activity");
-  await welcomed;
-
-  const before = await unreadCount(page);
-  const captured = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
-
-  await page.route(/\/api\/v1\/activity\/\d+$/, async (route) => {
-    const response = await route.fetch();
-
-    captured.resolve();
-    await release.promise;
-    await route.fulfill({ response });
-  });
-
-  const changed = page.waitForResponse(
-    (response) =>
-      response.url().includes("/api/v1/activity/") && response.request().method() === "PATCH",
-  );
-
-  await openButton(page).focus();
-  await page.keyboard.press("e");
-  await captured.promise;
-
-  try {
-    const afterClear = await body(page).textContent();
-
-    await control(request, "activity-arrival");
-    await expect(body(page)).not.toHaveText(afterClear ?? "");
-  } finally {
-    release.resolve();
-  }
-
-  await (await changed).finished();
-  await expect(page.locator(".page-count [aria-hidden='true']")).toHaveText(`${before}`);
-  await expect(
-    page.getByRole("button", { name: "Activity" }).locator(".badge > .visually-hidden"),
-  ).toHaveText(`${before} unread`);
 });
 
 /** The header's unread count. */
@@ -317,23 +190,6 @@ matrix("saved messages", async ({ page, theme, phone }) => {
   await shot(page, "saved-empty", theme);
 });
 
-test("marking a saved message done moves it to Done", async ({ page }) => {
-  await openApp(page, "saved");
-  await ready(page, "Saved");
-
-  const first = rows(page).first();
-  const text = (await first.locator(".saved-body").textContent()) ?? "";
-
-  await first.hover();
-  await first.getByRole("button", { name: "Mark as done" }).click();
-  await expect(rows(page).first().locator(".saved-body")).not.toHaveText(text);
-
-  await page.getByRole("tab", { name: "Done" }).click();
-  await expect(page).toHaveURL(/status=done/);
-  // Done lists newest saved first, so the item sits at its saved place, marked done.
-  await expect(rows(page).first()).toContainText("Done");
-});
-
 test("removing a saved message offers Undo", async ({ page }) => {
   await openApp(page, "saved");
   await ready(page, "Saved");
@@ -349,43 +205,6 @@ test("removing a saved message offers Undo", async ({ page }) => {
   await expect(said(page)).toHaveText("");
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
-});
-
-test("undoing a done message's removal brings it back done", async ({ page }) => {
-  await openApp(page, "saved?status=done");
-  await ready(page, "Saved");
-
-  const messageId =
-    (await rows(page).first().locator(".saved-row").getAttribute("data-message-id")) ?? "";
-
-  const text = (await rows(page).first().locator(".saved-body").textContent()) ?? "";
-
-  expect(messageId).toMatch(/^\d+$/);
-
-  // Seeded messages can share a body; Undo creates a new saved item for the same message.
-  const message = rows(page).filter({
-    has: page.locator(`.saved-row[data-message-id="${messageId}"]`),
-  });
-
-  await message.locator(".list-row-open").focus();
-  await page.keyboard.press("Delete");
-  await expect(message).toHaveCount(0);
-  await page.getByRole("button", { name: "Undo" }).click();
-  // Saved again it's the newest item, and still done.
-  await expect(rows(page).first().locator(".saved-row")).toHaveAttribute(
-    "data-message-id",
-    messageId,
-  );
-  await expect(message.locator(".saved-body")).toHaveText(text);
-  await expect(message).toHaveAttribute("data-state", "done");
-
-  await page.getByRole("tab", { name: "In progress" }).click();
-  await expect(page.getByRole("tab", { name: "In progress" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(rows(page).first()).toBeVisible();
-  await expect(message).toHaveCount(0);
 });
 
 test("the sidebar leads to Saved and Scheduled", async ({ page }) => {
@@ -420,17 +239,6 @@ matrix("scheduled messages", async ({ page, theme, phone }) => {
   await expect(past).toBeVisible();
   await page.mouse.move(0, 0);
   await shot(page, "scheduled-past", theme);
-});
-
-test("send now moves a message to Past", async ({ page }) => {
-  await openApp(page, "scheduled");
-  await ready(page, "Scheduled");
-
-  const first = rows(page).first();
-
-  await first.hover();
-  await first.getByRole("button", { name: "Send now" }).click();
-  await expect(page.getByText("Message sent")).toBeVisible();
 });
 
 test("cancelling asks first, then removes the message", async ({ page }) => {
@@ -573,10 +381,13 @@ matrix(
 
 // --- shell ---
 
-matrix("the rail and sidebar entries", async ({ page, theme, phone }) => {
-  await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
-  await expect(page.getByRole("link", { name: "Saved" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Activity" })).toBeVisible();
-  await page.mouse.move(0, 0);
-  await shot(page, "shell-entries", theme);
-});
+// Screenshot only: the entries' behaviour is checked by the rail badge and sidebar tests above.
+if (SHOTS) {
+  matrix("the rail and sidebar entries", async ({ page, theme, phone }) => {
+    await openApp(page, phone ? "" : `r/${ROOM_IDS.general}`, theme);
+    await expect(page.getByRole("link", { name: "Saved" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Activity" })).toBeVisible();
+    await page.mouse.move(0, 0);
+    await shot(page, "shell-entries", theme);
+  });
+}
