@@ -4,7 +4,7 @@ import type { SlackConversation } from "./SlackConversation";
 /**
  * One conversation in a workspace plan, with where it goes.
  */
-export type SlackPlanConversation = { conversation: SlackConversation, 
+export type SlackPlanConversation = { conversation: SlackConversation,
 /**
  * `"new"` (a room named after it), `"skip"`, or the id (as text) of a room to merge into.
  */

@@ -7,7 +7,7 @@
  * administrator lowers someone else's (403 otherwise: "Only hosts can lower another member's
  * hand"). Both answer the updated [`StageState`].
  */
-export type LowerHand = { 
+export type LowerHand = {
 /**
  * `null` for the viewer's own hand.
  */

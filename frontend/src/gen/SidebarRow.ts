@@ -7,32 +7,32 @@ import type { SidebarLastMessage } from "./SidebarLastMessage";
  * A room as it appears in one person's sidebar. Carried by `GET /api/v1/sidebar` and by the
  * `sidebar.row.upserted` event on that person's `user` topic.
  */
-export type SidebarRow = { room: Room, 
+export type SidebarRow = { room: Room,
 /**
  * The viewer's membership: involvement (`muted` rows are dimmed), favourite position,
  * category and read state (`unreadAt` set means unread, shown bold).
  */
-membership: Membership, 
+membership: Membership,
 /**
  * The row's label: the room's name, or for a direct message its other members' names
  * (or the room's own name when a group DM was renamed), as `sidebar_direct_label` builds it.
  */
-displayName: string, 
+displayName: string,
 /**
  * Direct messages only: the other members in membership order, or just the viewer for a
  * note-to-self; drives the avatar and presence dot. Empty for every other kind.
  */
-directMemberIds: Array<number>, 
+directMemberIds: Array<number>,
 /**
  * Root messages from the first unread one to the newest, inclusive (the room page's unread
  * count); 0 when the room is read.
  */
-unreadCount: number, 
+unreadCount: number,
 /**
  * The viewer's unread `mention` activity items for messages in this room
  * (`activity_items` with `event_type = 'mention'` and `read_at IS NULL`).
  */
-mentionCount: number, 
+mentionCount: number,
 /**
  * The red pill: the unread messages classic would have pushed to the viewer
  * (`Notifications::Policy#push`, leaving out quiet hours and do-not-disturb, which only hold
@@ -46,16 +46,16 @@ mentionCount: number,
  * counting once its inbox item is read. Keyword alerts alone don't push, so they don't
  * count, and a `nothing` room never pushes, so it counts none.
  */
-notificationCount: number, 
+notificationCount: number,
 /**
  * The part of `notification_count` in threads: what's left of it once the room is read.
  */
-threadNotificationCount: number, 
+threadNotificationCount: number,
 /**
  * Direct messages only: the newest root message, for the phone list's preview line. Absent
  * for every other kind and for a direct room with no messages yet.
  */
-lastMessage?: SidebarLastMessage, 
+lastMessage?: SidebarLastMessage,
 /**
  * Management changed the room's metadata or membership; reload a loaded room's detail.
  */

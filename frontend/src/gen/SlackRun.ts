@@ -9,40 +9,40 @@ import type { SlackRunStatus } from "./SlackRunStatus";
 /**
  * `GET .../runs/:id/status`: one run's progress, polled while it is active.
  */
-export type SlackRun = { id: number, kind: SlackRunKind, mode: SlackRunMode, status: SlackRunStatus, 
+export type SlackRun = { id: number, kind: SlackRunKind, mode: SlackRunMode, status: SlackRunStatus,
 /**
  * "Workspace dry run #12", as the classic page heads it.
  */
-title: string, startedBy: string, createdAt: string, startedAt: string | null, finishedAt: string | null, 
+title: string, startedBy: string, createdAt: string, startedAt: string | null, finishedAt: string | null,
 /**
  * The step it is on ("users", "conversations", "undo").
  */
-phase: string | null, 
+phase: string | null,
 /**
  * What it is working on within the step.
  */
-current: string | null, 
+current: string | null,
 /**
  * Queued behind another import, which has to finish first.
  */
-queuedBehind: boolean, people: SlackPeople | null, counts: SlackCounts | null, apiCalls: number | null, issuesCount: number, error: string | null, 
+queuedBehind: boolean, people: SlackPeople | null, counts: SlackCounts | null, apiCalls: number | null, issuesCount: number, error: string | null,
 /**
  * Queued, running or undoing: its status is worth reading again.
  */
-active: boolean, cancellable: boolean, undoable: boolean, 
+active: boolean, cancellable: boolean, undoable: boolean,
 /**
  * Why undo is blocked (a later import touched the same conversations, another run is
  * active), shown beside the disabled button.
  */
-undoBlockedReason: string | null, 
+undoBlockedReason: string | null,
 /**
  * A completed workspace dry run: its plan can be reviewed and imported.
  */
-planReady: boolean, 
+planReady: boolean,
 /**
  * A completed full workspace import: a catch-up import can run.
  */
-catchUp: boolean, 
+catchUp: boolean,
 /**
  * A completed personal preview's conversations, to check for the import (else empty).
  */
