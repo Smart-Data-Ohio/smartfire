@@ -85,6 +85,14 @@ export interface ComposerProps {
   readonly draftKey?: string;
 }
 
+/** What one submit took, read as the author submits: only this is sent and then cleared. */
+interface Submission {
+  readonly snapshot: ReplySnapshot;
+  /** The draft as submitted (untrimmed, to compare with the composer's text later). */
+  readonly text: string;
+  readonly fileIds: ReadonlySet<string>;
+}
+
 /** How many files one message can carry along (the rest go as their own messages). */
 const MAX_FILES = 10;
 
@@ -183,6 +191,8 @@ export function Composer({
   const creating = onSubmit !== undefined;
   const [text, setText] = useState(() => readDraft(key));
   const textRef = useRef(text);
+  /** Bumps on every edit and clear: a later outcome only puts back a draft nobody has touched. */
+  const draftEdits = useRef(0);
   const [caret, setCaret] = useState(() => ({ start: text.length, end: text.length }));
   const [restore, setRestore] = useState<{ start: number; end: number } | null>(null);
   const [focused, setFocused] = useState(false);
@@ -291,6 +301,7 @@ export function Composer({
   };
 
   const update = (next: string) => {
+    draftEdits.current += 1;
     textRef.current = next;
     setText(next);
     writeDraft(key, next);
@@ -332,6 +343,7 @@ export function Composer({
   };
 
   const clear = () => {
+    draftEdits.current += 1;
     textRef.current = "";
     setText("");
     writeDraft(key, "");
@@ -339,10 +351,15 @@ export function Composer({
     focusInput();
   };
 
-  const clearSubmitted = (submitted: string) => {
-    if (textRef.current === submitted) {
-      clear();
+  /** Clears the draft only if it's still what was submitted; says whether it did. */
+  const clearSubmitted = (submitted: string): boolean => {
+    if (textRef.current !== submitted) {
+      return false;
     }
+
+    clear();
+
+    return true;
   };
 
   const openPicker = () => fileInputRef.current?.click();
@@ -439,7 +456,12 @@ export function Composer({
     }
   };
 
-  const showResult = (result: SlashCommandResult, typed: string, revision: number) => {
+  const showResult = (
+    result: SlashCommandResult,
+    typed: string,
+    revision: number,
+    restoreTyped: () => void,
+  ) => {
     // A command that ran consumes the draft and, as in classic, the reply with it (not one
     // picked while it ran).
     if (result.status !== "error") {
@@ -462,8 +484,7 @@ export function Composer({
 
         return;
       case "error":
-        update(typed);
-        setRestore({ start: typed.length, end: typed.length });
+        restoreTyped();
         toast({ title: "That command didn't work", description: result.message, tone: "danger" });
 
         return;
@@ -505,14 +526,24 @@ export function Composer({
 
     setRunning(true);
     actions.setTyping(roomId, false, threadId);
-    clearSubmitted(submitted);
+
+    const cleared = clearSubmitted(submitted);
+    const edits = draftEdits.current;
+
+    // A command that fails puts its text back, unless the author has started something newer.
+    const restoreTyped = () => {
+      if (cleared && draftEdits.current === edits) {
+        update(typed);
+        setRestore({ start: typed.length, end: typed.length });
+      }
+    };
 
     try {
       const result = await composerActions.runSlashCommand(roomId, route.text, threadId);
 
-      showResult(result, typed, snapshot.revision);
+      showResult(result, typed, snapshot.revision, restoreTyped);
     } catch (error) {
-      update(typed);
+      restoreTyped();
       toast({
         title: "That command didn't run",
         description:
@@ -527,15 +558,36 @@ export function Composer({
   /** The reply a submit takes, read as the author submits; a new thread's never has one. */
   const currentReply = () => snapshotReply(creating ? null : key);
 
-  /** What a send waiting on uploads took when Enter was pressed. */
-  const waitingReply = useRef<ReplySnapshot | null>(null);
+  /** What a send waiting on uploads took when Enter was pressed: it sends exactly that. */
+  const waitingSubmission = useRef<Submission | null>(null);
 
-  const send = (snapshot: ReplySnapshot = currentReply()) => {
-    if (!canSend) {
+  /** The submission's files still in the tray (one removed while it waited is dropped). */
+  const submittedFiles = (submission: Submission) =>
+    attachments.files.filter((entry) => submission.fileIds.has(entry.id));
+
+  const send = (pending?: Submission) => {
+    if (pending === undefined && !canSend) {
       return;
     }
 
-    if (attachments.failed) {
+    const submission: Submission = pending ?? {
+      snapshot: currentReply(),
+      text,
+      fileIds: new Set(attachments.files.map((entry) => entry.id)),
+    };
+
+    const files = submittedFiles(submission);
+    const markdown = submission.text.trimEnd();
+
+    if (markdown === "" && files.length === 0) {
+      waitingSubmission.current = null;
+      setWaiting(false);
+
+      return;
+    }
+
+    if (files.some((entry) => entry.snapshot.phase === "failed")) {
+      waitingSubmission.current = null;
       setWaiting(false);
       toast({
         title: "A file didn't upload",
@@ -546,18 +598,15 @@ export function Composer({
       return;
     }
 
-    if (!attachments.ready) {
-      waitingReply.current = snapshot;
+    if (!files.every((entry) => entry.snapshot.phase === "done")) {
+      waitingSubmission.current = submission;
       setWaiting(true);
 
       return;
     }
 
-    waitingReply.current = null;
+    waitingSubmission.current = null;
     setWaiting(false);
-
-    const markdown = text.trimEnd();
-    const files = attachments.files;
 
     actions.setTyping(roomId, false, threadId);
 
@@ -574,7 +623,7 @@ export function Composer({
         .then(
           () => {
             attachments.clearSent(files);
-            clearSubmitted(text);
+            clearSubmitted(submission.text);
           },
           () => undefined,
         )
@@ -587,26 +636,32 @@ export function Composer({
     }
 
     if (files.length === 0 && looksLikeCommand(markdown)) {
-      void runCommand(markdown, snapshot, text);
+      void runCommand(markdown, submission.snapshot, submission.text);
 
       return;
     }
 
-    void deliver(markdown, files, snapshot, text);
+    void deliver(markdown, files, submission.snapshot, submission.text);
   };
 
-  // Enter while files upload: send as soon as they're all up (or stop if one fails).
+  // Enter while files upload: send as soon as the submitted ones are up (or stop if one fails).
   const sendRef = useRef(send);
 
   useLayoutEffect(() => {
     sendRef.current = send;
   });
 
-  const uploadsSettled = attachments.ready || attachments.failed || !hasFiles;
+  const waitingFor = waitingSubmission.current;
+
+  const uploadsSettled =
+    waitingFor === null ||
+    submittedFiles(waitingFor).every(
+      (entry) => entry.snapshot.phase === "done" || entry.snapshot.phase === "failed",
+    );
 
   useEffect(() => {
     if (waiting && uploadsSettled) {
-      sendRef.current(waitingReply.current ?? undefined);
+      sendRef.current(waitingSubmission.current ?? undefined);
     }
   }, [waiting, uploadsSettled]);
 

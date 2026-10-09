@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
@@ -111,5 +111,125 @@ describe("sending from history", () => {
     await act(async () => latest.resolve());
     expect(input).toHaveProperty("value", "");
     expect(readDraft(draftKey(ROOM, null))).toBe("");
+  });
+});
+
+describe("a send waiting on uploads", () => {
+  it("sends only what was submitted, keeping text and files added while it waited", async () => {
+    const firstUpload = Promise.withResolvers<{ signedId: string; uploadUrl: string }>();
+
+    vi.spyOn(actions, "jumpToPresent").mockResolvedValue(undefined);
+
+    const send = vi.spyOn(actions, "send").mockImplementation(() => undefined);
+
+    vi.spyOn(actions.messages, "startUpload").mockImplementation((body) =>
+      body.filename === "first.txt"
+        ? firstUpload.promise
+        : Promise.resolve({ signedId: `signed-${body.filename}`, uploadUrl: "/put" }),
+    );
+    vi.stubGlobal(
+      "XMLHttpRequest",
+      class {
+        status = 204;
+        upload = { onprogress: null };
+        onload: (() => void) | null = null;
+        onerror = null;
+        onabort = null;
+        open() {}
+        setRequestHeader() {}
+        abort() {}
+        send() {
+          queueMicrotask(() => this.onload?.());
+        }
+      },
+    );
+
+    const { container } = render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+    const picker = container.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (picker === null) {
+      throw new Error("no file input");
+    }
+
+    const attach = (name: string) =>
+      act(async () => {
+        fireEvent.change(picker, { target: { files: [new File(["bytes"], name)] } });
+      });
+
+    fireEvent.change(input, { target: { value: "With the file" } });
+    await attach("first.txt");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(send).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "Typed while waiting" } });
+    await attach("second.txt");
+    await waitFor(() => expect(screen.getByText("second.txt")).toBeTruthy());
+    expect(send).not.toHaveBeenCalled();
+
+    await act(async () => firstUpload.resolve({ signedId: "signed-first", uploadUrl: "/put" }));
+
+    await waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    expect(send).toHaveBeenCalledWith(
+      ROOM,
+      "With the file",
+      expect.objectContaining({ attachmentSignedId: "signed-first" }),
+    );
+    expect(input).toHaveProperty("value", "Typed while waiting");
+    expect(screen.queryByText("first.txt")).toBeNull();
+    expect(screen.getByText("second.txt")).toBeTruthy();
+  });
+});
+
+describe("a slash command that fails", () => {
+  const remind = {
+    name: "remind",
+    description: "Set a reminder",
+    argHint: "<when> <text>",
+    takesArguments: true,
+    agentName: null,
+  };
+
+  it.each([
+    ["errors", () => Promise.resolve({ status: "error" as const, message: "Bad time" })],
+    ["can't run", () => Promise.reject(new Error("Offline"))],
+  ])("keeps a draft typed while it ran when it %s", async (_label, outcome) => {
+    const gate = Promise.withResolvers<void>();
+
+    vi.spyOn(composerActions, "slashCommands").mockResolvedValue([remind]);
+
+    const run = vi
+      .spyOn(composerActions, "runSlashCommand")
+      .mockImplementation(() => gate.promise.then(outcome));
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.change(input, { target: { value: "/remind tomorrow lunch" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(1));
+    expect(input).toHaveProperty("value", "");
+
+    fireEvent.change(input, { target: { value: "Something newer" } });
+    await act(async () => gate.resolve());
+
+    expect(input).toHaveProperty("value", "Something newer");
+    expect(readDraft(draftKey(ROOM, null))).toBe("Something newer");
+  });
+
+  it("puts the command back when nothing was typed while it ran", async () => {
+    vi.spyOn(composerActions, "slashCommands").mockResolvedValue([remind]);
+    vi.spyOn(composerActions, "runSlashCommand").mockResolvedValue({
+      status: "error",
+      message: "Bad time",
+    });
+
+    render(<Composer roomId={ROOM} placeholder="Message" />);
+    const input = screen.getByRole("textbox", { name: "Message" });
+
+    fireEvent.change(input, { target: { value: "/remind tomorrow lunch" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    await waitFor(() => expect(input).toHaveProperty("value", "/remind tomorrow lunch"));
   });
 });
