@@ -112,6 +112,52 @@ export function shareResultLabel(status: string, reason: string | null): string 
   }
 }
 
+/** A finished grant stays up when anyone was skipped or refused, until the person dismisses it. */
+export function shareKeepsReport(results: readonly { readonly status: string }[]): boolean {
+  return results.some((result) => result.status !== "granted");
+}
+
+export interface ShareToast {
+  readonly title: string;
+  readonly description?: string;
+  readonly tone?: "success" | "danger";
+}
+
+/** What to say when a grant finishes after the share dialog has already gone. */
+export function closedShareToast(share: {
+  readonly outcome: string;
+  readonly blocked: string | null;
+  readonly results: readonly {
+    readonly recipient: { readonly name: string };
+    readonly status: string;
+    readonly reason: string | null;
+  }[];
+}): ShareToast {
+  if (share.outcome === "confirmation_required") {
+    return { title: CONFIRMATION_MESSAGE };
+  }
+
+  if (share.outcome === "blocked" || share.outcome === "full") {
+    return {
+      title: shareBlockedMessage(share.outcome === "full" ? "full" : (share.blocked ?? "file")),
+    };
+  }
+
+  const description = share.results
+    .map((result) => `${result.recipient.name}: ${shareResultLabel(result.status, result.reason)}`)
+    .join("; ");
+
+  const failed = share.results.some((result) => result.status === "failed");
+  const title = shareSummary(share.results);
+  const tone = failed ? "danger" : "success";
+
+  if (description === "") {
+    return { title, tone };
+  }
+
+  return { title, description, tone };
+}
+
 /** The summary above a partial or completed grant. Failures stay visible. */
 export function shareSummary(results: readonly { readonly status: string }[]): string {
   const granted = results.filter((result) => result.status === "granted").length;

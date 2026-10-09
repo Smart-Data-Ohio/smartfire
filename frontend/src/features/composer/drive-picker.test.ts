@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { planEdit } from "../messages/message-editor.tsx";
 import {
   attachDriveFile,
+  closedShareToast,
   DRIVE_FILES_PER_MESSAGE,
   DRIVE_SEARCH_DEBOUNCE_MS,
   driveDisconnected,
@@ -11,6 +12,7 @@ import {
   moveActive,
   pickerKeyAction,
   searchDelay,
+  shareKeepsReport,
   shareResultLabel,
   shareSummary,
 } from "./drive-picker.ts";
@@ -69,6 +71,41 @@ describe("drive picker state", () => {
     expect(grantCapacity(ten, "more")).toBe(false);
     expect(grantCapacity(ten, "0")).toBe(true);
     expect(grantCapacity([], "a")).toBe(true);
+  });
+
+  it("keeps a report when anyone was skipped or refused", () => {
+    expect(shareKeepsReport([{ status: "granted" }])).toBe(false);
+    expect(shareKeepsReport([{ status: "already" }])).toBe(true);
+    expect(shareKeepsReport([{ status: "granted" }, { status: "failed" }])).toBe(true);
+  });
+
+  it("names who received access when the share dialog is already gone", () => {
+    expect(
+      closedShareToast({
+        outcome: "shared",
+        blocked: null,
+        results: [
+          { recipient: { name: "Maya Okafor" }, status: "granted", reason: null },
+          { recipient: { name: "Jonah Lindqvist" }, status: "failed", reason: "denied" },
+        ],
+      }),
+    ).toEqual({
+      title: "1 of 2 recipients have access.",
+      description:
+        "Maya Okafor: granted view access; Jonah Lindqvist: not granted (refused by Google)",
+      tone: "danger",
+    });
+    expect(
+      closedShareToast({
+        outcome: "shared",
+        blocked: null,
+        results: [{ recipient: { name: "Maya Okafor" }, status: "already", reason: null }],
+      }),
+    ).toEqual({
+      title: "Everyone selected already has access.",
+      description: "Maya Okafor: already had access",
+      tone: "success",
+    });
   });
 
   it("keeps partial grant lines and the classic failure reasons", () => {

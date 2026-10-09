@@ -678,3 +678,49 @@ async fn share_checks_the_file_and_reports_partial_grants() {
     assert_eq!(tag(&deactivated), "Validation");
     assert_eq!(recorded.calls.lock().unwrap().len(), 9);
 }
+
+#[tokio::test]
+async fn share_rejects_a_non_member_recipient_before_any_grant() {
+    let Some((app, recorded)) = app().await else {
+        return;
+    };
+    grant(&app, DAVID).await;
+    let kevin_email: String = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT email_address FROM users WHERE id=?",
+                [KEVIN],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let mut david = app.sign_in(DAVID).await;
+    let rejected = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/drive/shares"),
+            &share_body(
+                FILE,
+                &[(JASON, "jason@37signals.com"), (KEVIN, &kevin_email)],
+                &[],
+            ),
+        ))
+        .await;
+    assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(tag(&rejected), "Validation");
+    let envelope: api::ApiErrorResponse = parse(&rejected);
+    match envelope.error {
+        api::ApiError::Validation { message, fields } => {
+            assert_eq!(message, "invalid_recipients");
+            assert_eq!(fields["recipients"], vec![KEVIN.to_string()]);
+        }
+        other => panic!("expected validation, got {other:?}"),
+    }
+    let calls = recorded.calls.lock().unwrap();
+    assert!(
+        calls.is_empty(),
+        "a non-member recipient must not reach Google: {calls:?}"
+    );
+}

@@ -8,9 +8,11 @@ import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Checkbox } from "../../ui/checkbox.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { BrandMark } from "../cards/brand-marks.tsx";
 import {
   CONFIRMATION_MESSAGE,
+  closedShareToast,
   type DrivePick,
   driveDisconnected,
   driveSearchStatus,
@@ -20,6 +22,7 @@ import {
   pickerKeyAction,
   searchDelay,
   shareBlockedMessage,
+  shareKeepsReport,
   shareResultLabel,
   shareSummary,
 } from "./drive-picker.ts";
@@ -67,12 +70,24 @@ export function DrivePicker({
   const subsequent = useRef(false);
   const request = useRef(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const reviewRef = useRef<DrivePick | null>(null);
+  const grantingRef = useRef(false);
+
+  reviewRef.current = review;
 
   useEffect(() => {
     if (open) {
       searchRef.current?.focus();
     }
   }, [open]);
+
+  // A grant that finishes after this picker is gone would otherwise update a closed dialog.
+  useEffect(
+    () => () => {
+      reviewRef.current = null;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -127,6 +142,15 @@ export function DrivePicker({
 
   const close = () => onOpenChange(false);
 
+  const dismissReview = () => {
+    if (grantingRef.current) {
+      return;
+    }
+
+    reviewRef.current = null;
+    setReview(null);
+  };
+
   useLayoutEffect(() => {
     if (active < 0) return;
 
@@ -146,9 +170,112 @@ export function DrivePicker({
   };
 
   const attach = (file: DrivePick) => {
+    if (grantingRef.current) {
+      return;
+    }
+
     onAttach(file);
+    reviewRef.current = null;
     setReview(null);
     close();
+  };
+
+  const grantAccess = () => {
+    if (review === null || grantingRef.current) {
+      return;
+    }
+
+    if (!grantCapacity(attachedFileIds, review.id)) {
+      setNotice(shareBlockedMessage("full"));
+
+      return;
+    }
+
+    const file = review;
+
+    const approved = recipients
+      .filter((member) => chosen.has(String(member.id)))
+      .map((member) => ({ id: String(member.id), email: member.email }));
+
+    grantingRef.current = true;
+    setGranting(true);
+    setReport(null);
+    setNotice(null);
+
+    void actions.drive.share(roomId, file.id, approved, attachedFileIds).then(
+      (share) => {
+        grantingRef.current = false;
+        const visible = reviewRef.current !== null;
+
+        if (visible) {
+          setGranting(false);
+        }
+
+        if (share.outcome === "confirmation_required") {
+          if (!visible) {
+            toast(closedShareToast(share));
+
+            return;
+          }
+
+          const changed = new Set(share.changedIds.map(String));
+          const live = new Set(share.recipients.map((member) => String(member.id)));
+
+          setRecipients(share.recipients);
+          setChosen(
+            (current) => new Set([...current].filter((id) => live.has(id) && !changed.has(id))),
+          );
+          setNotice(CONFIRMATION_MESSAGE);
+
+          return;
+        }
+
+        if (share.outcome === "blocked" || share.outcome === "full") {
+          if (!visible) {
+            toast(closedShareToast(share));
+
+            return;
+          }
+
+          const blocked = share.outcome === "full" ? "full" : (share.blocked ?? "file");
+
+          setNotice(shareBlockedMessage(blocked));
+
+          return;
+        }
+
+        onAttach(file);
+
+        if (!visible) {
+          toast(closedShareToast(share));
+
+          return;
+        }
+
+        if (shareKeepsReport(share.results)) {
+          setReport(share.results);
+          setNotice(shareSummary(share.results));
+
+          return;
+        }
+
+        reviewRef.current = null;
+        setReview(null);
+        close();
+      },
+      (failure: ActionError) => {
+        grantingRef.current = false;
+
+        if (reviewRef.current === null) {
+          toast({ title: failure.message, tone: "danger" });
+
+          return;
+        }
+
+        setGranting(false);
+        setNotice(failure.message);
+      },
+    );
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -252,19 +379,22 @@ export function DrivePicker({
         open={review !== null}
         onOpenChange={(next) => {
           if (!next) {
-            setReview(null);
+            dismissReview();
           }
         }}
+        role={granting ? "alertdialog" : "dialog"}
         title="Share a Drive file"
         description="Access grants happen immediately and stay in place even if you do not send the message, or if a recipient later leaves this chat. Future members are not added automatically. Only view access is granted, and no email notifications are sent."
         size="sm"
+        dirty={granting}
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={() => setReview(null)}>
+            <Button type="button" variant="ghost" disabled={granting} onClick={dismissReview}>
               Cancel
             </Button>
             <Button
               type="button"
+              disabled={granting}
               onClick={() => {
                 if (review !== null) {
                   attach(review);
@@ -280,71 +410,7 @@ export function DrivePicker({
                 disabled={!grantEnabled(chosen.size, review?.kind ?? "file") || granting}
                 loading={granting}
                 loadingLabel="Granting"
-                onClick={() => {
-                  if (review === null) return;
-
-                  if (!grantCapacity(attachedFileIds, review.id)) {
-                    setNotice(shareBlockedMessage("full"));
-
-                    return;
-                  }
-
-                  const approved = recipients
-                    .filter((member) => chosen.has(String(member.id)))
-                    .map((member) => ({ id: String(member.id), email: member.email }));
-
-                  setGranting(true);
-                  setReport(null);
-                  void actions.drive.share(roomId, review.id, approved, attachedFileIds).then(
-                    (share) => {
-                      setGranting(false);
-
-                      if (share.outcome === "confirmation_required") {
-                        const changed = new Set(share.changedIds.map(String));
-                        const live = new Set(share.recipients.map((member) => String(member.id)));
-
-                        setRecipients(share.recipients);
-                        setChosen(
-                          (current) =>
-                            new Set([...current].filter((id) => live.has(id) && !changed.has(id))),
-                        );
-                        setNotice(CONFIRMATION_MESSAGE);
-
-                        return;
-                      }
-
-                      if (share.outcome === "blocked") {
-                        setNotice(shareBlockedMessage(share.blocked ?? "file"));
-
-                        return;
-                      }
-
-                      if (share.outcome === "full") {
-                        setNotice(shareBlockedMessage("full"));
-
-                        return;
-                      }
-
-                      const failed = share.results.some((result) => result.status === "failed");
-
-                      onAttach(review);
-
-                      if (failed) {
-                        setReport(share.results);
-                        setNotice(shareSummary(share.results));
-
-                        return;
-                      }
-
-                      setReview(null);
-                      close();
-                    },
-                    (failure: ActionError) => {
-                      setGranting(false);
-                      setNotice(failure.message);
-                    },
-                  );
-                }}
+                onClick={grantAccess}
               >
                 Grant view access and attach
               </Button>
@@ -353,6 +419,7 @@ export function DrivePicker({
                 type="button"
                 variant="primary"
                 onClick={() => {
+                  reviewRef.current = null;
                   setReview(null);
                   close();
                 }}
