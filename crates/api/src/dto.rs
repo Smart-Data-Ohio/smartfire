@@ -50,16 +50,23 @@ impl UserExtras {
             .map(|user| user.id)
             .collect();
         let agents = agent_badges(conn, &bots)?;
+        let icon_users: Vec<_> = users
+            .iter()
+            .filter(|user| {
+                user.is_bot() && !avatars.contains(&user.id) && user.icon_name.is_some()
+            })
+            .collect();
+        let custom_titles: HashMap<String, String> = if icon_users.is_empty() {
+            HashMap::new()
+        } else {
+            conn.prepare("SELECT name,title FROM workspace_icons")?
+                .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+                .collect::<rusqlite::Result<_>>()?
+        };
         let mut icons = HashMap::new();
-        for user in users.iter().filter(|user| user.is_bot()) {
-            if avatars.contains(&user.id) {
-                continue;
-            }
-            if let Some(icon) = user
-                .icon_name
-                .as_deref()
-                .and_then(|name| avatar_icon(conn, name))
-            {
+        for user in icon_users {
+            let name = user.icon_name.as_deref().unwrap();
+            if let Some(icon) = avatar_icon(name, custom_titles.get(name).map(String::as_str)) {
                 icons.insert(user.id, icon);
             }
         }
@@ -118,9 +125,21 @@ pub fn agent_status(status: &str) -> api::AgentStatus {
 
 /// `users.icon_name` resolved as the classic avatar does (`resolve_avatar_icon`): a brand logo,
 /// else a workspace icon, else the built-in icon or emoji of that name.
-pub fn avatar_icon(conn: &Connection, name: &str) -> Option<api::Icon> {
+fn avatar_icon(name: &str, custom_title: Option<&str>) -> Option<api::Icon> {
     use campfire_views::helpers::AvatarIcon;
-    Some(match presenters::resolve_avatar_icon(conn, name)? {
+    let builtin = campfire_views::messages::reactions::static_icon(name);
+    let resolved = if matches!(builtin, Some(AvatarIcon::Image { brand: true, .. })) {
+        builtin
+    } else {
+        custom_title
+            .map(|title| AvatarIcon::Image {
+                title: title.to_string(),
+                url: format!("/icons/{name}"),
+                brand: false,
+            })
+            .or(builtin)
+    };
+    Some(match resolved? {
         AvatarIcon::Emoji { title, character } => api::Icon {
             name: name.to_string(),
             title,
@@ -1466,7 +1485,42 @@ fn room_file_rows(
 
 #[cfg(test)]
 mod tests {
-    use super::{Timestamp, inline_mentions, row_version, time};
+    use super::{Timestamp, api, avatar_icon, inline_mentions, row_version, time};
+
+    #[test]
+    fn preloaded_avatar_icons_preserve_brand_custom_and_emoji_precedence() {
+        assert_eq!(
+            avatar_icon("github", Some("Custom GitHub")),
+            Some(api::Icon {
+                name: "github".into(),
+                title: "GitHub".into(),
+                kind: api::IconKind::Brand,
+                character: None,
+                image_url: Some("icons/brands/github.svg".into()),
+            }),
+        );
+        assert_eq!(
+            avatar_icon("robot", Some("Workspace robot")),
+            Some(api::Icon {
+                name: "robot".into(),
+                title: "Workspace robot".into(),
+                kind: api::IconKind::Custom,
+                character: None,
+                image_url: Some("/icons/robot".into()),
+            }),
+        );
+        assert_eq!(
+            avatar_icon("robot", None),
+            Some(api::Icon {
+                name: "robot".into(),
+                title: "Robot".into(),
+                kind: api::IconKind::Emoji,
+                character: Some("🤖".into()),
+                image_url: None,
+            }),
+        );
+        assert_eq!(avatar_icon("missing-icon", None), None);
+    }
 
     #[test]
     fn row_versions_pad_seconds_and_preserve_microseconds() {

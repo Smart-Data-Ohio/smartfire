@@ -66,11 +66,18 @@ pub const SCREENS: &[Screen] = &[
         "/app/r/:room_id/t/:id",
         true,
     ),
-    // S6: boards share the room and thread pages above; only their new-post page is distinct.
+    // S6: boards share the room and thread pages above; their new-post and automation pages are
+    // distinct.
     screen(
         "channel_threads#new",
         "/rooms/:room_id/threads/new",
         "/app/r/:room_id/posts/new",
+        true,
+    ),
+    screen(
+        "rooms/boards/automations#show",
+        "/rooms/boards/:board_id/automations",
+        "/app/r/:board_id/automations",
         true,
     ),
     // S8: message aliases share the permalink; the room's permalink above wins on opt-out.
