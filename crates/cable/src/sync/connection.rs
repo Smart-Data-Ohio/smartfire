@@ -342,8 +342,15 @@ impl<U> Connection<U> {
     /// `replay`ing for a resumed client). Returns the `resync` to send if the ring dropped events
     /// this connection hadn't read.
     fn catch_up(&mut self, replay: bool) -> Option<ServerFrame> {
+        self.catch_up_before(u64::MAX, replay)
+    }
+
+    /// [`Connection::catch_up`], reading only events published before `before`.
+    fn catch_up_before(&mut self, before: u64, replay: bool) -> Option<ServerFrame> {
         match self.engine.ring.read(self.cursor) {
-            Read::Events(events, head) => {
+            Read::Events(mut events, head) => {
+                events.retain(|entry| entry.seq < before);
+                let head = head.min(before - 1).max(self.cursor);
                 // A gap marker for this person: events were skipped for them, as if lost.
                 let skipped = events
                     .iter()
@@ -400,9 +407,9 @@ impl<U> Connection<U> {
     /// The `bye` for a remote disconnect: the one `seen` this turn, else one published since.
     /// Like the classic connection, this looks again before anything pending goes out: a
     /// disconnect published after select chose the head's change can precede events
-    /// `catch_up` then read. Only events published before the disconnect may still be sent
-    /// (the hub assigns ring and internal-channel sequences under one lock), so the rest are
-    /// dropped.
+    /// `catch_up` then read. Exactly the events published before the disconnect still go out
+    /// (the hub assigns ring and internal-channel sequences under one lock): those not yet
+    /// read are read now, and any read past it are dropped.
     fn disconnect(
         &mut self,
         seen: Option<(u64, bool)>,
@@ -410,6 +417,9 @@ impl<U> Connection<U> {
         capacity: usize,
     ) -> Option<Bye> {
         let (sequence, reconnect) = seen.or_else(|| poll_remote_reconnect(internal, capacity))?;
+        // A gap before the disconnect ends the reading there, without a `resync`: the person
+        // can't refetch once disconnected, and a resume from their cursor starts afresh.
+        let _ = self.catch_up_before(sequence, false);
         self.pending.retain(|entry| entry.seq < sequence);
         Some(Bye {
             reconnect,
