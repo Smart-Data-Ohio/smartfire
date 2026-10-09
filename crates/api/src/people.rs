@@ -98,6 +98,9 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
             let person = !user.is_bot() && !user.is_deactivated();
             let active = person && user.is_active();
             let other = user.id != viewer_id;
+            let can_manage_bot = user.is_bot() && user.is_active()
+                && (administrator || campfire_db::Agent::for_user(conn, user.id)?
+                    .is_some_and(|agent| agent.owner_id == Some(viewer_id)));
             let email_address = (administrator && person)
                 .then(|| user.email_address.clone())
                 .flatten();
@@ -138,6 +141,7 @@ async fn reply(c: &mut Ctx, viewer: &User, id: i64) -> Result {
                     transfer_url: None,
                     transfer_qr_svg: None,
                     can_ban: administrator && person && other,
+                    can_manage_bot,
                 },
                 active,
             ))

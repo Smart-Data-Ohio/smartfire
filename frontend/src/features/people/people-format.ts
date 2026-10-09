@@ -104,14 +104,14 @@ export const OWN_TRANSFER_HINT = "Use this link to login automatically on anothe
 
 /**
  * Where a bot's page lives: its agent profile when the SPA has one (`hasAgentPage`), else the
- * classic page, kept classic with `?classic=1` (a ported page would send it straight back here).
+ * person page in the SPA.
  */
 export function botPage(user: User, hasAgentPage: boolean): string {
   if (user.agent !== null && hasAgentPage) {
     return `/app/agents/${user.agent.agentId}`;
   }
 
-  return `/users/${user.id}?classic=1`;
+  return `/app/people/${user.id}`;
 }
 
 /** A person page's presence word, in the words the rest of the app uses (idle reads "Away"). */

@@ -23,6 +23,30 @@ pub async fn show(c: &mut Ctx) -> Result {
     render_show(c, StatusCode::OK, viewer, None, None, None).await
 }
 
+/// The SPA's profile edit alias. Classic has no edit action and keeps its 404.
+pub async fn edit(c: &mut Ctx) -> Result {
+    if !concerns::coexistence_navigation(c)? {
+        return Err(Error::NotFound);
+    }
+    let Some(session) = concerns::find_session_by_cookie(c).await? else {
+        return Err(Error::NotFound);
+    };
+    let user_id = session.user_id;
+    let user = c.app().db.read(move |conn| campfire_db::User::find_by_id(conn, user_id))
+        .await.map_err(Error::internal)?;
+    let Some(user) = user else { return Err(Error::NotFound) };
+    if user.is_bot() || concerns::session_expired(
+        &session,
+        &user,
+        c.app().config.admin_session_idle_timeout,
+        campfire_db::Timestamp::from_jiff(c.now()),
+    ) || !concerns::next_ui(c, &user).await? {
+        return Err(Error::NotFound);
+    }
+    concerns::before_actions(c, Before::default()).await?;
+    Err(Error::NotFound)
+}
+
 /// `Some(id)` when `:user_id` names a different person. `me` and the viewer's own id are `None`.
 async fn other_person(c: &Ctx, viewer_id: i64) -> Result<Option<i64>> {
     let Some(param) = c.param_str("user_id") else {

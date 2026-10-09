@@ -317,17 +317,66 @@ test("a lapsed password confirmation sends a ban to the classic password page", 
   await expect(page).toHaveURL(/\/sudo\/new$/);
 });
 
-test("your own page links to your settings and has no DND toggle or ban button", async ({
-  page,
-}) => {
-  await openPerson(page, USER_IDS.riel);
+test("your numeric own page opens your profile settings", async ({ page }) => {
+  await openApp(page, `people/${USER_IDS.riel}`);
 
-  await expect(page.getByRole("link", { name: "Edit my profile" })).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/settings$/);
+  await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /during DND/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Ban / })).toHaveCount(0);
+});
+
+test("a legacy bot profile stays in the SPA with classic bot actions", async ({
+  page,
+  request,
+}) => {
+  await page.route("**/users/900/avatar", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="purple"/></svg>',
+    }),
+  );
+  const bots = await request.get("/api/v1/admin/bots");
+
+  expect(bots.ok()).toBe(true);
+  await openPeople(page);
+  await expect(row(page, "Deploy Bot")).toContainText("Bot");
+  await row(page, "Deploy Bot").getByRole("link", { name: "Deploy Bot" }).click();
+  await expect(page).toHaveURL(/\/app\/people\/900$/);
+  await expect(page.getByRole("heading", { name: "Deploy Bot", exact: true })).toBeVisible();
+  await expect(page.locator(".person .people-badge")).toHaveText("Bot");
+  await expect(page.locator(".person [role=img]")).toHaveAttribute("aria-label", "Deploy Bot");
+  await expect(page.locator(".person .avatar-image")).toHaveAttribute("src", "/users/900/avatar");
+  await expect(page.getByRole("button", { name: "Message Deploy Bot" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /during DND|^Ban / })).toHaveCount(0);
+  await expect(page.locator(".person-email, .person-status, .person-transfer")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveAttribute(
+    "href",
+    "/app/admin/bots/900/grants",
+  );
+  await page.getByRole("link", { name: "Manage capability grants" }).click();
+  await expect(page).toHaveURL(/\/app\/admin\/bots\/900\/grants$/);
   await expect(
-    page.getByLabel("Use this link to login automatically on another device"),
+    page.getByRole("heading", { name: "Deploy Bot's grants", exact: true }),
   ).toBeVisible();
+});
+
+test("a member can message a legacy bot but cannot manage its grants", async ({
+  page,
+  request,
+}) => {
+  await request.get("/api/v1/admin/bots");
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/viewer-role", {
+    headers: { "X-CSRF-Token": state.csrfToken },
+    data: { role: "member" },
+  });
+  await openPerson(page, 900);
+  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Message Deploy Bot" }).click();
+  await expect(page).toHaveURL(/\/app\/r\/\d+$/);
 });
 
 test("a deactivated person's page says they've gone, and an unknown one says so", async ({
@@ -338,6 +387,22 @@ test("a deactivated person's page says they've gone, and an unknown one says so"
 
   await openApp(page, "people/999");
   await expect(page.getByText("There's nobody here by that link.")).toBeVisible();
+});
+
+test("an inactive legacy bot says it has gone and offers no actions", async ({ page, request }) => {
+  await request.get("/api/v1/admin/bots");
+  await page.route("**/api/v1/people/900", async (route) => {
+    const response = await route.fetch();
+    const profile = await response.json();
+
+    profile.user.status = "deactivated";
+    profile.canManageBot = false;
+    await route.fulfill({ response, json: profile });
+  });
+  await openPerson(page, 900);
+  await expect(page.locator(".person")).toContainText("Deploy Bot is no longer on this account");
+  await expect(page.getByRole("button", { name: "Message Deploy Bot" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Manage capability grants" })).toHaveCount(0);
 });
 
 test("a bot's page opens its ported agent profile", async ({ page }) => {
