@@ -351,8 +351,12 @@ test("the sync welcome's refetch leaves a reader on the unread divider", async (
 
   if (remaining > 1) await scrollByWheel(page, log, remaining);
 
-  await scrollByWheel(page, log, top - (await log.evaluate((element) => element.scrollTop)));
-  await expect(divider).toBeInViewport();
+  // Late row measurements can move the bottom after its offset is read but before the wheel
+  // arrives. Finish returning to the divider before testing what the welcome does to its place.
+  await expect(async () => {
+    await scrollByWheel(page, log, top - (await log.evaluate((element) => element.scrollTop)));
+    await expect(divider).toBeInViewport({ timeout: 1000 });
+  }).toPass();
 
   // Someone posts while the socket is held. The welcome refetches the newest page, which holds
   // their message: it joins the window below the reader, counted, without moving them.
