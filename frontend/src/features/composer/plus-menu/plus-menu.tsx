@@ -5,6 +5,7 @@ import {
   ignoreModuleResourceLoadError,
   loadForUpdate,
 } from "../../../service-worker/update-required.ts";
+import { useActionSheet } from "../../../ui/action-sheet.tsx";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import type { IconName } from "../../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../../ui/menu.tsx";
@@ -99,21 +100,24 @@ export function PlainPlusMenu({ actions }: PlusMenuProps) {
 /**
  * The composer's + button. It opens a menu that splits out of the button as liquid
  * (Jakub Antalik's liquid-gooey, lazy-loaded, one instance per composer); under reduced motion,
- * on low-power devices and until the chunk arrives, it is the plain dropdown.
+ * on low-power devices and until the chunk arrives, it is the plain dropdown. On a touch phone
+ * it is the plain menu too, which opens there as an action sheet.
  */
 export function PlusMenu({ actions }: PlusMenuProps) {
   const reduced = useReducedMotion();
-  const [plain] = useState(lowPower);
+  const sheet = useActionSheet();
+  const [lowPowered] = useState(lowPower);
+  const plain = reduced || lowPowered || sheet;
 
   useEffect(() => {
-    if (reduced || plain) {
+    if (plain) {
       return;
     }
 
     return whenIdle(() => void loadGooey().catch(ignoreModuleResourceLoadError));
-  }, [reduced, plain]);
+  }, [plain]);
 
-  if (reduced || plain) {
+  if (plain) {
     return <PlainPlusMenu actions={actions} />;
   }
 
