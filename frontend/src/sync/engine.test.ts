@@ -85,11 +85,11 @@ const pushEvents = (...events: readonly SyncEvent[]) =>
     yield* settle;
   });
 
-const welcome = (seq: number, resumed: boolean, epoch = "e1") =>
+const welcome = (seq: number, resumed: boolean, epoch = "e1", replayThrough = seq) =>
   Effect.gen(function* () {
     const socket = yield* MemorySocket;
 
-    yield* socket.push({ t: "welcome", epoch, seq, resumed });
+    yield* socket.push({ t: "welcome", epoch, seq, resumed, replayThrough });
     yield* settle;
   });
 
@@ -719,7 +719,8 @@ describe("resuming", () => {
           yield* pushEvents(unreadEvent(11));
           yield* socket.drop;
           yield* TestClock.adjust(250);
-          yield* welcome(13, true);
+          // The real resumed welcome keeps the old cursor; the replay boundary is separate.
+          yield* welcome(11, true, "e1", 13);
           yield* pushEvents(unreadEvent(12), unreadEvent(13), unreadEvent(14));
           expect(observed).toEqual([
             [11, 10],

@@ -47,7 +47,7 @@ export function playChatSound(url: string): void {
 }
 
 /** Listen on the timeline, so virtualized rows and history mounts never trigger playback. */
-export function listenForChatSounds(roomId: number): () => void {
+export function listenForChatSounds(roomId: number, viewingLatestPage: () => boolean): () => void {
   const seen = new Set<number>(
     Object.values(store.getState().messages).map((message) => message.id),
   );
@@ -72,6 +72,7 @@ export function listenForChatSounds(roomId: number): () => void {
         message.roomId === roomId &&
         timeline.status === "ready" &&
         timeline.after === null &&
+        viewingLatestPage() &&
         timeline.ids.includes(message.id)
       ) {
         playChatSound(message.sound.url);

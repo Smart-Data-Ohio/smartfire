@@ -322,32 +322,43 @@ export function Composer({
   /** Takes the room's window to the present, where a message from here lands. */
   const toPresent = () => {
     if (threadId === null && store.getState().timelines[roomId]?.after != null) {
-      void actions.jumpToPresent(roomId);
+      return actions.jumpToPresent(roomId);
     }
+
+    return Promise.resolve();
   };
 
   /** Posts the text with the first file, and each further file as its own message. */
-  const deliver = (markdown: string, files: readonly TrayFile[]) => {
-    toPresent();
+  const deliver = async (markdown: string, files: readonly TrayFile[]) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    setRunning(true);
 
-    const [first, ...rest] = files;
+    try {
+      // Classic awaits the latest page before inserting the pending row and submitting.
+      await toPresent();
+      const [first, ...rest] = files;
 
-    actions.send(roomId, markdown, {
-      threadId,
-      attachmentSignedId: first?.snapshot.signedId ?? null,
-      attachment: first === undefined ? null : pendingAttachment(first),
-    });
-
-    for (const entry of rest) {
-      actions.send(roomId, "", {
+      actions.send(roomId, markdown, {
         threadId,
-        attachmentSignedId: entry.snapshot.signedId,
-        attachment: pendingAttachment(entry),
+        attachmentSignedId: first?.snapshot.signedId ?? null,
+        attachment: first === undefined ? null : pendingAttachment(first),
       });
-    }
 
-    attachments.clearSent();
-    clear();
+      for (const entry of rest) {
+        actions.send(roomId, "", {
+          threadId,
+          attachmentSignedId: entry.snapshot.signedId,
+          attachment: pendingAttachment(entry),
+        });
+      }
+
+      attachments.clearSent();
+      clear();
+    } finally {
+      submitting.current = false;
+      setRunning(false);
+    }
   };
 
   const showResult = (result: SlashCommandResult, typed: string) => {
@@ -355,7 +366,7 @@ export function Composer({
       case "posted":
         // The server posted it with no pending row: go to it, as a send does.
         notePosted(threadId === null ? `room:${roomId}` : `thread:${threadId}`, result.messageId);
-        toPresent();
+        void toPresent();
 
         if (result.notice !== null) {
           toast({ title: result.notice, tone: "success" });
@@ -400,7 +411,7 @@ export function Composer({
     const route = routeSlash(typed, commands);
 
     if (route.kind === "message") {
-      deliver(route.markdown, []);
+      await deliver(route.markdown, []);
 
       return;
     }
@@ -484,7 +495,7 @@ export function Composer({
       return;
     }
 
-    deliver(markdown, files);
+    void deliver(markdown, files);
   };
 
   // Enter while files upload: send as soon as they're all up (or stop if one fails).

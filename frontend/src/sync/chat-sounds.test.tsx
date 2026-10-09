@@ -114,7 +114,7 @@ describe("sound message", () => {
 
   it("handles browser autoplay refusal without retrying history on the next gesture", async () => {
     play.mockRejectedValue(new DOMException("Gesture required", "NotAllowedError"));
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     arrive(1);
     await Promise.resolve();
     fireEvent.pointerDown(document.body);
@@ -124,7 +124,7 @@ describe("sound message", () => {
 
 describe("automatic playback", () => {
   it("plays a live message once at the latest page", () => {
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     arrive(1);
     arrive(1, { seq: 2 });
     expect(play).toHaveBeenCalledOnce();
@@ -132,18 +132,18 @@ describe("automatic playback", () => {
 
   it("never plays initial history, pagination, replay, or a remounted row", () => {
     arrive(1);
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     arrive(1);
     arrive(2, { after: 99 });
     arrive(3, { liveAfter: 3 });
     stop();
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     arrive(3, { seq: 4 });
     expect(play).not.toHaveBeenCalled();
   });
 
   it("leaves thread arrivals silent, as the classic thread controller does", () => {
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     arrive(1, { threadId: 88 });
     arrive(2, { threadId: 88 });
     expect(play).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe("automatic playback", () => {
   });
 
   it("reads the current quiet setting on arrival and does not replay muted messages later", () => {
-    stop = listenForChatSounds(12);
+    stop = listenForChatSounds(12, () => true);
     store.setState({ me: { ...meFixture, chatSounds: { ...POLICY, muted: true } } });
     arrive(1);
     expect(play).not.toHaveBeenCalled();

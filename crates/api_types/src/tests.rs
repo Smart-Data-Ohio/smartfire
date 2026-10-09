@@ -414,8 +414,9 @@ fn server_frames_match_the_protocol() {
             epoch: "b7c1".into(),
             seq: 48230,
             resumed: true,
+            replay_through: 48235,
         },
-        json!({"t": "welcome", "epoch": "b7c1", "seq": 48230, "resumed": true}),
+        json!({"t": "welcome", "epoch": "b7c1", "seq": 48230, "resumed": true, "replayThrough": 48235}),
     );
     assert_wire(
         &ServerFrame::Resync {

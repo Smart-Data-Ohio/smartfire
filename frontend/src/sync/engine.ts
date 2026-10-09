@@ -667,7 +667,7 @@ export class Engine extends Context.Service<
       });
 
       const welcome = Effect.fnUntraced(function* (frame: Extract<ServerFrame, { t: "welcome" }>) {
-        yield* Ref.set(replayThrough, frame.seq);
+        yield* Ref.set(replayThrough, frame.replayThrough);
         const point = yield* cursor.get;
         const afterReload = yield* Ref.getAndSet(restored, false);
 

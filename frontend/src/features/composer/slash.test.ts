@@ -33,15 +33,19 @@ describe("slashName", () => {
   it("tells when the command list is needed", () => {
     expect(looksLikeCommand("  /me waves")).toBe(true);
     expect(looksLikeCommand("plain text")).toBe(false);
+    expect(looksLikeCommand("  /PLAY bell")).toBe(false);
   });
 });
 
 describe("routeSlash", () => {
-  it("dispatches /play to the existing sound-message slash handler", () => {
+  it("posts /play through normal message submission, even when the command is registered", () => {
     expect(routeSlash("/play bell", COMMANDS)).toEqual({
-      kind: "command",
-      command: COMMANDS[4],
-      text: "/play bell",
+      kind: "message",
+      markdown: "/play bell",
+    });
+    expect(routeSlash("  /PLAY bell  ", COMMANDS)).toEqual({
+      kind: "message",
+      markdown: "  /PLAY bell",
     });
   });
   it("runs a known command with the whole trimmed line", () => {

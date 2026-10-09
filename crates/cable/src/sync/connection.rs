@@ -344,6 +344,7 @@ impl<U> Connection<U> {
             epoch: self.engine.ring.epoch().to_string(),
             seq: seq as i64,
             resumed,
+            replay_through: self.cursor as i64,
         }
     }
 
@@ -755,7 +756,8 @@ mod tests {
             ServerFrame::Welcome {
                 epoch: connection.engine.ring.epoch().to_string(),
                 seq: 5,
-                resumed: false
+                resumed: false,
+                replay_through: 5,
             }
         );
         // From past it, the resume goes on.
@@ -800,7 +802,8 @@ mod tests {
             ServerFrame::Welcome {
                 epoch: connection.engine.ring.epoch().to_string(),
                 seq: 4,
-                resumed: false
+                resumed: false,
+                replay_through: 4,
             }
         );
         assert!(
@@ -820,7 +823,8 @@ mod tests {
             ServerFrame::Welcome {
                 epoch: connection.engine.ring.epoch().to_string(),
                 seq: 3,
-                resumed: true
+                resumed: true,
+                replay_through: 4,
             }
         );
         assert_eq!(
@@ -847,7 +851,8 @@ mod tests {
             ServerFrame::Welcome {
                 epoch: connection.engine.ring.epoch().to_string(),
                 seq: 0,
-                resumed: true
+                resumed: true,
+                replay_through: 1,
             }
         );
         assert_eq!(
