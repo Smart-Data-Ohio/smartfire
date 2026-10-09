@@ -5,6 +5,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
 import type { Poll } from "../../gen/Poll.ts";
@@ -13,6 +14,7 @@ import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
 import { store } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
+import { Dialog } from "../../ui/dialog.tsx";
 import { holdCardsChunk } from "../cards/card-slot.tsx";
 import { Timeline } from "./timeline.tsx";
 import { timelineItems } from "./timeline-items.ts";
@@ -92,6 +94,69 @@ async function renderTimeline(focus: number | null) {
 
   render(<RouterProvider router={router} />);
   await act(() => router.load());
+}
+
+/** The timeline plus a dialog whose close hands focus back to whatever opened it. */
+let setDialogOpen: (open: boolean) => void = () => undefined;
+
+function TimelineDialogHost({ focus }: { readonly focus: number }) {
+  const [open, setOpen] = useState(false);
+
+  setDialogOpen = setOpen;
+
+  return (
+    <>
+      <Timeline roomId={ROOM} focusMessageId={focus} />
+      <Dialog open={open} onOpenChange={setOpen} title="Confirm">
+        <button type="button">Stay</button>
+      </Dialog>
+    </>
+  );
+}
+
+async function renderTimelineDialog(focus: number) {
+  const root = createRootRoute({
+    component: () => <TimelineDialogHost focus={focus} />,
+  });
+
+  const router = createRouter({
+    routeTree: root,
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+  });
+
+  render(<RouterProvider router={router} />);
+  await act(() => router.load());
+}
+
+/** Where a virtualised row sits in the list, from the wrapper Virtua positions. */
+function rowTop(row: Element): number {
+  const top = Number.parseFloat(row.parentElement?.style.top ?? "");
+
+  if (!Number.isFinite(top)) {
+    throw new Error("The row has no virtual offset");
+  }
+
+  return top;
+}
+
+function listViewportHeight(list: HTMLElement, fallback: number): number {
+  return list.clientHeight > 0 ? list.clientHeight : fallback;
+}
+
+async function settlePlacement() {
+  for (let frame = 0; frame < ANCHOR_ATTEMPTS && frames.size > 0; frame += 1) {
+    await flushFrame();
+  }
+}
+
+function replaceAround(ids: readonly number[]) {
+  store.setState({
+    messages: {
+      ...store.getState().messages,
+      ...Object.fromEntries(ids.map((id) => [id, messageFixture(id, ROOM)])),
+    },
+  });
+  patchTimeline({ ids, before: 9, after: 13, generation: 2 });
 }
 
 async function flushFrame() {
@@ -518,6 +583,119 @@ describe("permalink placement", () => {
 
     expect(scrolls).toEqual([]);
     expect(list?.scrollTop).toBe(held);
+  });
+
+  it("does not yank after Tab to an offscreen buffered link when a delayed around replacement lands", async () => {
+    const row = 80;
+    const box = 240;
+    const focus = 15;
+    const linkId = 18;
+    const ids = Array.from({ length: 30 }, (_, index) => index + 1);
+
+    emitScroll = true;
+    restoreMeasure = measureList(row, box);
+    install(ids, { before: 1, after: 99, generation: 1 });
+    store.setState({
+      messages: {
+        ...store.getState().messages,
+        [linkId]: messageFixture(linkId, ROOM, {
+          bodyHtml: '<p><a href="/offscreen">Offscreen note</a></p>',
+        }),
+      },
+    });
+    await renderTimeline(focus);
+    expect(document.querySelector(`[data-message-id="${focus}"]`)).not.toBeNull();
+    await settlePlacement();
+
+    const list = document.querySelector<HTMLElement>("[data-message-list]");
+    const link = document.querySelector<HTMLAnchorElement>('a[href="/offscreen"]');
+    const linkRow = link?.closest<HTMLElement>("[data-message-row]") ?? null;
+    expect(list).not.toBeNull();
+    expect(link).not.toBeNull();
+    expect(linkRow).not.toBeNull();
+
+    if (list === null || link === null || linkRow === null) {
+      return;
+    }
+
+    const view = listViewportHeight(list, box);
+    const parked = rowTop(linkRow);
+
+    // Mounted in Virtua's buffer, below the centred permalink.
+    expect(parked).toBeGreaterThanOrEqual(list.scrollTop + view);
+
+    // jsdom does not move focus on Tab. The key, then the focus, is what the browser does,
+    // including the scroll that brings the newly focused control into view.
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+      link.focus();
+      list.scrollTop = parked;
+    });
+
+    expect(document.activeElement).toBe(link);
+    expect(rowTop(linkRow)).toBeLessThan(list.scrollTop + view);
+    scrolls.length = 0;
+
+    await act(async () => {
+      patchTimeline({ generation: 2 });
+    });
+
+    expect(scrolls).toEqual([]);
+    expect(list.scrollTop).toBe(parked);
+    expect(document.activeElement).toBe(link);
+    expect(link.isConnected).toBe(true);
+    expect(rowTop(link.closest("[data-message-row]") ?? linkRow)).toBeLessThan(
+      list.scrollTop + view,
+    );
+  });
+
+  it("still recentres after a dialog returns focus when a delayed around replacement lands", async () => {
+    emitScroll = true;
+    restoreMeasure = measureList();
+    install([1, 2, FOCUS, 4, 5], { after: 5, generation: 1 });
+    await renderTimelineDialog(FOCUS);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+    await settlePlacement();
+
+    const row = document.querySelector<HTMLElement>(
+      `[data-message-row][data-message-id="${FOCUS}"]`,
+    );
+
+    expect(row).not.toBeNull();
+
+    // The permalink placed this row. Opening the dialog from it is not reader input.
+    await act(async () => {
+      row?.focus();
+      setDialogOpen(true);
+    });
+
+    const dialog = document.querySelector("dialog");
+
+    expect(dialog).not.toBeNull();
+    expect(document.activeElement).not.toBe(row);
+
+    await act(async () => {
+      dialog?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+      );
+      await new Promise((resolve) => {
+        setTimeout(resolve, 80);
+      });
+    });
+
+    expect(document.querySelector("dialog")).toBeNull();
+    expect(document.activeElement).toBe(row);
+    scrolls.length = 0;
+
+    const ids = [10, 11, 12, FOCUS];
+
+    await act(async () => {
+      replaceAround(ids);
+    });
+
+    expect(scrolls.length).toBeGreaterThan(0);
+    expect(document.querySelector(`[data-message-id="${FOCUS}"]`)).not.toBeNull();
+    expect(rowIndex(FOCUS)).toBeGreaterThan(0);
   });
 });
 

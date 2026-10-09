@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { VListHandle } from "virtua";
+import { bindReaderInput, readerMovedFocus } from "../../lib/reader-focus.ts";
 import type { TimelineItem } from "../room/timeline-items.ts";
 
 type Anchor =
@@ -941,6 +942,10 @@ export function useViewportAnchor({
     };
 
     const onFocus = (event: Event) => {
+      // Tab moves focus after keydown, so the key list never sees it. A press in the last
+      // moment is the reader; focus() from a dialog or the app itself is marked and is not.
+      if (readerMovedFocus()) noteReaderInput();
+
       retainRow(event.target);
 
       if (event.type === "contextmenu" && event instanceof MouseEvent && event.buttons !== 0)
@@ -1128,6 +1133,7 @@ export function useViewportAnchor({
       pointer = null;
     };
 
+    const releaseReaderInput = bindReaderInput(element.ownerDocument);
     const inputs = ["wheel", "touchstart", "pointerdown", "mousedown", "auxclick"];
 
     for (const input of inputs)
@@ -1160,6 +1166,8 @@ export function useViewportAnchor({
       retentionPendingRef.current = null;
       cancelAnimationFrame(settlementFrameRef.current);
       settlementFrameRef.current = 0;
+
+      releaseReaderInput();
 
       for (const input of inputs) element.removeEventListener(input, onInput, true);
 
