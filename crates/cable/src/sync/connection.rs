@@ -228,7 +228,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
         }
         let due = connection.flush_at.is_some_and(|at| at <= Instant::now());
-        if due || connection.pending.len() >= config.flush_max || bye.is_some() {
+        if due || connection.full() || bye.is_some() {
             let frames = connection.take_batches();
             if connection.send(&mut sink, &frames).await.is_err() {
                 break;
@@ -314,6 +314,9 @@ struct Connection<U> {
     /// The conversation topics followed, each with the ring's head when it was authorized: an
     /// unsubscribe published by then is older than the authorization, so it doesn't apply.
     topics: BTreeMap<String, u64>,
+    /// Every event read since the last write, in sequence order, including those a later one
+    /// coalesces away: that's settled at the write, after a disconnect's cutoff, so an event
+    /// from before the disconnect is never replaced by one that won't go out.
     pending: Vec<Arc<Entry>>,
     /// When the pending events must go out, once there are any.
     flush_at: Option<Instant>,
@@ -397,10 +400,6 @@ impl<U> Connection<U> {
         {
             self.topics.remove(topic);
         }
-        if let Some(key) = &entry.coalesce {
-            self.pending
-                .retain(|pending| pending.coalesce.as_ref() != Some(key));
-        }
         self.pending.push(entry);
         if self.flush_at.is_none() {
             self.flush_at = Some(Instant::now() + self.engine.ring.config().flush_interval);
@@ -435,12 +434,31 @@ impl<U> Connection<U> {
         })
     }
 
+    /// The pending events that go out: of those with the same `coalesce` key, only the latest.
+    fn outgoing(&self) -> Vec<&Arc<Entry>> {
+        let mut keys = std::collections::HashSet::new();
+        let mut events: Vec<_> = self
+            .pending
+            .iter()
+            .rev()
+            .filter(|entry| entry.coalesce.as_ref().is_none_or(|key| keys.insert(key)))
+            .collect();
+        events.reverse();
+        events
+    }
+
+    /// Whether a full batch is waiting.
+    fn full(&self) -> bool {
+        let max = self.engine.ring.config().flush_max;
+        self.pending.len() >= max && self.outgoing().len() >= max
+    }
+
     /// The pending events as `batch` frames of at most `flush_max` events each.
     fn take_batches(&mut self) -> Vec<Frame> {
         self.flush_at = None;
         let max = self.engine.ring.config().flush_max.max(1);
         let frames = self
-            .pending
+            .outgoing()
             .chunks(max)
             .map(|events| {
                 let mut frame = String::from(r#"{"t":"batch","events":["#);
@@ -860,6 +878,39 @@ mod tests {
             connection.welcome(start),
             ServerFrame::Welcome { resumed: false, .. }
         ));
+    }
+
+    #[tokio::test]
+    async fn an_update_before_a_disconnect_is_not_coalesced_into_one_after_it() {
+        let (hub, mut internal) = internal_channel_for_user_1();
+        let mut connection = connection(SyncConfig::default());
+        let update = |seq| SyncPublication {
+            coalesce: Some("workspace".into()),
+            ..SyncPublication::new(
+                Audience::User(1),
+                format!(r#"{{"type":"workspace.updated","data":{{"n":{seq}}}}}"#),
+            )
+        };
+        // The select chose the head's change; then update 1, the disconnect (seq 2) and update
+        // 3, which replaces update 1 in a batch, all commit before `catch_up` reads the ring.
+        hub.sequenced(|seq| connection.engine.ring.push(seq, update(seq)));
+        hub.broadcast(
+            &internal_channel("1"),
+            r#"{"type":"disconnect","reconnect":false}"#,
+        );
+        hub.sequenced(|seq| connection.engine.ring.push(seq, update(seq)));
+        assert!(connection.catch_up(false).is_none());
+        connection
+            .disconnect(None, false, &mut internal, 16)
+            .expect("the disconnect is seen before the write");
+        let frames = connection.take_batches();
+        assert_eq!(
+            frames.iter().map(Frame::as_str).collect::<Vec<_>>(),
+            [
+                r#"{"t":"batch","events":[{"seq":1,"topic":"user","type":"workspace.updated","data":{"n":1}}]}"#
+            ],
+            "update 1 goes out before the bye, update 3 never does"
+        );
     }
 
     #[test]
