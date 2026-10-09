@@ -22,20 +22,33 @@ let appFocus = 0;
 
 let listeners = 0;
 
+/** Wall time, unless a test has installed its own clock. */
+let readNow = (): number => performance.now();
+
 function onKeyDown(event: Event): void {
   if (!(event instanceof KeyboardEvent)) {
     return;
   }
 
-  lastInput = { kind: "key", key: event.key, at: performance.now() };
+  lastInput = { kind: "key", key: event.key, at: readNow() };
 }
 
 function onPointerDown(event: Event): void {
-  lastInput = { kind: "pointer", target: event.target, at: performance.now() };
+  lastInput = { kind: "pointer", target: event.target, at: readNow() };
 }
 
 function forgetInput(): void {
   lastInput = null;
+}
+
+/**
+ * Drops the remembered press and the app-focus depth. `read`, when given, is the clock until
+ * the next reset, so a test can hold the window still instead of following wall time.
+ */
+export function resetReaderFocusForTests(read: () => number = () => performance.now()): void {
+  lastInput = null;
+  appFocus = 0;
+  readNow = read;
 }
 
 /**
@@ -84,10 +97,7 @@ export function duringAppFocus<T>(run: () => T): T {
  * A focusin that followed the person's latest input when that input was Tab, or a click
  * on `focused` (or an ancestor of it). A later key or click replaces the earlier one.
  */
-export function readerMovedFocus(
-  focused: EventTarget | null = null,
-  at = performance.now(),
-): boolean {
+export function readerMovedFocus(focused: EventTarget | null = null, at = readNow()): boolean {
   if (appFocus !== 0 || lastInput === null || at - lastInput.at > READER_FOCUS_WINDOW_MS) {
     return false;
   }

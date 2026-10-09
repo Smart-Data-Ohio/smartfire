@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
 import type { Poll } from "../../gen/Poll.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
+import { resetReaderFocusForTests } from "../../lib/reader-focus.ts";
 import type { Boot, Timeline as RoomTimeline } from "../../store/model.ts";
 import { removeMessage } from "../../store/reducers.ts";
 import { emptyTimeline, initialState } from "../../store/state.ts";
@@ -337,6 +338,9 @@ describe("permalink placement", () => {
   let previousObserver: typeof ResizeObserver;
 
   beforeEach(() => {
+    // jsdom does not move focus inside Tab, so the test focuses on the next line. That work
+    // already takes longer than the 100ms window when the runner is busy, so the clock stays put.
+    resetReaderFocusForTests(() => 0);
     store.setState(initialState, true);
     releaseCards?.();
     releaseCards = null;
@@ -380,6 +384,7 @@ describe("permalink placement", () => {
   });
 
   afterEach(() => {
+    resetReaderFocusForTests();
     releaseCards?.();
     releaseCards = null;
     restoreMeasure?.();

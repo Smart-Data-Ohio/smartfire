@@ -9,6 +9,7 @@ import { createRef, type ReactNode, type RefObject, useImperativeHandle, useRef 
 import type { VListHandle } from "virtua";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageFixture } from "../../api/testing.ts";
+import { resetReaderFocusForTests } from "../../lib/reader-focus.ts";
 import { MessageRow } from "../room/message-row.tsx";
 import type { TimelineItem } from "../room/timeline-items.ts";
 import { useListEdges } from "./list-edges.ts";
@@ -353,11 +354,15 @@ function follow(apiRef: RefObject<AnchorApi | null>, geometry: Geometry): void {
 
 describe("useViewportAnchor reader control", () => {
   beforeEach(() => {
+    // Tab and click are followed by focus() on the next line. Hold the reader-focus clock so a
+    // busy runner cannot age that pair out of the window.
+    resetReaderFocusForTests(() => 0);
     MeasuringObserver.instances = [];
     vi.stubGlobal("ResizeObserver", MeasuringObserver);
   });
 
   afterEach(() => {
+    resetReaderFocusForTests();
     vi.unstubAllGlobals();
   });
 

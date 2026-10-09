@@ -1,16 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { bindReaderInput, duringAppFocus, readerMovedFocus } from "./reader-focus.ts";
+import {
+  bindReaderInput,
+  duringAppFocus,
+  readerMovedFocus,
+  resetReaderFocusForTests,
+} from "./reader-focus.ts";
 
 describe("readerMovedFocus", () => {
   let release: (() => void) | null = null;
+  let now = 0;
 
   beforeEach(() => {
+    now = 0;
+    resetReaderFocusForTests(() => now);
     release = bindReaderInput(document);
   });
 
   afterEach(() => {
     release?.();
     release = null;
+    resetReaderFocusForTests();
     document.body.replaceChildren();
   });
 
@@ -75,6 +84,18 @@ describe("readerMovedFocus", () => {
       new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true }),
     );
     expect(readerMovedFocus(link)).toBe(true);
+  });
+
+  it("keeps Tab through 100ms and drops it on the next millisecond", () => {
+    const link = document.createElement("a");
+
+    document.body.append(link);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    now = 100;
+    expect(readerMovedFocus(link)).toBe(true);
+
+    now = 101;
+    expect(readerMovedFocus(link)).toBe(false);
   });
 
   it("stays quiet inside duringAppFocus even after Tab", () => {
