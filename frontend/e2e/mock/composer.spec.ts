@@ -190,6 +190,50 @@ test("an ordinary send posts and shows its pending row before the latest page ar
   }
 });
 
+test("a second ordinary send from history posts before the latest page arrives", async ({
+  page,
+}) => {
+  await openApp(page, `${GENERAL}/m/10005`);
+  await expect(page.locator('[data-message-id="10005"]')).toBeVisible();
+
+  const latest = Promise.withResolvers<void>();
+  let fetching = false;
+  const posts: { markdownSource: string }[] = [];
+
+  await page.route(`**/api/v1/rooms/${ROOM_IDS.general}/messages`, async (route) => {
+    if (route.request().method() === "GET") {
+      fetching = true;
+      await latest.promise;
+    } else {
+      posts.push(route.request().postDataJSON());
+    }
+
+    return route.continue();
+  });
+
+  try {
+    const input = composer(page);
+
+    await input.fill("First send from history");
+    await input.press("Enter");
+    await expect.poll(() => fetching).toBe(true);
+    await expect.poll(() => posts.length).toBe(1);
+
+    await input.fill("Second send from history");
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
+    await input.press("Enter");
+    await expect
+      .poll(() => posts.map((post) => post.markdownSource))
+      .toEqual(["First send from history", "Second send from history"]);
+
+    latest.resolve();
+    await expect(posted(page, "First send from history")).toBeVisible();
+    await expect(posted(page, "Second send from history")).toBeVisible();
+  } finally {
+    latest.resolve();
+  }
+});
+
 for (const first of ["POST response", "broadcast"]) {
   test(`an ordinary send stays visible when the ${first} arrives before the latest page`, async ({
     page,
