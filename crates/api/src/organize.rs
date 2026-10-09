@@ -154,7 +154,7 @@ async fn put_order(c: &mut Ctx) -> Result {
 async fn row(c: &Ctx, room: Room, membership_id: i64) -> Result<api::SidebarRow> {
     c.app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let membership = Membership::find(conn, membership_id)?;
             dto::membership_row(conn, &room, &membership)
         })
@@ -226,7 +226,7 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             membership.move_favorite_to(tx, position)?;
-            shown_favorites(tx.conn(), user_id)
+            shown_favorites(&campfire_db::Snapshot::of_write(tx)?, user_id)
         })
         .await
         .map_err(db_error)?;
@@ -235,7 +235,7 @@ async fn patch_favorite(c: &mut Ctx) -> Result {
 
 /// The favourites the person's sidebar shows, in order.
 fn shown_favorites(
-    conn: &campfire_db::Connection,
+    conn: &campfire_db::Snapshot<'_>,
     user_id: i64,
 ) -> campfire_db::Result<Vec<api::SidebarRow>> {
     let mut rows = Vec::new();

@@ -1556,6 +1556,56 @@ async fn a_row_paused_before_a_revocation_never_shows_the_revoked_member_a_later
     server.abort();
 }
 
+/// `GET /api/v1/sidebar` reads its memberships and its direct previews from one snapshot: paused
+/// once the memberships are read, then revoked and sent a secret, the answer shows the room as
+/// the membership saw it, never the secret.
+#[tokio::test]
+async fn a_sidebar_read_across_a_revocation_never_shows_a_later_message() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    let post = |client: &str| {
+        json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": client, "markdownSource": client}),
+        )
+    };
+    let reply = david.write(post("before-revocation")).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+
+    let hold = campfire_api::test_hooks::hold_after_sidebar_memberships(a.db().path(), KEVIN);
+    let revoke_and_post = async {
+        tokio::time::timeout(Duration::from_secs(5), hold.reached)
+            .await
+            .expect("the sidebar read its memberships")
+            .unwrap();
+        a.db()
+            .write(move |tx| campfire_db::Room::find(tx.conn(), room)?.revoke_from(tx, &[KEVIN]))
+            .await
+            .unwrap();
+        let reply = david.write(post("the-secret-after-revocation")).await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        hold.release.send(()).unwrap();
+    };
+    let (reply, ()) = tokio::join!(kevin.send(get("/api/v1/sidebar")), revoke_and_post);
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    assert!(
+        !reply.text().contains("the-secret-after-revocation"),
+        "{}",
+        reply.text()
+    );
+}
+
 /// Waits until the room's name, as committed, is `name`.
 async fn room_named(a: &TestApp, room: i64, name: &'static str) {
     tokio::time::timeout(Duration::from_secs(5), async {

@@ -8,7 +8,8 @@ use campfire_app::app::AppState;
 use campfire_db::models::workspace_presence_lease::Presence as LeasePresence;
 use campfire_db::{
     CachedStatements, Connection, Involvement, Membership, Message, MessagePin, Result, Role, Room,
-    RoomType, StageRole, Status, Timestamp, User, UserStatusSettings, WorkspacePresenceLease,
+    RoomType, Snapshot, StageRole, Status, Timestamp, User, UserStatusSettings,
+    WorkspacePresenceLease,
 };
 use campfire_web::controllers::presenters::{self, Presenter, accounts, room_shell};
 use rails_compat::Secrets;
@@ -921,9 +922,10 @@ fn sidebar_row_with(
     })
 }
 
-/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar.
+/// The membership's sidebar row, or `None` when the room isn't in the person's sidebar. Read
+/// from one snapshot, as the membership must be: its direct preview is only what it could see.
 pub fn sidebar_row(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
 ) -> Result<Option<api::SidebarRow>> {
@@ -934,9 +936,9 @@ pub fn sidebar_row(
 }
 
 /// The membership's row as the sidebar would show it, even when it's hidden (`invisible`): the
-/// answer to an organising call on a hidden room.
+/// answer to an organising call on a hidden room. From one snapshot, as [`sidebar_row`] is.
 pub fn membership_row(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     room: &Room,
     membership: &Membership,
 ) -> Result<api::SidebarRow> {
@@ -966,14 +968,18 @@ pub fn membership_row(
     )
 }
 
+/// The person's whole sidebar, from one snapshot: the memberships it lists and the direct
+/// previews it shows are read together, so a preview is never newer than the membership.
 pub fn sidebar(
-    conn: &Connection,
+    conn: &Snapshot<'_>,
     secrets: &Secrets,
     viewer: &User,
     can_create_rooms: bool,
     now: Timestamp,
 ) -> Result<api::Sidebar> {
     let all = Membership::visible_with_ordered_room(conn, viewer.id)?;
+    #[cfg(feature = "test-support")]
+    crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let mentions = mention_counts(conn, viewer.id, None)?;
     let direct_ids: Vec<i64> = all
         .iter()

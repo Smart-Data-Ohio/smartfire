@@ -95,7 +95,7 @@ impl SyncRenderer for Renderer {
 
     fn sidebar_row(
         &self,
-        conn: &Connection,
+        conn: &campfire_db::Snapshot<'_>,
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {

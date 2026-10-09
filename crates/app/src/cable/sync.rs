@@ -22,7 +22,7 @@ use campfire_api_types::{
     ThreadRemoved, ThreadUnread, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
-use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room};
+use campfire_db::{ChannelThread, Connection, Database, Membership, Message, Room, Snapshot};
 
 use super::Cable;
 
@@ -33,10 +33,10 @@ pub trait SyncRenderer: Send + Sync + 'static {
     /// The message's reactions and boosts, as `POST /api/v1/messages/:id/boosts` answers them.
     fn reactions(&self, conn: &Connection, message: &Message) -> Option<MessageReactions>;
     /// The membership's sidebar row, or `None` when the room isn't in that sidebar (an
-    /// invisible membership, a deleted room).
+    /// invisible membership, a deleted room). Read in the snapshot the membership came from.
     fn sidebar_row(
         &self,
-        conn: &Connection,
+        conn: &Snapshot<'_>,
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<SidebarRow>>;
@@ -1129,16 +1129,34 @@ fn defer_rows(
     }));
 }
 
-/// Runs `read` in one read transaction (`BEGIN DEFERRED`; the pooled readers otherwise commit
-/// each statement on its own), so everything it reads comes from one SQLite snapshot, taken at
-/// its first read: no read in it can see a commit an earlier one predates. `None` (logged) when
-/// the transaction can't be opened; nothing is read then.
-fn in_snapshot<T>(conn: &Connection, read: impl FnOnce(&Connection) -> T) -> Option<T> {
-    match conn.unchecked_transaction() {
+/// How long a sidebar row pass may keep its snapshot open before it is logged.
+const SLOW_SNAPSHOT: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Runs `read` in one read transaction ([`Snapshot`]; the pooled readers otherwise commit each
+/// statement on its own), so everything it reads comes from one SQLite snapshot, taken at its
+/// first read: no read in it can see a commit an earlier one predates. `None` (logged) when the
+/// transaction can't be opened; nothing is read then.
+///
+/// A pass that keeps its snapshot open longer than [`SLOW_SNAPSHOT`] is logged: a long read
+/// transaction holds back WAL checkpoints for as long as it lasts.
+fn in_snapshot<T>(
+    conn: &Connection,
+    room_id: i64,
+    read: impl FnOnce(&Snapshot<'_>) -> T,
+) -> Option<T> {
+    match Snapshot::begin(conn) {
         // Dropped once read, rolling back a transaction that wrote nothing.
-        Ok(snapshot) => Some(read(&snapshot)),
+        Ok(snapshot) => {
+            let started = std::time::Instant::now();
+            let read = read(&snapshot);
+            let took = started.elapsed();
+            if took > SLOW_SNAPSHOT {
+                tracing::warn!(?took, room_id, "sync: slow sidebar snapshot");
+            }
+            Some(read)
+        }
         Err(error) => {
-            tracing::warn!(%error, "sync: sidebar snapshot not opened");
+            tracing::warn!(%error, room_id, "sync: sidebar snapshot not opened");
             None
         }
     }
@@ -1176,7 +1194,7 @@ impl RoomRows {
         // Before anything is read: a row is published only if no change to its unread state was
         // published since (see `row`).
         let since = server.sync_head();
-        let Some(mut refused) = in_snapshot(conn, |conn| {
+        let Some(mut refused) = in_snapshot(conn, self.room_id, |conn| {
             self.rows(server, renderer, conn, viewers, since, refresh_room)
         }) else {
             return;
@@ -1186,7 +1204,7 @@ impl RoomRows {
                 return;
             }
             let since = server.sync_head();
-            let Some(again) = in_snapshot(conn, |conn| {
+            let Some(again) = in_snapshot(conn, self.room_id, |conn| {
                 self.rows(
                     server,
                     renderer,
@@ -1211,7 +1229,7 @@ impl RoomRows {
         &self,
         server: &Cable,
         renderer: Option<&Arc<dyn SyncRenderer>>,
-        conn: &Connection,
+        conn: &Snapshot<'_>,
         viewers: Viewers<'_>,
         since: u64,
         refresh_room: Option<bool>,
@@ -1275,7 +1293,7 @@ impl RoomRows {
         &self,
         server: &Cable,
         renderer: &dyn SyncRenderer,
-        conn: &Connection,
+        conn: &Snapshot<'_>,
         (room, membership): (&Room, &Membership),
         since: u64,
         refresh_room: Option<bool>,

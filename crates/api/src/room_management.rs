@@ -575,7 +575,7 @@ async fn mutation(c: &Ctx, room: Room) -> Result<api::RoomMutation> {
     let now = now(c);
     c.app()
         .db
-        .read(move |conn| {
+        .read_snapshot(move |conn| {
             let membership = Membership::find_by_room_and_user(conn, room.id, viewer.id)?;
             let (detail, row) = match membership {
                 Some(membership) if !room.deleted() => (

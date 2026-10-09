@@ -149,6 +149,7 @@ struct SnapshotPause {
 type SnapshotHolds = Mutex<Option<HashMap<(PathBuf, i64), SnapshotPause>>>;
 static AFTER_THREAD_SNAPSHOT: SnapshotHolds = Mutex::new(None);
 static AFTER_SIDEBAR_SNAPSHOT: SnapshotHolds = Mutex::new(None);
+static AFTER_SIDEBAR_MEMBERSHIPS: SnapshotHolds = Mutex::new(None);
 
 fn hold_snapshot(holds: &SnapshotHolds, database: &Path, id: i64) -> SnapshotHold {
     let (reached, ready) = tokio::sync::oneshot::channel();
@@ -194,6 +195,27 @@ pub fn hold_after_sidebar_snapshot(database: &Path, room_id: i64) -> SnapshotHol
 
 pub(crate) fn after_sidebar_snapshot(database: &Path, room_id: i64) {
     after_snapshot(&AFTER_SIDEBAR_SNAPSHOT, database, room_id);
+}
+
+/// Holds the person's next `GET /api/v1/sidebar` once its memberships are read, before the rest
+/// of the sidebar is.
+pub fn hold_after_sidebar_memberships(database: &Path, user_id: i64) -> SnapshotHold {
+    hold_snapshot(&AFTER_SIDEBAR_MEMBERSHIPS, &canonical(database), user_id)
+}
+
+pub(crate) fn after_sidebar_memberships(conn: &campfire_db::Connection, user_id: i64) {
+    if let Some(database) = conn.path() {
+        after_snapshot(
+            &AFTER_SIDEBAR_MEMBERSHIPS,
+            &canonical(Path::new(database)),
+            user_id,
+        );
+    }
+}
+
+/// The database file as SQLite names it, whichever way the test spelt its path.
+fn canonical(database: &Path) -> PathBuf {
+    std::fs::canonicalize(database).unwrap_or_else(|_| database.to_owned())
 }
 
 static READ_AFTER_SIDEBAR_SNAPSHOT: Mutex<Option<HashMap<(PathBuf, i64), usize>>> =
