@@ -263,14 +263,34 @@ const readRoom = Effect.fnUntraced(function* (roomId: number, token: number) {
   if (Result.isSuccess(loaded)) {
     const detail = withSidebarRow(loaded.success, store.getState().sidebar.rows[roomId]);
 
-    const landed =
-      mutations.setRoomDetail(detail, started) ||
-      ((yield* rereadRefused(roomId, token)) &&
-        mutations.setRoomDetail(detail, beginRoomRequest()));
-
-    if (landed) {
+    if (mutations.setRoomDetail(detail, started)) {
       clearRoomJoin(roomId);
       yield* loadTimeline(roomId, token, detail, load);
+
+      return;
+    }
+
+    if (!(yield* rereadRefused(roomId, token))) {
+      return;
+    }
+
+    // At the cap. A removal since (the row is gone) outranks this older detail: revocations win,
+    // so the room shows unavailable rather than content from before the removal.
+    const row = store.getState().sidebar.rows[roomId];
+
+    if (row === undefined) {
+      if (mutations.setRoomUnavailable(roomId, beginRoomRequest(), rowsSince)) {
+        mutations.setPageFailed(roomId);
+      }
+
+      return;
+    }
+
+    const capped = withSidebarRow(loaded.success, row);
+
+    if (mutations.setRoomDetail(capped, beginRoomRequest())) {
+      clearRoomJoin(roomId);
+      yield* loadTimeline(roomId, token, capped, load);
     }
 
     return;

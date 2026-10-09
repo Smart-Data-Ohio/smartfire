@@ -4918,7 +4918,7 @@ describe("an open room visit always settles", () => {
     [3, 2, 1],
   ];
 
-  const cases = (["resync", "upsert"] as const).flatMap((fact) =>
+  const cases = (["resync", "upsert", "removal", "late removal"] as const).flatMap((fact) =>
     orders.flatMap((order) =>
       outcomes.flatMap((first) =>
         outcomes.flatMap((refresh) =>
@@ -4951,7 +4951,11 @@ describe("an open room visit always settles", () => {
     // recovery read), or a membership push (3 is the first re-read: the refresh's, holding the
     // slot, when the refresh lands first, else the first read's). `order` is the order 1, 2 and 3
     // land in; one not yet sent at its turn is skipped and lands later as a re-read. Re-reads
-    // answer `later`, in arrival order.
+    // answer `later`, in arrival order. The removal facts add a removal push after the membership
+    // push: before anything lands, or after the second landing. A request sent after the removal
+    // answers 404, as the server would, and nothing older may bring the room's content back.
+    // "late removal" sends a second membership push after the first landing and the removal after
+    // the second, so the visit can reach its read cap with the removal overtaking the last read.
     it.effect(
       `${fact}: first ${answers[0]}, refresh ${answers[1]}, third ${answers[2]}, landing ${order.join("")}, re-reads ${later}`,
       () =>
@@ -4964,6 +4968,21 @@ describe("an open room visit always settles", () => {
               [];
 
             let issued = 0;
+
+            /** Requests sent before the removal push; null until it arrives. */
+            let removedAfter: number | null = null;
+
+            const remove = (seq: number) =>
+              Effect.gen(function* () {
+                removedAfter = issued;
+                yield* pushEvents({
+                  seq,
+                  topic: "user",
+                  type: "sidebar.row.removed",
+                  data: { roomId: 12, refreshRoom: true },
+                });
+                yield* settle;
+              });
 
             const land = (ordinal: number, outcome: Outcome) =>
               Effect.gen(function* () {
@@ -4997,9 +5016,15 @@ describe("an open room visit always settles", () => {
                 const gate = yield* Deferred.make<Outcome>();
 
                 issued += 1;
-                held.push({ ordinal: issued, gate });
 
-                return yield* answer(yield* Deferred.await(gate));
+                const ordinal = issued;
+                const revoked = removedAfter !== null && ordinal > removedAfter;
+
+                held.push({ ordinal, gate });
+
+                const outcome = yield* Deferred.await(gate);
+
+                return yield* answer(revoked ? "404" : outcome);
               }),
             );
             yield* startEngine;
@@ -5034,8 +5059,22 @@ describe("an open room visit always settles", () => {
               });
             }
 
-            for (const ordinal of order) {
+            if (fact === "removal") yield* remove(3);
+
+            for (const [index, ordinal] of order.entries()) {
               yield* land(ordinal, answers[ordinal - 1] ?? later);
+
+              // Another membership push, then the removal, each overtaking the reads in flight.
+              if (fact === "late removal" && index === 0) {
+                yield* pushEvents({
+                  seq: 3,
+                  topic: "user",
+                  type: "sidebar.row.upserted",
+                  data: { ...row, membership: { ...row.membership, involvement: "mentions" } },
+                });
+              }
+
+              if (fact === "late removal" && index === 1) yield* remove(4);
             }
 
             // Re-reads land in order. A loop would never drain.
@@ -5050,6 +5089,11 @@ describe("an open room visit always settles", () => {
             expect(held).toEqual([]);
             expect(session.roomVisitToken(12)).not.toBeNull();
             expect(["ready", "error"]).toContain(store.getState().rooms[12]?.status);
+
+            if (removedAfter !== null) {
+              expect(store.getState().rooms[12]?.detail).toBeNull();
+              expect(store.getState().rooms[12]?.status).toBe("error");
+            }
           }),
         ),
     );
@@ -5071,6 +5115,102 @@ describe("an open room visit settles within the cap while membership pushes keep
 
     return room?.status === "error" && room.error === "boom";
   };
+
+  for (const refreshFirst of [false, true]) {
+    it.effect(
+      `a removal that overtakes the third read wins over its stale detail${refreshFirst ? ", refresh landing first" : ""}`,
+      () =>
+        withSync(
+          Effect.gen(function* () {
+            const api = yield* FakeApi;
+            const row = sidebarRowFixture(12, "general");
+            const held: Deferred.Deferred<void>[] = [];
+            let reads = 0;
+
+            const upsert = (seq: number, involvement: "muted" | "mentions") =>
+              pushEvents({
+                seq,
+                topic: "user",
+                type: "sidebar.row.upserted",
+                data: { ...row, membership: { ...row.membership, involvement } },
+              });
+
+            const land = (read: number) =>
+              Effect.gen(function* () {
+                const gate = held[read - 1];
+
+                if (gate !== undefined) yield* Deferred.succeed(gate, undefined);
+
+                yield* settle;
+                yield* settle;
+              });
+
+            yield* api.reply("GET /sidebar", sidebarFixture([row]));
+            yield* api.reply("GET /rooms/12/messages", pageFixture([]));
+            yield* api.reply("GET /users", { users: [] });
+            yield* api.route("GET /rooms/12/preview", () =>
+              Effect.fail(new NotFound({ message: "gone" })),
+            );
+            // Reads 1-3 are the visit's and answer the room. Read 4 is the removal's refresh.
+            yield* api.route("GET /rooms/12", () =>
+              Effect.gen(function* () {
+                const gate = yield* Deferred.make<void>();
+
+                reads += 1;
+
+                const read = reads;
+
+                held.push(gate);
+                yield* Deferred.await(gate);
+
+                if (read === 4) return yield* Effect.fail(new NotFound({ message: "gone" }));
+
+                return roomDetailFixture(12);
+              }),
+            );
+            yield* startEngine;
+            yield* welcome(0, false);
+            yield* Effect.forkChild(session.openRoom(12, null));
+            yield* settle;
+
+            // Two refusals.
+            yield* upsert(1, "muted");
+            yield* land(1);
+            yield* upsert(2, "mentions");
+            yield* land(2);
+
+            expect(reads).toBe(3);
+
+            // The removal overtakes read 3 and starts its refresh.
+            yield* pushEvents({
+              seq: 3,
+              topic: "user",
+              type: "sidebar.row.removed",
+              data: { roomId: 12, refreshRoom: true },
+            });
+
+            expect(reads).toBe(4);
+
+            if (refreshFirst) {
+              yield* land(4);
+              yield* land(3);
+            } else {
+              yield* land(3);
+              yield* land(4);
+            }
+
+            yield* TestClock.adjust("5 seconds");
+
+            expect(reads).toBe(4);
+            expect(session.roomVisitToken(12)).not.toBeNull();
+            expect(store.getState().rooms[12]?.status).toBe("error");
+            expect(store.getState().rooms[12]?.detail).toBeNull();
+            expect(store.getState().rooms[12]?.error).toBe("This room is no longer available");
+            expect(store.getState().sidebar.rows[12]).toBeUndefined();
+          }),
+        ),
+    );
+  }
 
   for (const answer of ["404", "preview", "ok", "500"] as const) {
     // Every room read is overtaken by a push that changes the membership, for five reads; then
