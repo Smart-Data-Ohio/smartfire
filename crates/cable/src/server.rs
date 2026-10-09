@@ -13,7 +13,7 @@ use tokio::sync::{broadcast, watch};
 use crate::channel::Channel;
 use crate::pubsub::{Frame, Hub};
 use crate::socket::Handshake;
-use crate::sync::{Engine, Ring, SyncConfig, SyncHandler, SyncPublication};
+use crate::sync::{Engine, Ring, Stale, SyncConfig, SyncHandler, SyncPublication};
 use crate::{connection, json, naming, protocol};
 
 /// `config.action_cable.*` as the production reference runs it.
@@ -309,6 +309,7 @@ impl<U: Send + Sync + 'static> Server<U> {
             handler: Arc::new(handler),
             connections: std::sync::atomic::AtomicUsize::new(0),
             people: Default::default(),
+            fences: Default::default(),
         }));
     }
 
@@ -372,6 +373,46 @@ impl<U: Send + Sync + 'static> Server<U> {
             engine.ring.push(seq, publication);
             seq
         }))
+    }
+
+    /// [`Server::sync_publish`], recording the event's sequence under `fence`: a publication
+    /// read before it is refused by [`Server::sync_publish_fresh`].
+    pub fn sync_publish_fencing(&self, publication: SyncPublication, fence: String) -> Option<u64> {
+        let engine = self.inner.sync.get()?;
+        Some(self.inner.hub.sequenced(|seq| {
+            engine.ring.push(seq, publication);
+            engine.fences.lock().unwrap().record(fence, seq);
+            seq
+        }))
+    }
+
+    /// The latest sequence taken. Read it before reading what a publication carries, and hand
+    /// it to [`Server::sync_publish_fresh`].
+    pub fn sync_head(&self) -> u64 {
+        self.inner.hub.sequence()
+    }
+
+    /// [`Server::sync_publish`], unless an event under `fence` was published after `since` (a
+    /// [`Server::sync_head`] read before the publication's inputs were). The publication may
+    /// then carry state older than that event, which clients have already applied: `Err`, and
+    /// the caller reads afresh and tries again. The check and the publication are one step, so
+    /// no fencing event can come between them.
+    pub fn sync_publish_fresh(
+        &self,
+        publication: SyncPublication,
+        fence: &str,
+        since: u64,
+    ) -> Result<Option<u64>, Stale> {
+        let Some(engine) = self.inner.sync.get() else {
+            return Ok(None);
+        };
+        self.inner.hub.sequenced(|seq| {
+            if engine.fences.lock().unwrap().crossed(fence, since) {
+                return Err(Stale);
+            }
+            engine.ring.push(seq, publication);
+            Ok(Some(seq))
+        })
     }
 
     /// `ActionCable.server.restart`: closes every connection with `server_restart`.

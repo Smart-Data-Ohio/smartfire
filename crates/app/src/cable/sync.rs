@@ -532,9 +532,7 @@ pub fn room_unread(
         message_id,
         mentioned,
     });
-    send(server, Audience::User(user_id), &payload, |publication| {
-        publication
-    });
+    send_unread_change(server, user_id, room_id, &payload);
 }
 
 /// The twin of a `Broadcast::UnreadRoom` the database layer emits: `room.unread` with the message
@@ -575,11 +573,28 @@ pub fn room_read(server: &Cable, user_id: i64, room_id: i64) {
     if !server.sync_wanted() {
         return;
     }
-    send(
+    send_unread_change(
         server,
-        Audience::User(user_id),
+        user_id,
+        room_id,
         &SyncPayload::RoomRead(RoomRead { room_id }),
-        |publication| publication,
+    );
+}
+
+/// The fence for a person's unread state in a room: `room.read` and `room.unread` change it on
+/// the client, and a sidebar row read before one of them carries the state from before it.
+fn unread_fence(user_id: i64, room_id: i64) -> String {
+    format!("unread:{user_id}:{room_id}")
+}
+
+/// Publishes a change to the person's unread state of the room on their `user` topic, fencing
+/// it: a row read before it is refused and read again ([`RoomRows::row`]), so no row can undo
+/// the change on the client however long its publication waited.
+fn send_unread_change(server: &Cable, user_id: i64, room_id: i64, payload: &SyncPayload) {
+    let payload = serde_json::to_string(payload).expect("sync payloads serialize");
+    server.sync_publish_fencing(
+        SyncPublication::new(Audience::User(user_id), payload),
+        unread_fence(user_id, room_id),
     );
 }
 
@@ -922,26 +937,22 @@ pub fn thread_indicator(
         }),
         |publication| publication,
     );
+    // Later: this runs on the database writer, which must not wait for the thread's lock.
     if let Some(thread_id) = thread_id {
-        thread_changed(server, slot, conn, thread_id, false);
+        thread_changed_later(server, slot, thread_id, false);
     }
 }
 
 /// `thread.created` on the thread's room, or `thread.updated` on its room and its own topic.
-pub fn thread_changed(
+/// The caller holds the thread's lock and the reader `conn`, taken in that order (see
+/// [`thread_changed_later`]).
+fn thread_changed(
     server: &Cable,
-    slot: &RendererSlot,
+    renderer: &dyn SyncRenderer,
     conn: &Connection,
     thread_id: i64,
     created: bool,
 ) {
-    let Some(renderer) = slot.get(server) else {
-        return;
-    };
-    // Deferred readers can render an older snapshot more slowly than a newer one. Serialize
-    // the read through both publications, so a late reader cannot send stale state last.
-    let lock = slot.thread_lock(thread_id);
-    let _publication = hold(&lock);
     let thread = match ChannelThread::find_by_id(conn, thread_id) {
         Ok(Some(thread)) => thread,
         Ok(None) => return,
@@ -968,16 +979,29 @@ pub fn thread_changed(
     }
 }
 
-/// [`thread_changed`], read afresh later: for broadcast points without a connection.
+/// [`thread_changed`], read afresh later. Deferred readers can render an older snapshot more
+/// slowly than a newer one, so each takes the thread's lock and reads through publication; a late
+/// reader cannot send stale state last. The lock comes first and the reader only once it is held
+/// (the order [`room_rows`] keeps for rooms): waiting holds no reader, so however many updates
+/// queue behind a slow render, the pool stays free for the database writer's reads. No
+/// publication holds a room's lock and a thread's together.
 pub fn thread_changed_later(server: &Cable, slot: &RendererSlot, thread_id: i64, created: bool) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
     let (server, slot) = (server.downgrade(), slot.clone());
-    renderer.defer(Box::new(move |conn| {
-        if let Some(server) = server.upgrade() {
-            thread_changed(&server, &slot, conn, thread_id, created);
-        }
+    renderer.defer_unread(Box::new(move |reader| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        let lock = slot.thread_lock(thread_id);
+        let _publication = hold(&lock);
+        reader.read(&mut |conn| {
+            thread_changed(&server, renderer.as_ref(), conn, thread_id, created);
+        });
     }));
 }
 
@@ -1102,6 +1126,9 @@ impl RoomRows {
         if !server.sync_wanted() {
             return;
         }
+        // Before anything is read: a row is published only if no change to its unread state was
+        // published since (see `row`).
+        let since = server.sync_head();
         let room_id = self.room_id;
         let room = match Room::find_by_id(conn, room_id) {
             Ok(room) => room,
@@ -1123,8 +1150,8 @@ impl RoomRows {
                     server,
                     renderer.as_ref(),
                     conn,
-                    room,
-                    membership,
+                    (room, membership),
+                    since,
                     refresh_room,
                 );
             }
@@ -1143,15 +1170,22 @@ impl RoomRows {
         }
     }
 
+    /// The person's row, read from `membership` as it was at `since` (a
+    /// [`Cable::sync_head`](campfire_cable::Server::sync_head) read before it). A `room.read` or
+    /// `room.unread` of theirs published after that has already changed the row's unread state on
+    /// the client, and this row may predate it: the publication is refused, and the membership
+    /// and row are read again. Only a person whose unread state keeps changing faster than a row
+    /// renders runs out of tries; their `user` topic then gets a gap, so they refetch the sidebar.
     fn row(
         &self,
         server: &Cable,
         renderer: &dyn SyncRenderer,
         conn: &Connection,
-        room: &Room,
-        membership: &Membership,
+        (room, membership): (&Room, &Membership),
+        mut since: u64,
         refresh_room: Option<bool>,
     ) {
+        const TRIES: usize = 8;
         let user_id = membership.user_id;
         if room.deleted() {
             return self.removed(server, user_id);
@@ -1160,24 +1194,41 @@ impl RoomRows {
             server.sync_skipped_for(user_id);
             return;
         }
-        match renderer.sidebar_row(conn, room, membership) {
-            Ok(Some(mut row)) => {
-                row.refresh_room = refresh_room;
-                send(
-                    server,
-                    Audience::User(user_id),
-                    &SyncPayload::SidebarRowUpserted(row),
-                    |publication| publication,
-                );
+        let fence = unread_fence(user_id, room.id);
+        let mut reread;
+        let mut membership = membership;
+        for _ in 0..TRIES {
+            let mut row = match renderer.sidebar_row(conn, room, membership) {
+                Ok(Some(row)) => row,
+                Ok(None) => return self.hidden(server, user_id, refresh_room),
+                Err(error) => {
+                    return tracing::warn!(
+                        %error,
+                        room_id = room.id,
+                        user_id,
+                        "sync: sidebar row not rendered"
+                    );
+                }
+            };
+            row.refresh_room = refresh_room;
+            let payload = serde_json::to_string(&SyncPayload::SidebarRowUpserted(row))
+                .expect("sync payloads serialize");
+            let publication = SyncPublication::new(Audience::User(user_id), payload);
+            if server
+                .sync_publish_fresh(publication, &fence, since)
+                .is_ok()
+            {
+                return;
             }
-            Ok(None) => self.hidden(server, user_id, refresh_room),
-            Err(error) => tracing::warn!(
-                %error,
-                room_id = room.id,
-                user_id,
-                "sync: sidebar row not rendered"
-            ),
+            since = server.sync_head();
+            reread = match Membership::find(conn, membership.id) {
+                Ok(membership) => membership,
+                // Gone: the leave publishes its removal.
+                Err(_) => return,
+            };
+            membership = &reread;
         }
+        server.sync_skipped_for(user_id);
     }
 
     /// The person no longer belongs: `sidebar.row.removed` on their `user` topic, and their
@@ -1377,16 +1428,6 @@ pub fn organized_later(
                 );
             }
         });
-        if let Some(id) = change.removed_category_id {
-            send(
-                server,
-                Audience::User(user_id),
-                &SyncPayload::SidebarCategoryRemoved(campfire_api_types::RoomCategoryRemoved {
-                    id,
-                }),
-                |publication| publication,
-            );
-        }
     });
 }
 

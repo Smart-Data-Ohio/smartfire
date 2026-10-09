@@ -410,6 +410,45 @@ async fn an_unsubscribe_publication_stops_the_topic() {
 }
 
 #[tokio::test]
+async fn a_publication_read_before_a_fencing_event_is_refused() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    let server = &app.cable.server;
+    let event = |data: &str| {
+        SyncPublication::new(
+            Audience::User(1),
+            json!({ "type": "test", "data": data }).to_string(),
+        )
+    };
+    let read = server.sync_head();
+    let fence = server
+        .sync_publish_fencing(event("read"), "unread:1:7".into())
+        .unwrap();
+    // Read before the fencing event: refused, and nothing is sent.
+    assert_eq!(
+        server.sync_publish_fresh(event("stale row"), "unread:1:7", read),
+        Err(campfire_cable::sync::Stale)
+    );
+    // Another key isn't fenced, and a fresh read goes out.
+    let other = server
+        .sync_publish_fresh(event("other room"), "unread:1:8", read)
+        .unwrap()
+        .unwrap();
+    let fresh = server
+        .sync_publish_fresh(event("fresh row"), "unread:1:7", server.sync_head())
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        client.batch().await,
+        [
+            (fence, "user".into(), json!("read")),
+            (other, "user".into(), json!("other room")),
+            (fresh, "user".into(), json!("fresh row")),
+        ]
+    );
+}
+
+#[tokio::test]
 async fn a_remote_disconnect_says_bye_and_closes() {
     let app = app(fast()).await;
     let (mut client, _) = app.hello(1, Value::Null, &[]).await;

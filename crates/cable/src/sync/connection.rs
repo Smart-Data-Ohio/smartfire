@@ -531,6 +531,7 @@ mod tests {
                 handler: Arc::new(Nobody),
                 connections: Default::default(),
                 people: Default::default(),
+                fences: Default::default(),
             }),
             session: Box::new(Nobody),
             user_id: 1,

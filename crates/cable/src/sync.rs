@@ -384,6 +384,40 @@ pub(crate) struct Engine<U> {
     /// Who has a sync socket open (from its `hello` until it closes), and who has a gap marker
     /// in the ring since their last one opened.
     pub people: Mutex<People>,
+    /// The latest event published for each fence key: see [`crate::Server::sync_publish_fresh`].
+    pub fences: Mutex<Fences>,
+}
+
+/// [`crate::Server::sync_publish_fresh`] refused a publication read before an event under its
+/// fence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Stale;
+
+/// [`Engine::fences`]: for each key, the sequence of the latest event published under it.
+#[derive(Default)]
+pub(crate) struct Fences {
+    latest: HashMap<String, u64>,
+    /// Keys forgotten to bound the map: their latest event was at or before this sequence.
+    forgotten_through: u64,
+}
+
+impl Fences {
+    /// Keys remembered before the oldest are forgotten all at once.
+    const LIMIT: usize = 4096;
+
+    /// An event was published under `key` at `seq`. The caller holds the hub lock.
+    pub fn record(&mut self, key: String, seq: u64) {
+        if self.latest.len() >= Self::LIMIT && !self.latest.contains_key(&key) {
+            self.forgotten_through = self.latest.values().copied().max().unwrap_or(0);
+            self.latest.clear();
+        }
+        self.latest.insert(key, seq);
+    }
+
+    /// Whether an event under `key` may have been published after `since`.
+    pub fn crossed(&self, key: &str, since: u64) -> bool {
+        since < self.forgotten_through || self.latest.get(key).is_some_and(|&seq| seq > since)
+    }
 }
 
 /// [`Engine::people`].
@@ -400,6 +434,25 @@ pub(crate) use connection::run;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fences_forget_old_keys_by_fencing_everything_read_before_them() {
+        let mut fences = Fences::default();
+        fences.record("a".into(), 5);
+        assert!(fences.crossed("a", 4));
+        assert!(!fences.crossed("a", 5));
+        assert!(!fences.crossed("b", 0));
+        for n in 0..Fences::LIMIT as u64 {
+            fences.record(format!("k{n}"), 10 + n);
+        }
+        // The last key found the map full: every earlier one is forgotten, so a read from before
+        // the latest of them is fenced under any key, and a read after it isn't.
+        let newest = 10 + Fences::LIMIT as u64 - 1;
+        assert_eq!(fences.latest.len(), 1);
+        assert!(fences.crossed("a", newest - 2));
+        assert!(!fences.crossed("a", newest - 1));
+        assert!(fences.crossed(&format!("k{}", Fences::LIMIT - 1), newest - 1));
+    }
 
     fn ring(capacity: usize, max_age: Duration) -> Ring {
         Ring::new(SyncConfig {

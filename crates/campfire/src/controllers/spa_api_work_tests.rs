@@ -1488,3 +1488,82 @@ async fn the_board_frames_are_the_same_with_the_sync_engine_on() {
         assert_eq!(off, on, "frame {index}");
     }
 }
+
+#[tokio::test]
+async fn thread_updates_waiting_on_a_thread_hold_no_readers() {
+    let a = app(true).await.expect("the frozen default seed");
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut tab = Sync::connect(
+        addr,
+        &david.cookie_header(),
+        &[format!("room:{DESIGNERS}"), format!("thread:{THREAD}")],
+    )
+    .await;
+    tab.welcome().await;
+
+    // A work change's snapshot is rendered and paused, holding the thread's lock. Each reply
+    // after it queues a `thread.updated` behind that lock: more of them than the reader pool
+    // has readers.
+    let hold = campfire_api::test_hooks::hold_after_thread_snapshot(a.db().path(), THREAD);
+    let changed = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/threads/{THREAD}/work"),
+            &json!({"status": "in_progress", "ownerId": KEVIN}),
+        ))
+        .await;
+    assert_eq!(changed.status, StatusCode::OK, "{}", changed.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the work snapshot was rendered")
+        .unwrap();
+    let before = a
+        .db()
+        .read(|conn| Ok(campfire_db::ChannelThread::find(conn, THREAD)?.messages_count))
+        .await
+        .unwrap();
+    let readers = a.booted.app.config.db_readers;
+    let replies = readers + 4;
+    for n in 0..replies {
+        let body = json!({"clientMessageId": format!("held-thread-{n}"), "markdownSource": format!("Reply {n}"),
+                          "replyToMessageId": null, "replyNotifyAuthor": null});
+        let reply = tokio::time::timeout(
+            Duration::from_secs(5),
+            david.write(json_body(
+                Method::POST,
+                &format!("/api/v1/threads/{THREAD}/messages"),
+                &body,
+            )),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("reply {n} committed while thread updates wait"));
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    }
+
+    // The writer's own reads still find a reader: a message in the room (whose append the cable
+    // sink reads on the writer) commits.
+    let body = json!({"clientMessageId": "elsewhere", "markdownSource": "Elsewhere"});
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        david.write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{DESIGNERS}/messages"),
+            &body,
+        )),
+    )
+    .await
+    .expect("a root message commits while the thread updates wait");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    hold.release.send(()).unwrap();
+    let expected = before + replies as i64;
+    tab.until(
+        move |event| {
+            matches!(&event.payload, api::SyncPayload::ThreadUpdated(thread)
+            if thread.id == THREAD && thread.reply_count == expected)
+        },
+        |_| false,
+    )
+    .await;
+    server.abort();
+}

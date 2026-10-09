@@ -1333,6 +1333,94 @@ async fn a_rename_paused_across_a_newer_rename_ends_on_the_newer_name() {
 }
 
 #[tokio::test]
+async fn a_row_read_before_a_room_read_cannot_bring_the_badge_back() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/rooms",
+            &json!({"type": "closed", "name": "Before", "iconName": "smile",
+                    "clientRoomId": uuid::Uuid::new_v4().to_string(),
+                    "userIds": [DAVID, JASON, KEVIN]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::RoomMutation>(&reply).room.id;
+    let body = json!({"clientMessageId": "unread-first", "markdownSource": "Unread for Kevin"});
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &body,
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    remaining_row_events(&a, &mut sync, room).await;
+
+    // The rename's row for Kevin is rendered unread and paused, holding the room. Kevin reads
+    // the room meanwhile: `room.read` goes out, and the paused row must not undo it.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/rooms/{room}"),
+            &json!({"type": "closed", "name": "Renamed", "iconName": "smile",
+                    "userIds": [DAVID, JASON, KEVIN]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the renamed row was rendered")
+        .unwrap();
+    let read = kevin
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/read"),
+            &json!({}),
+        ))
+        .await;
+    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
+    sync.until(
+        move |event| matches!(&event.payload, api::SyncPayload::RoomRead(read) if read.room_id == room),
+        |_| false,
+    )
+    .await;
+    hold.release.send(()).unwrap();
+
+    let events = remaining_row_events(&a, &mut sync, room).await;
+    let badges: Vec<_> = events
+        .iter()
+        .map(|event| match event {
+            api::SyncPayload::SidebarRowUpserted(row) => (
+                row.room.name.clone(),
+                row.unread_count,
+                row.membership.unread_at.is_some(),
+            ),
+            other => panic!("only upserts: {other:?}"),
+        })
+        .collect();
+    assert!(
+        !badges.is_empty(),
+        "the rename publishes Kevin's row: {badges:?}"
+    );
+    assert!(
+        badges.iter().all(
+            |(name, unread, unread_at)| name.as_deref() == Some("Renamed")
+                && *unread == 0
+                && !unread_at
+        ),
+        "no row after the read has a badge: {badges:?}"
+    );
+    server.abort();
+}
+
+#[tokio::test]
 async fn row_publications_waiting_on_a_room_hold_no_readers() {
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
