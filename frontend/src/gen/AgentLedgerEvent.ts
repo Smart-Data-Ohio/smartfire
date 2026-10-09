@@ -7,11 +7,11 @@ import type { AgentWebhookStatus } from "./AgentWebhookStatus";
 /**
  * One entry of an agent's event ledger (`history::present_event`, `agents/events/_event.html`).
  */
-export type AgentLedgerEvent = { id: number, eventType: AgentLedgerEventType, 
+export type AgentLedgerEvent = { id: number, eventType: AgentLedgerEventType,
 /**
  * `null` when none was recorded (the classic row shows nothing after the type).
  */
-outcome: AgentDeliveryOutcome | null, createdAt: string, roomId: number | null, 
+outcome: AgentDeliveryOutcome | null, createdAt: string, roomId: number | null,
 /**
  * The viewer-relative room name; `null` when `roomId` is, when the room is gone, and when
  * the viewer is neither an administrator nor a member of the room ("a room you're not in").
@@ -22,42 +22,42 @@ outcome: AgentDeliveryOutcome | null, createdAt: string, roomId: number | null,
  * (`approval_decided`, `github_action_completed`), since deletion is indistinguishable.
  * Only `fizzy_action_completed`, whose writer never sets a room, is ungated without one.
  */
-roomName: string | null, 
+roomName: string | null,
 /**
  * "from {actor}"; `null` for none. No `users` entry when the account is gone.
  */
-actorId: number | null, 
+actorId: number | null,
 /**
  * "message #{id}"; `null` for none.
  */
-messageId: number | null, 
+messageId: number | null,
 /**
  * How many agent-to-agent hops led here; 0 shows nothing.
  */
-hop: number, 
+hop: number,
 /**
  * `null` when blank, and when gated (see `roomName`).
  */
-detail: string | null, webhookStatus: AgentWebhookStatus, 
+detail: string | null, webhookStatus: AgentWebhookStatus,
 /**
  * "{n} attempt(s)" when above 0.
  */
-webhookAttempts: number, 
+webhookAttempts: number,
 /**
  * `null` when blank.
  */
-webhookLastError: string | null, 
+webhookLastError: string | null,
 /**
  * `githubActionCompleted` and `fizzyActionCompleted` entries that recorded a result;
  * `null` otherwise.
  */
-external: AgentExternalResult | null, 
+external: AgentExternalResult | null,
 /**
  * `workHandedOff` entries: the handoff's summary alone, without the classic row's
  * "Handoff: " prefix (the client labels it), cut to 140 characters (ending "..." when cut).
  * `null` otherwise, and when gated (see `roomName`).
  */
-handoffSummary: string | null, 
+handoffSummary: string | null,
 /**
  * The message's plain text, cut as `handoffSummary` is, only when the agent is a member of
  * its room with `read_messages` there, the viewer is an administrator or a member of

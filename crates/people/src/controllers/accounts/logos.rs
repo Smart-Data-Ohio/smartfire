@@ -19,6 +19,12 @@ const STALE_WHILE_REVALIDATE: u64 = 7 * 24 * 60 * 60;
 pub async fn show(c: &mut Ctx) -> Result {
     c.use_live_response(); // `include ActiveStorage::Streaming`
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
+    if c.param_str("animated") == Some("1")
+        || c.param_str("still") == Some("1")
+        || c.param_str("blob").is_some()
+    {
+        return super::banners::show_image(c, "logo").await;
+    }
     let account = c.app().db.read(Account::first).await.map_err(Error::internal)?;
 
     // `stale?(etag: Current.account)`; there's no accounts/logos/show template to digest.
@@ -36,7 +42,35 @@ pub async fn show(c: &mut Ctx) -> Result {
         // `logo.variant(size).processed if logo.variable?`: :small is 192, :large 512, both PNG.
         Some(account) => {
             let size = if small { 192 } else { 512 };
-            attachments::processed_variant(c.app(), Record::account(account.id), "logo", Variation::resize_to_limit(size, size, Some("png"))).await?
+            let id = account.id;
+            let blob = c
+                .app()
+                .db
+                .read(move |conn| attachments::attached_blob(conn, "Account", id, "logo"))
+                .await
+                .map_err(Error::internal)?;
+            if let Some(blob) = blob.filter(|blob| blob.is_variable()) {
+                let timeout = campfire_storage::branding::processing_timeout(&blob);
+                campfire_web::active_storage::processed_branding_variant_with_deadline(
+                    c.app(),
+                    blob,
+                    Variation::resize_to_limit(size, size, Some("png")),
+                    timeout,
+                    |storage, blob, variation, cancel| {
+                        campfire_storage::branding::transform_variant(
+                            storage,
+                            blob,
+                            campfire_storage::branding::Kind::Logo,
+                            variation,
+                            cancel,
+                        )
+                    },
+                )
+                .await
+                .ok()
+            } else {
+                None
+            }
         }
         None => None,
     };
@@ -46,12 +80,18 @@ pub async fn show(c: &mut Ctx) -> Result {
             c.send_file(path, SendOptions::inline("image/png"))
         }
         // send_stock_icon
-        None => {
-            let filename = if small { "app-icon-192.png" } else { "app-icon.png" };
-            let path = asset_file(&format!("logos/{filename}"))?;
-            c.send_file(path, SendOptions::inline("image/png"))
-        }
+        None => stock_icon(c, small),
     }
+}
+
+pub(super) fn stock_icon(c: &mut Ctx, small: bool) -> Result {
+    let filename = if small {
+        "app-icon-192.png"
+    } else {
+        "app-icon.png"
+    };
+    let path = asset_file(&format!("logos/{filename}"))?;
+    c.send_file(path, SendOptions::inline("image/png"))
 }
 
 /// `Current.account.logo.destroy`
@@ -60,17 +100,19 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     let account = super::current_account(c).await?;
+    let secrets = c.app().secrets.clone();
     let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
         .write(move |tx| {
-            attachments::destroy(tx, Record::account(account.id), "logo")?;
+            attachments::destroy(tx, Record::account(account.id, &secrets), "logo")?;
             Ok(())
         })
         .await
         .map_err(Error::internal)?;
     // Rails destroys the attachment before its separate audit write.
     c.app().db.write(move |tx| crate::account_security::logo_removed(tx, &account, &audit)).await.map_err(Error::internal)?;
+    crate::controllers::presenters::workspace_branding::publish(c.app()).await;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }

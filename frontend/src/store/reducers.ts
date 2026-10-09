@@ -1,10 +1,12 @@
-import { addBoardPost, boardAutomationsChanged, mergeWorkSteps } from "./boards.ts";
+import { addBoardPost, boardAutomationsChanged } from "./boards.ts";
 /**
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
  */
 
 import { applyActivityItem, removeActivityItem } from "./activity.ts";
+import { applyAgentStatus, applyAgentSteps } from "./agents.ts";
+import { applyApprovalUpdated, approvalRequested } from "./approvals.ts";
 import { applyMessageCards, applyPoll, applyPollBallot, reconcileMessage } from "./cards.ts";
 import { setHuddlePresence, setStage } from "./huddles.ts";
 import { mergeSavedMarks, setPinState, setReactions } from "./message-extras.ts";
@@ -12,8 +14,10 @@ import type {
   Me,
   MessageDTO,
   MessagePage,
+  OpenRoomPreview,
   PendingMessage,
   RoomDetail,
+  RoomState,
   Sidebar,
   SidebarRow,
   SyncEvent,
@@ -22,11 +26,13 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
-import { removeCategory, setDetailMembership, upsertCategory } from "./organize.ts";
+import { removeCategory, upsertCategory } from "./organize.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
-import { removeThread, setThreadIndicator, setThreadUnread, upsertThread } from "./threads.ts";
+import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
+import { receiveWorkThread } from "./work.ts";
+import { setWorkspaceBranding } from "./workspace.ts";
 
 export { compareMessages };
 
@@ -70,7 +76,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
     rows[row.room.id] = row;
   }
 
-  return {
+  let next: State = {
     ...state,
     users: mergeUserList(state.users, sidebar.users),
     sidebar: {
@@ -83,6 +89,12 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
       overlay: state.sidebar.overlay,
     },
   };
+
+  for (const row of sidebar.rows) {
+    next = setDetailRow(next, row);
+  }
+
+  return next;
 }
 
 function updateRow(state: State, roomId: number, change: (row: SidebarRow) => SidebarRow): State {
@@ -124,6 +136,15 @@ function withThreadTimeline(state: State, threadId: number, timeline: Timeline):
   return { ...state, threadTimelines: { ...state.threadTimelines, [threadId]: timeline } };
 }
 
+function roomView(
+  detail: RoomDetail | null,
+  status: RoomState["status"],
+  error: string | null,
+  preview: OpenRoomPreview | null,
+): RoomState {
+  return { detail, status, error, preview };
+}
+
 export function setRoomLoading(state: State, roomId: number): State {
   const room = state.rooms[roomId];
 
@@ -131,7 +152,7 @@ export function setRoomLoading(state: State, roomId: number): State {
     ...state,
     rooms: {
       ...state.rooms,
-      [roomId]: { detail: room?.detail ?? null, status: "loading", error: null },
+      [roomId]: roomView(room?.detail ?? null, "loading", null, null),
     },
   };
 }
@@ -141,7 +162,21 @@ export function setRoomError(state: State, roomId: number, error: string): State
 
   return {
     ...state,
-    rooms: { ...state.rooms, [roomId]: { detail: room?.detail ?? null, status: "error", error } },
+    rooms: {
+      ...state.rooms,
+      [roomId]: roomView(room?.detail ?? null, "error", error, null),
+    },
+  };
+}
+
+/** The viewer can join this open room. The conversation stays unloaded. */
+export function setRoomPreview(state: State, roomId: number, preview: OpenRoomPreview): State {
+  return {
+    ...state,
+    rooms: {
+      ...state.rooms,
+      [roomId]: roomView(null, "ready", null, preview),
+    },
   };
 }
 
@@ -152,7 +187,7 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
   return {
     ...state,
     users: mergeUserList(state.users, detail.users),
-    rooms: { ...state.rooms, [roomId]: { detail, status: "ready", error: null } },
+    rooms: { ...state.rooms, [roomId]: roomView(detail, "ready", null, null) },
     timelines: {
       ...state.timelines,
       [roomId]:
@@ -174,6 +209,42 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
  * lands a resync's newest page without moving the reader (see `landNewest`).
  */
 export type PageMode = "replace" | "older" | "newer" | "refresh" | "resync";
+
+type PageDirection = "older" | "newer";
+
+function requestId(timeline: Timeline, direction: PageDirection): number {
+  return direction === "older" ? timeline.olderRequest : timeline.newerRequest;
+}
+
+/** A directional result whose id was bumped (a replace, or a later page) must not land. */
+function staleRequest(timeline: Timeline, mode: PageMode, request: number | undefined): boolean {
+  if ((mode !== "older" && mode !== "newer") || request === undefined) {
+    return false;
+  }
+
+  return requestId(timeline, mode) !== request;
+}
+
+function beginDirectional(timeline: Timeline, direction: PageDirection): Timeline {
+  return direction === "older"
+    ? { ...timeline, loadingOlder: true, olderRequest: timeline.olderRequest + 1 }
+    : { ...timeline, loadingNewer: true, newerRequest: timeline.newerRequest + 1 };
+}
+
+/** Clears one direction's flag when `request` still owns it. */
+function clearOwned(
+  timeline: Timeline,
+  direction: PageDirection,
+  request: number | undefined,
+): Timeline | undefined {
+  if (requestId(timeline, direction) !== request) {
+    return undefined;
+  }
+
+  return direction === "older"
+    ? { ...timeline, loadingOlder: false }
+    : { ...timeline, loadingNewer: false };
+}
 
 /** A page merged into the store, and the window it makes. */
 interface LandedPage {
@@ -342,8 +413,14 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
       status: "ready",
       before,
       after,
-      loadingOlder: mode === "older" ? false : timeline.loadingOlder,
-      loadingNewer: mode === "newer" ? false : timeline.loadingNewer,
+      // A fresh window ends the load that raised a flag and retires both directional requests,
+      // so a page still in flight cannot clear the next one's flag or move this cursor.
+      // Leaving `loadingNewer` set blocks every later forward page (the pane sets it while a
+      // permalink's window loads).
+      loadingOlder: mode === "replace" || mode === "older" ? false : timeline.loadingOlder,
+      loadingNewer: mode === "replace" || mode === "newer" ? false : timeline.loadingNewer,
+      olderRequest: mode === "replace" ? timeline.olderRequest + 1 : timeline.olderRequest,
+      newerRequest: mode === "replace" ? timeline.newerRequest + 1 : timeline.newerRequest,
       generation: mode === "replace" ? timeline.generation + 1 : timeline.generation,
       arrived: fresh ? null : timeline.arrived,
     },
@@ -351,8 +428,20 @@ function landPage(state: State, timeline: Timeline, page: MessagePage, mode: Pag
 }
 
 /** Lands a page of messages: a fresh window, or one more page on either end. */
-export function applyPage(state: State, roomId: number, page: MessagePage, mode: PageMode): State {
-  const landed = landPage(state, timelineOf(state, roomId), page, mode);
+export function applyPage(
+  state: State,
+  roomId: number,
+  page: MessagePage,
+  mode: PageMode,
+  request?: number,
+): State {
+  const timeline = timelineOf(state, roomId);
+
+  if (staleRequest(timeline, mode, request)) {
+    return state;
+  }
+
+  const landed = landPage(state, timeline, page, mode);
 
   return withTimeline(landed.state, roomId, landed.timeline);
 }
@@ -363,22 +452,21 @@ export function applyThreadPage(
   threadId: number,
   page: MessagePage,
   mode: PageMode,
+  request?: number,
 ): State {
-  const landed = landPage(state, state.threadTimelines[threadId] ?? emptyTimeline, page, mode);
+  const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  if (staleRequest(timeline, mode, request)) {
+    return state;
+  }
+
+  const landed = landPage(state, timeline, page, mode);
 
   return withThreadTimeline(landed.state, threadId, landed.timeline);
 }
 
-export function setPageLoading(state: State, roomId: number, direction: "older" | "newer"): State {
-  const timeline = timelineOf(state, roomId);
-
-  return withTimeline(
-    state,
-    roomId,
-    direction === "older"
-      ? { ...timeline, loadingOlder: true }
-      : { ...timeline, loadingNewer: true },
-  );
+export function setPageLoading(state: State, roomId: number, direction: PageDirection): State {
+  return withTimeline(state, roomId, beginDirectional(timelineOf(state, roomId), direction));
 }
 
 /**
@@ -396,8 +484,19 @@ export function setThreadPageReplacing(state: State, threadId: number): State {
   return withThreadTimeline(state, threadId, { ...timeline, arrived: [] });
 }
 
-export function setPageFailed(state: State, roomId: number): State {
+export function setPageFailed(
+  state: State,
+  roomId: number,
+  direction?: PageDirection,
+  request?: number,
+): State {
   const timeline = timelineOf(state, roomId);
+
+  if (direction !== undefined) {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withTimeline(state, roomId, cleared);
+  }
 
   return withTimeline(state, roomId, {
     ...timeline,
@@ -411,20 +510,29 @@ export function setPageFailed(state: State, roomId: number): State {
 export function setThreadPageLoading(
   state: State,
   threadId: number,
-  direction: "older" | "newer",
+  direction: PageDirection,
 ): State {
   const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
 
   return withThreadTimeline(state, threadId, {
-    ...timeline,
+    ...beginDirectional(timeline, direction),
     status: timeline.status === "idle" ? "loading" : timeline.status,
-    loadingOlder: direction === "older" ? true : timeline.loadingOlder,
-    loadingNewer: direction === "newer" ? true : timeline.loadingNewer,
   });
 }
 
-export function setThreadPageFailed(state: State, threadId: number): State {
+export function setThreadPageFailed(
+  state: State,
+  threadId: number,
+  direction?: PageDirection,
+  request?: number,
+): State {
   const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  if (direction !== undefined) {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withThreadTimeline(state, threadId, cleared);
+  }
 
   return withThreadTimeline(state, threadId, {
     ...timeline,
@@ -432,6 +540,37 @@ export function setThreadPageFailed(state: State, threadId: number): State {
     loadingOlder: false,
     loadingNewer: false,
     status: timeline.status === "loading" || timeline.status === "idle" ? "error" : timeline.status,
+  });
+}
+
+/**
+ * The in-flight page was dropped. `replace` is a fresh window: it also releases replies held for
+ * that window. A directional page clears only its own flag, and only while its request id is
+ * still current, so a superseded interrupt cannot release the page that replaced it.
+ */
+export function clearThreadPageLoading(
+  state: State,
+  threadId: number,
+  direction: PageDirection | "replace",
+  request?: number,
+): State {
+  const timeline = state.threadTimelines[threadId];
+
+  if (timeline === undefined) {
+    return state;
+  }
+
+  if (direction !== "replace") {
+    const cleared = clearOwned(timeline, direction, request);
+
+    return cleared === undefined ? state : withThreadTimeline(state, threadId, cleared);
+  }
+
+  return withThreadTimeline(state, threadId, {
+    ...timeline,
+    arrived: null,
+    loadingOlder: false,
+    loadingNewer: false,
   });
 }
 
@@ -693,12 +832,56 @@ function upsertRow(state: State, row: SidebarRow): State {
   const known = state.sidebar.rows[row.room.id] !== undefined;
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;
 
+  return setDetailRow(
+    {
+      ...state,
+      sidebar: {
+        ...state.sidebar,
+        rows,
+        order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+      },
+    },
+    row,
+  );
+}
+
+/** A synced row updates cached header facts without replacing its roster or unread divider. */
+function setDetailRow(state: State, row: SidebarRow): State {
+  const loaded = state.rooms[row.room.id];
+
+  if (loaded?.detail === null || loaded?.detail === undefined) {
+    return state;
+  }
+
   return {
     ...state,
-    sidebar: {
-      ...state.sidebar,
-      rows,
-      order: known && !renamed ? state.sidebar.order : sortSidebarOrder(rows),
+    rooms: {
+      ...state.rooms,
+      [row.room.id]: {
+        ...loaded,
+        // The patch retired the read that had set loading; that read must not land later.
+        status: loaded.status === "loading" ? "ready" : loaded.status,
+        detail: {
+          ...loaded.detail,
+          room: row.room,
+          membership: row.membership,
+          displayName: row.displayName,
+          directMemberIds: row.directMemberIds,
+        },
+      },
+    },
+  };
+}
+
+/** A successful local delete, leave, or self-removal establishes that access was revoked. */
+export function setRoomUnavailable(state: State, roomId: number): State {
+  const next = removeRow(state, roomId);
+
+  return {
+    ...next,
+    rooms: {
+      ...next.rooms,
+      [roomId]: roomView(null, "error", "This room is no longer available", null),
     },
   };
 }
@@ -763,10 +946,13 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = applySavedChange(next, event.data.messageId, event.data.item);
         break;
       case "activity.item":
-        next = applyActivityItem(next, event.data.item, event.data.unreadCount);
+        next = approvalRequested(
+          applyActivityItem(next, event.data.item, event.data),
+          event.data.item,
+        );
         break;
       case "activity.removed":
-        next = removeActivityItem(next, event.data.id, event.data.unreadCount);
+        next = removeActivityItem(next, event.data.id, event.data);
         break;
       case "scheduled.changed":
         next = applyScheduled(next, event.data);
@@ -778,10 +964,10 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = setThreadIndicator(next, event.data);
         break;
       case "thread.created":
-        next = addBoardPost(upsertThread(next, event.data), event.data);
+        next = addBoardPost(receiveWorkThread(next, event.data), event.data);
         break;
       case "thread.updated":
-        next = upsertThread(next, event.data);
+        next = receiveWorkThread(next, event.data);
         break;
       case "thread.removed":
         next = removeThread(next, event.data.threadId, event.data.roomId);
@@ -810,7 +996,7 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = markRoomRead(next, event.data.roomId);
         break;
       case "sidebar.row.upserted":
-        next = setDetailMembership(upsertRow(next, event.data), event.data.membership);
+        next = upsertRow(next, event.data);
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);
@@ -823,6 +1009,15 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         break;
       case "presence":
         next = setPresence(next, [event.data]);
+        break;
+      case "agent.status":
+        next = applyAgentStatus(next, event.data);
+        break;
+      case "agent.steps":
+        next = applyAgentSteps(next, event.data);
+        break;
+      case "approval.updated":
+        next = applyApprovalUpdated(next, event.data);
         break;
       case "huddle.presence":
         next = setHuddlePresence(next, event.data);
@@ -839,8 +1034,8 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
       case "message.cards":
         next = applyMessageCards(next, event.data);
         break;
-      case "agent.steps":
-        next = mergeWorkSteps(next, event.data);
+      case "workspace.updated":
+        next = setWorkspaceBranding(next, event.data);
         break;
     }
   }

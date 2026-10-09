@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { RawWorkSearch } from "./features/work/work-search.ts";
 import { parseBoardSearch } from "./lib/board-search.ts";
 import { SCREENS } from "./lib/screens.ts";
 import { router } from "./router.tsx";
@@ -39,12 +38,16 @@ describe("the screen map and the router", () => {
       SCREENS.filter((screen) => screen.ported).map((screen) => routePattern(screen.spa)),
     );
 
-    // These are SPA-only tools, without a classic page of their own.
-    // The room-scoped handoff dialog is where the classic handoff page's resolver lands.
+    // These are SPA-only tools, without a classic page of their own. Classic has no agent
+    // profile page (only /agents/:id/approvals and /agents/:id/events), so the profile is one.
+    // The profile and the workspace also have a phone page each, pushed from the section list
+    // their root shows there; the root itself maps to the classic page.
     const internal = new Set([
       "/app/_kitchen-sink",
       "/app/r/:id/t/new",
-      "/app/r/:id/t/:id/handoff",
+      "/app/agents/:id",
+      "/app/settings/profile",
+      "/app/admin/workspace",
     ]);
 
     for (const route of Object.values(router.routesById)) {
@@ -76,7 +79,6 @@ describe("board route search", () => {
     for (const path of [
       "/r/900/posts/new",
       "/r/900/t/42",
-      "/r/900/t/42/handoff",
       "/r/900/files",
       "/r/900/automations",
       "/r/900/m/123",
@@ -87,44 +89,11 @@ describe("board route search", () => {
 
       expect(leaf?.search).toMatchObject({ view: "board", status: "all", owner: "me", tag: "api" });
 
-      if (path.startsWith("/r/900/t/42")) expect(leaf?.search).toHaveProperty("m", 123);
+      if (path === "/r/900/t/42") expect(leaf?.search).toHaveProperty("m", 123);
     }
 
     expect(
       router.matchRoutes("/r/900/t/new", { parent: 123, status: "open" }).at(-1)?.search,
     ).toMatchObject({ parent: 123, status: "open" });
-  });
-});
-
-describe("work routes", () => {
-  it("opens the Work page with a validated filter", () => {
-    const leaf = (search: RawWorkSearch) => router.matchRoutes("/work", search).at(-1);
-
-    expect(leaf({})?.routeId).toBe("/shell/work");
-    expect(leaf({})?.search).toEqual({});
-    expect(leaf({ state: "agents" })?.search).toEqual({ state: "agents" });
-    expect(leaf({ state: "boards" })?.search).toEqual({ state: "boards" });
-    // The default and anything unknown read as open, left out of the URL.
-    expect(leaf({ state: "open" })?.search).toEqual({});
-    expect(leaf({ state: "closed" })?.search).toEqual({});
-    expect(leaf({ state: ["done"] })?.search).toEqual({});
-  });
-
-  it("opens the handoff dialog over the thread pane", () => {
-    const matches = router.matchRoutes("/r/900/t/42/handoff", {});
-
-    expect(matches.at(-1)?.routeId).toBe("/shell/r/$roomId/t/$threadId/handoff");
-    expect(matches.at(-1)?.params).toMatchObject({ roomId: 900, threadId: 42 });
-    // The thread stays matched under the dialog, so its pane stays open.
-    expect(matches.map((match) => match.routeId)).toContain("/shell/r/$roomId/t/$threadId");
-  });
-
-  it("resolves a bare handoff link, and only for a thread id", () => {
-    const matches = router.matchRoutes("/t/42/handoff", {});
-
-    expect(matches.at(-1)?.routeId).toBe("/shell/t/$threadId/handoff");
-    expect(matches.at(-1)?.params).toMatchObject({ threadId: 42 });
-    // A malformed id fails the params parse: the page is not found, nothing is fetched.
-    expect(router.matchRoutes("/t/abc/handoff", {}).at(-1)?.paramsError).toBeTruthy();
   });
 });

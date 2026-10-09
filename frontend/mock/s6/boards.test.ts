@@ -4,7 +4,6 @@ import type { BoardPostForm } from "../../src/gen/BoardPostForm.ts";
 import type { ThreadDetail } from "../../src/gen/ThreadDetail.ts";
 import type { WorkList } from "../../src/gen/WorkList.ts";
 import { field } from "../json.ts";
-import { THREAD_IDS } from "../s2/seed.ts";
 import { collect, errorOf, expectStatus, get, harness, messageBody, send } from "../s2/testing.ts";
 import { BOT_ID, DEACTIVATED_ID, VIEWER_ID } from "../seed.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "./seed.ts";
@@ -226,145 +225,8 @@ describe("mock boards and work", () => {
     ).toBe(true);
     expect(events.some(({ type }) => type === "thread.removed")).toBe(true);
     const work = await get<WorkList>(server, "/api/v1/work?state=boards");
-    expect(work.threads).toHaveLength(11);
+    expect(work.threads).toHaveLength(14);
     expect(work.threads.every(({ board }) => board)).toBe(true);
-    expect((await get<WorkList>(server, "/api/v1/work?state=agents")).threads).toHaveLength(2);
-  });
-});
-
-describe("mock work list and handoffs", () => {
-  it("filters the work list as work_threads#index does", async () => {
-    const { server } = harness();
-
-    const ids = async (state: string) =>
-      (await get<WorkList>(server, `/api/v1/work${state}`)).threads.map(({ thread }) => thread.id);
-
-    const open = await ids("");
-
-    expect(open).toEqual(await ids("?state=open"));
-    expect(open).toEqual(await ids("?state=unknown"));
-    expect(open).not.toContain(BOARD_POST_IDS.pricingPage);
-    expect(open[0]).toBe(BOARD_POST_IDS.apiPagination);
-    expect(await ids("?state=done")).toEqual([
-      BOARD_POST_IDS.rateLimits,
-      BOARD_POST_IDS.iconRefresh,
-      BOARD_POST_IDS.pricingPage,
-    ]);
-    expect(await ids("?state=all")).toHaveLength(12);
-    expect(await ids("?state=agents")).toEqual([
-      BOARD_POST_IDS.retryBug,
-      BOARD_POST_IDS.rateLimits,
-    ]);
-
-    const row = (await get<WorkList>(server, "/api/v1/work")).threads[0];
-
-    expect(row?.roomName).toBe("Roadmap");
-    expect(row?.board).toBe(true);
-    expect(row?.thread.work).not.toBeNull();
-  });
-
-  it("refuses handoffs in the server's words, fields and all", async () => {
-    const { server } = harness();
-    const path = `/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work/handoff`;
-    const valid = { receiverAgentId: BOT_ID, summary: "Over to you", links: [], openQuestions: [] };
-
-    const untracked = await send(
-      server,
-      "POST",
-      `/api/v1/threads/${THREAD_IDS.generalActive}/work/handoff`,
-      valid,
-    );
-
-    expect(untracked.status).toBe(422);
-    expect(errorOf(untracked.json)).toEqual({
-      tag: "Validation",
-      message: "This thread isn't tracked as work",
-    });
-    expect(field(field(untracked.json, "error"), "fields")).toEqual({
-      base: ["This thread isn't tracked as work"],
-    });
-
-    const stranger = await send(server, "POST", path, { ...valid, receiverAgentId: 424242 });
-
-    const notMember =
-      "Receiver must be an active agent member of this room with permission to post";
-
-    expect(errorOf(stranger.json)).toEqual({ tag: "Validation", message: notMember });
-    expect(field(field(stranger.json, "error"), "fields")).toEqual({
-      receiverAgentId: [notMember],
-    });
-
-    const owned = await send(
-      server,
-      "POST",
-      `/api/v1/threads/${BOARD_POST_IDS.retryBug}/work/handoff`,
-      valid,
-    );
-
-    expect(errorOf(owned.json).message).toBe("Receiver is already the owner of this work");
-
-    const package_ = await send(server, "POST", path, {
-      receiverAgentId: BOT_ID,
-      summary: "   ",
-      links: ["ftp://example.com/spec"],
-      openQuestions: Array.from({ length: 11 }, (_, index) => `Question ${index}?`),
-    });
-
-    expect(package_.status).toBe(422);
-    expect(errorOf(package_.json)).toEqual({
-      tag: "Validation",
-      message:
-        "Summary can't be blank, Links must be http(s) URLs, Open questions are limited to 10 per handoff",
-    });
-    expect(field(field(package_.json, "error"), "fields")).toEqual({
-      summary: ["can't be blank"],
-      links: ["must be http(s) URLs"],
-      openQuestions: ["are limited to 10 per handoff"],
-    });
-
-    const long = await send(server, "POST", path, { ...valid, summary: "x".repeat(2001) });
-
-    expect(field(field(long.json, "error"), "fields")).toEqual({
-      summary: ["is too long (maximum is 2000 characters)"],
-    });
-    // Nothing changed hands.
-    expect(
-      (await get<ThreadDetail>(server, `/api/v1/threads/${BOARD_POST_IDS.apiPagination}`)).thread
-        .work?.owner,
-    ).toBeNull();
-  });
-
-  it("hands work to the agent and records the package", async () => {
-    const { server } = harness();
-
-    const handed = await expectStatus<ThreadDetail>(
-      server,
-      "POST",
-      `/api/v1/threads/${BOARD_POST_IDS.apiPagination}/work/handoff`,
-      {
-        receiverAgentId: BOT_ID,
-        summary: "  Cursor shape agreed; wire the endpoint.  ",
-        links: ["https://example.com/spec", "https://example.com/spec", " "],
-        openQuestions: ["Page size?", ""],
-      },
-      201,
-    );
-
-    expect(handed.thread.work?.owner?.id).toBe(BOT_ID);
-    expect(handed.work?.handoffReceivers).toEqual([]);
-    expect(handed.work?.history[0]).toMatchObject({
-      kind: "handoff",
-      actorId: VIEWER_ID,
-      toOwner: { userId: BOT_ID },
-      handoff: {
-        summary: "Cursor shape agreed; wire the endpoint.",
-        linkCount: 1,
-        questionCount: 1,
-      },
-    });
-
-    const agents = await get<WorkList>(server, "/api/v1/work?state=agents");
-
-    expect(agents.threads[0]?.thread.id).toBe(BOARD_POST_IDS.apiPagination);
+    expect((await get<WorkList>(server, "/api/v1/work?state=agents")).threads).toHaveLength(3);
   });
 });

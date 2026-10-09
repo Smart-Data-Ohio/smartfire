@@ -1,5 +1,16 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import {
+  expect,
+  expectNoHorizontalOverflow,
+  expectTouchTargets,
+  matrix,
+  openHeaderTool,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+} from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -17,13 +28,9 @@ function pane(page: Page) {
   return page.locator("aside.right-pane");
 }
 
-async function openPane(page: Page, name: RegExp): Promise<void> {
-  await page.locator(".room-header").getByRole("button", { name }).first().click();
-}
-
 matrix("the members pane", async ({ page, theme }) => {
   await open(page, `r/${GENERAL}`, theme);
-  await openPane(page, /^Members/);
+  await openHeaderTool(page, /^Members/);
 
   await expect(pane(page).getByRole("heading", { name: "Members" })).toBeVisible();
   await expect(pane(page).getByRole("heading", { name: /^Starred/ })).toBeVisible();
@@ -38,7 +45,7 @@ matrix("the members pane", async ({ page, theme }) => {
 
 test("starring a member moves them to Starred", async ({ page }) => {
   await open(page, `r/${GENERAL}`);
-  await openPane(page, /^Members/);
+  await openHeaderTool(page, /^Members/);
 
   const starred = pane(page).getByRole("region", { name: /^Starred/ });
 
@@ -54,7 +61,7 @@ test("starring a member moves them to Starred", async ({ page }) => {
 
 test("choosing a member opens the direct message", async ({ page }) => {
   await open(page, `r/${GENERAL}`);
-  await openPane(page, /^Members/);
+  await openHeaderTool(page, /^Members/);
   await pane(page)
     .getByRole("button", { name: /^Message Jonah/ })
     .click();
@@ -65,7 +72,7 @@ test("choosing a member opens the direct message", async ({ page }) => {
 
 matrix("the pins pane", async ({ page, theme }) => {
   await open(page, `r/${GENERAL}`, theme);
-  await openPane(page, /^Pinned messages/);
+  await openHeaderTool(page, /^Pinned messages/);
 
   await expect(pane(page).getByRole("heading", { name: "Pinned messages" })).toBeVisible();
 
@@ -82,7 +89,7 @@ matrix("the pins pane", async ({ page, theme }) => {
 
 matrix("the files pane", async ({ page, theme }) => {
   await open(page, `r/${GENERAL}`, theme);
-  await openPane(page, /^Files/);
+  await openHeaderTool(page, /^Files/);
 
   await expect(pane(page).getByRole("heading", { name: "Files" })).toBeVisible();
   await expect(
@@ -102,7 +109,7 @@ matrix("the files pane", async ({ page, theme }) => {
 
 matrix("the threads pane", async ({ page, theme }) => {
   await open(page, `r/${GENERAL}`, theme);
-  await openPane(page, /^Threads/);
+  await openHeaderTool(page, /^Threads/);
 
   await expect(pane(page).getByRole("heading", { name: "Threads" })).toBeVisible();
   await expect(pane(page).locator(".thread-row").first()).toBeVisible();
@@ -127,4 +134,57 @@ test("the header buttons show which pane is open", async ({ page }) => {
   await files.click();
   await expect(files).toHaveAttribute("aria-pressed", "false");
   await expect(pane(page)).toHaveCount(0);
+});
+
+test.describe("pane headers on a 360 px touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  for (const [name, heading] of [
+    [/^Members/, "Members"],
+    [/^Pinned messages/, "Pinned messages"],
+    [/^Files/, "Files"],
+    [/^Threads/, "Threads"],
+  ] as const) {
+    test(`the ${heading} pane is a pushed page with a touch-size back button`, async ({ page }) => {
+      await open(page, `r/${GENERAL}`);
+      await openHeaderTool(page, name);
+
+      const header = pane(page).locator(".pane-header");
+      const back = header.getByRole("button", { name: "Back to #general" });
+
+      await expect(header.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+      await expect(back).toBeVisible();
+      // No close button: Back is the way out of a pushed page.
+      await expect(header.getByRole("button", { name: "Close" })).toHaveCount(0);
+      await expectTouchTargets(page, "aside.right-pane .pane-header");
+      await expectNoHorizontalOverflow(page);
+
+      // The back chevron leads at the screen's edge, the title right after it.
+      const backBox = await back.boundingBox();
+      const titleBox = await header.locator(".pane-title").boundingBox();
+
+      expect(backBox?.x).toBeLessThanOrEqual(8);
+      expect((titleBox?.x ?? 0) - ((backBox?.x ?? 0) + (backBox?.width ?? 0))).toBeLessThanOrEqual(
+        12,
+      );
+
+      await back.click();
+      await expect(pane(page)).toHaveCount(0);
+      await expect(page.locator(".room-header .room-title-name")).toBeInViewport();
+    });
+  }
+
+  test("a pane opened from the room's details goes back to them", async ({ page }) => {
+    await open(page, `r/${GENERAL}`);
+    await page.locator(".room-header .room-title-button").click();
+    await pane(page)
+      .getByRole("button", { name: /^Members/ })
+      .click();
+
+    await expect(pane(page).getByRole("heading", { name: "Members", exact: true })).toBeVisible();
+    await pane(page).getByRole("button", { name: "Back to details" }).click();
+    await expect(pane(page).getByRole("heading", { name: "Details" })).toBeVisible();
+    await pane(page).getByRole("button", { name: "Back to #general" }).click();
+    await expect(pane(page)).toHaveCount(0);
+  });
 });

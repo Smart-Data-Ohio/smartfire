@@ -6,7 +6,7 @@ edition.workspace = true
 [features]
 # Test hooks the crates above drive in their own tests (fixed render secrets, the forgery switch,
 # test-only renderers). Production builds don't compile them.
-test-support = ["campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support"]
+test-support = ["campfire_app/test-support", "campfire_jobs/test-support", "campfire_cable/test-support", "campfire_kit/test-support", "campfire_db/test-support", "campfire_storage/test-support"]
 
 [dependencies]
 rails_compat.workspace = true

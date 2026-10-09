@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IntegrationsHealth } from "../../gen/IntegrationsHealth.ts";
 import type { Person } from "../../gen/Person.ts";
+import { groupSections } from "../settings/settings-format.ts";
 import {
   auditTime,
   filterValue,
@@ -55,6 +56,11 @@ describe("the admin sections", () => {
   it("show members only the workspace and its people", () => {
     expect(visibleSections(false).map((section) => section.key)).toEqual(["workspace", "people"]);
     expect(visibleSections(true)).toHaveLength(8);
+  });
+
+  it("group a member's two sections as one block of the phone list", () => {
+    expect(groupSections(visibleSections(false))).toHaveLength(1);
+    expect(groupSections(visibleSections(true)).map((group) => group.length)).toEqual([2, 4, 2]);
   });
 });
 

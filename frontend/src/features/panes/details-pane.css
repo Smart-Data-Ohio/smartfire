@@ -1,0 +1,119 @@
+/* A room's details (DetailsPane): who and what it is, then a list of rows, as Slack's channel details. */
+@layer app {
+  .details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-3) var(--space-6);
+  }
+
+  .details-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding-inline: var(--space-3);
+    text-align: center;
+  }
+
+  .details-glyph {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: var(--space-1);
+    border-radius: var(--radius-lg);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+  }
+
+  .details-hero > .avatar {
+    margin-bottom: var(--space-1);
+  }
+
+  .details-name {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: 24px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .details-kind {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
+  /* A grouped list, the rows hairline-separated inside one rounded card. */
+  .details-rows {
+    padding: 0;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 0 0 1px var(--border);
+    list-style: none;
+  }
+
+  .details-rows > li + li {
+    box-shadow: inset 0 1px 0 var(--border);
+  }
+
+  .details-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 48px;
+    padding: 0 var(--space-3) 0 var(--space-4);
+    color: var(--text);
+    font-size: var(--text-body);
+    text-align: start;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .details-row:hover,
+  .details-row[aria-expanded="true"] {
+    background: var(--bg-hover);
+  }
+
+  .details-row:active {
+    background: var(--bg-active);
+  }
+
+  .details-row:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .details-row-icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .details-row-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .details-row-value {
+    flex-shrink: 0;
+    max-width: 50%;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .details-row-chevron {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+}

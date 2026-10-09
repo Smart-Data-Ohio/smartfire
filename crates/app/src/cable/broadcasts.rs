@@ -192,6 +192,13 @@ impl Broadcasts {
         self.sync.settle().await;
     }
 
+    /// `sidebar.row.upserted` after an open-room join. The joiner's row is new. Every other
+    /// member's row carries `refreshRoom`, so a room they have open reloads its member count and
+    /// members pane. The classic page only prepends HTML on the joiner's sidebar.
+    pub fn joined_open_room(&self, conn: &Connection, membership_id: i64) {
+        sync::joined_open_room(&self.server, &self.sync, conn, membership_id);
+    }
+
     /// `message.created` (or `message.updated`) for a message a broadcast point outside this
     /// type rendered.
     pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {
@@ -261,14 +268,19 @@ impl Broadcasts {
         sync::poll_later(&self.server, &self.sync, change);
     }
 
+    /// `events.changed` on the room's topic for a change to one of its events.
+    pub fn sync_events_changed(&self, change: campfire_db::models::calendar_event::EventsChanged) {
+        sync::events_changed(&self.server, change);
+    }
+
     /// `message.cards` for each of `messages`, for a card slot's replace a broadcast point
     /// outside this type sent.
     pub fn sync_message_cards(&self, conn: &Connection, messages: &[campfire_db::Message]) {
         sync::message_cards(&self.server, &self.sync, conn, messages);
     }
 
-    /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
-    /// broadcast point outside this type replaced (its members or name changed).
+    /// A management write's viewer-qualified row, including a hidden row refresh, after
+    /// a broadcast point outside this type replaced its metadata or members.
     pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {
         sync::membership_row(&self.server, &self.sync, conn, membership_id);
     }
@@ -559,7 +571,7 @@ impl Broadcasts {
             "shared_rooms",
             &partials.shared_room(room),
         );
-        sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
+        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
     /// Rooms::OpensController#update: replace `[room, :list]` on `:rooms`, then `[room, :header]`
@@ -575,7 +587,7 @@ impl Broadcasts {
         if let Some(header) = header {
             self.replace(&Stream::rooms(), &room_dom_id(room, "header"), header);
         }
-        sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
+        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
     /// Rooms::ClosedsController#create: render once, prepend to each member's own stream
@@ -591,7 +603,7 @@ impl Broadcasts {
         for &user_id in &user_ids {
             self.prepend(&Stream::user_rooms(user_id), "shared_rooms", &html);
         }
-        sync::sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
+        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
         Ok(())
     }
 
@@ -616,7 +628,7 @@ impl Broadcasts {
                 self.replace(&Stream::user_rooms(user_id), &target, header);
             }
         }
-        sync::sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
+        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
         Ok(())
     }
 
@@ -636,7 +648,7 @@ impl Broadcasts {
                 &html,
             );
         }
-        sync::sidebar_rows(&self.server, &self.sync, conn, room, None);
+        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, None);
         Ok(())
     }
 

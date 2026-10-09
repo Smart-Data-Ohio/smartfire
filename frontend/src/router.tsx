@@ -5,6 +5,7 @@ import {
   notFound,
   Outlet,
 } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 import { parseActivitySearch } from "./features/activity/activity-search.ts";
 import { AdminView } from "./features/admin/admin-view.tsx";
 import { AuditLogSection } from "./features/admin/audit-log-section.tsx";
@@ -18,8 +19,11 @@ import { IntegrationsSection as AdminIntegrationsSection } from "./features/admi
 import { PeopleSection } from "./features/admin/people-section.tsx";
 import { StylesSection } from "./features/admin/styles-section.tsx";
 import { WorkspaceSection } from "./features/admin/workspace-section.tsx";
+import { parseApprovalsSearch, parseLedgerSearch } from "./features/agents/agent-search.ts";
 import { captureInitialMessageLink } from "./features/room/message-link.ts";
 import { RoomRoute } from "./features/room/room-route.tsx";
+import { NewRoomRoute } from "./features/rooms/new-room-route.tsx";
+import { NEW_ROOM_SLUGS } from "./features/rooms/room-forms.ts";
 import { parseSavedSearch } from "./features/saved/saved-search.ts";
 import { AppearanceSection } from "./features/settings/appearance-section.tsx";
 import { CallsSection } from "./features/settings/calls-section.tsx";
@@ -36,6 +40,11 @@ import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
 import { NotFound } from "./features/shell/not-found.tsx";
 import {
+  ROUTE_PENDING_DELAY_MS,
+  ROUTE_PENDING_MIN_MS,
+  RoutePending,
+} from "./features/shell/route-pending.tsx";
+import {
   PersonalSlackRunSection,
   PersonalSlackSection,
 } from "./features/slack/personal-slack-section.tsx";
@@ -44,8 +53,8 @@ import { SlackPlanSection } from "./features/slack/slack-plan-section.tsx";
 import { SlackRunSection, SlackRunsSection } from "./features/slack/slack-runs-section.tsx";
 import { SlackSetupSection } from "./features/slack/slack-setup-section.tsx";
 import { parseWorkSearch } from "./features/work/work-search.ts";
-import { parseBoardSearch } from "./lib/board-search.ts";
-import { lazyForUpdate as lazy } from "./service-worker/lazy.ts";
+import { parseRoomSearch } from "./lib/board-search.ts";
+import { isModuleResourceLoadError, loadForUpdate } from "./service-worker/update-required.ts";
 
 export type { BoardSearch } from "./lib/board-search.ts";
 
@@ -60,13 +69,36 @@ function parseId(segment: string): number {
   return id;
 }
 
+/** A screen in its own chunk: the loader fetches it, and the component renders without suspending. */
+function chunked(load: () => Promise<{ default: ComponentType }>) {
+  let View: ComponentType | null = null;
+
+  const loader = async () => {
+    try {
+      const module = await loadForUpdate(load);
+
+      View = module.default;
+    } catch (error) {
+      if (!isModuleResourceLoadError(error)) {
+        throw error;
+      }
+
+      View = () => null;
+    }
+  };
+
+  const component = () => (View === null ? null : <View />);
+
+  return { loader, component };
+}
+
 const rootRoute = createRootRoute({ component: Outlet });
 
 /** The design-system gallery, its own chunk so none of it ships in the entry. */
 const kitchenSinkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "_kitchen-sink",
-  component: lazy(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
+  ...chunked(() => import("./routes/kitchen-sink/kitchen-sink.tsx")),
 });
 
 const shellRoute = createRoute({
@@ -86,7 +118,7 @@ const homeRoute = createRoute({
 const roomRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "r/$roomId",
-  validateSearch: parseBoardSearch,
+  validateSearch: parseRoomSearch,
   params: {
     parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
     stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
@@ -113,7 +145,7 @@ const messageRoute = createRoute({
     parse: ({ messageId }) => ({ messageId: parseId(messageId) }),
     stringify: ({ messageId }) => ({ messageId: `${messageId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/room/message-resolver.tsx").then((module) => ({
       default: module.MessageResolver,
     })),
@@ -127,6 +159,8 @@ const roomControlRoutes = [
   createRoute({ getParentRoute: () => roomRoute, path: "pins", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "automations", component: () => null }),
   createRoute({ getParentRoute: () => roomRoute, path: "notifications", component: () => null }),
+  // The room's settings dialog (`RoomSettingsHost`), over the conversation.
+  createRoute({ getParentRoute: () => roomRoute, path: "settings", component: () => null }),
 ];
 
 /** The board owns its new-post dialog; this route opens no right pane. */
@@ -135,6 +169,15 @@ const newBoardPostRoute = createRoute({
   path: "posts/new",
   component: () => null,
 });
+
+/** `/app/rooms/new/<kind>`: the create-a-room dialog, opened on that kind over the home screen. */
+const newRoomRoutes = NEW_ROOM_SLUGS.map((kind) =>
+  createRoute({
+    getParentRoute: () => shellRoute,
+    path: `rooms/new/${kind}`,
+    component: () => <NewRoomRoute kind={kind} />,
+  }),
+);
 
 /** The new-thread pane's query as the URL has it. */
 interface RawNewThreadSearch {
@@ -186,28 +229,6 @@ const threadRoute = createRoute({
   component: () => null,
 });
 
-/** `/app/r/$roomId/t/$threadId/handoff`: the thread pane with its handoff dialog open over it. */
-const handoffRoute = createRoute({
-  getParentRoute: () => threadRoute,
-  path: "handoff",
-  component: () => null,
-});
-
-/** The classic handoff page names only the thread: resolve its room, then open the dialog. */
-const handoffResolverRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: "t/$threadId/handoff",
-  params: {
-    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
-    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
-  },
-  component: lazy(() =>
-    import("./features/work/handoff-resolver.tsx").then((module) => ({
-      default: module.HandoffResolver,
-    })),
-  ),
-});
-
 /** A message's id in a "Create Fizzy card" URL (not `messageId`: that would refocus the room). */
 const sourceParams = {
   parse: ({ sourceId }: { readonly sourceId: string }) => ({ sourceId: parseId(sourceId) }),
@@ -240,9 +261,14 @@ const settingsRoute = createRoute({
   component: SettingsView,
 });
 
-/** The settings sections, each at `/app/settings/<path>` (the profile at `/app/settings`). */
+/**
+ * The settings sections, each at `/app/settings/<path>`. `/app/settings` shows the profile beside
+ * the nav; on phones it is the list of sections (the profile kept under it, hidden), and the
+ * profile is pushed at `…/profile`.
+ */
 const settingsSections = [
   createRoute({ getParentRoute: () => settingsRoute, path: "/", component: ProfileSection }),
+  createRoute({ getParentRoute: () => settingsRoute, path: "profile", component: ProfileSection }),
   createRoute({ getParentRoute: () => settingsRoute, path: "status", component: StatusSection }),
   createRoute({
     getParentRoute: () => settingsRoute,
@@ -291,9 +317,14 @@ const adminRoute = createRoute({
   component: AdminView,
 });
 
-/** The admin sections, each at `/app/admin/<path>` (the workspace at `/app/admin`). */
+/**
+ * The admin sections, each at `/app/admin/<path>`. `/app/admin` shows the workspace beside the
+ * nav; on phones it is the list of sections (the workspace kept under it, hidden), and the
+ * workspace is pushed at `…/workspace`.
+ */
 const adminSections = [
   createRoute({ getParentRoute: () => adminRoute, path: "/", component: WorkspaceSection }),
+  createRoute({ getParentRoute: () => adminRoute, path: "workspace", component: WorkspaceSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "people", component: PeopleSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "icons", component: IconsSection }),
   createRoute({ getParentRoute: () => adminRoute, path: "styles", component: StylesSection }),
@@ -340,7 +371,7 @@ const activityRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "activity",
   validateSearch: parseActivitySearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/activity/activity-route.tsx").then((module) => ({
       default: module.ActivityRoute,
     })),
@@ -352,7 +383,7 @@ const savedRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "saved",
   validateSearch: parseSavedSearch,
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/saved/saved-route.tsx").then((module) => ({ default: module.SavedRoute })),
   ),
 });
@@ -361,20 +392,83 @@ const savedRoute = createRoute({
 const scheduledRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "scheduled",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/scheduled/scheduled-page.tsx").then((module) => ({
       default: module.ScheduledPage,
     })),
   ),
 });
 
-/** `/app/work?state=`: tracked work from every room the viewer is in (its own chunk). */
+/** `/app/work?state=`: every work thread, by tab (its own chunk). */
 const workRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "work",
   validateSearch: parseWorkSearch,
-  component: lazy(() =>
-    import("./features/work/work-route.tsx").then((module) => ({ default: module.WorkRoute })),
+  ...chunked(() =>
+    import("./features/work/work-route.tsx").then((module) => ({
+      default: module.WorkRoute,
+    })),
+  ),
+});
+
+/** `/app/agents`: every agent in the workspace, with live status (S4). */
+const agentsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents",
+  ...chunked(() =>
+    import("./features/agents/agent-directory-page.tsx").then((module) => ({
+      default: module.AgentDirectoryPage,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: an agent's profile (S4). */
+const agentRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "agents/$agentId",
+  params: {
+    parse: ({ agentId }) => ({ agentId: parseId(agentId) }),
+    stringify: ({ agentId }) => ({ agentId: `${agentId}` }),
+  },
+  ...chunked(() =>
+    import("./features/agents/agent-profile-route.tsx").then((module) => ({
+      default: module.AgentProfileRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId`: the profile's overview section. */
+const agentOverviewRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "/",
+  ...chunked(() =>
+    import("./features/agents/agent-profile-page.tsx").then((module) => ({
+      default: module.AgentOverviewRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/approvals?status=`: an agent's approval requests (S4). */
+const agentApprovalsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "approvals",
+  validateSearch: parseApprovalsSearch,
+  ...chunked(() =>
+    import("./features/agents/agent-approvals-tab.tsx").then((module) => ({
+      default: module.AgentApprovalsRoute,
+    })),
+  ),
+});
+
+/** `/app/agents/$agentId/events?outcome=`: an agent's activity ledger (S4). */
+const agentEventsRoute = createRoute({
+  getParentRoute: () => agentRoute,
+  path: "events",
+  validateSearch: parseLedgerSearch,
+  ...chunked(() =>
+    import("./features/agents/agent-ledger-tab.tsx").then((module) => ({
+      default: module.AgentLedgerRoute,
+    })),
   ),
 });
 
@@ -382,7 +476,7 @@ const workRoute = createRoute({
 const peopleRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: "people",
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/people/people-page.tsx").then((module) => ({ default: module.PeoplePage })),
   ),
 });
@@ -395,12 +489,56 @@ const personRoute = createRoute({
     parse: ({ userId }) => ({ userId: parseId(userId) }),
     stringify: ({ userId }) => ({ userId: `${userId}` }),
   },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/people/person-page.tsx").then((module) => ({
       default: module.PersonRoute,
     })),
   ),
 });
+
+/** `/app/r/$roomId/events`: a room's calendar (its own chunk); `…/new` opens the form over it. */
+const eventsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events",
+  params: {
+    parse: ({ roomId }) => ({ roomId: parseId(roomId) }),
+    stringify: ({ roomId }) => ({ roomId: `${roomId}` }),
+  },
+  ...chunked(() =>
+    import("./features/events/events-page.tsx").then((module) => ({
+      default: module.EventsRoute,
+    })),
+  ),
+});
+
+const newEventRoute = createRoute({
+  getParentRoute: () => eventsRoute,
+  path: "new",
+  component: () => null,
+});
+
+/**
+ * `/app/r/$roomId/events/$eventId`: an event's page; `…/edit` opens the form over it and
+ * `…/attendance` opens it on the viewer's response.
+ */
+const eventRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: "r/$roomId/events/$eventId",
+  params: {
+    parse: ({ roomId, eventId }) => ({ roomId: parseId(roomId), eventId: parseId(eventId) }),
+    stringify: ({ roomId, eventId }) => ({ roomId: `${roomId}`, eventId: `${eventId}` }),
+  },
+  ...chunked(() =>
+    import("./features/events/event-page.tsx").then((module) => ({
+      default: module.EventRoute,
+    })),
+  ),
+});
+
+const eventChildRoutes = [
+  createRoute({ getParentRoute: () => eventRoute, path: "edit", component: () => null }),
+  createRoute({ getParentRoute: () => eventRoute, path: "attendance", component: () => null }),
+];
 
 /** The search page's query as the URL has it. */
 interface RawSearchPageSearch {
@@ -418,7 +556,7 @@ const searchRoute = createRoute({
   path: "search",
   validateSearch: (search: RawSearchPageSearch): SearchPageSearch =>
     search.q === undefined || search.q === null || search.q === "" ? {} : { q: String(search.q) },
-  component: lazy(() =>
+  ...chunked(() =>
     import("./features/search/search-page.tsx").then((module) => ({ default: module.SearchPage })),
   ),
 });
@@ -431,19 +569,23 @@ const routeTree = rootRoute.addChildren([
     savedRoute,
     scheduledRoute,
     workRoute,
+    agentsRoute,
+    agentRoute.addChildren([agentOverviewRoute, agentApprovalsRoute, agentEventsRoute]),
     searchRoute,
     peopleRoute,
     personRoute,
     messageRoute,
-    handoffResolverRoute,
+    ...newRoomRoutes,
     roomRoute.addChildren([
       permalinkRoute,
       fizzyCardRoute,
       newThreadRoute,
       newBoardPostRoute,
-      threadRoute.addChildren([threadFizzyCardRoute, handoffRoute]),
+      threadRoute.addChildren([threadFizzyCardRoute]),
       ...roomControlRoutes,
     ]),
+    eventsRoute.addChildren([newEventRoute]),
+    eventRoute.addChildren(eventChildRoutes),
     settingsRoute.addChildren(settingsSections),
     adminRoute.addChildren(adminSections),
   ]),
@@ -453,6 +595,12 @@ export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL,
   defaultPreload: false,
+  // Loaders fetch the chunk. Until `pendingMs`, the current screen stays; Suspense then hides
+  // only the incoming pane. Hover preloads still warm the module cache.
+  defaultPendingMs: ROUTE_PENDING_DELAY_MS,
+  // 0, not TanStack's 500ms, including reduced motion: the 150ms wait and the ~300ms reveal already stop a flash.
+  defaultPendingMinMs: ROUTE_PENDING_MIN_MS,
+  defaultPendingComponent: RoutePending,
   // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
   defaultNotFoundComponent: NotFound,
   scrollRestoration: false,

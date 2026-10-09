@@ -96,8 +96,7 @@ pub async fn content(c: &mut Ctx) -> Result {
         let records = if let Some(anchor) = &anchor { Message::page_around(conn, Timeline::Thread(id), anchor)? } else { Message::last_page(conn, Timeline::Thread(id))? };
         Ok((records, anchor.map(|message| message.id)))
     }).await.map_err(db_error)?;
-    // Rails' explicit partial render has no JSON template and raises MissingTemplate.
-    if c.format()? == Some(&format::JSON) { return Err(Error::internal(anyhow::anyhow!("Missing thread conversation JSON partial"))); }
+    // HTML only. JSON is 406 from the template lookup, the same as the other partials.
     c.no_store(); c.set_header("pragma", "no-cache");
     let viewer = require_current_user(c)?.clone();
     let updated_at = room.updated_at.jiff();

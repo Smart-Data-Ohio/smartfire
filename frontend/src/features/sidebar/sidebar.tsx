@@ -10,22 +10,27 @@ import {
   useRef,
   useState,
 } from "react";
-import { setTheme, useAppearance } from "../../lib/appearance.ts";
+import { setThemeOverride, useAppearance } from "../../lib/appearance.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
+import { useReducedMotion } from "../../motion/reduced-motion.ts";
 import type { RoomCategory, SidebarRow as Row } from "../../store/model.ts";
 import { organizedSidebar } from "../../store/organize.ts";
+import type { State } from "../../store/state.ts";
 import { useStore } from "../../store/store.ts";
+import { saveAccountTheme } from "../../sync/settings.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { toast } from "../../ui/toast-store.ts";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { openNewRoom } from "../rooms/new-room-store.ts";
 import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
@@ -51,6 +56,7 @@ import {
   RowGlyph,
   SidebarRow,
 } from "./sidebar-row.tsx";
+import { useBannerFold } from "./use-banner-fold.ts";
 import { useFlip } from "./use-flip.ts";
 import { type DragState, useSidebarDrag } from "./use-sidebar-drag.ts";
 import "./sidebar.css";
@@ -374,16 +380,80 @@ function SidebarSkeleton() {
   );
 }
 
+/** The workspace logo at rest: an animated one's first frame. */
+function workspaceLogo(state: State): string | null {
+  const account = state.boot?.account;
+
+  return account?.logoStillUrl ?? account?.logoUrl ?? null;
+}
+
+/** A banner as the header shows it: the image, and an animated one's first frame. */
+interface Banner {
+  readonly url: string;
+  readonly stillUrl: string | null;
+}
+
+/**
+ * The workspace banner behind the header: animated only while it shows and motion isn't reduced.
+ * Folded away, an animated banner rests on its first frame. A load failure is reported, so the
+ * header goes back to the plain one.
+ */
+function SidebarBanner({
+  banner,
+  folded,
+  onBroken,
+}: {
+  readonly banner: Banner;
+  readonly folded: boolean;
+  readonly onBroken: (src: string) => void;
+}) {
+  const reduced = useReducedMotion();
+  const src = (reduced || folded) && banner.stillUrl !== null ? banner.stillUrl : banner.url;
+
+  return (
+    <div className="sidebar-banner" aria-hidden="true">
+      <img
+        className="sidebar-banner-image"
+        src={src}
+        alt=""
+        draggable={false}
+        onError={() => onBroken(src)}
+      />
+    </div>
+  );
+}
+
 /** The workspace header: the account's menu (shortcuts live there) and a new-message button. */
 function WorkspaceHeader({
   title,
+  logo,
+  banner,
+  folded,
+  onBannerBroken,
   onNewCategory,
 }: {
   readonly title: string;
+  /** The workspace logo's still, beside the name where the rail is a tab bar (phones). */
+  readonly logo: string | null;
+  /** The workspace banner (Discord's server banner), when one is uploaded and shown here. */
+  readonly banner: Banner | null;
+  /** The list has scrolled: the banner folds into the plain header. */
+  readonly folded: boolean;
+  /** The banner image didn't load: show the plain header instead. */
+  readonly onBannerBroken: (src: string) => void;
   readonly onNewCategory?: (() => void) | undefined;
 }) {
+  const canCreateRooms = useStore((state) => state.sidebar.canCreateRooms);
+
   return (
-    <header className="sidebar-header">
+    <header
+      className="sidebar-header"
+      data-banner={banner === null ? undefined : ""}
+      data-folded={banner !== null && folded ? "" : undefined}
+    >
+      {banner === null ? null : (
+        <SidebarBanner banner={banner} folded={folded} onBroken={onBannerBroken} />
+      )}
       <Menu
         label={`${title} menu`}
         trigger={(props) => (
@@ -394,6 +464,9 @@ function WorkspaceHeader({
             trailingIcon="chevron-down"
             className="sidebar-workspace"
           >
+            {logo === null ? null : (
+              <img className="sidebar-workspace-logo" src={logo} alt="" width={20} height={20} />
+            )}
             <span className="sidebar-workspace-name">{title}</span>
           </Button>
         )}
@@ -405,6 +478,11 @@ function WorkspaceHeader({
         >
           New message
         </MenuItem>
+        {canCreateRooms ? (
+          <MenuItem icon="plus" onSelect={() => openNewRoom()}>
+            Create a channel…
+          </MenuItem>
+        ) : null}
         <MenuItem
           icon="search"
           shortcut={shortcutKeys("switcher")}
@@ -467,8 +545,23 @@ function YouPanel() {
   const me = useStore((state) => state.me);
   const bootUser = useStore((state) => state.boot?.user ?? null);
   const status = useStore((state) => (me === null ? null : (state.presence[me.user.id] ?? null)));
-  const { theme } = useAppearance();
+  const { theme, themeOverride } = useAppearance();
   const userId = me?.user.id ?? bootUser?.id;
+
+  // The next theme: pinned on this device when one is pinned, else saved to the account.
+  const cycleTheme = () => {
+    const next = THEME_NEXT[theme];
+
+    if (themeOverride !== null) {
+      setThemeOverride(next);
+
+      return;
+    }
+
+    saveAccountTheme(next).catch((error: Error) =>
+      toast({ title: "Couldn't save your theme", description: error.message, tone: "danger" }),
+    );
+  };
 
   if (userId === undefined) {
     return null;
@@ -489,7 +582,7 @@ function YouPanel() {
         icon={THEME_ICON[theme]}
         label={`Theme: ${theme}`}
         size="sm"
-        onClick={() => setTheme(THEME_NEXT[theme])}
+        onClick={cycleTheme}
       />
     </footer>
   );
@@ -595,6 +688,9 @@ function openerOf(active: Element | null): HTMLElement | null {
 export function Sidebar() {
   const sidebar = useStore((state) => state.sidebar);
   const accountName = useStore((state) => state.boot?.account.name ?? null);
+  const bannerUrl = useStore((state) => state.boot?.account.bannerUrl ?? null);
+  const bannerStillUrl = useStore((state) => state.boot?.account.bannerStillUrl ?? null);
+  const logo = useStore(workspaceLogo);
   const params = useParams({ strict: false });
   const [collapsed, setCollapsedKeys] = useState(readCollapsed);
   const [menu, setMenu] = useState<RoomMenuRequest | null>(null);
@@ -606,12 +702,27 @@ export function Sidebar() {
   const selectedRoomId = params.roomId ?? null;
   const destination = useDestination();
   const view = organizedSidebar(sidebar);
+  const { canCreateRooms } = sidebar;
   const categories = view.categories;
   const all = sidebarSections(sidebar);
   const flip = useFlip(scrollRef);
   const focusAfterRender = useFocusAfterRender();
   // A keyboard drag's steps interrupt: each one answers the key just pressed.
   const announcer = useAnnouncer("assertive");
+
+  // An image that failed to load: its banner gives way to the plain header.
+  const [brokenBanner, setBrokenBanner] = useState<string | null>(null);
+
+  // The banner shows over the workspace's conversations, not the direct-message list.
+  const banner: Banner | null =
+    destination === "dms" ||
+    bannerUrl === null ||
+    brokenBanner === bannerUrl ||
+    (brokenBanner !== null && brokenBanner === bannerStillUrl)
+      ? null
+      : { url: bannerUrl, stillUrl: bannerStillUrl };
+
+  const folded = useBannerFold(scrollRef, banner !== null);
 
   useEffect(() => commands.onBeforeOrganize(flip));
 
@@ -789,6 +900,18 @@ export function Sidebar() {
     />
   );
 
+  /** The "+" on a section of rooms (Discord's): creates one of that section's kind. */
+  const createButton = (kind: "open" | "voice", label: string) =>
+    canCreateRooms ? (
+      <IconButton
+        icon="plus"
+        label={label}
+        size="sm"
+        className="sidebar-section-action"
+        onClick={() => openNewRoom(kind)}
+      />
+    ) : null;
+
   const emptyFor = (section: SidebarSection) => {
     switch (section.kind) {
       case "direct":
@@ -839,7 +962,14 @@ export function Sidebar() {
 
     switch (section.kind) {
       case "channels":
-        return newCategoryButton;
+        return (
+          <>
+            {createButton("open", "Create a channel")}
+            {newCategoryButton}
+          </>
+        );
+      case "voice":
+        return createButton("voice", "Create a voice channel") ?? undefined;
       case "direct":
         return newMessage;
       default:
@@ -913,6 +1043,10 @@ export function Sidebar() {
     <aside className="sidebar" aria-label="Conversations">
       <WorkspaceHeader
         title={destination === "dms" ? "Direct messages" : (accountName ?? "Smartfire")}
+        logo={destination === "dms" ? null : logo}
+        banner={banner}
+        folded={folded}
+        onBannerBroken={setBrokenBanner}
         onNewCategory={destination === "dms" ? undefined : () => newCategory()}
       />
       <JumpButton />

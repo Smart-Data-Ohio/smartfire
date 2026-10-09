@@ -45,23 +45,16 @@ pub async fn create(c: &mut Ctx) -> Result {
     let name = room_name_param(c)?.flatten();
     let icon = room_icon_param(c)?.flatten();
     let draft = (name.clone(), icon.clone());
-    let user_id = require_current_user(c)?.id;
     // Rooms::Open.create_for(room_params, users: Current.user)
-    let room = c
-        .app()
-        .db
-        .write(move |tx| {
-            Room::create_for_with_icon(
-                tx,
-                RoomType::Open,
-                name.as_deref(),
-                icon.as_deref(),
-                user_id,
-                &[user_id],
-                crate::rich_text::room_icon_resolves,
-            )
-        })
-        .await;
+    let room = super::operations::create(
+        c,
+        RoomType::Open,
+        name,
+        icon,
+        require_current_user(c)?.id,
+        Vec::new(),
+    )
+    .await;
     let room = match room {
         Ok(room) => room,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -77,8 +70,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         serde_json::json!({"name":room.name}),
     )
     .await?;
-    let partials = render_shared_room(c, &room).await?;
-    c.app().broadcasts.open_room_create(&room, &partials);
+    broadcast(c, &room, false).await?;
     redirect_to_room(c, room.id)
 }
 
@@ -109,21 +101,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         icon.clone().unwrap_or_else(|| room.icon_name.clone()),
     );
     // force_room_type, then `@room.update! room_params` saves the name and the new type.
-    let room = c
-        .app()
-        .db
-        .write(move |tx| {
-            let mut room = room;
-            room.update_with_icon(
-                tx,
-                name.as_ref().map(|name| name.as_deref()),
-                Some(RoomType::Open),
-                icon.as_ref().map(|icon| icon.as_deref()),
-                crate::rich_text::room_icon_resolves,
-            )?;
-            Ok(room)
-        })
-        .await;
+    let room = super::operations::update(c, room, name, icon, Some(RoomType::Open)).await;
     let room = match room {
         Ok(room) => room,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
@@ -132,12 +110,21 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         Err(error) => return Err(db_error(error)),
     };
-    let partials = render_shared_room(c, &room).await?;
-    let header = super::render_shared_header(c, &room).await?;
-    c.app()
-        .broadcasts
-        .open_room_update(&room, &partials, Some(&header));
+    broadcast(c, &room, true).await?;
     redirect_to_room(c, room.id)
+}
+
+pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+    let partials = render_shared_room(c, room).await?;
+    if update {
+        let header = super::render_shared_header(c, room).await?;
+        c.app()
+            .broadcasts
+            .open_room_update(room, &partials, Some(&header));
+    } else {
+        c.app().broadcasts.open_room_create(room, &partials);
+    }
+    Ok(())
 }
 
 async fn render_form(c: &mut Ctx, room: FormRoom, status: StatusCode) -> Result {

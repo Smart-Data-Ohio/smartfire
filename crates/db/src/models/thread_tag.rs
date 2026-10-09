@@ -116,7 +116,9 @@ impl ThreadTag {
     }
 
     fn register_row_callback(tx: &mut Tx<'_>, id: i64, thread_id: i64) -> Result<()> {
+        // A work-field save may already have queued this thread's final sync snapshot.
         if !tx.has_commit_record("board_post_creation", thread_id)
+            && !crate::models::channel_thread::ThreadWorkChange::pending(tx, thread_id)
             && let Some(thread) = ChannelThread::find_by_id(tx.conn(), thread_id)?
             && thread.board_post(tx.conn())?
         {

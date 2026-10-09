@@ -193,6 +193,7 @@ describe("work sync and board room sessions", () => {
                   acquired.push(topic);
                 }),
               release: () => Effect.void,
+              forgetRejected: () => Effect.void,
               subscribed: Effect.succeed([]),
             }),
           ),
@@ -221,7 +222,7 @@ it.effect("refetches again when newer work facts arrive during a detail request"
   Effect.gen(function* () {
     const fake = yield* FakeApi;
     mutations.loadThreadDetail(boardDetail(), 0);
-    mutations.upsertThread(boardThread(1, "done"));
+    mutations.upsertThread(boardThread(1, "done", null, [], 1));
     const waiting = yield* Deferred.make<ReturnType<typeof boardDetail>>();
     const entered = yield* Deferred.make<void>();
     let calls = 0;
@@ -230,12 +231,12 @@ it.effect("refetches again when newer work facts arrive during a detail request"
 
       return calls === 1
         ? Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(waiting))
-        : Effect.succeed(boardDetail(boardThread(1, "blocked")));
+        : Effect.succeed(boardDetail(boardThread(1, "blocked", null, [], 2)));
     });
     const refresh = yield* Effect.forkChild(refreshWorkPane(1));
     yield* Deferred.await(entered);
-    mutations.upsertThread(boardThread(1, "blocked"));
-    yield* Deferred.succeed(waiting, boardDetail(boardThread(1, "done")));
+    mutations.upsertThread(boardThread(1, "blocked", null, [], 2));
+    yield* Deferred.succeed(waiting, boardDetail(boardThread(1, "done", null, [], 1)));
     yield* Fiber.join(refresh);
     expect(calls).toBe(2);
     expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("blocked");
@@ -245,7 +246,7 @@ it.effect("refetches again when newer work facts arrive during a detail request"
 it.effect("keeps a reply's newer activity when work detail lands", () =>
   Effect.gen(function* () {
     const fake = yield* FakeApi;
-    const old = boardThread(1, "done");
+    const old = boardThread(1, "done", null, [], 1);
     mutations.loadThreadDetail(boardDetail(), 0);
     mutations.upsertThread(old);
     const waiting = yield* Deferred.make<ReturnType<typeof boardDetail>>();
@@ -273,15 +274,22 @@ it.effect("doesn't let a late save reply undo a newer change that arrived meanwh
     yield* fake.route("PATCH /threads/1/work", () =>
       Effect.andThen(Deferred.succeed(entered, undefined), Deferred.await(reply)),
     );
-    yield* fake.reply("GET /threads/1", boardDetail(boardThread(1, "blocked", 8)));
+    yield* fake.reply("GET /threads/1", boardDetail(boardThread(1, "blocked", 8, [], 2)));
     const save = yield* Effect.forkChild(boards.update(1, { status: "in_progress" }));
     yield* Deferred.await(entered);
     // Another member's later change lands while our reply is held up.
     mutations.applyEvents(
-      [{ seq: 1, topic: "room:900", type: "thread.updated", data: boardThread(1, "blocked", 8) }],
+      [
+        {
+          seq: 1,
+          topic: "room:900",
+          type: "thread.updated",
+          data: boardThread(1, "blocked", 8, [], 2),
+        },
+      ],
       0,
     );
-    yield* Deferred.succeed(reply, boardDetail(boardThread(1, "in_progress")));
+    yield* Deferred.succeed(reply, boardDetail(boardThread(1, "in_progress", null, [], 1)));
     yield* Fiber.join(save);
     expect(store.getState().threads[1]?.work?.status).toBe("blocked");
     expect(store.getState().threadPanes[1]?.workFacts?.status).toBe("blocked");
@@ -463,5 +471,23 @@ it.effect("keeps the live message count when an older work detail lands", () =>
     yield* Deferred.succeed(waiting, boardDetail());
     yield* Fiber.join(refresh);
     expect(store.getState().threads[1]?.work?.messageCount).toBe(7);
+  }).pipe(Effect.provide(FakeApi.layerClient)),
+);
+
+it.effect("keeps a newer held work revision when an older board snapshot lands", () =>
+  Effect.gen(function* () {
+    const fake = yield* FakeApi;
+    mutations.loadThreadDetail(boardDetail(boardThread(1, "done", 7, ["api"], 2)), 0);
+    yield* fake.reply(
+      `GET /rooms/${BOARD}/board`,
+      boardListing([boardThread(1, "planned", 7, ["api"], 1)]),
+    );
+    yield* boards.open(BOARD, all);
+
+    expect(store.getState().threads[1]?.work).toMatchObject({
+      status: "done",
+      updatedAt: "2026-10-07T10:00:00.002000Z",
+    });
+    expect(boardPostIds(store.getState(), BOARD)).toEqual([1]);
   }).pipe(Effect.provide(FakeApi.layerClient)),
 );

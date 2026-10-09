@@ -10,10 +10,12 @@ import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
 import { cardMutations } from "../store/card-mutations.ts";
 import {
   attendanceKey,
   fizzyKey,
+  githubActionsKey,
   githubKey,
   type PendingAnswer,
   type PreviewKind,
@@ -106,22 +108,46 @@ const loadPreview = <Kind extends PreviewKind, E extends { readonly message: str
 
     cardMutations.previewLoading(kind, key, ref);
 
+    const generation = store.getState().cards.previews[kind][key]?.generation ?? 0;
+
+    const current = () => store.getState().cards.previews[kind][key]?.generation === generation;
+
     let delay = FIRST_RETRY;
 
     for (let attempt = 0; ; attempt += 1) {
       const value = yield* fetch.pipe(
         Effect.tapError((error) =>
-          Effect.sync(() => cardMutations.previewFailed(kind, key, ref, error.message)),
+          Effect.sync(() => {
+            if (current()) {
+              cardMutations.previewFailed(kind, key, ref, error.message, generation);
+            }
+          }),
         ),
       );
 
-      cardMutations.previewLoaded(kind, key, ref, value, yield* Clock.currentTimeMillis);
+      if (!current()) {
+        return;
+      }
+
+      cardMutations.previewLoaded(
+        kind,
+        key,
+        ref,
+        value,
+        yield* Clock.currentTimeMillis,
+        generation,
+      );
 
       if (!stillLoading(value) || attempt >= STILL_LOADING_RETRIES) {
         return;
       }
 
       yield* Effect.sleep(delay);
+
+      if (!current()) {
+        return;
+      }
+
       delay = Duration.times(delay, 2);
     }
   });
@@ -143,6 +169,102 @@ export const loadGithub = Effect.fn("cards.loadGithub")(function* (
     api.githubCard(roomId, pullRequestId, scope),
     githubStillLoading,
   );
+});
+
+/** What this viewer can do on the pull request. The card shows a control only when its flag is set. */
+export const githubActions = Effect.fn("cards.githubActions")(function* (
+  roomId: number,
+  pullRequestId: number,
+) {
+  return yield* api.githubActions(roomId, pullRequestId);
+});
+
+/**
+ * One `/actions` read per room and pull request. Copies that ask for the same `reason` while it
+ * is in flight share it. A later reason replaces it, and the earlier response is ignored.
+ * A refusal (no discussion, or the account can't be read) lands as no value.
+ */
+export const loadGithubActions = Effect.fn("cards.loadGithubActions")(function* (
+  roomId: number,
+  pullRequestId: number,
+  reason: string,
+) {
+  const key = githubActionsKey(roomId, pullRequestId);
+  const token = cardMutations.beginGithubActions(key, reason);
+
+  if (token === null) {
+    return;
+  }
+
+  const value = yield* api
+    .githubActions(roomId, pullRequestId)
+    .pipe(Effect.catch(() => Effect.succeed(null)));
+
+  cardMutations.settleGithubActions(key, token, value);
+});
+
+/** Starts the room's discussion of this pull request (`discuss`), then reloads its card. */
+export const discussGithub = Effect.fn("cards.discussGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  messageId: number,
+) {
+  const created = yield* api.discussGithub(roomId, pullRequestId, messageId);
+
+  cardMutations.invalidateGithub(pullRequestId);
+
+  return created;
+});
+
+/**
+ * After a write, ask for the card again. A failure here doesn't undo the post: GitHub already
+ * has it, and `message.cards` marks the preview stale so a mounted card fetches it too. A get
+ * that started before that invalidation does not land if a newer one is in flight.
+ */
+const refreshGithub = (roomId: number, pullRequestId: number, scope: api.GithubCardScope) =>
+  loadGithub(roomId, pullRequestId, scope).pipe(Effect.catch(() => Effect.void));
+
+/** Posts an issue comment as the viewer, then refetches the card. */
+export const commentOnGithub = Effect.fn("cards.commentOnGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  body: string,
+) {
+  const result = yield* api.commentOnGithub(roomId, pullRequestId, body);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
+});
+
+/** Submits a review (approve, request changes, or a review comment), then refetches the card. */
+export const reviewGithub = Effect.fn("cards.reviewGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  event: GithubReviewKind,
+  body: string,
+) {
+  const result = yield* api.reviewGithub(roomId, pullRequestId, event, body);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
+});
+
+/** Asks GitHub users to review, then refetches the card. */
+export const requestGithubReviewers = Effect.fn("cards.requestGithubReviewers")(function* (
+  roomId: number,
+  pullRequestId: number,
+  scope: api.GithubCardScope,
+  reviewers: string,
+) {
+  const result = yield* api.requestGithubReviewers(roomId, pullRequestId, reviewers);
+
+  yield* refreshGithub(roomId, pullRequestId, scope);
+
+  return result;
 });
 
 /** The Fizzy card under a message (the fetch also asks the server to refresh it). */

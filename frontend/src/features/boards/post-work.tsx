@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { type ReactNode, useState } from "react";
 import type { AgentStep } from "../../gen/AgentStep.ts";
 import type { User } from "../../gen/User.ts";
@@ -8,7 +7,6 @@ import type { WorkLink } from "../../gen/WorkLink.ts";
 import type { WorkLinkKind } from "../../gen/WorkLinkKind.ts";
 import type { WorkOwnerSnapshot } from "../../gen/WorkOwnerSnapshot.ts";
 import type { WorkStatus } from "../../gen/WorkStatus.ts";
-import { parseBoardSearch } from "../../lib/board-search.ts";
 import { formatFull } from "../../lib/time.ts";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -24,6 +22,7 @@ import { BodyHtml } from "../messages/body-html.tsx";
 import { isAgent } from "../people/people.ts";
 import { timeAgo } from "../threads/thread-format.ts";
 import { useNow } from "../threads/use-now.ts";
+import { HandoffDialog } from "../work/handoff-dialog.tsx";
 import {
   classicWorkUrl,
   parseTags,
@@ -563,31 +562,37 @@ function StepSummary({ label, text }: { readonly label: string; readonly text: s
   );
 }
 
-/**
- * What a manager can do with the work beyond its facts: hand it off to an agent (the dialog over
- * this pane), and manage its links, still a classic page (step 10 brings it here).
- */
-function WorkActions({ roomId, threadId }: { readonly roomId: number; readonly threadId: number }) {
+/** Link management stays classic; handoffs use the shared work dialog. */
+function PostWorkActions({
+  threadId,
+  detail,
+}: {
+  readonly threadId: number;
+  readonly detail: WorkDetail | null;
+}) {
+  const [handingOff, setHandingOff] = useState(false);
+  const name = useStore((state) => state.threads[threadId]?.name ?? "Post");
+
   return (
-    <div className="post-actions">
-      <Link
-        to="/r/$roomId/t/$threadId/handoff"
-        params={{ roomId, threadId }}
-        search={parseBoardSearch}
-        className="button"
-        data-variant="secondary"
-        data-size="sm"
-      >
-        <Icon name="send" size={14} />
-        Hand off
-      </Link>
-      <p className="post-classic">
-        <span>Links open in classic.</span>
-        <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
-          Manage links
-          <Icon name="arrow-up-right" size={12} />
-        </a>
-      </p>
+    <div className="post-classic">
+      <a className="post-classic-link" href={classicWorkUrl(threadId, "links")}>
+        Manage links
+        <Icon name="arrow-up-right" size={12} />
+      </a>
+      {detail === null || detail.handoffReceivers.length === 0 ? null : (
+        <>
+          <Button variant="secondary" size="sm" icon="send" onClick={() => setHandingOff(true)}>
+            Hand off to an agent
+          </Button>
+          <HandoffDialog
+            threadId={threadId}
+            threadName={name}
+            work={detail}
+            open={handingOff}
+            onOpenChange={setHandingOff}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -595,12 +600,10 @@ function WorkActions({ roomId, threadId }: { readonly roomId: number; readonly t
 /**
  * A board post's work, on top of its discussion in the right pane: status, owner and tags (each
  * a control for whoever may change it), the agent's run, what's linked, the pinned result with
- * its editor, the agent's steps, the work history, the handoff and the way to the classic links
- * page.
+ * its editor, the agent's steps, the work history, and link management and handoff controls.
  */
 export function PostWork({ threadId }: { readonly threadId: number }) {
   const work = useStore((state) => state.threads[threadId]?.work ?? null);
-  const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
   const detail = useStore((state) => state.threadPanes[threadId]?.work ?? null);
 
   const permissions: ThreadPermissions | null = useStore(
@@ -666,8 +669,8 @@ export function PostWork({ threadId }: { readonly threadId: number }) {
       />
       <Steps steps={detail?.steps ?? []} />
       <History history={detail?.history ?? []} />
-      {permissions?.canManageWork === true && roomId !== null ? (
-        <WorkActions roomId={roomId} threadId={threadId} />
+      {permissions?.canManageWork === true ? (
+        <PostWorkActions threadId={threadId} detail={detail} />
       ) : null}
     </div>
   );

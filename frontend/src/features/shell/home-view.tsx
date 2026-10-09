@@ -1,9 +1,8 @@
 import { Navigate } from "@tanstack/react-router";
 import { useSyncExternalStore } from "react";
+import { PHONE_QUERY } from "../../lib/breakpoints.ts";
 import { useStore } from "../../store/store.ts";
 import { PageLoading } from "./page-loading.tsx";
-
-const PHONE_QUERY = "(width < 720px)";
 
 function subscribePhone(onChange: () => void): () => void {
   const media = window.matchMedia(PHONE_QUERY);

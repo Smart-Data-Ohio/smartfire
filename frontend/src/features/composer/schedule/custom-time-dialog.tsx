@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { Button } from "../../../ui/button.tsx";
 import { Dialog } from "../../../ui/dialog.tsx";
 import { TextField } from "../../../ui/text-field.tsx";
@@ -27,6 +27,7 @@ export function CustomTimeDialog(props: CustomTimeDialogProps) {
   // Mount the form fresh for each opening, so it starts from `initial` every time.
   const [opened, setOpened] = useState(0);
   const [wasOpen, setWasOpen] = useState(props.open);
+  const [dirty, setDirty] = useState(false);
 
   if (props.open !== wasOpen) {
     setWasOpen(props.open);
@@ -37,24 +38,45 @@ export function CustomTimeDialog(props: CustomTimeDialogProps) {
   }
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange} title={props.title} size="sm">
-      <CustomTimeForm key={opened} {...props} />
+    <Dialog
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      title={props.title}
+      size="sm"
+      dirty={dirty}
+    >
+      <CustomTimeForm key={opened} {...props} onDirty={setDirty} />
     </Dialog>
   );
 }
 
-function CustomTimeForm({ initial, confirmLabel, onConfirm, onOpenChange }: CustomTimeDialogProps) {
-  const [value, setValue] = useState(() => {
-    const start = initial ?? schedulePresets(new Date())[1]?.at ?? new Date();
+interface CustomTimeFormProps extends CustomTimeDialogProps {
+  /** Whether the time differs from the one the picker started at. */
+  readonly onDirty: (dirty: boolean) => void;
+}
 
-    return toLocalInput(start);
-  });
+function CustomTimeForm({
+  initial,
+  confirmLabel,
+  onConfirm,
+  onOpenChange,
+  onDirty,
+}: CustomTimeFormProps) {
+  const [start] = useState(() =>
+    toLocalInput(initial ?? schedulePresets(new Date())[1]?.at ?? new Date()),
+  );
 
+  const [value, setValue] = useState(start);
   const [error, setError] = useState<string | undefined>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const at = fromLocalInput(value);
   const now = new Date();
+  const dirty = value !== start;
+
+  useEffect(() => onDirty(dirty), [dirty, onDirty]);
+
+  useEffect(() => () => onDirty(false), [onDirty]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -100,7 +122,7 @@ function CustomTimeForm({ initial, confirmLabel, onConfirm, onOpenChange }: Cust
           setError(undefined);
         }}
       />
-      <div className="schedule-form-actions">
+      <div className="schedule-form-actions" data-dialog-actions>
         <Button variant="secondary" onClick={() => onOpenChange(false)}>
           Cancel
         </Button>

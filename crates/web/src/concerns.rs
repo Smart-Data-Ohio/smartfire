@@ -292,14 +292,19 @@ pub async fn effective_ui(c: &Ctx) -> Result<campfire_db::models::user::ui_prefe
     Ok(UiPreference::effective(stored, app.config.spa_default_next))
 }
 
-/// One registration at scope `/`: both UIs choose the same script for the effective UI.
-pub fn service_worker_url(ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
-    use campfire_db::models::user::ui_preference::UiPreference;
+/// Both UIs update the same registration at scope `/`.
+pub fn service_worker_url(_ui: campfire_db::models::user::ui_preference::UiPreference) -> String {
+    "/service-worker.js".into()
+}
 
-    match ui {
-        UiPreference::Classic => "/service-worker.js".into(),
-        UiPreference::Next => format!("{}service-worker.js", campfire_spa::root_path()),
-    }
+/// The SPA URL coexistence would use for `endpoint` at `path`.
+pub fn ported_page(endpoint: &str, path: &str, query: Option<&str>) -> Option<String> {
+    campfire_spa::screens::spa_url(endpoint, path, query)
+}
+
+/// Whether the query asks to stay on the classic page (`?classic=1`).
+pub fn classic_requested(query: Option<&str>) -> bool {
+    campfire_spa::screens::bypassed(query)
 }
 
 /// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
@@ -327,7 +332,18 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     if campfire_spa::screens::bypassed(query) {
         return Ok(());
     }
-    let Some(location) = campfire_spa::screens::spa_url(endpoint, c.request.path(), query) else {
+    // `/users/:id/profile` for the viewer's own id is the same page as `/users/me/profile`.
+    let own_id = c.param_str("user_id").and_then(cast_integer);
+    let own_profile = endpoint == "users/profiles#show"
+        && own_id.is_some_and(|id| current_user(c).is_some_and(|user| user.id == id));
+    let screen_path = if own_profile { "/users/me/profile" } else { c.request.path() };
+    let location = if endpoint == "rooms#show" {
+        let confirmed = confirmed_room_query(c, screen_path, query).await?;
+        campfire_spa::screens::spa_url_confirmed(endpoint, screen_path, query, confirmed)
+    } else {
+        campfire_spa::screens::spa_url(endpoint, screen_path, query)
+    };
+    let Some(location) = location else {
         return Ok(());
     };
     if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) || !navigates(c) {
@@ -343,6 +359,79 @@ pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
     }
     let location = c.url_for(&location);
     halt(c.redirect_to(&location)?)
+}
+
+/// Whether this signed-in HTML navigation would be sent to the SPA, apart from which screen it
+/// is. The same gates as [`redirect_to_spa`]: the SPA is on, the request navigates, nothing has
+/// asked for classic, and no flash is waiting. Peeking the flash marks it discarded, so a
+/// controller that then redirects at a classic page must `keep` the flash or the next hop loses it.
+pub async fn coexistence_wants_spa(c: &mut Ctx) -> Result<bool> {
+    use campfire_kit::format;
+
+    let config = &c.app().config;
+    if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
+        return Ok(false);
+    }
+    if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
+        return Ok(false);
+    }
+    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
+    if campfire_spa::screens::bypassed(query) {
+        return Ok(false);
+    }
+    if !matches!(c.format()?, Some(kind) if kind == &format::HTML || kind == &format::ALL) || !navigates(c) {
+        return Ok(false);
+    }
+    if !c.peek_flash().is_empty() {
+        return Ok(false);
+    }
+    next_ui(c, require_current_user(c)?).await
+}
+
+/// `thread` and `message_id` the viewer can open in the room `path` names. Anything else (another
+/// room, a room they aren't in, a deleted row) is left off, so the redirect stays on the plain
+/// room route.
+async fn confirmed_room_query(
+    c: &Ctx,
+    path: &str,
+    query: Option<&str>,
+) -> Result<campfire_spa::screens::ConfirmedRoomQuery> {
+    let none = campfire_spa::screens::ConfirmedRoomQuery { thread: None, message: None };
+    let Some(room_id) = campfire_spa::screens::room_show_id(path) else {
+        return Ok(none);
+    };
+    let ids = campfire_spa::screens::room_query_ids(query);
+    if ids.thread.is_none() && ids.message.is_none() {
+        return Ok(none);
+    }
+    let Some(user_id) = current_user(c).map(|user| user.id) else {
+        return Ok(none);
+    };
+    let thread_id = ids.thread.map(|id| id as i64);
+    let message_id = ids.message.map(|id| id as i64);
+    c.app().db.read(move |conn| {
+        if Room::find_for_user(conn, user_id, room_id)?.is_none() {
+            return Ok(none);
+        }
+        let thread = match thread_id {
+            Some(id) => campfire_db::ChannelThread::find_by_id(conn, id)?
+                .filter(|thread| thread.room_id == room_id)
+                .map(|thread| thread.id as u64),
+            None => None,
+        };
+        let message = match message_id {
+            Some(id) => campfire_db::Message::find_by_id(conn, id)?.and_then(|message| {
+                if message.room_id != room_id {
+                    return None;
+                }
+                let on_thread = thread.is_some_and(|thread| message.thread_id == Some(thread as i64));
+                let on_timeline = thread.is_none() && message.thread_id.is_none();
+                (on_thread || on_timeline).then_some(message.id as u64)
+            }),
+            None => None,
+        };
+        Ok(campfire_spa::screens::ConfirmedRoomQuery { thread, message })
+    }).await.map_err(Error::internal)
 }
 
 /// A browser opening a page: `Sec-Fetch-Mode: navigate`, or an `Accept` naming `text/html`. A
@@ -950,8 +1039,19 @@ pub async fn post_authentication_destination(c: &Ctx, url: String) -> Result<Str
     if campfire_spa::screens::bypassed(query) {
         return Ok(url);
     }
+    let confirmed = if campfire_spa::screens::room_show_id(path).is_some() {
+        Some(confirmed_room_query(c, path, query).await?)
+    } else {
+        None
+    };
     for screen in campfire_spa::screens::SCREENS {
-        if let Some(spa) = campfire_spa::screens::spa_url(screen.endpoint, path, query) {
+        let spa = match confirmed {
+            Some(confirmed) if screen.endpoint == "rooms#show" => {
+                campfire_spa::screens::spa_url_confirmed(screen.endpoint, path, query, confirmed)
+            }
+            _ => campfire_spa::screens::spa_url(screen.endpoint, path, query),
+        };
+        if let Some(spa) = spa {
             return Ok(c.url_for(&spa));
         }
     }

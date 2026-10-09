@@ -1,14 +1,51 @@
 /// <reference types="vitest/config" />
+import { readdirSync, readFileSync } from "node:fs";
+import { basename } from "node:path";
 import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
-import { defineConfig, type ProxyOptions } from "vite";
+import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 import { isMockEnabled, smartfireMock } from "./mock/vite-plugin.ts";
+import { inlinePaletteTable } from "./src/lib/palette-table.ts";
+import { smartfirePreviewPolicy } from "./tools/preview-policy.ts";
 import { smartfireServiceWorker } from "./tools/service-worker.ts";
 
 // The Rust app serves the built SPA under /app/ (crates/spa). In development Vite serves it and
 // forwards everything the SPA asks the Rust app for to `cargo run` on :3000, keeping the request's
 // Origin so the session cookie and the CSRF origin check line up.
 const rust = { target: "http://127.0.0.1:3000", changeOrigin: false };
+
+/**
+ * Every palette's tokens, built into index.html's blocking script (src/lib/palette-table.ts). Only
+ * the app shell carries that script; offline.html has no palette table.
+ */
+const paletteTable: Plugin = {
+  name: "smartfire-palette-table",
+  transformIndexHtml: {
+    order: "pre",
+    handler: (html, { filename }) =>
+      basename(filename) === "index.html" ? inlinePaletteTable(html) : html,
+  },
+};
+
+const fonts = new URL("./src/styles/fonts/", import.meta.url);
+
+/**
+ * Each self-hosted font's licence, beside the fonts in the build's assets/: the SIL Open Font
+ * License travels with the fonts (crates/spa's tests check every shipped font has its licence).
+ */
+const fontLicences: Plugin = {
+  name: "smartfire-font-licences",
+  apply: "build",
+  generateBundle() {
+    for (const name of readdirSync(fonts).filter((file) => file.startsWith("LICENSE-"))) {
+      this.emitFile({
+        type: "asset",
+        fileName: `assets/${name}`,
+        source: readFileSync(new URL(name, fonts)),
+      });
+    }
+  },
+};
 
 export default defineConfig(({ mode }) => {
   // With the mock (`SMARTFIRE_MOCK=1` or `--mode mock`) the dev server answers /api itself
@@ -27,7 +64,12 @@ export default defineConfig(({ mode }) => {
       react(),
       babel({ presets: [reactCompilerPreset()] }),
       smartfireMock(),
+      paletteTable,
+      fontLicences,
       smartfireServiceWorker(),
+      // The embedded files' policy under `vite preview`, so the browser suite exercises its
+      // same-origin script, worker, style and font rules (tools/preview-policy.ts).
+      smartfirePreviewPolicy(),
     ],
     build: {
       // The bundle-size report in CI reads the entry chunks from here.
@@ -50,16 +92,14 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: { proxy: Object.fromEntries(proxy) },
-    preview: {
-      headers: {
-        // The embedded files use the app's nonce-free policy. Exercise its same-origin script,
-        // worker, style and font rules in the browser suite too.
-        "Content-Security-Policy":
-          "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:",
-      },
-    },
     test: {
-      include: ["src/**/*.test.{ts,tsx}", "mock/**/*.test.ts", "tools/service-worker.test.ts"],
+      include: [
+        "src/**/*.test.{ts,tsx}",
+        "mock/**/*.test.ts",
+        "tools/service-worker.test.ts",
+        "tools/preview-policy.test.ts",
+      ],
+      maxWorkers: 4,
       // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
       // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
       // handling); the native paths are covered by the Playwright pass.

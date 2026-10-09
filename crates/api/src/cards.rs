@@ -851,19 +851,7 @@ async fn post_vote(c: &mut Ctx) -> Result {
 /// `rooms/events/attendances`' `set_event`: an active human member of the alive room, and an
 /// event in it (404).
 async fn set_event(c: &mut Ctx) -> Result<(CalendarEvent, User)> {
-    before_actions(c).await?;
-    let (_, room) = set_room(c).await?;
-    // Anyone in the room sees the counts; `respondable` says whether they may answer (bots and
-    // deactivated people may not), and a response they can't give is a 422.
-    let viewer = concerns::require_current_user(c)?.clone();
-    let event_id = path_id(c, "event_id")?;
-    let user_id = viewer.id;
-    let event = c
-        .app()
-        .db
-        .read(move |conn| CalendarEvent::find_visible(conn, room.id, event_id, user_id))
-        .await
-        .map_err(db_error)?;
+    let (_, event, viewer) = crate::events::scoped_event(c).await?;
     Ok((event, viewer))
 }
 
@@ -889,7 +877,7 @@ fn attendance_of(
     })
 }
 
-fn response_of(stored: &str) -> Option<api::AttendanceResponse> {
+pub(crate) fn response_of(stored: &str) -> Option<api::AttendanceResponse> {
     match stored {
         "going" => Some(api::AttendanceResponse::Going),
         "maybe" => Some(api::AttendanceResponse::Maybe),
@@ -911,13 +899,22 @@ async fn show_attendance(c: &mut Ctx) -> Result {
 
 async fn put_attendance(c: &mut Ctx) -> Result {
     let (event, viewer) = set_event(c).await?;
-    let input: api::RespondToEvent = body(c).await?;
-    let response = match input.response {
-        api::AttendanceResponse::Going => "going",
-        api::AttendanceResponse::Maybe => "maybe",
-        api::AttendanceResponse::Declined => "declined",
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Input {
+        #[serde(default)]
+        response: String,
+        #[serde(default)]
+        apply_to_future: bool,
+    }
+    let input: Input = body(c).await?;
+    let response = input.response;
+    if !RESPONSES.contains(&response.as_str()) {
+        return Err(fail(
+            c,
+            attendance_error("Choose going, maybe, or declined."),
+        ));
     };
-    debug_assert!(RESPONSES.contains(&response));
     let (event_id, room_id) = (event.id, event.room_id);
     #[cfg(feature = "test-support")]
     crate::test_hooks::before_attendance_write(event_id).await;
@@ -929,19 +926,30 @@ async fn put_attendance(c: &mut Ctx) -> Result {
             // so one racing a cancellation can't land on a cancelled event.
             let event = CalendarEvent::find_visible(tx.conn(), room_id, event_id, viewer.id)?;
             if !event.respondable_by(tx.conn(), Some(&viewer))? {
-                return Ok(Err(validation(
-                    "response",
-                    "can't be given: this event is cancelled or you can't respond to it",
+                return Ok(Err(attendance_error(
+                    "This event is no longer open for responses.",
                 )));
             }
-            CalendarEvent::respond(tx, event.id, viewer.id, response, input.apply_to_future)?;
+            CalendarEvent::respond(tx, event.id, viewer.id, &response, input.apply_to_future)?;
             attendance_of(tx.conn(), &event, &viewer).map(Ok)
         })
         .await
-        .map_err(db_error)?;
+        .map_err(|error| match error {
+            campfire_db::Error::RecordInvalid(errors) => {
+                fail(c, crate::error::record_invalid(&errors, &[]))
+            }
+            other => db_error(other),
+        })?;
     match outcome {
         Ok(attendance) => c.json(StatusCode::OK, &attendance),
         Err(error) => Err(fail(c, error)),
+    }
+}
+
+fn attendance_error(message: &str) -> api::ApiError {
+    api::ApiError::Validation {
+        message: message.into(),
+        fields: std::collections::BTreeMap::from([("response".into(), vec![message.into()])]),
     }
 }
 

@@ -8,6 +8,7 @@ import {
   pageFixture,
   roomDetailFixture,
 } from "../api/testing.ts";
+import { beginRoomRequest } from "../store/join-state.ts";
 import { mutations, store } from "../store/store.ts";
 import * as messages from "./message-actions.ts";
 
@@ -18,7 +19,7 @@ const reaction = { content: "🎉", title: "Party popper", imageUrl: null, react
 function seed(): void {
   mutations.reset();
   mutations.setMe(meFixture);
-  mutations.setRoomDetail({ ...roomDetailFixture(ROOM), pinsCount: 2 });
+  mutations.setRoomDetail({ ...roomDetailFixture(ROOM), pinsCount: 2 }, beginRoomRequest());
   mutations.applyPage(
     ROOM,
     {

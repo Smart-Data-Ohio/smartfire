@@ -5,11 +5,11 @@ import type { UpdateBotAgent } from "./UpdateBotAgent";
  * `PATCH /api/v1/admin/bots/:id` (`accounts/bots#update`). `null` leaves a key as it is; an
  * empty `iconName` or `webhookUrl` clears it. Only administrators may change the webhook URL.
  */
-export type UpdateBot = { name: string | null, iconName: string | null, webhookUrl: string | null, 
+export type UpdateBot = { name: string | null, iconName: string | null, webhookUrl: string | null,
 /**
  * A blob uploaded with `POST /api/v1/uploads` becomes the picture.
  */
-avatar: string | null, 
+avatar: string | null,
 /**
  * Ignored for a legacy bot.
  */

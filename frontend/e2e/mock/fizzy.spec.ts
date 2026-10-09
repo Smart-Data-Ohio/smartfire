@@ -391,6 +391,7 @@ test.describe("Create Fizzy card", () => {
     const moved = await focusedMessage();
 
     expect(moved).not.toBeNull();
+    expect(moved).not.toBe(String(oldest));
     await page.waitForTimeout(1000);
     expect(await focusedMessage()).toBe(moved);
   });

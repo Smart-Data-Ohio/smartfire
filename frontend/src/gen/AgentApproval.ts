@@ -9,65 +9,76 @@ import type { AgentApprovalStatus } from "./AgentApprovalStatus";
  * agent's owner, while both they and the agent's user are active (`AgentApproval#decidable_by`).
  * The request's raw `payload` and `externalId` stay with the agent.
  */
-export type AgentApproval = { id: number, agentId: number, 
+export type AgentApproval = { id: number, agentId: number,
 /**
  * The agent's bot user, for the card's avatar and name.
  */
-agentUserId: number, 
+agentUserId: number,
 /**
  * `null` for a request outside a room.
  */
-roomId: number | null, 
+roomId: number | null,
 /**
  * The viewer-relative room name ("in {room}"); `null` when `roomId` is, and when the viewer
  * is neither an administrator nor a member of the room (an owner deciding for a room they
  * aren't in sees "in a room you're not in"). **New**: the classic card always names it.
  */
-roomName: string | null, 
+roomName: string | null,
 /**
  * The action asked for, e.g. `github.merge_pull_request` (up to 60 characters of
  * `[a-z0-9_.-]`).
  */
-action: string, 
+action: string,
 /**
  * Up to 500 characters of plain text.
  */
-summary: string, 
+summary: string,
 /**
  * The effective state: a pending request past `expiresAt` reads `expired`
  * (`AgentApproval#effective_status`).
  */
-status: AgentApprovalStatus, expiresAt: string, createdAt: string, 
+status: AgentApprovalStatus, expiresAt: string, createdAt: string,
 /**
  * Who approved or denied it; `null` while undecided. It stays set when that person's
  * account is later deleted, so no `users` entry matches it: the card reads "by someone".
  */
-decidedById: number | null, decidedAt: string | null, 
+decidedById: number | null, decidedAt: string | null,
 /**
  * Up to 200 characters; `null` for none.
  */
-decisionNote: string | null, 
+decisionNote: string | null,
 /**
  * `github.*` actions: "Acts on GitHub as @{login}"; `null` otherwise or when unknown.
  */
-githubLogin: string | null, 
+githubLogin: string | null,
 /**
  * `fizzy.*` actions: "Acts on Fizzy as {name}"; `null` otherwise or when unknown.
  */
-fizzyUserName: string | null, 
+fizzyUserName: string | null,
 /**
  * `github.*` and `fizzy.*` actions, which only an administrator may approve. Anyone who may
  * decide may deny them.
  */
-adminOnly: boolean, 
+adminOnly: boolean,
 /**
  * The viewer may approve it (`AgentApproval#approvable_by`). The card then shows Approve;
  * otherwise "Only an administrator can approve {GitHub|Fizzy} write actions." Like
  * `deniable`, it says who may decide, not whether the request is still open: it means
  * something only while `status` is `pending`, and the card shows no buttons otherwise.
  */
-approvable: boolean, 
+approvable: boolean,
 /**
  * The viewer may deny it (`AgentApproval#decidable_by`); only while `status` is `pending`.
  */
-deniable: boolean, };
+deniable: boolean,
+/**
+ * The server's revision of the request (its status, decision and note): when it last
+ * changed on the server.
+ * UTC with exactly six fractional digits and a `Z` suffix, for example
+ * `2026-10-07T10:15:00.123456Z`. String order equals time order; whole-second and
+ * millisecond rows are padded with zeros.
+ * A client keeps a copy only if its `updatedAt` is not older than the one it holds, on
+ * every path (reads, write replies, events and refetches), so a late or replayed copy never
+ * undoes a newer one.
+ */
+updatedAt: string, };

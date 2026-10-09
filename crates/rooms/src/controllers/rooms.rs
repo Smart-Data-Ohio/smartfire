@@ -4,8 +4,9 @@
 //!
 //! The subclasses (`Rooms::OpensController` and friends) re-declare `before_action :set_room`
 //! (and `ensure_can_administer`) with their own `only:`, which *replaces* the parent's callback.
-//! So the actions they inherit from here but don't list (`destroy` for opens/closeds, `show` for
-//! directs) run without `set_room` and raise on the nil `@room`, as in the reference.
+//! So the actions they inherit from here but don't list (`destroy` for opens/closeds) run without
+//! `set_room` and raise on the nil `@room`, as in the reference. Direct show and board destroy
+//! are implemented on their own controllers.
 
 pub mod call_moderation;
 pub mod stage_streams;
@@ -23,11 +24,13 @@ pub mod involvements;
 pub mod members;
 pub mod message_links;
 pub mod opens;
+pub mod operations;
 pub mod pins;
 pub mod polls;
 pub mod reads;
 pub mod refreshes;
 
+pub mod settings;
 pub mod slash_commands;
 
 use askama::Template;
@@ -108,15 +111,26 @@ pub async fn show(c: &mut Ctx) -> Result {
 pub async fn join(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let id = c.param_str("id").and_then(cast_integer);
-    let room = match id {
-        Some(id) => joinable_open_room(c, id).await?,
+    let joined = match id {
+        Some(id) => join_open_room(c, id).await?,
         None => None,
     };
-    let Some(room) = room else {
+    let Some((room, _)) = joined else {
         return inaccessible_room(c);
     };
+    redirect_to_room(c, room.id)
+}
+
+/// `Membership::join_open` plus the joiner's sidebar broadcasts. `None` when the room is not an
+/// alive open room. A membership that already exists is returned without broadcasting again.
+pub async fn join_open_room(
+    c: &Ctx,
+    room_id: i64,
+) -> Result<Option<(Room, campfire_db::Membership)>> {
+    let Some(room) = find_joinable_open_room(c, room_id).await? else {
+        return Ok(None);
+    };
     let user_id = require_current_user(c)?.id;
-    let room_id = room.id;
     let (membership, created) = c
         .app()
         .db
@@ -131,8 +145,18 @@ pub async fn join(c: &mut Ctx) -> Result {
             "shared_rooms",
             &partials.shared_room(&room),
         );
+        let broadcasts = c.app().broadcasts.clone();
+        let membership_id = membership.id;
+        c.app()
+            .db
+            .read(move |conn| {
+                broadcasts.joined_open_room(conn, membership_id);
+                Ok(())
+            })
+            .await
+            .map_err(db_error)?;
     }
-    redirect_to_room(c, room.id)
+    Ok(Some((room, membership)))
 }
 
 /// `destroy` (RoomsController and `Rooms::DirectsController`).
@@ -154,20 +178,7 @@ pub async fn destroy_without_room(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
-    let destroyed = room.clone();
-    c.app()
-        .db
-        .write(move |tx| destroyed.begin_destroy(tx))
-        .await
-        .map_err(db_error)?;
-    audit_room(
-        c,
-        &room,
-        "room.destroy",
-        serde_json::json!({"name": room.name}),
-    )
-    .await?;
-    c.app().broadcasts.room_remove(&room);
+    destroy_operation(c, &room).await?;
     match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
         f if *f == campfire_kit::format::JSON => c.json(
             StatusCode::OK,
@@ -191,6 +202,25 @@ pub(crate) async fn destroy_room(c: &mut Ctx, room: Room) -> Result {
     }
 }
 
+pub async fn destroy_operation(c: &Ctx, room: &Room) -> Result<()> {
+    if room.voice() || room.stage() { return call_channels::destroy_operation(c, room).await; }
+    let destroyed = room.clone();
+    c.app()
+        .db
+        .write(move |tx| destroyed.begin_destroy(tx))
+        .await
+        .map_err(db_error)?;
+    audit_room(
+        c,
+        room,
+        "room.destroy",
+        serde_json::json!({"name": room.name}),
+    )
+    .await?;
+    c.app().broadcasts.room_remove(room);
+    Ok(())
+}
+
 pub async fn leave(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::All).await?;
@@ -198,6 +228,17 @@ pub async fn leave(c: &mut Ctx) -> Result {
 }
 
 pub(crate) async fn leave_room(c: &mut Ctx, room: Room) -> Result {
+    leave_operation(c, &room).await?;
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => c.json(
+            StatusCode::OK,
+            &serde_json::json!({"left":true,"room_id":room.id}),
+        ),
+        _ => c.redirect_to(&c.url_for(&campfire_routes::root())),
+    }
+}
+
+pub async fn leave_operation(c: &Ctx, room: &Room) -> Result<bool> {
     let user = require_current_user(c)?.clone();
     let left = room.clone();
     let destroyed = c
@@ -220,28 +261,22 @@ pub(crate) async fn leave_room(c: &mut Ctx, room: Room) -> Result {
     if destroyed {
         audit_room(
             c,
-            &room,
+            room,
             "room.destroy",
             serde_json::json!({"name":room.name}),
         )
         .await?;
-        c.app().broadcasts.room_remove(&room);
+        c.app().broadcasts.room_remove(room);
     } else {
         audit_room(
             c,
-            &room,
+            room,
             "room.membership.change",
             serde_json::json!({"revoked":[require_current_user(c)?.name]}),
         )
         .await?;
     }
-    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
-        f if *f == campfire_kit::format::JSON => c.json(
-            StatusCode::OK,
-            &serde_json::json!({"left":true,"room_id":room.id}),
-        ),
-        _ => c.redirect_to(&c.url_for(&campfire_routes::root())),
-    }
+    Ok(destroyed)
 }
 
 // --- Shared before-actions ----------------------------------------------------------------------
@@ -278,7 +313,7 @@ fn inaccessible_room<T>(c: &mut Ctx) -> Result<T> {
     halt(c.redirect_to_with(&root, redirect)?)
 }
 
-async fn joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
+pub async fn find_joinable_open_room(c: &Ctx, id: i64) -> Result<Option<Room>> {
     c.app()
         .db
         .read(move |conn| {
@@ -307,7 +342,7 @@ pub(super) async fn set_room_for_show(c: &mut Ctx, scope: Scope) -> Result<(Room
         if let Some(room) = room.filter(|room| scope.includes(room)) {
             return Ok((room, false));
         }
-        if let Some(room) = joinable_open_room(c, id).await? {
+        if let Some(room) = find_joinable_open_room(c, id).await? {
             return Ok((room, true));
         }
     }

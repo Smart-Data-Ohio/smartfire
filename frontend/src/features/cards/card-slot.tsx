@@ -15,6 +15,9 @@ let fetching = false;
 /** The last fetch failed; nothing waits on the chunk until a slot asks for it again. */
 let failed = false;
 
+/** Open holds keep the chunk unsettled after it has loaded or failed. Tests stall the import this way. */
+let holds = 0;
+
 const listeners = new Set<() => void>();
 
 /** Fetches the chunk (unless it's here or on its way) and tells every waiting slot when it lands. */
@@ -61,7 +64,30 @@ function subscribe(listener: () => void): () => void {
 
 const snapshot = () => loaded;
 
-const settledSnapshot = () => loaded !== null || failed;
+const settledSnapshot = () => holds === 0 && (loaded !== null || failed);
+
+/**
+ * Keeps the cards chunk unsettled until the returned function runs. A timeline waiting on cards
+ * then hits its placement deadline instead of the real import.
+ */
+export function holdCardsChunk(): () => void {
+  holds += 1;
+  notifyAll();
+
+  let released = false;
+
+  return () => {
+    if (released) {
+      return;
+    }
+
+    released = true;
+    holds -= 1;
+    notifyAll();
+  };
+}
+
+const loadedSnapshot = () => loaded !== null;
 
 /** Whether a message shows anything from the cards chunk: a poll or a card. */
 export function hasCards(message: MessageDTO): boolean {
@@ -75,6 +101,11 @@ export function hasCards(message: MessageDTO): boolean {
  */
 export function useCardsChunkSettled(): boolean {
   return useSyncExternalStore(subscribe, settledSnapshot, settledSnapshot);
+}
+
+/** A successful reveal, including a retry after the initial fetch failed. */
+export function useCardsChunkLoaded(): boolean {
+  return useSyncExternalStore(subscribe, loadedSnapshot, loadedSnapshot);
 }
 
 /**

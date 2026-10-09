@@ -42,7 +42,9 @@ describe("work permissions and candidates", () => {
 
     if (ordinary === undefined) throw new Error("Thread missing");
     expect(threadPermissions(ctx, ordinary).canConvertWork).toBe(true);
-    ordinary.work = post.work ?? null;
+
+    if (post.work === undefined) throw new Error("Work missing");
+    ordinary.work = post.work;
     expect(threadPermissions(ctx, ordinary).canConvertWork).toBe(false);
     expect(threadPermissions(ctx, ordinary).canRemoveWork).toBe(true);
   });

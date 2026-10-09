@@ -2,8 +2,12 @@ import type { ConversationName } from "../gen/ConversationName.ts";
 import type { HuddlePresence } from "../gen/HuddlePresence.ts";
 import type { StageState } from "../gen/StageState.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import { type AgentsSlice, emptyAgents } from "./agents.ts";
+import { type ApprovalsSlice, emptyApprovals } from "./approvals.ts";
 import type { BoardState } from "./boards.ts";
 import { type CardsState, emptyCards } from "./cards.ts";
+import { emptyFreshness, type Freshness } from "./freshness.ts";
+import { emptyLedger, type LedgerSlice } from "./ledger.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -25,6 +29,7 @@ import type {
 import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
+import { emptyWork, type WorkSlice } from "./work.ts";
 
 /**
  * The whole live store. Normalized: every entity lives once, by id; views hold ids. The sync
@@ -32,6 +37,7 @@ import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
  * components read slices through selectors.
  */
 export interface State {
+  readonly freshness: Freshness;
   readonly boot: Boot | null;
   readonly me: Me | null;
   readonly connection: ConnectionStatus;
@@ -98,6 +104,14 @@ export interface State {
   readonly scheduled: ScheduledSlice;
   /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
+  /** Work detail for open thread panes and the work lists (S4); facts live on threads. */
+  readonly work: WorkSlice;
+  /** Agents: the directory, profiles and working presence (S4). */
+  readonly agents: AgentsSlice;
+  /** Agents' approval requests and their per-agent lists (S4). */
+  readonly approvals: ApprovalsSlice;
+  /** Agents' event ledgers: entries and per-agent lists (S4). */
+  readonly ledger: LedgerSlice;
   /** Ballots, votes on their way and per-viewer card previews (see `cards.ts`). */
   readonly cards: CardsState;
 }
@@ -115,6 +129,7 @@ export interface SidebarState {
 }
 
 export const initialState: State = {
+  freshness: emptyFreshness,
   boot: null,
   me: null,
   connection: "connecting",
@@ -155,6 +170,10 @@ export const initialState: State = {
   savedList: emptySavedList,
   scheduled: emptyScheduled,
   conversationNames: {},
+  work: emptyWork,
+  agents: emptyAgents,
+  approvals: emptyApprovals,
+  ledger: emptyLedger,
   cards: emptyCards,
 };
 
@@ -165,6 +184,8 @@ export const emptyTimeline: Timeline = {
   status: "idle",
   loadingOlder: false,
   loadingNewer: false,
+  olderRequest: 0,
+  newerRequest: 0,
   unreadFromId: null,
   unreadCount: 0,
   generation: 0,

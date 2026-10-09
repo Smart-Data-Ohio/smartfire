@@ -4,7 +4,7 @@ import type { Presence } from "./Presence";
 /**
  * One person's presence. A row of `GET /api/v1/presence`, and the `presence` event's data.
  */
-export type UserPresence = { userId: number, presence: Presence, 
+export type UserPresence = { userId: number, presence: Presence,
 /**
  * The status line shown beside the name (`status_text_display`): a custom status, out of
  * office, in a meeting, and so on; `null` when there's none.

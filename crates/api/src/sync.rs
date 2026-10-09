@@ -105,7 +105,7 @@ impl SyncRenderer for Renderer {
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {
         let app = self.app.upgrade()?;
         let now = app.db.env().now();
-        Room::find(conn, thread.room_id)
+        let dto = Room::find(conn, thread.room_id)
             .and_then(|room| {
                 let work =
                     crate::work::facts(conn, &app.secrets, std::slice::from_ref(thread), now)?
@@ -113,7 +113,10 @@ impl SyncRenderer for Renderer {
                 Ok(dto::thread(thread, &room, now, work))
             })
             .inspect_err(|error| tracing::warn!(%error, thread_id = thread.id, "sync: thread not rendered"))
-            .ok()
+            .ok();
+        #[cfg(feature = "test-support")]
+        crate::test_hooks::after_thread_snapshot(app.db.path(), thread.id);
+        dto
     }
 
     fn thread_indicator(
@@ -172,6 +175,7 @@ impl SyncRenderer for Renderer {
             status: dto::agent_status(&agent.status),
             status_note: agent.status_note.clone(),
             status_changed_at: agent.status_changed_at.map(dto::time),
+            updated_at: dto::row_version(agent.updated_at),
             suspended: agent.suspended_at.is_some(),
             working_presence_expires_at: working_presence
                 .as_ref()

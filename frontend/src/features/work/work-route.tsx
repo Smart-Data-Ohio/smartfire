@@ -3,7 +3,7 @@ import type { WorkFilter } from "../../gen/WorkFilter.ts";
 import { WorkPage } from "./work-page.tsx";
 import { parseWorkSearch } from "./work-search.ts";
 
-/** `/app/work`: tracked work from every room the viewer is in, its filter kept in the URL. */
+/** `/app/work`: the work page, its tab kept in the URL (`?state=`). */
 export function WorkRoute() {
   const search = useSearch({ from: "/shell/work" });
   const navigate = useNavigate();

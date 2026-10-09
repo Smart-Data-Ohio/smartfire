@@ -17,7 +17,15 @@ import type { Poll } from "../../src/gen/Poll.ts";
 import type { PollResults } from "../../src/gen/PollResults.ts";
 import type { QuotePreview } from "../../src/gen/QuotePreview.ts";
 import type { QuotePreviewResult } from "../../src/gen/QuotePreviewResult.ts";
-import { forbidden, notFound, ok, validation } from "../http.ts";
+import {
+  conflict,
+  forbidden,
+  type MockResponse,
+  notFound,
+  ok,
+  refusal,
+  validation,
+} from "../http.ts";
 import {
   booleanField,
   field,
@@ -29,7 +37,17 @@ import {
 import type { Mentionable } from "../markdown.ts";
 import { createRandom } from "../random.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { buildMessage, plainDraft } from "../s2/model.ts";
+import {
+  buildMessage,
+  DEFAULT_AUTO_ARCHIVE_MINUTES,
+  defaultThreadName,
+  indicatorOf,
+  iso,
+  plainDraft,
+  type ThreadRecord,
+  threadDto,
+  touched,
+} from "../s2/model.ts";
 import { clientMessageIdOf } from "../s2/posting.ts";
 import {
   BOT_ID,
@@ -123,6 +141,13 @@ interface CardsWorld {
   readonly events: Map<number, EventRecord>;
   /** The card under a message, by pull request id. */
   readonly pullRequests: Map<number, GithubPullRequestCard>;
+  /** The viewer's linked GitHub account can post. Off: the actions answer with every flag false. */
+  githubWrites: boolean;
+  /**
+   * `roomId:pullRequestId` to the discussion thread. Only Discuss writes this; an ordinary
+   * thread on the linking message is not a mapping.
+   */
+  readonly discussions: Map<string, number>;
   readonly fizzy: Map<number, FizzyCardPreview>;
   readonly quotes: Map<number, QuotePreviewResult>;
   /** Fetches served per preview (`github:412`), for tests. */
@@ -138,6 +163,8 @@ function emptyCardsWorld(): CardsWorld {
     nextOptionId: 1000,
     events: new Map(),
     pullRequests: new Map(),
+    githubWrites: true,
+    discussions: new Map(),
     fizzy: new Map(),
     quotes: new Map(),
     fetches: new Map(),
@@ -900,7 +927,16 @@ function optionIdsOf(body: Json | undefined): number[] {
   return raw.flatMap((value: Json) => (Number.isInteger(value) ? [Number(value)] : []));
 }
 
-export function createCards(ctx: S2Context): CardsModule {
+export interface CalendarAttendance {
+  readonly readAttendance: (roomId: number, eventId: number) => MockResponse | null;
+  readonly respond: (
+    roomId: number,
+    eventId: number,
+    body: Json | undefined,
+  ) => MockResponse | null;
+}
+
+export function createCards(ctx: S2Context, calendar?: CalendarAttendance): CardsModule {
   const state = () => cardsOf(ctx.world());
 
   const pollOr404 = (roomId: number, pollId: number): PollRecord => {
@@ -1148,14 +1184,88 @@ export function createCards(ctx: S2Context): CardsModule {
       (held) => held.kind === "github" && held.data.pullRequestId === pullRequestId,
     ) ?? false;
 
-  /** The pull request's discussion: the thread started on a message that links it. */
-  const discussionOf = (roomId: number, pullRequestId: number) =>
-    [...ctx.world().threads.values()].find(
-      (thread) =>
-        thread.roomId === roomId &&
-        thread.parentMessageId !== null &&
-        linksPullRequest(roomId, thread.parentMessageId, pullRequestId),
-    ) ?? null;
+  const discussionKey = (roomId: number, pullRequestId: number) => `${roomId}:${pullRequestId}`;
+
+  /** The pull request's discussion: the thread Discuss mapped, not an ordinary thread. */
+  const discussionOf = (roomId: number, pullRequestId: number) => {
+    const threadId = state().discussions.get(discussionKey(roomId, pullRequestId));
+
+    if (threadId === undefined) return null;
+
+    return ctx.world().threads.get(threadId) ?? null;
+  };
+
+  /**
+   * Classic Discuss (`discuss`): a thread on the linking message plus the mapping row. An
+   * ordinary `POST /threads` does not write the mapping, so writes stay 404 until this runs.
+   */
+  const githubDiscussion = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    const messageId = intField(body, "messageId");
+
+    if (messageId === null || !linksPullRequest(roomId, messageId, pullRequestId)) {
+      throw notFound("Message not found");
+    }
+
+    const located = findMessage(roomId, messageId);
+
+    if (located === null || located.message.threadId !== null) throw notFound("Message not found");
+
+    const existing = discussionOf(roomId, pullRequestId);
+
+    if (existing !== null) return ok({ threadId: existing.id });
+
+    const world = ctx.world();
+
+    if ([...world.threads.values()].some((thread) => thread.parentMessageId === messageId)) {
+      throw conflict("That message already has a thread");
+    }
+
+    const createdAt = iso(Math.max(ctx.now(), Date.parse(located.message.createdAt) + 1));
+    const id = world.nextThreadId++;
+
+    const thread: ThreadRecord = {
+      id,
+      roomId,
+      parentMessageId: messageId,
+      creatorId: VIEWER_ID,
+      name: defaultThreadName(located.message),
+      closed: false,
+      locked: false,
+      lastActivityAt: createdAt,
+      autoArchiveAfterMinutes: DEFAULT_AUTO_ARCHIVE_MINUTES,
+      createdAt,
+      messages: [],
+      memberIds: new Set([VIEWER_ID]),
+      viewerMembership: {
+        threadId: id,
+        involvement: "everything",
+        unreadAt: null,
+        joinedAt: createdAt,
+      },
+    };
+
+    world.threads.set(id, thread);
+    state().discussions.set(discussionKey(roomId, pullRequestId), id);
+
+    const indicator = indicatorOf(thread);
+
+    located.replace({
+      ...located.message,
+      thread: indicator,
+      updatedAt: touched(ctx.now(), located.message.updatedAt),
+    });
+
+    ctx.publish([
+      { topic: `room:${roomId}`, type: "thread.created", data: threadDto(thread, ctx.now()) },
+      {
+        topic: `room:${roomId}`,
+        type: "thread.indicator",
+        data: { roomId, parentMessageId: messageId, thread: indicator },
+      },
+    ]);
+
+    return ok({ threadId: id }, 201);
+  };
 
   const github = (roomId: number, pullRequestId: number, query: URLSearchParams) => {
     const threadId = Number(query.get("threadId") ?? Number.NaN);
@@ -1188,6 +1298,165 @@ export function createCards(ctx: S2Context): CardsModule {
     return ok(
       card.state === "loaded" ? { ...card, discussionThreadId: discussion?.id ?? null } : card,
     );
+  };
+
+  /**
+   * The real API 404s a write until this room has a `PullRequestThread` row. An ordinary thread
+   * on the linking message is not one; Discuss (`POST .../discussion`) creates the mapping.
+   */
+  const requireDiscussion = (roomId: number, pullRequestId: number) => {
+    ctx.roomOr404(roomId);
+
+    if (discussionOf(roomId, pullRequestId) === null) throw notFound("Pull request not found");
+  };
+
+  const githubActionFlags = (roomId: number, pullRequestId: number) => {
+    requireDiscussion(roomId, pullRequestId);
+    countFetch(`github-actions:${pullRequestId}`);
+
+    const card = state().pullRequests.get(pullRequestId);
+
+    if (card === undefined || card.state === "hidden") throw notFound("Pull request not found");
+
+    const usable = state().githubWrites;
+
+    return ok({
+      login: "maya",
+      account: usable ? "connected" : "rejected",
+      canComment: usable,
+      canReview: usable,
+      canRequestReviewers: usable,
+      status: card.state === "loaded" ? card.status : "open",
+    });
+  };
+
+  const loadedPullRequest = (roomId: number, pullRequestId: number) => {
+    ctx.roomOr404(roomId);
+
+    const card = state().pullRequests.get(pullRequestId);
+
+    if (card?.state !== "loaded") throw notFound("Pull request not found");
+
+    return card;
+  };
+
+  const publishPullRequest = (roomId: number, pullRequestId: number) => {
+    const record = ctx.roomOr404(roomId);
+
+    for (const held of record.messages) {
+      if (
+        held.cards.some(
+          (card) => card.kind === "github" && card.data.pullRequestId === pullRequestId,
+        )
+      ) {
+        refreshCards(roomId, held.id);
+      }
+    }
+  };
+
+  const githubComment = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
+    loadedPullRequest(roomId, pullRequestId);
+
+    const text = (stringField(body, "body") ?? "").trim();
+
+    if (text === "") throw refusal("body", "Write a comment first.");
+
+    if (!state().githubWrites) {
+      throw refusal("account", "Connect GitHub to comment and review from here as yourself.");
+    }
+
+    publishPullRequest(roomId, pullRequestId);
+
+    return ok({ notice: "Comment posted on GitHub as @maya." });
+  };
+
+  const githubReview = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
+
+    const card = loadedPullRequest(roomId, pullRequestId);
+    const event = stringField(body, "event");
+    const text = (stringField(body, "body") ?? "").trim();
+
+    if (event === "request_changes" && text === "") {
+      throw refusal("body", "Add a note describing the requested changes.");
+    }
+
+    if (event === "comment" && text === "") {
+      throw refusal("body", "Add a note for the review comment.");
+    }
+
+    if (event !== "approve" && event !== "request_changes" && event !== "comment") {
+      throw refusal("body", "Choose Approve or Request changes.");
+    }
+
+    if (!state().githubWrites) {
+      throw refusal("account", "Connect GitHub to comment and review from here as yourself.");
+    }
+
+    let review = card.review;
+    let notice = "Left a review comment on GitHub as @maya.";
+
+    if (event === "approve") {
+      review = "approved";
+      notice = "Approved on GitHub as @maya.";
+    } else if (event === "request_changes") {
+      review = "changes_requested";
+      notice = "Requested changes on GitHub as @maya.";
+    }
+
+    state().pullRequests.set(pullRequestId, { ...card, review });
+    publishPullRequest(roomId, pullRequestId);
+
+    return ok({ notice });
+  };
+
+  const reviewerLogins = (raw: string): string[] | null => {
+    const logins: string[] = [];
+
+    for (const token of raw.split(/[\s,]+/)) {
+      if (token === "") {
+        continue;
+      }
+
+      const login = token.replace(/^@/, "").toLowerCase();
+      const letter = (char: string) => /[a-z0-9]/i.test(char);
+
+      if (
+        login.length === 0 ||
+        login.length > 39 ||
+        !letter(login[0] ?? "") ||
+        !letter(login.at(-1) ?? "") ||
+        login.includes("--") ||
+        [...login].some((char) => !letter(char) && char !== "-")
+      ) {
+        return null;
+      }
+
+      if (!logins.includes(login)) logins.push(login);
+    }
+
+    return logins.length > 0 && logins.length <= 15 ? logins : null;
+  };
+
+  const githubReviewRequest = (roomId: number, pullRequestId: number, body: Json | undefined) => {
+    requireDiscussion(roomId, pullRequestId);
+    loadedPullRequest(roomId, pullRequestId);
+
+    const raw = stringField(body, "reviewers") ?? "";
+    const logins = reviewerLogins(raw);
+
+    if (logins === null) throw refusal("reviewers", "Enter GitHub usernames separated by commas.");
+
+    if (!state().githubWrites) {
+      throw refusal("account", "Connect GitHub to comment and review from here as yourself.");
+    }
+
+    publishPullRequest(roomId, pullRequestId);
+
+    return ok({
+      notice: `Requested review from ${logins.map((login) => `@${login}`).join(", ")} on GitHub as @maya.`,
+    });
   };
 
   const fizzy = (roomId: number, fizzyCardId: number, query: URLSearchParams) => {
@@ -1230,17 +1499,47 @@ export function createCards(ctx: S2Context): CardsModule {
       "GET",
       /^\/rooms\/(\d+)\/events\/(\d+)\/attendance$/,
       ({ ids: [roomId = 0, eventId = 0] }) =>
+        calendar?.readAttendance(roomId, eventId) ??
         ok(attendanceOf(eventOr404(roomId, eventId), viewerIsHuman())),
     ),
     route(
       "PUT",
       /^\/rooms\/(\d+)\/events\/(\d+)\/attendance$/,
-      ({ ids: [roomId = 0, eventId = 0], body }) => respondTo(roomId, eventId, body),
+      ({ ids: [roomId = 0, eventId = 0], body }) =>
+        calendar?.respond(roomId, eventId, body) ?? respondTo(roomId, eventId, body),
     ),
     route(
       "GET",
       /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/card$/,
       ({ ids: [roomId = 0, pullRequestId = 0], query }) => github(roomId, pullRequestId, query),
+    ),
+    route(
+      "GET",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/actions$/,
+      ({ ids: [roomId = 0, pullRequestId = 0] }) => githubActionFlags(roomId, pullRequestId),
+    ),
+    route(
+      "POST",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/discussion$/,
+      ({ ids: [roomId = 0, pullRequestId = 0], body }) =>
+        githubDiscussion(roomId, pullRequestId, body),
+    ),
+    route(
+      "POST",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/comments$/,
+      ({ ids: [roomId = 0, pullRequestId = 0], body }) =>
+        githubComment(roomId, pullRequestId, body),
+    ),
+    route(
+      "POST",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/reviews$/,
+      ({ ids: [roomId = 0, pullRequestId = 0], body }) => githubReview(roomId, pullRequestId, body),
+    ),
+    route(
+      "POST",
+      /^\/rooms\/(\d+)\/github\/pull_requests\/(\d+)\/review_requests$/,
+      ({ ids: [roomId = 0, pullRequestId = 0], body }) =>
+        githubReviewRequest(roomId, pullRequestId, body),
     ),
     route(
       "GET",
@@ -1318,10 +1617,19 @@ export function createCards(ctx: S2Context): CardsModule {
 
       case "refresh":
         return refreshCards(roomId, intField(body, "messageId") ?? 0);
+      case "github-writes": {
+        state().githubWrites = (intField(body, "enabled") ?? 1) !== 0;
+
+        return { enabled: state().githubWrites };
+      }
+
       case "fetches":
         return Object.fromEntries(state().fetches);
       default:
-        throw validation("op", "op must be vote, close-poll, github-loaded, refresh or fetches");
+        throw validation(
+          "op",
+          "op must be vote, close-poll, github-loaded, github-writes, refresh or fetches",
+        );
     }
   };
 

@@ -23,7 +23,7 @@ const LIST: PushSubscriptionList = {
 };
 
 class Worker extends EventTarget {
-  readonly scriptURL = "https://smartfire.test/app/service-worker.js";
+  readonly scriptURL = "https://smartfire.test/service-worker.js";
   state: ServiceWorkerState = "activated";
 }
 
@@ -72,7 +72,7 @@ function fixture(permission: NotificationPermission = "default") {
 
   const browser: PushBrowser = {
     origin: "https://smartfire.test",
-    workerUrl: "/app/service-worker.js",
+    workerUrl: "/service-worker.js",
     permission: () => permission,
     requestPermission,
     register,
@@ -235,7 +235,7 @@ describe("explicit browser push enrollment", () => {
       const f = fixture("granted");
 
       const browser =
-        wrong === "script" ? { ...f.browser, workerUrl: "/service-worker.js" } : f.browser;
+        wrong === "script" ? { ...f.browser, workerUrl: "/wrong-service-worker.js" } : f.browser;
 
       if (wrong === "scope")
         f.register.mockResolvedValue({ ...f.registration, scope: "https://smartfire.test/app/" });

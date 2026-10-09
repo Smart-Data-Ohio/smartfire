@@ -36,6 +36,9 @@ const LOU: i64 = 773523958;
 const DESIGNERS_EVENT: i64 = 390339825;
 const PULL_REQUEST: i64 = 1;
 
+#[path = "spa_api_work_revision_tests.rs"]
+mod revisions;
+
 fn envelope(reply: &Reply) -> api::ApiError {
     parse::<api::ApiErrorResponse>(reply).error
 }
@@ -1272,10 +1275,9 @@ async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
                 .await,
         );
         assert_eq!(detail.thread.name, "Concurrent release");
-        assert_eq!(
-            detail.thread.work.unwrap().status,
-            api::WorkStatus::InProgress
-        );
+        let work = detail.thread.work.unwrap();
+        assert_eq!(work.status, api::WorkStatus::InProgress);
+        assert_eq!(work.owner.unwrap().id, KEVIN);
         no_more_thread_updates(
             &a,
             &mut classic,
@@ -1287,6 +1289,84 @@ async fn overlapping_api_work_and_classic_rename_publish_once_per_write() {
         .await;
         server.abort();
     }
+}
+
+#[tokio::test]
+async fn overlapping_api_work_and_classic_rename_cannot_publish_a_stale_snapshot_last() {
+    let a = app(true).await.expect("the frozen default seed");
+    let (addr, server) = serve(&a).await;
+    let mut classic = a.sign_in(DAVID).await;
+    let mut spa = a.sign_in(DAVID).await;
+    classic.authenticity_token().await;
+    spa.authenticity_token().await;
+    let mut tab = Sync::connect(
+        addr,
+        &classic.cookie_header(),
+        &[format!("room:{DESIGNERS}")],
+    )
+    .await;
+    tab.welcome().await;
+
+    // The API's reader has the old name. Commit the rename while that snapshot is held,
+    // giving its separate reader a chance to overtake the earlier publication.
+    let hold = campfire_api::test_hooks::hold_after_thread_snapshot(a.db().path(), THREAD);
+    let changed = spa
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/threads/{THREAD}/work"),
+            &json!({"status": "in_progress", "ownerId": KEVIN}),
+        ))
+        .await;
+    assert_eq!(changed.status, StatusCode::OK, "{}", changed.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the work snapshot was rendered")
+        .unwrap();
+    let renamed = classic
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/{DESIGNERS}/threads/{THREAD}"),
+            )
+            .header("accept", "text/html")
+            .form(&[("thread[name]", "Concurrent release")]),
+        )
+        .await;
+    assert!(renamed.status.is_redirection(), "{}", renamed.text());
+    let overtaking = tokio::time::timeout(
+        Duration::from_millis(100),
+        tab.until(thread_updated(THREAD), |_| false),
+    )
+    .await;
+    hold.release.send(()).unwrap();
+    let first = match overtaking {
+        Ok(event) => event,
+        Err(_) => tab.until(thread_updated(THREAD), |_| false).await,
+    };
+    let last = tab.until(thread_updated(THREAD), |_| false).await;
+    let api::SyncPayload::ThreadUpdated(first) = first.payload else {
+        unreachable!()
+    };
+    let api::SyncPayload::ThreadUpdated(last) = last.payload else {
+        unreachable!()
+    };
+    assert_eq!(last.name, "Concurrent release");
+    assert_eq!(first.name, "Launch review");
+    for thread in [first, last] {
+        let work = thread.work.unwrap();
+        assert_eq!(work.status, api::WorkStatus::InProgress);
+        assert_eq!(work.owner.unwrap().id, KEVIN);
+    }
+    no_more_thread_updates(
+        &a,
+        &mut classic,
+        &mut tab,
+        DESIGNERS,
+        THREAD,
+        "held-work-snapshot-marker",
+    )
+    .await;
+    server.abort();
 }
 
 /// The classic frames of a board post's work change through `channel_threads#update`: its rows

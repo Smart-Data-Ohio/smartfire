@@ -6,7 +6,7 @@ import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { auditTime } from "../admin/admin-format.ts";
-import { adminFailure, Confirm } from "../admin/admin-parts.tsx";
+import { adminFailure, CardCell, CardRow, CardTable, Confirm } from "../admin/admin-parts.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsGroup, SettingsPage, useBusy } from "../settings/settings-parts.tsx";
 import { CONFIRM, modeLabel, personalConnectionSentence } from "./slack-format.ts";
@@ -159,30 +159,20 @@ export function PersonalSlackSection() {
               <p className="text-muted">No personal imports yet.</p>
             ) : (
               <section className="admin-audit-wrap" aria-label="Your imports">
-                <table className="admin-audit-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">Run</th>
-                      <th scope="col">Mode</th>
-                      <th scope="col">Status</th>
-                      <th scope="col">When</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {page.runs.map((run) => (
-                      <tr key={run.id}>
-                        <td>
-                          <Link to="/settings/slack/$runId" params={{ runId: `${run.id}` }}>
-                            #{run.id}
-                          </Link>
-                        </td>
-                        <td>{modeLabel(run.mode)}</td>
-                        <td>{run.status}</td>
-                        <td>{auditTime(run.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <CardTable columns={["Run", "Mode", "Status", "When"]}>
+                  {page.runs.map((run) => (
+                    <CardRow key={run.id}>
+                      <CardCell column="Run" title>
+                        <Link to="/settings/slack/$runId" params={{ runId: `${run.id}` }}>
+                          #{run.id}
+                        </Link>
+                      </CardCell>
+                      <CardCell column="Mode">{modeLabel(run.mode)}</CardCell>
+                      <CardCell column="Status">{run.status}</CardCell>
+                      <CardCell column="When">{auditTime(run.createdAt)}</CardCell>
+                    </CardRow>
+                  ))}
+                </CardTable>
               </section>
             )}
           </SettingsGroup>

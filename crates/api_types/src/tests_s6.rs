@@ -26,6 +26,7 @@ fn post() -> Thread {
             links: vec![],
             tags: vec!["api".into(), "bug".into()],
             message_count: 3,
+            updated_at: "2026-10-07T09:30:00.000000Z".into(),
         }),
     }
 }

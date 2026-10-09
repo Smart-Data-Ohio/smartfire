@@ -54,9 +54,10 @@ export class WorkerCache {
     this.fetch = (...args) => network(...args);
     this.coordinator = coordinator;
     this.name = cacheName(build.version);
-    this.marker = new URL(`${build.offline}.activation`, origin).href;
+    // Keep pre-cutover activation markers readable so live pages retain their build caches.
+    this.marker = new URL("../offline.html.activation", new URL(build.page, origin)).href;
     this.currentUrls = new Set(build.precache.map((path) => new URL(path, origin).href));
-    this.assetPrefix = new URL("assets/", new URL(build.offline, origin)).pathname;
+    this.assetPrefix = new URL(".", new URL(build.page, origin)).pathname;
   }
 
   handles(request: Request): boolean {

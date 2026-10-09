@@ -1,11 +1,14 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
+import { seededMessageId } from "../../mock/seed.ts";
+import type { MessagePage } from "../../src/gen/MessagePage.ts";
 import {
   expect,
   holdSync,
   matrix,
   postMessage,
   ROOM_IDS,
+  scrollByWheel,
   shot,
   type Theme,
   test,
@@ -45,6 +48,28 @@ async function settledShot(page: Page, name: string, theme: Theme) {
 async function openOn(page: Page, messageId: number, theme: Theme = "light") {
   await openRoom(page, `r/${ROOM_IDS.general}/m/${messageId}`, theme);
   await expect(row(page, messageId)).toBeVisible();
+}
+
+/**
+ * Pages toward the present until the jump pill closes: the window reaches the present and the
+ * reader is at its end. Scrolling is what fetches each newer page. The wheel is the reader, so a
+ * permalink does not keep the place they just left. It follows the jump: the listener settles the
+ * position it sees, and a wheel before the jump anchors the permalink.
+ */
+async function scrollToPresent(page: Page) {
+  const log = page.getByRole("log", { name: "Messages" });
+  const jump = page.locator(".timeline-jump");
+
+  await expect(async () => {
+    await log.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+      element.dispatchEvent(
+        new WheelEvent("wheel", { deltaY: 1, bubbles: true, cancelable: true }),
+      );
+    });
+    await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
+    await expect(jump).toHaveAttribute("data-open", "false");
+  }).toPass({ timeout: 20_000 });
 }
 
 /**
@@ -309,21 +334,24 @@ test("the sync welcome's refetch leaves a reader on the unread divider", async (
   const divider = log.locator(".unread-divider");
 
   await expect(divider).toBeInViewport();
+  await expect(log).toHaveAttribute("data-placement-settled", "true");
+  await expect(log).toHaveAttribute("data-scroll-settled", "true");
 
   // Page down to the present and back up to the divider before the welcome arrives.
-  const top = await log.evaluate((element) => {
-    const at = element.scrollTop;
+  const top = await log.evaluate((element) => element.scrollTop);
 
-    element.scrollTop = element.scrollHeight;
-
-    return at;
-  });
+  await scrollByWheel(page, log, 10_000);
 
   await (await newer).finished();
   await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
-  await log.evaluate((element, at) => {
-    element.scrollTop = at;
-  }, top);
+
+  const remaining = await log.evaluate(
+    (element) => element.scrollHeight - element.clientHeight - element.scrollTop,
+  );
+
+  if (remaining > 1) await scrollByWheel(page, log, remaining);
+
+  await scrollByWheel(page, log, top - (await log.evaluate((element) => element.scrollTop)));
   await expect(divider).toBeInViewport();
 
   // Someone posts while the socket is held. The welcome refetches the newest page, which holds
@@ -371,8 +399,62 @@ test("a reader at the bottom through a long absence is paged on to the present",
     (url) => url.searchParams.has("around"),
     (route) => route.abort(),
   );
+
+  const paged = page.waitForResponse(async (response) => {
+    const url = new URL(response.url());
+
+    if (
+      url.pathname !== `/api/v1/rooms/${ROOM_IDS.engineering}/messages` ||
+      !url.searchParams.has("after")
+    )
+      return false;
+
+    const body: MessagePage = await response.json();
+
+    return body.after === null;
+  });
+
   release();
+  await (await paged).finished();
   await expect(log.getByText("while away 45", { exact: true })).toBeInViewport();
+});
+
+test("a permalink scrolled to the present pages on after a long absence", async ({
+  page,
+  request,
+}) => {
+  const release = await holdSync(page, { missed: true });
+
+  // Early in #engineering, so the page around it stops short of the present. Scrolling there
+  // keeps the message focused: the URL still names it.
+  const permalink = seededMessageId(ROOM_IDS.engineering, 20);
+
+  await openRoom(page, `r/${ROOM_IDS.engineering}/m/${permalink}`);
+  await expect(row(page, permalink)).toBeVisible();
+  await scrollToPresent(page);
+  await expect(page).toHaveURL(new RegExp(`/m/${permalink}$`));
+
+  // More is posted while the socket is down than the welcome's newest page holds, so that page
+  // no longer meets the window the reader scrolled to.
+  for (let at = 1; at <= 45; at++) {
+    await postMessage(request, {
+      roomId: ROOM_IDS.engineering,
+      userId: USER_IDS.maya,
+      markdown: `missed on permalink ${at}`,
+    });
+  }
+
+  // The welcome also re-reads the window around its middle, which adds older rows and so scrolls
+  // the list; fail that re-read, so nothing the reader does or sees moves the list.
+  await page.route(
+    (url) => url.searchParams.has("around"),
+    (route) => route.abort(),
+  );
+  release();
+
+  const log = page.getByRole("log", { name: "Messages" });
+
+  await expect(log.getByText("missed on permalink 45", { exact: true })).toBeInViewport();
 });
 
 matrix("message hover bar", async ({ page, theme, phone }) => {

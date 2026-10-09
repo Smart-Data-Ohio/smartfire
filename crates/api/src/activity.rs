@@ -146,9 +146,11 @@ pub(crate) fn changed(
     let Some(item) = items(conn, app, viewer, std::slice::from_ref(&row))?.pop() else {
         return Ok(None);
     };
+    let unread = ActivityItem::unread_snapshot(conn, viewer.id)?;
     Ok(Some(api::ActivityItemChanged {
         item,
-        unread_count: ActivityItem::unread_count(conn, viewer)?,
+        unread_count: unread.count,
+        unread_revision: unread.revision,
     }))
 }
 
@@ -221,9 +223,11 @@ async fn index_activity(c: &mut Ctx) -> Result {
                 .iter()
                 .filter_map(|item| item.source.creator_id)
                 .collect::<std::collections::BTreeSet<_>>();
+            let unread = ActivityItem::unread_snapshot(conn, viewer.id)?;
             Ok(api::ActivityList {
                 users: dto::users(conn, &app.secrets, creators, now)?,
-                unread_count: ActivityItem::unread_count(conn, &viewer)?,
+                unread_count: unread.count,
+                unread_revision: unread.revision,
                 items,
                 next_cursor,
             })
@@ -237,13 +241,19 @@ async fn show_unread_count(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     no_store(c);
     let viewer = concerns::require_current_user(c)?.clone();
-    let unread_count = c
+    let unread = c
         .app()
         .db
-        .read(move |conn| ActivityItem::unread_count(conn, &viewer))
+        .read(move |conn| ActivityItem::unread_snapshot(conn, viewer.id))
         .await
         .map_err(db_error)?;
-    c.json(StatusCode::OK, &api::ActivityUnreadCount { unread_count })
+    c.json(
+        StatusCode::OK,
+        &api::ActivityUnreadCount {
+            unread_count: unread.count,
+            unread_revision: unread.revision,
+        },
+    )
 }
 
 /// `activity_items#find`: the viewer's accessible item `:id`, or a 404.

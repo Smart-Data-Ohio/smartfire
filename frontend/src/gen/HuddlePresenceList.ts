@@ -7,7 +7,7 @@ import type { User } from "./User";
  * rooms, in no particular order. Rooms with nobody in the call are left out. A 503 `Unavailable`
  * tells the client to hide every huddle control.
  */
-export type HuddlePresenceList = { rooms: Array<HuddlePresence>, 
+export type HuddlePresenceList = { rooms: Array<HuddlePresence>,
 /**
  * Every participant's directory entry.
  */

@@ -6,11 +6,11 @@ import type { VoiceMode } from "./VoiceMode";
 /**
  * Appearance and huddle settings, already normalized the way the layouts read them.
  */
-export type Preferences = { theme: Theme, textSize: TextSize, 
+export type Preferences = { theme: Theme, textSize: TextSize,
 /**
  * An IANA or Rails zone name; `null` when unset.
  */
-timeZone: string | null, 
+timeZone: string | null,
 /**
  * "Not set" was chosen on purpose, so the browser's zone isn't adopted.
  */

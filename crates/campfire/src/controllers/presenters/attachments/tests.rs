@@ -211,9 +211,13 @@ async fn null_analyzer_runs_after_attachment_commit() {
         .stage(&app.booted.app)
         .await
         .unwrap();
+    let secrets = app.booted.app.secrets.clone();
     app.db()
         .write(move |tx| {
-            let record = Record::account(campfire_db::Account::first(tx.conn())?.unwrap().id);
+            let record = Record::account(
+                campfire_db::Account::first(tx.conn())?.unwrap().id,
+                &secrets,
+            );
             // Runs before the analysis hook, and can already see the committed attachment.
             tx.after_commit(move |tx| {
                 assert!(!tx.in_transaction());
@@ -661,7 +665,7 @@ async fn signed_blob_workspace_assignment_uses_the_existing_blob() {
     app.db().write(move |tx| {
         tx.conn().execute("INSERT INTO workspace_icons (name,title,creator_id,created_at,updated_at) VALUES ('attach_parity','Attachment parity',?1,?2,?2)", rusqlite::params![DAVID, tx.now().to_string()])?;
         let id = tx.conn().last_insert_rowid();
-        assign(tx, Record { record_type: "WorkspaceIcon", table: "workspace_icons", id }, "image", assignment)?;
+        assign(tx, Record::workspace_icon(id), "image", assignment)?;
         assert_eq!(attached_blob(tx.conn(), "WorkspaceIcon", id, "image")?.unwrap().id, blob.id);
         Ok(())
     }).await.unwrap();
@@ -702,11 +706,12 @@ async fn durable_analysis_survives_restart_and_repeated_delivery() {
         .storage
         .stage_bytes(&png(), Filename::new("restart.png"), Some("image/png"))
         .unwrap();
+    let secrets = app.secrets.clone();
     let id = app
         .db
         .write(move |tx| {
             let account = campfire_db::Account::first(tx.conn())?.unwrap();
-            attach(tx, Record::account(account.id), "logo", staged)?;
+            attach(tx, Record::account(account.id, &secrets), "logo", staged)?;
             Ok(attached_blob(tx.conn(), "Account", account.id, "logo")?
                 .unwrap()
                 .id)
@@ -832,7 +837,7 @@ async fn signed_blob_reassignment_preserves_rows_and_rails_can_read_them() {
     app.db().write(move |tx| {
         tx.conn().execute("INSERT INTO workspace_icons (name,title,creator_id,created_at,updated_at) VALUES ('attach_readback','Attachment parity',?1,?2,?2)", rusqlite::params![DAVID, tx.now().to_string()])?;
         let id = tx.conn().last_insert_rowid();
-        assign(tx, Record { record_type: "WorkspaceIcon", table: "workspace_icons", id }, "image", assignment)
+        assign(tx, Record::workspace_icon(id), "image", assignment)
     }).await.unwrap();
     wait_analyzed(&app.booted.app, blob.id).await;
     let before = app
@@ -1048,4 +1053,91 @@ async fn durable_analysis_other_callers_roll_back() {
             );
         }
     }
+}
+
+#[tokio::test]
+async fn avatar_attachment_and_analysis_touches_preserve_later_user_core_revisions() {
+    let frozen: jiff::Timestamp = SEED_NOW.parse().unwrap();
+    let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(frozen));
+    let app = TestApp::boot_with_test_clock(clock.clone()).await.unwrap();
+    // A core change persisted ahead of the frozen clock (a later writer's clock); the touches
+    // below run at the frozen time and must keep that later revision.
+    clock.advance(jiff::SignedDuration::from_mins(1));
+    let core = app
+        .db()
+        .write(|tx| {
+            let mut user = campfire_db::User::find(tx.conn(), DAVID)?;
+            for name in ["First core change", "Latest core change"] {
+                user.update(
+                    tx,
+                    campfire_db::UserChanges {
+                        name: Some(name.into()),
+                        ..Default::default()
+                    },
+                )?;
+            }
+            Ok(user)
+        })
+        .await
+        .unwrap();
+    clock.set(frozen);
+    let core_revision = core.updated_at;
+    app.db()
+        .write(move |tx| {
+            assert!(core_revision > tx.now());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let staged = app
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            b"Avatar touch regression",
+            Filename::new("avatar.txt"),
+            Some("text/plain"),
+        )
+        .unwrap();
+    app.db()
+        .write(move |tx| {
+            assign(
+                tx,
+                Record::user(DAVID),
+                "avatar",
+                Assignment::Create(staged),
+            )
+        })
+        .await
+        .unwrap();
+    let (attached, analyzed) = app
+        .db()
+        .read(|conn| {
+            Ok((
+                campfire_db::User::find(conn, DAVID)?,
+                attached_blob(conn, "User", DAVID, "avatar")?
+                    .unwrap()
+                    .is_analyzed(),
+            ))
+        })
+        .await
+        .unwrap();
+    assert!(
+        analyzed,
+        "the synchronous analyzer also touched the user row"
+    );
+    assert_eq!(attached, core);
+    app.db()
+        .write(|tx| {
+            assert!(destroy(tx, Record::user(DAVID), "avatar")?);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let detached = app
+        .db()
+        .read(|conn| campfire_db::User::find(conn, DAVID))
+        .await
+        .unwrap();
+    assert_eq!(detached, core);
 }

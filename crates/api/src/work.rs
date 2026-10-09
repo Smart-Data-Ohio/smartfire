@@ -262,6 +262,9 @@ pub fn facts(
                 links,
                 tags: grouped_tags.remove(&thread.id).unwrap_or_default(),
                 message_count: message_counts.remove(&thread.id).unwrap_or_default(),
+                // Owner/link rows can disappear without touching the thread; taking their
+                // live timestamps would make this revision go backwards after a deletion.
+                updated_at: dto::row_version(thread.updated_at),
             },
         );
     }
@@ -466,7 +469,7 @@ async fn list_work(c: &mut Ctx) -> Result {
                     thread: dto::thread(thread, room, now, Some(work)),
                     room_name: names.get(&room.id).cloned().unwrap_or_default(),
                     board: room.board(),
-                    updated_at: dto::time(thread.updated_at),
+                    updated_at: dto::row_version(thread.updated_at),
                 });
             }
             Ok(api::WorkList {

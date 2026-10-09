@@ -2,7 +2,7 @@
 //! Group notes and directory events come from WS8a; templates consume per-viewer facts.
 
 use campfire_db::{Account, CachedStatements, Membership, Room, User};
-use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode};
+use campfire_kit::{Ctx, Param, Redirect, Result, StatusCode};
 use campfire_views::rooms::{DirectEditView, DirectPickerUser, DirectsEdit, DirectsNew};
 
 use super::{Scope, audit_room, destroy_room, redirect_to_room, set_room};
@@ -11,13 +11,13 @@ use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::Presenter;
 use crate::controllers::presenters::page::{self, Rendered, db_error};
 
-/// The pinned namespace inherits show without setting `@room`, so the last-room callback
-/// raises. The working, membership-scoped page route is `/rooms/:id`.
+/// Same alias as the other room-type show actions: the membership-scoped room, then the
+/// canonical `/rooms/:id` page.
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    Err(Error::internal(anyhow::anyhow!(
-        "undefined method 'id' for nil"
-    )))
+    let room = set_room(c, Scope::Directs).await?;
+    crate::concerns::remember_last_room_visited(c, room.id);
+    redirect_to_room(c, room.id)
 }
 
 pub async fn new(c: &mut Ctx) -> Result {
@@ -300,6 +300,11 @@ fn sentence(names: &[String]) -> String {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::Directs).await?;
+    ensure_can_delete(c, &room).await?;
+    destroy_room(c, room).await
+}
+
+pub async fn ensure_can_delete(c: &Ctx, room: &Room) -> Result<()> {
     let id = room.id;
     let group = c
         .app()
@@ -310,7 +315,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     if group && !require_current_user(c)?.is_administrator() {
         return campfire_kit::halt(crate::concerns::head(StatusCode::FORBIDDEN));
     }
-    destroy_room(c, room).await
+    Ok(())
 }
 
 /// `broadcast_create_room`: `users/sidebars/rooms/_direct` for each membership, to its user.

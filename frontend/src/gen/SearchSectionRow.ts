@@ -5,24 +5,24 @@ import type { WorkStatus } from "./WorkStatus";
 /**
  * One section hit (`SearchSectionRecord`).
  */
-export type SearchSectionRow = { 
+export type SearchSectionRow = {
 /**
  * The thread's id, or the event's for `events`.
  */
-id: number, roomId: number, roomKind: RoomKind, 
+id: number, roomId: number, roomKind: RoomKind,
 /**
  * The thread's name or the event's title.
  */
-title: string, 
+title: string,
 /**
  * The thread's `lastActivityAt`, or the event's `startsAt`.
  */
-time: string, 
+time: string,
 /**
  * Work threads (and board posts that have one): `channel_threads.work_status`. `null`
  * otherwise.
  */
-workStatus: WorkStatus | null, 
+workStatus: WorkStatus | null,
 /**
  * Events only: it was cancelled.
  */

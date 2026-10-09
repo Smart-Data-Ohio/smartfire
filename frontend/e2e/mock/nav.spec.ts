@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, openApp, ROOM_IDS, shot, test } from "./support.ts";
+import { expect, matrix, openApp, openHeaderTool, ROOM_IDS, shot, test } from "./support.ts";
 
 /** The modifier the app reads on this platform (the CI browsers aren't Apple). */
 const MOD = process.platform === "darwin" ? "Meta" : "Control";
@@ -320,7 +320,7 @@ async function openGroupDirect(page: Page, theme: "light" | "dark", phone: boole
 
 matrix("add people", async ({ page, theme, phone }) => {
   await openGroupDirect(page, theme, phone);
-  await page.getByRole("button", { name: "Add people" }).click();
+  await openHeaderTool(page, "Add people");
 
   const dialog = page.getByRole("dialog", { name: /Add people/ });
 
@@ -332,7 +332,7 @@ matrix("add people", async ({ page, theme, phone }) => {
 
 matrix("rename", async ({ page, theme, phone }) => {
   await openGroupDirect(page, theme, phone);
-  await page.getByRole("button", { name: "Rename conversation" }).click();
+  await openHeaderTool(page, "Rename conversation");
   await expect(page.getByRole("dialog", { name: "Rename conversation" })).toBeVisible();
   await page.getByRole("textbox", { name: "Name" }).fill("Launch crew");
   await shot(page, "rename", theme);

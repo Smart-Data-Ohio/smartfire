@@ -11,4 +11,14 @@
     height: 420px;
     color: var(--text-faint);
   }
+
+  /* An action sheet's picker: the full width, and its grid's height plus the search and tabs. */
+  .popover.action-sheet:has(> .emoji-picker-fallback) {
+    padding-bottom: var(--safe-bottom);
+  }
+
+  .action-sheet .emoji-picker-fallback {
+    width: auto;
+    height: calc(min(360px, 48dvh) + 100px);
+  }
 }

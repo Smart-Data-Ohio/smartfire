@@ -1,6 +1,16 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { MESSAGE_IDS, seededReplyId, THREAD_IDS } from "../../mock/s2/seed.ts";
+import {
+  expect,
+  matrix,
+  PHONE_TOUCH,
+  ROOM_IDS,
+  shot,
+  simulateKeyboard,
+  syncWelcomed,
+  type Theme,
+  test,
+} from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -20,6 +30,24 @@ interface ThreadPost {
   readonly threadId: number;
   readonly userId: number;
   readonly markdown: string;
+}
+
+/** Posts `count` replies so an early one falls off the newest page. */
+async function postReplies(page: Page, threadId: number, count: number): Promise<void> {
+  const state = await (await page.request.get("/__mock/state")).json();
+
+  for (let index = 0; index < count; index += 1) {
+    await page.request.post(`/api/v1/threads/${threadId}/messages`, {
+      headers: { "X-CSRF-Token": state.csrfToken },
+      data: {
+        clientMessageId: `paging-filler-${index}`,
+        markdownSource: `Filler reply ${index}`,
+        replyToMessageId: null,
+        replyNotifyAuthor: null,
+        attachmentSignedId: null,
+      },
+    });
+  }
 }
 
 /** Has someone reply in a thread through the mock's `/__mock/thread-post` control. */
@@ -44,6 +72,12 @@ matrix("a reply indicator opens its thread", async ({ page, theme }) => {
 
   const indicator = page.getByRole("button", { name: /^\d+ replies, unread\./ }).first();
 
+  await expect(indicator).toHaveCSS("pointer-events", "auto");
+  await indicator.evaluate((element) =>
+    element.scrollIntoView({ block: "center", behavior: "instant" }),
+  );
+  await expect(indicator).toBeInViewport({ ratio: 1 });
+  await expect(indicator).toHaveCSS("pointer-events", "auto");
   await indicator.click();
   await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}/t/${THREAD_IDS.generalActive}$`));
   await expect(pane(page).getByRole("heading", { name: ACTIVE_NAME })).toBeVisible();
@@ -190,6 +224,35 @@ test("the thread menu offers what the viewer may do", async ({ page }) => {
   await expect(pane(page).getByRole("heading", { name: "Conversion dip, week 40" })).toBeVisible();
 });
 
+test("an older reply's permalink pages forward when scrolled to the bottom", async ({ page }) => {
+  const oldest = seededReplyId(THREAD_IDS.generalActive, 0);
+
+  await open(page, `r/${GENERAL}`);
+  // More replies than a permalink window plus the welcome's re-read around its middle, so the
+  // tail stays past the loaded window until the reader scrolls down to it.
+  await postReplies(page, THREAD_IDS.generalActive, 80);
+
+  const welcomed = syncWelcomed(page);
+
+  const newer = page.waitForResponse((response) =>
+    response.url().includes(`/api/v1/threads/${THREAD_IDS.generalActive}/messages?after=`),
+  );
+
+  await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}?m=${oldest}`);
+  await welcomed;
+
+  const log = pane(page).getByRole("log", { name: "Replies" });
+  const oldestRow = log.locator(`[data-message-id="${oldest}"]`);
+
+  await expect(oldestRow).toBeVisible();
+  // End asks the virtual list to bring its last loaded reply to the bottom edge, which pages on.
+  await oldestRow.focus();
+  await page.keyboard.press("End");
+  await (await newer).finished();
+  await page.keyboard.press("End");
+  await expect(log.getByText("Filler reply 79", { exact: true })).toBeVisible();
+});
+
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -200,5 +263,64 @@ test.describe("phone", () => {
     await pane(page).getByRole("button", { name: "Back to #general" }).click();
     await expect(page).toHaveURL(new RegExp(`/r/${GENERAL}$`));
     await expect(page.getByRole("log", { name: "Messages" })).toBeVisible();
+  });
+});
+
+test.describe("on a touch phone", () => {
+  test.use(PHONE_TOUCH);
+
+  test("the work facts fold to one line, and give way to the replies while typing", async ({
+    page,
+  }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+    const work = pane(page).getByRole("region", { name: "Work" });
+
+    await expect(work.getByRole("button", { name: /^Status: / })).toBeVisible();
+
+    // One line: the status, the owner and the details toggle share a row.
+    const middle = async (name: string | RegExp) => {
+      const box = await work.getByRole("button", { name }).boundingBox();
+
+      return (box?.y ?? 0) + (box?.height ?? 0) / 2;
+    };
+
+    const status = await middle(/^Status: /);
+    const toggle = await middle("Result, steps and history");
+
+    expect(Math.abs(status - toggle), "the toggle beside the status").toBeLessThan(4);
+
+    const section = await work.boundingBox();
+
+    expect(section?.height ?? 999, "one line").toBeLessThanOrEqual(52);
+
+    const keyboard = 320;
+    const visible = PHONE_TOUCH.viewport.height - keyboard;
+
+    await pane(page).getByRole("textbox", { name: "Reply…" }).click();
+    await simulateKeyboard(page, keyboard);
+    await expect(work).toBeHidden();
+
+    const log = await pane(page).getByRole("log", { name: "Replies" }).boundingBox();
+
+    expect(log?.height ?? 0, "the replies keep half the visible screen").toBeGreaterThanOrEqual(
+      visible * 0.5,
+    );
+  });
+
+  test("editing the work result keeps the editor in view while typing", async ({ page }) => {
+    await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+    const work = pane(page).getByRole("region", { name: "Work" });
+
+    await work.getByRole("button", { name: "Result, steps and history" }).click();
+    await work.getByRole("button", { name: /^(Add|Edit) result$/ }).click();
+
+    const editor = work.getByRole("textbox", { name: "Result" });
+
+    await editor.click();
+    await simulateKeyboard(page, 320);
+    await expect(editor).toBeVisible();
+    await expect(editor).toBeFocused();
   });
 });

@@ -30,6 +30,7 @@ function facts(owner: User | null, ownerActive: boolean): WorkFacts {
     links: [],
     tags: [],
     messageCount: 0,
+    updatedAt: "2026-10-07T10:00:00.000000Z",
   };
 }
 
@@ -119,6 +120,7 @@ describe("agent steps", () => {
 
   it("links a post's classic pages", () => {
     expect(classicWorkUrl(9006, "links")).toBe("/threads/9006/work/links?classic=1");
+    expect(classicWorkUrl(9006, "handoff")).toBe("/threads/9006/work/handoff/new?classic=1");
   });
 });
 

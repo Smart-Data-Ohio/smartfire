@@ -9,7 +9,11 @@ import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
 import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { EventAttendance } from "../gen/EventAttendance.ts";
 import type { FizzyCardPreview } from "../gen/FizzyCardPreview.ts";
+import type { GithubDiscussion } from "../gen/GithubDiscussion.ts";
+import type { GithubPullRequestActions } from "../gen/GithubPullRequestActions.ts";
 import type { GithubPullRequestCard } from "../gen/GithubPullRequestCard.ts";
+import type { GithubReviewKind } from "../gen/GithubReviewKind.ts";
+import type { GithubWriteResult } from "../gen/GithubWriteResult.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { PollResults } from "../gen/PollResults.ts";
 import type { QuotePreviewResult } from "../gen/QuotePreviewResult.ts";
@@ -17,7 +21,10 @@ import { call, get } from "./call.ts";
 import {
   EventAttendance as EventAttendanceSchema,
   FizzyCardPreview as FizzyCardPreviewSchema,
+  GithubDiscussion as GithubDiscussionSchema,
+  GithubPullRequestActions as GithubPullRequestActionsSchema,
   GithubPullRequestCard as GithubPullRequestCardSchema,
+  GithubWriteResult as GithubWriteResultSchema,
   PollResults as PollResultsSchema,
   QuotePreviewResult as QuotePreviewResultSchema,
 } from "./schema/cards.ts";
@@ -109,6 +116,85 @@ export const githubCard = Effect.fn("api.githubCard")(function* (
   return yield* call(
     get(`/rooms/${roomId}/github/pull_requests/${pullRequestId}/card`, githubScopeQuery(scope)),
     wire<GithubPullRequestCard>(GithubPullRequestCardSchema),
+  );
+});
+
+/**
+ * `POST /rooms/:roomId/github/pull_requests/:id/discussion`: the classic Discuss action.
+ * Creates the thread and the pull-request mapping, or returns the thread already mapped.
+ */
+export const discussGithub = Effect.fn("api.discussGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  messageId: number,
+) {
+  return yield* call(
+    {
+      method: "POST",
+      path: `/rooms/${roomId}/github/pull_requests/${pullRequestId}/discussion`,
+      body: { messageId },
+    },
+    wire<GithubDiscussion>(GithubDiscussionSchema),
+  );
+});
+
+/** `GET /rooms/:roomId/github/pull_requests/:id/actions`: what this viewer can post. */
+export const githubActions = Effect.fn("api.githubActions")(function* (
+  roomId: number,
+  pullRequestId: number,
+) {
+  return yield* call(
+    get(`/rooms/${roomId}/github/pull_requests/${pullRequestId}/actions`),
+    wire<GithubPullRequestActions>(GithubPullRequestActionsSchema),
+  );
+});
+
+/** `POST /rooms/:roomId/github/pull_requests/:id/comments`: an issue comment as the viewer. */
+export const commentOnGithub = Effect.fn("api.commentOnGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  body: string,
+) {
+  return yield* call(
+    {
+      method: "POST",
+      path: `/rooms/${roomId}/github/pull_requests/${pullRequestId}/comments`,
+      body: { body },
+    },
+    wire<GithubWriteResult>(GithubWriteResultSchema),
+  );
+});
+
+/** `POST /rooms/:roomId/github/pull_requests/:id/reviews`: approve, request changes, or comment. */
+export const reviewGithub = Effect.fn("api.reviewGithub")(function* (
+  roomId: number,
+  pullRequestId: number,
+  event: GithubReviewKind,
+  body: string,
+) {
+  return yield* call(
+    {
+      method: "POST",
+      path: `/rooms/${roomId}/github/pull_requests/${pullRequestId}/reviews`,
+      body: { event, body },
+    },
+    wire<GithubWriteResult>(GithubWriteResultSchema),
+  );
+});
+
+/** `POST /rooms/:roomId/github/pull_requests/:id/review_requests`: comma-separated GitHub logins. */
+export const requestGithubReviewers = Effect.fn("api.requestGithubReviewers")(function* (
+  roomId: number,
+  pullRequestId: number,
+  reviewers: string,
+) {
+  return yield* call(
+    {
+      method: "POST",
+      path: `/rooms/${roomId}/github/pull_requests/${pullRequestId}/review_requests`,
+      body: { reviewers },
+    },
+    wire<GithubWriteResult>(GithubWriteResultSchema),
   );
 });
 
