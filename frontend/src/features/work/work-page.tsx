@@ -32,7 +32,8 @@ interface WorkPageProps {
 /**
  * `/app/work`: every work thread the viewer can see, by tab (open, completed, all, owned by
  * agents, boards only), most recently updated first, all at once. A snapshot, as on the classic
- * page: it loads whenever it's shown (or the tab changes), with no live updates.
+ * page: it loads whenever it's shown (or the tab changes), and again when this browser tab
+ * comes back into view, with no live updates.
  */
 export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
   const now = useNow();
@@ -45,6 +46,23 @@ export function WorkPage({ filter, onFilterChange }: WorkPageProps) {
   // Shown, or a new tab: load it (the rows already held stay up meanwhile).
   useEffect(() => {
     void actions.work.loadList(filter);
+  }, [filter]);
+
+  // A snapshot: coming back to this browser tab loads it again. A hidden tab doesn't.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        void actions.work.loadList(filter);
+      }
+    };
+
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, [filter]);
 
   // A snapshot that reloads when shown: rows appear without motion.

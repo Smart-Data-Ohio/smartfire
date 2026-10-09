@@ -94,6 +94,11 @@ export const locate = Effect.fn("threads.locate")(function* (threadId: number) {
   return (yield* api.thread(threadId)).thread.roomId;
 });
 
+/** The thread's detail (`GET /threads/:id`), for a resolver that needs more than its room. */
+export const read = Effect.fn("threads.read")(function* (threadId: number) {
+  return yield* api.thread(threadId);
+});
+
 /** Subscribes to the thread, then loads its header and newest replies (or those around a reply). */
 export const open = Effect.fn("threads.open")(function* (
   threadId: number,

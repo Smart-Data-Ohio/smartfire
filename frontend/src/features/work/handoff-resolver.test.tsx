@@ -11,6 +11,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { HandoffResolver } from "./handoff-resolver.tsx";
+import {
+  factsFixture,
+  threadDetailFixture,
+  workDetailFixture,
+  workPermissionsFixture,
+} from "./test-fixtures.ts";
 
 async function mount(path: string) {
   const root = createRootRoute({ component: Outlet });
@@ -25,14 +31,25 @@ async function mount(path: string) {
     component: HandoffResolver,
   });
 
-  const handoff = createRoute({
+  const thread = createRoute({
     getParentRoute: () => root,
-    path: "/r/$roomId/t/$threadId/handoff",
+    path: "/r/$roomId/t/$threadId",
+    component: () => (
+      <>
+        <p>Thread destination</p>
+        <Outlet />
+      </>
+    ),
+  });
+
+  const handoff = createRoute({
+    getParentRoute: () => thread,
+    path: "handoff",
     component: () => <p>Handoff destination</p>,
   });
 
   const router = createRouter({
-    routeTree: root.addChildren([resolver, handoff]),
+    routeTree: root.addChildren([resolver, thread.addChildren([handoff])]),
     basepath: "/app",
     history: createMemoryHistory({ initialEntries: [path] }),
   });
@@ -47,20 +64,54 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("HandoffResolver", () => {
   it("finds the thread's room and replaces itself with the thread's handoff dialog", async () => {
-    const locate = vi.spyOn(actions.threads, "locate").mockResolvedValue(4);
+    const read = vi
+      .spyOn(actions.threads, "read")
+      .mockResolvedValue(threadDetailFixture(7, factsFixture(), workDetailFixture()));
+
     const router = await mount("/app/t/7/handoff");
 
     await screen.findByText("Handoff destination");
-    expect(locate).toHaveBeenCalledWith(7);
+    expect(read).toHaveBeenCalledWith(7);
     expect(router.history.location.href).toBe("/app/r/4/t/7/handoff");
     expect(router.history.length).toBe(1);
   });
 
   it("shows the unavailable page for a thread the viewer can't see", async () => {
-    vi.spyOn(actions.threads, "locate").mockRejectedValue(new ActionError("NotFound", "Not found"));
+    vi.spyOn(actions.threads, "read").mockRejectedValue(new ActionError("NotFound", "Not found"));
     const router = await mount("/app/t/7/handoff");
 
     await screen.findByRole("region", { name: "Page not found" });
     expect(router.history.location.href).toBe("/app/t/7/handoff");
+  });
+
+  it("explains an untracked thread and does not open the dialog", async () => {
+    vi.spyOn(actions.threads, "read").mockResolvedValue(threadDetailFixture(7, null, null));
+    const router = await mount("/app/t/7/handoff");
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "This thread isn't tracked as work",
+    );
+    expect(screen.queryByText("Handoff destination")).toBeNull();
+    expect(router.history.location.href).toBe("/app/t/7/handoff");
+    expect(router.history.length).toBe(1);
+  });
+
+  it("explains a thread the viewer can't manage and does not open the dialog", async () => {
+    vi.spyOn(actions.threads, "read").mockResolvedValue(
+      threadDetailFixture(
+        7,
+        factsFixture(),
+        workDetailFixture(),
+        workPermissionsFixture({ canManageWork: false }),
+      ),
+    );
+    const router = await mount("/app/t/7/handoff");
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "You cannot manage work in this thread",
+    );
+    expect(screen.queryByText("Handoff destination")).toBeNull();
+    expect(router.history.location.href).toBe("/app/t/7/handoff");
+    expect(router.history.length).toBe(1);
   });
 });

@@ -1,4 +1,4 @@
-import { useMatchRoute, useNavigate } from "@tanstack/react-router";
+import { useLocation, useMatchRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useId, useState } from "react";
 import type { WorkDetail } from "../../gen/WorkDetail.ts";
 import { parseBoardSearch } from "../../lib/board-search.ts";
@@ -16,35 +16,73 @@ import {
   type HandoffDraft,
   type HandoffErrors,
   SUMMARY_LIMIT,
+  serverHandoffErrors,
 } from "./handoff-form.ts";
 import { WorkTextArea } from "./work-textarea.tsx";
 
+declare module "@tanstack/react-router" {
+  interface HistoryState {
+    /** The work bar or a board post pushed the handoff dialog over the thread. */
+    readonly smartfireHandoffOver?: boolean;
+  }
+}
+
+/** The history state an in-app open carries, so closing can step back to the entry under it. */
+export function handoffOverState() {
+  return { smartfireHandoffOver: true };
+}
+
 /**
  * The handoff dialog follows `/app/r/$roomId/t/$threadId/handoff` (a board's query stays put).
- * Opening pushes that URL; closing replaces it with the thread, so a direct visit and Cancel
- * both land on the thread.
+ * An in-app open (the work bar, a board post) pushes that URL with {@link handoffOverState}, and
+ * closing steps back, so the thread entry underneath is the one that was already there. A direct
+ * arrival (the classic URL's redirect, a deep link) has no such flag, and closing replaces this
+ * entry with the thread. Cancel and a successful handoff both close this way.
  */
 export function useHandoffRoute(threadId: number) {
   const navigate = useNavigate();
+  const router = useRouter();
   const matchRoute = useMatchRoute();
+  const over = useLocation({ select: (location) => location.state.smartfireHandoffOver === true });
   const roomId = useStore((state) => state.threads[threadId]?.roomId ?? null);
   const open = matchRoute({ to: "/r/$roomId/t/$threadId/handoff", includeSearch: false }) !== false;
 
-  const go = (
-    to: "/r/$roomId/t/$threadId" | "/r/$roomId/t/$threadId/handoff",
-    replace: boolean,
-  ) => {
+  const replaceWithThread = () => {
     if (roomId === null) {
       return;
     }
 
-    void navigate({ to, params: { roomId, threadId }, search: parseBoardSearch, replace });
+    void navigate({
+      to: "/r/$roomId/t/$threadId",
+      params: { roomId, threadId },
+      search: parseBoardSearch,
+      replace: true,
+    });
   };
 
   return {
     open,
-    openHandoff: () => go("/r/$roomId/t/$threadId/handoff", false),
-    closeHandoff: () => go("/r/$roomId/t/$threadId", true),
+    openHandoff: () => {
+      if (roomId === null) {
+        return;
+      }
+
+      void navigate({
+        to: "/r/$roomId/t/$threadId/handoff",
+        params: { roomId, threadId },
+        search: parseBoardSearch,
+        state: handoffOverState(),
+      });
+    },
+    closeHandoff: () => {
+      if (over) {
+        router.history.back();
+
+        return;
+      }
+
+      replaceWithThread();
+    },
   };
 }
 
@@ -96,8 +134,9 @@ function ReceiverOption({
 
 /**
  * "Hand off “{name}”": picks the receiving agent from `handoffReceivers`, with a summary, links
- * and open questions. Checks what the server checks before sending, and shows the server's
- * refusal in the form when it has the last word.
+ * and open questions. Checks what the server checks before sending. A refusal that names a field
+ * is shown on that field; one that doesn't (an untracked thread, a lost connection) is the
+ * form's alert.
  */
 export function HandoffDialog({
   threadId,
@@ -113,7 +152,9 @@ export function HandoffDialog({
   const [errors, setErrors] = useState<HandoffErrors>({});
   const [refusal, setRefusal] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [wasOpen, setWasOpen] = useState(open);
+  // False until an opening is applied, so a dialog that mounts already open (a direct arrival)
+  // still starts a fresh draft and chooses the only agent.
+  const [wasOpen, setWasOpen] = useState(false);
 
   // Each opening starts afresh, with the only agent chosen when there's just one.
   if (open !== wasOpen) {
@@ -162,8 +203,11 @@ export function HandoffDialog({
         toast({ title: `Handed off to ${name}`, tone: "success" });
       },
       (error: Error) => {
+        const found = serverHandoffErrors(error);
+
         setSending(false);
-        setRefusal(error.message);
+        setErrors(found.errors);
+        setRefusal(found.alert);
       },
     );
   };

@@ -311,7 +311,7 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
             threadId={threadId}
             threadName={name}
             work={work}
-            open={handingOff}
+            open={handingOff && permissions.canManageWork}
             onOpenChange={(next) => {
               if (!next) closeHandoff();
             }}
