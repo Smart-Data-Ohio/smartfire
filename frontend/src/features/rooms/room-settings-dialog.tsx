@@ -19,6 +19,7 @@ import {
   isDirty,
   type ManagedKind,
   type RoomDraft,
+  reconcileMembers,
   roomLabel,
   updateBody,
 } from "./room-forms.ts";
@@ -45,6 +46,18 @@ const NOUN = {
   stage: "stage",
   board: "board",
 } as const satisfies Record<ManagedKind, string>;
+
+function withMembership(form: RoomForm, next: RoomForm): RoomForm {
+  return {
+    ...form,
+    userIds: next.userIds,
+    memberIds: next.memberIds,
+    users: next.users,
+    candidateIds: next.candidateIds,
+    displayMemberIds: next.displayMemberIds,
+    stageRoles: next.stageRoles,
+  };
+}
 
 function capitalised(text: string): string {
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
@@ -112,6 +125,8 @@ export default function RoomSettingsDialog({
   // Which opening of the dialog this is, and whether it's still open: a save or delete that
   // completes after the viewer closed it (or after it reopened) mustn't close or navigate again.
   const opening = useRef({ id: 0, open: false });
+  const membershipForm = useRef<RoomForm | null>(null);
+  const membershipSeq = useRef(0);
 
   useEffect(() => {
     opening.current = open
@@ -174,6 +189,8 @@ export default function RoomSettingsDialog({
   }, [roomId, open]);
 
   const form = load.status === "ready" ? load.form : null;
+
+  membershipForm.current = form;
   const readOnly = form === null || !form.canSubmit;
   const dirty = form !== null && isDirty(form, kind, draft);
   const noun = NOUN[kind];
@@ -252,6 +269,37 @@ export default function RoomSettingsDialog({
   const agentIds = new Set(
     form?.users.filter((user) => user.agent !== null).map((user) => user.id),
   );
+
+  /**
+   * Subscribe and unsubscribe add or remove the GitHub bot on the server. The dialog's member
+   * list is what Save sends, so it has to include that change or the next save drops the bot.
+   * The delta comes from a refetch, and unsaved member edits are left in place.
+   */
+  const reconcileMembership = () => {
+    const seq = membershipSeq.current + 1;
+
+    membershipSeq.current = seq;
+
+    const showing = stillShowing();
+    const before = membershipForm.current?.userIds ?? [];
+
+    actions.rooms.editForm(roomId).then(
+      (next) => {
+        if (!showing() || membershipSeq.current !== seq) return;
+
+        setLoad((current) =>
+          current.status === "ready"
+            ? { status: "ready", form: withMembership(current.form, next) }
+            : current,
+        );
+        setDraft((draft) => ({
+          ...draft,
+          userIds: reconcileMembers(draft.userIds, before, next.userIds),
+        }));
+      },
+      () => undefined,
+    );
+  };
 
   const edit = (patch: Partial<RoomDraft>) => {
     setDraft((current) => ({ ...current, ...patch }));
@@ -491,7 +539,9 @@ export default function RoomSettingsDialog({
               readOnly={readOnly}
             />
           ) : null}
-          {shownTab === "github" ? <GithubSubscriptions roomId={roomId} /> : null}
+          {shownTab === "github" ? (
+            <GithubSubscriptions roomId={roomId} onMembership={reconcileMembership} />
+          ) : null}
           {shownTab === "email" ? <InboundEmailSection roomId={roomId} /> : null}
         </div>
         {problem === null ? null : (

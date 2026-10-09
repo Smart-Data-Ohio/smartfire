@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import type { GithubEventChoice } from "../../gen/GithubEventChoice.ts";
 import type { GithubSubscription } from "../../gen/GithubSubscription.ts";
 import type { GithubSubscriptionList } from "../../gen/GithubSubscriptionList.ts";
@@ -10,6 +10,14 @@ import { Dialog } from "../../ui/dialog.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import {
+  beginGithubWrite,
+  cancelGithubWrite,
+  finishGithubWrite,
+  noteGithubLoad,
+  readGithubSession,
+  useGithubSession,
+} from "./integration-session.ts";
 
 interface Draft {
   readonly id: number;
@@ -60,6 +68,69 @@ function sameEvents(left: readonly string[], right: readonly string[]): boolean 
   return true;
 }
 
+function withSubscription(
+  list: GithubSubscriptionList,
+  subscription: GithubSubscription,
+): GithubSubscriptionList {
+  const subscriptions: GithubSubscription[] = [];
+  let found = false;
+
+  for (const item of list.subscriptions) {
+    if (item.id === subscription.id) {
+      subscriptions.push(subscription);
+      found = true;
+    } else {
+      subscriptions.push(item);
+    }
+  }
+
+  if (!found) subscriptions.push(subscription);
+
+  return { ...list, subscriptions };
+}
+
+function withoutSubscription(list: GithubSubscriptionList, id: number): GithubSubscriptionList {
+  const subscriptions: GithubSubscription[] = [];
+
+  for (const item of list.subscriptions) {
+    if (item.id !== id) subscriptions.push(item);
+  }
+
+  return { ...list, subscriptions };
+}
+
+/**
+ * Server rows win when they are new or their saved events changed. A checkbox the viewer has
+ * toggled and not saved stays, so subscribing another repository does not wipe that edit.
+ */
+function mergeDrafts(
+  current: readonly Draft[],
+  subscriptions: readonly GithubSubscription[],
+): Draft[] {
+  const previous = new Map<number, Draft>();
+
+  for (const draft of current) previous.set(draft.id, draft);
+
+  const drafts: Draft[] = [];
+
+  for (const subscription of subscriptions) {
+    const existing = previous.get(subscription.id);
+
+    if (existing === undefined || !sameEvents(existing.saved, subscription.events)) {
+      drafts.push({
+        id: subscription.id,
+        fullName: subscription.fullName,
+        saved: subscription.events,
+        events: subscription.events,
+      });
+    } else {
+      drafts.push({ ...existing, fullName: subscription.fullName });
+    }
+  }
+
+  return drafts;
+}
+
 function draftsFrom(subscriptions: readonly GithubSubscription[]): Draft[] {
   const drafts: Draft[] = [];
 
@@ -90,26 +161,71 @@ function Loading() {
  * The creator and administrators see it on every room except a direct message. Anyone else who
  * opens settings gets the refusal the API returns.
  */
-export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
-  const [load, setLoad] = useState<Load>({ status: "loading" });
+export function GithubSubscriptions({
+  roomId,
+  onMembership,
+}: {
+  readonly roomId: number;
+  /** The room's membership changed with this subscribe or unsubscribe. The dialog refetches it. */
+  readonly onMembership?: () => void;
+}) {
+  const session = useGithubSession(roomId);
+  const applied = useRef(session.revision);
+  const mounted = useRef(true);
+
+  const [load, setLoad] = useState<Load>(() =>
+    session.list === null ? { status: "loading" } : { status: "ready", list: session.list },
+  );
+
   const [attempt, setAttempt] = useState(0);
-  const [drafts, setDrafts] = useState<readonly Draft[]>([]);
+
+  const [drafts, setDrafts] = useState<readonly Draft[]>(() =>
+    draftsFrom(session.list?.subscriptions ?? []),
+  );
+
   const [fullName, setFullName] = useState("");
-  const [picked, setPicked] = useState<readonly string[]>([]);
+
+  const [picked, setPicked] = useState<readonly string[]>(() =>
+    session.list === null ? [] : defaultKeys(session.list.events),
+  );
+
   const [skip, setSkip] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [showConnect, setShowConnect] = useState(false);
   const [busy, setBusy] = useState<"subscribe" | "save" | "remove" | null>(null);
   const [removing, setRemoving] = useState<Draft | null>(null);
 
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // A write that finished on a previous panel (or while this one was reading) lands here.
+  useEffect(() => {
+    const list = session.list;
+
+    if (list === null || session.revision === applied.current) return;
+
+    applied.current = session.revision;
+    setLoad({ status: "ready", list });
+    setDrafts((current) => mergeDrafts(current, list.subscriptions));
+  }, [session.list, session.revision]);
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: attempt is the Try again trigger
   useEffect(() => {
     let live = true;
+    const seenRevision = readGithubSession(roomId).revision;
 
-    setLoad({ status: "loading" });
+    if (readGithubSession(roomId).list === null) setLoad({ status: "loading" });
+
     actions.rooms.githubSubscriptions(roomId).then(
       (list) => {
-        if (!live) return;
+        // The store keeps the row even when this panel has gone, so the one that replaced it
+        // does not paint a read that started before the write.
+        if (!noteGithubLoad(roomId, list, seenRevision) || !live) return;
 
         setLoad({ status: "ready", list });
         setDrafts(draftsFrom(list.subscriptions));
@@ -150,80 +266,93 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
   };
 
   const subscribe = () => {
-    if (list === null || busy !== null) return;
+    if (list === null || busy !== null || session.write !== null) return;
 
     setBusy("subscribe");
     setProblem(null);
     setShowConnect(false);
+    beginGithubWrite(roomId, "subscribe");
     actions.rooms
       .subscribeRepository(roomId, {
         fullName,
         events: [...picked],
         skipAccessCheck: skip,
       })
-      .then((subscription) => {
-        setBusy(null);
-        setDrafts((current) => [...current, ...draftsFrom([subscription])]);
-        setFullName("");
-        setPicked(defaultKeys(list.events));
-        setSkip(false);
-        toast({ title: `Subscribed to ${subscription.fullName}.`, tone: "success" });
-      }, fail);
+      .then(
+        (subscription) => {
+          const base = readGithubSession(roomId).list ?? list;
+
+          finishGithubWrite(roomId, withSubscription(base, subscription));
+          onMembership?.();
+          toast({ title: `Subscribed to ${subscription.fullName}.`, tone: "success" });
+
+          if (!mounted.current) return;
+
+          setBusy(null);
+          setFullName("");
+          setPicked(defaultKeys(base.events));
+          setSkip(false);
+        },
+        (failure: ActionError) => {
+          cancelGithubWrite(roomId);
+
+          if (!mounted.current) return;
+
+          fail(failure);
+        },
+      );
   };
 
   const save = (draft: Draft) => {
-    if (busy !== null) return;
+    if (list === null || busy !== null || session.write !== null) return;
 
     setBusy("save");
     setProblem(null);
-    actions.rooms
-      .updateGithubSubscription(roomId, draft.id, { events: [...draft.events] })
-      .then((subscription) => {
-        setBusy(null);
-        setDrafts((current) => {
-          const next: Draft[] = [];
+    beginGithubWrite(roomId, "save");
+    actions.rooms.updateGithubSubscription(roomId, draft.id, { events: [...draft.events] }).then(
+      (subscription) => {
+        const base = readGithubSession(roomId).list ?? list;
 
-          for (const item of current) {
-            next.push(
-              item.id === subscription.id
-                ? {
-                    id: subscription.id,
-                    fullName: subscription.fullName,
-                    saved: subscription.events,
-                    events: subscription.events,
-                  }
-                : item,
-            );
-          }
-
-          return next;
-        });
+        finishGithubWrite(roomId, withSubscription(base, subscription));
         toast({ title: `Subscription to ${subscription.fullName} updated.`, tone: "success" });
-      }, fail);
+
+        if (mounted.current) setBusy(null);
+      },
+      (failure: ActionError) => {
+        cancelGithubWrite(roomId);
+
+        if (!mounted.current) return;
+
+        fail(failure);
+      },
+    );
   };
 
   const remove = () => {
-    if (removing === null || busy !== null) return;
+    if (list === null || removing === null || busy !== null || session.write !== null) return;
 
     const target = removing;
 
     setBusy("remove");
+    beginGithubWrite(roomId, "remove");
     actions.rooms.unsubscribeRepository(roomId, target.id).then(
       () => {
+        const base = readGithubSession(roomId).list ?? list;
+
+        finishGithubWrite(roomId, withoutSubscription(base, target.id));
+        onMembership?.();
+        toast({ title: `Unsubscribed from ${target.fullName}.`, tone: "success" });
+
+        if (!mounted.current) return;
+
         setBusy(null);
         setRemoving(null);
-        setDrafts((current) => {
-          const next: Draft[] = [];
-
-          for (const item of current) {
-            if (item.id !== target.id) next.push(item);
-          }
-
-          return next;
-        });
-        toast({ title: `Unsubscribed from ${target.fullName}.`, tone: "success" });
       },
       (failure: ActionError) => {
+        cancelGithubWrite(roomId);
+
+        if (!mounted.current) return;
+
         setBusy(null);
         setRemoving(null);
         fail(failure);
@@ -283,7 +412,7 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
                   size="sm"
                   variant="danger"
                   aria-label={`Remove ${draft.fullName}`}
-                  disabled={busy !== null}
+                  disabled={busy !== null || session.write !== null}
                   onClick={() => setRemoving(draft)}
                 >
                   Remove
@@ -294,7 +423,7 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
                   <Checkbox
                     key={event.key}
                     checked={draft.events.includes(event.key)}
-                    disabled={busy !== null}
+                    disabled={busy !== null || session.write !== null}
                     label={event.label}
                     onCheckedChange={(on) => {
                       setDrafts((current) => {
@@ -319,7 +448,9 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
                   size="sm"
                   variant="primary"
                   aria-label={`Save ${draft.fullName}`}
-                  disabled={busy !== null || sameEvents(draft.events, draft.saved)}
+                  disabled={
+                    busy !== null || session.write !== null || sameEvents(draft.events, draft.saved)
+                  }
                   onClick={() => save(draft)}
                 >
                   Save
@@ -337,7 +468,7 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
           autoComplete="off"
           spellCheck={false}
           value={fullName}
-          disabled={busy !== null}
+          disabled={busy !== null || session.write !== null}
           onKeyDown={onRepositoryKeyDown}
           onChange={(event) => {
             setFullName(event.target.value);
@@ -350,7 +481,7 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
             <Checkbox
               key={event.key}
               checked={picked.includes(event.key)}
-              disabled={busy !== null}
+              disabled={busy !== null || session.write !== null}
               label={event.label}
               onCheckedChange={(on) => setPicked((current) => withEvent(current, event.key, on))}
             />
@@ -359,7 +490,7 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
         {list?.administrator === true ? (
           <Checkbox
             checked={skip}
-            disabled={busy !== null}
+            disabled={busy !== null || session.write !== null}
             label="Subscribe without verifying my GitHub access (private pull-request titles stay hidden)"
             onCheckedChange={setSkip}
           />
@@ -367,8 +498,8 @@ export function GithubSubscriptions({ roomId }: { readonly roomId: number }) {
         <div className="room-integration-actions">
           <Button
             variant="primary"
-            disabled={busy !== null}
-            loading={busy === "subscribe"}
+            disabled={busy !== null || session.write !== null}
+            loading={busy === "subscribe" || session.write === "subscribe"}
             onClick={subscribe}
           >
             Subscribe

@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { GITHUB_BOT_ID } from "../../mock/s8/room-integrations.ts";
 import {
   DESKTOP,
   expect,
@@ -571,6 +572,35 @@ test.describe("room settings", () => {
 
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`/app/r/${ROOM_IDS.design}$`));
+  });
+
+  test("renaming a closed room after subscribing keeps the GitHub bot", async ({ page }) => {
+    await openApp(page, `r/${ROOM_IDS.launchPlanning}/settings`);
+
+    const dialog = page.getByRole("dialog", { name: "Channel settings" });
+
+    await dialog.getByRole("tab", { name: "GitHub" }).click();
+    await dialog.getByRole("textbox", { name: "Repository" }).fill("rails/rails");
+    await dialog.getByRole("button", { name: "Subscribe" }).click();
+    await expect(dialog.getByText("rails/rails")).toBeVisible();
+    await expect(dialog.getByRole("tab", { name: "Members · 5" })).toBeVisible();
+
+    const saved = page.waitForRequest(
+      (request) =>
+        request.method() === "PATCH" &&
+        new URL(request.url()).pathname === `/api/v1/rooms/${ROOM_IDS.launchPlanning}`,
+    );
+
+    await dialog.getByRole("tab", { name: "General" }).click();
+    await dialog.getByLabel("Name", { exact: true }).fill("launch-renamed");
+    await dialog.getByRole("button", { name: "Save changes" }).click();
+
+    const body = (await saved).postDataJSON();
+
+    expect(body.name).toBe("launch-renamed");
+    expect(body.userIds).toHaveLength(5);
+    expect(body.userIds).toContain(GITHUB_BOT_ID);
+    expect(body.userIds).toEqual(expect.arrayContaining([1, 2, 3, 6, GITHUB_BOT_ID]));
   });
 
   test("subscribes and unsubscribes a repository, and shows the room's email address", async ({

@@ -7,10 +7,11 @@ import type { GithubEventChoice } from "../../src/gen/GithubEventChoice.ts";
 import type { GithubSubscription } from "../../src/gen/GithubSubscription.ts";
 import type { GithubSubscriptionList } from "../../src/gen/GithubSubscriptionList.ts";
 import type { InboundEmail } from "../../src/gen/InboundEmail.ts";
+import type { User } from "../../src/gen/User.ts";
 import { forbidden, notFound, ok, refusal, validation } from "../http.ts";
 import { field, isBoolean, isRecord, isString, type Json } from "../json.ts";
 import { firstId, type Route, route, type S2Context } from "../s2/context.ts";
-import { ROOM_IDS, VIEWER_ID, type World } from "../seed.ts";
+import { ROOM_IDS, rowTimestamp, timestamp, VIEWER_ID, type World } from "../seed.ts";
 
 const EVENT_KEYS = [
   "opened",
@@ -24,6 +25,9 @@ const EVENT_KEYS = [
 const DEFAULT_EVENTS = ["opened", "merged", "review_requested", "checks_failed"];
 
 const DOMAIN = "mail.campfire.test";
+
+/** The GitHub bot the classic subscribe inserts into the room, and the last unsubscribe removes. */
+export const GITHUB_BOT_ID = 42;
 
 /** 32 hex characters, stable so the e2e can read the seeded address. */
 const LAUNCH_TOKEN = "a1b2c3d4e5f67890a1b2c3d4e5f67890";
@@ -156,6 +160,47 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
 
   const state = () => integrationsFor(ctx.world());
 
+  const githubBot = () => {
+    const world = ctx.world();
+    const existing = world.users.get(GITHUB_BOT_ID);
+
+    if (existing !== undefined) return existing;
+
+    const now = ctx.now();
+
+    const bot: User = {
+      id: GITHUB_BOT_ID,
+      name: "GitHub",
+      role: "bot",
+      status: "active",
+      bio: null,
+      avatarUrl: `/users/${GITHUB_BOT_ID}/avatar`,
+      hasAvatar: false,
+      customStatus: null,
+      avatarIcon: null,
+      agent: null,
+      createdAt: timestamp(now),
+      updatedAt: rowTimestamp(now),
+    };
+
+    world.users.set(GITHUB_BOT_ID, bot);
+
+    return bot;
+  };
+
+  const addBot = (roomId: number) => {
+    const record = ctx.roomOr404(roomId);
+    const botId = githubBot().id;
+
+    if (!record.memberIds.includes(botId)) record.memberIds = [...record.memberIds, botId];
+  };
+
+  const dropBot = (roomId: number) => {
+    const record = ctx.roomOr404(roomId);
+
+    record.memberIds = record.memberIds.filter((id) => id !== GITHUB_BOT_ID);
+  };
+
   const githubRoom = (roomId: number) => {
     const record = ctx.roomOr404(roomId);
 
@@ -245,6 +290,7 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
 
     current.nextSubscriptionId += 1;
     current.subscriptions.set(roomId, [...rows, subscription]);
+    addBot(roomId);
 
     return ok({ id: subscription.id, fullName, events: [...events] }, 201);
   };
@@ -300,6 +346,8 @@ export function createRoomIntegrations(ctx: S2Context): RoomIntegrations {
     }
 
     current.subscriptions.set(roomId, next);
+
+    if (next.length === 0) dropBot(roomId);
 
     return ok({ id: removed.id, fullName: removed.fullName, events: [...removed.events] });
   };

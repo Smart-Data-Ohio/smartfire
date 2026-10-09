@@ -7,6 +7,7 @@ import { ActionError } from "../../sync/run.ts";
 import { actions } from "../../sync/runtime.ts";
 import { GithubSubscriptions } from "./github-subscriptions.tsx";
 import { InboundEmailSection } from "./inbound-email.tsx";
+import { resetIntegrationSessions } from "./integration-session.ts";
 
 const EVENTS: GithubSubscriptionList["events"] = [
   { key: "opened", label: "Opened", selectedByDefault: true },
@@ -28,6 +29,7 @@ function list(change?: Partial<GithubSubscriptionList>): GithubSubscriptionList 
 }
 
 afterEach(() => {
+  resetIntegrationSessions();
   vi.restoreAllMocks();
 });
 

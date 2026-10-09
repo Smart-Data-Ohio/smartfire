@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { GithubSubscription } from "../../src/gen/GithubSubscription.ts";
 import type { GithubSubscriptionList } from "../../src/gen/GithubSubscriptionList.ts";
 import type { InboundEmail } from "../../src/gen/InboundEmail.ts";
+import type { RoomForm } from "../../src/gen/RoomForm.ts";
 import { field } from "../json.ts";
 import { errorOf, expectStatus, get, harness, send } from "../s2/testing.ts";
 import { SEED_IDS } from "../server.ts";
+import { GITHUB_BOT_ID } from "./room-integrations.ts";
 
 const { rooms, boards } = SEED_IDS;
 
@@ -35,6 +37,10 @@ describe("room integration mock", () => {
 
     expect(created.fullName).toBe("rails/rails");
     expect(created.events).toEqual(["opened", "merged", "review_requested", "checks_failed"]);
+
+    const joined = await get<RoomForm>(server, `/api/v1/rooms/${roomId}/edit`);
+
+    expect(joined.userIds).toContain(GITHUB_BOT_ID);
 
     const duplicate = await send(server, "POST", path, {
       fullName: "rails/rails",
@@ -82,6 +88,9 @@ describe("room integration mock", () => {
 
     await expectStatus(server, "DELETE", `${path}/${created.id}`, null, 200);
     expect((await get<GithubSubscriptionList>(server, path)).subscriptions).toEqual([]);
+    expect((await get<RoomForm>(server, `/api/v1/rooms/${roomId}/edit`)).userIds).not.toContain(
+      GITHUB_BOT_ID,
+    );
 
     expect(
       (await send(server, "GET", `/api/v1/rooms/${rooms.dmMaya}/github_subscriptions`)).status,
