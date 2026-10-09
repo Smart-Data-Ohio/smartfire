@@ -7,7 +7,7 @@ import { TextField } from "../../ui/text-field.tsx";
 import { PaneError, PaneListSkeleton } from "../panes/pane-states.tsx";
 import { SettingsPage } from "../settings/settings-parts.tsx";
 import { auditTime, filterValue, NO_FILTERS } from "./admin-format.ts";
-import { AdministratorsOnly, useAdmin } from "./admin-parts.tsx";
+import { AdministratorsOnly, CardCell, CardRow, CardTable, useAdmin } from "./admin-parts.tsx";
 
 type Load =
   | { readonly status: "loading" }
@@ -209,37 +209,29 @@ export function AuditLogSection() {
             <p className="text-muted">No audit entries match these filters.</p>
           ) : (
             <section className="admin-audit-wrap" aria-label="Audit log entries">
-              <table className="admin-audit-table">
-                <caption className="visually-hidden">Audit log entries, newest first</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Time</th>
-                    <th scope="col">Actor</th>
-                    <th scope="col">Action</th>
-                    <th scope="col">Target</th>
-                    <th scope="col">Changes</th>
-                    <th scope="col">IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {load.page.entries.map((entry) => (
-                    <tr key={entry.id}>
-                      <td>
-                        <time dateTime={entry.createdAt}>
-                          {auditTime(entry.createdAt, load.page.timeZone)}
-                        </time>
-                      </td>
-                      <td>{entry.actor ?? "—"}</td>
-                      <td>
-                        <code>{entry.action}</code>
-                      </td>
-                      <td>{entry.target ?? "—"}</td>
-                      <td className="admin-audit-changes">{entry.changes}</td>
-                      <td>{entry.ipAddress ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <CardTable
+                caption="Audit log entries, newest first"
+                columns={["Time", "Actor", "Action", "Target", "Changes", "IP"]}
+              >
+                {load.page.entries.map((entry) => (
+                  <CardRow key={entry.id}>
+                    <CardCell column="Time">
+                      <time dateTime={entry.createdAt}>
+                        {auditTime(entry.createdAt, load.page.timeZone)}
+                      </time>
+                    </CardCell>
+                    <CardCell column="Actor">{entry.actor ?? "—"}</CardCell>
+                    <CardCell column="Action" title>
+                      <code>{entry.action}</code>
+                    </CardCell>
+                    <CardCell column="Target">{entry.target ?? "—"}</CardCell>
+                    <CardCell column="Changes" className="admin-audit-changes">
+                      {entry.changes}
+                    </CardCell>
+                    <CardCell column="IP">{entry.ipAddress ?? "—"}</CardCell>
+                  </CardRow>
+                ))}
+              </CardTable>
             </section>
           )}
           <div className="settings-actions admin-audit-pages">

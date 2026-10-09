@@ -62,17 +62,16 @@ test.describe("on a 360 px touch phone", () => {
     expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
   });
 
-  // The settings and workspace section strips scroll sideways on purpose until they become lists.
-  for (const [screen, path, allowScroll] of [
-    ["home", "", undefined],
-    ["room", GENERAL, undefined],
-    ["settings", "settings", ".settings-nav"],
-    ["workspace admin", "admin/people", ".settings-nav"],
+  for (const [screen, path] of [
+    ["home", ""],
+    ["room", GENERAL],
+    ["settings", "settings"],
+    ["workspace admin", "admin/people"],
   ] as const) {
     test(`nothing on ${screen} scrolls sideways`, async ({ page }) => {
       await openApp(page, path);
       await expect(page.locator(".app-shell")).toBeVisible();
-      await expectNoHorizontalOverflow(page, { allowScroll });
+      await expectNoHorizontalOverflow(page);
     });
   }
 
@@ -81,7 +80,7 @@ test.describe("on a 360 px touch phone", () => {
     await openApp(page, "");
     await saveAccountAppearance(page, { textSize: "smaller" });
 
-    for (const path of [GENERAL, `${GENERAL}/events/new`, "settings", "search", "people"]) {
+    for (const path of [GENERAL, `${GENERAL}/events/new`, "settings/profile", "search", "people"]) {
       await openApp(page, path);
       await expect(
         page.locator("input, textarea").locator("visible=true").first(),
@@ -92,7 +91,7 @@ test.describe("on a 360 px touch phone", () => {
   });
 
   test("controls take the touch size", async ({ page }) => {
-    await openApp(page, "settings");
+    await openApp(page, "settings/profile");
 
     expect(await rootToken(page, "--control-md")).toBe("44px");
     expect(await rootToken(page, "--control-lg")).toBe("44px");

@@ -189,7 +189,8 @@ const ANIMATED_BANNER = {
 /** Opens the workspace page, inside the app on a desktop. */
 async function openProfile(page: Page, theme: "light" | "dark" = "light"): Promise<void> {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
-  await page.goto("/app/admin");
+  // The workspace section's own page: on phones `/app/admin` is the list of sections.
+  await page.goto("/app/admin/workspace");
   await page.getByRole("heading", { level: 2, name: "Workspace profile" }).waitFor();
 }
 

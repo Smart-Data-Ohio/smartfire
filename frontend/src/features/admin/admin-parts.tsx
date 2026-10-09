@@ -1,4 +1,4 @@
-import { createContext, use, useRef } from "react";
+import { createContext, type ReactNode, use, useRef } from "react";
 import type { Workspace } from "../../gen/Workspace.ts";
 import { browserDeps, UploadTask } from "../../lib/upload/direct-upload.ts";
 import { ActionError } from "../../sync/run.ts";
@@ -201,4 +201,75 @@ export function useRowFocus() {
   useKeepRowFocus(container, ADMIN_ROW_PARTS);
 
   return container;
+}
+
+/**
+ * A table phones show as a stack of cards (admin.css): a row is a card, its `title` cell first,
+ * every other cell a "label value" line. A table whose display is changed loses its semantics in
+ * Chromium and Safari, so each part restates its role, and the column headers stay for screen
+ * readers (only visually hidden there): every value keeps its header.
+ */
+export function CardTable({
+  columns,
+  caption,
+  children,
+}: {
+  readonly columns: readonly string[];
+  readonly caption?: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    // biome-ignore lint/a11y/noRedundantRoles: phones restyle the table as cards, which drops the implicit role
+    <table className="admin-audit-table" data-cards role="table">
+      {caption === undefined ? null : <caption className="visually-hidden">{caption}</caption>}
+      {/* biome-ignore lint/a11y/noRedundantRoles: as the table's */}
+      <thead role="rowgroup">
+        {/* biome-ignore lint/a11y/noRedundantRoles: as the table's */}
+        <tr role="row">
+          {columns.map((column) => (
+            // biome-ignore lint/a11y/noRedundantRoles: as the table's
+            <th key={column} scope="col" role="columnheader">
+              {column}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      {/* biome-ignore lint/a11y/noRedundantRoles: as the table's */}
+      <tbody role="rowgroup">{children}</tbody>
+    </table>
+  );
+}
+
+/** A row of a CardTable: a card on phones. */
+export function CardRow({ children }: { readonly children: ReactNode }) {
+  // biome-ignore lint/a11y/noRedundantRoles: as CardTable's
+  return <tr role="row">{children}</tr>;
+}
+
+/**
+ * A cell of a CardTable, under `column`: on phones a line labelled with it, or with `title`, the
+ * card's heading.
+ */
+export function CardCell({
+  column,
+  title = false,
+  className,
+  children,
+}: {
+  readonly column: string;
+  readonly title?: boolean;
+  readonly className?: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <td
+      // biome-ignore lint/a11y/noRedundantRoles: as CardTable's
+      role="cell"
+      className={className}
+      data-label={title ? undefined : column}
+      data-title={title || undefined}
+    >
+      {children}
+    </td>
+  );
 }
