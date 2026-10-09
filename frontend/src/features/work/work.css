@@ -220,6 +220,19 @@
     min-width: 0;
   }
 
+  /* Chips and "Link" sit together. On a phone the chips scroll and the button stays put. */
+  .work-bar-links-slot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .work-bar-editor {
+    min-width: 0;
+  }
+
   .work-control {
     max-width: 100%;
     padding-inline: var(--space-1);
@@ -234,9 +247,10 @@
   }
 
   /* Phones: the section folds to one line: the status, the owner, the links as a strip that
-     scrolls sideways, and the details toggle (its name kept for assistive tech). Opened, the
-     details drop below the line. While the keyboard is up for a reply the section gives way to
-     the replies (editing the result, it stays: the editor is in it). */
+     scrolls sideways, "Link" at the end of that strip, and the details toggle (its name kept
+     for assistive tech). Opened, the details drop below the line; the links editor, when the
+     URL is /links, takes the row between them. While the keyboard is up for a reply the
+     section gives way to the replies (editing the result, it stays: the editor is in it). */
   @media (width < 720px) {
     .pane-toolbar:has(> .work-bar) {
       padding: var(--space-1) var(--space-3) 0;
@@ -261,17 +275,30 @@
       display: contents;
     }
 
-    .work-bar .work-links {
+    .work-bar-links-slot {
       grid-row: 1;
       grid-column: 3;
       flex-wrap: nowrap;
+    }
+
+    .work-bar-links-slot > .work-links {
+      flex-wrap: nowrap;
+      min-width: 0;
       overflow-x: auto;
       scrollbar-width: none;
       mask-image: linear-gradient(to right, #000 calc(100% - var(--space-4)), transparent);
     }
 
+    .work-bar-links-slot > .button,
     .work-bar .work-links > li {
       flex-shrink: 0;
+    }
+
+    /* The editor takes the next row; the details drop below it while both are open. */
+    .work-bar-editor {
+      grid-row: 2;
+      grid-column: 1 / -1;
+      padding-top: var(--space-2);
     }
 
     .work-bar .accordion-heading {
@@ -299,6 +326,10 @@
     .work-bar .t-acc-panel {
       grid-row: 2;
       grid-column: 1 / -1;
+    }
+
+    .work-bar:has(.work-bar-editor) .t-acc-panel {
+      grid-row: 3;
     }
   }
 

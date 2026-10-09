@@ -266,7 +266,7 @@ const handoffRoute = createRoute({
   component: () => null,
 });
 
-/** `/app/r/$roomId/t/$threadId/links`: the thread pane with its post's link form open. */
+/** `/app/r/$roomId/t/$threadId/links`: the thread pane with its link editor open. */
 const linksRoute = createRoute({
   getParentRoute: () => threadRoute,
   path: "links",

@@ -1,5 +1,6 @@
+import { S4_WORK_IDS } from "../../mock/s4/seed.ts";
 import { BOARD_POST_IDS, BOARD_ROOM_ID } from "../../mock/s6/seed.ts";
-import { DESKTOP, expect, openApp, PHONE, shot, test } from "./support.ts";
+import { DESKTOP, expect, openApp, PHONE, ROOM_IDS, shot, test } from "./support.ts";
 
 const POST = BOARD_POST_IDS.apiPagination;
 
@@ -46,4 +47,24 @@ test("the classic links URL opens the link form on its post", async ({ page }) =
   await expect(page).toHaveURL(new RegExp(`/app/r/${BOARD_ROOM_ID}/t/${POST}/links$`));
   await expect(page.getByRole("form", { name: "Link to this work" })).toBeVisible();
   await shot(page, "work-links-form", "dark");
+});
+
+test("a work thread's classic links URL opens the link editor", async ({ page }) => {
+  await page.setViewportSize(DESKTOP);
+  await openApp(page, `t/${S4_WORK_IDS.agentOwned}/links`);
+
+  const thread = `/app/r/${ROOM_IDS.general}/t/${S4_WORK_IDS.agentOwned}`;
+
+  await expect(page).toHaveURL(new RegExp(`${thread}/links$`));
+
+  const work = page.locator("aside.right-pane").getByRole("region", { name: "Work" });
+  const form = work.getByRole("form", { name: "Link to this work" });
+
+  await expect(form).toBeVisible();
+  await form.getByLabel("Pull request URL").fill("https://github.com/acme/api/pull/88");
+  await form.getByRole("button", { name: "Link pull request" }).click();
+
+  await expect(form).toHaveCount(0);
+  await expect(page).toHaveURL(new RegExp(`${thread}$`));
+  await expect(work.getByRole("link", { name: /acme\/api#88/ })).toBeVisible();
 });

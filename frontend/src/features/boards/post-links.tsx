@@ -14,6 +14,7 @@ import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import "./boards.css";
 
 const LINK_ICON = {
   pull_request: "git-pull-request",
@@ -360,7 +361,11 @@ export function PostLinks({
   readonly editable: boolean;
 }) {
   const navigate = useNavigate();
-  const adding = useMatchRoute()({ to: "/r/$roomId/t/$threadId/links" }) !== false && editable;
+
+  const adding =
+    useMatchRoute()({ to: "/r/$roomId/t/$threadId/links", includeSearch: false }) !== false &&
+    editable;
+
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const headingId = useId();

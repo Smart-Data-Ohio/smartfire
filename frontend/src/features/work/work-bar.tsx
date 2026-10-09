@@ -1,8 +1,10 @@
 /**
  * The thread pane's work section (S4): under the header of a tracked thread, the status and the
  * owner (menus for whoever may change them), the links and the run, and a disclosure with the
- * result, the agent's steps, the history and "Hand off to an agent". `WorkLive` sits beside it
- * in the pane, announcing changes and refetching the detail when live facts move on.
+ * result, the agent's steps, the history and "Hand off to an agent". "Link" opens the editor at
+ * `/links`, which is also where a classic links URL lands, including for a thread that isn't a
+ * board post. `WorkLive` sits beside it in the pane, announcing changes and refetching the
+ * detail when live facts move on.
  */
 import { useEffect, useRef, useState } from "react";
 import type { User } from "../../gen/User.ts";
@@ -19,12 +21,14 @@ import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { Menu, MenuGroup, MenuItem, MenuRadioItem, MenuSeparator } from "../../ui/menu.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { PostLinks } from "../boards/post-links.tsx";
 import { useAnnouncer } from "../destinations/live-region.tsx";
 import { isAgent, UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { threadTitle } from "../threads/thread-format.ts";
 import { handoffRefusal } from "./handoff-access.ts";
 import { HandoffDialog, useHandoffRoute } from "./handoff-dialog.tsx";
+import { useLinksRoute } from "./links-route.ts";
 import { WorkHistory, WorkResult, WorkStepsSection } from "./work-details.tsx";
 import { WorkLinks, WorkOwner, WorkStatusPill } from "./work-facts.tsx";
 import { UNASSIGNED, WORK_STATUS_LABEL, WORK_STATUSES, workStatusLabel } from "./work-format.ts";
@@ -257,7 +261,8 @@ function StopTrackingDialog({
 /**
  * The work section in the pane's toolbar, for a tracked thread. What it offers follows the
  * viewer's permissions: status (`canUpdateWorkStatus`), owner (`canAssignWork`), stop tracking
- * (`canRemoveWork`), and the result and handoff (`canManageWork`).
+ * (`canRemoveWork`), and the result and handoff (`canManageWork`). Links need none of those:
+ * anyone who can see the work may edit them.
  */
 export function WorkBar({ threadId }: { readonly threadId: number }) {
   const facts = useStore((state) => state.threads[threadId]?.work ?? null);
@@ -266,6 +271,7 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
   const permissions = useStore((state) => state.threadPanes[threadId]?.permissions ?? null);
   const [stopping, setStopping] = useState(false);
   const { open: handingOff, openHandoff, closeHandoff } = useHandoffRoute(threadId);
+  const { open: editingLinks, roomId, openLinks } = useLinksRoute(threadId);
   const { announce, region } = useAnnouncer();
 
   if (facts === null || permissions === null) {
@@ -290,8 +296,27 @@ export function WorkBar({ threadId }: { readonly threadId: number }) {
           onStop={() => setStopping(true)}
         />
         <OwnerControl threadId={threadId} facts={facts} work={work} permissions={permissions} />
-        <WorkLinks links={facts.links} runUrl={facts.runUrl} label={`Links for ${name}`} />
+        <div className="work-bar-links-slot">
+          <WorkLinks links={facts.links} runUrl={facts.runUrl} label={`Links for ${name}`} />
+          {editingLinks ? null : (
+            <Button variant="ghost" size="sm" icon="plus" onClick={openLinks}>
+              Link
+            </Button>
+          )}
+        </div>
       </div>
+      {editingLinks && roomId !== null ? (
+        <div className="work-bar-editor">
+          <PostLinks
+            // Another thread's draft starts afresh: no busy change carries over.
+            key={threadId}
+            threadId={threadId}
+            roomId={roomId}
+            links={facts.links}
+            editable
+          />
+        </div>
+      ) : null}
       {work === undefined ? null : (
         <div className="work-bar-details">
           <Accordion title="Result, steps and history">
