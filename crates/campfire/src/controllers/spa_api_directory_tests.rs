@@ -447,14 +447,7 @@ async fn a_new_message_upserts_each_unread_members_row() {
     // Only once: `message_create` publishes it, and the sink's unread ping doesn't again. Give a
     // second copy time to come, then mark the end with an event published at once.
     tokio::time::sleep(Duration::from_millis(300)).await;
-    let broadcasts = a.booted.app.broadcasts.clone();
-    a.db()
-        .read(move |conn| {
-            broadcasts.sync_row_removed(conn, JASON, 1);
-            Ok(())
-        })
-        .await
-        .unwrap();
+    a.booted.app.broadcasts.sync_row_removed(JASON, 1);
     sync.until(
         |event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(removed) if removed.room_id == 1),
         upserted(false, DESIGNERS),

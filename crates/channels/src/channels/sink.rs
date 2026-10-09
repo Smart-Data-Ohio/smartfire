@@ -22,7 +22,15 @@ use askama::Template;
 pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
     match event {
         Event::DisconnectUser { user_id, reconnect } => {
-            revocation::disconnect_user(cable, *user_id, *reconnect);
+            // Behind any sidebar removal still queued for them (a leave emits both), so the
+            // removal reaches their sockets first; otherwise at once.
+            let queued = app.is_some_and(|app| {
+                app.broadcasts
+                    .sync_disconnect_after_leaves(*user_id, *reconnect)
+            });
+            if !queued {
+                revocation::disconnect_user(cable, *user_id, *reconnect);
+            }
             true
         }
         Event::Broadcast(request) => {
@@ -375,7 +383,9 @@ fn direct_sidebar_twin(cable: &Cable, app: Option<&App>, broadcast: &campfire_db
         && let Some(campfire_db::broadcasts::Partial::DirectSidebar { membership_id, .. }) = &frame.partial
         && cable.sync_wanted()
     {
-        app.db.read_blocking(|conn| { app.broadcasts.sync_membership_row(conn, *membership_id); Ok(()) })?;
+        // Later, on a deferred reader: the sink runs on the database writer, which must not
+        // wait for the room's lock.
+        app.broadcasts.sync_membership_row_later(*membership_id);
     }
     Ok(())
 }
@@ -416,16 +426,14 @@ pub fn room_removal(cable: &Cable, app: Option<&App>, broadcast: &RoomRemovalBro
         None,
         &[],
     );
-    // The sync twin reads the membership under the room's lock: with no app there's no sync
-    // renderer, so no twin, as for the sink's other sync twins.
+    // The sync twin is queued: the sink runs on the database writer, and the removal takes the
+    // room's lock and a reader later, off it. With no app there's no sync renderer, so no twin,
+    // as for the sink's other sync twins.
     if let Some(app) = app
         && cable.sync_wanted()
-        && let Err(error) = app.db.read_blocking(|conn| {
-            app.broadcasts.sync_row_removed(conn, broadcast.user_id, broadcast.room_id);
-            Ok(())
-        })
     {
-        tracing::warn!(%error, room_id = broadcast.room_id, "sync: removed row not read");
+        app.broadcasts
+            .sync_row_removed(broadcast.user_id, broadcast.room_id);
     }
 }
 

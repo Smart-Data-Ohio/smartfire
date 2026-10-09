@@ -11,7 +11,7 @@
 //!
 //! [`TWINS`] lists which broadcasts have twins and [`NOT_YET_TWINNED`] the ones still to port;
 //! a test in the server crate fails when a broadcast is in neither.
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
 pub use campfire_api_types::WorkspaceBranding;
@@ -119,6 +119,16 @@ struct RendererState {
     renderer: OnceLock<Arc<dyn SyncRenderer>>,
     threads: PublicationLocks,
     rooms: PublicationLocks,
+    /// Each person's leave steps not yet published, in order: see [`leave_later`].
+    leaves: Mutex<HashMap<i64, VecDeque<LeaveStep>>>,
+}
+
+/// What a leave publishes for the person, in the order the writer committed it.
+enum LeaveStep {
+    /// `sidebar.row.removed` for the room they left (read under the room's lock).
+    Removed(i64),
+    /// Their connections are closed (`Membership` destroyed: `reset_remote_connections`).
+    Disconnect { reconnect: bool },
 }
 
 /// One lock per thread or room while a publication holds it, so its deferred readers run one
@@ -1207,6 +1217,20 @@ pub fn membership_row(server: &Cable, slot: &RendererSlot, conn: &Connection, me
     });
 }
 
+/// [`membership_row`], read afresh later on a deferred reader: for callers on the database
+/// writer, which must not wait for the room's lock.
+pub fn membership_row_later(server: &Cable, slot: &RendererSlot, membership_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        if let Some(server) = server.upgrade() {
+            membership_row(&server, &slot, conn, membership_id);
+        }
+    }));
+}
+
 /// [`sidebar_rows`], read afresh later: for broadcast points without a connection.
 pub fn sidebar_rows_later(
     server: &Cable,
@@ -1349,16 +1373,94 @@ pub fn organized_later(
 /// The person left the room: `sidebar.row.removed` on their `user` topic, and their connections
 /// stop following the room. Published under the room's lock, after any row read before the
 /// leave, and only if they still don't belong when it goes out.
-pub fn sidebar_row_removed(
-    server: &Cable,
-    slot: &RendererSlot,
-    conn: &Connection,
-    user_id: i64,
-    room_id: i64,
-) {
-    room_rows(slot, room_id, |rows| {
-        rows.publish(server, slot, conn, Viewers::Users(&[user_id]), None);
-    });
+///
+/// The cable sink calls this on the database writer, after the leave commits, so it only
+/// queues: the room's lock and a reader are taken later, off the writer (see [`leave_later`]).
+pub fn sidebar_row_removed_later(server: &Cable, slot: &RendererSlot, user_id: i64, room_id: i64) {
+    leave_later(server, slot, user_id, LeaveStep::Removed(room_id));
+}
+
+/// Closes the person's connections, after any of their leave removals still queued (so the
+/// removal reaches the socket before the disconnect does). `false` when none is queued: the
+/// caller disconnects them at once, as before.
+pub fn disconnect_after_leaves(slot: &RendererSlot, user_id: i64, reconnect: bool) -> bool {
+    let mut leaves = slot
+        .0
+        .leaves
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let Some(steps) = leaves.get_mut(&user_id) else {
+        return false;
+    };
+    steps.push_back(LeaveStep::Disconnect { reconnect });
+    true
+}
+
+/// Queues a leave step for the person, and starts a deferred reader to publish their steps if
+/// none is running. One reader drains a person's queue at a time, in order: each removal takes
+/// the room's lock, so it follows any row of that room already being published, and a row read
+/// after it finds the membership gone; a disconnect queued behind it closes the sockets only
+/// once the removal is out. Nothing here waits on a lock or a reader, so the writer never does.
+fn leave_later(server: &Cable, slot: &RendererSlot, user_id: i64, step: LeaveStep) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    {
+        let mut leaves = slot
+            .0
+            .leaves
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let steps = leaves.entry(user_id).or_default();
+        steps.push_back(step);
+        if steps.len() > 1 {
+            // A reader is already draining this person's steps.
+            return;
+        }
+    }
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let server = server.upgrade();
+        loop {
+            // The front step stays queued while it publishes, so later steps wait behind it.
+            let step = {
+                let leaves = slot
+                    .0
+                    .leaves
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner());
+                match leaves.get(&user_id).and_then(VecDeque::front) {
+                    Some(LeaveStep::Removed(room_id)) => LeaveStep::Removed(*room_id),
+                    Some(LeaveStep::Disconnect { reconnect }) => LeaveStep::Disconnect {
+                        reconnect: *reconnect,
+                    },
+                    None => return,
+                }
+            };
+            if let Some(server) = &server {
+                match step {
+                    LeaveStep::Removed(room_id) => room_rows(&slot, room_id, |rows| {
+                        rows.publish(server, &slot, conn, Viewers::Users(&[user_id]), None);
+                    }),
+                    LeaveStep::Disconnect { reconnect } => {
+                        server.disconnect(&super::user_gid(user_id).to_string(), reconnect);
+                    }
+                }
+            }
+            let mut leaves = slot
+                .0
+                .leaves
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
+            if let Some(steps) = leaves.get_mut(&user_id) {
+                steps.pop_front();
+                if steps.is_empty() {
+                    leaves.remove(&user_id);
+                    return;
+                }
+            }
+        }
+    }));
 }
 
 /// The room is gone: `sidebar.row.removed` for everyone, and nobody follows it any more. Under

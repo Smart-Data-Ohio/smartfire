@@ -1159,30 +1159,42 @@ async fn a_row_read_before_a_leave_cannot_bring_the_row_back() {
         .await
         .expect("the row was rendered")
         .unwrap();
-    let leave = async {
-        kevin
-            .write(json_body(
-                Method::DELETE,
-                &format!("/api/v1/rooms/{room}/membership"),
-                &json!({}),
-            ))
-            .await
-    };
-    let release = async {
-        let overtaking = tokio::time::timeout(
-            Duration::from_millis(300),
-            sync.until(row_event(room), |_| false),
-        )
-        .await;
-        hold.release.send(()).unwrap();
-        overtaking.map(|event| event.payload)
-    };
-    let (reply, overtaking) = tokio::join!(leave, release);
+    // The writer doesn't wait for the paused row: the leave answers, and a write to another
+    // room commits, while this room is still held.
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        kevin.write(json_body(
+            Method::DELETE,
+            &format!("/api/v1/rooms/{room}/membership"),
+            &json!({}),
+        )),
+    )
+    .await
+    .expect("the leave doesn't wait for the room's lock");
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    let body = json!({"clientMessageId": "elsewhere", "markdownSource": "Another room"});
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        david.write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{ALL_TALK}/messages"),
+            &body,
+        )),
+    )
+    .await
+    .expect("another room's write isn't held up by this room's lock");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let overtaking = tokio::time::timeout(
+        Duration::from_millis(300),
+        sync.until(row_event(room), |_| false),
+    )
+    .await
+    .map(|event| event.payload);
     assert!(
         overtaking.is_err(),
         "the removal waits for the paused row: {overtaking:?}"
     );
+    hold.release.send(()).unwrap();
 
     // The paused row goes out, then the removal, then the leave's disconnect: nothing after the
     // removal brings the row back (once the socket is gone, a row would only record a gap).

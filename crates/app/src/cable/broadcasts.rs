@@ -278,10 +278,23 @@ impl Broadcasts {
         sync::membership_row(&self.server, &self.sync, conn, membership_id);
     }
 
+    /// [`Self::sync_membership_row`], read later on a deferred reader: for the cable sink,
+    /// which runs on the database writer and must not wait for the room's lock.
+    pub fn sync_membership_row_later(&self, membership_id: i64) {
+        sync::membership_row_later(&self.server, &self.sync, membership_id);
+    }
+
     /// `sidebar.row.removed` after a person left a room (`Membership#broadcast_room_removal_to_user`,
-    /// which the cable sink sent): read under the room's lock, so it follows any row read before.
-    pub fn sync_row_removed(&self, conn: &Connection, user_id: i64, room_id: i64) {
-        sync::sidebar_row_removed(&self.server, &self.sync, conn, user_id, room_id);
+    /// which the cable sink sends on the database writer): queued, and published later under the
+    /// room's lock, after any row of the room read before the leave.
+    pub fn sync_row_removed(&self, user_id: i64, room_id: i64) {
+        sync::sidebar_row_removed_later(&self.server, &self.sync, user_id, room_id);
+    }
+
+    /// Queues closing the person's connections behind their queued leave removals, so each
+    /// removal goes out first; `false` when none is queued and the caller disconnects at once.
+    pub fn sync_disconnect_after_leaves(&self, user_id: i64, reconnect: bool) -> bool {
+        sync::disconnect_after_leaves(&self.sync, user_id, reconnect)
     }
 
     // The primitives
