@@ -960,3 +960,136 @@ async fn editing_and_deleting_a_direct_message_refreshes_the_preview() {
     assert!(row.last_message.is_none());
     server.abort();
 }
+
+#[tokio::test]
+async fn an_edit_read_before_a_delete_cannot_publish_its_preview_last() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    let mut ids = Vec::new();
+    for (client, source) in [("first", "First one"), ("second", "Second one")] {
+        let body = json!({"clientMessageId": client, "markdownSource": source});
+        let reply = david
+            .write(json_body(
+                Method::POST,
+                &format!("/api/v1/rooms/{room}/messages"),
+                &body,
+            ))
+            .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        ids.push(parse::<api::MessageDTO>(&reply).id);
+    }
+    sync.until(previewing(room, Some("Second one")), |_| false)
+        .await;
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("the creation previews settled");
+
+    // The edit's reader renders Kevin's row and pauses before publishing it; meanwhile the
+    // newest message is deleted, and its reader would publish the fallback first.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", ids[1]),
+            &json!({"markdownSource": "Second, edited"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the edit's preview was rendered")
+        .unwrap();
+    let reply = david
+        .write(
+            Req::new(Method::DELETE, &format!("/api/v1/messages/{}", ids[1]))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(reply.status, StatusCode::NO_CONTENT, "{}", reply.text());
+    let row_for_room = move |event: &api::SyncEvent| {
+        matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row) if row.room.id == room)
+    };
+    let overtaking = tokio::time::timeout(
+        Duration::from_millis(200),
+        sync.until(row_for_room, |_| false),
+    )
+    .await;
+    assert!(
+        overtaking.is_err(),
+        "the delete's reader waits for the edit's publication"
+    );
+    hold.release.send(()).unwrap();
+
+    // Both publish, in order: the last preview Kevin gets is the database's.
+    sync.until(previewing(room, Some("Second, edited")), |_| false)
+        .await;
+    sync.until(previewing(room, Some("First one")), |_| false)
+        .await;
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("the previews settled");
+    let later = tokio::time::timeout(
+        Duration::from_millis(200),
+        sync.until(row_for_room, |_| false),
+    )
+    .await;
+    assert!(later.is_err(), "no row after the database's: {later:?}");
+    let sidebar: api::Sidebar = parse(&kevin.send(get("/api/v1/sidebar")).await);
+    let row = sidebar.rows.iter().find(|row| row.room.id == room).unwrap();
+    assert_eq!(
+        row.last_message.as_ref().map(|last| last.excerpt.as_str()),
+        Some("First one")
+    );
+
+    // Editing an older root leaves the preview alone: no row is read or sent.
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": "third", "markdownSource": "Third one"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    sync.until(previewing(room, Some("Third one")), |_| false)
+        .await;
+    let reply = david
+        .write(json_body(
+            Method::PATCH,
+            &format!("/api/v1/messages/{}", ids[0]),
+            &json!({"markdownSource": "First, edited"}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
+    tokio::time::timeout(
+        Duration::from_secs(5),
+        a.booted.app.broadcasts.settle_sync(),
+    )
+    .await
+    .expect("the edit settled");
+    let later = tokio::time::timeout(
+        Duration::from_millis(200),
+        sync.until(row_for_room, |_| false),
+    )
+    .await;
+    assert!(later.is_err(), "an older root's edit sends no row: {later:?}");
+    server.abort();
+}

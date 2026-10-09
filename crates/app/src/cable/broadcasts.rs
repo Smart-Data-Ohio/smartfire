@@ -447,8 +447,8 @@ impl Broadcasts {
                     mentioned.contains(&user_id),
                 );
             }
-            // A direct row previews its newest message, so every member's row changes.
-            if room.direct() {
+            // A direct row previews its newest root, so every member's row changes with one.
+            if room.direct() && previews(message) {
                 self.direct_preview_later(room, message);
             } else {
                 sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
@@ -469,15 +469,11 @@ impl Broadcasts {
     }
 
     /// A direct row previews its newest root message (`SidebarRow.lastMessage`): after one is
-    /// created, edited or removed, every member's row is read afresh, so the preview follows (or
-    /// falls back to the message before).
+    /// created, edited or removed, every member's row is read afresh if it is (or was) the
+    /// newest, so the preview follows (or falls back to the message before).
     fn direct_preview_later(&self, room: &Room, message: &Message) {
-        if room.direct()
-            && message.thread_id.is_none()
-            && !message.system_note
-            && self.server.sync_wanted()
-        {
-            sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
+        if room.direct() && previews(message) {
+            sync::direct_preview_later(&self.server, &self.sync, message);
         }
     }
 
@@ -743,4 +739,9 @@ fn unread_user_ids(
         .filter(|m| !muted(m) || mentioned.contains(&m.user_id))
         .map(|m| m.user_id)
         .collect())
+}
+
+/// Whether a direct row could preview `message`: a root message that isn't a system note.
+fn previews(message: &Message) -> bool {
+    message.thread_id.is_none() && !message.system_note
 }

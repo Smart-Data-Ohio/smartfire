@@ -99,7 +99,12 @@ impl SyncRenderer for Renderer {
         room: &Room,
         membership: &Membership,
     ) -> campfire_db::Result<Option<api::SidebarRow>> {
-        dto::sidebar_row(conn, room, membership)
+        let row = dto::sidebar_row(conn, room, membership);
+        #[cfg(feature = "test-support")]
+        if let Some(app) = self.app.upgrade() {
+            crate::test_hooks::after_sidebar_snapshot(app.db.path(), room.id);
+        }
+        row
     }
 
     fn thread(&self, conn: &Connection, thread: &campfire_db::ChannelThread) -> Option<api::Thread> {

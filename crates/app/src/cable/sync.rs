@@ -117,7 +117,28 @@ pub struct RendererSlot(Arc<RendererState>);
 #[derive(Default)]
 struct RendererState {
     renderer: OnceLock<Arc<dyn SyncRenderer>>,
-    threads: Mutex<HashMap<i64, Weak<Mutex<()>>>>,
+    threads: PublicationLocks,
+    rooms: PublicationLocks,
+}
+
+/// One lock per thread or room while a publication holds it, so its deferred readers run one
+/// at a time from read through publication.
+type PublicationLocks = Mutex<HashMap<i64, Weak<Mutex<()>>>>;
+
+fn publication_lock(locks: &PublicationLocks, id: i64) -> Arc<Mutex<()>> {
+    let mut locks = locks.lock().unwrap_or_else(|error| error.into_inner());
+    if let Some(lock) = locks.get(&id).and_then(Weak::upgrade) {
+        return lock;
+    }
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    let lock = Arc::new(Mutex::new(()));
+    locks.insert(id, Arc::downgrade(&lock));
+    lock
+}
+
+/// Holds `lock` until dropped; a panicked holder doesn't wedge later publications.
+fn hold(lock: &Mutex<()>) -> std::sync::MutexGuard<'_, ()> {
+    lock.lock().unwrap_or_else(|error| error.into_inner())
 }
 
 impl RendererSlot {
@@ -141,18 +162,12 @@ impl RendererSlot {
     }
 
     fn thread_lock(&self, thread_id: i64) -> Arc<Mutex<()>> {
-        let mut threads = self
-            .0
-            .threads
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        if let Some(lock) = threads.get(&thread_id).and_then(Weak::upgrade) {
-            return lock;
-        }
-        threads.retain(|_, lock| lock.strong_count() > 0);
-        let lock = Arc::new(Mutex::new(()));
-        threads.insert(thread_id, Arc::downgrade(&lock));
-        lock
+        publication_lock(&self.0.threads, thread_id)
+    }
+
+    /// The room's sidebar rows, as [`Self::thread_lock`] is the thread's.
+    fn room_lock(&self, room_id: i64) -> Arc<Mutex<()>> {
+        publication_lock(&self.0.rooms, room_id)
     }
 }
 
@@ -904,7 +919,7 @@ pub fn thread_changed(
     // Deferred readers can render an older snapshot more slowly than a newer one. Serialize
     // the read through both publications, so a late reader cannot send stale state last.
     let lock = slot.thread_lock(thread_id);
-    let _publication = lock.lock().unwrap_or_else(|error| error.into_inner());
+    let _publication = hold(&lock);
     let thread = match ChannelThread::find_by_id(conn, thread_id) {
         Ok(Some(thread)) => thread,
         Ok(None) => return,
@@ -1018,6 +1033,23 @@ fn sidebar_rows_with_refresh(
     user_ids: Option<&[i64]>,
     refresh_room: Option<bool>,
 ) {
+    if slot.get(server).is_none() {
+        return;
+    }
+    let lock = slot.room_lock(room.id);
+    let _publication = hold(&lock);
+    publish_room_rows(server, slot, conn, room, user_ids, refresh_room);
+}
+
+/// [`sidebar_rows_with_refresh`] with the room's lock already held.
+fn publish_room_rows(
+    server: &Cable,
+    slot: &RendererSlot,
+    conn: &Connection,
+    room: &Room,
+    user_ids: Option<&[i64]>,
+    refresh_room: Option<bool>,
+) {
     let Some(renderer) = slot.get(server) else {
         return;
     };
@@ -1080,6 +1112,14 @@ pub fn membership_row(server: &Cable, slot: &RendererSlot, conn: &Connection, me
     let Some(renderer) = slot.get(server) else {
         return;
     };
+    let room_id = match Membership::find(conn, membership_id) {
+        Ok(membership) => membership.room_id,
+        Err(campfire_db::Error::RecordNotFound(_)) => return,
+        Err(error) => return tracing::warn!(%error, membership_id, "sync: membership row not read"),
+    };
+    // Read the row under the room's lock, so it can't overtake a newer one (see `thread_changed`).
+    let lock = slot.room_lock(room_id);
+    let _publication = hold(&lock);
     let found = Membership::find(conn, membership_id)
         .and_then(|membership| Ok((membership.room(conn)?, membership)));
     match found {
@@ -1129,11 +1169,17 @@ fn sidebar_rows_later_with_refresh(
     };
     let (server, slot) = (server.downgrade(), slot.clone());
     renderer.defer(Box::new(move |conn| {
-        let (Some(server), Ok(Some(room))) = (server.upgrade(), Room::find_by_id(conn, room_id))
-        else {
+        let Some(server) = server.upgrade() else {
             return;
         };
-        sidebar_rows_with_refresh(
+        // Deferred readers run concurrently: read and publish under the room's lock, so a
+        // slower reader with an older snapshot can't publish it last (see `thread_changed`).
+        let lock = slot.room_lock(room_id);
+        let _publication = hold(&lock);
+        let Ok(Some(room)) = Room::find_by_id(conn, room_id) else {
+            return;
+        };
+        publish_room_rows(
             &server,
             &slot,
             conn,
@@ -1141,6 +1187,39 @@ fn sidebar_rows_later_with_refresh(
             user_ids.as_deref(),
             refresh_room,
         );
+    }));
+}
+
+/// Every member's row of a direct room, read afresh later under the room's lock, after a root
+/// message was created, edited or removed: when it is (or, removed, was) the room's newest
+/// root, the row's preview (`SidebarRow.lastMessage`) follows it or falls back to the one
+/// before. An older root's edit leaves the preview as it was, so no row is read for it.
+pub fn direct_preview_later(server: &Cable, slot: &RendererSlot, message: &Message) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (room_id, message_id, created_at) = (message.room_id, message.id, message.created_at);
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let Some(server) = server.upgrade() else {
+            return;
+        };
+        let lock = slot.room_lock(room_id);
+        let _publication = hold(&lock);
+        let newer = conn.query_row(
+            r#"SELECT EXISTS (SELECT 1 FROM "messages" WHERE "room_id" = ?1 AND "thread_id" IS NULL AND NOT "system_note" AND ("created_at" > ?2 OR ("created_at" = ?2 AND "id" > ?3)))"#,
+            rusqlite::params![room_id, created_at, message_id],
+            |row| row.get::<_, bool>(0),
+        );
+        match newer {
+            Ok(true) => return,
+            Ok(false) => {}
+            Err(error) => return tracing::warn!(%error, room_id, "sync: direct preview not read"),
+        }
+        let Ok(Some(room)) = Room::find_by_id(conn, room_id) else {
+            return;
+        };
+        publish_room_rows(&server, &slot, conn, &room, None, None);
     }));
 }
 
@@ -1161,7 +1240,7 @@ pub fn organized_later(
         server.sync_skipped_for(user_id);
         return;
     }
-    let server = server.downgrade();
+    let (server, slot) = (server.downgrade(), slot.clone());
     let job_renderer = renderer.clone();
     renderer.defer(Box::new(move |conn| {
         let Some(server) = server.upgrade() else {
@@ -1176,6 +1255,8 @@ pub fn organized_later(
                     continue;
                 }
             };
+            let lock = slot.room_lock(found.room_id);
+            let _publication = hold(&lock);
             let row = found
                 .room(conn)
                 .and_then(|room| job_renderer.sidebar_row(conn, &room, &found));
