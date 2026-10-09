@@ -1,7 +1,8 @@
 //! Auth form/behavior contracts against Rails vectors; unrelated classic pages keep byte goldens.
 use crate::controllers::presenters::test_support::TestApp;
+use crate::controllers::users::people_tests::retained;
 use askama::Template;
-use campfire_views::{helpers as h, layouts, sessions, sudos, two_factor, users};
+use campfire_views::{helpers as h, layouts, users};
 use serde_json::Value;
 struct Tokens;
 impl h::request_forgery::AuthenticityTokens for Tokens {
@@ -108,49 +109,69 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
                                 .collect();
                         }
                         match name.as_str() {
-                            "sign_in" => sessions::New {
-                                                        ctx: &ctx,
-                                email_address: None,
-                                help_contact: help.clone(),
-                                google_sign_in_domains: Vec::new(),
-                            }
-                            .render()
-                            .unwrap(),
-                            "incompatible_browser" => sessions::IncompatibleBrowser { ctx: &ctx }
-                                .render()
-                                .unwrap(),
-                            "transfer" => sessions::TransferShow {
-                                ctx: &ctx,
-                                action: "/session/transfers/some-token".into(),
-                            }
-                            .render()
-                            .unwrap(),
-                            "setup" => two_factor::Setup {
-                                ctx: &ctx,
-                                key: vectors["key"].as_str().unwrap().into(),
-                                qr: qr.clone(),
-                            }
-                            .render()
-                            .unwrap(),
-                            "challenge" => two_factor::Challenge { ctx: &ctx }.render().unwrap(),
-                            "backups" | "backups_signed_out" => two_factor::BackupCodes {
-                                ctx: &ctx,
-                                codes: vectors["codes"]
-                                    .as_array()
-                                    .unwrap()
-                                    .iter()
-                                    .map(|v| v.as_str().unwrap().into())
-                                    .collect(),
-                                signed_out: usize::from(name == "backups_signed_out") * 2,
-                                continue_url: if name == "backups" {
-                                    "http://campfire.test/users/me/profile"
-                                } else {
-                                    "http://campfire.test/rooms/486777696"
+                            "sign_in" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::sessions::New {
+                                    ctx: &ctx,
+                                    email_address: None,
+                                    help_contact: help.clone(),
+                                    google_sign_in_domains: Vec::new(),
                                 }
-                                .into(),
+                                .render()
+                                .unwrap()
                             }
-                            .render()
-                            .unwrap(),
+                            "incompatible_browser" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::sessions::IncompatibleBrowser { ctx: &ctx }
+                                    .render()
+                                    .unwrap()
+                            }
+                            "transfer" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::sessions::TransferShow {
+                                    ctx: &ctx,
+                                    action: "/session/transfers/some-token".into(),
+                                }
+                                .render()
+                                .unwrap()
+                            }
+                            "setup" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::two_factor::Setup {
+                                    ctx: &ctx,
+                                    key: vectors["key"].as_str().unwrap().into(),
+                                    qr: qr.clone(),
+                                }
+                                .render()
+                                .unwrap()
+                            }
+                            "challenge" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::two_factor::Challenge { ctx: &ctx }
+                                    .render()
+                                    .unwrap()
+                            }
+                            "backups" | "backups_signed_out" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::two_factor::BackupCodes {
+                                    ctx: &ctx,
+                                    codes: vectors["codes"]
+                                        .as_array()
+                                        .unwrap()
+                                        .iter()
+                                        .map(|v| v.as_str().unwrap().into())
+                                        .collect(),
+                                    signed_out: usize::from(name == "backups_signed_out") * 2,
+                                    continue_url: if name == "backups" {
+                                        "http://campfire.test/users/me/profile"
+                                    } else {
+                                        "http://campfire.test/rooms/486777696"
+                                    }
+                                    .into(),
+                                }
+                                .render()
+                                .unwrap()
+                            }
                             "sessions_one" | "sessions_two" => users::SessionsIndex {
                                 ctx: &ctx,
                                 now,
@@ -179,26 +200,32 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
                             }
                             .render()
                             .unwrap(),
-                            "sudo_continue" => sudos::Continue {
-                                ctx: &ctx,
-                                method: "patch".into(),
-                                path: "/account/users/127326141?x=1&y=2".into(),
-                                params: vectors["replay"].clone(),
+                            "sudo_continue" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::sudos::Continue {
+                                    ctx: &ctx,
+                                    method: "patch".into(),
+                                    path: "/account/users/127326141?x=1&y=2".into(),
+                                    params: vectors["replay"].clone(),
+                                }
+                                .render()
+                                .unwrap()
                             }
-                            .render()
-                            .unwrap(),
                             "sudo_"
                             | "sudo_password"
                             | "sudo_totp"
                             | "sudo_google"
-                            | "sudo_password_totp_google" => sudos::New {
-                                ctx: &ctx,
-                                password: name.contains("password"),
-                                totp: name.contains("totp"),
-                                google: name.contains("google"),
+                            | "sudo_password_totp_google" => {
+                                let ctx = retained(&ctx);
+                                campfire_retained::sudos::New {
+                                    ctx: &ctx,
+                                    password: name.contains("password"),
+                                    totp: name.contains("totp"),
+                                    google: name.contains("google"),
+                                }
+                                .render()
+                                .unwrap()
                             }
-                            .render()
-                            .unwrap(),
                             other => panic!("unexpected full-page case {other}"),
                         }
                     },
@@ -206,7 +233,28 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
             },
         );
         let expected = expected.as_str().unwrap();
-        if ["incompatible_browser", "sessions_one", "sessions_two"].contains(&name.as_str()) {
+        if name == "incompatible_browser" {
+            assert!(
+                actual.contains("<body class=\"auth\">"),
+                "{name}: retained shell"
+            );
+            assert!(
+                !actual.contains("importmap"),
+                "{name}: no classic import map"
+            );
+            crate::form_contracts::assert_text(&actual, "Upgrade to a supported web browser");
+            crate::form_contracts::assert_text(
+                &actual,
+                "Smartfire requires a modern web browser. Please use one of the browsers listed below and make sure auto-updates are enabled.",
+            );
+            for (browser, version) in campfire_retained::sessions::ALLOW_BROWSER_VERSIONS {
+                crate::form_contracts::assert_text(
+                    &actual,
+                    &campfire_views::helpers::capitalize(browser),
+                );
+                assert!(actual.contains(version), "{name}: {browser} {version}");
+            }
+        } else if ["sessions_one", "sessions_two"].contains(&name.as_str()) {
             if !super::asset_goldens::compare(name, &actual, expected) {
                 let at = actual
                     .bytes()
@@ -229,7 +277,9 @@ async fn complete_auth_templates_preserve_rails_forms_and_visible_behaviour() {
             crate::form_contracts::assert_head(name, &actual, expected);
             let content = crate::form_contracts::page_content(&actual);
             crate::form_contracts::assert_forms(
-                name, content, crate::form_contracts::page_content(expected),
+                name,
+                content,
+                crate::form_contracts::page_content(expected),
             );
             if name == "sign_in" {
                 crate::form_contracts::assert_text(content, &account.as_ref().unwrap().name);

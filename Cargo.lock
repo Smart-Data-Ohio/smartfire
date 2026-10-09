@@ -397,6 +397,7 @@ dependencies = [
  "campfire_mail",
  "campfire_messages",
  "campfire_people",
+ "campfire_retained",
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
@@ -618,6 +619,7 @@ dependencies = [
  "campfire_kit",
  "campfire_messages",
  "campfire_people",
+ "campfire_retained",
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
@@ -798,6 +800,7 @@ dependencies = [
  "campfire_channels",
  "campfire_db",
  "campfire_kit",
+ "campfire_retained",
  "campfire_richtext",
  "campfire_routes",
  "campfire_storage",
@@ -812,6 +815,17 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "campfire_retained"
+version = "0.1.0"
+dependencies = [
+ "askama",
+ "campfire_assets",
+ "campfire_routes",
+ "campfire_views",
+ "serde_json",
 ]
 
 [[package]]
@@ -930,6 +944,7 @@ dependencies = [
  "campfire_jobs",
  "campfire_kit",
  "campfire_mail",
+ "campfire_retained",
  "campfire_richtext",
  "campfire_routes",
  "campfire_spa",

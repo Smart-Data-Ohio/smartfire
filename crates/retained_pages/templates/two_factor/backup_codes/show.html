@@ -1,0 +1,27 @@
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+<main class="auth-card">
+  <header class="auth-header">
+    <h1 class="auth-title">Save your backup codes</h1>
+    <p class="auth-lede">Each code signs you in once if you lose your authenticator. They will not be shown again.</p>
+{% if signed_out > 0 %}    <p class="auth-note">Signed out your other devices</p>
+{% endif %}  </header>
+
+  <ul class="auth-codes" id="two_factor_backup_codes">
+{% for code in codes %}    <li><code>{{ code }}</code></li>
+{% endfor %}  </ul>
+
+  <div class="auth-stack">
+    <div class="auth-row">
+      <button type="button" class="button auth-copy" data-variant="secondary" data-copy="{{ self.text() }}">{% call auth::copy() %}<span data-copy-label>Copy all</span></button>
+      {% filter link_to(self.download(), h::attrs().attr("download", "smartfire-backup-codes.txt").class("button").data("variant", "secondary")) %}{% call auth::download() %}<span>Download</span>{% endfilter %}
+    </div>
+
+    {{ h::link_to(&continue_url, h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg"), "Continue") }}
+  </div>
+</main>
+{% endblock %}

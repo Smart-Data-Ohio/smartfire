@@ -1,0 +1,19 @@
+{% extends "layouts/auth.html" %}
+{% import "auth/_macros.html" as auth %}
+
+{% block head %}{% endblock %}
+
+{% block content %}
+<main class="auth-card">
+  <header class="auth-header">
+    <h1 class="auth-title">{{ self.page_title().unwrap_or_default() }}</h1>
+    <p class="auth-lede">Create the first account. It administers the workspace.</p>
+  </header>
+
+{% let form = h::form_with(h::routes::first_run()).model("user").class("auth-form") %}  {% filter form_with(form) %}
+{% let avatar_label = "Add your avatar" %}{% include "auth/_signup_fields.html" %}
+
+    {{ h::button_tag(h::attrs().class("button auth-wide").data("variant", "primary").data("size", "lg").type_("submit"), "Create account") }}
+{% endfilter %}
+</main>
+{% endblock %}

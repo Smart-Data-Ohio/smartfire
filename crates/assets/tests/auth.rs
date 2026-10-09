@@ -60,7 +60,7 @@ fn standalone_auth_assets_and_fonts_are_served_without_changing_classic_tags() {
     assert!(!campfire_assets::javascript_importmap_tags().contains(&script_path));
 }
 
-#[path = "../build/auth.rs"]
+#[path = "../../retained_pages/auth_build.rs"]
 mod bundle;
 
 #[test]

@@ -1,4 +1,6 @@
 //! Auth assets are bundled at build time without Node, then compiled by Propshaft.
+//! The assets build script includes this file so the digested `auth.css` and `auth.js`
+//! stay on the same load path. `auth.js` and the font files stay where they are.
 use fancy_regex::Regex;
 use std::collections::HashSet;
 use std::fs;
