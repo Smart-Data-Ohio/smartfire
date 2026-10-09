@@ -435,6 +435,25 @@ async fn a_remote_disconnect_says_bye_and_closes() {
 }
 
 #[tokio::test]
+async fn a_remote_disconnect_sends_what_was_published_before_it_first() {
+    let app = app(fast()).await;
+    let (mut client, _) = app.hello(1, Value::Null, &[]).await;
+    // Published, then disconnected at once: the connection may see the disconnect before it
+    // notices the head moved, and must still send the event ahead of the bye.
+    for round in 0..20 {
+        let seq = app.publish(Audience::User(1), json!(round));
+        assert!(app.cable.server.disconnect("user-1", true) >= 1);
+        assert_eq!(client.batch().await, [(seq, "user".into(), json!(round))]);
+        assert_eq!(
+            client.next().await,
+            json!({ "t": "bye", "reconnect": true, "reason": "remote" })
+        );
+        client.closed().await;
+        (client, _) = app.hello(1, Value::Null, &[]).await;
+    }
+}
+
+#[tokio::test]
 async fn a_heartbeat_after_the_session_ended_says_bye_and_closes() {
     let app = app(fast()).await;
     let (mut client, _) = app.hello(1, Value::Null, &[]).await;

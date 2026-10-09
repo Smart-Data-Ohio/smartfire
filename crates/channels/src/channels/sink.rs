@@ -385,7 +385,7 @@ fn direct_sidebar_twin(cable: &Cable, app: Option<&App>, broadcast: &campfire_db
     {
         // Later, on a deferred reader: the sink runs on the database writer, which must not
         // wait for the room's lock.
-        app.broadcasts.sync_membership_row_later(*membership_id);
+        app.broadcasts.sync_membership_row(*membership_id);
     }
     Ok(())
 }

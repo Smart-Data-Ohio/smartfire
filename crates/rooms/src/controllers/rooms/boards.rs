@@ -232,7 +232,7 @@ pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
                         broadcasts.prepend(&Stream::user_rooms(user_id), "board_rooms", &html);
                     }
                     for membership in room.memberships(conn)? {
-                        broadcasts.sync_membership_row(conn, membership.id);
+                        broadcasts.sync_membership_row(membership.id);
                     }
                     Ok(())
                 }

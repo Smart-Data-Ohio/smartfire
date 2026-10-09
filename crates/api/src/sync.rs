@@ -286,9 +286,38 @@ impl SyncRenderer for Renderer {
         });
     }
 
+    fn defer_unread(&self, job: twins::UnreadJob) {
+        let Some(app) = self.app.upgrade() else {
+            return;
+        };
+        #[cfg(feature = "test-support")]
+        let deferred = self.deferred.start();
+        // A blocking thread, not a reader: the job may wait on a lock before it reads.
+        self.runtime.spawn_blocking(move || {
+            #[cfg(feature = "test-support")]
+            let _deferred = deferred;
+            job(&PooledReader(&app.db));
+        });
+    }
+
     #[cfg(feature = "test-support")]
     fn settle(&self) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send + '_>> {
         Box::pin(self.deferred.settle())
+    }
+}
+
+/// A reader from the app's pool, borrowed for one `read` at a time.
+struct PooledReader<'a>(&'a campfire_db::Database);
+
+impl twins::Reader for PooledReader<'_> {
+    fn read(&self, read: &mut dyn FnMut(&Connection)) {
+        let result = self.0.read_blocking(|conn| {
+            read(conn);
+            Ok(())
+        });
+        if let Err(error) = result {
+            tracing::warn!(%error, "sync: deferred twin not read");
+        }
     }
 }
 

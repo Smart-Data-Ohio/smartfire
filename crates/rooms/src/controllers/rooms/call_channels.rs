@@ -350,7 +350,7 @@ pub async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
                 }
             }
             for membership in room.memberships(conn)? {
-                app.broadcasts.sync_membership_row(conn, membership.id);
+                app.broadcasts.sync_membership_row(membership.id);
             }
             Ok(())
         })

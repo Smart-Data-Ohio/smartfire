@@ -274,13 +274,9 @@ impl Broadcasts {
 
     /// A management write's viewer-qualified row, including a hidden row refresh, after
     /// a broadcast point outside this type replaced its metadata or members.
-    pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {
-        sync::membership_row(&self.server, &self.sync, conn, membership_id);
-    }
-
-    /// [`Self::sync_membership_row`], read later on a deferred reader: for the cable sink,
-    /// which runs on the database writer and must not wait for the room's lock.
-    pub fn sync_membership_row_later(&self, membership_id: i64) {
+    /// Read later, under the room's lock: a caller holding a reader (or on the database
+    /// writer) never waits for that lock.
+    pub fn sync_membership_row(&self, membership_id: i64) {
         sync::membership_row_later(&self.server, &self.sync, membership_id);
     }
 
@@ -632,7 +628,7 @@ impl Broadcasts {
         for &user_id in &user_ids {
             self.prepend(&Stream::user_rooms(user_id), "shared_rooms", &html);
         }
-        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
+        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
         Ok(())
     }
 
@@ -657,7 +653,7 @@ impl Broadcasts {
                 self.replace(&Stream::user_rooms(user_id), &target, header);
             }
         }
-        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
+        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
         Ok(())
     }
 
@@ -677,7 +673,7 @@ impl Broadcasts {
                 &html,
             );
         }
-        sync::management_sidebar_rows(&self.server, &self.sync, conn, room, None);
+        sync::management_sidebar_rows_later(&self.server, &self.sync, room.id, None);
         Ok(())
     }
 

@@ -1331,3 +1331,72 @@ async fn a_rename_paused_across_a_newer_rename_ends_on_the_newer_name() {
     );
     server.abort();
 }
+
+#[tokio::test]
+async fn row_publications_waiting_on_a_room_hold_no_readers() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let kevin = a.sign_in(KEVIN).await;
+    let mut sync = Sync::connect(addr, &kevin.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let reply = david
+        .write(json_body(
+            Method::POST,
+            "/api/v1/directs",
+            &json!({"userIds": [KEVIN, JASON]}),
+        ))
+        .await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    let room = parse::<api::SidebarRow>(&reply).room.id;
+    remaining_row_events(&a, &mut sync, room).await;
+
+    // Kevin's row is rendered and paused, holding the room's lock. Each message after it queues
+    // a preview behind that lock: more of them than the reader pool has readers.
+    let hold = campfire_api::test_hooks::hold_after_sidebar_snapshot(a.db().path(), room);
+    let post = |room: i64, client: String| {
+        json_body(
+            Method::POST,
+            &format!("/api/v1/rooms/{room}/messages"),
+            &json!({"clientMessageId": client, "markdownSource": client}),
+        )
+    };
+    let reply = david.write(post(room, "held".into())).await;
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    tokio::time::timeout(Duration::from_secs(5), hold.reached)
+        .await
+        .expect("the row was rendered")
+        .unwrap();
+    let readers = a.booted.app.config.db_readers;
+    for n in 0..readers + 4 {
+        let reply = tokio::time::timeout(
+            Duration::from_secs(5),
+            david.write(post(room, format!("queued-{n}"))),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("message {n} committed while previews wait on the room"));
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    }
+
+    // The writer's own reads still find a reader: a message elsewhere (whose append the cable
+    // sink reads on the writer) commits.
+    let reply = tokio::time::timeout(
+        Duration::from_secs(5),
+        david.write(post(ALL_TALK, "elsewhere".into())),
+    )
+    .await
+    .expect("another room's write commits while the previews wait");
+    assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+    hold.release.send(()).unwrap();
+    let last = format!("queued-{}", readers + 3);
+    sync.until(
+        move |event| {
+            matches!(&event.payload, api::SyncPayload::SidebarRowUpserted(row)
+                if row.room.id == room
+                    && row.last_message.as_ref().is_some_and(|m| m.excerpt == last))
+        },
+        |_| false,
+    )
+    .await;
+    server.abort();
+}

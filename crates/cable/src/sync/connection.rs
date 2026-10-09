@@ -210,6 +210,21 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(
             }
         }
 
+        // The select prefers a disconnect over the head moving, so pull in what was published
+        // before the bye first: it goes out ahead of the bye, in publication order.
+        if bye.is_some()
+            && let Some(resync) = connection.catch_up(false)
+        {
+            let frames = connection.take_batches();
+            if connection.send(&mut sink, &frames).await.is_err()
+                || connection
+                    .send(&mut sink, &[encode(&resync)])
+                    .await
+                    .is_err()
+            {
+                break;
+            }
+        }
         let due = connection.flush_at.is_some_and(|at| at <= Instant::now());
         if due || connection.pending.len() >= config.flush_max || bye.is_some() {
             let frames = connection.take_batches();
