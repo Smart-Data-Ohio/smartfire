@@ -137,6 +137,19 @@ export const start = Effect.fn("session.start")(function* () {
   }
 });
 
+/** Whether the viewer sent to the room's timeline while its fresh window loaded. */
+function sentWhileLoading(roomId: number): boolean {
+  const state = store.getState();
+  const viewerId = state.me?.user.id ?? state.boot?.user.id ?? null;
+
+  return (
+    (state.pendingByRoom[roomId]?.length ?? 0) > 0 ||
+    (state.timelines[roomId]?.arrived ?? []).some(
+      (id) => state.messages[id]?.creatorId === viewerId,
+    )
+  );
+}
+
 /** The first page: at the visit's focused message, the unread divider or the end. */
 const loadFirstPage = Effect.fnUntraced(function* (
   roomId: number,
@@ -162,6 +175,13 @@ const loadFirstPage = Effect.fnUntraced(function* (
   }
 
   yield* messages(roomId, cursor).pipe(
+    // A send from here while the page loaded lands at the present, beyond a window opened at the
+    // first unread or a permalink: open at the present instead, where the reader sees it.
+    Effect.flatMap((page) =>
+      page.after !== null && current() && sentWhileLoading(roomId)
+        ? messages(roomId, null)
+        : Effect.succeed(page),
+    ),
     Effect.tap((page) =>
       Effect.sync(() => {
         if (!current()) {
