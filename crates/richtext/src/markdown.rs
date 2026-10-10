@@ -33,6 +33,7 @@ pub const MARKDOWN_TAGS: &[&str] = &[
     "ol",
     "p",
     "pre",
+    "span",
     "strong",
     "table",
     "tbody",
@@ -42,8 +43,9 @@ pub const MARKDOWN_TAGS: &[&str] = &[
     "tr",
     "ul",
 ];
-pub const MARKDOWN_ATTRIBUTES: &[&str] = &["align", "checked", "class", "disabled", "href", "rel", "start", "target", "title", "type"];
-pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "task-list-item"];
+pub const MARKDOWN_ATTRIBUTES: &[&str] =
+    &["align", "checked", "class", "data-spoiler", "disabled", "href", "rel", "start", "target", "title", "type"];
+pub const ALLOWED_CLASSES: &[&str] = &["contains-task-list", "markdown-body", "spoiler", "task-list-item"];
 const BLOCK_TAGS: &[&str] = &["blockquote", "h1", "h2", "h3", "h4", "h5", "h6", "li", "ol", "p", "pre", "table", "tr", "ul"];
 static MENTION_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"@\[([^\[\]\r\n]+)\]").unwrap());
 static SHORTCODE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
@@ -134,6 +136,7 @@ pub fn render(source: &str, mentions: &dyn MentionResolver, icons: &dyn IconReso
     let (protected, tokens, pattern) = protect_mentions(source);
     let mut options = Options::default();
     options.extension.autolink = true;
+    options.extension.spoiler = true;
     options.extension.strikethrough = true;
     options.extension.table = true;
     options.extension.tagfilter = true;
@@ -198,6 +201,20 @@ fn constrain_generated_markup(dom: &mut Dom, root: NodeId) {
                 dom.remove_attr(node, "class");
             } else {
                 dom.set_attr(node, "class", &classes);
+            }
+        }
+        // Comrak's spoiler extension emits `<span class="spoiler">`. `data-spoiler` is the only
+        // new attribute, and the SPA and plain-text previews key off it. Escaped-character spans
+        // are not spoilers: unwrap them so they don't appear in stored HTML.
+        if dom.local_name(node) == Some("span") {
+            let spoiler = dom.attr(node, "class").is_some_and(|classes| classes.split_whitespace().any(|class| class == "spoiler"));
+            if spoiler {
+                dom.set_attr(node, "data-spoiler", "");
+            } else if dom.parent(node).is_some() {
+                for child in dom.children(node).to_vec() {
+                    dom.insert_before(node, child);
+                }
+                dom.detach(node);
             }
         }
         if dom.local_name(node) == Some("input") {
@@ -440,6 +457,11 @@ fn plain_node(dom: &Dom, node: NodeId, icons: &dyn IconResolver) -> String {
     let name = dom.local_name(node).unwrap_or("");
     if name == "br" {
         return "\n".to_owned();
+    }
+    // Push, email, activity and sidebar excerpts are this plain text. The hidden words stay in
+    // the HTML for the reader who reveals them, and are replaced here so a preview can't leak them.
+    if name == "span" && dom.has_attr(node, "data-spoiler") {
+        return "spoiler".to_owned();
     }
     if name == "img" {
         let alt = dom.attr(node, "alt").unwrap_or("");

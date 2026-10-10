@@ -19,6 +19,8 @@ fn plain_text_for(dom: &Dom, node: NodeId) -> String {
             if list_depth(dom, node) > 0 { format!("\n{text}") } else { text }
         }
         "br" => "\n".to_string(),
+        // Same redaction as `markdown::plain_text`: a spoiler's words never enter a preview.
+        "span" if dom.has_attr(node, "data-spoiler") => "spoiler".to_string(),
         // Text nodes, and elements that happen to be named "text" (SVG's), use `node.text`
         "text" => chomp_newlines(&dom.text_content(node)).to_string(),
         "div" => format!("{}\n", chomp_newlines(&child_values().concat())),

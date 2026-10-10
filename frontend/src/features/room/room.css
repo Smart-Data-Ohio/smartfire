@@ -551,6 +551,42 @@
     text-decoration: underline;
   }
 
+  /* A Discord-style spoiler (`||text||`). The words stay in the DOM; the bar hides them until
+     this one spoiler is revealed. Tokens cover light and dark. Reduced motion drops the fade. */
+  .message-body .spoiler {
+    border-radius: var(--radius-xs);
+    background: var(--text);
+    box-decoration-break: clone;
+    color: transparent;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      color var(--duration-small) var(--ease-enter),
+      background-color var(--duration-small) var(--ease-enter);
+  }
+
+  .message-body .spoiler:not([data-revealed]) * {
+    color: transparent;
+  }
+
+  .message-body .spoiler:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .message-body .spoiler[data-revealed] {
+    background: var(--bg-sunken);
+    color: inherit;
+    cursor: text;
+    user-select: text;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .message-body .spoiler {
+      transition: none;
+    }
+  }
+
   .message-body code {
     padding: 1px 4px;
     border-radius: var(--radius-xs);
