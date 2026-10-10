@@ -758,6 +758,7 @@ pub fn activity_removed_later(server: &Cable, slot: &RendererSlot, removed: Acti
                         id,
                         unread_count: unread.count,
                         unread_revision: unread.revision,
+                        evaluated_at: unread.evaluated_at.to_evaluation_time(),
                     }),
                     |publication| publication,
                 ),

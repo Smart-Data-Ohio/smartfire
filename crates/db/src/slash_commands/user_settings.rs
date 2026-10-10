@@ -167,6 +167,9 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         .filter(|key| attrs[*key] != original[*key])
         .collect::<Vec<_>>();
     if changed.is_empty() {
+        if changes.contains_key("inbox_preferences") {
+            crate::models::user::profile_settings::bump_revision(tx, user)?;
+        }
         return Ok(());
     }
     let mut values = changed
@@ -185,5 +188,5 @@ pub(crate) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
         &format!("UPDATE users SET {assignments},updated_at=? WHERE id=?"),
         rusqlite::params_from_iter(values),
     )?;
-    Ok(())
+    crate::models::user::profile_settings::bump_revision(tx, user)
 }

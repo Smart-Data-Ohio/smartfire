@@ -13,4 +13,8 @@ export type Settings = {
 /**
  * Monotonic, persisted ordering for every settings response.
  */
-revision: number, profile: ProfileSettings, appearance: AppearanceSettings, notifications: NotificationSettings, status: StatusSettings, calls: CallSettings, integrations: IntegrationSettings, };
+revision: number,
+/**
+ * The injected server clock used for expiry-dependent fields, in UTC with nanoseconds.
+ */
+evaluatedAt: string, profile: ProfileSettings, appearance: AppearanceSettings, notifications: NotificationSettings, status: StatusSettings, calls: CallSettings, integrations: IntegrationSettings, };

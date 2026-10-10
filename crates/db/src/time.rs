@@ -159,6 +159,11 @@ impl Timestamp {
         self.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
     }
 
+    /// The injected clock's evaluation time, with fixed precision for snapshot ordering.
+    pub fn to_evaluation_time(self) -> String {
+        self.jiff().strftime("%Y-%m-%dT%H:%M:%S%.9fZ").to_string()
+    }
+
     /// The exact text Active Record writes to SQLite, including signed years.
     pub fn to_db(self) -> String {
         let (proxy, shift) = self.calendar_proxy();

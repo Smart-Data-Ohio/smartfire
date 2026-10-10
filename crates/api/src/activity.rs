@@ -151,6 +151,7 @@ pub(crate) fn changed(
         item,
         unread_count: unread.count,
         unread_revision: unread.revision,
+        evaluated_at: unread.evaluated_at.to_evaluation_time(),
     }))
 }
 
@@ -228,6 +229,7 @@ async fn index_activity(c: &mut Ctx) -> Result {
                 users: dto::users(conn, &app.secrets, creators, now)?,
                 unread_count: unread.count,
                 unread_revision: unread.revision,
+                evaluated_at: unread.evaluated_at.to_evaluation_time(),
                 items,
                 next_cursor,
             })
@@ -253,6 +255,7 @@ async fn show_unread_count(c: &mut Ctx) -> Result {
         &api::ActivityUnreadCount {
             unread_count: unread.count,
             unread_revision: unread.revision,
+            evaluated_at: unread.evaluated_at.to_evaluation_time(),
         },
     )
 }

@@ -22,6 +22,8 @@ use crate::{Involvement, PresenceSetting, TextSize, Theme, Timestamp, VoiceMode}
 pub struct Settings {
     /// Monotonic, persisted ordering for every settings response.
     pub revision: i64,
+    /// The injected server clock used for expiry-dependent fields, in UTC with nanoseconds.
+    pub evaluated_at: String,
     pub profile: ProfileSettings,
     pub appearance: AppearanceSettings,
     pub notifications: NotificationSettings,

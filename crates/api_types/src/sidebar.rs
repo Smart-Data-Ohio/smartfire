@@ -41,6 +41,10 @@ pub struct Sidebar {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SidebarRow {
+    /// The viewer's persisted notification settings revision.
+    pub revision: i64,
+    /// The injected server clock used for these counts, in UTC with nanoseconds.
+    pub evaluated_at: String,
     pub room: Room,
     /// The viewer's membership: involvement (`muted` rows are dimmed), favourite position,
     /// category and read state (`unreadAt` set means unread, shown bold).

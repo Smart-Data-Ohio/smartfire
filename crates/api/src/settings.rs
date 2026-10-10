@@ -324,6 +324,7 @@ async fn load(c: &mut Ctx, id: i64) -> Result<api::Settings> {
     let now = campfire_db::Timestamp::from_jiff(now);
     Ok(api::Settings {
         revision: status.notification_preferences.settings_revision,
+        evaluated_at: now.to_evaluation_time(),
         profile: api::ProfileSettings {
             user_id: user.id,
             name: user.name.clone(),

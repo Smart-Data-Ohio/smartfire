@@ -997,6 +997,7 @@ fn sidebar_row_with(
     members: Option<&[(i64, String)]>,
     counts: RoomCounts,
     last_message: Option<api::SidebarLastMessage>,
+    (revision, now): (i64, Timestamp),
 ) -> api::SidebarRow {
     let (display_name, direct_member_ids) = match members {
         Some(members) => {
@@ -1010,6 +1011,8 @@ fn sidebar_row_with(
         None => (room.name.clone().unwrap_or_default(), Vec::new()),
     };
     api::SidebarRow {
+        revision,
+        evaluated_at: now.to_evaluation_time(),
         room: self::room(room),
         membership: self::membership(membership),
         display_name,
@@ -1066,6 +1069,7 @@ pub fn membership_row(
         members.as_deref(),
         counts,
         last_message,
+        (campfire_db::models::notification_policy::NotificationPreferences::load(conn, membership.user_id)?.settings_revision, now),
     ))
 }
 
@@ -1083,6 +1087,7 @@ pub fn sidebar(
     #[cfg(feature = "test-support")]
     crate::test_hooks::after_sidebar_memberships(conn, viewer.id);
     let counts = notification_counts(conn, viewer.id, None, now)?;
+    let revision = campfire_db::models::notification_policy::NotificationPreferences::load(conn, viewer.id)?.settings_revision;
     let direct_ids: Vec<i64> = all
         .iter()
         .filter(|(_, room)| room.direct())
@@ -1104,6 +1109,7 @@ pub fn sidebar(
             members.as_deref(),
             counts.get(&room.id).copied().unwrap_or_default(),
             last_messages.remove(&room.id),
+            (revision, now),
         );
         user_ids.extend(row.direct_member_ids.iter().copied());
         rows.push(row);

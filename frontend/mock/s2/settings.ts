@@ -95,6 +95,7 @@ function initialState(world: World, now: number): State {
   return {
     settings: {
       revision: 0,
+      evaluatedAt: new Date(now).toISOString().replace("Z", "000000Z"),
       profile: {
         userId: VIEWER_ID,
         name: viewer?.name ?? "You",
@@ -258,6 +259,7 @@ export function createSettings(
   /** The settings page, with the viewer's DND exceptions. */
   const page = (): Settings => {
     const world = ctx.world();
+    const now = ctx.now();
     const { settings } = current();
 
     const allowedPeople = [...world.dndAllowed]
@@ -268,7 +270,19 @@ export function createSettings(
       })
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    return { ...settings, notifications: { ...settings.notifications, allowedPeople } };
+    return {
+      ...settings,
+      evaluatedAt: new Date(now).toISOString().replace("Z", "000000Z"),
+      notifications: {
+        ...settings.notifications,
+        allowedPeople,
+        roomMuteUntil: Object.fromEntries(
+          Object.entries(settings.notifications.roomMuteUntil).filter(
+            ([, until]) => until === null || Date.parse(until) > now,
+          ),
+        ),
+      },
+    };
   };
 
   const update = (change: (settings: Settings) => Settings) => {

@@ -1431,6 +1431,10 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
     )
     .await;
     assert_eq!(muted.status, StatusCode::OK, "{}", muted.text());
+    let settings_before = parse::<Value>(&muted);
+    let count_before = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
+    assert_eq!(settings_before["evaluatedAt"], "2035-01-01T12:00:00.000000000Z");
+    assert_eq!(count_before["evaluatedAt"], settings_before["evaluatedAt"]);
     assert_eq!(push_badge(&app).await, 0);
     let favorite_path = format!("/api/v1/rooms/{room}/favorite");
     let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
@@ -1454,6 +1458,15 @@ async fn a9_badges_resume_when_injected_clock_reaches_mute_expiry() {
         0
     );
     clock.advance(jiff::SignedDuration::from_secs(900));
+    let settings_after = parse::<Value>(&browser.send(get("/api/v1/settings")).await);
+    let count_after = parse::<Value>(&browser.send(get("/api/v1/activity/unread_count")).await);
+    let list_after = parse::<Value>(&browser.send(get("/api/v1/activity")).await);
+    assert_eq!(settings_after["revision"], settings_before["revision"]);
+    assert_eq!(count_after["unreadRevision"], count_before["unreadRevision"]);
+    assert_eq!(settings_after["evaluatedAt"], "2035-01-01T12:15:00.000000000Z");
+    assert_eq!(count_after["evaluatedAt"], settings_after["evaluatedAt"]);
+    assert_eq!(list_after["evaluatedAt"], settings_after["evaluatedAt"]);
+    assert_eq!(settings_after["notifications"]["roomMuteUntil"], json!({}));
     assert_eq!(push_badge(&app).await, 1);
     let favorite = write(&mut browser, Method::POST, &favorite_path, json!({})).await;
     assert_eq!(favorite.status, StatusCode::OK, "{}", favorite.text());

@@ -13,10 +13,11 @@ pub struct ActivityQuery<'a> {
 }
 
 /// The badge count and its per-user ordering token from one SQLite statement.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ActivityUnread {
     pub count: i64,
     pub revision: i64,
+    pub evaluated_at: Timestamp,
 }
 
 fn unmuted_activity_sql() -> String {
@@ -35,9 +36,10 @@ impl ActivityItem {
             Ok(ActivityUnread {
                 count: row.get(0)?,
                 revision: row.get(1)?,
+                evaluated_at: now,
             })
         })?
-        .unwrap_or_default())
+        .unwrap_or(ActivityUnread { count: 0, revision: 0, evaluated_at: now }))
     }
 
     pub fn accessible_to(conn: &Connection, user: &User) -> Result<Vec<Self>> {

@@ -38,7 +38,7 @@ import { PushSubscriptionId, RememberedDeviceId, RoomId, SessionId, UserId } fro
 import { PresenceSetting, TextSize, Theme, VoiceMode } from "./me.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Involvement } from "./room.ts";
-import { Timestamp } from "./time.ts";
+import { EvaluationTimestamp, Timestamp } from "./time.ts";
 
 /** One time zone the appearance form offers. */
 export const TimeZoneChoice = Schema.Struct({ label: Schema.String, value: Schema.String });
@@ -224,6 +224,7 @@ export type IntegrationChangePin = Assert<
 /** `GET /api/v1/settings`: everything the settings screens show. */
 export const Settings = Schema.Struct({
   revision: Schema.Number,
+  evaluatedAt: EvaluationTimestamp,
   profile: ProfileSettings,
   appearance: AppearanceSettings,
   notifications: NotificationSettings,

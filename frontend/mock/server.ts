@@ -404,6 +404,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const unreadCount = unreadMessages(record).length;
 
     const row: SidebarRow = {
+      revision: world.activityRevision,
+      evaluatedAt: new Date(now()).toISOString().replace("Z", "000000Z"),
       room: record.room.kind === "direct" ? { ...record.room, name: null } : record.room,
       membership: record.membership,
       displayName: displayName(record),

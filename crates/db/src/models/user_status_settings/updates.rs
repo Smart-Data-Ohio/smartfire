@@ -49,6 +49,9 @@ impl UserStatusSettings {
         } else {
             tx.conn().execute("UPDATE users SET ooo_broadcast=0,ooo_until=NULL,ooo_note=NULL,updated_at=? WHERE id=? AND (ooo_broadcast IS NULL OR ooo_broadcast!=0) AND (ooo_until IS NULL OR ooo_until<=?)", rusqlite::params![revision,self.user.id,now])?
         };
+        if affected == 1 && !active {
+            crate::models::user::profile_settings::bump_revision(tx, self.user.id)?;
+        }
         Ok(affected == 1)
     }
 

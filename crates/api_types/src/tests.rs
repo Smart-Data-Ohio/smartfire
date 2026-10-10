@@ -518,6 +518,8 @@ fn membership() -> Membership {
 
 pub(crate) fn row() -> SidebarRow {
     SidebarRow {
+        revision: 0,
+        evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         room: room(),
         membership: membership(),
         display_name: "general".into(),
@@ -661,6 +663,8 @@ fn sidebar_round_trips() {
     assert_eq!(
         wire["rows"][0],
         json!({
+            "revision": 0,
+            "evaluatedAt": "2026-10-10T12:00:00.000000000Z",
             "room": serde_json::to_value(room()).unwrap(),
             "membership": serde_json::to_value(membership()).unwrap(),
             "displayName": "general",

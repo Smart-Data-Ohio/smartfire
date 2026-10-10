@@ -10,6 +10,7 @@ use crate::*;
 fn settings() -> Settings {
     Settings {
         revision: 3,
+        evaluated_at: "2026-10-10T12:00:00.000000000Z".into(),
         profile: ProfileSettings {
             user_id: 7,
             name: "Ada Lovelace".into(),
@@ -85,6 +86,7 @@ fn settings_wire() {
         &settings(),
         json!({
             "revision": 3,
+            "evaluatedAt": "2026-10-10T12:00:00.000000000Z",
             "profile": {
                 "userId": 7,
                 "name": "Ada Lovelace",

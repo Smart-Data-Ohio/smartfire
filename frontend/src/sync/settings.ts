@@ -53,6 +53,7 @@ import {
   showAccountTheme,
   type ThemePreference,
 } from "../lib/appearance.ts";
+import { compareSnapshots } from "../store/snapshot-order.ts";
 import type { State } from "../store/state.ts";
 import { mutations, sidebarRowClock, store } from "../store/store.ts";
 import { loadUnreadCount } from "./activity-actions.ts";
@@ -135,7 +136,7 @@ async function settingsSnapshot(run: () => Promise<Settings>): Promise<Settings>
 
   if (
     latestSettings?.profile.userId !== next.profile.userId ||
-    next.revision >= latestSettings.revision
+    compareSnapshots(next, latestSettings) >= 0
   ) {
     latestSettings = next;
     mutations.setNotificationPreferences(next.notifications);

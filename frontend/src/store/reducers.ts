@@ -39,6 +39,7 @@ import {
 } from "./row-touches.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
+import { compareSnapshots } from "./snapshot-order.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
 import { removeThread, setThreadIndicator, setThreadUnread } from "./threads.ts";
 import { receiveWorkThread } from "./work.ts";
@@ -107,8 +108,10 @@ function installSidebar(state: State, sidebar: Sidebar, since: number): State {
 
   for (const row of sidebar.rows) {
     if (!touchedSince(state, row.room.id, since)) {
-      rows[row.room.id] = row;
-      installed.push(row);
+      const held = state.sidebar.rows[row.room.id];
+      const next = held !== undefined && compareSnapshots(row, held) < 0 ? held : row;
+      rows[row.room.id] = next;
+      installed.push(next);
     }
   }
 
@@ -907,6 +910,9 @@ function setTyping(state: State, topic: string, userId: number, on: boolean, now
 }
 
 function upsertRow(state: State, row: SidebarRow): State {
+  const held = state.sidebar.rows[row.room.id];
+
+  if (held !== undefined && compareSnapshots(row, held) < 0) return state;
   const rows = { ...state.sidebar.rows, [row.room.id]: row };
   const known = state.sidebar.rows[row.room.id] !== undefined;
   const renamed = known && state.sidebar.rows[row.room.id]?.displayName !== row.displayName;

@@ -405,14 +405,11 @@ pub fn resolve(
                 }
             }
             room.grant_to(tx, &grants)?;
-            for membership in room.memberships(tx.conn())? {
+            for mut membership in room.memberships(tx.conn())? {
                 if truthy(&c["is_archived"])
                     || (room.open() && !members.contains(&membership.user_id))
                 {
-                    tx.conn().execute(
-                        "UPDATE memberships SET involvement='invisible' WHERE id=?",
-                        [membership.id],
-                    )?;
+                    membership.update_involvement(tx, campfire_db::Involvement::Invisible)?;
                 }
             }
             users::record(

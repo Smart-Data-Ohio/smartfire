@@ -64,7 +64,7 @@ pub fn replace_keyword_alerts(tx: &mut Tx<'_>, user_id: i64, lines: &[String]) -
         for phrase in phrases {
             KeywordAlert::create(tx, user_id, &phrase)?;
         }
-        Ok(())
+        crate::models::user::profile_settings::bump_revision(tx, user_id)
     })
     .map_err(|error| match error {
         crate::Error::RecordInvalid(errors) => {
@@ -203,6 +203,7 @@ impl UserStatusSettings {
             &format!("UPDATE users SET {} WHERE id=?", columns.join(",")),
             rusqlite::params_from_iter(values),
         )?;
+        crate::models::user::profile_settings::bump_revision(tx, self.user.id)?;
         *self = Self::find(tx.conn(), self.user.id)?;
         Ok(())
     }

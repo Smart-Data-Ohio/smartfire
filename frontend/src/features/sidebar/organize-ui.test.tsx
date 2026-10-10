@@ -59,6 +59,8 @@ interface RowOptions {
 
 function row(name: string, options: RowOptions = {}): SidebarRow {
   return {
+    revision: 0,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     room: {
       id: 5,
       kind: options.kind ?? "open",

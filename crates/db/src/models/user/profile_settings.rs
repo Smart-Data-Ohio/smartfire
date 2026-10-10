@@ -52,7 +52,6 @@ pub fn appearance(conn: &rusqlite::Connection, user: i64) -> Result<Appearance> 
 /// Run inside the same writer transaction as core profile, security and attachment changes.
 /// Validation also examines unchanged settings, as User#save does in Rails.
 pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
-    let preferences_changing = changes.inbox_preferences.is_some();
     let mut attrs = Map::new();
     for (key, value) in [
         ("theme", changes.theme),
@@ -133,9 +132,6 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
         );
     }
     crate::slash_commands::user_settings::update(tx, user, Value::Object(attrs))?;
-    if preferences_changing {
-        bump_revision(tx, user)?;
-    }
     Ok(())
 }
 

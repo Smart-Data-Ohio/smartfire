@@ -50,6 +50,8 @@ function row(id: number, name: string, options: RowOptions = {}): SidebarRow {
     (options.muted === true ? "muted" : options.kind === "direct" ? "everything" : "mentions");
 
   return {
+    revision: 0,
+    evaluatedAt: "2026-10-10T12:00:00.000000000Z",
     room: {
       id,
       kind: options.kind ?? "open",

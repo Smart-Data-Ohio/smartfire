@@ -14,6 +14,93 @@ fn instant(s: &str) -> Timestamp {
 }
 
 #[test]
+fn a9_room_choices_advance_revision_even_when_only_inheritance_changes() {
+    use crate::models::notification_policy::NotificationPreferences;
+    use crate::models::user::profile_settings::{self, Changes};
+    let t = TestDb::new();
+    let room = t.read(|conn| crate::Membership::find(conn, id("david_watercooler"))).room_id;
+    t.write(move |tx| profile_settings::update(tx, id("david"), Changes {
+        inbox_preferences: Some(json!({"default_notification_level":"nothing", "room_notification_levels":{room.to_string():null}})),
+        ..Default::default()
+    }));
+    let mut previous = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    for level in [Involvement::Everything, Involvement::Mentions, Involvement::Nothing, Involvement::Muted, Involvement::Invisible] {
+        t.write(move |tx| crate::Membership::find(tx.conn(), id("david_watercooler"))?.update_involvement(tx, level));
+        let preferences = t.read(|conn| NotificationPreferences::load(conn, id("david")));
+        assert!(preferences.settings_revision > previous, "{level:?} did not advance settings revision");
+        assert!(!preferences.room_notification_levels.contains_key(&room));
+        previous = preferences.settings_revision;
+    }
+    t.write(|tx| crate::Membership::find(tx.conn(), id("david_watercooler"))?.update_involvement(tx, Involvement::Invisible));
+    assert_eq!(t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision, previous);
+}
+
+#[test]
+fn a9_notification_writers_advance_revision_outside_the_settings_api() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let revision = |t: &TestDb| t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    let mut previous = revision(&t);
+    t.write(|tx| {
+        let mut status = UserStatusSettings::find(tx.conn(), id("david"))?;
+        status.dnd_enabled = !status.dnd_enabled;
+        status.save(tx)
+    });
+    assert!(revision(&t) > previous, "status save did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| crate::slash_commands::user_settings::update(tx, id("david"), json!({"presence_setting":"dnd"})));
+    assert!(revision(&t) > previous, "slash setting did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::models::user_status_settings::replace_keyword_alerts(tx, id("david"), &["revision witness".into()])
+    });
+    assert!(revision(&t) > previous, "keywords did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::DndAllowedUser::remove(tx, id("david"), id("kevin"))?;
+        crate::DndAllowedUser::create(tx, id("david"), id("kevin"))?;
+        Ok(())
+    });
+    assert!(revision(&t) > previous, "DND allowance did not advance revision");
+    previous = revision(&t);
+    t.write(|tx| {
+        crate::DndAllowedUser::remove(tx, id("david"), id("kevin"))?;
+        Ok(())
+    });
+    assert!(revision(&t) > previous, "DND allowance removal did not advance revision");
+}
+
+#[test]
+fn a9_direct_keyword_writers_advance_revision() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let revision = |t: &TestDb| t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    let mut previous = revision(&t);
+    let keyword = t.write(|tx| crate::KeywordAlert::create(tx, id("david"), "revision witness"));
+    assert!(revision(&t) > previous, "keyword creation did not advance revision");
+    previous = revision(&t);
+    let keyword = t.write(move |tx| {
+        let mut keyword = keyword;
+        keyword.update(tx, "revision changed")?;
+        Ok(keyword)
+    });
+    assert!(revision(&t) > previous, "keyword update did not advance revision");
+    previous = revision(&t);
+    t.write(move |tx| keyword.destroy(tx));
+    assert!(revision(&t) > previous, "keyword removal did not advance revision");
+}
+
+#[test]
+fn a9_calendar_notification_state_advances_revision() {
+    use crate::models::notification_policy::NotificationPreferences;
+    let t = TestDb::new();
+    let before = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    t.write(|tx| crate::models::google_meeting_cache::complete(tx, id("david"), Some(json!([])), Some(json!([])), Some("revision witness".into()), tx.now()));
+    let after = t.read(|conn| NotificationPreferences::load(conn, id("david"))).settings_revision;
+    assert!(after > before, "calendar notification state did not advance revision");
+}
+
+#[test]
 fn ws17_policy_matches_rails_combinations() {
     let t = TestDb::new();
     let mut user = t.read(|conn| {

@@ -35,6 +35,45 @@ function held<A>() {
   return { promise, release };
 }
 
+it("keeps expired mutes out of settings when an earlier equal-revision GET arrives last", async () => {
+  const roomId = SEED_IDS.rooms.general;
+  const saved = await settings.updateNotifications({ roomMute: { roomId, duration: "minutes15" } });
+  const started = held<void>();
+  const gate = held<void>();
+  let delay = true;
+  intercept = async (input, init) => {
+    if (String(input).endsWith("/settings")) {
+      const older = delay;
+      delay = false;
+
+      const response = Response.json({
+        ...saved,
+        evaluatedAt: older ? "2035-01-01T12:14:59.999999999Z" : "2035-01-01T12:15:00.000000000Z",
+        notifications: {
+          ...saved.notifications,
+          roomMuteUntil: older ? saved.notifications.roomMuteUntil : {},
+        },
+      });
+
+      if (older) {
+        started.release();
+        await gate.promise;
+      }
+
+      return response;
+    }
+
+    return fetch(input, init);
+  };
+
+  const older = settings.load();
+  await started.promise;
+  await settings.load();
+  gate.release();
+  expect((await older).notifications.roomMuteUntil).toEqual({});
+  expect(store.getState().sidebar.notificationPreferences?.roomMuteUntil).toEqual({});
+});
+
 it("applies a mute committed after a GET even when its PATCH started first", async () => {
   const roomId = SEED_IDS.rooms.general;
   await settings.updateNotifications({ roomMute: { roomId, duration: "off" } });
@@ -156,6 +195,7 @@ it.each(["policy", "badge"])(
         const response = Response.json({
           unreadCount: first ? 0 : 1,
           unreadRevision: first ? 8 : 9,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
         });
 
         if (first) {
@@ -170,7 +210,11 @@ it.each(["policy", "badge"])(
       return fetch(input, init);
     };
 
-    mutations.setActivityUnreadCount({ unreadCount: 1, unreadRevision: 7 });
+    mutations.setActivityUnreadCount({
+      unreadCount: 1,
+      unreadRevision: 7,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     const stop = followNotificationPreferences();
 
     try {

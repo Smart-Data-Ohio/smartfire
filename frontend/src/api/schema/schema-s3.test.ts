@@ -351,6 +351,7 @@ describe("S3 DTO schemas", () => {
       users: [userJson],
       unreadCount: 4,
       unreadRevision: 1,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
       nextCursor: "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
     });
     roundTrips(ActivityItem, {
@@ -371,15 +372,33 @@ describe("S3 DTO schemas", () => {
     expect(() =>
       Schema.decodeUnknownSync(ActivityItem)({ ...activityItemJson, source: null }),
     ).toThrowError();
-    roundTrips(ActivityUnreadCount, { unreadCount: 4, unreadRevision: 1 });
+    roundTrips(ActivityUnreadCount, {
+      unreadCount: 4,
+      unreadRevision: 1,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
     expect(() => Schema.decodeUnknownSync(ActivityUnreadCount)({ unreadCount: 4 })).toThrowError();
     expect(() =>
-      Schema.decodeUnknownSync(ActivityUnreadCount)({ unreadCount: 4, unreadRevision: "1" }),
+      Schema.decodeUnknownSync(ActivityUnreadCount)({
+        unreadCount: 4,
+        unreadRevision: "1",
+        evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+      }),
     ).toThrowError();
     roundTrips(UpdateActivityItem, { action: "unhandled" });
     expect(() => Schema.decodeUnknownSync(UpdateActivityItem)({ state: "read" })).toThrowError();
-    roundTrips(ActivityItemChanged, { item: activityItemJson, unreadCount: 3, unreadRevision: 2 });
-    roundTrips(ActivityItemRemoved, { id: 301, unreadCount: 2, unreadRevision: 3 });
+    roundTrips(ActivityItemChanged, {
+      item: activityItemJson,
+      unreadCount: 3,
+      unreadRevision: 2,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
+    roundTrips(ActivityItemRemoved, {
+      id: 301,
+      unreadCount: 2,
+      unreadRevision: 3,
+      evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+    });
 
     const item = Schema.decodeUnknownSync(ActivityItem)(activityItemJson);
 
@@ -614,9 +633,22 @@ describe("S3 sync events", () => {
     const events = [
       {
         type: "activity.item",
-        data: { item: activityItemJson, unreadCount: 3, unreadRevision: 2 },
+        data: {
+          item: activityItemJson,
+          unreadCount: 3,
+          unreadRevision: 2,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        },
       },
-      { type: "activity.removed", data: { id: 301, unreadCount: 2, unreadRevision: 3 } },
+      {
+        type: "activity.removed",
+        data: {
+          id: 301,
+          unreadCount: 2,
+          unreadRevision: 3,
+          evaluatedAt: "2026-10-10T12:00:00.000000000Z",
+        },
+      },
       { type: "scheduled.changed", data: scheduledJson },
       { type: "scheduled.removed", data: { id: 4, roomId: 12 } },
       { type: "sidebar.category.upserted", data: categoryJson },

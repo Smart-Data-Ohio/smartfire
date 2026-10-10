@@ -499,8 +499,15 @@ impl Membership {
     /// `update!(involvement:)`
     pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: impl Into<Option<Involvement>>) -> Result<()> {
         let involvement = involvement.into();
-        tx.conn().execute("UPDATE users SET inbox_preferences=json_remove(inbox_preferences, ?) WHERE id=? AND json_type(inbox_preferences, ?) IS NOT NULL", params![format!("$.room_notification_levels.\"{}\"", self.room_id), self.user_id, format!("$.room_notification_levels.\"{}\"", self.room_id)])?;
+        let path = format!("$.room_notification_levels.\"{}\"", self.room_id);
+        let removed = tx.conn().execute(
+            "UPDATE users SET inbox_preferences=json_remove(inbox_preferences, ?) WHERE id=? AND json_type(inbox_preferences, ?) IS NOT NULL",
+            params![path, self.user_id, path],
+        )?;
         if self.involvement == involvement {
+            if removed != 0 {
+                super::user::profile_settings::bump_revision(tx, self.user_id)?;
+            }
             return Ok(());
         }
         let now = tx.now();
@@ -510,7 +517,7 @@ impl Membership {
         )?;
         self.involvement = involvement;
         self.updated_at = now;
-        Ok(())
+        super::user::profile_settings::bump_revision(tx, self.user_id)
     }
 
     /// `read`: `update!(unread_at: nil, last_read_message_id: latest_root_message_id)`, which
