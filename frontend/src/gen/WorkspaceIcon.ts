@@ -11,4 +11,8 @@ name: string, title: string, creatorName: string,
 /**
  * `/icons/:name`.
  */
-imageUrl: string, };
+imageUrl: string, animated: boolean,
+/**
+ * First-frame PNG for animated emoji, otherwise the original image URL.
+ */
+stillUrl: string, };

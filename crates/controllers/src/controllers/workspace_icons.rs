@@ -25,9 +25,27 @@ pub async fn show(c: &mut Ctx) -> Result {
         })
         .await
         .map_err(db_error)?;
-    let Some(blob) = blob else {
+    let Some(mut blob) = blob else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
+    if c.param_str("still") == Some("1") && campfire_storage::workspace_icon::animated(&blob) {
+        blob = campfire_runtime::active_storage::processed_branding_variant_with_deadline(
+            c.app(),
+            blob,
+            campfire_storage::branding::Kind::Emoji.still_variation(),
+            std::time::Duration::from_secs(10),
+            |storage, blob, variation, cancel| {
+                campfire_storage::branding::transform_variant(
+                    storage,
+                    blob,
+                    campfire_storage::branding::Kind::Emoji,
+                    variation,
+                    cancel,
+                )
+            },
+        )
+        .await?;
+    }
     c.expires_in(
         3600,
         ExpiresIn {

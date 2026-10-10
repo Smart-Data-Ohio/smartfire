@@ -160,6 +160,9 @@ pub struct WorkspaceIcon {
     pub creator_name: String,
     /// `/icons/:name`.
     pub image_url: String,
+    pub animated: bool,
+    /// First-frame PNG for animated emoji, otherwise the original image URL.
+    pub still_url: String,
 }
 
 /// `GET /api/v1/admin/icons`, and the answer to adding (`POST`) or deleting
@@ -169,6 +172,9 @@ pub struct WorkspaceIcon {
 #[ts(export)]
 pub struct WorkspaceIconList {
     pub icons: Vec<WorkspaceIcon>,
+    /// Static emoji have unlimited capacity. This limit applies only to animated emoji.
+    pub animated_limit: i64,
+    pub animated_usage: i64,
 }
 
 /// `POST /api/v1/admin/icons` (`accounts/icons#create`). A refusal is `Validation` with `fields`
@@ -179,7 +185,7 @@ pub struct WorkspaceIconList {
 pub struct CreateIcon {
     pub name: String,
     pub title: String,
-    /// The uploaded SVG or PNG (`POST /api/v1/uploads`); `null` is refused as a missing image.
+    /// The uploaded SVG, PNG, GIF or WebP; `null` is refused as a missing image.
     pub signed_id: Option<String>,
 }
 

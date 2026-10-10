@@ -49,6 +49,8 @@ const agentUserJson = {
     kind: "brand",
     character: null,
     imageUrl: "/assets/icons/github.svg",
+    animated: false,
+    stillUrl: "/assets/icons/github.svg",
   },
   agent: { agentId: 3, kind: "personal", status: "working", suspended: false },
   createdAt: "2026-09-26T12:26:46.848Z",

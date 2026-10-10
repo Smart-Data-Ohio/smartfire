@@ -139,7 +139,7 @@
       "title": "Acme Corp",
       "valid": false,
       "errors": [
-        "Image must be an SVG or PNG"
+        "Image must be an SVG, PNG, GIF or WebP image"
       ],
       "content_type": "application/xhtml+xml"
     },

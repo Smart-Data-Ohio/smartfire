@@ -72,6 +72,7 @@ async fn all_committed_media_and_field_validation_cases_match_rails() {
                 content_type,
                 byte_size: blob.byte_size,
                 content_error: error,
+                animated: false,
             })
         } else {
             None

@@ -16,6 +16,8 @@ export const Icon = Schema.Struct({
   kind: IconKind,
   character: Schema.NullOr(Schema.String),
   imageUrl: Schema.NullOr(Schema.String),
+  animated: Schema.Boolean,
+  stillUrl: Schema.NullOr(Schema.String),
 });
 
 export type Icon = typeof Icon.Type;
