@@ -588,6 +588,36 @@ describe("call state", () => {
     localStorage.clear();
   });
 
+  it("an ordinary share uses the picked quality when storage writes fail", async () => {
+    localStorage.clear();
+
+    const { controller, transports } = harness();
+
+    await controller.join(ROOM, "Lounge", null);
+
+    const [transport] = transports;
+
+    if (transport === undefined) {
+      throw new Error("no transport");
+    }
+
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      controller.setShareQuality("1080p60");
+    } finally {
+      setItem.mockRestore();
+    }
+
+    await controller.toggleScreenShare();
+    expect(callStore.getState().snapshot.screenSharing).toBe(true);
+    expect(transport.screenQuality).toBe("1080p60");
+    await controller.leave();
+    localStorage.clear();
+  });
+
   it("going live captures and publishes at the stream's quality", async () => {
     const { controller, transports } = harness({
       startStream: async (_roomId, quality) => ({
